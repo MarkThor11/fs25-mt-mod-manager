@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<npcs>
+    <npc name="GRANDPA" spotUniqueId="GRANDPA_FARMHOUSE"/>
+    <npc name="FORESTER" spotUniqueId="FORESTER_SHED"/>
+    <npc name="FARMER" spotUniqueId="FARMER_HOUSE"/>
+    <npc name="HELPER" spotUniqueId="HELPER_HOUSE"/>
+    <npc name="ANIMAL_DEALER" spotUniqueId="ANIMAL_DEALER_SHOP"/>
+</npcs>

@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<sales>
+    <item timeLeft="31" isGenerated="true" xmlFilename="data/vehicles/faresin/pf224/pf224.xml" age="9" price="29190" damage="0.560550" wear="0.924529" operatingTime="27177.515625"/>
+    <item timeLeft="29" isGenerated="true" xmlFilename="data/vehicles/claas/convioFlex1380/convioFlex1380.xml" age="20" price="70379" damage="0.249543" wear="0.464644" operatingTime="48099.382812"/>
+    <item timeLeft="40" isGenerated="true" xmlFilename="data/vehicles/caseIH/farmall120C/farmall120C.xml" age="37" price="34753" damage="0.342567" wear="0.600274" operatingTime="137509.437500"/>
+    <item timeLeft="27" isGenerated="true" xmlFilename="data/vehicles/krone/bigM450/bigM450.xml" age="33" price="202671" damage="0.556609" wear="0.555330" operatingTime="97761.312500"/>
+</sales>

@@ -1,0 +1,5 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<onCreateLoadedObjects>
+    <object saveId="ShipMover_bigShipSpline" time="0.004631"/>
+    <object saveId="ShipMover_smallShipSpline" time="0.003675"/>
+</onCreateLoadedObjects>

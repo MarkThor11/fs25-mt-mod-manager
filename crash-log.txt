@@ -1,0 +1,5 @@
+[CRITICAL MAIN PROCESS ERROR] 2026-04-06T23:53:43.969Z: TypeError: Cannot read properties of undefined (reading 'close')
+    at App.<anonymous> (C:\Users\Mark\Desktop\GoogleModManager\src\main\index.js:616:9)
+    at App.emit (node:events:519:28)
+    at App.<anonymous> (C:\Users\Mark\Desktop\GoogleModManager\src\main\index.js:612:42)
+    at App.emit (node:events:531:35)

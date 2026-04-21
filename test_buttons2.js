@@ -1,0 +1,1 @@
+const fs = require('fs'); const cheerio = require('cheerio'); const html = fs.readFileSync('test_modhub_download.html', 'utf8'); const m = cheerio.load(html); m('a').each((i, el) => { const text = m(el).text().trim().toLowerCase(); if (text.includes('download')) console.log('href:', m(el).attr('href')); });

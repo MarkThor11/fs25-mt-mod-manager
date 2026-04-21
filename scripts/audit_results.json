@@ -1,0 +1,2853 @@
+{
+  "scanTime": "2026-04-07T00:32:59.307Z",
+  "totalMods": 1205,
+  "failures": [
+    {
+      "modId": "306235",
+      "title": "Lizard HomeMade Disc Harrow",
+      "category": "discHarrows",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=306235&title=fs2025",
+      "author": "VuleX"
+    },
+    {
+      "modId": "310128",
+      "title": "Landoll 7431VT 33FT",
+      "category": "discHarrows",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=310128&title=fs2025",
+      "author": "Bcbuhler"
+    },
+    {
+      "modId": "318359",
+      "title": "Forigo Roteritalia Power Harrows Pack",
+      "category": "powerHarrows",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=318359&title=fs2025",
+      "author": "DD ModPassion"
+    },
+    {
+      "modId": "318360",
+      "title": "Forigo Roteritalia Power Harrows Pack Additional Features",
+      "category": "powerHarrows",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=318360&title=fs2025",
+      "author": "DD ModPassion"
+    },
+    {
+      "modId": "346288",
+      "title": "Gascon / Zeppelin 3 Arms Subsoilers",
+      "category": "subsoilers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=346288&title=fs2025",
+      "author": "Alexsi Modding"
+    },
+    {
+      "modId": "347847",
+      "title": "Gascon / Zeppelin 5 Arms Subsoilers",
+      "category": "subsoilers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=347847&title=fs2025",
+      "author": "Alexsi Modding"
+    },
+    {
+      "modId": "347891",
+      "title": "Gascon / Zeppelin 7 Arms Subsoilers",
+      "category": "subsoilers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=347891&title=fs2025",
+      "author": "Alexsi Modding"
+    },
+    {
+      "modId": "311963",
+      "title": "Rolmako U614",
+      "category": "subsoilers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=311963&title=fs2025",
+      "author": "JMZ"
+    },
+    {
+      "modId": "329300",
+      "title": "Albutt Stone Bucket",
+      "category": "stonePickers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=329300&title=fs2025",
+      "author": "Achi_Wastl"
+    },
+    {
+      "modId": "311995",
+      "title": "TerraClear TC100",
+      "category": "stonePickers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=311995&title=fs2025",
+      "author": "JHHG Modding"
+    },
+    {
+      "modId": "309472",
+      "title": "Quicke Stengrep Pack",
+      "category": "stonePickers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=309472&title=fs2025",
+      "author": "JensM"
+    },
+    {
+      "modId": "342442",
+      "title": "John Deere RC6M Brush Cutter",
+      "category": "mulchers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=342442&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "334602",
+      "title": "KinnanFAB Stalk Roller",
+      "category": "mulchers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=334602&title=fs2025",
+      "author": "JHHG Modding"
+    },
+    {
+      "modId": "310128",
+      "title": "Landoll 7431VT 33FT",
+      "category": "mulchers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=310128&title=fs2025",
+      "author": "Bcbuhler"
+    },
+    {
+      "modId": "305244",
+      "title": "Amazone T-Pack U",
+      "category": "seeders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=305244&title=fs2025",
+      "author": "htModding"
+    },
+    {
+      "modId": "327528",
+      "title": "Sowing Machine Roller Ready",
+      "category": "seeders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=327528&title=fs2025",
+      "author": "Ifko[nator]"
+    },
+    {
+      "modId": "325327",
+      "title": "Vence Tudo Pampeana 32000",
+      "category": "seeders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=325327&title=fs2025",
+      "author": "Vence Tudo and Connect Modding LTDA"
+    },
+    {
+      "modId": "347878",
+      "title": "Lizard TIM PSK 4",
+      "category": "planters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=347878&title=fs2025",
+      "author": "VuleX"
+    },
+    {
+      "modId": "305244",
+      "title": "Amazone T-Pack U",
+      "category": "planters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=305244&title=fs2025",
+      "author": "htModding"
+    },
+    {
+      "modId": "343941",
+      "title": "Kuhn Sprayer Pack",
+      "category": "sprayers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=343941&title=fs2025",
+      "author": "ONR Modding"
+    },
+    {
+      "modId": "308673",
+      "title": "Jacoby EUROtrac 2000",
+      "category": "sprayers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=308673&title=fs2025",
+      "author": "Creative Mesh"
+    },
+    {
+      "modId": "341167",
+      "title": "Seguip XS 460",
+      "category": "sprayers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=341167&title=fs2025",
+      "author": "Onur Emre"
+    },
+    {
+      "modId": "313336",
+      "title": "Caruelle Nicolas Stilla 460",
+      "category": "sprayers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=313336&title=fs2025",
+      "author": "Onur Emre"
+    },
+    {
+      "modId": "336741",
+      "title": "Unimog Beds Pack",
+      "category": "sprayers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=336741&title=fs2025",
+      "author": "Bb Mods"
+    },
+    {
+      "modId": "332649",
+      "title": "Lizard P027/5",
+      "category": "sprayers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=332649&title=fs2025",
+      "author": "Slyclif,Voksel,Ostry,LSF"
+    },
+    {
+      "modId": "317635",
+      "title": "Agrio Gigant",
+      "category": "sprayers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317635&title=fs2025",
+      "author": "GIANTS Software"
+    },
+    {
+      "modId": "316539",
+      "title": "Hardi Navigator 4000 Delta Force",
+      "category": "sprayers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=316539&title=fs2025",
+      "author": "GIANTS Software"
+    },
+    {
+      "modId": "308474",
+      "title": "Agrio Mamut XL",
+      "category": "sprayers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=308474&title=fs2025",
+      "author": "GIANTS Software"
+    },
+    {
+      "modId": "353901",
+      "title": "Camara Fertilizer Spreaders Pack",
+      "category": "fertilizerSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=353901&title=fs2025",
+      "author": "CALERUEGA modding design / Maquinaria Camara"
+    },
+    {
+      "modId": "348243",
+      "title": "Amazone ZA-TS Super",
+      "category": "fertilizerSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=348243&title=fs2025",
+      "author": "PremiumPower"
+    },
+    {
+      "modId": "305231",
+      "title": "Bredal K 165",
+      "category": "fertilizerSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=305231&title=fs2025",
+      "author": "htModding"
+    },
+    {
+      "modId": "343403",
+      "title": "Lizard RN 610 / N-064 Antek",
+      "category": "fertilizerSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=343403&title=fs2025",
+      "author": "Vnsfdg2, patologia__, qwertyPL"
+    },
+    {
+      "modId": "336091",
+      "title": "Sipma RN 610 / N-064 Antek",
+      "category": "fertilizerSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=336091&title=fs2025",
+      "author": "Vnsfdg2, patologia__, qwertyPL"
+    },
+    {
+      "modId": "340435",
+      "title": "Kverneland Exacta EL 700",
+      "category": "fertilizerSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=340435&title=fs2025",
+      "author": "Puszkap"
+    },
+    {
+      "modId": "339709",
+      "title": "Streumaster FW 212 TD",
+      "category": "fertilizerSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=339709&title=fs2025",
+      "author": "SimonLsDesign"
+    },
+    {
+      "modId": "330636",
+      "title": "Unia Special 3",
+      "category": "fertilizerSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=330636&title=fs2025",
+      "author": "Alexsi Modding, StarterModding"
+    },
+    {
+      "modId": "336268",
+      "title": "Amazone ZA-S 330",
+      "category": "fertilizerSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=336268&title=fs2025",
+      "author": "unstoppable"
+    },
+    {
+      "modId": "328561",
+      "title": "Amazone Zats 6000 Multispreader",
+      "category": "fertilizerSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=328561&title=fs2025",
+      "author": "MackTrucker921"
+    },
+    {
+      "modId": "330635",
+      "title": "Sola Special 3",
+      "category": "fertilizerSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=330635&title=fs2025",
+      "author": "Alexsi Modding, StarterModding"
+    },
+    {
+      "modId": "317699",
+      "title": "Bomech Slurry Distributor Pack With Real Section Control",
+      "category": "slurryTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317699&title=fs2025",
+      "author": "[WeekendFarmers]T4xs"
+    },
+    {
+      "modId": "321468",
+      "title": "Bomech Pack",
+      "category": "slurryTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=321468&title=fs2025",
+      "author": "RentnerModding"
+    },
+    {
+      "modId": "350883",
+      "title": "Joskin Terrasoc Pack",
+      "category": "slurryTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=350883&title=fs2025",
+      "author": "Duysens-Agri Nico Du 55"
+    },
+    {
+      "modId": "340064",
+      "title": "BeTEC Cameleon 15",
+      "category": "slurryTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=340064&title=fs2025",
+      "author": "WOLFex Modding"
+    },
+    {
+      "modId": "338326",
+      "title": "Camara Slurry Tanker Pack",
+      "category": "slurryTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=338326&title=fs2025",
+      "author": "CALERUEGA modding design / Maquinaria Camara"
+    },
+    {
+      "modId": "339354",
+      "title": "Detk 5",
+      "category": "slurryTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=339354&title=fs2025",
+      "author": "tomek"
+    },
+    {
+      "modId": "336593",
+      "title": "Detk 5",
+      "category": "slurryTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=336593&title=fs2025",
+      "author": "tomek"
+    },
+    {
+      "modId": "331020",
+      "title": "Pichon B-MIX80",
+      "category": "slurryTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=331020&title=fs2025",
+      "author": "AgriDesignModding / Nathaël / Nico Du 55"
+    },
+    {
+      "modId": "321316",
+      "title": "Bomech 24",
+      "category": "slurryTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=321316&title=fs2025",
+      "author": "AgrarModding"
+    },
+    {
+      "modId": "313345",
+      "title": "Slurry Spreaders",
+      "category": "slurryTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=313345&title=fs2025",
+      "author": "Smety"
+    },
+    {
+      "modId": "310889",
+      "title": "Lizard Moscha Duo Pack",
+      "category": "slurryTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=310889&title=fs2025",
+      "author": "Duysens-Agri-NicoDu55"
+    },
+    {
+      "modId": "350512",
+      "title": "SAMSON US328",
+      "category": "manureSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=350512&title=fs2025",
+      "author": "AgrarModding, FMTBene"
+    },
+    {
+      "modId": "325293",
+      "title": "Maitre Pack",
+      "category": "manureSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=325293&title=fs2025",
+      "author": "NicoPix's / Nico Du 55"
+    },
+    {
+      "modId": "348939",
+      "title": "Fliegl ASW Pack",
+      "category": "manureSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=348939&title=fs2025",
+      "author": "Großflächendesign - Simon"
+    },
+    {
+      "modId": "350883",
+      "title": "Joskin Terrasoc Pack",
+      "category": "manureSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=350883&title=fs2025",
+      "author": "Duysens-Agri Nico Du 55"
+    },
+    {
+      "modId": "347787",
+      "title": "Fliegl ASS 298",
+      "category": "manureSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=347787&title=fs2025",
+      "author": "Smety"
+    },
+    {
+      "modId": "345710",
+      "title": "Fliegl ASW 391",
+      "category": "manureSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=345710&title=fs2025",
+      "author": "Smety"
+    },
+    {
+      "modId": "349381",
+      "title": "US 235 Dynamic",
+      "category": "manureSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=349381&title=fs2025",
+      "author": "AGNADRIAN"
+    },
+    {
+      "modId": "338875",
+      "title": "Fliegl ASW 256",
+      "category": "manureSpreaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=338875&title=fs2025",
+      "author": "Agrar Design Austria"
+    },
+    {
+      "modId": "325159",
+      "title": "Elmers Super 7",
+      "category": "weeders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=325159&title=fs2025",
+      "author": "Bcbuhler"
+    },
+    {
+      "modId": "345677",
+      "title": "Holaras Stego WR",
+      "category": "rollers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=345677&title=fs2025",
+      "author": "Bb Mods, Ridiculous Dominick"
+    },
+    {
+      "modId": "310785",
+      "title": "Peecon LR290 Roller",
+      "category": "rollers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=310785&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "334602",
+      "title": "KinnanFAB Stalk Roller",
+      "category": "rollers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=334602&title=fs2025",
+      "author": "JHHG Modding"
+    },
+    {
+      "modId": "322695",
+      "title": "Lizard LR290 Roller",
+      "category": "rollers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=322695&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "350434",
+      "title": "John Deere 56",
+      "category": "mowers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=350434&title=fs2025",
+      "author": "SleutjesModding"
+    },
+    {
+      "modId": "309955",
+      "title": "Duevelsdorf Swing Arm",
+      "category": "mowers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=309955&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "339852",
+      "title": "Joskin Rotary Pasture Topper Pack",
+      "category": "mowers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=339852&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "342442",
+      "title": "John Deere RC6M Brush Cutter",
+      "category": "mowers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=342442&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "306515",
+      "title": "Brush Cutter",
+      "category": "mowers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=306515&title=fs2025",
+      "author": "Adub Modding Mantrid ABP Team"
+    },
+    {
+      "modId": "303281",
+      "title": "Real Mower",
+      "category": "mowers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=303281&title=fs2025",
+      "author": "kenny456"
+    },
+    {
+      "modId": "348956",
+      "title": "LIZARD SV2500",
+      "category": "tedders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=348956&title=fs2025",
+      "author": "NicoPix's"
+    },
+    {
+      "modId": "343960",
+      "title": "Agromet \"Famarol\" Słupsk Z211/2",
+      "category": "tedders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=343960&title=fs2025",
+      "author": "Hajstel, Rockstar"
+    },
+    {
+      "modId": "311441",
+      "title": "MultiFruit AI Tedder",
+      "category": "tedders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=311441&title=fs2025",
+      "author": "Sablerock"
+    },
+    {
+      "modId": "343960",
+      "title": "Agromet \"Famarol\" Słupsk Z211/2",
+      "category": "windrowers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=343960&title=fs2025",
+      "author": "Hajstel, Rockstar"
+    },
+    {
+      "modId": "321713",
+      "title": "Krone Front Windrower",
+      "category": "windrowers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=321713&title=fs2025",
+      "author": "Hispano"
+    },
+    {
+      "modId": "351020",
+      "title": "Fortschritt HTS 7104",
+      "category": "loaderWagons",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=351020&title=fs2025",
+      "author": "Bartmann"
+    },
+    {
+      "modId": "317686",
+      "title": "Agromet PFMZ Orkan N-225/6",
+      "category": "loaderWagons",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317686&title=fs2025",
+      "author": "Zimov"
+    },
+    {
+      "modId": "309955",
+      "title": "Duevelsdorf Swing Arm",
+      "category": "grasslandCare",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=309955&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "345677",
+      "title": "Holaras Stego WR",
+      "category": "grasslandCare",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=345677&title=fs2025",
+      "author": "Bb Mods, Ridiculous Dominick"
+    },
+    {
+      "modId": "339852",
+      "title": "Joskin Rotary Pasture Topper Pack",
+      "category": "grasslandCare",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=339852&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "311020",
+      "title": "APV Grassland Combi Pack Additional Features",
+      "category": "grasslandCare",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=311020&title=fs2025",
+      "author": "DD ModPassion"
+    },
+    {
+      "modId": "312362",
+      "title": "Dalbo Grass Rollers Pack",
+      "category": "grasslandCare",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=312362&title=fs2025",
+      "author": "Hispano"
+    },
+    {
+      "modId": "306912",
+      "title": "Madara Agro RollingBear",
+      "category": "grasslandCare",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=306912&title=fs2025",
+      "author": "EED123"
+    },
+    {
+      "modId": "306012",
+      "title": "Selectable Bale Capacity Pack",
+      "category": "balersSquare",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=306012&title=fs2025",
+      "author": "GH66Mods"
+    },
+    {
+      "modId": "309319",
+      "title": "Bale Twine Addon",
+      "category": "balersSquare",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=309319&title=fs2025",
+      "author": "DD ModPassion"
+    },
+    {
+      "modId": "317807",
+      "title": "Bale Twine Addon Additional Features",
+      "category": "balersSquare",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317807&title=fs2025",
+      "author": "DD ModPassion"
+    },
+    {
+      "modId": "319314",
+      "title": "Massey Ferguson MF 1840 Baler",
+      "category": "balersSquare",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=319314&title=fs2025",
+      "author": "Rooster Mods"
+    },
+    {
+      "modId": "317479",
+      "title": "Balers Pack Works With Ai And Silage Additive",
+      "category": "balersSquare",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317479&title=fs2025",
+      "author": "DrXmL"
+    },
+    {
+      "modId": "307374",
+      "title": "Krone Baler Pack",
+      "category": "balersSquare",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=307374&title=fs2025",
+      "author": "MircoGT"
+    },
+    {
+      "modId": "306012",
+      "title": "Selectable Bale Capacity Pack",
+      "category": "balersRound",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=306012&title=fs2025",
+      "author": "GH66Mods"
+    },
+    {
+      "modId": "340824",
+      "title": "Shredded Straw Addon",
+      "category": "balersRound",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=340824&title=fs2025",
+      "author": "Zetor6245, AlexL353_modding, waSchtl"
+    },
+    {
+      "modId": "314325",
+      "title": "HomeMade Lizard Fork",
+      "category": "balersRound",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=314325&title=fs2025",
+      "author": "VuleX, Gliga"
+    },
+    {
+      "modId": "314326",
+      "title": "HomeMade Lizard Fork 2",
+      "category": "balersRound",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=314326&title=fs2025",
+      "author": "VuleX"
+    },
+    {
+      "modId": "314332",
+      "title": "HomeMade Bale Trailer",
+      "category": "balersRound",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=314332&title=fs2025",
+      "author": "VuleX"
+    },
+    {
+      "modId": "315886",
+      "title": "Göweil Pack",
+      "category": "balersRound",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=315886&title=fs2025",
+      "author": "SHfarmingTV"
+    },
+    {
+      "modId": "317806",
+      "title": "Bale Net Addon Additional Features",
+      "category": "balersRound",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317806&title=fs2025",
+      "author": "DD ModPassion"
+    },
+    {
+      "modId": "354318",
+      "title": "Kverneland Wrapper 7850C",
+      "category": "baleWrappers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=354318&title=fs2025",
+      "author": "Łosioł"
+    },
+    {
+      "modId": "329853",
+      "title": "Kuhn SW4014 Bale Wrapper-RH",
+      "category": "baleWrappers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=329853&title=fs2025",
+      "author": "Macktrucker921"
+    },
+    {
+      "modId": "317479",
+      "title": "Balers Pack Works With Ai And Silage Additive",
+      "category": "baleWrappers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317479&title=fs2025",
+      "author": "DrXmL"
+    },
+    {
+      "modId": "313175",
+      "title": "Plastic Film SiloPak",
+      "category": "baleWrappers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=313175&title=fs2025",
+      "author": "Duysens-Agri"
+    },
+    {
+      "modId": "309320",
+      "title": "Bale Wrap Addon",
+      "category": "baleWrappers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=309320&title=fs2025",
+      "author": "DD ModPassion"
+    },
+    {
+      "modId": "354399",
+      "title": "Lizard Additive Rack",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=354399&title=fs2025",
+      "author": "Grubby, 5oteruud"
+    },
+    {
+      "modId": "354398",
+      "title": "Serigstad Additive Rack",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=354398&title=fs2025",
+      "author": "Grubby, 5oteruud"
+    },
+    {
+      "modId": "344150",
+      "title": "RealismAddon: Balers",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=344150&title=fs2025",
+      "author": "modelleicher"
+    },
+    {
+      "modId": "325003",
+      "title": "Net Holder Front",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=325003&title=fs2025",
+      "author": "htModding"
+    },
+    {
+      "modId": "354423",
+      "title": "Round Bale Drying",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=354423&title=fs2025",
+      "author": "Da Andy"
+    },
+    {
+      "modId": "347162",
+      "title": "Arcusin Linepack",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=347162&title=fs2025",
+      "author": "Caleruega modding design"
+    },
+    {
+      "modId": "340837",
+      "title": "Bobcat 3 Point Bale Fork",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=340837&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "342059",
+      "title": "Lizard 3 Point Ballast Weight",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=342059&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "303644",
+      "title": "Liftable Pallets And Bales",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=303644&title=fs2025",
+      "author": "Jos"
+    },
+    {
+      "modId": "338933",
+      "title": "Bressel And Lade CargoBox 2",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=338933&title=fs2025",
+      "author": "BlackTiger"
+    },
+    {
+      "modId": "327930",
+      "title": "Lizard Back Bale Fork",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=327930&title=fs2025",
+      "author": "E.T.A La Marchoise"
+    },
+    {
+      "modId": "340673",
+      "title": "Duevelsdorf BF Combi",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=340673&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "324525",
+      "title": "Consumable Support",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=324525&title=fs2025",
+      "author": "Matteo40 / Nico Du 55"
+    },
+    {
+      "modId": "326576",
+      "title": "Net Holder Pm",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=326576&title=fs2025",
+      "author": "Rick Black Labele TWD Modding, privatprivat"
+    },
+    {
+      "modId": "317963",
+      "title": "Göweil GFM",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317963&title=fs2025",
+      "author": "Agrar Design Austria"
+    },
+    {
+      "modId": "309587",
+      "title": "Lizard Back Fork",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=309587&title=fs2025",
+      "author": "Blodisgo"
+    },
+    {
+      "modId": "302812",
+      "title": "Rounder Wrapped Round Bales",
+      "category": "balingMisc",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=302812&title=fs2025",
+      "author": "OlaHaldor"
+    },
+    {
+      "modId": "343520",
+      "title": "Feedmixer",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=343520&title=fs2025",
+      "author": "Lamai"
+    },
+    {
+      "modId": "343800",
+      "title": "Large Feedmixer",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=343800&title=fs2025",
+      "author": "Lamai"
+    },
+    {
+      "modId": "326655",
+      "title": "Fimaks FMV Pack",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=326655&title=fs2025",
+      "author": "KRKZ-modding, Fimaks A.S."
+    },
+    {
+      "modId": "336320",
+      "title": "Pig Food Production",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=336320&title=fs2025",
+      "author": "AgritruckTeam"
+    },
+    {
+      "modId": "329146",
+      "title": "EuroMilk Rino FX500 Slim",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=329146&title=fs2025",
+      "author": "BartsoNv3"
+    },
+    {
+      "modId": "334041",
+      "title": "EuroMilk Rino FXL1000HD - FX1000HD - FXX1400/1600/1800/3000HD+",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=334041&title=fs2025",
+      "author": "BartsoNv3"
+    },
+    {
+      "modId": "332269",
+      "title": "Sano Feed Pack",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=332269&title=fs2025",
+      "author": "Weksi"
+    },
+    {
+      "modId": "333746",
+      "title": "EuroMilk Rino FXXS 1200HD/1400HD",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=333746&title=fs2025",
+      "author": "BartsoNv3"
+    },
+    {
+      "modId": "311066",
+      "title": "Siloking StaticLine Pack",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=311066&title=fs2025",
+      "author": "DD ModPassion"
+    },
+    {
+      "modId": "317799",
+      "title": "Jeantil MVV14D",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317799&title=fs2025",
+      "author": "Univers Simu Modding"
+    },
+    {
+      "modId": "330862",
+      "title": "EuroMark RD16HD",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=330862&title=fs2025",
+      "author": "AgriDesignModding / Nathaël"
+    },
+    {
+      "modId": "309854",
+      "title": "Medium Cowshed With Feeding Robot",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=309854&title=fs2025",
+      "author": "SOB Modding"
+    },
+    {
+      "modId": "310978",
+      "title": "Siloking EA 2300",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=310978&title=fs2025",
+      "author": "WOLFex Modding"
+    },
+    {
+      "modId": "314572",
+      "title": "Anderson Group A700",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=314572&title=fs2025",
+      "author": "Onur Emre"
+    },
+    {
+      "modId": "316133",
+      "title": "BVL Van Lengerich V-MIX 24 2S",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=316133&title=fs2025",
+      "author": "BartsoNv3"
+    },
+    {
+      "modId": "317945",
+      "title": "Jeulin ENERGY 18",
+      "category": "forageMixers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317945&title=fs2025",
+      "author": "76-Max"
+    },
+    {
+      "modId": "350570",
+      "title": "Cemo 5,000 L GRP Tank",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=350570&title=fs2025",
+      "author": "[Weekend Farmers]"
+    },
+    {
+      "modId": "350571",
+      "title": "LIZARD 5,000 L GRP Tank",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=350571&title=fs2025",
+      "author": "[Weekend Farmers]"
+    },
+    {
+      "modId": "353755",
+      "title": "Lizard Brave Trailer Tank",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=353755&title=fs2025",
+      "author": "SleutjesModding"
+    },
+    {
+      "modId": "348158",
+      "title": "One Axle Trailer",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=348158&title=fs2025",
+      "author": "Consi"
+    },
+    {
+      "modId": "339917",
+      "title": "Lizard Water Trailer",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=339917&title=fs2025",
+      "author": "MWM POWERR / Nico Du 55"
+    },
+    {
+      "modId": "336593",
+      "title": "Detk 5",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=336593&title=fs2025",
+      "author": "tomek"
+    },
+    {
+      "modId": "339354",
+      "title": "Detk 5",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=339354&title=fs2025",
+      "author": "tomek"
+    },
+    {
+      "modId": "310222",
+      "title": "Dropdeck Trailer - Autoload Bales",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=310222&title=fs2025",
+      "author": "macktrucker921"
+    },
+    {
+      "modId": "339918",
+      "title": "Lenormand Water Trailer",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=339918&title=fs2025",
+      "author": "MWM POWERR / Nico Du 55"
+    },
+    {
+      "modId": "318129",
+      "title": "Liquids Handling Truck Train",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=318129&title=fs2025",
+      "author": "BDBSSB, Dogface"
+    },
+    {
+      "modId": "333212",
+      "title": "Combination Liquid Tank 3000L",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=333212&title=fs2025",
+      "author": "Macktrucker921"
+    },
+    {
+      "modId": "323633",
+      "title": "MBP 6.5 Trailer",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=323633&title=fs2025",
+      "author": "tomek"
+    },
+    {
+      "modId": "328856",
+      "title": "Liquid Structure",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=328856&title=fs2025",
+      "author": "htModding"
+    },
+    {
+      "modId": "315809",
+      "title": "Lizard MKS",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=315809&title=fs2025",
+      "author": "Landmensch"
+    },
+    {
+      "modId": "323064",
+      "title": "MKS32 MultiLiquids",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=323064&title=fs2025",
+      "author": "MGP231"
+    },
+    {
+      "modId": "321968",
+      "title": "Joskin Tanker 3500",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=321968&title=fs2025",
+      "author": "SimulatorGAMES"
+    },
+    {
+      "modId": "309178",
+      "title": "Milk/Water Transport On 3 Point Support Platform",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=309178&title=fs2025",
+      "author": "doodoo (RGM)"
+    },
+    {
+      "modId": "322138",
+      "title": "Water Trailer",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=322138&title=fs2025",
+      "author": "[F/A] IrrSinn Rainer"
+    },
+    {
+      "modId": "318941",
+      "title": "Wood Barrel",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=318941&title=fs2025",
+      "author": "Silent Modding, BERNIESCS"
+    },
+    {
+      "modId": "312563",
+      "title": "Old Tank Liquid",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=312563&title=fs2025",
+      "author": "Natural Modding"
+    },
+    {
+      "modId": "311803",
+      "title": "ZJV-F-3.2",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=311803&title=fs2025",
+      "author": "FarmCat"
+    },
+    {
+      "modId": "311805",
+      "title": "ZJV-F-3.0",
+      "category": "barrels",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=311805&title=fs2025",
+      "author": "FarmCat"
+    },
+    {
+      "modId": "324299",
+      "title": "Lizard SMB 40",
+      "category": "strawBlowers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=324299&title=fs2025",
+      "author": "VuleX"
+    },
+    {
+      "modId": "343722",
+      "title": "Emily Vortex",
+      "category": "strawBlowers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=343722&title=fs2025",
+      "author": "Univers Simu Modding"
+    },
+    {
+      "modId": "330854",
+      "title": "EuroMark X-P3HD",
+      "category": "strawBlowers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=330854&title=fs2025",
+      "author": "AgriDesignModding / Nathaël / Nico Du 55"
+    },
+    {
+      "modId": "312153",
+      "title": "Teagle Tomahawk 6200H",
+      "category": "strawBlowers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=312153&title=fs2025",
+      "author": "SiiD Modding, JHHG Modding"
+    },
+    {
+      "modId": "319063",
+      "title": "Göweil BZT",
+      "category": "strawBlowers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=319063&title=fs2025",
+      "author": "Agrar Design Austria"
+    },
+    {
+      "modId": "310978",
+      "title": "Siloking EA 2300",
+      "category": "strawBlowers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=310978&title=fs2025",
+      "author": "WOLFex Modding"
+    },
+    {
+      "modId": "325602",
+      "title": "Arden BB2VBH 2200",
+      "category": "beetLoading",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=325602&title=fs2025",
+      "author": "Duysens-Agri/Nicodu55/Frabel"
+    },
+    {
+      "modId": "312010",
+      "title": "Trailer With Beet Cutter",
+      "category": "beetLoading",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=312010&title=fs2025",
+      "author": "Dogface"
+    },
+    {
+      "modId": "312209",
+      "title": "Sugar Beet Shredder",
+      "category": "beetLoading",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=312209&title=fs2025",
+      "author": "Piesel"
+    },
+    {
+      "modId": "306716",
+      "title": "Sugarbeet Cutter Pack",
+      "category": "beetLoading",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=306716&title=fs2025",
+      "author": "CuratoFarms"
+    },
+    {
+      "modId": "348964",
+      "title": "Box Tipper",
+      "category": "potatoHarvesting",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=348964&title=fs2025",
+      "author": "NicoPix's"
+    },
+    {
+      "modId": "341205",
+      "title": "Ropa Keiler RK22",
+      "category": "potatoHarvesting",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=341205&title=fs2025",
+      "author": "hirschenpower"
+    },
+    {
+      "modId": "334263",
+      "title": "Grimme Evo 280",
+      "category": "potatoHarvesting",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=334263&title=fs2025",
+      "author": "76-Max"
+    },
+    {
+      "modId": "328917",
+      "title": "Potato Washing System",
+      "category": "potatoHarvesting",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=328917&title=fs2025",
+      "author": "HoT online Team"
+    },
+    {
+      "modId": "310539",
+      "title": "Grimme GF 90 4",
+      "category": "vegetablePlanters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=310539&title=fs2025",
+      "author": "76-Max"
+    },
+    {
+      "modId": "325409",
+      "title": "Universal Autoload",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=325409&title=fs2025",
+      "author": "loki_79"
+    },
+    {
+      "modId": "354311",
+      "title": "Harvest Valley",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=354311&title=fs2025",
+      "author": "BartsoNv3, Przemson"
+    },
+    {
+      "modId": "357324",
+      "title": "Gülzow",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=357324&title=fs2025",
+      "author": "AgrarlohnVirtual"
+    },
+    {
+      "modId": "355957",
+      "title": "Compaction Roller",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=355957&title=fs2025",
+      "author": "Nico Du 55"
+    },
+    {
+      "modId": "337082",
+      "title": "Geistal",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=337082&title=fs2025",
+      "author": "Lucas G"
+    },
+    {
+      "modId": "356224",
+      "title": "Meinefeld Region Schaumburg",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=356224&title=fs2025",
+      "author": "RotoxLP Gaming"
+    },
+    {
+      "modId": "356296",
+      "title": "Barn And Cowshed",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=356296&title=fs2025",
+      "author": "LeoLeo"
+    },
+    {
+      "modId": "356363",
+      "title": "Thuringian Farmhouse",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=356363&title=fs2025",
+      "author": "Kastor [D-S-Agrarservice]"
+    },
+    {
+      "modId": "355942",
+      "title": "Storagehall",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=355942&title=fs2025",
+      "author": "WJan89"
+    },
+    {
+      "modId": "357192",
+      "title": "More Motor Sounds",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=357192&title=fs2025",
+      "author": "[MW]PeterAH + Farming Dud's - Vassili_K98"
+    },
+    {
+      "modId": "356773",
+      "title": "Concrete Fence Pack",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=356773&title=fs2025",
+      "author": "Sienek"
+    },
+    {
+      "modId": "356181",
+      "title": "Concrete Liquid Manure Tank",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=356181&title=fs2025",
+      "author": "Jonas"
+    },
+    {
+      "modId": "356159",
+      "title": "Wooden Support",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=356159&title=fs2025",
+      "author": "Lamai"
+    },
+    {
+      "modId": "337619",
+      "title": "Construction Screen Zoom",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=337619&title=fs2025",
+      "author": "[FD]Aekzl"
+    },
+    {
+      "modId": "357319",
+      "title": "CarboLime Prefab",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=357319&title=fs2025",
+      "author": "[BG] Lahmi"
+    },
+    {
+      "modId": "331434",
+      "title": "Owendale Michigan",
+      "category": "vineyardEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=331434&title=fs2025",
+      "author": "Northern Michigan Mapping"
+    },
+    {
+      "modId": "346288",
+      "title": "Gascon / Zeppelin 3 Arms Subsoilers",
+      "category": "grapeTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=346288&title=fs2025",
+      "author": "Alexsi Modding"
+    },
+    {
+      "modId": "355756",
+      "title": "Narrow Vines And Olives (2 And 2.50)",
+      "category": "grapeTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=355756&title=fs2025",
+      "author": "IllGib"
+    },
+    {
+      "modId": "317200",
+      "title": "Cynkomet Dzik",
+      "category": "grapeTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317200&title=fs2025",
+      "author": "Nikos321"
+    },
+    {
+      "modId": "306922",
+      "title": "Eurospand Pack",
+      "category": "grapeTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=306922&title=fs2025",
+      "author": "Black eyes modding"
+    },
+    {
+      "modId": "308112",
+      "title": "MP 122 OCEA Twin",
+      "category": "grapeTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=308112&title=fs2025",
+      "author": "Univers Simu Modding"
+    },
+    {
+      "modId": "307665",
+      "title": "Grape Silo",
+      "category": "grapeTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=307665&title=fs2025",
+      "author": "Chenben"
+    },
+    {
+      "modId": "321361",
+      "title": "Tree Planter And Forestry Shredder",
+      "category": "forestryMulchers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=321361&title=fs2025",
+      "author": "JogaDim"
+    },
+    {
+      "modId": "314875",
+      "title": "Devour Trees",
+      "category": "forestryMulchers",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=314875&title=fs2025",
+      "author": "raulycristi1 [VSR Modding Sur]"
+    },
+    {
+      "modId": "332327",
+      "title": "Winch Attachment",
+      "category": "forestryWinches",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=332327&title=fs2025",
+      "author": "P555_DigitalDesign"
+    },
+    {
+      "modId": "314897",
+      "title": "Lizard Forestry T20 Winch",
+      "category": "forestryWinches",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=314897&title=fs2025",
+      "author": "HR Forst und Fahrzeugbau"
+    },
+    {
+      "modId": "336952",
+      "title": "Hand Plant Saplings",
+      "category": "forestryPlanters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=336952&title=fs2025",
+      "author": "GtX"
+    },
+    {
+      "modId": "321361",
+      "title": "Tree Planter And Forestry Shredder",
+      "category": "forestryPlanters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=321361&title=fs2025",
+      "author": "JogaDim"
+    },
+    {
+      "modId": "317826",
+      "title": "SeedProduction",
+      "category": "forestryPlanters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317826&title=fs2025",
+      "author": "FSPT"
+    },
+    {
+      "modId": "306116",
+      "title": "Tree Sapling Pack",
+      "category": "forestryPlanters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=306116&title=fs2025",
+      "author": "Macktrucker921"
+    },
+    {
+      "modId": "314875",
+      "title": "Devour Trees",
+      "category": "forestryStumpCutters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=314875&title=fs2025",
+      "author": "raulycristi1 [VSR Modding Sur]"
+    },
+    {
+      "modId": "316605",
+      "title": "Dipperfox",
+      "category": "forestryStumpCutters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=316605&title=fs2025",
+      "author": "ITS"
+    },
+    {
+      "modId": "355230",
+      "title": "Weight 1000kg",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=355230&title=fs2025",
+      "author": "STv-Modding"
+    },
+    {
+      "modId": "352507",
+      "title": "Front Weight Pack",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=352507&title=fs2025",
+      "author": "Chris - CJFarming"
+    },
+    {
+      "modId": "354786",
+      "title": "Adjustable Drawbar Pack",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=354786&title=fs2025",
+      "author": "EY Modding"
+    },
+    {
+      "modId": "354839",
+      "title": "Adjustable Weight",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=354839&title=fs2025",
+      "author": "EY Modding"
+    },
+    {
+      "modId": "352477",
+      "title": "Selfmade Weight 1200 KG",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=352477&title=fs2025",
+      "author": "AgrarModding,JanzzenModding"
+    },
+    {
+      "modId": "352971",
+      "title": "Selfmade Weight",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=352971&title=fs2025",
+      "author": "[PolyCount]Taz, Starlexas"
+    },
+    {
+      "modId": "354860",
+      "title": "ST900 Weight Lizard",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=354860&title=fs2025",
+      "author": "76-Max"
+    },
+    {
+      "modId": "353493",
+      "title": "CLAAS 900kg",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=353493&title=fs2025",
+      "author": "STv-Modding"
+    },
+    {
+      "modId": "352787",
+      "title": "Multi-Brand Bumper Weight",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=352787&title=fs2025",
+      "author": "76-Max"
+    },
+    {
+      "modId": "353458",
+      "title": "Adapted 3-Point Weights",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=353458&title=fs2025",
+      "author": "John GM"
+    },
+    {
+      "modId": "314272",
+      "title": "AT-HEG Weight",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=314272&title=fs2025",
+      "author": "ASSASSINTV2"
+    },
+    {
+      "modId": "325287",
+      "title": "New Holland 850kg Weight",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=325287&title=fs2025",
+      "author": "STv-Modding"
+    },
+    {
+      "modId": "330895",
+      "title": "Lair Pack",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=330895&title=fs2025",
+      "author": "AgriDesignModding / Nathaël / Nico Du 55"
+    },
+    {
+      "modId": "350596",
+      "title": "Plate Weight 1200 KG",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=350596&title=fs2025",
+      "author": "AgrarModding"
+    },
+    {
+      "modId": "352482",
+      "title": "Cochet Super XL",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=352482&title=fs2025",
+      "author": "Farmels"
+    },
+    {
+      "modId": "352085",
+      "title": "AGCO Weight",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=352085&title=fs2025",
+      "author": "Duysens-Agri"
+    },
+    {
+      "modId": "348569",
+      "title": "Lestagri Weight Pack",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=348569&title=fs2025",
+      "author": "76-Max"
+    },
+    {
+      "modId": "338818",
+      "title": "Multi-Brand Safety Weight",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=338818&title=fs2025",
+      "author": "Kaymara"
+    },
+    {
+      "modId": "334534",
+      "title": "AgriBumper",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=334534&title=fs2025",
+      "author": "BayernGamers"
+    },
+    {
+      "modId": "348629",
+      "title": "Schoema Selfmade Weight Pack",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=348629&title=fs2025",
+      "author": "NicoTWD,Rick_Black_Labele,privatprivat"
+    },
+    {
+      "modId": "347607",
+      "title": "AGB 1200 Kg Weight",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=347607&title=fs2025",
+      "author": "AlexsiModding"
+    },
+    {
+      "modId": "343472",
+      "title": "Concrete Plates Weight",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=343472&title=fs2025",
+      "author": "michal piwko, qbitqbit, mimi, wylewiskoTV, pupu"
+    },
+    {
+      "modId": "347162",
+      "title": "Arcusin Linepack",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=347162&title=fs2025",
+      "author": "Caleruega modding design"
+    },
+    {
+      "modId": "305244",
+      "title": "Amazone T-Pack U",
+      "category": "weights",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=305244&title=fs2025",
+      "author": "htModding"
+    },
+    {
+      "modId": "355449",
+      "title": "SAMASZ Jump320 Truck Plow",
+      "category": "winterEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=355449&title=fs2025",
+      "author": "Roughneck Modding Crew"
+    },
+    {
+      "modId": "309797",
+      "title": "SPRINGER Winter Equipment Pack",
+      "category": "winterEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=309797&title=fs2025",
+      "author": "Agrar Design Austria"
+    },
+    {
+      "modId": "342396",
+      "title": "Lizard Snow Pusher",
+      "category": "winterEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=342396&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "351403",
+      "title": "RTS 3000",
+      "category": "winterEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=351403&title=fs2025",
+      "author": "Team Vidhostice"
+    },
+    {
+      "modId": "340103",
+      "title": "Cold Winters",
+      "category": "winterEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=340103&title=fs2025",
+      "author": "Highbrow"
+    },
+    {
+      "modId": "319538",
+      "title": "Lizard SA 800",
+      "category": "winterEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=319538&title=fs2025",
+      "author": "5oteruud"
+    },
+    {
+      "modId": "317039",
+      "title": "BM Volvo Snow Gear",
+      "category": "winterEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317039&title=fs2025",
+      "author": "[NMC] T-Bone"
+    },
+    {
+      "modId": "312909",
+      "title": "Kahlbacher Winter Equipment",
+      "category": "winterEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=312909&title=fs2025",
+      "author": "ITS"
+    },
+    {
+      "modId": "312871",
+      "title": "SaMASZ AlpS 331",
+      "category": "winterEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=312871&title=fs2025",
+      "author": "Agrogaatti"
+    },
+    {
+      "modId": "319537",
+      "title": "Duun SA 800",
+      "category": "winterEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=319537&title=fs2025",
+      "author": "5oteruud"
+    },
+    {
+      "modId": "311670",
+      "title": "Small Tractors Winter Pack",
+      "category": "winterEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=311670&title=fs2025",
+      "author": "privatprivat, Rick Black Labele"
+    },
+    {
+      "modId": "309228",
+      "title": "Hand Spreader",
+      "category": "winterEquipment",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=309228&title=fs2025",
+      "author": "Andi Modding"
+    },
+    {
+      "modId": "308878",
+      "title": "Duevelsdorf Big Bag Handler",
+      "category": "frontLoaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=308878&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "317549",
+      "title": "Fendt Cargo Package",
+      "category": "frontLoaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317549&title=fs2025",
+      "author": "Bayern-Agrar"
+    },
+    {
+      "modId": "330717",
+      "title": "Göweil Equipment Pack",
+      "category": "frontLoaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=330717&title=fs2025",
+      "author": "Agrar Design Austria"
+    },
+    {
+      "modId": "336005",
+      "title": "Valtra Front Loaders",
+      "category": "frontLoaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=336005&title=fs2025",
+      "author": "Agrogaatti"
+    },
+    {
+      "modId": "335265",
+      "title": "John Deere 148 And 158 Front Loaders",
+      "category": "frontLoaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=335265&title=fs2025",
+      "author": "EY Modding"
+    },
+    {
+      "modId": "323181",
+      "title": "New Holland 655TL Front Loader",
+      "category": "frontLoaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=323181&title=fs2025",
+      "author": "Jolly Farms Modding"
+    },
+    {
+      "modId": "305753",
+      "title": "Roetterink Shovel Pack",
+      "category": "frontLoaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=305753&title=fs2025",
+      "author": "Rick Black Labele TWD Modding"
+    },
+    {
+      "modId": "326297",
+      "title": "Stoll Frontloader GTA Xylon Pack",
+      "category": "frontLoaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=326297&title=fs2025",
+      "author": "ASSASSINTV2,Dean_Blacky"
+    },
+    {
+      "modId": "323354",
+      "title": "Stoll Frontloader Pack",
+      "category": "frontLoaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=323354&title=fs2025",
+      "author": "ASSASSINTV2, Dean_Blacky"
+    },
+    {
+      "modId": "317397",
+      "title": "Sigma 4 Pack",
+      "category": "frontLoaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317397&title=fs2025",
+      "author": "THOMAS-MODDING, Aratore_24"
+    },
+    {
+      "modId": "317399",
+      "title": "Frontloader 70-90 Pack",
+      "category": "frontLoaders",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317399&title=fs2025",
+      "author": "THOMAS-MODDING, Aratore_24"
+    },
+    {
+      "modId": "308878",
+      "title": "Duevelsdorf Big Bag Handler",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=308878&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "310084",
+      "title": "Lift-Wood",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=310084&title=fs2025",
+      "author": "AgriKevolution"
+    },
+    {
+      "modId": "351387",
+      "title": "Bressel And Lade H10 Palletfork",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=351387&title=fs2025",
+      "author": "Rick Black Labele TWD Modding"
+    },
+    {
+      "modId": "317577",
+      "title": "Riman Tool Pack",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317577&title=fs2025",
+      "author": "Fred Modding / Nico Du 55"
+    },
+    {
+      "modId": "350497",
+      "title": "Pallet Fork With Tension Belts",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=350497&title=fs2025",
+      "author": "Depa3Design"
+    },
+    {
+      "modId": "348669",
+      "title": "Quicke 3-Point Linkage Adapter",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=348669&title=fs2025",
+      "author": "Agrogaatti"
+    },
+    {
+      "modId": "348287",
+      "title": "Hauer RK Basket And Stone Picker",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=348287&title=fs2025",
+      "author": "Glumpii, privatprivat, FMTBene"
+    },
+    {
+      "modId": "347595",
+      "title": "Arcusin Grabpack",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=347595&title=fs2025",
+      "author": "CALERUEGA modding design"
+    },
+    {
+      "modId": "343302",
+      "title": "Agromanut Tool Pack",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=343302&title=fs2025",
+      "author": "FredModding"
+    },
+    {
+      "modId": "348877",
+      "title": "Duevelsdorf Balefork",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=348877&title=fs2025",
+      "author": "Rick Black Labele TWD Modding,Blackfox"
+    },
+    {
+      "modId": "313408",
+      "title": "Galonnier GG21",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=313408&title=fs2025",
+      "author": "Fred Modding / Nico Du 55"
+    },
+    {
+      "modId": "325259",
+      "title": "Quicke Gradingbucket",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=325259&title=fs2025",
+      "author": "n0t._.p0lar"
+    },
+    {
+      "modId": "340673",
+      "title": "Duevelsdorf BF Combi",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=340673&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "339152",
+      "title": "Balefork Selfmade",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=339152&title=fs2025",
+      "author": "FMT Bene"
+    },
+    {
+      "modId": "339317",
+      "title": "Lizard M44SR Fork",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=339317&title=fs2025",
+      "author": "Kaymara, NicoPix's"
+    },
+    {
+      "modId": "340446",
+      "title": "Loader Tool Camera Pack",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=340446&title=fs2025",
+      "author": "AlexL353_modding"
+    },
+    {
+      "modId": "339318",
+      "title": "Altec M44SR Fork",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=339318&title=fs2025",
+      "author": "Kaymara, NicoPix's"
+    },
+    {
+      "modId": "317549",
+      "title": "Fendt Cargo Package",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317549&title=fs2025",
+      "author": "Bayern-Agrar"
+    },
+    {
+      "modId": "317246",
+      "title": "Tanco D 80",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317246&title=fs2025",
+      "author": "Agrar Design Austria"
+    },
+    {
+      "modId": "314165",
+      "title": "Quicke L200",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=314165&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "334993",
+      "title": "Front Tools With Tension Belts Pack",
+      "category": "frontLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=334993&title=fs2025",
+      "author": "ChrisS and RileyS"
+    },
+    {
+      "modId": "348964",
+      "title": "Box Tipper",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=348964&title=fs2025",
+      "author": "NicoPix's"
+    },
+    {
+      "modId": "352850",
+      "title": "TC Pack Lizard + Potato Palox",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=352850&title=fs2025",
+      "author": "76-Max"
+    },
+    {
+      "modId": "347856",
+      "title": "TC Pack Orenge + Potato Palox",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=347856&title=fs2025",
+      "author": "76-Max"
+    },
+    {
+      "modId": "317577",
+      "title": "Riman Tool Pack",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317577&title=fs2025",
+      "author": "Fred Modding / Nico Du 55"
+    },
+    {
+      "modId": "350497",
+      "title": "Pallet Fork With Tension Belts",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=350497&title=fs2025",
+      "author": "Depa3Design"
+    },
+    {
+      "modId": "351387",
+      "title": "Bressel And Lade H10 Palletfork",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=351387&title=fs2025",
+      "author": "Rick Black Labele TWD Modding"
+    },
+    {
+      "modId": "347595",
+      "title": "Arcusin Grabpack",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=347595&title=fs2025",
+      "author": "CALERUEGA modding design"
+    },
+    {
+      "modId": "343302",
+      "title": "Agromanut Tool Pack",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=343302&title=fs2025",
+      "author": "FredModding"
+    },
+    {
+      "modId": "316325",
+      "title": "Double Big Bag Hook For Telescopic Lifter",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=316325&title=fs2025",
+      "author": "NazzaB82"
+    },
+    {
+      "modId": "313408",
+      "title": "Galonnier GG21",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=313408&title=fs2025",
+      "author": "Fred Modding / Nico Du 55"
+    },
+    {
+      "modId": "339317",
+      "title": "Lizard M44SR Fork",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=339317&title=fs2025",
+      "author": "Kaymara, NicoPix's"
+    },
+    {
+      "modId": "334993",
+      "title": "Front Tools With Tension Belts Pack",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=334993&title=fs2025",
+      "author": "ChrisS and RileyS"
+    },
+    {
+      "modId": "340446",
+      "title": "Loader Tool Camera Pack",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=340446&title=fs2025",
+      "author": "AlexL353_modding"
+    },
+    {
+      "modId": "317246",
+      "title": "Tanco D 80",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317246&title=fs2025",
+      "author": "Agrar Design Austria"
+    },
+    {
+      "modId": "339318",
+      "title": "Altec M44SR Fork",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=339318&title=fs2025",
+      "author": "Kaymara, NicoPix's"
+    },
+    {
+      "modId": "336266",
+      "title": "Telehandler Tools With Camera",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=336266&title=fs2025",
+      "author": "PREZES929"
+    },
+    {
+      "modId": "333197",
+      "title": "Horsch Seed Shuttle",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=333197&title=fs2025",
+      "author": "Kalderone"
+    },
+    {
+      "modId": "335687",
+      "title": "Taylor Attachments Viper Silage Fork Pack",
+      "category": "teleLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=335687&title=fs2025",
+      "author": "RossN Mods"
+    },
+    {
+      "modId": "354953",
+      "title": "Beet Loader For Wheel Loader",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=354953&title=fs2025",
+      "author": "EY Modding"
+    },
+    {
+      "modId": "351118",
+      "title": "Albutt Silage Bucket",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=351118&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "355172",
+      "title": "Albutt Silage Fork",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=355172&title=fs2025",
+      "author": "Rentner Modding"
+    },
+    {
+      "modId": "350984",
+      "title": "Beco LPZ3",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=350984&title=fs2025",
+      "author": "LT-Groep"
+    },
+    {
+      "modId": "348964",
+      "title": "Box Tipper",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=348964&title=fs2025",
+      "author": "NicoPix's"
+    },
+    {
+      "modId": "317577",
+      "title": "Riman Tool Pack",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317577&title=fs2025",
+      "author": "Fred Modding / Nico Du 55"
+    },
+    {
+      "modId": "350497",
+      "title": "Pallet Fork With Tension Belts",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=350497&title=fs2025",
+      "author": "Depa3Design"
+    },
+    {
+      "modId": "347578",
+      "title": "HW2500",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=347578&title=fs2025",
+      "author": "VincoMods"
+    },
+    {
+      "modId": "347595",
+      "title": "Arcusin Grabpack",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=347595&title=fs2025",
+      "author": "CALERUEGA modding design"
+    },
+    {
+      "modId": "317583",
+      "title": "MDE Falcon FT16",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317583&title=fs2025",
+      "author": "Fred Modding / Nico Du 55"
+    },
+    {
+      "modId": "346210",
+      "title": "Lizard Big Bale Fork",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=346210&title=fs2025",
+      "author": "Carl-TG"
+    },
+    {
+      "modId": "317246",
+      "title": "Tanco D 80",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317246&title=fs2025",
+      "author": "Agrar Design Austria"
+    },
+    {
+      "modId": "334993",
+      "title": "Front Tools With Tension Belts Pack",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=334993&title=fs2025",
+      "author": "ChrisS and RileyS"
+    },
+    {
+      "modId": "340446",
+      "title": "Loader Tool Camera Pack",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=340446&title=fs2025",
+      "author": "AlexL353_modding"
+    },
+    {
+      "modId": "334423",
+      "title": "Quicke Palletforks",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=334423&title=fs2025",
+      "author": "n0t._.p0lar"
+    },
+    {
+      "modId": "335687",
+      "title": "Taylor Attachments Viper Silage Fork Pack",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=335687&title=fs2025",
+      "author": "RossN Mods"
+    },
+    {
+      "modId": "334391",
+      "title": "Lizard Silage Fork",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=334391&title=fs2025",
+      "author": "Duysens-Agri"
+    },
+    {
+      "modId": "330639",
+      "title": "Round Cotton Module Spear For Wheel Loaders",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=330639&title=fs2025",
+      "author": "Jolly Farms Modding"
+    },
+    {
+      "modId": "321084",
+      "title": "Wheel Loader Shovel Pack",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=321084&title=fs2025",
+      "author": "Macktrucker921"
+    },
+    {
+      "modId": "320161",
+      "title": "L120H/L180H Multiple Pallets Fork Frame",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=320161&title=fs2025",
+      "author": "ScandinavianVikingsModRebuildsTeam"
+    },
+    {
+      "modId": "327832",
+      "title": "Lizard Silage Fork",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=327832&title=fs2025",
+      "author": "Sully"
+    },
+    {
+      "modId": "325446",
+      "title": "Fliegl Ruby 2000 Extended",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=325446&title=fs2025",
+      "author": "[Weekend Farmers] T4xs"
+    },
+    {
+      "modId": "325922",
+      "title": "Bressel Und Lade Shovel Pack",
+      "category": "wheelLoaderTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=325922&title=fs2025",
+      "author": "VertexDezign"
+    },
+    {
+      "modId": "324899",
+      "title": "Adapter 3 Point SkidSteer",
+      "category": "skidSteerTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=324899&title=fs2025",
+      "author": "NazzaB82"
+    },
+    {
+      "modId": "342396",
+      "title": "Lizard Snow Pusher",
+      "category": "skidSteerTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=342396&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "312079",
+      "title": "Skid Pro Bale Spear",
+      "category": "skidSteerTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=312079&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "336868",
+      "title": "Trailer Mover For Skid Steers",
+      "category": "skidSteerTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=336868&title=fs2025",
+      "author": "E.M"
+    },
+    {
+      "modId": "317519",
+      "title": "Lizard Bale Spear",
+      "category": "skidSteerTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317519&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "317648",
+      "title": "Hillco Wrap Twine Remover",
+      "category": "skidSteerTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317648&title=fs2025",
+      "author": "JHHG Modding"
+    },
+    {
+      "modId": "316839",
+      "title": "Fliegl Long Neck Combi Plus",
+      "category": "skidSteerTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=316839&title=fs2025",
+      "author": "HR Forst und Fahrzeugbau"
+    },
+    {
+      "modId": "316605",
+      "title": "Dipperfox",
+      "category": "skidSteerTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=316605&title=fs2025",
+      "author": "ITS"
+    },
+    {
+      "modId": "312265",
+      "title": "Taylor Attachments Manure Fork Pack",
+      "category": "skidSteerTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=312265&title=fs2025",
+      "author": "RossN Mods"
+    },
+    {
+      "modId": "309570",
+      "title": "Quicke Bale Tools",
+      "category": "skidSteerTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=309570&title=fs2025",
+      "author": "AEN Design"
+    },
+    {
+      "modId": "311995",
+      "title": "TerraClear TC100",
+      "category": "skidSteerTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=311995&title=fs2025",
+      "author": "JHHG Modding"
+    },
+    {
+      "modId": "306111",
+      "title": "Skid Steer Tool Pack",
+      "category": "skidSteerTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=306111&title=fs2025",
+      "author": "FS Miner"
+    },
+    {
+      "modId": "307458",
+      "title": "Skid Steer Bumper Hitch Adapter",
+      "category": "skidSteerTools",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=307458&title=fs2025",
+      "author": "Mrboomnastic,BuckeyeStateFarms,FordMan4090"
+    },
+    {
+      "modId": "350471",
+      "title": "Hand Pushable Tool Pack",
+      "category": "tractorsS",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=350471&title=fs2025",
+      "author": "IllGib"
+    },
+    {
+      "modId": "351613",
+      "title": "LIZARD CRF 450R",
+      "category": "cars",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=351613&title=fs2025",
+      "author": "Farm Centro Sul"
+    },
+    {
+      "modId": "351515",
+      "title": "Lizard 80s",
+      "category": "cars",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=351515&title=fs2025",
+      "author": "SleutjesModding"
+    },
+    {
+      "modId": "319182",
+      "title": "Emergency Service",
+      "category": "cars",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=319182&title=fs2025",
+      "author": "AgriKevolution"
+    },
+    {
+      "modId": "341008",
+      "title": "Lizard ATC 200 BIG RED",
+      "category": "cars",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=341008&title=fs2025",
+      "author": "SleutjesModding"
+    },
+    {
+      "modId": "337395",
+      "title": "Lizard Legendary",
+      "category": "cars",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=337395&title=fs2025",
+      "author": "SleutjesModding"
+    },
+    {
+      "modId": "349620",
+      "title": "GDR Wheel Barrow",
+      "category": "miscDrivables",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=349620&title=fs2025",
+      "author": "DerRobi66 / Bartmann"
+    },
+    {
+      "modId": "350252",
+      "title": "Electric Conveyor Belt",
+      "category": "miscDrivables",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=350252&title=fs2025",
+      "author": "HoT online Team"
+    },
+    {
+      "modId": "344333",
+      "title": "Super Cleaner Cart",
+      "category": "miscDrivables",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=344333&title=fs2025",
+      "author": "Squigglze"
+    },
+    {
+      "modId": "342317",
+      "title": "Shopping Cart",
+      "category": "miscDrivables",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=342317&title=fs2025",
+      "author": "JMZ"
+    },
+    {
+      "modId": "331592",
+      "title": "Temporary Worksite Signal",
+      "category": "miscDrivables",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=331592&title=fs2025",
+      "author": "Kaymara, NrA"
+    },
+    {
+      "modId": "305098",
+      "title": "Snüfelstück",
+      "category": "miscDrivables",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=305098&title=fs2025",
+      "author": "MTL Modding Team"
+    },
+    {
+      "modId": "313421",
+      "title": "Polish Welded Wheelbarrow",
+      "category": "miscDrivables",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=313421&title=fs2025",
+      "author": "PREZES929"
+    },
+    {
+      "modId": "334795",
+      "title": "Multiplayer Vehicle Keys",
+      "category": "miscDrivables",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=334795&title=fs2025",
+      "author": "GtX"
+    },
+    {
+      "modId": "347557",
+      "title": "Case IH 890 Loader",
+      "category": "frontLoaderVehicles",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=347557&title=fs2025",
+      "author": "Casearias Modding"
+    },
+    {
+      "modId": "305753",
+      "title": "Roetterink Shovel Pack",
+      "category": "frontLoaderVehicles",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=305753&title=fs2025",
+      "author": "Rick Black Labele TWD Modding"
+    },
+    {
+      "modId": "317399",
+      "title": "Frontloader 70-90 Pack",
+      "category": "frontLoaderVehicles",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317399&title=fs2025",
+      "author": "THOMAS-MODDING, Aratore_24"
+    },
+    {
+      "modId": "309449",
+      "title": "Telehandler Shovel",
+      "category": "teleLoaderVehicles",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=309449&title=fs2025",
+      "author": "Nazzab82"
+    },
+    {
+      "modId": "339825",
+      "title": "Magsi Tool Pack",
+      "category": "teleLoaderVehicles",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=339825&title=fs2025",
+      "author": "FredModding / Nicodu55"
+    },
+    {
+      "modId": "336663",
+      "title": "Manitou MLT 120-175 Eco-Chip",
+      "category": "teleLoaderVehicles",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=336663&title=fs2025",
+      "author": "Kubxxz_"
+    },
+    {
+      "modId": "330472",
+      "title": "Manure Crane",
+      "category": "teleLoaderVehicles",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=330472&title=fs2025",
+      "author": "LeoLeo, Deus_Volt, Rockstar"
+    },
+    {
+      "modId": "323888",
+      "title": "Lizard Work Cap",
+      "category": "teleLoaderVehicles",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=323888&title=fs2025",
+      "author": "Rick Black Labele TWD Modding"
+    },
+    {
+      "modId": "339825",
+      "title": "Magsi Tool Pack",
+      "category": "wheelLoaderVehicles",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=339825&title=fs2025",
+      "author": "FredModding / Nicodu55"
+    },
+    {
+      "modId": "320150",
+      "title": "Hitch Support",
+      "category": "wheelLoaderVehicles",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=320150&title=fs2025",
+      "author": "Scandinavian Vikings Mod-Rebuilds Team"
+    },
+    {
+      "modId": "317519",
+      "title": "Lizard Bale Spear",
+      "category": "skidSteerVehicles",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=317519&title=fs2025",
+      "author": "Adub Modding ABP Team"
+    },
+    {
+      "modId": "308809",
+      "title": "Tool Inclination Helper",
+      "category": "forklifts",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=308809&title=fs2025",
+      "author": "Farmsim Tim (timmeey86)"
+    },
+    {
+      "modId": "306553",
+      "title": "Taillift Pack",
+      "category": "forklifts",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=306553&title=fs2025",
+      "author": "MaanTieBanaani"
+    },
+    {
+      "modId": "305255",
+      "title": "Gorenc Transfer Pack",
+      "category": "forklifts",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=305255&title=fs2025",
+      "author": "WOLFex Modding"
+    },
+    {
+      "modId": "329175",
+      "title": "New Holland 980CR Series Corn Heads",
+      "category": "harvesters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=329175&title=fs2025",
+      "author": "Jolly Farms Modding"
+    },
+    {
+      "modId": "322014",
+      "title": "Combine XPerience",
+      "category": "harvesters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=322014&title=fs2025",
+      "author": "yumi"
+    },
+    {
+      "modId": "340824",
+      "title": "Shredded Straw Addon",
+      "category": "forageHarvesters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=340824&title=fs2025",
+      "author": "Zetor6245, AlexL353_modding, waSchtl"
+    },
+    {
+      "modId": "336847",
+      "title": "Multi Fruit Harvester Pack",
+      "category": "beetHarvesters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=336847&title=fs2025",
+      "author": "tn4799"
+    },
+    {
+      "modId": "348964",
+      "title": "Box Tipper",
+      "category": "potatoHarvesting",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=348964&title=fs2025",
+      "author": "NicoPix's"
+    },
+    {
+      "modId": "341205",
+      "title": "Ropa Keiler RK22",
+      "category": "potatoHarvesting",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=341205&title=fs2025",
+      "author": "hirschenpower"
+    },
+    {
+      "modId": "334263",
+      "title": "Grimme Evo 280",
+      "category": "potatoHarvesting",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=334263&title=fs2025",
+      "author": "76-Max"
+    },
+    {
+      "modId": "328917",
+      "title": "Potato Washing System",
+      "category": "potatoHarvesting",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=328917&title=fs2025",
+      "author": "HoT online Team"
+    },
+    {
+      "modId": "336847",
+      "title": "Multi Fruit Harvester Pack",
+      "category": "vegetableHarvesters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=336847&title=fs2025",
+      "author": "tn4799"
+    },
+    {
+      "modId": "318149",
+      "title": "Custom Mission Vehicles",
+      "category": "vegetableHarvesters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=318149&title=fs2025",
+      "author": "Azhur"
+    },
+    {
+      "modId": "331724",
+      "title": "John Deere - FD 55 Fellerbuncher Head",
+      "category": "forestryHarvesters",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=331724&title=fs2025",
+      "author": "HR Forst und Fahrzeugbau"
+    },
+    {
+      "modId": "311615",
+      "title": "JCB 220X Excavator",
+      "category": "forestryExcavators",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=311615&title=fs2025",
+      "author": "RossN Mods"
+    },
+    {
+      "modId": "315853",
+      "title": "Demarec MQP-30",
+      "category": "forestryExcavators",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=315853&title=fs2025",
+      "author": "Angelo_smet"
+    },
+    {
+      "modId": "325602",
+      "title": "Arden BB2VBH 2200",
+      "category": "forestryExcavators",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=325602&title=fs2025",
+      "author": "Duysens-Agri/Nicodu55/Frabel"
+    },
+    {
+      "modId": "304002",
+      "title": "Easy Arm Controls Toggle",
+      "category": "forestryExcavators",
+      "url": "https://www.farming-simulator.com/mod.php?mod_id=304002&title=fs2025",
+      "author": "kenny456"
+    }
+  ],
+  "categories": {
+    "plows": {
+      "total": 24,
+      "fail": 0
+    },
+    "cultivators": {
+      "total": 24,
+      "fail": 0
+    },
+    "discHarrows": {
+      "total": 24,
+      "fail": 2
+    },
+    "powerHarrows": {
+      "total": 23,
+      "fail": 2
+    },
+    "subsoilers": {
+      "total": 24,
+      "fail": 4
+    },
+    "spaders": {
+      "total": 4,
+      "fail": 0
+    },
+    "stonePickers": {
+      "total": 10,
+      "fail": 3
+    },
+    "mulchers": {
+      "total": 24,
+      "fail": 3
+    },
+    "seeders": {
+      "total": 24,
+      "fail": 3
+    },
+    "planters": {
+      "total": 24,
+      "fail": 2
+    },
+    "seedTanks": {
+      "total": 7,
+      "fail": 0
+    },
+    "sprayers": {
+      "total": 24,
+      "fail": 9
+    },
+    "fertilizerSpreaders": {
+      "total": 23,
+      "fail": 11
+    },
+    "slurryTools": {
+      "total": 19,
+      "fail": 11
+    },
+    "manureSpreaders": {
+      "total": 24,
+      "fail": 8
+    },
+    "weeders": {
+      "total": 16,
+      "fail": 1
+    },
+    "rollers": {
+      "total": 24,
+      "fail": 4
+    },
+    "mowers": {
+      "total": 24,
+      "fail": 6
+    },
+    "tedders": {
+      "total": 23,
+      "fail": 3
+    },
+    "windrowers": {
+      "total": 24,
+      "fail": 2
+    },
+    "loaderWagons": {
+      "total": 24,
+      "fail": 2
+    },
+    "grasslandCare": {
+      "total": 12,
+      "fail": 6
+    },
+    "balersSquare": {
+      "total": 24,
+      "fail": 6
+    },
+    "balersRound": {
+      "total": 24,
+      "fail": 7
+    },
+    "baleWrappers": {
+      "total": 11,
+      "fail": 5
+    },
+    "balingMisc": {
+      "total": 18,
+      "fail": 17
+    },
+    "forageMixers": {
+      "total": 24,
+      "fail": 16
+    },
+    "barrels": {
+      "total": 24,
+      "fail": 22
+    },
+    "strawBlowers": {
+      "total": 10,
+      "fail": 6
+    },
+    "beetLoading": {
+      "total": 8,
+      "fail": 4
+    },
+    "potatoPlanting": {
+      "total": 3,
+      "fail": 0
+    },
+    "potatoHarvesting": {
+      "total": 14,
+      "fail": 4
+    },
+    "vegetablePlanters": {
+      "total": 4,
+      "fail": 1
+    },
+    "vineyardEquipment": {
+      "total": 24,
+      "fail": 16
+    },
+    "grapeTools": {
+      "total": 24,
+      "fail": 6
+    },
+    "forestryMulchers": {
+      "total": 10,
+      "fail": 2
+    },
+    "forestryWinches": {
+      "total": 10,
+      "fail": 2
+    },
+    "forestryPlanters": {
+      "total": 5,
+      "fail": 4
+    },
+    "forestryStumpCutters": {
+      "total": 2,
+      "fail": 2
+    },
+    "weights": {
+      "total": 24,
+      "fail": 24
+    },
+    "winterEquipment": {
+      "total": 17,
+      "fail": 12
+    },
+    "frontLoaders": {
+      "total": 24,
+      "fail": 11
+    },
+    "frontLoaderTools": {
+      "total": 24,
+      "fail": 21
+    },
+    "teleLoaderTools": {
+      "total": 24,
+      "fail": 18
+    },
+    "wheelLoaderTools": {
+      "total": 24,
+      "fail": 23
+    },
+    "skidSteerTools": {
+      "total": 21,
+      "fail": 13
+    },
+    "tractorsS": {
+      "total": 24,
+      "fail": 1
+    },
+    "tractorsM": {
+      "total": 24,
+      "fail": 0
+    },
+    "tractorsL": {
+      "total": 24,
+      "fail": 0
+    },
+    "trucks": {
+      "total": 24,
+      "fail": 0
+    },
+    "cars": {
+      "total": 24,
+      "fail": 5
+    },
+    "miscDrivables": {
+      "total": 24,
+      "fail": 8
+    },
+    "frontLoaderVehicles": {
+      "total": 20,
+      "fail": 3
+    },
+    "teleLoaderVehicles": {
+      "total": 24,
+      "fail": 5
+    },
+    "wheelLoaderVehicles": {
+      "total": 19,
+      "fail": 2
+    },
+    "skidSteerVehicles": {
+      "total": 11,
+      "fail": 1
+    },
+    "forklifts": {
+      "total": 17,
+      "fail": 3
+    },
+    "harvesters": {
+      "total": 24,
+      "fail": 2
+    },
+    "forageHarvesters": {
+      "total": 21,
+      "fail": 1
+    },
+    "beetHarvesters": {
+      "total": 10,
+      "fail": 1
+    },
+    "vegetableHarvesters": {
+      "total": 9,
+      "fail": 2
+    },
+    "riceHarvesters": {
+      "total": 0,
+      "fail": 0
+    },
+    "sugarcaneHarvesters": {
+      "total": 1,
+      "fail": 0
+    },
+    "cottonHarvesters": {
+      "total": 4,
+      "fail": 0
+    },
+    "grapeHarvesters": {
+      "total": 4,
+      "fail": 0
+    },
+    "oliveHarvesters": {
+      "total": 3,
+      "fail": 0
+    },
+    "forestryHarvesters": {
+      "total": 8,
+      "fail": 1
+    },
+    "forestryForwarders": {
+      "total": 9,
+      "fail": 0
+    },
+    "forestryExcavators": {
+      "total": 17,
+      "fail": 4
+    }
+  }
+}

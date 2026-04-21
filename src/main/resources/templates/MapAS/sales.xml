@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<sales>
+    <item timeLeft="29" isGenerated="true" xmlFilename="data/vehicles/heizomat/hm10500KF/hm10500KF.xml" age="18" price="50382" damage="0.510303" wear="0.785638" operatingTime="55433.925781"/>
+    <item timeLeft="30" isGenerated="true" xmlFilename="data/vehicles/fliegl/dts59/dts59.xml" age="7" price="18234" damage="0.583850" wear="0.566929" operatingTime="23451.644531">
+        <boughtConfiguration name="rimColor" id="3"/>
+    </item>
+    <item timeLeft="32" isGenerated="true" xmlFilename="data/vehicles/fliegl/dts59/dts59.xml" age="22" price="14634" damage="0.432591" wear="0.474189" operatingTime="61777.390625"/>
+    <item timeLeft="32" isGenerated="true" xmlFilename="data/vehicles/geringhoff/northStar1230FB/northStar1230FB.xml" age="7" price="63526" damage="0.203550" wear="0.993696" operatingTime="14313.005859"/>
+</sales>

@@ -1,0 +1,212 @@
+/* ── Fade In ── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Slide ── */
+@keyframes slideInLeft {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ── Skeleton Shimmer ── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Pulse ── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 8px var(--accent-glow); }
+  50% { box-shadow: 0 0 24px var(--accent-glow), 0 0 48px rgba(74, 222, 128, 0.1); }
+}
+
+/* ── Spin ── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ── Bounce ── */
+@keyframes bounceIn {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* ── Progress Bar ── */
+@keyframes progressStripe {
+  0% { background-position: 0 0; }
+  100% { background-position: 40px 0; }
+}
+
+/* ── Toast slide ── */
+@keyframes toastIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes toastOut {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
+}
+
+/* ── Utility classes ── */
+.animate-fade-in {
+  animation: fadeIn var(--duration-normal) var(--ease-out) both;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp var(--duration-normal) var(--ease-out) both;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft var(--duration-normal) var(--ease-out) both;
+}
+
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-surface) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* ── Staggered children ── */
+.stagger-children > * {
+  animation: fadeInUp var(--duration-normal) var(--ease-out) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 350ms; }
+.stagger-children > *:nth-child(9) { animation-delay: 400ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 450ms; }
+.stagger-children > *:nth-child(11) { animation-delay: 500ms; }
+.stagger-children > *:nth-child(12) { animation-delay: 550ms; }
+.stagger-children > *:nth-child(13) { animation-delay: 600ms; }
+.stagger-children > *:nth-child(14) { animation-delay: 650ms; }
+.stagger-children > *:nth-child(15) { animation-delay: 700ms; }
+.stagger-children > *:nth-child(16) { animation-delay: 750ms; }
+.stagger-children > *:nth-child(17) { animation-delay: 800ms; }
+.stagger-children > *:nth-child(18) { animation-delay: 850ms; }
+.stagger-children > *:nth-child(19) { animation-delay: 900ms; }
+.stagger-children > *:nth-child(20) { animation-delay: 950ms; }
+.stagger-children > *:nth-child(21) { animation-delay: 1000ms; }
+.stagger-children > *:nth-child(22) { animation-delay: 1050ms; }
+.stagger-children > *:nth-child(23) { animation-delay: 1100ms; }
+.stagger-children > *:nth-child(24) { animation-delay: 1150ms; }
+.stagger-children > *:nth-child(n+25) { animation-delay: 1200ms; }
+
+/* ── Corn Field Background Animation ── */
+@keyframes scroll-background {
+  from { background-position: 0 0; }
+  to { background-position: -1000px 0; }
+}
+
+.animate-scroll {
+  animation: scroll-background 20s linear infinite;
+}
+
+@keyframes wheel-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes smoke-puff {
+  0% { 
+    opacity: 0; 
+    transform: translate(0, 0) scale(0.4); 
+  }
+  20% { 
+    opacity: 0.4; 
+  }
+  100% { 
+    opacity: 0; 
+    transform: translate(30px, -60px) scale(2.5); 
+  }
+}
+
+.animate-wheel {
+  animation: wheel-spin 1.5s linear infinite;
+}
+
+.animate-wheel-svg {
+  transform-origin: center;
+  animation: wheel-spin 1.5s linear infinite;
+}
+
+@keyframes smoke-puff-svg {
+  0% { 
+    opacity: 0; 
+    transform: translate(0, 0) scale(0.5); 
+  }
+  20% { 
+    opacity: 0.8; 
+  }
+  100% { 
+    opacity: 0; 
+    transform: translate(60px, -120px) scale(3); 
+  }
+}
+
+.p1 { animation-delay: 0s; }
+.p2 { animation-delay: 0.7s; }
+.p3 { animation-delay: 1.4s; }
+
+.animate-smoke {
+  animation: smoke-puff 2s ease-out infinite;
+}

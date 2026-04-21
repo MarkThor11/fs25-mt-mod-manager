@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<missions version="0">
+    <treeTransportMission numTrees="19" uniqueId="mission3f8145abf68c07a27d058dee981a8fa7" status="CREATED" finishState="NONE" spotIndex="6" numDeliveredTrees="0" numDeletedTrees="0">
+        <info reward="4845" reimbursement="0.000000" completion="0.000000"/>
+        <vehicles spawned="false" group="1"/>
+        <endDate endDay="8" endDayTime="57600000"/>
+        <sellingStation uniqueId="preplaced_sawmill_5c35894c280cfd42969ad726f354a56f" unloadingStationIndex="1"/>
+    </treeTransportMission>
+</missions>

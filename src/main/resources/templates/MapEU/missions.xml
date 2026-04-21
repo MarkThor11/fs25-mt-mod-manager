@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<missions version="0">
+    <fertilizeMission uniqueId="missiond9765ab41d909548b18fb44a1bed8020" status="CREATED" finishState="NONE" targetSprayLevel="2">
+        <info reward="0" reimbursement="0.000000" completion="0.000000"/>
+        <vehicles spawned="false" group="1"/>
+        <endDate endDay="6" endDayTime="86399999"/>
+        <field id="24"/>
+    </fertilizeMission>
+</missions>

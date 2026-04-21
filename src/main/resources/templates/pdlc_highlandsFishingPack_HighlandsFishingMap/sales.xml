@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<sales>
+    <item timeLeft="25" isGenerated="true" xmlFilename="data/vehicles/johnDeere/headerC16F/headerC16F.xml" age="10" price="77241" damage="0.547997" wear="0.721947" operatingTime="35834.433594"/>
+    <item timeLeft="20" isGenerated="true" xmlFilename="data/vehicles/elmersMfg/super7/super7.xml" age="11" price="27374" damage="0.223392" wear="0.370790" operatingTime="50052.019531"/>
+    <item timeLeft="30" isGenerated="true" xmlFilename="data/vehicles/kuhn/hr6040RCS/hr6040RCS.xml" age="31" price="18292" damage="0.293972" wear="0.451470" operatingTime="89169.562500"/>
+    <item timeLeft="26" isGenerated="true" xmlFilename="data/vehicles/samsonAgro/sbh4_36/sbh4_36.xml" age="39" price="48241" damage="0.580368" wear="0.411583" operatingTime="98807.445312"/>
+</sales>

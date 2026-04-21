@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<collectibles isComplete="false">
+    <collectible index="8" collected="false"/>
+    <collectible index="3" collected="false"/>
+    <collectible index="7" collected="false"/>
+    <collectible index="4" collected="false"/>
+    <collectible index="11" collected="false"/>
+    <collectible index="6" collected="false"/>
+    <collectible index="1" collected="false"/>
+    <collectible index="10" collected="false"/>
+    <collectible index="12" collected="false"/>
+    <collectible index="5" collected="false"/>
+    <collectible index="9" collected="false"/>
+    <collectible index="2" collected="false"/>
+</collectibles>

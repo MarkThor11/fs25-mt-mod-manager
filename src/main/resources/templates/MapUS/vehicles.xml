@@ -1,0 +1,375 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<vehicles>
+    <vehicle filename="data/vehicles/challenger/mt655/mt655.xml" uniqueId="vehicled58bd6c2d631bd41715e4b05577c88e1" age="24.000000" price="59620.000000" farmId="1" propertyState="OWNED" operatingTime="293237.000000" tourId="tourTractor1" selectedObjectIndex="1" subSelectedObjectIndex="1">
+        <component index="1" position="-708.062 47.067 92.272" rotation="-179.73 0.14 180.00"/>
+        <component index="2" position="-708.057 47.787 90.371" rotation="-179.73 0.14 -180.00"/>
+        <configuration name="fillUnit" id="1" isActive="true"/>
+        <configuration name="design" id="1" isActive="true"/>
+        <configuration name="attacherJoint" id="8" isActive="true"/>
+        <configuration name="motor" id="1" isActive="true"/>
+        <configuration name="wheel" id="DEFAULT_TRELLEBORG_TM900" isActive="true"/>
+        <washable>
+            <dirtNode amount="0.750000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+        </washable>
+        <wearable damage="0.119000">
+            <wearNode amount="0.520000"/>
+        </wearable>
+        <wheels lastConfigId="DEFAULT_TRELLEBORG_TM900"/>
+        <enterable activeCameraIndex="1" isTabbable="true" isLeavingAllowed="true">
+            <camera rotation="-20.00 180.00 0.00" translation="0.000 0.000 6.500" zoom="6.500010" fovY="64.432205"/>
+            <camera rotation="-18.00 180.00 0.00" translation="0.000 2.770 -0.628" zoom="2.839809" fovY="70.000000"/>
+        </enterable>
+        <fillUnit>
+            <unit index="1" fillType="DIESEL" fillLevel="454.000000"/>
+            <unit index="2" fillType="AIR" fillLevel="4000.000000"/>
+        </fillUnit>
+        <drivable cruiseControl="40" cruiseControlReverse="12" odometerMilage="0.000005"/>
+        <aiFieldWorker isActive="false"/>
+        <aiJobVehicle isAIStartAllowed="true"/>
+        <aiAutomaticSteering courseWasActive="true" isOnField="false"/>
+        <aiModeSelection currentMode="WORKER"/>
+        <attacherJoints comboDirection="-1">
+            <attachedImplement jointIndex="2" moveDown="false" attachedVehicleUniqueId="vehicle555d5e8cf2c8e4f54aeebedcb4a9014e" inputJointIndex="1"/>
+        </attacherJoints>
+    </vehicle>
+    <vehicle filename="data/vehicles/johnDeere/cultivator980/cultivator980.xml" uniqueId="vehicle555d5e8cf2c8e4f54aeebedcb4a9014e" age="21.000000" price="9500.000000" farmId="1" propertyState="OWNED" operatingTime="238716.000000" tourId="tourCultivator">
+        <component index="1" position="-708.115 46.948 98.263" rotation="-179.10 0.68 180.00"/>
+        <component index="2" position="-709.430 47.385 99.231" rotation="-179.95 0.68 180.00"/>
+        <component index="3" position="-706.823 47.385 99.261" rotation="179.99 0.68 180.00"/>
+        <component index="4" position="-708.150 47.487 101.234" rotation="-179.10 0.68 180.00"/>
+        <configuration name="folding" id="1" isActive="true"/>
+        <configuration name="wheel" id="BKT_DEFAULT" isActive="true"/>
+        <washable>
+            <dirtNode amount="0.750000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+        </washable>
+        <wearable damage="0.103000">
+            <wearNode amount="0.512000"/>
+        </wearable>
+        <wheels lastConfigId="BKT_DEFAULT"/>
+        <attachable isDetachingBlocked="false"/>
+        <attacherJoints comboDirection="-1"/>
+        <foldable foldAnimTime="1.000000" isAllowed="true"/>
+    </vehicle>
+    <vehicle filename="data/vehicles/greatPlains/seeder1500/seeder1500.xml" uniqueId="vehicle79c21548dffdab24529c36e24c35d328" age="21.000000" price="49500.000000" farmId="1" propertyState="OWNED" operatingTime="257237.000000" tourId="tourSeeder" selectedObjectIndex="1" subSelectedObjectIndex="1">
+        <component index="1" position="-707.725 47.133 113.986" rotation="-5.43 -0.96 0.11"/>
+        <component index="2" position="-707.695 48.501 112.074" rotation="2.33 -0.96 0.10"/>
+        <configuration name="fillUnit" id="1" isActive="true"/>
+        <configuration name="rimColor" id="1" isActive="true"/>
+        <configuration name="fillVolume" id="1" isActive="true"/>
+        <configuration name="vehicleType" id="1" isActive="true"/>
+        <configuration name="folding" id="1" isActive="true"/>
+        <configuration name="cover" id="1" isActive="true"/>
+        <configuration name="wheel" id="BKT_DEFAULT" isActive="true"/>
+        <washable>
+            <dirtNode amount="0.750000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+        </washable>
+        <wearable damage="0.089000">
+            <wearNode amount="0.492000"/>
+        </wearable>
+        <wheels lastConfigId="BKT_DEFAULT"/>
+        <attachable isDetachingBlocked="false"/>
+        <attacherJoints comboDirection="-1"/>
+        <foldable foldAnimTime="1.000000" isAllowed="true"/>
+        <fillUnit>
+            <unit index="1" fillType="UNKNOWN" fillLevel="0.000000"/>
+        </fillUnit>
+        <cover state="0"/>
+        <sowingMachine selectedSeedFruitType="WHEAT" allowsSeedChanging="true"/>
+    </vehicle>
+    <vehicle filename="data/vehicles/johnDeere/series3650/series3650.xml" uniqueId="vehicle840fd882892d9fd6b1ae5c51fa750c74" age="27.000000" price="45000.000000" farmId="1" propertyState="OWNED" operatingTime="333383.000000" tourId="tourTractor2" selectedObjectIndex="1" subSelectedObjectIndex="1">
+        <component index="1" position="-720.870 47.022 103.502" rotation="-0.85 -89.29 -0.00"/>
+        <component index="2" position="-722.211 47.679 103.519" rotation="-1.03 -89.29 0.18"/>
+        <configuration name="fillUnit" id="1" isActive="true"/>
+        <configuration name="frontloader" id="1" isActive="true"/>
+        <configuration name="attacherJoint" id="1" isActive="true"/>
+        <configuration name="motor" id="1" isActive="true"/>
+        <configuration name="wheel" id="DEFAULT_TRELLEBORG_TM600" isActive="true"/>
+        <washable>
+            <dirtNode amount="0.750000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+        </washable>
+        <wearable damage="0.109000">
+            <wearNode amount="0.530000"/>
+        </wearable>
+        <wheels lastConfigId="DEFAULT_TRELLEBORG_TM600"/>
+        <enterable activeCameraIndex="1" isTabbable="true" isLeavingAllowed="true">
+            <camera rotation="-19.00 180.00 0.00" translation="0.000 0.000 6.100" zoom="6.100010" fovY="64.432205"/>
+            <camera rotation="-18.00 180.00 0.00" translation="0.000 2.500 -1.300" zoom="2.817811" fovY="70.000000"/>
+        </enterable>
+        <fillUnit>
+            <unit index="1" fillType="DIESEL" fillLevel="118.000000"/>
+            <unit index="2" fillType="AIR" fillLevel="3000.000000"/>
+        </fillUnit>
+        <drivable cruiseControl="38" cruiseControlReverse="13" odometerMilage="0.000004"/>
+        <aiFieldWorker isActive="false"/>
+        <aiJobVehicle isAIStartAllowed="true"/>
+        <aiAutomaticSteering courseWasActive="true" isOnField="false"/>
+        <aiModeSelection currentMode="WORKER"/>
+        <attacherJoints comboDirection="-1"/>
+    </vehicle>
+    <vehicle filename="data/vehicles/masseyFerguson/mf8570Header/mf8570Header.xml" uniqueId="vehicle8fd6ff8a3eaeb179f53c8ad8cffa230a" age="22.000000" price="30000.000000" farmId="1" propertyState="OWNED" operatingTime="287709.000000" tourId="tourHeader" selectedObjectIndex="1" subSelectedObjectIndex="1">
+        <component index="1" position="-746.109 48.108 159.973" rotation="-24.96 -4.35 -0.17"/>
+        <configuration name="designColor" id="1" isActive="true"/>
+        <washable>
+            <dirtNode amount="0.750000" wetness="0.000000"/>
+        </washable>
+        <wearable damage="0.092000">
+            <wearNode amount="0.440000"/>
+        </wearable>
+        <cylindered>
+            <movingTool translation="0.000000"/>
+            <movingTool rotation="-22.000000"/>
+        </cylindered>
+        <attachable isDetachingBlocked="false"/>
+        <attacherJoints comboDirection="-1"/>
+        <fruitExtraObjects lastFruitType="UNKNOWN"/>
+        <cutter cutHeight="0.150000"/>
+    </vehicle>
+    <vehicle filename="data/vehicles/masseyFerguson/mf8570/mf8570.xml" uniqueId="vehiclef901de4f85f1f6d257b9cfbcca216a89" age="22.000000" price="104500.000000" farmId="1" propertyState="OWNED" operatingTime="309375.000000" tourId="tourCombine" selectedObjectIndex="2" subSelectedObjectIndex="1">
+        <component index="1" position="-738.246 47.042 159.601" rotation="-0.10 90.00 0.00"/>
+        <component index="2" position="-739.956 47.714 159.601" rotation="-0.10 90.00 0.00"/>
+        <configuration name="folding" id="1" isActive="true"/>
+        <configuration name="fillVolume" id="1" isActive="true"/>
+        <configuration name="fillUnit" id="1" isActive="true"/>
+        <configuration name="motor" id="1" isActive="true"/>
+        <configuration name="wheel" id="DEFAULT_TRELLEBORG_TM600" isActive="true"/>
+        <washable>
+            <dirtNode amount="0.750000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+        </washable>
+        <wearable damage="0.114000">
+            <wearNode amount="0.437000"/>
+        </wearable>
+        <wheels lastConfigId="DEFAULT_TRELLEBORG_TM600"/>
+        <enterable activeCameraIndex="1" isTabbable="true" isLeavingAllowed="true">
+            <camera rotation="-20.30 180.00 0.00" translation="0.000 0.000 8.400" zoom="8.400009" fovY="64.432205"/>
+            <camera rotation="-28.00 180.00 0.00" translation="0.694 3.299 2.470" zoom="4.178922" fovY="85.000000"/>
+        </enterable>
+        <fillUnit>
+            <unit index="1" fillType="UNKNOWN" fillLevel="0.000000"/>
+            <unit index="2" fillType="DIESEL" fillLevel="378.000000"/>
+        </fillUnit>
+        <drivable cruiseControl="27" cruiseControlReverse="15" odometerMilage="0.000008"/>
+        <aiFieldWorker isActive="false"/>
+        <aiJobVehicle isAIStartAllowed="true"/>
+        <aiAutomaticSteering courseWasActive="true" isOnField="false"/>
+        <aiModeSelection currentMode="WORKER"/>
+        <attacherJoints comboDirection="-1">
+            <attachedImplement jointIndex="2" moveDown="false" attachedVehicleUniqueId="vehicle3d252a6ac936e5506ee0443de3f39a00" inputJointIndex="1"/>
+        </attacherJoints>
+        <dischargeable isAllowed="true"/>
+        <foldable foldAnimTime="1.000000" isAllowed="true"/>
+        <combine isSwathActive="true" workedHectars="0.000000" numAttachedCutters="0"/>
+        <pipe state="1" isStateChangeAllowed="true"/>
+    </vehicle>
+    <vehicle filename="data/vehicles/masseyFerguson/mf8570Trailer/mf8570Trailer.xml" uniqueId="vehicle3d252a6ac936e5506ee0443de3f39a00" age="22.000000" price="1000.000000" farmId="1" propertyState="OWNED" operatingTime="290805.000000" tourId="tourHeaderTrailer">
+        <component index="1" position="-744.690 47.025 159.272" rotation="0.49 85.65 0.33"/>
+        <configuration name="wheel" id="DEFAULT" isActive="true"/>
+        <washable>
+            <dirtNode amount="0.750000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+        </washable>
+        <wearable damage="0.094000">
+            <wearNode amount="0.382000"/>
+        </wearable>
+        <wheels lastConfigId="DEFAULT"/>
+        <attachable isDetachingBlocked="false"/>
+        <attacherJoints comboDirection="-1"/>
+    </vehicle>
+    <vehicle filename="data/objects/bigBag/seeds/bigBag_seeds.xml" uniqueId="vehicleb0359dde1ccf0114f2353e3cb9eeb2d4" age="0.000000" price="1260.000000" farmId="1" propertyState="OWNED" operatingTime="0.000000" tourId="tourSeedsPallet" selectedObjectIndex="1" subSelectedObjectIndex="1">
+        <component index="1" position="-704.000 47.033 122.000" rotation="-0.00 -0.00 0.00"/>
+        <component index="2" position="-704.000 48.304 122.000" rotation="-0.00 -0.00 -0.00"/>
+        <configuration name="fillUnit" id="1" isActive="true"/>
+        <fillUnit>
+            <unit index="1" fillType="SEEDS" fillLevel="1000.000000"/>
+        </fillUnit>
+        <dischargeable isAllowed="true"/>
+        <pallet age="0.582384"/>
+        <attachable isDetachingBlocked="false"/>
+    </vehicle>
+    <vehicle filename="data/vehicles/farmtech/edk650/edk650.xml" uniqueId="vehicle99fa2e72d2524f0d534eb68ea67bd63d" age="19.000000" price="9000.000000" farmId="1" propertyState="OWNED" operatingTime="124525.000000" tourId="tourTrailer" selectedObjectIndex="1" subSelectedObjectIndex="1">
+        <component index="1" position="-760.000 47.002 129.000" rotation="0.24 -90.00 0.00"/>
+        <configuration name="fillUnit" id="1" isActive="false"/>
+        <configuration name="fillUnit" id="3" isActive="true"/>
+        <configuration name="tensionBelts" id="1" isActive="true"/>
+        <configuration name="trailer" id="1" isActive="false"/>
+        <configuration name="trailer" id="2" isActive="true"/>
+        <configuration name="designColor" id="1" isActive="true"/>
+        <configuration name="dischargeable" id="1" isActive="false"/>
+        <configuration name="dischargeable" id="2" isActive="true"/>
+        <configuration name="fillVolume" id="1" isActive="false"/>
+        <configuration name="fillVolume" id="3" isActive="true"/>
+        <configuration name="design" id="1" isActive="true"/>
+        <configuration name="attacherJoint" id="1" isActive="true"/>
+        <configuration name="baseColor" id="1" isActive="true"/>
+        <configuration name="wheel" id="DEFAULT_BKT_ridemaxFL693M" isActive="true"/>
+        <washable>
+            <dirtNode amount="0.750000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+            <dirtNode amount="0.750000" wetness="0.000000" snowScale="0.000000"/>
+            <dirtNode amount="0.000000" wetness="0.000000"/>
+        </washable>
+        <wearable damage="0.087000">
+            <wearNode amount="0.510000"/>
+        </wearable>
+        <wheels lastConfigId="DEFAULT_BKT_ridemaxFL693M"/>
+        <attachable isDetachingBlocked="false"/>
+        <attacherJoints comboDirection="-1"/>
+        <fillUnit>
+            <unit index="1" fillType="UNKNOWN" fillLevel="0.000000"/>
+        </fillUnit>
+        <dischargeable isAllowed="true"/>
+        <trailer tipSideIndex="1" doorState="false" tipAnimationTime="0.000000" tipState="0"/>
+    </vehicle>
+    <vehicle filename="data/vehicles/train/locomotiveUS/forestryLocomotive.xml" uniqueId="vehiclee8541f1754d1685522fa67793e6c5832" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="9.167010" selectedObjectIndex="5" subSelectedObjectIndex="1">
+        <component index="1" position="-1069.698 54.689 -1160.684" rotation="-1.09 -68.71 0.00"/>
+        <configuration name="motor" id="1" isActive="true"/>
+        <configuration name="wheel" id="1" isActive="true"/>
+        <wheels lastConfigId="1"/>
+        <enterable activeCameraIndex="1" isTabbable="false" isLeavingAllowed="true">
+            <camera rotation="-24.00 180.00 0.00" translation="0.000 0.000 16.000" zoom="16.000010" fovY="64.432205"/>
+            <camera rotation="0.00 180.00 0.00" translation="-1.108 3.590 -4.552" zoom="5.902007" fovY="70.000000"/>
+        </enterable>
+        <drivable cruiseControl="80" cruiseControlReverse="80" odometerMilage="0.113209"/>
+        <attacherJoints comboDirection="-1">
+            <attachedImplement jointIndex="1" moveDown="false" attachedVehicleUniqueId="vehiclef1ec46591b5644c5ef81c60a25b723fc" inputJointIndex="1"/>
+        </attacherJoints>
+    </vehicle>
+    <vehicle filename="data/vehicles/train/wagonGrainEU/wagonGrainEU.xml" uniqueId="vehiclef1ec46591b5644c5ef81c60a25b723fc" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="9.167010">
+        <component index="1" position="-1056.628 54.421 -1165.754" rotation="-1.13 -69.14 0.00"/>
+        <configuration name="fillUnit" id="1" isActive="true"/>
+        <configuration name="fillVolume" id="1" isActive="true"/>
+        <configuration name="trailer" id="1" isActive="true"/>
+        <configuration name="cover" id="1" isActive="true"/>
+        <configuration name="wheel" id="1" isActive="true"/>
+        <wheels lastConfigId="1"/>
+        <attacherJoints comboDirection="-1">
+            <attachedImplement jointIndex="1" moveDown="false" attachedVehicleUniqueId="vehicle583441a25e26af78ed7ae3ff49098e9e" inputJointIndex="1"/>
+        </attacherJoints>
+        <attachable isDetachingBlocked="false"/>
+        <fillUnit>
+            <unit index="1" fillType="UNKNOWN" fillLevel="0.000000"/>
+        </fillUnit>
+        <dischargeable isAllowed="true"/>
+        <trailer doorState="false" tipAnimationTime="0.000000" tipState="0"/>
+        <cover state="0"/>
+    </vehicle>
+    <vehicle filename="data/vehicles/train/wagonSugarbeetsEU/wagonSugarbeetsEU.xml" uniqueId="vehicle583441a25e26af78ed7ae3ff49098e9e" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="9.167010">
+        <component index="1" position="-1039.784 54.063 -1172.150" rotation="-1.19 -69.65 0.00"/>
+        <configuration name="fillUnit" id="1" isActive="true"/>
+        <configuration name="fillVolume" id="1" isActive="true"/>
+        <configuration name="trailer" id="1" isActive="true"/>
+        <configuration name="cover" id="1" isActive="true"/>
+        <configuration name="wheel" id="1" isActive="true"/>
+        <wheels lastConfigId="1"/>
+        <attacherJoints comboDirection="-1">
+            <attachedImplement jointIndex="1" moveDown="false" attachedVehicleUniqueId="vehicle59571fe1df992bc6185ff5d6897a0814" inputJointIndex="1"/>
+        </attacherJoints>
+        <attachable isDetachingBlocked="false"/>
+        <fillUnit>
+            <unit index="1" fillType="UNKNOWN" fillLevel="0.000000"/>
+        </fillUnit>
+        <dischargeable isAllowed="true"/>
+        <trailer doorState="false" tipAnimationTime="0.000000" tipState="0"/>
+        <cover state="0"/>
+    </vehicle>
+    <vehicle filename="data/vehicles/train/wagonWoodChipsEU/wagonWoodChipsEU.xml" uniqueId="vehicle59571fe1df992bc6185ff5d6897a0814" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="9.167010">
+        <component index="1" position="-1018.346 53.586 -1180.064" rotation="-1.25 -70.19 0.00"/>
+        <configuration name="fillUnit" id="1" isActive="true"/>
+        <configuration name="trailer" id="1" isActive="true"/>
+        <configuration name="fillVolume" id="1" isActive="true"/>
+        <configuration name="wheel" id="1" isActive="true"/>
+        <wheels lastConfigId="1"/>
+        <attacherJoints comboDirection="-1">
+            <attachedImplement jointIndex="1" moveDown="false" attachedVehicleUniqueId="vehiclec5739b9fda57db22005cfdf04c1ec2de" inputJointIndex="1"/>
+        </attacherJoints>
+        <attachable isDetachingBlocked="false"/>
+        <fillUnit>
+            <unit index="1" fillType="UNKNOWN" fillLevel="0.000000"/>
+        </fillUnit>
+        <dischargeable isAllowed="true"/>
+        <trailer doorState="false" tipAnimationTime="0.000000" tipState="0"/>
+    </vehicle>
+    <vehicle filename="data/vehicles/train/wagonTimberUS/wagonTimberUS.xml" uniqueId="vehiclec5739b9fda57db22005cfdf04c1ec2de" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="9.167010">
+        <component index="1" position="-1001.113 53.184 -1186.245" rotation="-1.30 -70.65 0.00"/>
+        <configuration name="tensionBelts" id="1" isActive="true"/>
+        <configuration name="wheel" id="1" isActive="true"/>
+        <wheels lastConfigId="1"/>
+        <attacherJoints comboDirection="-1">
+            <attachedImplement jointIndex="1" moveDown="false" attachedVehicleUniqueId="vehicle6eae8ab0a5b8b7388028b67d1c1649e6" inputJointIndex="1"/>
+        </attacherJoints>
+        <attachable isDetachingBlocked="false"/>
+        <tensionBelts>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+        </tensionBelts>
+    </vehicle>
+    <vehicle filename="data/vehicles/train/wagonFlatBedUS/wagonFlatBedUS.xml" uniqueId="vehicle6eae8ab0a5b8b7388028b67d1c1649e6" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="9.167010">
+        <component index="1" position="-983.727 52.763 -1192.316" rotation="-1.36 -71.19 0.00"/>
+        <configuration name="tensionBelts" id="1" isActive="true"/>
+        <configuration name="wheel" id="1" isActive="true"/>
+        <wheels lastConfigId="1"/>
+        <attacherJoints comboDirection="-1"/>
+        <attachable isDetachingBlocked="false"/>
+        <tensionBelts>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+            <belt isActive="false"/>
+        </tensionBelts>
+    </vehicle>
+</vehicles>

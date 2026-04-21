@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<sales>
+    <item timeLeft="25" isGenerated="true" xmlFilename="data/vehicles/annaburger/aw2207/aw2207.xml" age="25" price="14597" damage="0.563430" wear="0.880492" operatingTime="96731.703125"/>
+    <item timeLeft="26" isGenerated="true" xmlFilename="data/vehicles/masseyFerguson/mf8570Header/mf8570Header.xml" age="35" price="10104" damage="0.299914" wear="0.799556" operatingTime="129168.750000"/>
+    <item timeLeft="34" isGenerated="true" xmlFilename="data/vehicles/vaderstad/topDown600/topDown600.xml" age="18" price="40800" damage="0.549548" wear="0.920252" operatingTime="40614.644531" configSetIndex="2"/>
+    <item timeLeft="33" isGenerated="true" xmlFilename="data/vehicles/manitou/m504/m504.xml" age="28" price="34398" damage="0.305330" wear="0.874738" operatingTime="89645.242188"/>
+</sales>
