@@ -72,7 +72,7 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.png"
     },
     "nsis": {
       "oneClick": true,
