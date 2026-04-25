@@ -34,4 +34,4 @@ jobs:
           release: true
           # For macOS, we need to skip signing unless the user provides certificates
           # We'll build an unsigned DMG for now.
-          mac_args: "-c.mac.identity=null"
+          args: "-c.mac.identity=null"
