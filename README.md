@@ -22,22 +22,5 @@ A premium desktop application for managing mods, savegames, and system performan
 - **Database**: SQLite (via better-sqlite3)
 - **Icons**: Lucide React
 
-## 📦 Installation & Build
 
-### Development
-```bash
-npm install
-npm run dev
-```
-
-### Build Production
-```bash
-npm run dist:win
-```
-
-## 🤝 Contribution
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
----
 *Not affiliated with GIANTS Software.*
