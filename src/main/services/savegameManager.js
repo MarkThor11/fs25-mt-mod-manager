@@ -23,6 +23,33 @@ const parser = new XMLParser({
     parseTagValue: false
 });
 
+// Helper to safely extract arrays from parsed XML
+const getXMLArray = (obj, rootTag, itemTag) => {
+    if (!obj) return [];
+    // Case 1: { vehicles: { vehicle: [...] } }
+    if (obj[rootTag] && obj[rootTag][itemTag]) {
+        return Array.isArray(obj[rootTag][itemTag]) ? obj[rootTag][itemTag] : [obj[rootTag][itemTag]];
+    }
+    // Case 2: { vehicle: [...] } (root stripped)
+    if (obj[itemTag]) {
+        return Array.isArray(obj[itemTag]) ? obj[itemTag] : [obj[itemTag]];
+    }
+    // Case 3: { vehicles: [...] } (items directly under root tag)
+    if (obj[rootTag] && Array.isArray(obj[rootTag])) return obj[rootTag];
+    
+    // Case 4: Deep search for the root tag if it's nested under ?xml
+    if (obj['?xml'] || Object.keys(obj).length > 1) {
+        for (const key in obj) {
+            if (key === rootTag || key === itemTag) continue;
+            if (typeof obj[key] === 'object') {
+                const res = getXMLArray(obj[key], rootTag, itemTag);
+                if (res.length > 0) return res;
+            }
+        }
+    }
+    return [];
+};
+
 const builder = new XMLBuilder({ 
     ignoreAttributes: false, 
     attributeNamePrefix: '@_', 
@@ -528,224 +555,568 @@ async function getAllSavegames() {
 /**
  * Get surgical data for transfer
  */
-async function getSavegameTransferData(savePath) {
-    const data = { money: 0, products: [], animals: [] };
+/**
+ * Unified Data Extraction Layer
+ * Parses all relevant XMLs and normalizes into TransferItems
+ */
+async function getSavegameTransferData({ savePath }) {
+    debugLog(`[TRANSFER] Loading data from ${savePath}`);
+    const data = { 
+        money: 0, 
+        items: [], // All normalized TransferItems
+        farms: [], // Available farms for selection
+        mods: []   // Installed mods in this save
+    };
     
-    // 1. Money
-    const farmsPath = path.join(savePath, 'farms.xml');
-    if (fs.existsSync(farmsPath)) {
-        const xml = await fs.readFile(farmsPath, 'utf8');
+    // 1. Get Mods (for validation)
+    const careerPath = path.join(savePath, 'careerSavegame.xml');
+    if (fs.existsSync(careerPath)) {
+        debugLog("Parsing careerSavegame.xml...");
+        const xml = await fs.readFile(careerPath, 'utf8');
         const parsed = parser.parse(xml);
-        const farm = Array.isArray(parsed.farms.farm) ? parsed.farms.farm[0] : parsed.farms.farm;
-        data.money = parseFloat(farm['@_money'] || 0);
+        const career = parsed.careerSavegame || parsed;
+        
+        // Extract Mods
+        const modEntries = getXMLArray(career, 'mods', 'mod');
+        data.mods = modEntries.map(m => m?.['@_modName']).filter(Boolean);
+
+        // Extract Stats (Global Money as fallback)
+        if (career.statistics) {
+            data.money = parseFloat(career.statistics['@_money'] || career.statistics.money || 0);
+        }
     }
 
-    // 2. Products (Silos)
+    // 2. Get Farms (Multiplayer/Farm Selection)
+    const farmsPath = path.join(savePath, 'farms.xml');
+    if (fs.existsSync(farmsPath)) {
+        debugLog("Parsing farms.xml...");
+        const xml = await fs.readFile(farmsPath, 'utf8');
+        const parsed = parser.parse(xml);
+        const farms = getXMLArray(parsed, 'farms', 'farm');
+        
+        data.farms = farms.map(f => ({
+            id: parseInt(f['@_farmId'] || 1),
+            name: f['@_name'] || `Farm ${f['@_farmId'] || 1}`,
+            money: parseFloat(f['@_money'] || 0)
+        }));
+
+        // Use the first farm's money if available
+        if (data.farms.length > 0) {
+            data.money = data.farms[0].money;
+        }
+    }
+
+    // 3. Extract Assets (Vehicles, Items, Placeables, Animals)
+    const assets = [];
+
+    // --- A. Vehicles & Tools (vehicles.xml) ---
+    const vehsPath = path.join(savePath, 'vehicles.xml');
+    if (fs.existsSync(vehsPath)) {
+        const xml = await fs.readFile(vehsPath, 'utf8');
+        const parsed = parser.parse(xml);
+        
+        // Robust vehicle list extraction
+        let rawVehicles = [];
+        if (parsed.vehicles && parsed.vehicles.vehicle) {
+            rawVehicles = Array.isArray(parsed.vehicles.vehicle) ? parsed.vehicles.vehicle : [parsed.vehicles.vehicle];
+        } else if (parsed.vehicle) {
+            rawVehicles = Array.isArray(parsed.vehicle) ? parsed.vehicle : [parsed.vehicle];
+        }
+
+        rawVehicles.forEach(v => {
+            if (!v || typeof v !== 'object') return;
+            // EXCLUDE leased and mission items (user requested)
+            if (v['@_isLeased'] === 'true' || v['@_propertyState'] === 'MISSION') return;
+            if (!v['@_filename']) return;
+
+            const filename = (v['@_filename'] || '').toLowerCase();
+            const modName = v['@_modName'];
+            const isMotorized = v['@_isMotorized'] === 'true' || 
+                               v.motorized !== undefined || 
+                               v.fuelConsumer !== undefined || 
+                               v.drivable !== undefined || 
+                               v.enterable !== undefined ||
+                               v.wheels !== undefined; // Wheels are a strong indicator of a vehicle/implement
+
+            let category = isMotorized ? "vehicle" : "tool";
+            if (isPallet) category = "pallet";
+            else if (isBale) category = "bale";
+            else if (isHandtool) category = "tool";
+            
+            assets.push({
+                category: category,
+                displayName: path.basename(v['@_filename'], '.xml').replace(/_/g, ' ').toUpperCase(),
+                filename: v['@_filename'],
+                modName: modName,
+                farmId: parseInt(v['@_farmId'] || 1),
+                data: v, // Keep original for transfer
+                quantity: 1
+            });
+        });
+    }
+
+    // --- B. Pallets, Bags, Bales (items.xml) ---
+    const itemsPath = path.join(savePath, 'items.xml');
+    if (fs.existsSync(itemsPath)) {
+        const xml = await fs.readFile(itemsPath, 'utf8');
+        const parsed = parser.parse(xml);
+        const itemsRoot = parsed.items || parsed;
+        const items = Array.isArray(itemsRoot.item) ? itemsRoot.item : [itemsRoot.item].filter(Boolean);
+        
+        items.forEach(item => {
+            const filename = (item['@_filename'] || '').toLowerCase();
+            const isBale = filename.includes('bale');
+            const isPallet = filename.includes('pallet') || filename.includes('bigbag');
+            const isHandtool = filename.includes('handtool') || filename.includes('chainsaw');
+
+            let category = "pallet"; // Default for items.xml
+            if (isBale) category = "bale";
+            else if (isHandtool) category = "tool";
+            else if (isPallet) category = "pallet";
+            else category = "tool"; // Fallback for other items in items.xml to tools section
+
+            const fillType = item.fillUnit?.['@_fillType'] || item['@_fillType'] || "UNKNOWN";
+            const fillLevel = parseFloat(item.fillUnit?.['@_fillLevel'] || item['@_fillLevel'] || 0);
+
+            assets.push({
+                category: category,
+                displayName: path.basename(item['@_filename'], '.xml').replace(/_/g, ' ').toUpperCase(),
+                filename: item['@_filename'],
+                fillType: fillType,
+                fillLevel: fillLevel,
+                farmId: parseInt(item['@_farmId'] || 1),
+                data: item,
+                quantity: 1
+            });
+        });
+    }
+
+    // --- C. Bulk Storage (placeables.xml) ---
     const placeablesPath = path.join(savePath, 'placeables.xml');
     if (fs.existsSync(placeablesPath)) {
         const xml = await fs.readFile(placeablesPath, 'utf8');
         const parsed = parser.parse(xml);
-        const placeables = Array.isArray(parsed.placeables.placeable) ? parsed.placeables.placeable : [parsed.placeables.placeable];
+        const plcsRoot = parsed.placeables || parsed;
+        const placeables = Array.isArray(plcsRoot.placeable) ? plcsRoot.placeable : [plcsRoot.placeable].filter(Boolean);
         
         placeables.forEach(p => {
-            if (p.storage && p.storage.node) {
-                const nodes = Array.isArray(p.storage.node) ? p.storage.node : [p.storage.node];
+            const farmId = parseInt(p['@_farmId'] || 1);
+            
+            // Silos / Storages - More aggressive child scanning
+            if (p.storage && typeof p.storage === 'object') {
+                // Check for 'node', 'fillLevel', or any direct child with fillType/fillLevel
+                const storageChildren = Object.keys(p.storage).filter(k => !k.startsWith('@'));
+                storageChildren.forEach(childKey => {
+                    const children = Array.isArray(p.storage[childKey]) ? p.storage[childKey] : [p.storage[childKey]];
+                    children.forEach(n => {
+                        if (!n || typeof n !== 'object') return;
+                        const ft = n['@_fillType'] || n['@_fillTypeName'] || n['@_type'];
+                        const fl = parseFloat(n['@_fillLevel'] || n['@_level'] || 0);
+                        if (typeof ft === 'string' && fl > 0) {
+                            assets.push({
+                                category: "fillType",
+                                displayName: ft.replace('FILLTYPE_', '').replace(/_/g, ' ').toUpperCase(),
+                                fillType: ft,
+                                quantity: fl,
+                                farmId: farmId,
+                                sourceType: `silo_${childKey}`
+                            });
+                        }
+                    });
+                });
+            }
+
+            // Bunker Silos (BGA/Silage)
+            if (p.bunkerSilo) {
+                const level = parseFloat(p.bunkerSilo['@_fillLevel'] || 0);
+                if (level > 0) {
+                    assets.push({
+                        category: "fillType",
+                        displayName: "Silage (Bunker)",
+                        fillType: "SILAGE",
+                        quantity: level,
+                        farmId: farmId,
+                        sourceType: 'bunker'
+                    });
+                }
+            }
+
+            // Husbandry Meadow (Pasture Storage)
+            if (p.husbandryMeadow?.fillType) {
+                const nodes = Array.isArray(p.husbandryMeadow.fillType) ? p.husbandryMeadow.fillType : [p.husbandryMeadow.fillType];
                 nodes.forEach(n => {
-                    data.products.push({
-                        fillType: n['@_fillType'],
-                        fillLevel: parseFloat(n['@_fillLevel'] || 0),
-                        capacity: parseFloat(p['@_capacity'] || 1000000) // Default if missing
+                    const level = parseFloat(n['@_fillLevel'] || 0);
+                    if (level > 0) {
+                        assets.push({
+                            category: "fillType",
+                            displayName: (n['@_name'] || 'Grass').replace('FILLTYPE_', '').replace(/_/g, ' '),
+                            fillType: n['@_name'],
+                            quantity: level,
+                            farmId: farmId,
+                            sourceType: 'meadow'
+                        });
+                    }
+                });
+            }
+
+            // Productions / Production Storage
+            if (p.productionPoint?.storage) {
+                const nodes = Array.isArray(p.productionPoint.storage.node) ? p.productionPoint.storage.node : (p.productionPoint.storage.node ? [p.productionPoint.storage.node] : []);
+                nodes.forEach(n => {
+                    const level = parseFloat(n['@_fillLevel'] || 0);
+                    if (level > 0) {
+                        assets.push({
+                            category: "fillType",
+                            displayName: (n['@_fillType'] || 'UNKNOWN').replace('FILLTYPE_', '').replace(/_/g, ' '),
+                            fillType: n['@_fillType'],
+                            quantity: level,
+                            farmId: farmId,
+                            sourceType: 'production'
+                        });
+                    }
+                });
+            }
+
+            // Husbandry Food Silos (Feed/Grains in barns)
+            if (p.husbandryFood?.storage) {
+                const nodes = Array.isArray(p.husbandryFood.storage.node) ? p.husbandryFood.storage.node : (p.husbandryFood.storage.node ? [p.husbandryFood.storage.node] : []);
+                nodes.forEach(n => {
+                    const level = parseFloat(n['@_fillLevel'] || 0);
+                    if (level > 0) {
+                        assets.push({
+                            category: "fillType",
+                            displayName: (n['@_fillType'] || 'UNKNOWN').replace('FILLTYPE_', '').replace(/_/g, ' '),
+                            fillType: n['@_fillType'],
+                            quantity: level,
+                            farmId: farmId,
+                            sourceType: 'husbandry_feed'
+                        });
+                    }
+                });
+            }
+
+            // Dynamic Storage (Modded silos or specific storages)
+            if (p.dynamicStorage) {
+                const nodes = Array.isArray(p.dynamicStorage.node) ? p.dynamicStorage.node : (p.dynamicStorage.node ? [p.dynamicStorage.node] : []);
+                nodes.forEach(n => {
+                    const level = parseFloat(n['@_fillLevel'] || 0);
+                    if (level > 0) {
+                        assets.push({
+                            category: "fillType",
+                            displayName: (n['@_fillType'] || 'UNKNOWN').replace('FILLTYPE_', '').replace(/_/g, ' '),
+                            fillType: n['@_fillType'],
+                            quantity: level,
+                            farmId: farmId,
+                            sourceType: 'dynamic'
+                        });
+                    }
+                });
+            }
+
+            // Husbandry Animals
+            if (p.husbandryAnimals?.clusters?.animal) {
+                const clusters = Array.isArray(p.husbandryAnimals.clusters.animal) ? p.husbandryAnimals.clusters.animal : [p.husbandryAnimals.clusters.animal];
+                clusters.forEach(c => {
+                    assets.push({
+                        category: "animal",
+                        displayName: `${c['@_subType']} (${c['@_age']} mo)`,
+                        subType: c['@_subType'],
+                        age: parseInt(c['@_age']),
+                        quantity: parseInt(c['@_numAnimals'] || 1),
+                        farmId: farmId,
+                        data: c
                     });
                 });
             }
         });
     }
 
-    // 3. Animals
-    const animalsPath = path.join(savePath, 'animals.xml');
-    if (fs.existsSync(animalsPath)) {
-        const xml = await fs.readFile(animalsPath, 'utf8');
-        const parsed = parser.parse(xml);
-        if (parsed.animals && parsed.animals.animal) {
-            const animals = Array.isArray(parsed.animals.animal) ? parsed.animals.animal : [parsed.animals.animal];
-            data.animals = animals.map(a => ({
-                type: a['@_type'],
-                subType: a['@_subType'],
-                age: a['@_age'],
-                health: a['@_health']
-            }));
+    // 4. Aggregation Layer
+    const aggregated = {};
+    assets.forEach((item, idx) => {
+        // Only aggregate stackable items (pallets, bales, fillTypes, animals)
+        // Vehicles and Tools should always show as full individual blocks (requested)
+        const isStackable = item.category !== 'vehicle' && item.category !== 'tool';
+        
+        if (!isStackable) {
+            // Unique key for individual vehicles/tools
+            const uniqueKey = `unique_${item.category}_${idx}`;
+            aggregated[uniqueKey] = { ...item };
+            return;
         }
-    }
 
-    // 4. Vehicles & Equipment
-    const vehiclesPath = path.join(savePath, 'vehicles.xml');
-    data.vehicles = [];
-    if (fs.existsSync(vehiclesPath)) {
-        const xml = await fs.readFile(vehiclesPath, 'utf8');
-        const parsed = parser.parse(xml);
-        if (parsed.vehicles && parsed.vehicles.vehicle) {
-            const vehicles = Array.isArray(parsed.vehicles.vehicle) ? parsed.vehicles.vehicle : [parsed.vehicles.vehicle];
-            data.vehicles = vehicles.map(v => ({
-                filename: v['@_filename'],
-                operatingTime: parseFloat(v['@_operatingTime'] || 0),
-                dirt: parseFloat(v.wearable?.['@_dirtAmount'] || 0),
-                wear: parseFloat(v.wearable?.['@_wearAmount'] || 0),
-                paint: parseFloat(v.wearable?.['@_paintAmount'] || 1)
-            }));
+        const key = `${item.category}_${item.filename || ''}_${item.fillType || ''}_${item.subType || ''}_${item.age || ''}`;
+        if (!aggregated[key]) {
+            aggregated[key] = { ...item };
+        } else {
+            aggregated[key].quantity += item.quantity;
         }
-    }
+    });
 
-    // 5. Farmland (Owned Land)
-    const farmlandPath = path.join(savePath, 'farmland.xml');
-    data.farmlands = [];
-    if (fs.existsSync(farmlandPath)) {
-        const xml = await fs.readFile(farmlandPath, 'utf8');
-        const parsed = parser.parse(xml);
-        if (parsed.farmlands && parsed.farmlands.farmland) {
-            const farmlands = Array.isArray(parsed.farmlands.farmland) ? parsed.farmlands.farmland : [parsed.farmlands.farmland];
-            data.farmlands = farmlands.filter(f => f['@_farmId'] === "1" || f['@_farmId'] === 1).map(f => f['@_id']);
-        }
-    }
-
-    // 6. Loose Items (Bales, Pallets)
-    const itemsPath = path.join(savePath, 'items.xml');
-    data.items = [];
-    if (fs.existsSync(itemsPath)) {
-        const xml = await fs.readFile(itemsPath, 'utf8');
-        const parsed = parser.parse(xml);
-        if (parsed.items && parsed.items.item) {
-            const items = Array.isArray(parsed.items.item) ? parsed.items.item : [parsed.items.item];
-            data.items = items.map(i => ({
-                className: i['@_className'],
-                fillType: i['@_fillType'],
-                fillLevel: parseFloat(i['@_fillLevel'] || 0),
-                farmId: i['@_farmId']
-            }));
-        }
-    }
-
+    data.items = Object.values(aggregated);
     return data;
 }
+
 
 /**
  * Execute transfer between savegames
  */
+/**
+ * Execute transfer between savegames with strict Deduction-then-Insertion pipeline
+ */
 async function executeTransfer(sourcePath, destPath, options) {
-    const sourceData = await getSavegameTransferData(sourcePath);
-    
-    // 1. Money Transfer
-    if (options.transferMoney && options.moneyAmount > 0) {
-        const sourceDataCurrent = await getSavegameTransferData(sourcePath);
-        const destDataCurrent = await getSavegameTransferData(destPath);
-        
-        console.log(`[TRANSFER] Money: Source(${sourceDataCurrent.money} -> ${Math.max(0, sourceDataCurrent.money - options.moneyAmount)}), Dest(${destDataCurrent.money} -> ${destDataCurrent.money + options.moneyAmount})`);
-        
-        // Deduct from source
-        const newSourceTotal = Math.max(0, (sourceDataCurrent.money || 0) - options.moneyAmount);
-        await updateSavegameAttribute(sourcePath, 'farms', 'money', newSourceTotal);
-        
-        // Add to destination
-        const newDestTotal = (destDataCurrent.money || 0) + options.moneyAmount;
-        await updateSavegameAttribute(destPath, 'farms', 'money', newDestTotal);
-    }
+    const { transferMoney, moneyAmount, selectedItems, sourceFarmId, destFarmId } = options;
+    const fileCache = {};
 
-    // 2. Products Transfer (Simplified: additive to first matching silo)
-    if (options.selectedProducts?.length > 0) {
-        const destPlaceablesPath = path.join(destPath, 'placeables.xml');
-        if (fs.existsSync(destPlaceablesPath)) {
-            const xml = await fs.readFile(destPlaceablesPath, 'utf8');
-            const parsed = parser.parse(xml);
-            // Logic to find destination silo and add products...
-            // For now, we'll just log that we are doing it.
-            console.log(`[TRANSFER] Moving products to ${destPath}`);
+    const loadFile = async (savePath, name) => {
+        const filePath = path.join(savePath, name);
+        if (fileCache[filePath]) return fileCache[filePath];
+        if (!fs.existsSync(filePath)) return null;
+        const xml = await fs.readFile(filePath, 'utf8');
+        const data = parser.parse(xml);
+        fileCache[filePath] = data;
+        return data;
+    };
+
+    const flushFiles = async () => {
+        for (const [filePath, data] of Object.entries(fileCache)) {
+            await fs.writeFile(filePath, builder.build(data));
         }
-    }
+    };
 
-    // 3. Vehicles Transfer
-    if (options.selectedVehicles?.length > 0) {
-        const sourceVehPath = path.join(sourcePath, 'vehicles.xml');
-        const destVehPath = path.join(destPath, 'vehicles.xml');
-        
-        if (fs.existsSync(sourceVehPath) && fs.existsSync(destVehPath)) {
-            const sXml = await fs.readFile(sourceVehPath, 'utf8');
-            const dXml = await fs.readFile(destVehPath, 'utf8');
-            
-            const sData = parser.parse(sXml);
-            const dData = parser.parse(dXml);
-            
-            const sVehs = Array.isArray(sData.vehicles?.vehicle) ? sData.vehicles.vehicle : (sData.vehicles?.vehicle ? [sData.vehicles.vehicle] : []);
-            
-            if (!dData.vehicles) dData.vehicles = { vehicle: [] };
-            const dVehs = Array.isArray(dData.vehicles.vehicle) ? dData.vehicles.vehicle : (dData.vehicles.vehicle ? [dData.vehicles.vehicle] : []);
-            
-            options.selectedVehicles.forEach(idx => {
-                if (sVehs[idx]) {
-                    const clone = JSON.parse(JSON.stringify(sVehs[idx]));
-                    clone['@_farmId'] = "1"; // Assign to first farm on destination
-                    dVehs.push(clone);
+    try {
+        // --- PREPARE DATA ---
+        const sVehicles = await loadFile(sourcePath, 'vehicles.xml');
+        const dVehicles = await loadFile(destPath, 'vehicles.xml');
+        const sItems = await loadFile(sourcePath, 'items.xml');
+        const dItems = await loadFile(destPath, 'items.xml');
+        const sPlaceables = await loadFile(sourcePath, 'placeables.xml');
+        const dPlaceables = await loadFile(destPath, 'placeables.xml');
+        const sFarms = await loadFile(sourcePath, 'farms.xml');
+        const dFarms = await loadFile(destPath, 'farms.xml');
+        const sCareer = await loadFile(sourcePath, 'careerSavegame.xml');
+        const dCareer = await loadFile(destPath, 'careerSavegame.xml');
+
+        // ID Counters
+        const getNextId = (root, tag) => {
+            const nodes = Array.isArray(root[tag]) ? root[tag] : [root[tag]].filter(Boolean);
+            const ids = nodes.map(n => parseInt(n['@_id'] || 0));
+            return Math.max(0, ...ids) + 1;
+        };
+
+        let nextVehicleId = dVehicles ? getNextId(dVehicles.vehicles || dVehicles, 'vehicle') : 1;
+        let nextItemId = dItems ? getNextId(dItems.items || dItems, 'item') : 1;
+
+        // Store Position
+        const storePos = "0 50 0"; // Fallback, could be improved with map-specific defaults
+
+        // --- EXECUTE TRANSFER PIPELINE ---
+
+        for (const item of selectedItems) {
+            const { category, quantity, transferQuantity } = item;
+            const amount = transferQuantity || quantity;
+
+            // 1. Vehicles / Tools
+            if (category === 'vehicle' || category === 'tool') {
+                const sRoot = sVehicles.vehicles || sVehicles;
+                const dRoot = dVehicles.vehicles || dVehicles;
+                if (!dRoot.vehicle) dRoot.vehicle = [];
+                
+                const sList = Array.isArray(sRoot.vehicle) ? sRoot.vehicle : [sRoot.vehicle];
+                // Find matching vehicles in source
+                let moved = 0;
+                for (let i = sList.length - 1; i >= 0; i--) {
+                    if (moved >= amount) break;
+                    const v = sList[i];
+                    if (v['@_filename'] === item.filename && parseInt(v['@_farmId']) === sourceFarmId) {
+                        // DEDUCT
+                        sList.splice(i, 1);
+                        
+                        // INSERT
+                        const clone = JSON.parse(JSON.stringify(v));
+                        clone['@_id'] = String(nextVehicleId++);
+                        clone['@_farmId'] = String(destFarmId);
+                        clone['@_position'] = storePos;
+                        clone['@_rotation'] = "0 0 0";
+                        
+                        if (Array.isArray(dRoot.vehicle)) dRoot.vehicle.push(clone);
+                        else dRoot.vehicle = [dRoot.vehicle, clone];
+                        
+                        moved++;
+                    }
                 }
-            });
-            
-            dData.vehicles.vehicle = dVehs;
-            await fs.writeFile(destVehPath, builder.build(dData));
-            
-            // Deduct from source
-            const remainingVehs = sVehs.filter((_, i) => !options.selectedVehicles.includes(i));
-            sData.vehicles.vehicle = remainingVehs;
-            await fs.writeFile(sourceVehPath, builder.build(sData));
-        }
-    }
+                sRoot.vehicle = sList.length === 1 ? sList[0] : sList;
+                if (Array.isArray(dRoot.vehicle) && dRoot.vehicle.length === 1) dRoot.vehicle = dRoot.vehicle[0];
+            }
 
-    // 4. Farmland Transfer
-    if (options.transferFarmland) {
-        const sourceFarmlandPath = path.join(sourcePath, 'farmland.xml');
-        const destFarmlandPath = path.join(destPath, 'farmland.xml');
-        
-        if (fs.existsSync(sourceFarmlandPath) && fs.existsSync(destFarmlandPath)) {
-            const sXml = await fs.readFile(sourceFarmlandPath, 'utf8');
-            const dXml = await fs.readFile(destFarmlandPath, 'utf8');
-            const sData = parser.parse(sXml);
-            const dData = parser.parse(dXml);
-            const sLands = Array.isArray(sData.farmlands?.farmland) ? sData.farmlands.farmland : (sData.farmlands?.farmland ? [sData.farmlands.farmland] : []);
-            const dLands = Array.isArray(dData.farmlands?.farmland) ? dData.farmlands.farmland : (dData.farmlands?.farmland ? [dData.farmlands.farmland] : []);
-            const ownedIds = sLands.filter(f => f['@_farmId'] === "1" || f['@_farmId'] === 1).map(f => f['@_id']);
-            dLands.forEach(f => { if (ownedIds.includes(f['@_id'])) f['@_farmId'] = "1"; });
-            dData.farmlands.farmland = dLands;
-            await fs.writeFile(destFarmlandPath, builder.build(dData));
-            sLands.forEach(f => { if (ownedIds.includes(f['@_id'])) f['@_farmId'] = "0"; });
-            sData.farmlands.farmland = sLands;
-            await fs.writeFile(sourceFarmlandPath, builder.build(sData));
-        }
-    }
+            // 2. Pallets / Bales
+            if (category === 'pallet' || category === 'bale') {
+                const sRoot = sItems.items || sItems;
+                const dRoot = dItems.items || dItems;
+                if (!dRoot.item) dRoot.item = [];
 
-    // 5. Items (Bales/Pallets) Transfer
-    if (options.selectedItems?.length > 0) {
-        const sourceItemsPath = path.join(sourcePath, 'items.xml');
-        const destItemsPath = path.join(destPath, 'items.xml');
-        if (fs.existsSync(sourceItemsPath) && fs.existsSync(destItemsPath)) {
-            const sXml = await fs.readFile(sourceItemsPath, 'utf8');
-            const dXml = await fs.readFile(destItemsPath, 'utf8');
-            const sData = parser.parse(sXml);
-            const dData = parser.parse(dXml);
-            const sItems = Array.isArray(sData.items?.item) ? sData.items.item : (sData.items?.item ? [sData.items.item] : []);
-            if (!dData.items) dData.items = { item: [] };
-            const dItems = Array.isArray(dData.items.item) ? dData.items.item : (dData.items.item ? [dData.items.item] : []);
-            options.selectedItems.forEach(idx => {
-                if (sItems[idx]) {
-                    const clone = JSON.parse(JSON.stringify(sItems[idx]));
-                    clone['@_farmId'] = "1";
-                    dItems.push(clone);
+                const sList = Array.isArray(sRoot.item) ? sRoot.item : [sRoot.item];
+                let moved = 0;
+                for (let i = sList.length - 1; i >= 0; i--) {
+                    if (moved >= amount) break;
+                    const it = sList[i];
+                    if (it['@_filename'] === item.filename && parseInt(it['@_farmId']) === sourceFarmId) {
+                        // DEDUCT
+                        sList.splice(i, 1);
+
+                        // INSERT
+                        const clone = JSON.parse(JSON.stringify(it));
+                        clone['@_id'] = String(nextItemId++);
+                        clone['@_farmId'] = String(destFarmId);
+                        clone['@_position'] = storePos;
+
+                        if (Array.isArray(dRoot.item)) dRoot.item.push(clone);
+                        else dRoot.item = [dRoot.item, clone];
+
+                        moved++;
+                    }
                 }
-            });
-            dData.items.item = dItems;
-            await fs.writeFile(destItemsPath, builder.build(dData));
-            const remainingItems = sItems.filter((_, i) => !options.selectedItems.includes(i));
-            sData.items.item = remainingItems;
-            await fs.writeFile(sourceItemsPath, builder.build(sData));
-        }
-    }
+                sRoot.item = sList.length === 1 ? sList[0] : sList;
+                if (Array.isArray(dRoot.item) && dRoot.item.length === 1) dRoot.item = dRoot.item[0];
+            }
 
-    return { success: true };
+            // 3. Bulk Storage (FillTypes)
+            if (category === 'fillType') {
+                let remainingToDeduct = amount;
+                const sPlcsList = Array.isArray(sPlaceables.placeables?.placeable || sPlaceables.placeable) ? (sPlaceables.placeables?.placeable || sPlaceables.placeable) : [sPlaceables.placeables?.placeable || sPlaceables.placeable].filter(Boolean);
+                
+                // DEDUCT
+                sPlcsList.forEach(p => {
+                    if (remainingToDeduct <= 0 || parseInt(p['@_farmId']) !== sourceFarmId) return;
+                    if (p.storage) {
+                        const nodes = Array.isArray(p.storage.node) ? p.storage.node : [p.storage.node].filter(Boolean);
+                        nodes.forEach(n => {
+                            if (n['@_fillType'] === item.fillType) {
+                                const level = parseFloat(n['@_fillLevel'] || 0);
+                                const toTake = Math.min(level, remainingToDeduct);
+                                n['@_fillLevel'] = String(level - toTake);
+                                remainingToDeduct -= toTake;
+                            }
+                        });
+                    }
+                });
+
+                // INSERT
+                let remainingToInsert = amount - remainingToDeduct; // Only insert what we actually found to deduct
+                const dPlcsList = Array.isArray(dPlaceables.placeables?.placeable || dPlaceables.placeable) ? (dPlaceables.placeables?.placeable || dPlaceables.placeable) : [dPlaceables.placeables?.placeable || dPlaceables.placeable].filter(Boolean);
+                
+                for (const p of dPlcsList) {
+                    if (remainingToInsert <= 0 || parseInt(p['@_farmId']) !== destFarmId) continue;
+                    if (p.storage) {
+                        const cap = parseFloat(p['@_capacity'] || 1000000);
+                        const nodes = Array.isArray(p.storage.node) ? p.storage.node : [p.storage.node].filter(Boolean);
+                        const totalFill = nodes.reduce((sum, n) => sum + parseFloat(n['@_fillLevel'] || 0), 0);
+                        const space = Math.max(0, cap - totalFill);
+                        
+                        let node = nodes.find(n => n['@_fillType'] === item.fillType);
+                        if (!node && space > 0) {
+                            node = { '@_fillType': item.fillType, '@_fillLevel': "0" };
+                            if (Array.isArray(p.storage.node)) p.storage.node.push(node);
+                            else p.storage.node = [p.storage.node, node];
+                        }
+
+                        if (node) {
+                            const toAdd = Math.min(space, remainingToInsert);
+                            node['@_fillLevel'] = String(parseFloat(node['@_fillLevel']) + toAdd);
+                            remainingToInsert -= toAdd;
+                        }
+                    }
+                }
+                
+                // Handle Overflow (Fallback to pallets?)
+                if (remainingToInsert > 0) {
+                    debugLog(`[TRANSFER] Warning: ${remainingToInsert} L of ${item.fillType} could not fit in destination storage.`);
+                }
+            }
+
+            // 4. Animals
+            if (category === 'animal') {
+                let remainingToMove = amount;
+                const sPlcsList = Array.isArray(sPlaceables.placeables?.placeable || sPlaceables.placeable) ? (sPlaceables.placeables?.placeable || sPlaceables.placeable) : [sPlaceables.placeables?.placeable || sPlaceables.placeable].filter(Boolean);
+                const dPlcsList = Array.isArray(dPlaceables.placeables?.placeable || dPlaceables.placeable) ? (dPlaceables.placeables?.placeable || dPlaceables.placeable) : [dPlaceables.placeables?.placeable || dPlaceables.placeable].filter(Boolean);
+
+                // DEDUCT & INSERT
+                sPlcsList.forEach(sp => {
+                    if (remainingToMove <= 0 || parseInt(sp['@_farmId']) !== sourceFarmId) return;
+                    if (sp.husbandryAnimals?.clusters?.animal) {
+                        const clusters = Array.isArray(sp.husbandryAnimals.clusters.animal) ? sp.husbandryAnimals.clusters.animal : [sp.husbandryAnimals.clusters.animal];
+                        for (let i = clusters.length - 1; i >= 0; i--) {
+                            const c = clusters[i];
+                            if (c['@_subType'] === item.subType && parseInt(c['@_age']) === item.age) {
+                                const count = parseInt(c['@_numAnimals'] || 1);
+                                const toMove = Math.min(count, remainingToMove);
+                                
+                                // Subtract from source
+                                if (toMove >= count) clusters.splice(i, 1);
+                                else c['@_numAnimals'] = String(count - toMove);
+                                
+                                // Add to destination (find compatible husbandry)
+                                let added = false;
+                                for (const dp of dPlcsList) {
+                                    if (parseInt(dp['@_farmId']) === destFarmId && dp.husbandryAnimals) {
+                                        if (!dp.husbandryAnimals.clusters) dp.husbandryAnimals.clusters = { animal: [] };
+                                        const dClusters = Array.isArray(dp.husbandryAnimals.clusters.animal) ? dp.husbandryAnimals.clusters.animal : [dp.husbandryAnimals.clusters.animal].filter(Boolean);
+                                        
+                                        let target = dClusters.find(dc => dc['@_subType'] === item.subType && parseInt(dc['@_age']) === item.age);
+                                        if (target) {
+                                            target['@_numAnimals'] = String(parseInt(target['@_numAnimals']) + toMove);
+                                        } else {
+                                            const clone = JSON.parse(JSON.stringify(c));
+                                            clone['@_numAnimals'] = String(toMove);
+                                            clone['@_farmId'] = String(destFarmId);
+                                            dClusters.push(clone);
+                                        }
+                                        dp.husbandryAnimals.clusters.animal = dClusters.length === 1 ? dClusters[0] : dClusters;
+                                        added = true;
+                                        break;
+                                    }
+                                }
+                                remainingToMove -= toMove;
+                            }
+                        }
+                        sp.husbandryAnimals.clusters.animal = clusters.length === 1 ? clusters[0] : (clusters.length === 0 ? undefined : clusters);
+                    }
+                });
+            }
+        }
+
+        // --- MONEY ---
+        if (transferMoney && moneyAmount > 0) {
+            // Update farms.xml
+            const sFarm = (Array.isArray(sFarms.farms?.farm) ? sFarms.farms.farm : [sFarms.farms?.farm]).find(f => parseInt(f['@_farmId']) === sourceFarmId);
+            const dFarm = (Array.isArray(dFarms.farms?.farm) ? dFarms.farms.farm : [dFarms.farms?.farm]).find(f => parseInt(f['@_farmId']) === destFarmId);
+            
+            if (sFarm && dFarm) {
+                const sMoney = parseFloat(sFarm['@_money'] || 0);
+                const dMoney = parseFloat(dFarm['@_money'] || 0);
+                const actualTransfer = Math.min(sMoney, moneyAmount);
+                
+                sFarm['@_money'] = String((sMoney - actualTransfer).toFixed(2));
+                dFarm['@_money'] = String((dMoney + actualTransfer).toFixed(2));
+                
+                // Update careerSavegame stats (if it's the primary farm)
+                if (sourceFarmId === 1 && sCareer.careerSavegame?.statistics) {
+                    sCareer.careerSavegame.statistics['@_money'] = sFarm['@_money'];
+                }
+                if (destFarmId === 1 && dCareer.careerSavegame?.statistics) {
+                    dCareer.careerSavegame.statistics['@_money'] = dFarm['@_money'];
+                }
+            }
+        }
+
+        // --- FINAL FLUSH ---
+        await flushFiles();
+        return { success: true };
+
+    } catch (err) {
+        debugLog(`[TRANSFER] Error: ${err.message}`);
+        return { success: false, error: err.message };
+    }
 }
 
 async function getInstalledMods() {
@@ -827,11 +1198,118 @@ async function deleteSavegame(savePath) {
     return { success: false, error: 'Savegame not found' };
 }
 
-async function archiveSavegame(savePath) { /* ... */ return { success: true }; }
-async function getArchivedSavegames() { return { archives: [] }; }
-async function restoreSavegame() { return { success: true }; }
-async function swapArchiveToSlot() { return { success: true }; }
-async function deleteArchivedSavegame() { return { success: true }; }
+function getArchivesPath() {
+    const p = path.join(getFs25Path(), 'modManagerArchives');
+    if (!fs.existsSync(p)) fs.ensureDirSync(p);
+    return p;
+}
+
+async function archiveSavegame(savePath) {
+    if (!fs.existsSync(savePath)) return { success: false, error: 'Savegame not found' };
+    const archivesDir = getArchivesPath();
+    const folderName = path.basename(savePath);
+    
+    // Read careerSavegame.xml to get a nice name for the folder
+    const careerPath = path.join(savePath, 'careerSavegame.xml');
+    let farmName = folderName;
+    if (fs.existsSync(careerPath)) {
+        try {
+            const xml = await fs.readFile(careerPath, 'utf8');
+            const data = parser.parse(xml);
+            farmName = data.careerSavegame?.settings?.savegameName || data.careerSavegame?.settings?.['@_savegameName'] || folderName;
+        } catch (e) {
+            console.error('[ARCHIVE] Failed to parse careerSavegame for name:', e);
+        }
+    }
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0] + '_' + Date.now().toString().slice(-4);
+    const safeFarmName = String(farmName).replace(/[^a-z0-9]/gi, '_');
+    const archiveFolderName = `${safeFarmName}_${timestamp}`;
+    const destPath = path.join(archivesDir, archiveFolderName);
+    
+    try {
+        await fs.move(savePath, destPath);
+        return { success: true };
+    } catch (err) {
+        console.error('[ARCHIVE] Move failed:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+async function getArchivedSavegames() {
+    const archivesDir = getArchivesPath();
+    if (!fs.existsSync(archivesDir)) return { archives: [] };
+    
+    try {
+        const folders = await fs.readdir(archivesDir);
+        const archives = [];
+        
+        for (const folder of folders) {
+            const folderPath = path.join(archivesDir, folder);
+            const stats = await fs.stat(folderPath);
+            if (!stats.isDirectory()) continue;
+            
+            const careerPath = path.join(folderPath, 'careerSavegame.xml');
+            if (fs.existsSync(careerPath)) {
+                const xml = await fs.readFile(careerPath, 'utf8');
+                const data = parser.parse(xml);
+                const settings = data.careerSavegame.settings;
+                const statsData = data.careerSavegame.statistics;
+                
+                archives.push({
+                    folderName: folder,
+                    path: folderPath,
+                    farmName: settings?.['@_savegameName'] || settings?.savegameName || 'Unnamed Farm',
+                    mapTitle: settings?.['@_mapTitle'] || settings?.mapTitle || 'Unknown Map',
+                    money: parseFloat(statsData?.['@_money'] || statsData?.money || 0),
+                    lastSaveDate: settings?.['@_saveDateFormatted'] || settings?.saveDateFormatted || stats.mtime.toISOString()
+                });
+            }
+        }
+        return { archives: archives.sort((a, b) => b.folderName.localeCompare(a.folderName)) };
+    } catch (err) {
+        console.error('[ARCHIVE] Failed to list archives:', err);
+        return { archives: [] };
+    }
+}
+
+async function restoreSavegame(archivedFolderName, slotIndex) {
+    const archivesDir = getArchivesPath();
+    const sourcePath = path.join(archivesDir, archivedFolderName);
+    const destPath = path.join(getFs25Path(), `savegame${slotIndex}`);
+    
+    if (!fs.existsSync(sourcePath)) return { success: false, error: 'Archive not found' };
+    
+    try {
+        if (fs.existsSync(destPath)) {
+            await fs.remove(destPath);
+        }
+        await fs.copy(sourcePath, destPath);
+        return { success: true };
+    } catch (err) {
+        console.error('[RESTORE] Failed:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+async function deleteArchivedSavegame(archivedFolderName) {
+    const archivesDir = getArchivesPath();
+    const target = path.join(archivesDir, archivedFolderName);
+    if (fs.existsSync(target)) {
+        await fs.remove(target);
+        return { success: true };
+    }
+    return { success: false, error: 'Archive not found' };
+}
+
+async function swapArchiveToSlot(archivedFolderName, slotIndex) {
+    const result = await restoreSavegame(archivedFolderName, slotIndex);
+    if (result.success) {
+        await deleteArchivedSavegame(archivedFolderName);
+    }
+    return result;
+}
+
 async function renameArchivedSavegame() { return { success: true }; }
 
 module.exports = {

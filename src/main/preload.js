@@ -63,6 +63,12 @@ contextBridge.exposeInMainWorld('api', {
     autoInstallDependencies: (params) => ipcRenderer.invoke('localMods:autoInstallDependencies', params),
   },
 
+  // Third Party Tracker
+  thirdParty: {
+    checkUrl: (params) => ipcRenderer.invoke('thirdParty:checkUrl', params),
+    findDownloadUrl: (params) => ipcRenderer.invoke('thirdParty:findDownloadUrl', params),
+  },
+
   // Radio
   radio: {
     getRadios: () => ipcRenderer.invoke('radio:getRadios'),

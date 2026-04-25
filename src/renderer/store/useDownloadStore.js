@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useLocalModsStore } from './useLocalModsStore';
+import { useToastStore } from './useToastStore';
 
 export const useDownloadStore = create((set, get) => ({
   activeDownloads: {},
@@ -156,7 +157,7 @@ export const useDownloadStore = create((set, get) => ({
     const timeoutId = setTimeout(() => {
       useLocalModsStore.getState().scanMods();
       set({ scanTimeout: null });
-    }, 1000);
+    }, 200);
     set({ scanTimeout: timeoutId });
   }
 }));
@@ -188,6 +189,11 @@ if (window.api?.on) {
 
       // Auto-clear successful downloads after a delay
       if (status === 'success') {
+        const active = get().activeDownloads[modId];
+        if (active) {
+            useToastStore.getState().success(`${active.title || 'Mod'} updated successfully!`);
+        }
+        
         // Trigger a re-scan and optimistic UI update
         useDownloadStore.getState().addSessionInstalled(modId);
         useDownloadStore.getState().triggerScan();
@@ -196,6 +202,10 @@ if (window.api?.on) {
           useDownloadStore.getState().removeDownload(modId);
         }, 3000);
       } else if (status === 'error') {
+        const active = get().activeDownloads[modId];
+        if (active) {
+            useToastStore.getState().error(`Download failed: ${active.title || modId}`);
+        }
         // Keep it in the store so UI shows 'FAILED' for a while
         console.warn(`Download failed for mod ${modId}`);
         setTimeout(() => {

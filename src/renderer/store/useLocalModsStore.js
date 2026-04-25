@@ -13,6 +13,7 @@ export const useLocalModsStore = create((set, get) => ({
   lastUpdateCheck: 0,
   isResolving: false,
   resolvingStatus: null, // { modName, status, progress }
+  showOnlyUpdates: false,
 
   loadCache: async () => {
     if (!window.api?.settings) return;
@@ -245,8 +246,22 @@ export const useLocalModsStore = create((set, get) => ({
       if (!window.api?.mods) return { success: false, error: 'Bridge not available' };
       const result = await window.api.mods.moveModsToFolder({ fileNames, destinationFolder });
       
-      // Force a fresh scan after move to ensure UI sync
-      await get().scanMods(null, true);
+      if (result.success && (!result.errors || result.errors.length === 0)) {
+        // Optimistic update: Update local state instead of re-scanning everything
+        set(state => ({
+            mods: state.mods.map(m => {
+                if (fileNames.includes(m.fileName)) {
+                    const baseName = m.fileName.includes('/') ? m.fileName.split('/').pop() : m.fileName;
+                    const newFileName = destinationFolder ? `${destinationFolder}/${baseName}` : baseName;
+                    return { ...m, folder: destinationFolder, fileName: newFileName };
+                }
+                return m;
+            })
+        }));
+      } else {
+        // If there were partial errors, a full scan is safer to ensure UI consistency
+        await get().scanMods(null, true);
+      }
       
       return result;
     } catch (err) {
@@ -334,5 +349,7 @@ export const useLocalModsStore = create((set, get) => ({
       return { success: false, error: err.message };
     }
   },
+
+  setShowOnlyUpdates: (val) => set({ showOnlyUpdates: val }),
 }));
 

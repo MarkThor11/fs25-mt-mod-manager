@@ -2,7 +2,7 @@
 
 A premium desktop application for managing mods, savegames, and system performance for **Farming Simulator 25**.
 
-![App Version](https://img.shields.io/badge/version-1.0.5-brightgreen)
+![App Version](https://img.shields.io/badge/version-1.0.6-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 ## 🚀 Key Features

@@ -69,12 +69,17 @@ class ErrorBoundary extends React.Component {
                 const report = {
                   error: this.state.error?.toString(),
                   stack: this.state.error?.stack,
-                  version: '1.0.6',
+                  version: '1.0.9',
                   platform: window.navigator.platform,
                   userAgent: window.navigator.userAgent,
                   timestamp: new Date().toISOString()
                 };
-                navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+                const reportStr = JSON.stringify(report, null, 2);
+                if (window.api && window.api.clipboard) {
+                  window.api.clipboard.writeText(reportStr);
+                } else {
+                  navigator.clipboard.writeText(reportStr);
+                }
                 alert('Diagnostic report copied to clipboard!');
               }}
               style={{ gap: 8 }}

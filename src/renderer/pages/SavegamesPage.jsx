@@ -4,7 +4,7 @@ import {
   Save, Play, RefreshCw, Edit3, MapPin,
   Clock, DollarSign, Package, Check, X,
   Plus, ChevronDown, ChevronRight, Gamepad2, Trash2, TrendingUp, Shield,
-  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft
+  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft
 } from 'lucide-react';
 import { useSavegameStore } from '../store/useSavegameStore';
 import { useToastStore } from '../store/useToastStore';
@@ -17,7 +17,12 @@ import MapImage, { MAP_PREVIEWS } from '../components/common/MapImage';
 import { resolveRecursiveDependencies } from '../utils/modUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 
-
+const getLocalizedString = (val, defaultVal = 'Unknown') => {
+    if (!val) return defaultVal;
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object') return val.en || val.de || val.fr || Object.values(val)[0] || defaultVal;
+    return String(val);
+};
 
 /**
  * Mod Audit Modal - Checks versions and missing mods for a savegame
@@ -85,7 +90,7 @@ function ModAuditModal({ save, allInstalledMods, onClose, onRefresh }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={onClose}>
       <div className="modal-content animate-zoom-in" style={{ width: 700, padding: 0, overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={{ background: 'var(--bg-tertiary)', padding: '24px', borderBottom: '1px solid var(--border)' }}>
@@ -227,8 +232,8 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
   }, [installedMods]);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal animate-zoom-in" style={{ width: 800, maxHeight: '90vh', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+    <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={onClose}>
+      <div className="modal animate-zoom-in" style={{ width: 1300, maxWidth: 'none', maxHeight: '90vh', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={{ background: 'var(--bg-tertiary)', padding: '24px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -267,7 +272,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
           {activeTab === 'general' && (
             <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
               <div className="settings-panel">
-                <h3 className="section-title"><Map size={16} /> Base Information</h3>
+                <h3 className="section-title"><MapIcon size={16} /> Base Information</h3>
                 <div className="settings-grid">
                   <div className="setting" style={{ gridColumn: 'span 2' }}>
                     <label>Savegame Name (Farm Name)</label>
@@ -291,7 +296,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                       <label>Map</label>
                       <div className="input-with-icon">
                         <MapPin size={14} />
-                        <input type="text" value={save.mapTitle} disabled style={{ opacity: 0.6 }} />
+                        <input type="text" value={getLocalizedString(save.mapTitle, 'Unknown Map')} disabled style={{ opacity: 0.6 }} />
                       </div>
                   </div>
                   <div className="setting">
@@ -852,7 +857,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onCreate, onEdit, onAudit, onRe
             
             {/* Map Preview Background */}
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.25, zIndex: 0, maskImage: 'linear-gradient(to bottom, black, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, black, transparent)' }}>
-                <MapImage mapTitle={save.mapTitle} mapId={save.mapId} mods={mods} />
+                <MapImage mapTitle={getLocalizedString(save.mapTitle, 'Unknown Map')} mapId={save.mapId} mods={mods} />
             </div>
             {save.isGhost && (
               <div style={{ 
@@ -902,9 +907,9 @@ function SaveSlotCard({ save, onPlay, onArchive, onCreate, onEdit, onAudit, onRe
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', opacity: 0.9, fontSize: 11, color: 'white' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
                       <MapPin size={12} className="text-accent" /> 
-                      {save.mapTitle} 
-                      {save.mapAuthor && save.mapAuthor !== 'Unknown' && (
-                        <span style={{ opacity: 0.5, fontSize: 9, marginLeft: 4 }}>BY {save.mapAuthor.toUpperCase()}</span>
+                      {getLocalizedString(save.mapTitle, 'Unknown Map')} 
+                      {save.mapAuthor && getLocalizedString(save.mapAuthor) !== 'Unknown' && (
+                        <span style={{ opacity: 0.5, fontSize: 9, marginLeft: 4 }}>BY {getLocalizedString(save.mapAuthor).toUpperCase()}</span>
                       )}
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}><DollarSign size={12} className="text-accent" /> {formatMoney(save.money)}</span>
@@ -966,6 +971,9 @@ export default function SavegamesPage() {
     archives, isLoading: isArchivesLoading, fetchArchives, deleteArchive, archiveSavegame, restoreSavegame
   } = useArchiveStore();
 
+  const [updatingMod, setUpdatingMod] = useState(null);
+  const [autoResolveMode, setAutoResolveMode] = useState(false);
+  const [createActiveTab, setCreateActiveTab] = useState('basic');
   const [editingName, setEditingName] = useState(null);
   const [newName, setNewName] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -1122,16 +1130,32 @@ export default function SavegamesPage() {
 
   const handleRestore = async () => {
     if (!showRestoreModal) return;
-    const targetSlot = parseInt(restoreSlot);
+    
+    let targetSlotValue = restoreSlot;
+    if (targetSlotValue === 'auto') {
+        const firstEmpty = allSlots.find(s => s.isEmpty);
+        if (!firstEmpty) {
+            useToastStore.getState().error("No empty slots available! Archive or delete a save first.");
+            return;
+        }
+        targetSlotValue = firstEmpty.index.toString();
+    }
+
+    const targetSlot = parseInt(targetSlotValue);
     const existing = savegames.find(s => s.index === targetSlot && (s.modCount > 0 || s.farmName !== s.folderName));
     
     if (existing && !window.confirm(`Slot ${targetSlot} is occupied by "${existing.farmName}". It will be OVERWRITTEN. Continue?`)) {
         return;
     }
 
-    const result = await restoreSavegame(showRestoreModal, targetSlot);
+    // Default to swapping (moving) unless user explicitly checked "Keep Copy"
+    const keepCopy = document.getElementById('keep-archive-copy')?.checked;
+    const result = keepCopy 
+        ? await restoreSavegame(showRestoreModal, targetSlot)
+        : await window.api.savegames.swapToSlot({ archivedFolderName: showRestoreModal, slotIndex: targetSlot });
+
     if (result.success) {
-      useToastStore.getState().success(`Restored to Slot ${targetSlot}`);
+      useToastStore.getState().success(keepCopy ? `Restored to Slot ${targetSlot}` : `Moved to Slot ${targetSlot}`);
       setShowRestoreModal(null);
       setIsArchivePanelOpen(false); // Close panel after restore
       fetchSavegames();
@@ -1611,12 +1635,15 @@ export default function SavegamesPage() {
                         <div style={{ flex: 1, overflow: 'hidden' }}>
                             <div style={{ fontWeight: 700, fontSize: 'var(--fs-md)', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{archive.farmName}</div>
                             <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', gap: 8, marginTop: 2 }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={11} /> {archive.mapTitle}</span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={11} /> {getLocalizedString(archive.mapTitle)}</span>
                                 <span>{formatMoney(archive.money)}</span>
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: 4 }}>
-                            <button className="btn btn--primary btn--sm" style={{ padding: '6px' }} onClick={() => { setShowRestoreModal(archive.folderName); setRestoreSlot('1'); }} title="Restore">
+                            <button className="btn btn--primary btn--sm" style={{ padding: '6px' }} onClick={() => { 
+                                setShowRestoreModal(archive.folderName); 
+                                setRestoreSlot('auto');
+                            }} title="Restore">
                                 <RotateCcw size={14} />
                             </button>
                             <button className="btn btn--ghost btn--sm" style={{ color: 'var(--error)', padding: '6px' }} onClick={async () => {
@@ -1642,15 +1669,16 @@ export default function SavegamesPage() {
 
       {/* MODALS */}
       {showCreateModal && (
-          <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowCreateModal(false)}>
               <div 
-                className="modal-content animate-fade-in-up" 
+                className="modal animate-zoom-in" 
                 style={{ 
-                  width: 1020, 
+                  width: 1300, 
+                  maxWidth: 'none',
                   maxHeight: '90vh',
                   display: 'flex',
                   flexDirection: 'column',
-                  padding: 32, 
+                  padding: 0, 
                   background: 'var(--bg-secondary)', 
                   border: '1px solid var(--border-light)', 
                   borderRadius: 16,
@@ -1659,199 +1687,317 @@ export default function SavegamesPage() {
                 }} 
                 onClick={e => e.stopPropagation()}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, flexShrink: 0 }}>
-                    <h2 style={{ fontSize: 24, fontWeight: 800 }}>Create New Career</h2>
-                    <button className="btn btn--ghost btn--icon" onClick={() => setShowCreateModal(false)}><X size={24} /></button>
+                {/* Header */}
+                <div style={{ background: 'var(--bg-tertiary)', padding: '24px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                                <Plus size={24} strokeWidth={3} />
+                            </div>
+                            <div>
+                                <h2 style={{ fontSize: 24, fontWeight: 800 }}>Create New Career</h2>
+                                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                                    {createSlot === 'auto' ? 'Auto-assigning to next empty slot' : `Targeting Savegame Slot ${createSlot}`}
+                                </div>
+                            </div>
+                        </div>
+                        <button className="btn btn--ghost btn--icon" onClick={() => setShowCreateModal(false)}><X size={24} /></button>
+                    </div>
                 </div>
 
-                <div style={{ flex: 1, overflowY: 'auto', paddingRight: 8 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 'var(--sp-8)' }}>
-                        <div>
-                            <div style={{ marginBottom: 'var(--sp-5)' }}>
-                                <label style={{ fontSize: 14, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>TARGET SLOT</label>
-                                <select value={createSlot} onChange={e => setCreateSlot(e.target.value)} style={{ width: '100%', padding: '12px', border: '2px solid var(--accent)', color: 'var(--accent)', fontWeight: 800, fontSize: 16 }}>
-                                    <option value="auto">Auto (Next Available)</option>
-                                    {[...Array(20)].map((_, i) => {
-                                        const idx = i + 1;
-                                        const slot = allSlots.find(s => s.index === idx);
-                                        const isOccupied = slot && !slot.isEmpty;
-                                        return (
-                                            <option key={idx} value={idx}>
-                                                Slot {idx} {isOccupied ? `(Occupied: ${slot.farmName})` : '(Empty)'}
-                                            </option>
-                                        );
-                                    })}
-                                </select>
-                            </div>
-                            <div style={{ marginBottom: 'var(--sp-5)' }}>
-                                <label style={{ fontSize: 14, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>
-                                    MAP {mapHasTemplate && <span style={{ color: 'var(--accent)', marginLeft: 8 }}><Zap size={12} fill="var(--accent)" /> AUTOMATED</span>}
-                                </label>
-                                <select value={createMap} onChange={e => setCreateMap(e.target.value)} style={{ width: '100%', padding: '12px', border: mapHasTemplate ? '1px solid var(--accent-dim)' : '1px solid var(--border)', fontSize: 16 }}>
-                                    <optgroup label="Official Maps">
-                                        <option value="MapUS|Riverbend Springs|">Riverbend Springs (US)</option>
-                                        <option value="MapAS|Hutan Pantai|">Hutan Pantai (Asia)</option>
-                                        <option value="MapEU|Zielonka|">Zielonka (Europe)</option>
-                                        <option value="HighlandsFishingMap|Kinlaig|pdlc_highlandsFishingPack">Kinlaig (DLC)</option>
-                                    </optgroup>
-                                    
-                                    {mods.filter(m => m.isMap).length > 0 && (
-                                        <optgroup label="Modded Maps">
-                                            {mods.filter(m => m.isMap).map(m => (
-                                                <option key={m.modName} value={`${m.mapId || m.modName}|${m.title}|${m.modName}`}>{m.title}</option>
-                                            ))}
+                {/* Tab Switcher */}
+                <div className="tab-switcher" style={{ padding: '0 24px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+                    <button className={`tab-btn ${createActiveTab === 'basic' ? 'tab-btn--active' : ''}`} onClick={() => setCreateActiveTab('basic')}>
+                        <MapIcon size={14} /> Basic & Map
+                    </button>
+                    <button className={`tab-btn ${createActiveTab === 'rules' ? 'tab-btn--active' : ''}`} onClick={() => setCreateActiveTab('rules')}>
+                        <Sliders size={14} /> Economy & Rules
+                    </button>
+                    <button className={`tab-btn ${createActiveTab === 'mods' ? 'tab-btn--active' : ''}`} onClick={() => setCreateActiveTab('mods')}>
+                        <Package size={14} /> Mod Selection
+                    </button>
+                </div>
+
+                <div style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
+                    {createActiveTab === 'basic' && (
+                        <div className="animate-fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                                <div>
+                                    <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>SAVEGAME NAME</label>
+                                    <input 
+                                        type="text" 
+                                        value={createName} 
+                                        onChange={e => setCreateName(e.target.value)} 
+                                        placeholder="New Farming Career"
+                                        style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} 
+                                    />
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>TARGET SLOT</label>
+                                    <select value={createSlot} onChange={e => setCreateSlot(e.target.value)} style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                                        <option value="auto">Auto (Next Available)</option>
+                                        {[...Array(20)].map((_, i) => {
+                                            const idx = i + 1;
+                                            const slot = allSlots.find(s => s.index === idx);
+                                            const isOccupied = slot && !slot.isEmpty;
+                                            return (
+                                                <option key={idx} value={idx}>
+                                                    Slot {idx} {isOccupied ? `(Occupied: ${slot.farmName})` : '(Empty)'}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>
+                                        SELECT MAP {mapHasTemplate && <span style={{ color: 'var(--accent)', marginLeft: 8 }}><Zap size={10} fill="var(--accent)" /> AUTOMATED</span>}
+                                    </label>
+                                    <select value={createMap} onChange={e => setCreateMap(e.target.value)} style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: mapHasTemplate ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 8 }}>
+                                        <optgroup label="Official Maps">
+                                            <option value="MapUS|Riverbend Springs|">Riverbend Springs (US)</option>
+                                            <option value="MapAS|Hutan Pantai|">Hutan Pantai (Asia)</option>
+                                            <option value="MapEU|Zielonka|">Zielonka (Europe)</option>
+                                            <option value="HighlandsFishingMap|Kinlaig|pdlc_highlandsFishingPack">Kinlaig (DLC)</option>
                                         </optgroup>
-                                    )}
-                                </select>
-                                
-                                <div style={{ marginTop: 16, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg-tertiary)', height: 150, position: 'relative' }}>
+                                        
+                                        {mods.filter(m => m.isMap).length > 0 && (
+                                            <optgroup label="Modded Maps">
+                                                {mods.filter(m => m.isMap).map(m => (
+                                                    <option key={m.modName} value={`${m.mapId || m.modName}|${m.title}|${m.modName}`}>{m.title}</option>
+                                                ))}
+                                            </optgroup>
+                                        )}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                <label style={{ fontSize: 12, fontWeight: 800, display: 'block', color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>MAP PREVIEW</label>
+                                <div style={{ flex: 1, borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg-tertiary)', position: 'relative', boxShadow: 'var(--shadow-lg)' }}>
                                     {(() => {
                                         const [mapId, title, modName] = createMap.split('|');
                                         return <MapImage mapTitle={title} mapId={mapId} mods={mods} />;
                                     })()}
+                                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, background: 'linear-gradient(transparent, rgba(0,0,0,0.8))', color: 'white' }}>
+                                        <div style={{ fontWeight: 800, fontSize: 18 }}>{createMap.split('|')[1]}</div>
+                                        <div style={{ fontSize: 12, opacity: 0.8 }}>{createMap.split('|')[0]}</div>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
+                    )}
 
+                    {createActiveTab === 'rules' && (
+                        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
                             {!mapHasTemplate ? (
-                                <div className="animate-pulse-subtle" style={{ padding: '24px', background: 'rgba(var(--accent-rgb), 0.05)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--accent-dim)', marginBottom: 'var(--sp-5)' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--accent)', fontWeight: 800, fontSize: 14, marginBottom: 10 }}>
-                                        <Info size={20} /> FIRST-LOAD HANDSHAKE REQUIRED
+                                <div className="animate-pulse-subtle" style={{ padding: '24px', background: 'rgba(var(--warning-rgb), 0.05)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--warning-dim)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--warning)', fontWeight: 800, fontSize: 14, marginBottom: 10 }}>
+                                        <ShieldAlert size={20} /> HANDSHAKE REQUIRED
                                     </div>
                                     <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                                        This map doesn't have an automation template yet. <strong>Advanced settings (Money, Difficulty, etc.) are locked </strong> 
-                                        until you initialize the map. Simply launch, save, and exit—the Manager will learn the map automatically!
+                                        This map doesn't have an automation template yet. <strong>Rules & Economy settings are locked </strong> 
+                                        until you initialize the map. Simply launch, save, and exit—the Manager will learn the map settings automatically!
                                     </p>
                                 </div>
                             ) : (
-                                <>
-                                    <div style={{ marginBottom: 'var(--sp-5)' }}>
-                                        <label style={{ fontSize: 14, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>STARTING MODE</label>
-                                        <select value={createMode} onChange={e => handleModeChange(e.target.value)} style={{ width: '100%', padding: '12px', border: '2px solid var(--accent)', color: 'var(--accent)', fontWeight: 800, fontSize: 16 }}>
-                                            <option value="NEW_FARMER">New Farmer</option>
-                                            <option value="FARM_MANAGER">Farm Manager</option>
-                                            <option value="START_FROM_SCRATCH">Start From Scratch</option>
-                                        </select>
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-4)', marginBottom: 'var(--sp-5)' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48 }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                                         <div>
-                                            <label style={{ fontSize: 14, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>MONEY</label>
-                                            <input type="number" value={createMoney} onChange={e => setCreateMoney(parseInt(e.target.value))} style={{ width: '100%', padding: '12px', fontSize: 16 }} />
+                                            <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>STARTING MODE</label>
+                                            <select value={createMode} onChange={e => handleModeChange(e.target.value)} style={{ width: '100%', padding: '14px', border: '2px solid var(--accent)', color: 'var(--accent)', fontWeight: 800, fontSize: 16, borderRadius: 8, background: 'var(--bg-tertiary)' }}>
+                                                <option value="NEW_FARMER">New Farmer</option>
+                                                <option value="FARM_MANAGER">Farm Manager</option>
+                                                <option value="START_FROM_SCRATCH">Start From Scratch</option>
+                                            </select>
                                         </div>
-                                        <div>
-                                            <label style={{ fontSize: 14, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>LOAN</label>
-                                            <input type="number" value={createLoan} onChange={e => setCreateLoan(parseInt(e.target.value))} style={{ width: '100%', padding: '12px', fontSize: 16 }} />
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                                            <div>
+                                                <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>INITIAL MONEY</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>$</span>
+                                                    <input type="number" value={createMoney} onChange={e => setCreateMoney(parseInt(e.target.value))} style={{ width: '100%', padding: '12px 12px 12px 28px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>INITIAL LOAN</label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>$</span>
+                                                    <input type="number" value={createLoan} onChange={e => setCreateLoan(parseInt(e.target.value))} style={{ width: '100%', padding: '12px 12px 12px 28px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-4)', marginBottom: 'var(--sp-5)' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                                         <div>
-                                            <label style={{ fontSize: 14, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>ECONOMY</label>
-                                            <select value={createEconomy} onChange={e => setCreateEconomy(e.target.value)} style={{ width: '100%', padding: '10px', fontSize: 15 }}>
+                                            <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>ECONOMY DIFFICULTY</label>
+                                            <select value={createEconomy} onChange={e => setCreateEconomy(e.target.value)} style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
                                                 <option value="EASY">Easy</option>
                                                 <option value="NORMAL">Normal</option>
                                                 <option value="HARD">Hard</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label style={{ fontSize: 14, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>SEASON LENGTH</label>
-                                            <input type="number" min="1" max="28" value={createSeasonLength} onChange={e => setCreateSeasonLength(parseInt(e.target.value))} style={{ width: '100%', padding: '10px', fontSize: 15 }} />
+                                            <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>SEASON LENGTH (DAYS)</label>
+                                            <input type="number" min="1" max="28" value={createSeasonLength} onChange={e => setCreateSeasonLength(parseInt(e.target.value))} style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} />
                                         </div>
                                     </div>
-                                </>
+                                </div>
                             )}
 
-                            <div style={{ marginTop: 'var(--sp-6)', padding: '20px', background: 'var(--bg-tertiary)', borderRadius: 12, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 16 }}>
+                            <div style={{ padding: '24px', background: 'var(--bg-tertiary)', borderRadius: 16, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 20 }}>
+                                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                                    <Zap size={24} />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 800, fontSize: 16 }}>Auto-launch to initialize map</div>
+                                    <div style={{ fontSize: 13, opacity: 0.6, marginTop: 2 }}>Modded maps require one launch to build the world files. We'll handle this automatically.</div>
+                                </div>
                                 <input 
                                     type="checkbox" 
-                                    id="auto-launch-check"
                                     checked={autoLaunchOnCreate} 
                                     onChange={e => setAutoLaunchOnCreate(e.target.checked)}
-                                    style={{ width: 22, height: 22, cursor: 'pointer', accentColor: 'var(--accent)' }}
+                                    style={{ width: 28, height: 28, cursor: 'pointer', accentColor: 'var(--accent)' }}
                                 />
-                                <label htmlFor="auto-launch-check" style={{ fontSize: 14, cursor: 'pointer', flex: 1 }}>
-                                    <strong style={{ display: 'block', marginBottom: 4 }}>Auto-launch to initialize map</strong>
-                                    <div style={{ fontSize: 12, opacity: 0.6, lineHeight: 1.4 }}>Modded maps require one launch to build the world files.</div>
-                                </label>
                             </div>
                         </div>
-                        
-                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 600 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-secondary)' }}>MODS ({modalSelectedMods.size})</div>
-                                <div style={{ display: 'flex', gap: 4 }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-xs)', color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
+                    )}
+
+                    {createActiveTab === 'mods' && (
+                        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none', background: 'var(--bg-tertiary)', padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)' }}>
                                         <input 
                                             type="checkbox" 
                                             checked={includeMustHaves} 
                                             onChange={(e) => setIncludeMustHaves(e.target.checked)}
-                                            style={{ accentColor: 'var(--accent)' }}
+                                            style={{ accentColor: 'var(--accent)', width: 16, height: 16 }}
                                         /> 
-                                        Include Must-Have
+                                        Include Must-Haves ({mods.filter(m => !m.isMap && (useModHubStore.getState().favoriteMods || []).some(fm => fm.isMustHave && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && m.fileName && fm.fileName === m.fileName)))).length})
                                     </label>
-                                    <button className="btn btn--ghost btn--xs" onClick={() => setModalSelectedMods(new Set(mods.filter(m => !m.isMap).map(m => m.modName)))} title="Select All (No Maps)">All</button>
-                                    <button className="btn btn--ghost btn--xs" onClick={() => setModalSelectedMods(new Set())}>Clear</button>
+                                </div>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    {profiles.length > 0 && (
+                                        <select onChange={e => applyProfileToModal(e.target.value)} defaultValue="" style={{ fontSize: 13, padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                                            <option value="" disabled>Apply Profile...</option>
+                                            {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        </select>
+                                    )}
+                                    <button className="btn btn--secondary btn--sm" onClick={() => setModalSelectedMods(new Set(mods.filter(m => !m.isMap).map(m => m.modName)))}>Select All</button>
+                                    <button className="btn btn--secondary btn--sm" onClick={() => setModalSelectedMods(new Set())}>Clear</button>
                                 </div>
                             </div>
-                            {profiles.length > 0 && (
-                                <select onChange={e => applyProfileToModal(e.target.value)} defaultValue="" style={{ width: '100%', marginBottom: 12, fontSize: 13, padding: '10px' }}>
-                                    <option value="" disabled>Apply Profile...</option>
-                                    {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                </select>
-                            )}
-                            <div style={{ flex: 1, minHeight: 300, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8, padding: 8, background: 'var(--bg-tertiary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+
+                            <div style={{ flex: 1, minHeight: 400, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 12, padding: 12, background: 'var(--bg-tertiary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
                                 {(() => {
                                   const favoriteMods = useModHubStore.getState().favoriteMods || [];
-                                  const mustHaveMods = mods.filter(m => !m.isMap && favoriteMods.some(fm => fm.isMustHave && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && m.fileName && fm.fileName === m.fileName))));
-                                  const otherMods = mods.filter(m => !m.isMap && !mustHaveMods.some(mh => mh.modName === m.modName));
+                                  
+                                  // 1. Helper to deduplicate mods by title + author
+                                  const deduplicate = (list) => {
+                                      const map = new Map();
+                                      list.forEach(m => {
+                                          const key = `${m.title}|${m.author}`.toLowerCase();
+                                          const existing = map.get(key);
+                                          if (!existing) {
+                                              map.set(key, m);
+                                          } else {
+                                              // Simple version comparison
+                                              const v1 = String(existing.version || '0').split('.').map(p => parseInt(p) || 0);
+                                              const v2 = String(m.version || '0').split('.').map(p => parseInt(p) || 0);
+                                              let isNewer = false;
+                                              for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
+                                                  if ((v2[i] || 0) > (v1[i] || 0)) { isNewer = true; break; }
+                                                  if ((v2[i] || 0) < (v1[i] || 0)) break;
+                                              }
+                                              if (isNewer) map.set(key, m);
+                                          }
+                                      });
+                                      return Array.from(map.values()).sort((a, b) => a.title.localeCompare(b.title));
+                                  };
+
+                                  const allValidMods = mods.filter(m => !m.isMap);
+                                  const mustHaveMods = deduplicate(allValidMods.filter(m => 
+                                      favoriteMods.some(fm => fm.isMustHave && (
+                                          (fm.modId && m.modId && String(fm.modId) === String(m.modId)) || 
+                                          (fm.fileName && m.fileName && fm.fileName === m.fileName)
+                                      ))
+                                  ));
+                                  
+                                  const otherMods = deduplicate(allValidMods.filter(m => 
+                                      !mustHaveMods.some(mh => mh.title === m.title && mh.author === m.author)
+                                  ));
 
                                   return (
                                       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                         {mustHaveMods.length > 0 && includeMustHaves && (
                                           <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-                                            <div style={{ fontSize: 10, fontWeight: 900, color: 'var(--accent)', letterSpacing: 1, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <div style={{ fontSize: 10, fontWeight: 900, color: 'var(--accent)', letterSpacing: 1, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 8 }}>
                                               <Pin size={10} fill="var(--accent)" /> PINNED MUST-HAVES
                                             </div>
                                             {mustHaveMods.map(m => (
-                                              <label key={m.modName} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', fontSize: 13, cursor: 'default', borderRadius: 4, background: 'rgba(var(--accent-rgb), 0.1)', opacity: 0.8 }} title="Pinned Must-Have (Auto-selected)">
-                                                <input type="checkbox" checked={true} readOnly style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
-                                                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{m.title}</span>
+                                              <label key={m.modName} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', fontSize: 14, cursor: 'default', borderRadius: 8, background: 'rgba(var(--accent-rgb), 0.1)', opacity: 0.8, marginBottom: 4 }} title={`Version: ${m.version}`}>
+                                                <input type="checkbox" checked={true} readOnly style={{ width: 18, height: 18, accentColor: 'var(--accent)' }} />
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{m.title}</span>
+                                                    <span style={{ fontSize: 11, opacity: 0.6 }}>{m.author} • v{m.version}</span>
+                                                </div>
                                               </label>
                                             ))}
                                           </div>
                                         )}
                                         
-                                        {(includeMustHaves ? otherMods : mods.filter(m => !m.isMap)).map(m => (
-                                          <label key={m.modName} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', fontSize: 13, cursor: 'pointer', borderRadius: 4, background: modalSelectedMods.has(m.modName) ? 'var(--accent-dim)' : 'transparent' }} className="hover-bg">
-                                            <input type="checkbox" checked={modalSelectedMods.has(m.modName)} onChange={() => toggleModalModSelection(m.modName)} style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
-                                            {m.title}
-                                          </label>
-                                        ))}
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                            {(includeMustHaves ? otherMods : deduplicate(allValidMods)).map(m => (
+                                            <label key={m.modName} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', fontSize: 14, cursor: 'pointer', borderRadius: 8, background: modalSelectedMods.has(m.modName) ? 'var(--accent-dim)' : 'transparent', border: '1px solid transparent', transition: 'all 0.15s' }} className="hover-bg-subtle">
+                                                <input type="checkbox" checked={modalSelectedMods.has(m.modName)} onChange={() => toggleModalModSelection(m.modName)} style={{ width: 18, height: 18, accentColor: 'var(--accent)' }} />
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
+                                                    <span style={{ fontWeight: 600 }}>{m.title}</span>
+                                                    <span style={{ fontSize: 11, opacity: 0.4, whiteSpace: 'nowrap' }}>v{m.version}</span>
+                                                </div>
+                                            </label>
+                                            ))}
+                                        </div>
                                       </div>
                                   );
                                 })()}
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
-                <div style={{ display: 'flex', gap: 'var(--sp-4)', justifyContent: 'flex-end', marginTop: 24, paddingTop: 24, borderTop: '1px solid var(--border)', flexShrink: 0 }}>
-                    <button className="btn btn--secondary" style={{ height: 48, padding: '0 32px', fontSize: 16 }} onClick={() => setShowCreateModal(false)}>Cancel</button>
-                    <button className="btn btn--primary" style={{ height: 48, padding: '0 48px', fontSize: 16, fontWeight: 800 }} onClick={handleCreate} disabled={creating}>{creating ? 'Creating...' : 'Create'}</button>
+                <div style={{ display: 'flex', gap: 'var(--sp-4)', justifyContent: 'flex-end', padding: '24px 32px', background: 'var(--bg-tertiary)', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+                    <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
+                            <strong style={{ color: 'var(--text-primary)' }}>{modalSelectedMods.size + (includeMustHaves ? 10 : 0)}</strong> Mods Selected
+                        </div>
+                    </div>
+                    <button className="btn btn--ghost" style={{ height: 48, padding: '0 32px', fontSize: 16 }} onClick={() => setShowCreateModal(false)}>Cancel</button>
+                    <button className="btn btn--primary" style={{ height: 48, padding: '0 48px', fontSize: 16, fontWeight: 800, background: 'var(--accent)', color: 'var(--bg-primary)' }} onClick={handleCreate} disabled={creating}>{creating ? 'Creating...' : 'Create Career'}</button>
                 </div>
               </div>
           </div>
       )}
 
       {showRestoreModal && (
-          <div className="modal-overlay" onClick={() => setShowRestoreModal(null)}>
+          <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowRestoreModal(null)}>
               <div className="modal-content" style={{ width: 400 }} onClick={e => e.stopPropagation()}>
                 <h2 style={{ marginBottom: 'var(--sp-4)' }}>Restore to Slot</h2>
                 <div style={{ marginBottom: 'var(--sp-5)' }}>
                     <label style={{ fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 4 }}>TARGET SLOT</label>
-                    <select value={restoreSlot} onChange={e => setRestoreSlot(e.target.value)} style={{ width: '100%', padding: '10px' }}>
+                    <select value={restoreSlot} onChange={e => setRestoreSlot(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid var(--border)', borderRadius: 8 }}>
+                        <option value="auto">Auto (Next Available)</option>
                         {[...Array(20)].map((_, i) => (
                             <option key={i+1} value={i+1}>Slot {i+1} {allSlots[i].isEmpty ? '(Empty)' : `(Occupied: ${allSlots[i].farmName})`}</option>
                         ))}
                     </select>
+                </div>
+                <div style={{ marginBottom: 'var(--sp-6)' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, cursor: 'pointer', userSelect: 'none' }}>
+                        <input type="checkbox" id="keep-archive-copy" style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+                        Keep a copy in the Library
+                    </label>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--sp-2)', justifyContent: 'flex-end' }}>
                     <button className="btn btn--ghost" onClick={() => setShowRestoreModal(null)}>Cancel</button>

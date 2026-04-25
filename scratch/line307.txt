@@ -1,0 +1,1 @@
+﻿                                 <div style={{ fontSize: 11, fontWeight: 700 }}>{p.fillType.replace('FILLTYPE_', '')}</div>

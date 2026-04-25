@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Plus, Trash2, Save, Package, PlayCircle, Coins, Map, Settings, Info, DollarSign, Share2, Download, Copy, RefreshCw, AlertCircle, Pin, Search, ChevronLeft, ChevronRight, Folder, ChevronDown, Truck, Users, Globe, Eye, Palette, MapPin, Ruler, Thermometer, Maximize, Radio, Video, Gamepad2, Volume2, LayoutGrid, List } from 'lucide-react';
+import { Plus, Trash2, Save, Package, PlayCircle, Coins, Map, Settings, Info, DollarSign, Share2, Download, Copy, RefreshCw, AlertCircle, Pin, Search, ChevronLeft, ChevronRight, Folder, ChevronDown, Truck, Users, Globe, Eye, Palette, MapPin, Ruler, Thermometer, Maximize, Radio, Video, Gamepad2, Volume2, LayoutGrid, List, Pencil } from 'lucide-react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useModHubStore } from '../store/useModHubStore';
 import { useToastStore } from '../store/useToastStore';
@@ -46,6 +46,8 @@ export default function ProfilesPage() {
   const [modSearchQuery, setModSearchQuery] = useState('');
   const [includeMustHaves, setIncludeMustHaves] = useState(true);
   const [activeTab, setActiveTab] = useState('general');
+  const [renamingProfileId, setRenamingProfileId] = useState(null);
+  const [renamingValue, setRenamingValue] = useState('');
   
   // Template Options
   const [options, setOptions] = useState({
@@ -384,6 +386,17 @@ export default function ProfilesPage() {
     });
   };
 
+  const handleSidebarRename = async (id, newName) => {
+    const trimmed = newName.trim();
+    if (trimmed && trimmed !== profiles.find(p => p.id === id)?.name) {
+      const p = profiles.find(p => p.id === id);
+      await updateProfile(id, { ...p, name: trimmed });
+      if (selectedProfileId === id) setProfileName(trimmed);
+      useToastStore.getState().success(`Renamed to ${trimmed}`);
+    }
+    setRenamingProfileId(null);
+  };
+
   return (
     <div className="page animate-fade-in-up" style={{ display: 'flex', height: '100%', gap: isSidebarCollapsed ? 0 : 'var(--sp-6)', position: 'relative' }}>
       
@@ -414,7 +427,7 @@ export default function ProfilesPage() {
             <Download size={16} /> Import
           </button>
           <button className="btn btn--secondary" onClick={() => scanMods()}>
-            <RefreshCw size={16} /> Refresh
+            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} /> Refresh
           </button>
         </div>
 
@@ -521,7 +534,34 @@ export default function ProfilesPage() {
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, color: selectedProfileId === p.id ? 'var(--accent)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {p.name}
+                    {renamingProfileId === p.id ? (
+                      <input 
+                        autoFocus
+                        className="editable-label__input"
+                        value={renamingValue}
+                        onChange={e => setRenamingValue(e.target.value)}
+                        onBlur={() => handleSidebarRename(p.id, renamingValue)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleSidebarRename(p.id, renamingValue);
+                          if (e.key === 'Escape') setRenamingProfileId(null);
+                        }}
+                        onClick={e => e.stopPropagation()}
+                        style={{ fontSize: 13, height: 20 }}
+                      />
+                    ) : (
+                      <span 
+                        className="editable-label"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRenamingProfileId(p.id);
+                          setRenamingValue(p.name);
+                        }}
+                        title="Click to rename template"
+                      >
+                        {p.name}
+                        <Pencil size={12} className="editable-label__icon" style={{ marginLeft: 6 }} />
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)' }}>
                     {(p.mods || []).length} mods · {p.options?.mapTitle || 'No map'}
@@ -989,34 +1029,6 @@ export default function ProfilesPage() {
                                   </div>
                                   
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={e => e.stopPropagation()}>
-                                    {/* View Mode Toggle */}
-                                    <div style={{ display: 'flex', gap: 2, background: 'rgba(255,255,255,0.03)', padding: 2, borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)', marginRight: 6 }}>
-                                      <button 
-                                        onClick={() => setFolderViewModes(prev => ({ ...prev, [folderName]: 'list' }))}
-                                        style={{ 
-                                          display: 'flex', alignItems: 'center', padding: '4px 8px', borderRadius: 4, 
-                                          background: viewMode === 'list' ? 'var(--accent)' : 'transparent',
-                                          color: viewMode === 'list' ? 'var(--bg-primary)' : 'var(--text-tertiary)',
-                                          border: 'none', cursor: 'pointer', transition: 'all 0.2s', width: 32, height: 28, justifyContent: 'center'
-                                        }}
-                                        title="List View"
-                                      >
-                                        <List size={14} strokeWidth={viewMode === 'list' ? 3 : 2} />
-                                      </button>
-                                      <button 
-                                        onClick={() => setFolderViewModes(prev => ({ ...prev, [folderName]: 'grid' }))}
-                                        style={{ 
-                                          display: 'flex', alignItems: 'center', padding: '4px 8px', borderRadius: 4, 
-                                          background: viewMode === 'grid' ? 'var(--accent)' : 'transparent',
-                                          color: viewMode === 'grid' ? 'var(--bg-primary)' : 'var(--text-tertiary)',
-                                          border: 'none', cursor: 'pointer', transition: 'all 0.2s', width: 32, height: 28, justifyContent: 'center'
-                                        }}
-                                        title="Grid View"
-                                      >
-                                        <LayoutGrid size={13} strokeWidth={viewMode === 'grid' ? 3 : 2} />
-                                      </button>
-                                    </div>
-
                                     <button 
                                       className="btn btn--ghost btn--xs" 
                                       onClick={() => handleSelectFolderMods(folderName, filteredFolderMods, allSelected)}
@@ -1059,6 +1071,35 @@ export default function ProfilesPage() {
                                       />
                                       <LayoutGrid size={14} style={{ opacity: 0.8 }} />
                                     </div>
+
+                                    {/* View Mode Toggle */}
+                                    <div style={{ display: 'flex', gap: 2, background: 'rgba(255,255,255,0.03)', padding: 2, borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)', marginRight: 6 }}>
+                                      <button 
+                                        onClick={() => setFolderViewModes(prev => ({ ...prev, [folderName]: 'list' }))}
+                                        style={{ 
+                                          display: 'flex', alignItems: 'center', padding: '4px 8px', borderRadius: 4, 
+                                          background: viewMode === 'list' ? 'var(--accent)' : 'transparent',
+                                          color: viewMode === 'list' ? 'var(--bg-primary)' : 'var(--text-tertiary)',
+                                          border: 'none', cursor: 'pointer', transition: 'all 0.2s', width: 32, height: 28, justifyContent: 'center'
+                                        }}
+                                        title="List View"
+                                      >
+                                        <List size={14} strokeWidth={viewMode === 'list' ? 3 : 2} />
+                                      </button>
+                                      <button 
+                                        onClick={() => setFolderViewModes(prev => ({ ...prev, [folderName]: 'grid' }))}
+                                        style={{ 
+                                          display: 'flex', alignItems: 'center', padding: '4px 8px', borderRadius: 4, 
+                                          background: viewMode === 'grid' ? 'var(--accent)' : 'transparent',
+                                          color: viewMode === 'grid' ? 'var(--bg-primary)' : 'var(--text-tertiary)',
+                                          border: 'none', cursor: 'pointer', transition: 'all 0.2s', width: 32, height: 28, justifyContent: 'center'
+                                        }}
+                                        title="Grid View"
+                                      >
+                                        <LayoutGrid size={13} strokeWidth={viewMode === 'grid' ? 3 : 2} />
+                                      </button>
+                                    </div>
+
                                   </div>
                                 </div>
 

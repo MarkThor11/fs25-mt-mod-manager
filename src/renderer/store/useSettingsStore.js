@@ -43,6 +43,7 @@ export const useSettingsStore = create((set) => ({
   badgeDuration: '48h',
   expandedFolders: { '': true },
   selectiveLoading: true,
+  nickname: '',
 
   setIsOnline: (isOnline) => set({ isOnline }),
 
@@ -116,6 +117,7 @@ export const useSettingsStore = create((set) => ({
         badgeDuration: settings.badgeDuration || '48h',
         expandedFolders: settings.expandedFolders ? JSON.parse(settings.expandedFolders) : { '': true },
         selectiveLoading: settings.selectiveLoading !== 'false',
+        nickname: settings.nickname || '',
         isLoaded: true,
       });
     } catch (err) {
@@ -385,5 +387,10 @@ export const useSettingsStore = create((set) => ({
   setSelectiveLoading: async (val) => {
     set({ selectiveLoading: val });
     if (window.api?.settings) await window.api.settings.set('selectiveLoading', String(val));
+  },
+
+  setNickname: async (nickname) => {
+    set({ nickname });
+    if (window.api?.settings) await window.api.settings.set('nickname', nickname);
   },
 }));

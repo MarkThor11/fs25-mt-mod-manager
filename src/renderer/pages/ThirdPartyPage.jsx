@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Globe, Plus, Trash2, ExternalLink, Link as LinkIcon, 
-  Info, RefreshCw, AlertCircle, CheckCircle2, Package, X
+  Info, RefreshCw, RefreshCcw, AlertCircle, CheckCircle2, Package, X, Edit2
 } from 'lucide-react';
 import { useThirdPartyStore } from '../store/useThirdPartyStore';
 import { useLocalModsStore } from '../store/useLocalModsStore';
@@ -14,12 +14,25 @@ export default function ThirdPartyPage() {
   const [newTitle, setNewTitle] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const [selectedLocalMod, setSelectedLocalMod] = useState('');
+  const [refreshingId, setRefreshingId] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingMod, setEditingMod] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editUrl, setEditUrl] = useState('');
+  const [editLocalFileName, setEditLocalFileName] = useState('');
+  
+  useEffect(() => {
+    // Automatically trigger a check for all mods if any are in an "Unknown" state
+    const needsCheck = externalMods.some(m => !m.lastChecked || !m.remoteVersion);
+    if (needsCheck && externalMods.length > 0 && !isChecking) {
+      checkAllUpdates();
+    }
+  }, []);
 
-  // Filter local mods to only show those NOT already linked and NOT from ModHub
+  // Filter local mods to only show those NOT already linked, NOT from ModHub, and NOT DLCs
   const availableLocalMods = useMemo(() => {
     const linkedFileNames = new Set(externalMods.map(m => m.localFileName).filter(Boolean));
-    return localMods.filter(m => !m.modId && !linkedFileNames.has(m.fileName));
+    return localMods.filter(m => !m.modId && !m.isDLC && !linkedFileNames.has(m.fileName));
   }, [localMods, externalMods]);
 
   const handleAddMod = (e) => {
@@ -46,14 +59,44 @@ export default function ThirdPartyPage() {
     });
     
     if (res.success) {
+      const addedModUrl = newUrl.trim();
       setNewTitle('');
       setNewUrl('');
       setSelectedLocalMod('');
       setShowAddForm(false);
       useToastStore.getState().success('External mod tracking added.');
+      
+      // Trigger initial check immediately
+      const newlyAdded = useThirdPartyStore.getState().externalMods.find(m => m.url === addedModUrl);
+      if (newlyAdded) {
+        handleRefreshSingle(newlyAdded);
+      }
     } else {
       useToastStore.getState().error(res.error);
     }
+  };
+
+  const handleEditMod = (mod) => {
+    setEditingMod(mod);
+    setEditTitle(mod.title);
+    setEditUrl(mod.url);
+    setEditLocalFileName(mod.localFileName || '');
+  };
+
+  const saveEdit = (e) => {
+    e.preventDefault();
+    if (!editTitle.trim() || !editUrl.trim()) return;
+    
+    const localMod = localMods.find(m => m.fileName === editLocalFileName);
+
+    updateExternalMod(editingMod.id, {
+      title: editTitle.trim(),
+      url: editUrl.trim(),
+      localFileName: editLocalFileName || null,
+      currentVersion: localMod?.version || editingMod.currentVersion
+    });
+    setEditingMod(null);
+    useToastStore.getState().success('Mod details updated.');
   };
 
   const handleOpenLink = (url) => {
@@ -63,6 +106,12 @@ export default function ThirdPartyPage() {
   const handleDownload = async (mod) => {
     const toast = useToastStore.getState();
     toast.info(`Attempting to find download for ${mod.title}...`);
+
+    if (!window.api?.thirdParty) {
+      toast.error('Tracker service is not available.');
+      handleOpenLink(mod.url);
+      return;
+    }
     
     const downloadUrl = await window.api.thirdParty.findDownloadUrl({ url: mod.url });
     
@@ -100,19 +149,49 @@ export default function ThirdPartyPage() {
 
   const handleRefreshSingle = async (mod) => {
     const toast = useToastStore.getState();
+    setRefreshingId(mod.id);
     toast.info(`Checking ${mod.title}...`);
-    const res = await window.api.thirdParty.checkUrl({ url: mod.url });
-    if (res.success) {
-      const hasUpdate = mod.currentVersion && res.version !== mod.currentVersion;
-      updateExternalMod(mod.id, {
-        remoteVersion: res.version,
-        lastChecked: new Date().toISOString(),
-        hasUpdate
-      });
-      if (hasUpdate) toast.warning(`Update found for ${mod.title}: ${res.version}`);
-      else toast.success(`${mod.title} is up to date.`);
-    } else {
-      toast.error(`Check failed: ${res.error}`);
+
+    if (!window.api?.thirdParty) {
+      toast.error('Tracker service is not available.');
+      setRefreshingId(null);
+      return;
+    }
+
+    try {
+      const res = await window.api.thirdParty.checkUrl({ url: mod.url });
+      if (res.success) {
+        let hasUpdate = false;
+        
+        if (res.version) {
+          // Version-based detection (Normalize both for comparison)
+          const normRemote = res.version.toLowerCase().replace(/^v/, '').trim();
+          const normLocal = (mod.currentVersion || '').toLowerCase().replace(/^v/, '').trim();
+          hasUpdate = normLocal && normRemote !== normLocal;
+        } else if (mod.fingerprint && res.fingerprint && mod.fingerprint !== res.fingerprint) {
+          // Fallback: Fingerprint-based detection (only if version isn't listed)
+          hasUpdate = true;
+        }
+
+        updateExternalMod(mod.id, {
+          remoteVersion: res.version || 'New',
+          fingerprint: res.fingerprint,
+          lastChecked: new Date().toISOString(),
+          hasUpdate: hasUpdate
+        });
+
+        if (hasUpdate) {
+            toast.warning(res.version ? `Update found for ${mod.title}: ${res.version}` : `Possible update for ${mod.title} (Site content changed)`);
+        } else {
+            toast.success(`${mod.title} check complete.`);
+        }
+      } else {
+        toast.error(`Check failed: ${res.error}`);
+      }
+    } catch (err) {
+      toast.error(`Error checking mod: ${err.message}`);
+    } finally {
+      setRefreshingId(null);
     }
   };
 
@@ -180,9 +259,10 @@ export default function ThirdPartyPage() {
                     className="form-input"
                     value={selectedLocalMod}
                     onChange={(e) => {
-                      setSelectedLocalMod(e.target.value);
-                      if (!newTitle && e.target.value) {
-                         const mod = localMods.find(m => m.fileName === e.target.value);
+                      const fileName = e.target.value;
+                      setSelectedLocalMod(fileName);
+                      if (fileName) {
+                         const mod = localMods.find(m => m.fileName === fileName);
                          setNewTitle(mod?.title || '');
                       }
                     }}
@@ -219,79 +299,166 @@ export default function ThirdPartyPage() {
               </p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
-              {externalMods.map((mod) => (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '24px' }}>
+              {externalMods.map((mod) => {
+                const localMod = localMods.find(m => m.fileName === mod.localFileName);
+                const icon = (localMod?.storeData && !localMod.storeData.startsWith('CATEGORY:')) 
+                  ? localMod.storeData 
+                  : localMod?.iconData;
+
+                return (
                 <div key={mod.id} className="external-item animate-fade-in-up" 
                   style={{ 
-                    background: 'var(--bg-card)', 
-                    borderRadius: 'var(--radius-md)', 
-                    border: mod.hasUpdate ? '1px solid var(--warning)' : '1px solid var(--border)',
-                    padding: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 12
+                    border: mod.hasUpdate ? '2px solid var(--warning)' : undefined,
                   }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-sm)', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: mod.hasUpdate ? 'var(--warning)' : 'var(--accent)' }}>
-                        <Package size={24} />
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 'var(--fs-sm)' }}>{mod.title}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mod.url}</div>
-                      </div>
+                  {/* Background Image Overlay */}
+                  {icon && (
+                    <div 
+                      className="external-item__bg"
+                      style={{ backgroundImage: `url(${icon})` }} 
+                    />
+                  )}
+                  {/* Gradient to ensure readability */}
+                  <div style={{ 
+                    position: 'absolute', 
+                    inset: 0, 
+                    background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.7) 0%, var(--bg-card) 100%)', 
+                    pointerEvents: 'none',
+                    zIndex: 1
+                  }} />
+
+                  {/* Top Action Row */}
+                  <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 8, zIndex: 10 }}>
+                    <button className="btn btn--secondary btn--sm" onClick={(e) => { e.stopPropagation(); handleRefreshSingle(mod); }} disabled={isChecking || refreshingId === mod.id} title="Refresh" style={{ width: 32, height: 32, padding: 0, justifyContent: 'center', background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)' }}>
+                      <RefreshCw size={14} className={(isChecking || refreshingId === mod.id) ? 'animate-spin' : ''} />
+                    </button>
+                    <button className="btn btn--danger btn--sm" onClick={(e) => { e.stopPropagation(); removeExternalMod(mod.id); }} title="Remove" style={{ width: 32, height: 32, padding: 0, justifyContent: 'center', background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)' }}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+
+                  {/* Title Section */}
+                  <div 
+                    onClick={() => handleEditMod(mod)}
+                    className="hover-opacity-1"
+                    style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: 4, 
+                      cursor: 'pointer',
+                      padding: '4px 0',
+                      zIndex: 5,
+                      marginTop: -4
+                    }}
+                  >
+                    <div style={{ fontWeight: 800, fontSize: '20px', color: 'var(--text-primary)' }}>{mod.title}</div>
+                  </div>
+
+                  {/* Version Badges */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, width: '100%', position: 'relative', zIndex: 5, padding: '8px 0' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>Local Version</span>
+                      <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>{mod.currentVersion || 'Not Linked'}</span>
                     </div>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <button className="btn btn--secondary btn--xs" onClick={() => handleRefreshSingle(mod)} disabled={isChecking}>
-                        <RefreshCw size={12} className={isChecking ? 'animate-spin' : ''} />
-                      </button>
-                      <button className="btn btn--danger btn--xs" onClick={() => removeExternalMod(mod.id)}>
-                        <Trash2 size={12} />
-                      </button>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>Site Version</span>
+                      <span style={{ fontSize: '15px', fontWeight: 700, color: mod.hasUpdate ? 'var(--warning)' : 'var(--text-primary)' }}>{(mod.remoteVersion === 'Unknown' ? 'New' : mod.remoteVersion) || 'New'}</span>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <div style={{ fontSize: '10px', padding: '4px 8px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
-                      Local: <span style={{ color: 'var(--text-primary)' }}>{mod.currentVersion || 'N/A'}</span>
-                    </div>
-                    <div style={{ fontSize: '10px', padding: '4px 8px', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
-                      Remote: <span style={{ color: mod.hasUpdate ? 'var(--warning)' : 'var(--text-primary)' }}>{mod.remoteVersion || 'Unknown'}</span>
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {/* Footer Action */}
+                  <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', position: 'relative', zIndex: 5 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       {mod.hasUpdate ? (
-                        <span style={{ color: 'var(--warning)', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <AlertCircle size={14} /> Update Ready
+                        <span style={{ color: 'var(--warning)', fontSize: '14px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <AlertCircle size={18} /> Update Available
                         </span>
                       ) : mod.lastChecked ? (
-                        <span style={{ color: 'var(--accent)', fontSize: '11px', display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <CheckCircle2 size={14} /> Up to Date
+                        <span style={{ color: 'var(--accent)', fontSize: '14px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <CheckCircle2 size={18} /> Up to Date
                         </span>
                       ) : (
-                        <span style={{ color: 'var(--text-tertiary)', fontSize: '11px' }}>Never checked</span>
+                        <span style={{ color: 'var(--text-tertiary)', fontSize: '14px', fontWeight: 600 }}>Never checked</span>
                       )}
                     </div>
                     <button 
-                      className={mod.hasUpdate ? "btn btn--primary btn--sm" : "btn btn--secondary btn--sm"}
+                      className={mod.hasUpdate ? "btn btn--primary" : "btn btn--secondary btn--sm"}
                       onClick={() => mod.hasUpdate ? handleDownload(mod) : handleOpenLink(mod.url)}
-                      style={{ gap: 6 }}
+                      style={{ gap: 8, height: 42, padding: '0 20px', fontWeight: 700 }}
                     >
                       {mod.hasUpdate ? (
-                        <RefreshCw size={14} className={isChecking ? 'animate-spin' : ''} />
+                        <><RefreshCw size={18} /> Update Now</>
                       ) : (
-                        <ExternalLink size={14} />
+                        <><ExternalLink size={18} /> Visit Site</>
                       )}
-                      {mod.hasUpdate ? 'Download Update' : 'View Page'}
                     </button>
                   </div>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
+
+
+        {/* Edit Modal */}
+        {editingMod && (
+          <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div className="modal-content animate-scale-in" style={{ background: 'var(--bg-secondary)', width: '100%', maxWidth: 500, borderRadius: 'var(--radius-lg)', padding: 32, boxShadow: 'var(--shadow-xl)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <h2 style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>Edit Mod Details</h2>
+                <button className="btn btn--icon" onClick={() => setEditingMod(null)}><X size={24} /></button>
+              </div>
+              
+              <form onSubmit={saveEdit}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <div className="form-group">
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: 'var(--fs-sm)', fontWeight: 600 }}>Mod Title (Display Name)</label>
+                    <input 
+                      type="text" 
+                      className="form-input"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: 'var(--fs-sm)', fontWeight: 600 }}>Tracking URL</label>
+                    <input 
+                      type="text" 
+                      className="form-input"
+                      value={editUrl}
+                      onChange={(e) => setEditUrl(e.target.value)}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: 'var(--fs-sm)', fontWeight: 600 }}>Linked Local Mod (Optional)</label>
+                    <select 
+                      className="form-input"
+                      value={editLocalFileName}
+                      onChange={(e) => setEditLocalFileName(e.target.value)}
+                      style={{ width: '100%', background: 'var(--bg-tertiary)' }}
+                    >
+                      <option value="">-- Not Linked --</option>
+                      {availableLocalMods
+                        .concat(editingMod?.localFileName ? localMods.filter(m => m.fileName === editingMod.localFileName) : [])
+                        .filter((v, i, a) => a.findIndex(t => t.fileName === v.fileName) === i) // Deduplicate
+                        .map(m => (
+                        <option key={m.fileName} value={m.fileName}>{m.title} ({m.fileName})</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
+                <div style={{ marginTop: 32, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                  <button type="button" className="btn btn--secondary" onClick={() => setEditingMod(null)}>Cancel</button>
+                  <button type="submit" className="btn btn--primary">Save Changes</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         <div className="third-party-info" style={{ marginTop: 'var(--sp-8)' }}>
           <div className="alert alert--info" style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '16px', border: '1px solid var(--border)' }}>

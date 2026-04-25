@@ -945,13 +945,22 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           </span>
         )}
         {(() => {
-          const isActuallyNew = mod.isNew || (!mod.isUpdate && !hideFreshBadges);
-          if (!isActuallyNew) return null;
-          return (
-            <span className="mod-card__status-badge" style={{ background: 'var(--success)', color: 'white', fontWeight: 900, textTransform: 'uppercase', top: 24, left: isMustHave ? 100 : 12, right: 'auto', border: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+          // If scraper found the 'NEW' ribbon, always show it
+          if (mod.isNew) return (
+            <span className="mod-card__status-badge" style={{ background: 'var(--success)', color: 'black', fontWeight: 900, textTransform: 'uppercase', top: 24, left: isMustHave ? 100 : 12, right: 'auto', border: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
               New!
             </span>
           );
+
+          // Fallback to date-based logic only if it's NOT an update
+          if (!mod.isUpdate && !hideFreshBadges) {
+            return (
+              <span className="mod-card__status-badge" style={{ background: 'var(--success)', color: 'black', fontWeight: 900, textTransform: 'uppercase', top: 24, left: isMustHave ? 100 : 12, right: 'auto', border: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+                New!
+              </span>
+            );
+          }
+          return null;
         })()}
         {status === 'removed' && (
           <span className="mod-card__status-badge mod-card__status-badge--removed" style={{ background: 'var(--danger)', color: 'white' }}>

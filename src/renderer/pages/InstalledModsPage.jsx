@@ -7,6 +7,7 @@ import {
   Heart, Star, Share2, Pencil, GripVertical, User, Pin
 } from 'lucide-react';
 import { useLocalModsStore } from '../store/useLocalModsStore';
+import { useDownloadStore } from '../store/useDownloadStore';
 import { useToastStore } from '../store/useToastStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useModHubStore } from '../store/useModHubStore';
@@ -213,8 +214,22 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
             </div>
 
             {status === 'update' && (
-                <div style={{ position: 'absolute', bottom: 8, right: 8, background: 'var(--warning)', color: 'black', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 900, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                    UPDATE
+                <div style={{ 
+                    position: 'absolute', 
+                    top: 8, 
+                    right: 8, 
+                    background: '#f59e0b', 
+                    color: 'black', 
+                    padding: '2px 8px', 
+                    borderRadius: 4, 
+                    fontSize: 10, 
+                    fontWeight: 900, 
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    zIndex: 30,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                }}>
+                    UPDATE!
                 </div>
             )}
             
@@ -422,7 +437,7 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
 export default function InstalledModsPage() {
   const {
     mods, allFolders, isLoading, isCheckingUpdates, updates, error,
-    isResolving, resolvingStatus,
+    isResolving, resolvingStatus, showOnlyUpdates, setShowOnlyUpdates,
     scanMods, checkUpdates, uninstallMod, updateMod, initListeners, toggleAutoResolve,
     createFolder, renameFolder, deleteFolder, moveModsToFolder, exportCollection
   } = useLocalModsStore();
@@ -433,6 +448,7 @@ export default function InstalledModsPage() {
     iconOnlyFolders, toggleIconOnlyFolder, isOnline, isLoaded
   } = useSettingsStore();
   const { toggleFavoriteMod, toggleFavoriteAuthor, favoriteMods, favoriteAuthors } = useModHubStore();
+  const { activeDownloads } = useDownloadStore();
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -570,6 +586,11 @@ export default function InstalledModsPage() {
     if (selectedTags.length > 0) {
         const hasMatch = selectedTags.some(tag => (m.tags || []).includes(tag));
         if (!hasMatch) return false;
+    }
+
+    if (showOnlyUpdates) {
+        const hasUpdate = updates.some(u => u.fileName === m.fileName);
+        if (!hasUpdate) return false;
     }
 
     return true;
@@ -975,24 +996,39 @@ export default function InstalledModsPage() {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     
-    // Set global hover state for outline effect
-    if (dragOverFolder !== targetFolderName) {
-        setDragOverFolder(targetFolderName);
-    }
-
-    // If we're dragging a mod, we don't show the reorder indicator
-    if (!draggedFolder) return;
-
-    if (draggedFolder === targetFolderName) {
+    // If we're dragging a mod, we always want to drop INTO the folder (Highlight whole card)
+    const isModDrag = e.dataTransfer.types.includes('sourceModFile') || e.dataTransfer.types.includes('sourceModFiles');
+    
+    if (isModDrag) {
+        if (dragOverFolder !== targetFolderName) setDragOverFolder(targetFolderName);
         setDropIndicator(null);
         return;
     }
 
+    // FOLDER REORDERING LOGIC
+    if (!draggedFolder) return;
+
+    if (draggedFolder === targetFolderName) {
+        setDropIndicator(null);
+        setDragOverFolder(null);
+        return;
+    }
+
     const rect = e.currentTarget.getBoundingClientRect();
-    const midPoint = rect.top + rect.height / 2;
-    const position = e.clientY < midPoint ? 'top' : 'bottom';
-    
-    setDropIndicator({ folderName: targetFolderName, position });
+    const relativeY = e.clientY - rect.top;
+    const threshold = rect.height * 0.35; // Increased to 35% for easier snapping
+
+    if (relativeY < threshold) {
+        setDropIndicator({ folderName: targetFolderName, position: 'top' });
+        setDragOverFolder(null);
+    } else if (relativeY > rect.height - threshold) {
+        setDropIndicator({ folderName: targetFolderName, position: 'bottom' });
+        setDragOverFolder(null);
+    } else {
+        // Middle 50% - Merging state
+        setDropIndicator(null);
+        if (dragOverFolder !== targetFolderName) setDragOverFolder(targetFolderName);
+    }
   };
 
   const handleDrop = async (e, targetFolderName) => {
@@ -1005,15 +1041,15 @@ export default function InstalledModsPage() {
         return;
     }
 
-    // Check for folder-to-folder drag (Move all mods from one folder to another)
+    // Check for folder-to-folder MERGE (Drop in middle, no indicator)
     const sourceFolderName = e.dataTransfer.getData('folderDragName');
-    if (sourceFolderName && sourceFolderName !== targetFolderName && !e.shiftKey) {
-        // If dropping onto a folder while NOT holding Shift, we move all mods from source to target
+    if (sourceFolderName && sourceFolderName !== targetFolderName && !dropIndicator) {
+        // Only merge if we aren't explicitly reordering (indicator is null)
         const modsInSourceFolder = mods.filter(m => (m.folder || '') === sourceFolderName);
         if (modsInSourceFolder.length > 0) {
             const fileNames = modsInSourceFolder.map(m => m.fileName);
             await moveModsToFolder(fileNames, targetFolderName);
-            useToastStore.getState().success(`Moved ${fileNames.length} mods from "${sourceFolderName || 'Root'}" to "${targetFolderName || 'Root'}"`);
+            useToastStore.getState().success(`Merged "${sourceFolderName || 'Root'}" into "${targetFolderName || 'Root'}"`);
             setDropIndicator(null);
             setDragOverFolder(null);
             return;
@@ -1096,14 +1132,14 @@ export default function InstalledModsPage() {
     setUpdatingMod(modFileName);
     try {
       const result = await updateMod(modFileName, modId);
-      if (result.success) {
-        useToastStore.getState().success(`Update completed for ${modFileName}`);
-      } else {
+      if (!result.success) {
         useToastStore.getState().error(`Update failed: ${result.error}`);
+        setUpdatingMod(null);
       }
+      // If success, we stay in the "updating" state until activeDownloads[modId] is gone
+      // We clear the local updatingMod state if the download didn't start or when it finishes
     } catch (err) {
       useToastStore.getState().error(`Update error: ${err.message}`);
-    } finally {
       setUpdatingMod(null);
     }
   };
@@ -1228,7 +1264,7 @@ export default function InstalledModsPage() {
               title="Deep Re-Scan"
               style={{ color: 'var(--warning)' }}
             >
-              <RefreshCcw size={16} />
+              <RefreshCcw size={16} className={isLoading ? 'animate-spin' : ''} />
             </button>
             <button className="btn btn--secondary btn--sm" onClick={scanMods} disabled={isLoading} title="Refresh Library">
               <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
@@ -1324,6 +1360,29 @@ export default function InstalledModsPage() {
           <Heart size={14} fill={showOnlyFavorites ? 'currentColor' : 'none'} /> Favorites
         </button>
 
+        <button 
+          className={`btn ${showOnlyUpdates ? 'btn--primary' : 'btn--secondary'} btn--sm`}
+          onClick={() => setShowOnlyUpdates(!showOnlyUpdates)}
+          style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
+          title={updates.length === 0 ? "No updates detected. Run 'Check for Updates' first." : "Filter by mods needing updates"}
+        >
+          <RefreshCw size={14} className={showOnlyUpdates ? 'animate-pulse' : ''} /> Updates
+          {updates.length > 0 && (
+            <span style={{ 
+                background: showOnlyUpdates ? 'white' : 'var(--accent)', 
+                color: showOnlyUpdates ? 'var(--accent)' : 'white', 
+                borderRadius: 10, 
+                padding: '1px 6px', 
+                fontSize: 10,
+                fontWeight: 900,
+                minWidth: 18,
+                textAlign: 'center'
+            }}>
+                {updates.length}
+            </span>
+          )}
+        </button>
+
 
 
         {selectedMods.length > 0 && (
@@ -1386,7 +1445,11 @@ export default function InstalledModsPage() {
                 
                 const key = exportCollection(selectedModIds);
                 if (key) {
-                  navigator.clipboard.writeText(key);
+                  if (window.api && window.api.clipboard) {
+                    window.api.clipboard.writeText(key);
+                  } else {
+                    navigator.clipboard.writeText(key);
+                  }
                   useToastStore.getState().success('Selection exported as Mod Key!');
                 }
               }}
@@ -1508,12 +1571,12 @@ export default function InstalledModsPage() {
               style={{ 
                 background: isHidden ? 'var(--bg-secondary)' : 'var(--bg-card)', 
                 borderRadius: 'var(--radius-lg)', 
-                border: (dragOverFolder === folderName && !draggedFolder) // Highlighting when dragging a mod
+                border: (dragOverFolder === folderName) 
                     ? '2px solid var(--accent)' 
                     : (isHidden ? '1px dashed var(--border)' : '1px solid var(--border)'),
-                overflow: 'hidden',
-                boxShadow: (dragOverFolder === folderName && !draggedFolder)
-                    ? '0 0 15px var(--accent-dim)'
+                overflow: 'visible', // Allow indicators to pop out
+                boxShadow: (dragOverFolder === folderName)
+                    ? '0 0 20px var(--accent-dim), inset 0 0 10px var(--accent-dim)'
                     : (isHidden ? 'none' : '0 2px 8px rgba(0,0,0,0.05)'),
                 opacity: isHidden ? 0.7 : 1,
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1527,16 +1590,19 @@ export default function InstalledModsPage() {
               {dropIndicator?.folderName === folderName && (
                   <div style={{
                       position: 'absolute',
-                      left: 10,
-                      right: 10,
-                      height: 6,
+                      left: 20, // Aligned with the Grab Handle start
+                      right: 20,
+                      height: 4, // Slightly thinner for more precision
                       background: 'var(--accent)',
-                      zIndex: 100,
+                      zIndex: 1000,
                       boxShadow: '0 0 20px var(--accent), 0 0 10px var(--accent)',
-                      [dropIndicator.position]: dropIndicator.position === 'top' ? -23 : -23,
+                      [dropIndicator.position]: -26, // Fine-tuned to align with the vertical center of the handle's future position
                       borderRadius: 10,
-                      transition: 'all 0.2s ease'
-                  }} />
+                      pointerEvents: 'none'
+                  }}>
+                    {/* Visual End Caps - Smaller to match handle dots */}
+                    <div style={{ position: 'absolute', left: -4, top: -4, bottom: -4, width: 12, background: 'var(--accent)', borderRadius: '50%', boxShadow: '0 0 10px var(--accent)' }} />
+                  </div>
               )}
               <div 
                   style={{ 
@@ -1544,7 +1610,7 @@ export default function InstalledModsPage() {
                       alignItems: 'center', 
                       gap: 12, 
                       padding: isHidden ? '8px 20px' : '12px 20px',
-                      background: folderName === '' ? 'var(--accent-dim)' : (isHidden ? 'transparent' : 'var(--bg-tertiary)'),
+                      background: (isHidden ? 'transparent' : 'var(--bg-tertiary)'),
                       cursor: 'pointer',
                       userSelect: 'none'
                   }}
@@ -1577,13 +1643,13 @@ export default function InstalledModsPage() {
                     }}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}
                   >
-                    <Folder size={isHidden ? 14 : 18} style={{ color: folderName === '' ? 'var(--accent)' : 'var(--text-tertiary)' }} />
+                    <Folder size={isHidden ? 14 : 18} style={{ color: 'var(--text-tertiary)' }} />
                     
                     {isRenaming ? (
                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                           <input 
                             autoFocus
-                            className="search-input"
+                            className="editable-label__input"
                             value={renameValue}
                             onChange={e => setRenameValue(e.target.value)}
                             onKeyDown={e => {
@@ -1597,11 +1663,20 @@ export default function InstalledModsPage() {
                     ) : (
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                         <span 
-                          style={{ fontWeight: 800, fontSize: isHidden ? 11 : 'var(--fs-sm)', letterSpacing: '0.05em' }}
-                          onDoubleClick={() => folderName !== '' && handleRenameFolder(folderName)}
-                        >
-                          {folderName === '' ? 'MAIN' : folderName.toUpperCase()}
-                        </span>
+                           className="editable-label"
+                           style={{ fontWeight: 800, fontSize: isHidden ? 11 : 'var(--fs-sm)', letterSpacing: '0.05em' }}
+                           onClick={(e) => {
+                             if (folderName === '' || folderName === 'DLC') return;
+                             e.stopPropagation();
+                             handleRenameFolder(folderName);
+                           }}
+                           title={folderName === '' || folderName === 'DLC' ? "" : "Click to rename folder"}
+                         >
+                           {folderName === '' ? 'MAIN' : folderName.toUpperCase()}
+                           {folderName !== '' && folderName !== 'DLC' && (
+                             <Pencil size={12} className="editable-label__icon" style={{ marginLeft: 8 }} />
+                           )}
+                         </span>
                         {!isHidden && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)', fontWeight: 500 }}>
@@ -1610,7 +1685,6 @@ export default function InstalledModsPage() {
                             
                             {/* Requirements Badge for Maps */}
                             {(() => {
-                               if (folderName === '') return null; // Hide for MAIN
                                const result = folderData.requirements;
                                if (result.status === 'none') return null;
                                return (
@@ -1687,6 +1761,97 @@ export default function InstalledModsPage() {
                   </div>
 
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} onDragStart={e => e.stopPropagation()}>
+                    {!isHidden && folderMods.length > 1 && (
+                      <div 
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 10px', borderRadius: 4, background: 'rgba(0,0,0,0.05)' }}
+                        onClick={() => toggleAllInFolder(folderName, folderMods)}
+                        onMouseDown={e => e.stopPropagation()}
+                        onDragStart={e => e.stopPropagation()}
+                      >
+                          <input 
+                            type="checkbox" 
+                            readOnly 
+                            checked={folderMods.length > 0 && folderMods.every(m => selectedMods.includes(m.fileName))}
+                            style={{ width: 14, height: 14, accentColor: 'var(--accent)' }}
+                          />
+                          <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}>Select All</span>
+                        </div>
+                      )}
+
+                    {!isHidden && folderName !== 'DLC' && folderMods.length > 0 && (
+                        <button 
+                            className="btn btn--danger btn--sm"
+                            disabled={!folderMods.some(m => selectedMods.includes(m.fileName))}
+                            onClick={async () => {
+                                const folderSelected = folderMods.filter(m => selectedMods.includes(m.fileName));
+                                if (folderSelected.length === 0) return;
+                                const skipConfirm = useSettingsStore.getState().skipDeleteConfirm;
+                                if (skipConfirm || confirm(`Delete ${folderSelected.length} selected mods in ${folderName || 'MAIN'}?`)) {
+                                    useLocalModsStore.getState().bulkUninstallMods(folderSelected);
+                                    setSelectedMods(prev => prev.filter(f => !folderSelected.some(m => m.fileName === f)));
+                                    useToastStore.getState().success(`Deleted ${folderSelected.length} mods.`);
+                                }
+                            }}
+                            style={{ height: 32, width: 32, padding: 0 }}
+                            title="Delete Selected Mods in Folder"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+                    )}
+
+                    
+                    {!isHidden && folderMods.length > 0 && (
+                      <div 
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 8, 
+                          background: 'rgba(0,0,0,0.05)', 
+                          padding: '4px 8px', 
+                          borderRadius: 4,
+                          marginRight: 4
+                        }}
+                        onClick={e => e.stopPropagation()}
+                        onMouseDown={e => e.stopPropagation()}
+                        onPointerDown={e => e.stopPropagation()}
+                        onDragStart={e => e.stopPropagation()}
+                      >
+                          <LayoutGrid size={12} style={{ opacity: 0.4 }} />
+                          <div style={{ 
+                            position: 'relative', 
+                            width: 60, 
+                            height: 4, 
+                            background: 'rgba(255,255,255,0.1)', 
+                            borderRadius: 2, 
+                            display: 'flex', 
+                            alignItems: 'center',
+                            margin: '0 4px'
+                          }}>
+                              <input 
+                                type="range" 
+                                min="120" 
+                                max="350" 
+                                step="5"
+                                value={folderZooms[folderName] || 180}
+                                onChange={(e) => setFolderZoom(folderName, parseInt(e.target.value))}
+                                className="range-slider"
+                                style={{ 
+                                  position: 'absolute',
+                                  left: '50%',
+                                  top: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                  width: 'calc(100% + 16px)', 
+                                  margin: 0,
+                                  cursor: 'pointer',
+                                  background: 'transparent'
+                                }}
+                                title={installedModsViewMode === 'grid' ? "Card Size" : "Icon Size"}
+                              />
+                          </div>
+                          <LayoutGrid size={16} style={{ opacity: 0.7 }} />
+                      </div>
+                    )}
+
                     {!isHidden && !isRenaming && (
                         <button 
                             className={`btn btn--sm ${iconOnlyFolders.includes(folderName) ? 'btn--primary' : 'btn--secondary'}`}
@@ -1720,40 +1885,10 @@ export default function InstalledModsPage() {
                         </button>
                     )}
 
-                    {!isHidden && folderName !== 'DLC' && (
-                        <button 
-                            className="btn btn--danger btn--sm"
-                            disabled={!folderMods.some(m => selectedMods.includes(m.fileName))}
-                            onClick={async () => {
-                                const folderSelected = folderMods.filter(m => selectedMods.includes(m.fileName));
-                                if (folderSelected.length === 0) return;
-                                const skipConfirm = useSettingsStore.getState().skipDeleteConfirm;
-                                if (skipConfirm || confirm(`Delete ${folderSelected.length} selected mods in ${folderName || 'MAIN'}?`)) {
-                                    useLocalModsStore.getState().bulkUninstallMods(folderSelected);
-                                    setSelectedMods(prev => prev.filter(f => !folderSelected.some(m => m.fileName === f)));
-                                    useToastStore.getState().success(`Deleted ${folderSelected.length} mods.`);
-                                }
-                            }}
-                            style={{ height: 32, width: 32, padding: 0 }}
-                            title="Delete Selected Mods in Folder"
-                        >
-                            <Trash2 size={14} />
-                        </button>
-                    )}
 
 
                     {folderName !== '' && folderName !== 'DLC' && !isRenaming && (
                       <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
-                        {!isHidden && (
-                          <button 
-                            className="btn btn--sm btn--ghost" 
-                            onClick={() => handleRenameFolder(folderName)}
-                            style={{ padding: 0, width: 28, height: 28, opacity: 0.6 }}
-                            title="Rename Folder"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                        )}
                         <button 
                           className={`btn btn--sm ${isHidden ? 'btn--primary' : 'btn--ghost'}`} 
                           onClick={() => toggleHiddenFolder(folderName)}
@@ -1775,79 +1910,10 @@ export default function InstalledModsPage() {
                         )}
                       </div>
                     )}
-                  
-                  {!isHidden && folderMods.length > 0 && (
-                    <div 
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 10px', borderRadius: 4, background: 'rgba(0,0,0,0.05)' }}
-                      onClick={() => toggleAllInFolder(folderName, folderMods)}
-                      onMouseDown={e => e.stopPropagation()}
-                      onDragStart={e => e.stopPropagation()}
-                    >
-                        <input 
-                          type="checkbox" 
-                          readOnly 
-                          checked={folderMods.length > 0 && folderMods.every(m => selectedMods.includes(m.fileName))}
-                          style={{ width: 14, height: 14, accentColor: 'var(--accent)' }}
-                        />
-                        <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}>Select All</span>
-                      </div>
-                    )}
-                  
-                  {!isHidden && folderMods.length > 0 && (
-                    <div 
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 8, 
-                        background: 'rgba(0,0,0,0.05)', 
-                        padding: '4px 8px', 
-                        borderRadius: 4,
-                        marginRight: 4
-                      }}
-                      onClick={e => e.stopPropagation()}
-                      onMouseDown={e => e.stopPropagation()}
-                      onPointerDown={e => e.stopPropagation()}
-                      onDragStart={e => e.stopPropagation()}
-                    >
-                        <LayoutGrid size={12} style={{ opacity: 0.4 }} />
-                        <div style={{ 
-                          position: 'relative', 
-                          width: 60, 
-                          height: 4, 
-                          background: 'rgba(255,255,255,0.1)', 
-                          borderRadius: 2, 
-                          display: 'flex', 
-                          alignItems: 'center',
-                          margin: '0 4px'
-                        }}>
-                            <input 
-                              type="range" 
-                              min="120" 
-                              max="350" 
-                              step="5"
-                              value={folderZooms[folderName] || 180}
-                              onChange={(e) => setFolderZoom(folderName, parseInt(e.target.value))}
-                              className="range-slider"
-                              style={{ 
-                                position: 'absolute',
-                                left: '50%',
-                                top: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                width: 'calc(100% + 16px)', 
-                                margin: 0,
-                                cursor: 'pointer',
-                                background: 'transparent'
-                              }}
-                              title={installedModsViewMode === 'grid' ? "Card Size" : "Icon Size"}
-                            />
-                        </div>
-                        <LayoutGrid size={16} style={{ opacity: 0.7 }} />
-                    </div>
-                  )}
+                  </div>
                 </div>
-              </div>
 
-              {isExpanded && (
+                {isExpanded && (
                 <div style={{ padding: installedModsViewMode === 'grid' ? '16px' : '4px 0' }}>
                   {folderMods.length === 0 ? (
                     <div style={{ padding: '24px', textAlign: 'center', fontSize: 'var(--fs-xs)', color: 'var(--text-muted)', fontStyle: 'italic' }}>
@@ -1877,7 +1943,7 @@ export default function InstalledModsPage() {
                                 onUninstall={handleUninstallCallback}
                                 status={getModStatus(mod)}
                                 updateInfo={getUpdateInfo(mod)}
-                                isUpdating={updatingMod === mod.fileName}
+                                isUpdating={updatingMod === mod.fileName || !!activeDownloads[mod.modId]}
                                 formatSize={formatSize}
                                 isIconOnly={iconOnlyFolders.includes(folderName)}
                                 zoom={folderZooms[folderName] || 180}
@@ -1889,7 +1955,7 @@ export default function InstalledModsPage() {
                       folderMods.map((mod) => {
                         const status = getModStatus(mod);
                         const updateInfo = getUpdateInfo(mod);
-                        const isUpdating = updatingMod === mod.fileName;
+                        const isUpdating = updatingMod === mod.fileName || !!activeDownloads[mod.modId];
                         const isSelected = selectedMods.includes(mod.fileName);
                         const modIdKey = mod.modId ? String(mod.modId) : mod.fileName;
                         const isFavMod = favModIds.has(modIdKey);

@@ -244,7 +244,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <HashRouter>
+      <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <TitleBar />
         <div className="app-layout">
           <Sidebar />

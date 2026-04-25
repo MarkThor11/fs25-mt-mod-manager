@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, session, dialog, net, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, session, dialog, net, protocol, Menu, MenuItem } = require('electron');
 const path = require('path');
 const fs = require('fs-extra');
 const scraper = require('./services/scraper');
@@ -43,7 +43,7 @@ app.whenReady().then(() => {
         console.log('[RADIO-PROXY] Streaming:', url);
         
         const response = await net.fetch(url, {
-          headers: { 'User-Agent': 'FS25-MT-Mod-Manager/1.0.5' },
+          headers: { 'User-Agent': 'FS25-MT-Mod-Manager/1.0.9' },
           redirect: 'follow'
         });
 
@@ -551,6 +551,15 @@ ipcMain.handle('localMods:autoOrganizeMaps', async () => {
   return await modManager.autoOrganizeMaps();
 });
 
+// ── Third Party Tracker ──
+ipcMain.handle('thirdParty:checkUrl', async (_, { url }) => {
+  return await externalTracker.checkUrl(url);
+});
+
+ipcMain.handle('thirdParty:findDownloadUrl', async (_, { url }) => {
+  return await externalTracker.findDownloadUrl(url);
+});
+
 
 
 // ── Savegames ──
@@ -823,15 +832,6 @@ ipcMain.handle('dialog:selectFile', async (_, { filters } = {}) => {
   return result.canceled ? null : result.filePaths[0];
 });
 
-// ── Third Party Tracker ──
-ipcMain.handle('thirdParty:checkUrl', async (_, { url }) => {
-  return await externalTracker.checkUrl(url);
-});
-
-ipcMain.handle('thirdParty:findDownloadUrl', async (_, { url }) => {
-  return await externalTracker.findDownloadUrl(url);
-});
-
 // ── Cache ──
 ipcMain.handle('cache:clear', () => {
   cache.clearAll();
@@ -910,6 +910,28 @@ app.whenReady().then(() => {
       console.log(`[SECURITY] Opening external link: ${url}`);
       shell.openExternal(url);
       return { action: 'deny' };
+    });
+
+    // ── Context Menu (Copy/Paste/Cut/SelectAll) ──
+    contents.on('context-menu', (event, params) => {
+      const menu = new Menu();
+      
+      // Basic text editing
+      if (params.isEditable) {
+        menu.append(new MenuItem({ label: 'Cut', role: 'cut', enabled: params.editFlags.canCut }));
+        menu.append(new MenuItem({ label: 'Copy', role: 'copy', enabled: params.editFlags.canCopy }));
+        menu.append(new MenuItem({ label: 'Paste', role: 'paste', enabled: params.editFlags.canPaste }));
+        menu.append(new MenuItem({ type: 'separator' }));
+        menu.append(new MenuItem({ label: 'Select All', role: 'selectAll', enabled: params.editFlags.canSelectAll }));
+      } else if (params.selectionText && params.selectionText.trim() !== '') {
+        // Just copying from non-editable areas
+        menu.append(new MenuItem({ label: 'Copy', role: 'copy' }));
+      } else {
+        // No text context, don't show menu
+        return;
+      }
+
+      menu.popup({ window: BrowserWindow.fromWebContents(contents) });
     });
   });
 

@@ -102,7 +102,7 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    handleAutoDetect();
+    handleAutoDetect(true);
     fetchSpecs();
   }, []);
 
@@ -167,13 +167,13 @@ export default function SettingsPage() {
     }
   };
 
-  const handleAutoDetect = async () => {
+  const handleAutoDetect = async (silent = false) => {
     setIsDetecting(true);
-    await Promise.all([detectGame(), detectMods()]);
+    await Promise.all([detectGame(silent), detectMods(silent)]);
     setIsDetecting(false);
   };
 
-  const detectGame = async () => {
+  const detectGame = async (silent = false) => {
     setIsDetecting(true);
     try {
       if (!window.api?.game) {
@@ -184,12 +184,12 @@ export default function SettingsPage() {
       if (result.path) {
         setDetectedGamePath(result.path);
         setGameSource(result.source);
-        useToastStore.getState().success(`Game detected via ${result.source}!`);
+        if (!silent) useToastStore.getState().success(`Game detected via ${result.source}!`);
         if (!gamePath) {
           setGamePath(result.path);
         }
       } else {
-        useToastStore.getState().info('Could not auto-detect game. Please browse manually.');
+        if (!silent) useToastStore.getState().info('Could not auto-detect game. Please browse manually.');
       }
     } catch (err) {
       console.error('Game detection failed:', err);
@@ -199,7 +199,7 @@ export default function SettingsPage() {
     }
   };
 
-  const detectMods = async () => {
+  const detectMods = async (silent = false) => {
     setIsDetecting(true);
     try {
       if (!window.api?.mods?.detectAllPaths) {
@@ -208,14 +208,14 @@ export default function SettingsPage() {
       const result = await window.api.mods.detectAllPaths();
       if (result.paths && result.paths.length > 0) {
         setDetectedModsPaths(result.paths);
-        useToastStore.getState().success(`Found ${result.paths.length} potential mods folders!`);
+        if (!silent) useToastStore.getState().success(`Found ${result.paths.length} potential mods folders!`);
         
         // Suggest the first one if none is set
         if (!modsPath && result.paths.length === 1) {
           setModsPath(result.paths[0]);
         }
       } else {
-        useToastStore.getState().info('Could not auto-detect mods folder.');
+        if (!silent) useToastStore.getState().info('Could not auto-detect mods folder.');
         setDetectedModsPaths([]);
       }
     } catch (err) {
@@ -476,7 +476,7 @@ export default function SettingsPage() {
                 color: 'var(--text-primary)',
                 cursor: 'pointer',
                 textAlign: 'left',
-                version: '1.0.6',
+                version: '1.0.9',
                 transition: 'all 0.2s ease',
               }}
             >
@@ -1207,7 +1207,7 @@ export default function SettingsPage() {
           <div className="settings-row__control">
             <button 
               className="btn btn--secondary btn--sm" 
-              onClick={() => {
+              onClick={async () => {
                 const settings = useSettingsStore.getState();
                 const exportData = Object.keys(settings)
                   .filter(key => typeof settings[key] !== 'function')
@@ -1216,7 +1216,12 @@ export default function SettingsPage() {
                     return obj;
                   }, {});
                 
-                navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
+                const settingsJson = JSON.stringify(exportData, null, 2);
+                if (window.api && window.api.clipboard) {
+                  await window.api.clipboard.writeText(settingsJson);
+                } else {
+                  await navigator.clipboard.writeText(settingsJson);
+                }
                 useToastStore.getState().success('Settings copied to clipboard!');
               }}
             >
@@ -1233,7 +1238,7 @@ export default function SettingsPage() {
         fontSize: 'var(--fs-sm)',
         padding: 'var(--sp-6) 0'
       }}>
-        <div style={{ marginBottom: 4 }}>FS25 MT Mod Manager v1.0.5</div>
+        <div style={{ marginBottom: 4 }}>FS25 MT Mod Manager v1.0.9</div>
         <p style={{ marginTop: 'var(--sp-1)' }}>Not affiliated with GIANTS Software</p>
       </div>
     </div>

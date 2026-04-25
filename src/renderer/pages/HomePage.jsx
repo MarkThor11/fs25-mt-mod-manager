@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  TrendingUp, Package, Download, RefreshCw, ArrowRight, Globe, Star, Users, Share2, Clipboard, DownloadCloud, Activity
+  TrendingUp, Package, Download, RefreshCw, ArrowRight, Globe, Star, Users, Share2, Clipboard, DownloadCloud, Activity, Pencil
 } from 'lucide-react';
 import ModCard from '../components/modhub/ModCard';
 import { useLocalModsStore } from '../store/useLocalModsStore';
@@ -26,7 +26,9 @@ export default function HomePage() {
     homeShowStats, 
     homeShowLatest, 
     homeShowDownloaded, 
-    homeShowUpdates 
+    homeShowUpdates,
+    nickname,
+    setNickname 
   } = useSettingsStore();
 
   const getInstalledVersion = useInstalledLookup();
@@ -35,6 +37,8 @@ export default function HomePage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [loadingFeatured, setLoadingFeatured] = useState(homeFeatured.length === 0);
   const [loadingTopDownloaded, setLoadingTopDownloaded] = useState(homeTopDownloaded.length === 0);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState('');
 
   useEffect(() => {
     fetchSavegames();
@@ -78,8 +82,16 @@ export default function HomePage() {
     .filter(s => !s.isGhost && s.playerName)
     .sort((a, b) => new Date(b.lastSaved) - new Date(a.lastSaved))[0];
     
-  const rawName = latestSave?.playerName || (savegames.find(s => !s.isGhost && s.playerName)?.playerName) || 'Farmer';
-  const displayName = `'${rawName}'`;
+  const rawName = nickname || latestSave?.playerName || (savegames.find(s => !s.isGhost && s.playerName)?.playerName) || 'Farmer';
+  
+  const handleSaveName = () => {
+    const trimmed = tempName.trim();
+    if (trimmed && trimmed !== rawName) {
+      setNickname(trimmed);
+      useToastStore.getState().success(`Welcome, ${trimmed}!`);
+    }
+    setIsEditingName(false);
+  };
 
   return (
     <div className="page animate-fade-in-up">
@@ -87,7 +99,33 @@ export default function HomePage() {
       {homeShowHero && (
         <div className="home-hero">
           <h1 className="home-hero__title">
-            {`Welcome ${displayName}`}
+            Welcome {isEditingName ? (
+              <input 
+                autoFocus
+                className="home-hero__name-input"
+                value={tempName}
+                onChange={e => setTempName(e.target.value)}
+                onBlur={handleSaveName}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleSaveName();
+                  if (e.key === 'Escape') setIsEditingName(false);
+                }}
+                onClick={e => e.stopPropagation()}
+              />
+            ) : (
+              <span 
+                className="home-hero__editable-name" 
+                onClick={(e) => { 
+                  e.stopPropagation();
+                  setTempName(rawName); 
+                  setIsEditingName(true); 
+                }}
+                title="Click to change your nickname"
+              >
+                '{rawName}'
+                <Pencil size={20} className="home-hero__edit-icon" />
+              </span>
+            )}
           </h1>
           <p className="home-hero__subtitle">
             Browse, install, and manage your Farming Simulator 25 mods — all from one place. 
@@ -101,7 +139,7 @@ export default function HomePage() {
         <div className="home-stats-container" style={{ position: 'relative', marginBottom: 'var(--sp-8)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-4)' }}>
              <h2 style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>Dashboard Overview</h2>
-             <button 
+                 <button 
                 className="btn btn--ghost btn--xs" 
                 onClick={() => {
                    fetchStats();
@@ -109,9 +147,9 @@ export default function HomePage() {
                    useToastStore.getState().success('Refreshing dashboard statistics...');
                 }}
                 style={{ height: 24, gap: 6 }}
-             >
-                <RefreshCw size={12} /> Refresh Data
-             </button>
+              >
+                <RefreshCw size={12} className={isCheckingUpdates ? 'animate-spin' : ''} /> Refresh Data
+              </button>
           </div>
           <div className="home-stats">
           <div className="stat-card">
@@ -265,7 +303,11 @@ export default function HomePage() {
                 onClick={() => {
                   const key = exportCollection();
                   if (key) {
-                    navigator.clipboard.writeText(key);
+                    if (window.api && window.api.clipboard) {
+                      window.api.clipboard.writeText(key);
+                    } else {
+                      navigator.clipboard.writeText(key);
+                    }
                     useToastStore.getState().success('Mod Key copied to clipboard! Share it with your friends.');
                   }
                 }}
@@ -304,7 +346,7 @@ export default function HomePage() {
       </div>
 
       {showImportModal && (
-        <div className="modal-overlay" onClick={() => setShowImportModal(false)}>
+        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowImportModal(false)}>
           <div className="modal-content animate-zoom-in" style={{ width: 450 }} onClick={e => e.stopPropagation()}>
              <h2 style={{ marginBottom: 'var(--sp-2)' }}>Import Mod Cluster</h2>
              <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--sp-5)' }}>Paste a Mod Key below to batch-install all associated mods.</p>

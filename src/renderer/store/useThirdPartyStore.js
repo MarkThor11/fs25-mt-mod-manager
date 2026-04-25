@@ -52,10 +52,17 @@ export const useThirdPartyStore = create((set, get) => ({
         if (!mod.url) continue;
         
         const res = await window.api.thirdParty.checkUrl({ url: mod.url });
-        if (res.success && res.version) {
-          const hasUpdate = mod.currentVersion && res.version !== mod.currentVersion;
+        if (res.success) {
+          let hasUpdate = false;
+          if (res.version) {
+            hasUpdate = mod.currentVersion && res.version !== mod.currentVersion;
+          } else if (mod.fingerprint && res.fingerprint && mod.fingerprint !== res.fingerprint) {
+            hasUpdate = true;
+          }
+
           updateExternalMod(mod.id, {
-            remoteVersion: res.version,
+            remoteVersion: res.version || 'New',
+            fingerprint: res.fingerprint,
             lastChecked: new Date().toISOString(),
             hasUpdate: hasUpdate
           });

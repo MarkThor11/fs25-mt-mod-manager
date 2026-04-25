@@ -10,54 +10,92 @@ const { net } = require('electron');
  */
 
 async function fetchHtml(url) {
-  return new Promise((resolve, reject) => {
-    const options = {
+  try {
+    const response = await net.fetch(url, {
+      method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
-      }
-    };
+      },
+      redirect: 'follow'
+    });
 
-    https.get(url, options, (res) => {
-      if (res.statusCode >= 400) {
-        reject(new Error(`HTTP ${res.statusCode}`));
-        return;
-      }
-      let data = '';
-      res.on('data', (d) => { data += d; });
-      res.on('end', () => resolve(data));
-      res.on('error', reject);
-    }).on('error', reject);
-  });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    const html = await response.text();
+    return html;
+  } catch (err) {
+    console.error(`[TRACKER] Fetch failed for ${url}:`, err.message);
+    throw err;
+  }
 }
 
 /**
  * Extract version from HTML using common patterns.
  */
 function extractVersion(html) {
-  // Common patterns for version numbers: v1.2, version 3.0, 1.2.3.0
+  const $ = cheerio.load(html);
+  $('script, style, noscript, iframe, .ad-container').remove();
+  const text = $('body').text().replace(/\s+/g, ' ');
+  const headText = text.substring(0, 10000); // Expanded scan area
+
+  const potentialVersions = [];
+  const sizeUnits = ['mb', 'gb', 'kb', 'bytes', 'kbps', 'downloads', 'views', 'px', 'hz', 'fps', 'dpi'];
+
+  // Patterns to look for
   const patterns = [
-    /Version[:\s]+([vV]?\d+\.\d+(?:\.\d+)*(?:\.\d+)?)/i,
-    /v(\d+\.\d+(?:\.\d+)*(?:\.\d+)?)/i,
-    /(\d+\.\d+\.\d+\.\d+)/,
-    /(\d+\.\d+\.\d+)/,
-    /(\d+\.\d+)/
+    { regex: /Version[:\s]*([vV]?\d+\.\d+(?:\.\d+)*)/gi, score: 100 },
+    { regex: /v(\d+\.\d+(?:\.\d+)*)/gi, score: 80 },
+    { regex: /\[([vV]?\d+\.\d+(?:\.\d+)*)\]/gi, score: 90 }, // Support for [1.0.0.0]
+    { regex: /Update[:\s]*([vV]?\d+\.\d+(?:\.\d+)*)/gi, score: 70 },
+    { regex: /(\d+\.\d+\.\d+\.\d+)/g, score: 60 }, // FS Standard
+    { regex: /(\d+\.\d+\.\d+)/g, score: 30 },
+    { regex: /(\d+\.\d+)/g, score: 10 }
   ];
 
-  // Look specifically near keywords
-  const lowerHtml = html.toLowerCase();
-  const searchIndex = lowerHtml.indexOf('version') || lowerHtml.indexOf('v ') || 0;
-  const context = html.substring(Math.max(0, searchIndex - 20), Math.min(html.length, searchIndex + 100));
+  patterns.forEach(p => {
+    const matches = headText.matchAll(p.regex);
+    for (const match of matches) {
+      const v = (match[1] || match[0]).replace(/^[vV]/, '').trim();
+      
+      // Basic filtering
+      if (v.length > 20 || v.length < 3) continue;
+      if (/^(19|20)\d{2}$/.test(v)) continue; // Ignore years
+      
+      // Check surrounding context for size units
+      const start = Math.max(0, match.index - 15);
+      const end = Math.min(headText.length, match.index + match[0].length + 25);
+      const context = headText.substring(start, end).toLowerCase();
+      
+      if (sizeUnits.some(unit => context.includes(unit))) continue;
 
-  for (const pattern of patterns) {
-    const match = context.match(pattern) || html.match(pattern);
-    if (match && match[1]) {
-      // Clean version string
-      return match[1].replace(/^[vV]/, '').trim();
+      // Scoring: prefer strings that look like FS versions
+      let finalScore = p.score;
+      const parts = v.split('.');
+      if (parts.length === 4) finalScore += 50;
+      if (parts.length === 3) finalScore += 20;
+      if (v.startsWith('1.0')) finalScore += 15;
+      
+      // Bonus if found near "download" keyword (but not a size unit)
+      if (context.includes('download') || context.includes('file')) finalScore += 10;
+
+      potentialVersions.push({ v, score: finalScore });
     }
+  });
+
+  if (potentialVersions.length === 0) {
+    console.log('[TRACKER] No versions found in scan area.');
+    return null;
   }
-  return null;
+
+  // Sort by score and return the best one
+  potentialVersions.sort((a, b) => b.score - a.score);
+  
+  console.log('[TRACKER] Best version candidate:', potentialVersions[0]);
+  return potentialVersions[0].v;
 }
 
 /**
@@ -66,18 +104,24 @@ function extractVersion(html) {
 function parseItch(html) {
   const $ = cheerio.load(html);
   
-  // Look for "Updated" or "Version" in the sidebar info
   let version = '';
   $('.game_info_panel_widget .table_row').each((_, el) => {
     const label = $(el).find('td').first().text().trim().toLowerCase();
     const value = $(el).find('td').last().text().trim();
-    if (label.includes('version') || label.includes('updated') || label.includes('published')) {
+    
+    // Prioritize "Version" label
+    if (label.includes('version')) {
       version = value;
+    } 
+    // Only use "Updated" if we haven't found a version yet AND the value looks like a version number (not a date)
+    else if (!version && (label.includes('updated') || label.includes('published'))) {
+      if (/^\d+\.\d+/.test(value)) {
+        version = value;
+      }
     }
   });
 
   if (!version) {
-      // Check for version strings in the body
       version = extractVersion(html);
   }
 
@@ -97,6 +141,7 @@ function parseKingMods(html) {
 async function checkUrl(url) {
   try {
     const html = await fetchHtml(url);
+    const $ = cheerio.load(html);
     let result = { version: null };
 
     if (url.includes('itch.io')) {
@@ -107,11 +152,17 @@ async function checkUrl(url) {
       result.version = extractVersion(html);
     }
 
+    // Create a stable fingerprint:
+    // 1. Remove common dynamic sections
+    $('.game_info_panel_widget, .game_comments_widget, .sidebar, footer, header, .ads, .user_panel').remove();
+    // 2. Get body text and remove all numbers (to ignore view counts, timestamps, etc.)
+    const stableText = $('body').text().toLowerCase().replace(/[\d\s\W]+/g, '');
+    const fingerprint = stableText.substring(0, 1000); // Take a sample
+
     return { 
       success: true, 
       version: result.version,
-      // Create a small fingerprint of the page's body to detect silent updates
-      fingerprint: html.length.toString() 
+      fingerprint: fingerprint 
     };
   } catch (err) {
     console.error(`[TRACKER] Error checking ${url}:`, err.message);

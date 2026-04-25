@@ -18,7 +18,7 @@ export default function DiagnosticsPage() {
     try {
       const report = {
         app: 'FS25 MT Mod Manager',
-        version: '1.0.6',
+        version: '1.0.9',
         platform: window.navigator.platform,
         timestamp: new Date().toISOString(),
         stats: {
@@ -33,7 +33,12 @@ export default function DiagnosticsPage() {
         userAgent: window.navigator.userAgent
       };
       
-      await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+      const reportJson = JSON.stringify(report, null, 2);
+      if (window.api && window.api.clipboard) {
+        await window.api.clipboard.writeText(reportJson);
+      } else {
+        await navigator.clipboard.writeText(reportJson);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -73,7 +78,7 @@ export default function DiagnosticsPage() {
           </p>
 
           <div style={{ background: 'var(--bg-tertiary)', padding: 16, borderRadius: 8, border: '1px solid var(--border)', fontSize: 11, fontFamily: 'monospace', color: 'var(--text-tertiary)', overflow: 'hidden' }}>
-            <div style={{ marginBottom: 4 }}>App: FS25 MT Mod Manager v1.0.6</div>
+            <div style={{ marginBottom: 4 }}>App: FS25 MT Mod Manager v1.0.9</div>
             <div style={{ marginBottom: 4 }}>OS: {window.navigator.platform}</div>
             <div style={{ marginBottom: 4 }}>Mods: {modCount} | Saves: {savegameCount}</div>
             <div style={{ opacity: 0.5 }}>[Click button below to copy full JSON]</div>

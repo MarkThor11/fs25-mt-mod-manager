@@ -580,6 +580,9 @@ function parseModDesc(modPath, zipInstance = null) {
 		// Robust icon detection: <iconFilename>...</iconFilename> OR <icon filename="..."/>
 		const iconFile = getTag(xmlContent, 'iconFilename') || getAttr(xmlContent, 'icon', 'filename') || '';
 		
+		// Technical Name from <modDesc name="...">
+		const techName = getAttr(xmlContent, 'modDesc', 'name') || '';
+		
 		// Check if this mod is a map
 		let isMap = false;
 		let mapId = null;
@@ -740,6 +743,7 @@ function parseModDesc(modPath, zipInstance = null) {
 			iconFile,
 			isMap,
 			modId,
+			techName,
 			mapId,
 			dependencies,
 			scripts,
@@ -926,31 +930,39 @@ async function performScan(manualPaths = null) {
 		allFolders.push('DLC');
 	}
 
-	const processEntrySync = async (modRootPath, entryName, subFolder = '') => {
+	const processEntry = async (modRootPath, entryName, subFolder = '') => {
 		const fullPath = subFolder ? path.join(modRootPath, subFolder, entryName) : path.join(modRootPath, entryName);
 		
 		const isZip = entryName.toLowerCase().endsWith('.zip');
 		let isModDir = false;
 
 		// ── FAST SKIP INVALID FILENAMES ──
-		// FS25 (and GIANTS in general) forbids mod filenames starting with a digit.
-		// These cause game engine errors and can crash/slow down scanning.
 		if (/^[0-9]/.test(entryName)) {
 			console.warn(`[SCAN] Skipping invalid mod name (must not start with a digit): ${entryName}`);
 			return;
 		}
 		
 		try {
-			if (!nodeFs.existsSync(fullPath)) return;
-			const stats = nodeFs.statSync(fullPath);
+			// Use asynchronous stat to prevent blocking, especially on NAS
+			const stats = await fs.lstat(fullPath).catch(() => null);
+			if (!stats) return;
+
+			// CRITICAL: Skip symbolic links in the root folder. 
+			// These are likely mirrors created by the manager. We only scan the sources.
+			if (stats.isSymbolicLink() && !subFolder) {
+				debugLog(`[SCAN] Skipping mirror link in root: ${entryName}`);
+				return;
+			}
+
 			const mtime = stats.mtimeMs;
 			let size = stats.size;
 			
 			if (stats.isDirectory()) {
-				isModDir = nodeFs.existsSync(path.join(fullPath, 'modDesc.xml'));
+				isModDir = await fs.pathExists(path.join(fullPath, 'modDesc.xml'));
 				if (isModDir) {
-					// Fallback to simple size for directories during sync scan to prevent blocking
-					size = nodeFs.readdirSync(fullPath).length * 1024; 
+					// Fallback to simple size for directories - using readdir for count
+					const dirFiles = await fs.readdir(fullPath).catch(() => []);
+					size = dirFiles.length * 1024; 
 				}
 			}
 			
@@ -972,10 +984,11 @@ async function performScan(manualPaths = null) {
 			}
 			
 			let iconBase64 = cached?.icon_base64 || null;
+			let storeBase64 = cached?.store_base64 || null;
 			
-			// If missing icon, or if it's a placeholder, force a re-extraction for maps
-			const isPlaceholder = iconBase64 === 'CATEGORY:map' || iconBase64 === 'CATEGORY:generic';
-			if (!modDesc || !iconBase64 || isPlaceholder) {
+			// If missing icon, or if it's a placeholder, force a re-extraction
+			const isPlaceholder = iconBase64 === 'CATEGORY:map' || iconBase64 === 'CATEGORY:generic' || storeBase64 === 'CATEGORY:generic';
+			if (!modDesc || !iconBase64 || !storeBase64 || isPlaceholder) {
 				try {
 					let zipInstance = null;
 					if (fullPath.toLowerCase().endsWith('.zip')) {
@@ -985,24 +998,31 @@ async function performScan(manualPaths = null) {
 					const modDescResult = parseModDesc(fullPath, zipInstance);
 					if (modDescResult) {
 						modDesc = modDescResult;
-						// Extract icon for new/changed mods or maps needing a refresh
+						// Extract images for new/changed mods
 						try {
-							const newIcon = await getModIcon(fullPath, modDesc.iconFile, modDesc, zipInstance);
+							const newIcon = await getModIcon(fullPath, modDesc.iconFile, modDesc, zipInstance, false);
 							if (newIcon && newIcon !== 'CATEGORY:generic' && newIcon !== 'CATEGORY:map') {
 								iconBase64 = newIcon;
 							} else if (!iconBase64) {
 								iconBase64 = newIcon;
 							}
+							
+							const newStore = await getModIcon(fullPath, modDesc.iconFile, modDesc, zipInstance, true);
+							if (newStore && newStore !== 'CATEGORY:generic' && newStore !== 'CATEGORY:map') {
+								storeBase64 = newStore;
+							} else if (!storeBase64) {
+								storeBase64 = newStore;
+							}
 						} catch (e) {
-							console.error(`[ICON] Failed for ${entryName}:`, e.message);
+							console.error(`[IMAGE] Failed for ${entryName}:`, e.message);
 						}
 						
 						// CACHE the result (even if minimal) to avoid re-parsing on every refresh
 						if (modDesc.title || modDesc.modId) {
-							cache.setLocalModCache(fullPath, mtime, size, modDesc, iconBase64, fileHash);
+							cache.setLocalModCache(fullPath, mtime, size, modDesc, iconBase64, fileHash, storeBase64);
 						} else {
 							// If it's truly empty, cache a "minimal" marker so we don't try again until it changes
-							cache.setLocalModCache(fullPath, mtime, size, { title: entryName.replace('.zip', ''), version: 'Invalid' }, 'CATEGORY:generic', fileHash);
+							cache.setLocalModCache(fullPath, mtime, size, { title: entryName.replace('.zip', ''), version: 'Invalid' }, 'CATEGORY:generic', fileHash, 'CATEGORY:generic');
 						}
 					}
 				} catch (err) {
@@ -1050,7 +1070,8 @@ async function performScan(manualPaths = null) {
 				isMap: modDesc?.isMap || false,
 				mapId: modDesc?.mapId || null,
 				mapTitle: modDesc?.mapTitle || null,
-				modName: entryName.replace('.zip', ''),
+				modName: modDesc?.techName || entryName.replace('.zip', ''),
+				technicalName: modDesc?.techName || '',
 				dependencies: modDesc?.dependencies || [],
 				conflicts: modDesc?.conflicts || [],
 				scripts: modDesc?.scripts || [],
@@ -1063,6 +1084,7 @@ async function performScan(manualPaths = null) {
 				})(),
 				iconFile: modDesc?.iconFile || '',
 				iconData: iconBase64,
+				storeData: storeBase64,
 				fileHash: fileHash || '',
 				tags: cached?.tags ? JSON.parse(cached.tags) : [],
 			});
@@ -1120,29 +1142,58 @@ async function performScan(manualPaths = null) {
 	};
 
 	const allEntries = [];
+	const subfolderModNames = new Set();
+	const potentialRootEntries = [];
+	const folderEntries = [];
 
-	for (const modsPath of modsPaths) {
-		if (!nodeFs.existsSync(modsPath)) continue;
-		const entries = nodeFs.readdirSync(modsPath, { withFileTypes: true });
-		debugLog(`[SCAN] Found ${entries.length} items in ${modsPath}`);
+	await Promise.all(modsPaths.map(async (modsPath) => {
+		if (!await fs.pathExists(modsPath)) return;
 		
-		for (const entry of entries) {
-			const entryName = entry.name;
-			if (entryName.startsWith('.') || entryName.toLowerCase() === 'backups') continue;
+		try {
+			const entries = await fs.readdir(modsPath, { withFileTypes: true });
+			debugLog(`[SCAN] Found ${entries.length} items in ${modsPath}`);
+			
+			for (const entry of entries) {
+				const entryName = entry.name;
+				if (entryName.startsWith('.') || entryName.toLowerCase() === 'backups') continue;
 
-			if (entry.isDirectory()) {
-				const subEntries = nodeFs.readdirSync(path.join(modsPath, entryName), { withFileTypes: true });
-				for (const sub of subEntries) {
-					if (sub.name.toLowerCase().endsWith('.zip') || (sub.isDirectory() && nodeFs.existsSync(path.join(modsPath, entryName, sub.name, 'modDesc.xml')))) {
-						allEntries.push({ root: modsPath, name: sub.name, sub: entryName });
+				if (entry.isDirectory()) {
+					const subPath = path.join(modsPath, entryName);
+
+					// Check if the folder itself is an unzipped mod
+					const isModDir = await fs.pathExists(path.join(subPath, 'modDesc.xml'));
+					if (isModDir) {
+						potentialRootEntries.push({ root: modsPath, name: entryName, sub: '' });
+					} else {
+						// Treat as organizational folder
+						const subEntries = await fs.readdir(subPath, { withFileTypes: true }).catch(() => []);
+						
+						for (const sub of subEntries) {
+							if (sub.name.toLowerCase().endsWith('.zip')) {
+								folderEntries.push({ root: modsPath, name: sub.name, sub: entryName });
+								subfolderModNames.add(sub.name.toLowerCase());
+							} else if (sub.isDirectory()) {
+								const hasModDesc = await fs.pathExists(path.join(subPath, sub.name, 'modDesc.xml'));
+								if (hasModDesc) {
+									folderEntries.push({ root: modsPath, name: sub.name, sub: entryName });
+									subfolderModNames.add(sub.name.toLowerCase());
+								}
+							}
+						}
+						allFolders.push(entryName);
 					}
+				} else if ((entry.isFile() || entry.isSymbolicLink()) && entryName.toLowerCase().endsWith('.zip')) {
+					potentialRootEntries.push({ root: modsPath, name: entryName, sub: '' });
 				}
-				allFolders.push(entryName);
-			} else if ((entry.isFile() || entry.isSymbolicLink()) && entryName.toLowerCase().endsWith('.zip')) {
-				allEntries.push({ root: modsPath, name: entryName, sub: '' });
 			}
+		} catch (err) {
+			console.error(`[SCAN] Failed to read ${modsPath}:`, err.message);
 		}
-	}
+	}));
+
+	// Deduplicate: Only add root mods if they don't exist in any subfolder
+	const rootEntries = potentialRootEntries.filter(e => !subfolderModNames.has(e.name.toLowerCase()));
+	allEntries.push(...folderEntries, ...rootEntries);
 
 	debugLog(`[SCAN] Queuing ${allEntries.length} items for processing...`);
 
@@ -1153,7 +1204,7 @@ async function performScan(manualPaths = null) {
 		
 		try {
 			cache.beginTransaction();
-			await Promise.all(chunk.map(e => processEntrySync(e.root, e.name, e.sub)));
+			await Promise.all(chunk.map(e => processEntry(e.root, e.name, e.sub)));
 			cache.commitTransaction();
 		} catch (e) {
 			console.error('[SCAN] Transaction failed, trying to commit partial:', e.message);
@@ -1167,14 +1218,49 @@ async function performScan(manualPaths = null) {
 	// TRIGGER MIRROR SYNC IN BACKGROUND
 	syncMirrorLinks(modsPaths[0]).catch(err => console.error('[MIRROR] Background sync failed:', err));
 	
-	mods.sort((a, b) => a.title.localeCompare(b.title));
-	const conflicts = detectConflicts(mods);
+	// ── FINAL DEDUPLICATION (By Identity & Filename) ──
+	// We use multiple keys to catch duplicates even if the filename or version changed.
+	// We ALWAYS prioritize mods in a subfolder over those in the root.
+	const uniqueModsMap = new Map();
+	const sortedForDedupe = [...mods].sort((a, b) => {
+		const aIsRoot = !a.folder || a.folder === '';
+		const bIsRoot = !b.folder || b.folder === '';
+		if (!aIsRoot && bIsRoot) return -1;
+		if (aIsRoot && !bIsRoot) return 1;
+		return 0;
+	});
+
+	for (const m of sortedForDedupe) {
+		const idKey = m.modId ? `ID_${m.modId}` : null;
+		const nameKey = m.technicalName ? `NAME_${m.technicalName.toLowerCase()}` : null;
+		const fileKey = `FILE_${path.basename(m.fileName).toLowerCase()}`;
+		const titleKey = `TITLE_${(m.title || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+
+		const keys = [idKey, nameKey, fileKey, titleKey].filter(Boolean);
+		let alreadySeen = false;
+		for (const k of keys) {
+			if (uniqueModsMap.has(k)) {
+				alreadySeen = true;
+				break;
+			}
+		}
+
+		if (!alreadySeen) {
+			// Register all identity keys for this mod instance
+			keys.forEach(k => uniqueModsMap.set(k, m));
+		}
+	}
+
+	// The map now contains only one instance per mod "identity"
+	const finalMods = Array.from(new Set(uniqueModsMap.values()));
+
+	finalMods.sort((a, b) => a.title.localeCompare(b.title));
+	const conflicts = detectConflicts(finalMods);
 	
-	// Identify missing dependencies
-	const modNames = new Set(mods.map(m => m.modName.toLowerCase()));
+	// Identify missing dependencies (using the deduplicated set for lookup)
+	const modNames = new Set(finalMods.map(m => m.modName.toLowerCase()));
 	const missingDependencies = [];
-	
-	for (const mod of mods) {
+	for (const mod of finalMods) {
 		for (const dep of (mod.dependencies || [])) {
 			if (!modNames.has(dep.toLowerCase())) {
 				missingDependencies.push({
@@ -1186,45 +1272,17 @@ async function performScan(manualPaths = null) {
 		}
 	}
 
-	// ── DEDUPLICATE MODS ──
-	// In FS25, only one mod with a given fileName can be active. 
-	// We deduplicate to prevent 'doubles' caused by symlinks in the root folder.
-	// We prioritize entries that have a 'folder' (subfolder) assignment.
-	const uniqueMods = new Map();
-	for (const mod of mods) {
-		const key = path.basename(mod.fileName).toLowerCase();
-		const existing = uniqueMods.get(key);
-		
-		if (!existing) {
-			uniqueMods.set(key, mod);
-		} else {
-			// Priority: Subfolder entry > Root entry
-			const existingIsRoot = !existing.folder || existing.folder === '';
-			const currentIsRoot = !mod.folder || mod.folder === '';
-			
-			if (existingIsRoot && !currentIsRoot) {
-				uniqueMods.set(key, mod);
-			}
-		}
-	}
-	const finalMods = Array.from(uniqueMods.values());
-
-	const resultData = { mods: finalMods, allFolders: [...new Set(allFolders)], conflicts, missingDependencies };
+	const resultData = { mods: finalMods, allFolders: Array.from(new Set(allFolders)).sort(), conflicts, missingDependencies };
 	
 	// ── BACKGROUND AUTO-RESOLVE ──
 	const autoResolve = cache.getSetting('autoResolveDependencies') === 'true';
 	if (autoResolve) {
-		autoResolveMissingDependencies(mods).catch(err => {
+		autoResolveMissingDependencies(finalMods).catch(err => {
 			console.error('[AUTO-RESOLVE] Background reconciliation failed:', err);
 		});
 	}
 
-	debugLog(`[SCAN] Finished. Total mods found across all locations: ${mods.length}`);
-	console.log(`[SCAN] Finished. Total mods found: ${mods.length}`);
-	const mapMods = mods.filter(m => m.isMap);
-	console.log(`[SCAN] Maps detected: ${mapMods.length}`);
-	mapMods.forEach(m => console.log(`  [MAP] "${m.title}" mapId=${m.mapId} folder=${m.folder || 'ROOT'}`));
-	console.log(`[SCAN] All mod titles: ${mods.map(m => m.title).join(', ')}`);
+	debugLog(`[SCAN] Finished. Total unique mods: ${finalMods.length} (from ${mods.length} physical files)`);
 	return resultData;
 }
 
@@ -1282,17 +1340,65 @@ function detectConflicts(mods) {
 	* Internal function for the queue worker to run.
 	*/
 async function runInstallTask(task) {
-	const { modId, modTitle, downloadUrl, onProgress, category, subFolder, techData } = task;
+	const { modId, modTitle, downloadUrl, onProgress, category, subFolder, techData, oldPath, recoveryPath } = task;
 	
 	broadcastStatus?.(modId, 'connecting');
 	
 	try {
 		const result = await installModInternal(modId, modTitle, downloadUrl, onProgress, category, subFolder, techData);
+		
+		// ── SUCCESS CLEANUP/BACKUP ──
+		if (result.success) {
+			const modsPath = getModsPath();
+			const backupsDir = path.join(modsPath, 'backups');
+			
+			if (oldPath && fs.existsSync(oldPath)) {
+				const fileName = path.basename(oldPath);
+				const bakPath = path.join(backupsDir, `${fileName}.bak`);
+				
+				if (oldPath !== result.filePath) {
+					// Filename changed: Move old file to backups folder
+					console.log(`[UPDATE] Filename changed. Moving old version to backup: ${fileName}`);
+					try {
+						await fs.ensureDir(backupsDir);
+						if (fs.existsSync(bakPath)) await fs.remove(bakPath);
+						await fs.move(oldPath, bakPath);
+					} catch (e) { console.warn(`[UPDATE] Failed to move old mod to backup: ${e.message}`); }
+				} else {
+					// Filename stayed same: It was overwritten. 
+					// If we have a recovery copy, move THAT to the backups folder so the user has the old version.
+					if (recoveryPath && fs.existsSync(recoveryPath)) {
+						console.log(`[UPDATE] Filename same (overwritten). Moving recovery copy to backup: ${fileName}`);
+						try {
+							await fs.ensureDir(backupsDir);
+							if (fs.existsSync(bakPath)) await fs.remove(bakPath);
+							await fs.move(recoveryPath, bakPath);
+						} catch (e) { console.warn(`[UPDATE] Failed to move recovery copy to backup: ${e.message}`); }
+					}
+				}
+			}
+
+			// Final cleanup of recovery file if it still exists
+			if (recoveryPath && fs.existsSync(recoveryPath)) {
+				await fs.remove(recoveryPath).catch(() => {});
+			}
+		}
+
 		broadcastStatus?.(modId, 'success');
 		onProgress?.({ status: 'success' }); // Explicit completion for dedicated listeners
 		return result;
 	} catch (err) {
 		console.error(`[QUEUE] Task failed for ${modTitle}:`, err);
+		
+		// ── ERROR RECOVERY ──
+		if (recoveryPath && fs.existsSync(recoveryPath) && oldPath) {
+			console.log(`[UPDATE] Installation failed. Restoring backup for: ${modTitle}`);
+			try {
+				await fs.ensureDir(path.dirname(oldPath));
+				await fs.move(recoveryPath, oldPath, { overwrite: true });
+			} catch (e) { console.error(`[UPDATE] Critical: Failed to restore backup: ${e.message}`); }
+		}
+
 		broadcastStatus?.(modId, 'error');
 		onProgress?.({ status: 'error' }); // Explicit failure for dedicated listeners
 		throw err;
@@ -1324,7 +1430,7 @@ async function processQueue() {
 /**
 	* Entry point for the frontend to queue a download.
 	*/
-async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category, subFolder = null) {
+async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category, subFolder = null, oldPath = null, recoveryPath = null) {
 	// Check if already in queue or active
 	if (activeInstalls.has(modId) || downloadQueue.some(t => t.modId === modId)) {
 		return { success: false, error: 'Already in progress or queued' };
@@ -1344,7 +1450,7 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 		}
 	}
 
-	downloadQueue.push({ modId, modTitle, downloadUrl, onProgress, category, subFolder, techData });
+	downloadQueue.push({ modId, modTitle, downloadUrl, onProgress, category, subFolder, techData, oldPath, recoveryPath });
 	
 	// Immediate broadcast so UI knows it is queued
 	broadcastStatus?.(modId, 'queued');
@@ -1952,7 +2058,7 @@ async function updateMod(modFileName, modId, onProgress) {
 	const modsPath = getModsPath();
 	const currentPath = await findModPath(modFileName);
 	const originalPath = currentPath || path.join(modsPath, modFileName);
-	const backupPath = originalPath + '.backup';
+	const backupPath = originalPath + '.bak';
 	
 	try {
 		// 1. Identify subfolder for persistence
@@ -1977,12 +2083,8 @@ async function updateMod(modFileName, modId, onProgress) {
 		}
 		
 		// 4. Download and install (respecting subFolder)
-		const result = await installMod(modId, modFileName.replace('.zip', ''), directUrl, onProgress, category, subFolder, detail?.techData);
-		
-		// Remove backup on success
-		if (fs.existsSync(backupPath)) {
-			await fs.remove(backupPath);
-		}
+		// We pass originalPath and backupPath to the queue so it can handle cleanup/backup AFTER completion.
+		const result = await installMod(modId, modFileName.replace('.zip', ''), directUrl, onProgress, category, subFolder, detail?.techData, originalPath, backupPath);
 		
 		return result;
 	} catch (err) {
@@ -2019,7 +2121,13 @@ async function syncMirrorLinks(primaryPath) {
 			// A. Mods in the root of THIS folder (only if it's not the primary root itself)
 			if (rootPath !== primaryPath) {
 				for (const entry of rootEntries) {
-					if (entry.isFile() && entry.name.toLowerCase().endsWith('.zip')) {
+					const isZip = entry.isFile() && entry.name.toLowerCase().endsWith('.zip');
+					let isModDir = false;
+					if (entry.isDirectory()) {
+						isModDir = await fs.pathExists(path.join(rootPath, entry.name, 'modDesc.xml'));
+					}
+
+					if (isZip || isModDir) {
 						subFolderMods.set(entry.name, path.join(rootPath, entry.name));
 					}
 				}
@@ -2029,10 +2137,16 @@ async function syncMirrorLinks(primaryPath) {
 			const subFolders = rootEntries.filter(e => e.isDirectory() && e.name.toLowerCase() !== 'backups');
 			for (const folder of subFolders) {
 				const subPath = path.join(rootPath, folder.name);
-				const modsInFolder = await fs.readdir(subPath);
-				for (const modFile of modsInFolder) {
-					if (modFile.toLowerCase().endsWith('.zip')) {
-						subFolderMods.set(modFile, path.join(subPath, modFile));
+				const modsInFolder = await fs.readdir(subPath, { withFileTypes: true }).catch(() => []);
+				for (const entry of modsInFolder) {
+					const isZip = entry.isFile() && entry.name.toLowerCase().endsWith('.zip');
+					let isModDir = false;
+					if (entry.isDirectory()) {
+						isModDir = await fs.pathExists(path.join(subPath, entry.name, 'modDesc.xml'));
+					}
+
+					if (isZip || isModDir) {
+						subFolderMods.set(entry.name, path.join(subPath, entry.name));
 					}
 				}
 			}
@@ -2062,8 +2176,10 @@ async function syncMirrorLinks(primaryPath) {
 
 			if (shouldCreate) {
 				try {
-					await fs.symlink(targetPath, mirrorPath, 'file');
-					console.log(`[MIRROR] Created link: ${modName} -> ${targetPath}`);
+					const targetStats = await fs.lstat(targetPath);
+					const isDir = targetStats.isDirectory();
+					await fs.symlink(targetPath, mirrorPath, isDir ? 'junction' : 'file');
+					console.log(`[MIRROR] Created link: ${modName} -> ${targetPath} (${isDir ? 'folder' : 'zip'})`);
 				} catch (e) {
 					console.error(`[MIRROR] Failed to create symlink for ${modName}: ${e.message}`);
 					// Fallback: Hardlink
@@ -2137,8 +2253,8 @@ async function autoOrganizeMaps() {
 /**
 	* Exported alias for the queue entry point
 */
-async function installMod(modId, modTitle, downloadUrl, onProgress, category, subFolder = null, techData = null) {
-    return await enqueueInstall(modId, modTitle, downloadUrl, onProgress, category, subFolder);
+async function installMod(modId, modTitle, downloadUrl, onProgress, category, subFolder = null, techData = null, oldPath = null, recoveryPath = null) {
+    return await enqueueInstall(modId, modTitle, downloadUrl, onProgress, category, subFolder, oldPath, recoveryPath);
 }
 
 /**
@@ -2271,7 +2387,7 @@ async function moveModsToFolder(fileNames, destinationFolder) {
 	const destDir = destinationFolder === '' ? modsPath : path.join(modsPath, destinationFolder);
 	debugLog(`[MOVE] Moving ${fileNames.length} mods. Primary: ${modsPath}, Dest: ${destDir}`);
 	
-	if (!fs.existsSync(destDir)) {
+	if (!await fs.pathExists(destDir)) {
 		await fs.ensureDir(destDir);
 	}
 	
@@ -2286,7 +2402,7 @@ async function moveModsToFolder(fileNames, destinationFolder) {
 			const lowerName = name.toLowerCase();
 			if (!locationIndex.has(lowerName)) {
 				// Only index if it actually exists on disk (stale cache prevention)
-				if (fs.existsSync(entry.file_path)) {
+				if (await fs.pathExists(entry.file_path)) {
 					locationIndex.set(lowerName, entry.file_path);
 				}
 			}
@@ -2302,7 +2418,7 @@ async function moveModsToFolder(fileNames, destinationFolder) {
 			// Try as relative path first
 			for (const p of allModsPaths) {
 				const full = path.join(p, fileName);
-				if (fs.existsSync(full)) {
+				if (await fs.pathExists(full)) {
 					locationIndex.set(lower, full);
 					break;
 				}
@@ -2332,7 +2448,7 @@ async function moveModsToFolder(fileNames, destinationFolder) {
 							locationIndex.set(lowerName, fullPath);
 						}
 					} else if (entry.isDirectory()) {
-						const isModDir = fs.existsSync(path.join(fullPath, 'modDesc.xml'));
+						const isModDir = await fs.pathExists(path.join(fullPath, 'modDesc.xml'));
 						if (isModDir) {
 							if (!locationIndex.has(lowerName)) {
 								locationIndex.set(lowerName, fullPath);
@@ -2440,7 +2556,11 @@ async function findModPath(fileName) {
 	for (const modsPath of allPaths) {
 		// 1. Check root
 		const rootPath = path.join(modsPath, fileName);
-		if (fs.existsSync(rootPath)) return rootPath;
+		if (fs.existsSync(rootPath)) {
+			const stats = await fs.lstat(rootPath).catch(() => null);
+			// Only return if it's a real file, NOT a symlink mirror
+			if (stats && !stats.isSymbolicLink()) return rootPath;
+		}
 		
 		// 2. Check all subdirectories (shallow scan)
 		try {
@@ -2448,7 +2568,10 @@ async function findModPath(fileName) {
 			for (const entry of entries) {
 				if (entry.isDirectory()) {
 					const subPath = path.join(modsPath, entry.name, fileName);
-					if (fs.existsSync(subPath)) return subPath;
+					if (fs.existsSync(subPath)) {
+						const stats = await fs.lstat(subPath).catch(() => null);
+						if (stats && !stats.isSymbolicLink()) return subPath;
+					}
 				}
 			}
 		} catch (e) {}
@@ -2586,10 +2709,9 @@ function decodeDDS(buffer, width, height, format) {
     return rgba;
 }
 
-async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null) {
+async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null, prioritizeStore = false) {
 	try {
-		// ── DLC PATH RESOLUTION ──
-		// If the path doesn't exist and looks like a DLC, try to find it in the game's pdlc folder
+		// ... (DLC logic stays same)
 		if (filePath && !fs.existsSync(filePath) && filePath.startsWith('pdlc_')) {
 			const { path: gamePath } = await gameLauncher.detectGamePath();
 			if (gamePath) {
@@ -2598,7 +2720,6 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 				if (fs.existsSync(pdlcPath)) {
 					filePath = pdlcPath;
 				} else {
-					// Check x64 parent
 					const x64Pdlc = path.join(gameDir, '..', 'pdlc', filePath + '.zip');
 					if (fs.existsSync(x64Pdlc)) filePath = x64Pdlc;
 				}
@@ -2611,34 +2732,50 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 		
 		const getCategoryFallback = (entries = null) => {
 			if (modDesc?.isMap) return 'CATEGORY:map';
-			
 			let hintSource = (modDesc?.title || filePath).toLowerCase();
-			
-			// Use the user's tip: look for *_icon.dds OR icon_*.dds in the root to find category clues
 			if (entries) {
 				const ddsEntry = entries.find(e => {
 					const lower = e.entryName.toLowerCase();
 					return lower.endsWith('_icon.dds') || (lower.startsWith('icon_') && lower.endsWith('.dds'));
 				});
-				if (ddsEntry) {
-					hintSource += ' ' + path.basename(ddsEntry.entryName).toLowerCase();
-				}
+				if (ddsEntry) hintSource += ' ' + path.basename(ddsEntry.entryName).toLowerCase();
 			}
-			
 			if (hintSource.includes('tractor') || hintSource.includes('vehicle') || hintSource.includes('truck') || hintSource.includes('car') || hintSource.includes('harvester') || hintSource.includes('combine') || hintSource.includes('series') || hintSource.includes('deutz') || hintSource.includes('johndeere') || hintSource.includes('fendt')) return 'CATEGORY:vehicle';
 			if (hintSource.includes('trailer') || hintSource.includes('implement') || hintSource.includes('plow') || hintSource.includes('plough') || hintSource.includes('mower') || hintSource.includes('header') || hintSource.includes('tank')) return 'CATEGORY:tool';
 			if (hintSource.includes('pack')) return 'CATEGORY:pack';
 			if (hintSource.includes('map') || hintSource.includes('village') || hintSource.includes('farm')) return 'CATEGORY:map';
-			
 			return 'CATEGORY:generic';
 		};
+
 		if (filePath.endsWith('.zip')) {
 			const zip = zipInstance || new AdmZip(filePath);
 			const entries = zip.getEntries();
 			let entry = null;
+
+			// 0. Store Priority (if enabled)
+			if (prioritizeStore) {
+				entry = entries.find(e => {
+					const n = e.entryName.toLowerCase();
+					// Root-level store_*.dds or store_*.png (User's specific pattern)
+					return (n.startsWith('store_') && (n.endsWith('.dds') || n.endsWith('.png'))) && !n.includes('/');
+				}) || entries.find(e => {
+					const n = e.entryName.toLowerCase();
+					// Standard fallbacks
+					return n === 'store.png' || n === 'store.dds' || n === 'shop.png' || n === 'shop.dds';
+				});
+			}
+
+			// 0.5 Icon Priority (if not store)
+			if (!entry && !prioritizeStore) {
+				entry = entries.find(e => {
+					const n = e.entryName.toLowerCase();
+					// Root-level icon_*.dds or icon_*.png (User's specific pattern)
+					return (n.startsWith('icon_') && (n.endsWith('.dds') || n.endsWith('.png'))) && !n.includes('/');
+				});
+			}
 			
-			// 1. Primary: Search for exact filename
-			if (normalizedIcon) {
+			// 1. Primary: Search for exact filename (if not store priority or store not found)
+			if (!entry && normalizedIcon) {
 				entry = entries.find(e => e.entryName.toLowerCase() === normalizedIcon.toLowerCase());
 			}
 			
@@ -2661,16 +2798,25 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 			
 			// 3. Last Resort: Search for common icon filenames
 			if (!entry) {
-				entry = entries.find(e => 
-					e.entryName.toLowerCase() === 'modicon.png' || 
-					e.entryName.toLowerCase() === 'icon.png' || 
-					e.entryName.toLowerCase() === 'mod_icon.png' ||
-					e.entryName.toLowerCase() === 'icon.jpg' ||
-					e.entryName.toLowerCase().endsWith('/modicon.png') ||
-					e.entryName.toLowerCase().endsWith('/icon.png') ||
-					e.entryName.toLowerCase().endsWith('/mod_icon.png') ||
-					e.entryName.toLowerCase().endsWith('/icon.jpg')
-				);
+				entry = entries.find(e => {
+					const name = e.entryName.toLowerCase();
+					return (
+						name === 'modicon.png' || 
+						name === 'icon.png' || 
+						name === 'mod_icon.png' ||
+						name === 'icon.jpg' ||
+						name === 'store.png' ||
+						name === 'store.dds' ||
+						name === 'mod_store.png' ||
+						name === 'mod_store.dds' ||
+						name.endsWith('/modicon.png') ||
+						name.endsWith('/icon.png') ||
+						name.endsWith('/mod_icon.png') ||
+						name.endsWith('/icon.jpg') ||
+						name.endsWith('/store.png') ||
+						name.endsWith('/store.dds')
+					);
+				});
 			}
 			
 			// 4. MAP-SPECIFIC AGGRESSIVE SEARCH (Prioritize overview/preview for maps)
@@ -2771,35 +2917,67 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 					return `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${buffer.toString('base64')}`;
 				}
 			}
-			return getCategoryFallback(entries);
-			} else {
+		} else {
 			// It's a directory
 			let fullIconPath = null;
+			const dirFiles = fs.readdirSync(filePath);
+			const lowerFiles = dirFiles.map(f => f.toLowerCase());
+
+			// 0. Store Priority (Directories)
+			if (prioritizeStore) {
+				const storeMatch = dirFiles.find(f => {
+					const low = f.toLowerCase();
+					return (low.startsWith('store_') && (low.endsWith('.dds') || low.endsWith('.png'))) || low === 'store.png' || low === 'store.dds' || low === 'shop.png' || low === 'shop.dds';
+				});
+				if (storeMatch) fullIconPath = path.join(filePath, storeMatch);
+			}
+
+			// 0.5 Icon Priority (Directories)
+			if (!fullIconPath && !prioritizeStore) {
+				const iconMatch = dirFiles.find(f => {
+					const low = f.toLowerCase();
+					return (low.startsWith('icon_') && (low.endsWith('.dds') || low.endsWith('.png')));
+				});
+				if (iconMatch) fullIconPath = path.join(filePath, iconMatch);
+			}
 			
-			if (normalizedIcon) {
-				fullIconPath = path.join(filePath, normalizedIcon);
-				if (!fs.existsSync(fullIconPath)) {
-					// Try case-insensitive search in that directory
-					try {
-						const dir = path.dirname(fullIconPath);
-						const base = path.basename(fullIconPath).toLowerCase();
-						const files = fs.readdirSync(dir);
-						const match = files.find(f => f.toLowerCase() === base);
-						if (match) fullIconPath = path.join(dir, match);
-					} catch (e) {}
+			// 1. Primary: Search for exact filename (modDesc)
+			if (!fullIconPath && normalizedIcon) {
+				const match = dirFiles.find(f => f.toLowerCase() === normalizedIcon.toLowerCase());
+				if (match) fullIconPath = path.join(filePath, match);
+				else {
+					// Check if normalizedIcon includes a subpath
+					const candidatePath = path.join(filePath, normalizedIcon);
+					if (fs.existsSync(candidatePath) && fs.statSync(candidatePath).isFile()) {
+						fullIconPath = candidatePath;
+					}
 				}
+			}
+
+			// 2. Secondary: If still not found, try common names at root
+			if (!fullIconPath) {
+				const commonMatch = dirFiles.find(f => {
+					const low = f.toLowerCase();
+					return low === 'modicon.png' || low === 'icon.png' || low === 'mod_icon.png' || low === 'icon.jpg' || low === 'store.png' || low === 'store.dds';
+				});
+				if (commonMatch) fullIconPath = path.join(filePath, commonMatch);
 			}
 			
 			if (!fullIconPath || !fs.existsSync(fullIconPath)) {
 				// Fallback: search root for common icons
 				try {
 					const files = fs.readdirSync(filePath);
-					const match = files.find(f => 
-						f.toLowerCase() === 'modicon.png' || 
-						f.toLowerCase() === 'icon.png' || 
-						f.toLowerCase() === 'mod_icon.png' || 
-						f.toLowerCase() === 'icon.jpg'
-					);
+					const match = files.find(f => {
+						const low = f.toLowerCase();
+						return (
+							low === 'modicon.png' || 
+							low === 'icon.png' || 
+							low === 'mod_icon.png' || 
+							low === 'icon.jpg' ||
+							low === 'store.png' ||
+							low === 'store.dds'
+						);
+					});
 					if (match) fullIconPath = path.join(filePath, match);
 				} catch (e) {}
 			}
@@ -2893,7 +3071,25 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 					}
 					
 					const ext = path.extname(fullIconPath).replace('.', '').toLowerCase() || 'png';
-					if (ext === 'dds') return getCategoryFallback();
+					if (ext === 'dds') {
+						// If we couldn't decode it above, and it's not a zip, we can try to fall back to the modDesc icon
+						// if it's different from the one we just tried.
+						if (normalizedIcon && !fullIconPath.toLowerCase().endsWith(normalizedIcon.toLowerCase())) {
+							const secondChance = path.join(filePath, normalizedIcon);
+							if (fs.existsSync(secondChance)) {
+								fullIconPath = secondChance;
+								// We continue the loop/logic to process this secondChance
+								const secondBuffer = fs.readFileSync(fullIconPath);
+								const secondExt = path.extname(fullIconPath).replace('.', '').toLowerCase();
+								try {
+									const { nativeImage } = require('electron');
+									let img = nativeImage.createFromBuffer(secondBuffer);
+									return img.toDataURL();
+								} catch (e) {}
+							}
+						}
+						return getCategoryFallback(hints);
+					}
 					
 					try {
 						const { nativeImage } = require('electron');
@@ -2917,7 +3113,7 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 			
 			return getCategoryFallback(hints);
 		}
-		} catch (err) {
+	} catch (err) {
 		console.error('Failed to get mod icon:', err);
 	}
 	return 'CATEGORY:generic';
@@ -3509,7 +3705,7 @@ async function pruneBackups() {
 					if (!entry.name.startsWith('.')) {
 						await walkAndPrune(fullPath);
 					}
-				} else if (entry.isFile() && entry.name.endsWith('.bak')) {
+				} else if (entry.isFile() && (entry.name.endsWith('.bak') || entry.name.endsWith('.backup'))) {
 					try {
 						const stats = await fs.stat(fullPath);
 						if (msThreshold === -1 || (now - stats.mtimeMs > msThreshold)) {
@@ -3571,8 +3767,11 @@ function looksLikeMap(modDesc) {
 function cleanModTitle(title, modName, fileName, isMap = false) {
     if (!title) return title;
 
+    // Unescape XML entities
+    let clean = title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+
     // First, flatten newlines and extra spaces
-    let clean = title.replace(/[\r\n\t]+/g, ' ').replace(/\s\s+/g, ' ').trim();
+    clean = clean.replace(/[\r\n\t]+/g, ' ').replace(/\s\s+/g, ' ').trim();
 
     // Utility to normalize for comparison (removes non-word chars and underscores)
     const normalize = (s) => (s || '').toLowerCase().replace(/[\W_]+/g, '');

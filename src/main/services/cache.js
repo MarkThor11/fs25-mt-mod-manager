@@ -85,7 +85,8 @@ function init() {
     { table: 'mod_tracking', column: 'technical_data', type: 'TEXT' },
     { table: 'local_mod_cache', column: 'icon_base64', type: 'TEXT' },
     { table: 'local_mod_cache', column: 'file_hash', type: 'TEXT' },
-    { table: 'local_mod_cache', column: 'tags', type: 'TEXT' }
+    { table: 'local_mod_cache', column: 'tags', type: 'TEXT' },
+    { table: 'local_mod_cache', column: 'store_base64', type: 'TEXT' }
   ];
 
   for (const m of migrations) {
@@ -366,12 +367,12 @@ function getAllLocalModCache() {
   return db.prepare('SELECT * FROM local_mod_cache').all();
 }
 
-function setLocalModCache(filePath, mtime, size, data, iconBase64 = null, fileHash = null) {
+function setLocalModCache(filePath, mtime, size, data, iconBase64 = null, fileHash = null, storeBase64 = null) {
   if (!db) return;
   db.prepare(`
-    INSERT OR REPLACE INTO local_mod_cache (file_path, mtime, size, json_data, icon_base64, file_hash)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(filePath, Math.floor(mtime), size, JSON.stringify(data), iconBase64, fileHash);
+    INSERT OR REPLACE INTO local_mod_cache (file_path, mtime, size, json_data, icon_base64, file_hash, store_base64)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(filePath, Math.floor(mtime), size, JSON.stringify(data), iconBase64, fileHash, storeBase64);
 }
 
 function removeLocalModCache(filePath) {
