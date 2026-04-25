@@ -27,6 +27,7 @@ jobs:
       - name: Build and Publish Mac App
         env:
           GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN }}
+          GH_TOKEN: ${{ secrets.UPDATE_TOKEN }}
           # Disable code signing for now as requested/implied by previous config
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: |
