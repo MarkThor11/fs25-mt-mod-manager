@@ -1,0 +1,33 @@
+name: Build Mac Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build and Publish Mac App
+        env:
+          GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN }}
+          # Disable code signing for now as requested/implied by previous config
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: |
+          npm run build
+          npx electron-builder --mac -c.mac.identity=null -c.dmg.sign=false --publish always

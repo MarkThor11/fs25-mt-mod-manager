@@ -9,7 +9,7 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 
 const SLIDES = [
   {
-    title: "MT Mod Manager v1.0.9",
+    title: "MT Mod Manager v1.0.10",
     description: "Welcome back! We've overhauled the engine with high-speed grid rendering and intelligent image caching for the smoothest experience yet.",
     icon: <Rocket className="w-12 h-12 text-accent" />,
     color: "var(--accent)"
@@ -210,7 +210,7 @@ const SLIDES = [
 
 export default function WelcomeTour({ forceShow = false, onClose }) {
   const { hasSeenGuide, setHasSeenGuide, tourVersion, setTourVersion } = useSettingsStore();
-  const CURRENT_TOUR_VERSION = '1.0.9';
+  const CURRENT_TOUR_VERSION = '1.0.10';
   const [currentSlide, setCurrentSlide] = useState(0);
   const [visible, setVisible] = useState(false);
   const [highlightStyle, setHighlightStyle] = useState(null);
