@@ -427,7 +427,7 @@ export default function ProfilesPage() {
             <Download size={16} /> Import
           </button>
           <button className="btn btn--secondary" onClick={() => scanMods()}>
-            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} /> Refresh
+            <RefreshCw size={16} className={isScanningMods ? 'animate-spin' : ''} /> Refresh
           </button>
         </div>
 
