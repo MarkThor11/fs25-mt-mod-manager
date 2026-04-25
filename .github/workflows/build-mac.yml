@@ -24,12 +24,20 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build and Publish Mac App
+      - name: Build Mac App
         env:
           GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN }}
           GH_TOKEN: ${{ secrets.UPDATE_TOKEN }}
-          # Disable code signing for now as requested/implied by previous config
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: |
           npm run build
-          ./node_modules/.bin/electron-builder --mac --publish always -c.mac.identity=null -c.dmg.sign=false
+          ./node_modules/.bin/electron-builder --mac -c.mac.identity=null -c.dmg.sign=false
+
+      - name: Upload Mac Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-build
+          path: |
+            release/*.dmg
+            release/latest-mac.yml
+          if-no-files-found: error
