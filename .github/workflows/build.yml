@@ -28,11 +28,15 @@ jobs:
         run: npm install
 
       - name: Build/Release Electron app
-        uses: samuelmeuli/action-electron-builder@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          release: true
-          # Explicitly call the platform-specific build scripts
-          build_script_name: ${{ matrix.os == 'windows-latest' && 'dist:win' || 'dist:mac' }}
-          # Skip macOS signing for now
-          args: "-c.mac.identity=null"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            npm run dist:win
+          else
+            # For Mac, we use the raw command to ensure no signing issues
+            npm run build
+            ./node_modules/.bin/electron-builder --mac -c.mac.identity=null
+          fi
+        shell: bash
