@@ -11,6 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
 
@@ -27,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build/Release Electron app
+      - name: Build Electron app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
@@ -35,8 +36,14 @@ jobs:
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             npm run dist:win
           else
-            # For Mac, we use the raw command to ensure no signing issues
             npm run build
-            ./node_modules/.bin/electron-builder --mac -c.mac.identity=null -c.dmg.sign=false
+            ./node_modules/.bin/electron-builder --mac -c.mac.identity=null -c.dmg.sign=false --publish never
           fi
         shell: bash
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.os }}
+          path: release/*.exe, release/*.dmg, release/*.zip
+          if-no-files-found: warn
