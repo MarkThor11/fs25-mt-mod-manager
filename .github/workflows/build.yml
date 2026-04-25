@@ -37,6 +37,6 @@ jobs:
           else
             # For Mac, we use the raw command to ensure no signing issues
             npm run build
-            ./node_modules/.bin/electron-builder --mac -c.mac.identity=null
+            ./node_modules/.bin/electron-builder --mac -c.mac.identity=null -c.dmg.sign=false
           fi
         shell: bash
