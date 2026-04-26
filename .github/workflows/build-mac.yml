@@ -43,6 +43,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           # This forces it to a unique tag so it never touches the Windows release
+          # This ensures it goes to the dedicated updates repo
+          repository: MarkThor11/fs25-mt-mod-manager-updates
           tag_name: mac-${{ github.event.inputs.tag_name || github.ref_name }}
           files: |
             release/*.dmg
