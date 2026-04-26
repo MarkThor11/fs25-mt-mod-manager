@@ -6,6 +6,11 @@ on:
       - 'v*'
       - '[0-9]*'
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag to upload to (e.g. 1.0.10)'
+        required: true
+        default: '1.0.10'
 
 jobs:
   build-mac:
@@ -33,11 +38,13 @@ jobs:
           npm run build
           ./node_modules/.bin/electron-builder --mac -c.mac.identity=null -c.dmg.sign=false
 
-      - name: Upload Mac Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: mac-build
-          path: |
+          # Use the manually entered tag or the tag that triggered the push
+          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+          files: |
             release/*.dmg
             release/latest-mac.yml
-          if-no-files-found: error
+        env:
+          GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN }}
