@@ -29,11 +29,23 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build and Publish Mac App
+      - name: Build Mac App
         env:
           GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN }}
           GH_TOKEN: ${{ secrets.UPDATE_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: |
           npm run build
-          ./node_modules/.bin/electron-builder --mac --publish always -c.mac.identity=null -c.dmg.sign=false
+          # We build WITHOUT publishing here to prevent collisions
+          ./node_modules/.bin/electron-builder --mac -c.mac.identity=null -c.dmg.sign=false
+
+      - name: Upload to SEPARATE Mac Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # This forces it to a unique tag so it never touches the Windows release
+          tag_name: mac-${{ github.event.inputs.tag_name || github.ref_name }}
+          files: |
+            release/*.dmg
+            release/latest-mac.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN }}
