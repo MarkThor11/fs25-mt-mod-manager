@@ -29,22 +29,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build Mac App
+      - name: Build and Publish Mac App
         env:
           GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN }}
           GH_TOKEN: ${{ secrets.UPDATE_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: |
           npm run build
-          ./node_modules/.bin/electron-builder --mac -c.mac.identity=null -c.dmg.sign=false
-
-      - name: Upload to Release
-        uses: softprops/action-gh-release@v2
-        with:
-          # Use the manually entered tag or the tag that triggered the push
-          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
-          files: |
-            release/*.dmg
-            release/latest-mac.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN }}
+          ./node_modules/.bin/electron-builder --mac --publish always -c.mac.identity=null -c.dmg.sign=false
