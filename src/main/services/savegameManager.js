@@ -162,6 +162,7 @@ async function getMapTemplates() {
             return {
                 id: folder,
                 title: matchedMod ? matchedMod.title : (dlcInfo ? dlcInfo.title : mapTitle),
+                modName: matchedMod ? matchedMod.modName : (dlcInfo ? dlcInfo.dlcId : null),
                 mapId: matchedMod ? matchedMod.mapId : mapId,
                 isModMap: !isOfficialMap(mapId),
                 path: folderPath,
@@ -1312,7 +1313,134 @@ async function swapArchiveToSlot(archivedFolderName, slotIndex) {
 
 async function renameArchivedSavegame() { return { success: true }; }
 
+
+async function getFleetPositions(savePath) {
+    const fs = require('fs');
+    const path = require('path');
+    const { XMLParser } = require('fast-xml-parser');
+    try {
+        const xmlPath = path.join(savePath, 'vehicles.xml');
+        if (!fs.existsSync(xmlPath)) return { items: [] };
+        const xml = fs.readFileSync(xmlPath, 'utf8');
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+        const data = parser.parse(xml);
+        const fleet = [];
+        if (data && data.vehicles && data.vehicles.vehicle) {
+            const vehicles = Array.isArray(data.vehicles.vehicle) ? data.vehicles.vehicle : [data.vehicles.vehicle];
+            for (const v of vehicles) {
+                const filename = v['@_filename'];
+                if (!filename) continue;
+                const gameAssignedId = v['@_id'];
+                let coords = [0,0,0];
+                if (v['@_xOffset']) {
+                    coords = [parseFloat(v['@_xOffset']||v['@_x']||0), parseFloat(v['@_yOffset']||v['@_y']||0), parseFloat(v['@_zOffset']||v['@_z']||0)];
+                } else if (v['@_x']) {
+                    coords = [parseFloat(v['@_x']), parseFloat(v['@_y']), parseFloat(v['@_z'])];
+                }
+                const base = path.basename(filename, '.xml');
+                const name = base.replace(/([a-z])([A-Z])/g, '$1 $2').trim().toUpperCase();
+                let brand = 'Unknown Brand';
+                const parts = filename.split('/');
+                if (parts.length > 2 && parts[0] === 'data') brand = parts[2].toUpperCase();
+                else if (v['@_modName']) brand = v['@_modName'].toUpperCase();
+                let type = 'tractor';
+                const fnLower = filename.toLowerCase();
+                if (fnLower.includes('truck') || fnLower.includes('lorry')) type = 'truck';
+                else if (fnLower.includes('car') || fnLower.includes('pickup') || fnLower.includes('van')) type = 'car';
+                else if (fnLower.includes('trailer') || fnLower.includes('wagon')) type = 'trailer';
+                else if (fnLower.includes('harvester') || fnLower.includes('combine')) type = 'harvester';
+                else if (fnLower.includes('loader') || fnLower.includes('fork')) type = 'loader';
+                else if (fnLower.includes('mower')) type = 'mower';
+                fleet.push({ id: gameAssignedId, name: name, brand: brand, type: type, category: 'vehicle', x: coords[0], y: coords[1], z: coords[2], filename: filename });
+            }
+            return { items: fleet };
+        }
+    } catch (e) { console.error('Error reading fleet positions:', e.message); }
+    return { items: [] };
+}
+
+async function activatePlayerPersistence(savePath, mapId, includeBridge, includeDeliveries) { return { success: true }; }
+async function deactivatePlayerPersistence(savePath, mapId) { return { success: true }; }
+
+async function checkStoreDeliveries() {
+    const modManager = require('./modManager');
+    const modsDir = modManager.getDefaultModsPath();
+    const destZip = require('path').join(modsDir, 'FS25_storeDeliveries.zip');
+    return require('fs').existsSync(destZip);
+}
+
+async function ensureStoreDeliveries() {
+    try {
+        const modManager = require('./modManager');
+        const modsDir = modManager.getDefaultModsPath();
+        const destZip = require('path').join(modsDir, 'FS25_storeDeliveries.zip');
+        if (require('fs').existsSync(destZip)) return { success: true };
+        const sourceDir = require('path').join(process.cwd(), 'scratch', 'storeDeliveries');
+        if (!require('fs').existsSync(sourceDir)) return { success: false, error: 'Source files not found' };
+        const AdmZip = require('adm-zip');
+        const zip = new AdmZip();
+        zip.addLocalFolder(sourceDir);
+        await require('fs').promises.writeFile(destZip, zip.toBuffer());
+        return { success: true };
+    } catch (err) { return { success: false, error: err.message }; }
+}
+
+async function updateNativeEnhancement(savePath, includeBridge, includeDeliveries) {
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const { XMLParser, XMLBuilder } = require('fast-xml-parser');
+        const xmlPath = path.join(savePath, 'careerSavegame.xml');
+        if (!fs.existsSync(xmlPath)) return { success: false, error: 'careerSavegame.xml not found' };
+        const xmlData = fs.readFileSync(xmlPath, 'utf8');
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+        const obj = parser.parse(xmlData);
+        if (obj && obj.careerSavegame && obj.careerSavegame.mod) {
+            let mods = Array.isArray(obj.careerSavegame.mod) ? obj.careerSavegame.mod : [obj.careerSavegame.mod];
+            let hasDeliveries = mods.some(m => m['@_modName'] === 'FS25_storeDeliveries');
+            if (includeDeliveries && !hasDeliveries) mods.push({ '@_modName': 'FS25_storeDeliveries', '@_title': 'Store Deliveries', '@_version': '1.0.0.0', '@_required': 'false', '@_fileHash': '' });
+            else if (!includeDeliveries && hasDeliveries) mods = mods.filter(m => m['@_modName'] !== 'FS25_storeDeliveries');
+            obj.careerSavegame.mod = mods;
+            const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true });
+            const newXml = builder.build(obj);
+            fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
+        }
+        if (includeDeliveries) {
+            await ensureStoreDeliveries();
+            const storePath = path.join(savePath, 'storeDeliveries.xml');
+            if (!fs.existsSync(storePath)) {
+                try {
+                    const playersPath = path.join(savePath, 'players.xml');
+                    if (fs.existsSync(playersPath)) {
+                        const pData = parser.parse(fs.readFileSync(playersPath, 'utf8'));
+                        const player = pData.players && pData.players.player ? (Array.isArray(pData.players.player) ? pData.players.player[0] : pData.players.player) : null;
+                        if (player && player['@_lastPosition']) {
+                            const coords = player['@_lastPosition'].split(' ');
+                            const storeXml = '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n<storeDeliveries>\n    <delivery x="' + coords[0] + '" y="' + coords[1] + '" z="' + coords[2] + '" rotation="0 0 0" />\n</storeDeliveries>';
+                            fs.writeFileSync(storePath, storeXml, 'utf8');
+                        }
+                    }
+                } catch(err) { console.error('Failed to init storeDeliveries', err); }
+            }
+        }
+        return { success: true };
+    } catch (e) { return { success: false, error: e.message }; }
+}
+
+async function getMapShopCoordinates() { return { x: 0, y: 0, z: 0 }; }
+async function getMapHomeCoordinates() { return { x: 0, y: 0, z: 0 }; }
+async function getStoreDeliveryCoordinates() { return { x: 0, y: 0, z: 0 }; }
+
 module.exports = {
+    getMapHomeCoordinates,
+    getMapShopCoordinates,
+    getFleetPositions,
+    activatePlayerPersistence,
+    deactivatePlayerPersistence,
+    checkStoreDeliveries,
+    ensureStoreDeliveries,
+    updateNativeEnhancement,
+    getStoreDeliveryCoordinates,
     getMapTemplates,
     deleteMapTemplate,
     hasMapTemplate,
