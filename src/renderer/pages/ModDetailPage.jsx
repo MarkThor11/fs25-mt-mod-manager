@@ -13,6 +13,17 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { compareVersions } from '../utils/modUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 
+// Shared Ultra Normalization (matches InstalledModsPage)
+const ultraNormalize = (str) => {
+    if (!str) return '';
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+        .replace(/\[[^\]]*\]/g, '') // Strip [Tags]
+        .replace(/\([^)]*\)/g, '') // Strip (By Author) or (v1.0)
+        .replace(/^(?:fs\d{2}|dlc|pdlc|mod|fendt|jcb|caseih|newholland|massey|farming\s*simulator(?:\s*\d{2})?)(?:[\s_\.]+)/gi, '') // Common prefixes
+        .replace(/[\s_\.]+(?:by\s+.*|author:.*|pack|package|dlc|mod|map|expansion|set|kit|collection|building|shed|v\d+.*)\s*$/gi, '') // Trailing noise
+        .replace(/[^a-z0-9]/g, ''); // Squash everything else
+};
+
 export default function ModDetailPage() {
   const { modId, fileName } = useParams();
   const navigate = useNavigate();
@@ -75,37 +86,16 @@ export default function ModDetailPage() {
     });
 
     const deduped = [];
-    const seenKeys = new Set();
+    const seenTitles = new Set();
 
     for (const dep of sorted) {
       const title = typeof dep === 'string' ? dep : dep.title;
       if (!title) continue;
-
-      const raw = title.toLowerCase()
-        .replace(/\s*(?:\(|\[)?by:?.*?(?:\)|\])?$/i, '')
-        .replace(/\s+pack(?:age)?/i, '')
-        .replace(/\s*v?\d+\.\d+\.\d+(?:\.\d+)?/i, '')
-        .replace(/[^a-z0-9]/g, '');
-
-      if (raw.length <= 2) {
+      
+      const lowerTitle = title.toLowerCase();
+      if (!seenTitles.has(lowerTitle)) {
         deduped.push(dep);
-        continue;
-      }
-
-      let isDuplicate = false;
-      for (const existing of seenKeys) {
-        if (existing.includes(raw) || raw.includes(existing)) {
-          const ratio = Math.min(existing.length, raw.length) / Math.max(existing.length, raw.length);
-          if (ratio > 0.6) {
-            isDuplicate = true;
-            break;
-          }
-        }
-      }
-
-      if (!isDuplicate) {
-        deduped.push(dep);
-        seenKeys.add(raw);
+        seenTitles.add(lowerTitle);
       }
     }
     return deduped;
@@ -114,17 +104,6 @@ export default function ModDetailPage() {
   const requirementsMet = useMemo(() => {
     if (uniqueDependencies.length === 0) return true;
     if (!localMods) return false;
-
-    // Shared Ultra Normalization (matches InstalledModsPage)
-    const ultraNormalize = (str) => {
-        if (!str) return '';
-        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-            .replace(/\[[^\]]*\]/g, '') // Strip [Tags]
-            .replace(/\([^)]*\)/g, '') // Strip (By Author) or (v1.0)
-            .replace(/^(?:fs\d{2}|dlc|pdlc|mod|fendt|jcb|caseih|newholland|massey|farming\s*simulator(?:\s*\d{2})?)(?:[\s_\.]+)/gi, '') // Common prefixes
-            .replace(/[\s_\.]+(?:by\s+.*|author:.*|pack|package|dlc|mod|map|expansion|set|kit|collection|building|shed|v\d+.*)\s*$/gi, '') // Trailing noise
-            .replace(/[^a-z0-9]/g, ''); // Squash everything else
-    };
 
     return uniqueDependencies.every(dep => {
       const depTitle = typeof dep === 'string' ? dep : dep.title;
@@ -240,18 +219,16 @@ export default function ModDetailPage() {
           const remote = await window.api.modhub.fetchModDetail({ modId: effectiveModId });
           if (remote && !remote.error) {
               // Merge remote data over local (prefer remote descriptions/images)
-              // But MERGE dependencies so we don't lose ZIP-based ones or remote ones
-              const localDeps = modData.dependencies || [];
+              // If ModHub provides dependencies, use ONLY ModHub dependencies.
+              // This ensures the list exactly matches the ModHub page and avoids duplicates
+              // or conflicting internal zip names from modDesc.xml.
               const remoteDeps = remote.dependencies || [];
-              const combinedDeps = [...localDeps];
               
-              remoteDeps.forEach(rd => {
-                  const rdTitle = typeof rd === 'string' ? rd : rd.title;
-                  const isAlreadyPresent = combinedDeps.some(ld => (typeof ld === 'string' ? ld : ld.title) === rdTitle);
-                  if (!isAlreadyPresent) combinedDeps.push(rd);
-              });
-
-              modData = { ...modData, ...remote, dependencies: combinedDeps };
+              modData = { 
+                  ...modData, 
+                  ...remote, 
+                  dependencies: remoteDeps.length > 0 ? remoteDeps : (modData.dependencies || []) 
+              };
           }
         } catch (err) {
           console.warn('Remote fetch failed, falling back to local metadata');
@@ -547,13 +524,31 @@ export default function ModDetailPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {uniqueDependencies.map((dep) => {
                   const depTitle = typeof dep === 'string' ? dep : dep.title;
-                  const normalizedDep = depTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+                  const normalizedDep = ultraNormalize(depTitle);
                   const depId = typeof dep === 'object' && dep.url ? (dep.url.match(/mod_id=(\d+)/)?.[1] || dep.url.match(/storage\/(\d+)\//)?.[1]) : null;
 
                   const isInstalled = localMods.some(lm => {
+                    // 1. Direct ID Match (Strongest)
                     if (depId && lm.modId && String(lm.modId) === String(depId)) return true;
-                    const localTitle = (lm.title || lm.modName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-                    return localTitle === normalizedDep || localTitle.includes(normalizedDep) || normalizedDep.includes(localTitle);
+                    
+                    // 2. Exact match against modName or fileName (handling subfolders)
+                    // Since modDesc.xml dependencies are exactly the required zip filenames (minus .zip)
+                    if (lm.modName && lm.modName.toLowerCase() === depTitle.toLowerCase()) return true;
+                    const cleanFileName = lm.fileName ? lm.fileName.split('/').pop().toLowerCase() : '';
+                    if (cleanFileName === depTitle.toLowerCase() + '.zip') return true;
+
+                    // 3. Fallback fuzzy match for titles
+                    const localUltraTitle = ultraNormalize(lm.title || '');
+                    const localUltraName = ultraNormalize(lm.modName || '');
+                    const localUltraFile = ultraNormalize(lm.fileName || '');
+                    
+                    if (localUltraTitle === normalizedDep || localUltraName === normalizedDep || localUltraFile === normalizedDep) return true;
+                    
+                    // 3. Containment (Safe fuzzy check)
+                    if (normalizedDep.length > 3 && localUltraTitle && (localUltraTitle.includes(normalizedDep) || normalizedDep.includes(localUltraTitle))) return true;
+                    if (normalizedDep.length > 3 && localUltraName && (localUltraName.includes(normalizedDep) || normalizedDep.includes(localUltraName))) return true;
+
+                    return false;
                   });
                   
                   return (

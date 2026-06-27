@@ -237,6 +237,24 @@ function getModHubMetadataPool() {
   } catch (err) {
     console.error('[CACHE] Metadata pool scan failed:', err.message);
   }
+
+  // 3. Fallback: merge bundled_cache.json if we have very little data
+  // Since this is a synchronous function, we use fs.readFileSync.
+  try {
+    const fs = require('fs-extra');
+    const path = require('path');
+    const { app } = require('electron');
+    const bundledPath = path.join(app.getAppPath(), 'src/main/resources/bundled_cache.json');
+    if (fs.existsSync(bundledPath)) {
+        const bundledData = fs.readJsonSync(bundledPath);
+        for (const [k, v] of Object.entries(bundledData)) {
+            if (!pool[k]) pool[k] = v;
+        }
+    }
+  } catch (err) {
+    // Ignore if not present
+  }
+
   return pool;
 }
 

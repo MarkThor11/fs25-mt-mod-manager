@@ -31,25 +31,7 @@ async function findModHubId(localMod) {
   const existing = allTracking.find(t => t.local_file_name === localMod.fileName);
   if (existing) return existing.mod_id;
 
-  console.log(`[VERSION] Searching ModHub for: ${localMod.title}`);
-  try {
-    const searchResult = await scraper.searchMods(localMod.title);
-    const mods = searchResult.mods || [];
-    
-    // Find best match
-    const match = mods.find(m => {
-        const remoteTitle = m.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const localTitle = localMod.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-        return remoteTitle === localTitle || remoteTitle.includes(localTitle) || localTitle.includes(remoteTitle);
-    });
-
-    if (match) {
-        console.log(`[VERSION] Matched ${localMod.title} -> ${match.modId}`);
-        return match.modId;
-    }
-  } catch (err) {
-    console.warn(`[VERSION] Search failed for ${localMod.title}:`, err.message);
-  }
+  // Skip ModHub search on version check to prevent unnecessary scanning/rate-limits
   return null;
 }
 

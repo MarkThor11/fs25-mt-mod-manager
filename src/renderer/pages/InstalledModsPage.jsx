@@ -24,7 +24,38 @@ const ultraNormalize = (str) => {
         .replace(/[^a-z0-9]/g, ''); // Squash everything else
 };
 
-const LocalModIcon = ({ mod }) => {
+// --- MAIN COMPONENT ---
+const LocalModIcon = React.memo(({ mod }) => {
+  const iconData = mod.iconData;
+
+  // FAST PATH: If we already have the icon data, render it statically
+  if (iconData) {
+    if (iconData.startsWith('CATEGORY:')) {
+      const CatIcon = (() => {
+        switch (iconData.split(':')[1]) {
+          case 'map': return Layers;
+          case 'vehicle': return Zap;
+          case 'tool': return Package;
+          case 'pack': return Layers;
+          default: return Package;
+        }
+      })();
+      return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-tertiary)', color: 'var(--accent)' }}>
+          <CatIcon size={64} strokeWidth={1} style={{ opacity: 0.7 }} />
+        </div>
+      );
+    }
+    return (
+      <img src={iconData} style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid var(--border)' }} alt="" loading="lazy" />
+    );
+  }
+
+  // SLOW PATH: If iconData is missing, lazy-load it from the main process on visibility
+  return <LazyLocalModIcon mod={mod} />;
+});
+
+const LazyLocalModIcon = ({ mod }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [iconData, setIconData] = useState(null);
   const [error, setError] = useState(false);
@@ -48,21 +79,6 @@ const LocalModIcon = ({ mod }) => {
     let active = true;
 
     const loadIcon = async () => {
-      if (mod.iconData) {
-        if (mod.iconData.startsWith('http')) {
-          try {
-            const url = await window.api.images.proxy(mod.iconData);
-            if (active) setIconData(url);
-          } catch (err) {
-            if (active) setIconData(mod.iconData);
-          }
-        } else {
-          if (active) setIconData(mod.iconData);
-        }
-        return;
-      }
-
-      // If missing iconData, try to fetch from main process (it checks DB cache first)
       if (mod.filePath && window.api?.mods?.getIcon) {
         setLoading(true);
         try {
@@ -84,7 +100,7 @@ const LocalModIcon = ({ mod }) => {
 
     loadIcon();
     return () => { active = false; };
-  }, [mod.iconData, mod.filePath, mod.iconFile, isVisible]);
+  }, [mod.filePath, mod.iconFile, isVisible]);
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
@@ -92,22 +108,7 @@ const LocalModIcon = ({ mod }) => {
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-tertiary)', opacity: 0.5 }}>
             <Package size={22} />
         </div>
-      ) : iconData.startsWith('CATEGORY:') ? (() => {
-          const CatIcon = (() => {
-              switch (iconData.split(':')[1]) {
-                  case 'map': return Layers;
-                  case 'vehicle': return Zap;
-                  case 'tool': return Package;
-                  case 'pack': return Layers;
-                  default: return Package;
-              }
-          })();
-          return (
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-tertiary)', color: 'var(--accent)' }}>
-                  <CatIcon size={64} strokeWidth={1} style={{ opacity: 0.7 }} />
-              </div>
-          );
-      })() : (
+      ) : (
         <img src={iconData} style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid var(--border)' }} alt="" />
       )}
     </div>
@@ -434,6 +435,301 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
 
 
 
+const LazyModList = ({
+  folderMods,
+  folderName,
+  folderZooms,
+  selectedMods,
+  toggleSelect,
+  handleNavigate,
+  handleUpdateCallback,
+  handleUninstallCallback,
+  getModStatus,
+  getUpdateInfo,
+  updatingMod,
+  activeDownloads,
+  formatSize,
+  iconOnlyFolders,
+  installedModsViewMode,
+  favModIds,
+  favAuthorNames,
+  mustHaveIds,
+  navigate,
+  setIsInternalDragging,
+  handleUpdate,
+  handleUninstall
+}) => {
+  const [visibleCount, setVisibleCount] = useState(60);
+  const sentinelRef = React.useRef(null);
+  const { toggleFavoriteMod, toggleFavoriteAuthor, toggleMustHaveMod } = useModHubStore();
+
+  useEffect(() => {
+    setVisibleCount(60);
+  }, [folderMods]);
+
+  useEffect(() => {
+    if (visibleCount >= folderMods.length) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setVisibleCount((prev) => Math.min(prev + 60, folderMods.length));
+      }
+    }, {
+      root: null,
+      rootMargin: '300px',
+      threshold: 0.1
+    });
+
+    const currentSentinel = sentinelRef.current;
+    if (currentSentinel) {
+      observer.observe(currentSentinel);
+    }
+
+    return () => {
+      if (currentSentinel) {
+        observer.unobserve(currentSentinel);
+      }
+    };
+  }, [folderMods.length, visibleCount]);
+
+  const visibleMods = useMemo(() => {
+    return folderMods.slice(0, visibleCount);
+  }, [folderMods, visibleCount]);
+
+  return (
+    <>
+      {installedModsViewMode === 'grid' ? (
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: `repeat(auto-fill, minmax(${folderZooms[folderName] || 180}px, 1fr))`, 
+          gap: 16 
+        }}>
+          {visibleMods.map((mod, modIdx) => (
+            <div 
+              key={`${mod.fileName}-${modIdx}`}
+              style={{ 
+                  contentVisibility: 'auto', 
+                  containIntrinsicSize: `auto 250px` 
+              }}
+            >
+              <ModCard 
+                  mod={mod}
+                  isSelected={selectedMods.includes(mod.fileName)}
+                  onToggleSelect={toggleSelect}
+                  onNavigate={handleNavigate}
+                  onUpdate={handleUpdateCallback}
+                  onUninstall={handleUninstallCallback}
+                  status={getModStatus(mod)}
+                  updateInfo={getUpdateInfo(mod)}
+                  isUpdating={updatingMod === mod.fileName || !!activeDownloads[mod.modId]}
+                  formatSize={formatSize}
+                  isIconOnly={iconOnlyFolders.includes(folderName)}
+                  zoom={folderZooms[folderName] || 180}
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
+        visibleMods.map((mod) => {
+          const status = getModStatus(mod);
+          const updateInfo = getUpdateInfo(mod);
+          const isUpdating = updatingMod === mod.fileName || !!activeDownloads[mod.modId];
+          const isSelected = selectedMods.includes(mod.fileName);
+          const modIdKey = mod.modId ? String(mod.modId) : mod.fileName;
+          const isFavMod = favModIds.has(modIdKey);
+          const authorName = mod.author || 'Unknown';
+          const isFavAuthor = favAuthorNames.has(authorName.toLowerCase());
+          const isMustHave = mustHaveIds.has(modIdKey);
+
+          return (
+            <div 
+                className={`mod-row-compact ${isSelected ? 'mod-row-compact--selected' : ''}`} 
+                key={mod.fileName} 
+                draggable={true}
+                onDragStart={(e) => {
+                    e.stopPropagation();
+                    e.dataTransfer.setData('sourceModFile', mod.fileName);
+                    e.dataTransfer.effectAllowed = 'move';
+                    setIsInternalDragging(true);
+                }}
+                onDragEnd={() => setIsInternalDragging(false)}
+                style={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '16px 20px',
+                    borderBottom: '1px solid var(--border-light)',
+                    transition: 'all 0.15s',
+                    background: isSelected ? 'var(--accent-dim)' : 'transparent',
+                    cursor: 'grab',
+                    contentVisibility: 'auto',
+                    containIntrinsicSize: 'auto 110px'
+                }}
+            >
+              <div 
+                style={{ width: 32, cursor: 'pointer' }}
+                onMouseDown={e => e.stopPropagation()}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    toggleSelect(mod.fileName);
+                }}
+              >
+                  <input 
+                    type="checkbox" 
+                    checked={isSelected}
+                    readOnly
+                    style={{ width: 18, height: 18, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                  />
+              </div>
+
+              <div 
+                onClick={() => navigate(`/installed/mod/${encodeURIComponent(mod.fileName)}`)}
+                style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, cursor: 'pointer' }}
+              >
+                {(() => {
+                  const zoom = folderZooms[folderName] || 180;
+                  const iconSize = Math.floor(120 + ((zoom - 120) / (350 - 120)) * (300 - 120));
+                  return (
+                    <div style={{ 
+                      width: iconSize, 
+                      height: iconSize, 
+                      marginRight: 20, 
+                      borderRadius: 8, 
+                      overflow: 'hidden', 
+                      background: 'var(--bg-tertiary)', 
+                      flexShrink: 0, 
+                      border: '1px solid var(--border)',
+                      transition: 'all 0.1s ease',
+                      position: 'relative'
+                    }}>
+                        <LocalModIcon mod={mod} />
+                        <div 
+                            style={{ position: 'absolute', top: 4, right: 4, display: 'flex', flexDirection: 'column', gap: 4 }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <button onClick={() => toggleFavoriteMod(mod)} style={{ color: isFavMod ? '#fbbf24' : 'white', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' }}>
+                                <Star size={14} fill={isFavMod ? 'currentColor' : 'none'} />
+                            </button>
+                            <button onClick={() => toggleFavoriteAuthor({ name: authorName, id: mod.modId || authorName })} style={{ color: isFavAuthor ? 'var(--danger)' : 'white', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' }}>
+                                <Heart size={14} fill={isFavAuthor ? 'currentColor' : 'none'} />
+                            </button>
+                        </div>
+                    </div>
+                  );
+                })()}
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: 'var(--fs-md)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {!mod.isDLC && <Package size={16} style={{ color: 'var(--accent)', opacity: 0.8 }} title="ZIP Archive" />}
+                        <span>{mod.title}</span>
+                        {status === 'update' && (
+                            <span style={{ fontSize: 10, background: 'var(--warning)', color: 'black', padding: '2px 8px', borderRadius: 4, fontWeight: 900 }}>UPDATE</span>
+                        )}
+                        {status === 'removed' && (
+                            <span style={{ fontSize: 10, background: 'var(--danger)', color: 'white', padding: '2px 8px', borderRadius: 4, fontWeight: 900 }}>REMOVED</span>
+                        )}
+                    </div>
+                    <div style={{ fontSize: 13, color: isFavAuthor ? 'var(--danger)' : 'var(--text-secondary)', marginTop: 4, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 12 }}>
+                      {!mod.isDLC && (
+                          <span>by {authorName}</span>
+                      )}
+                      <span style={{ opacity: 0.5, fontWeight: 400 }}>{mod.fileName}</span>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={(e) => { e.stopPropagation(); toggleFavoriteMod(mod); }} style={{ background: 'transparent', border: 'none', padding: 0, color: isFavMod ? '#fbbf24' : 'var(--text-muted)', cursor: 'pointer' }}>
+                              <Star size={14} fill={isFavMod ? 'currentColor' : 'none'} />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); toggleFavoriteAuthor({ name: authorName }); }} style={{ background: 'transparent', border: 'none', padding: 0, color: isFavAuthor ? 'var(--danger)' : 'var(--text-muted)', cursor: 'pointer' }}>
+                              <Heart size={14} fill={isFavAuthor ? 'currentColor' : 'none'} />
+                          </button>
+                          <button 
+                              onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleMustHaveMod(mod);
+                              }}
+                              style={{ 
+                                  background: 'transparent', border: 'none', padding: 0,
+                                  color: isMustHave ? 'var(--accent)' : 'var(--text-muted)',
+                                  opacity: 1,
+                                  cursor: 'pointer'
+                              }}
+                          >
+                              <Pin size={14} fill={isMustHave ? "currentColor" : "none"} strokeWidth={isMustHave ? 2.5 : 2} />
+                          </button>
+                      </div>
+                  </div>
+                      {mod.isDLC && <span style={{ marginLeft: 8, fontSize: 10, background: '#3b82f6', color: 'white', padding: '1px 6px', borderRadius: 4, fontWeight: 900 }}>DLC</span>}
+                    </div>
+              </div>
+
+              <div style={{ width: 120, textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                {!mod.isDLC && (
+                  status === 'removed' ? (
+                      <span style={{ color: 'var(--danger)', fontSize: 11, fontWeight: 800 }}>REMOVED FROM MODHUB</span>
+                  ) : status === 'update' ? (
+                      <span style={{ color: 'var(--warning)', fontWeight: 800 }}>v{mod.version} → v{updateInfo.remoteVersion}</span>
+                  ) : `v${mod.version}`
+                )}
+              </div>
+
+              <div style={{ flex: 1, minWidth: 120, display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-start', padding: '0 16px' }}>
+                  {mod.tags && mod.tags.slice(0, 3).map((tag, i) => (
+                      <span key={i} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>
+                          {tag}
+                      </span>
+                  ))}
+              </div>
+
+              <div style={{ width: 100, textAlign: 'right', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                {!mod.isDLC && formatSize(mod.size)}
+              </div>
+
+              <div style={{ width: 100, display: 'flex', justifyContent: 'flex-end', gap: 8, marginLeft: 20 }} onClick={e => e.stopPropagation()}>
+                {status === 'update' && (
+                    <button
+                        className="btn btn--primary btn--icon btn--sm"
+                        onClick={() => handleUpdate(mod.fileName, updateInfo.modId)}
+                        disabled={isUpdating}
+                        style={{ width: 32, height: 32 }}
+                    >
+                        {isUpdating ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
+                    </button>
+                )}
+                {!mod.isDLC && (
+                  <button
+                    className="btn btn--danger btn--icon btn--sm"
+                    onClick={() => handleUninstall(mod)}
+                    style={{ width: 32, height: 32, background: 'var(--danger)', color: 'white' }}
+                  >
+                      <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })
+      )}
+      
+      {visibleCount < folderMods.length && (
+        <div 
+          ref={sentinelRef} 
+          style={{ 
+            padding: '24px', 
+            textAlign: 'center', 
+            fontSize: 'var(--fs-xs)', 
+            color: 'var(--text-muted)', 
+            fontWeight: 800,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase'
+          }}
+        >
+          Loading more items... ({visibleCount} of {folderMods.length} loaded)
+        </div>
+      )}
+    </>
+  );
+};
+
+
+
 export default function InstalledModsPage() {
   const {
     mods, allFolders, isLoading, isCheckingUpdates, updates, error,
@@ -572,8 +868,8 @@ export default function InstalledModsPage() {
   }, [isInternalDragging]);
 
   const filteredMods = mods.filter((m) => {
-    const matchesSearch = m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         m.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = (m.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (m.author || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (m.tags || []).some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
     if (!matchesSearch) return false;
     
@@ -617,9 +913,13 @@ export default function InstalledModsPage() {
         }
     });
 
-    const findFastMatch = (depName) => {
-        const targetName = depName.toLowerCase();
-        const targetUltra = ultraNormalize(depName);
+    const findFastMatch = (dep) => {
+        if (!dep) return null;
+        const depStr = typeof dep === 'string' ? dep : (dep.title || dep.modName || dep.technicalName || dep.fileName || '');
+        if (!depStr) return null;
+        
+        const targetName = depStr.toLowerCase();
+        const targetUltra = ultraNormalize(depStr);
         
         // 1. Exact Name
         let match = modNameMap.get(targetName);
@@ -652,18 +952,21 @@ export default function InstalledModsPage() {
         
         mapsInFolder.forEach(mapMod => {
             if (mapMod.dependencies && mapMod.dependencies.length > 0) {
-                mapMod.dependencies.forEach(depName => {
+                mapMod.dependencies.forEach(dep => {
+                    const depStr = typeof dep === 'string' ? dep : (dep.title || dep.modName || dep.technicalName || dep.fileName || '');
+                    if (!depStr) return;
+
                     // Check if it's already visible in this folder (physical or already virtualized)
-                    const titleSafe = depName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const titleSafe = depStr.toLowerCase().replace(/[^a-z0-9]/g, '');
                     const isVisible = modsInThisFolder.some(m => {
                         const localName = (m.modName || '').toLowerCase();
                         const localUltra = ultraNormalize(m.title || '') || ultraNormalize(m.modName || '');
-                        const targetUltra = ultraNormalize(depName);
-                        return localName === depName.toLowerCase() || (targetUltra.length > 2 && localUltra === targetUltra);
+                        const targetUltra = ultraNormalize(depStr);
+                        return localName === depStr.toLowerCase() || (targetUltra.length > 2 && localUltra === targetUltra);
                     });
                     
                     if (!isVisible) {
-                        const physicalDep = findFastMatch(depName);
+                        const physicalDep = findFastMatch(dep);
                         if (physicalDep) {
                             modsInThisFolder.push({
                                 ...physicalDep,
@@ -730,14 +1033,35 @@ export default function InstalledModsPage() {
             const missingMods = [];
             for (const map of maps) {
                 if (!map.dependencies || map.dependencies.length === 0) continue;
+                
+                // For each dependency (which will be ModHub ones if the backend enriched them,
+                // or local FS25_ names if not), we check if it's installed.
                 for (const dep of map.dependencies) {
                     const depTitle = typeof dep === 'string' ? dep : dep.title;
                     const normalizedDep = ultraNormalize(depTitle);
                     const depId = typeof dep === 'object' && dep.url ? (dep.url.match(/mod_id=(\d+)/)?.[1] || dep.url.match(/storage\/(\d+)\//)?.[1]) : null;
 
-                    const found = (depId && modNameMap.has(String(depId))) || 
-                                  normalizedTitleMap.has(normalizedDep) ||
-                                  modNameMap.has(depTitle.toLowerCase());
+                    const exactCheckStr = (dep.fileName || depTitle || '').toString();
+
+                    const found = mods.some(lm => {
+                        // 1. Direct ID Match (Strongest)
+                        if (depId && lm.modId && String(lm.modId) === String(depId)) return true;
+                        
+                        // 2. Exact match against modName or fileName (handling subfolders)
+                        // Since modDesc.xml dependencies are exactly the required zip filenames (minus .zip)
+                        if (lm.modName && lm.modName.toLowerCase() === exactCheckStr.toLowerCase()) return true;
+                        const cleanFileName = lm.fileName ? lm.fileName.split('/').pop().toLowerCase() : '';
+                        if (cleanFileName === exactCheckStr.toLowerCase() + '.zip') return true;
+
+                        // 3. Fallback fuzzy match for titles
+                        const localUltraTitle = ultraNormalize(lm.title || '');
+                        const localUltraName = ultraNormalize(lm.modName || '');
+                        const localUltraFile = ultraNormalize(lm.fileName || '');
+                        if (localUltraTitle === normalizedDep || localUltraName === normalizedDep || localUltraFile === normalizedDep) return true;
+                        if (normalizedDep.length > 3 && localUltraTitle && (localUltraTitle.includes(normalizedDep) || normalizedDep.includes(localUltraTitle))) return true;
+                        if (normalizedDep.length > 3 && localUltraName && (localUltraName.includes(normalizedDep) || normalizedDep.includes(localUltraName))) return true;
+                        return false;
+                    });
                     
                     if (!found && !missingMods.includes(depTitle)) {
                         missingMods.push(depTitle);
@@ -1715,7 +2039,7 @@ export default function InstalledModsPage() {
                                             ? 'Requirements Met' 
                                             : isResolving && resolvingStatus?.targetFolder === folderName
                                               ? 'Resolving...'
-                                              : 'Requirements'}
+                                              : `${result.missing.length} Missing`}
                                      </div>
                                    </div>
                                      
@@ -1920,216 +2244,30 @@ export default function InstalledModsPage() {
                       Empty Folder — move mods here to organize them.
                     </div>
                   ) : (
-                    installedModsViewMode === 'grid' ? (
-                      <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: `repeat(auto-fill, minmax(${folderZooms[folderName] || 180}px, 1fr))`, 
-                        gap: 16 
-                      }}>
-                         {folderMods.map((mod, modIdx) => (
-                          <div 
-                            key={`${mod.fileName}-${modIdx}`}
-                            style={{ 
-                                contentVisibility: 'auto', 
-                                containIntrinsicSize: `auto 250px` 
-                            }}
-                          >
-                            <ModCard 
-                                mod={mod}
-                                isSelected={selectedMods.includes(mod.fileName)}
-                                onToggleSelect={toggleSelect}
-                                onNavigate={handleNavigate}
-                                onUpdate={handleUpdateCallback}
-                                onUninstall={handleUninstallCallback}
-                                status={getModStatus(mod)}
-                                updateInfo={getUpdateInfo(mod)}
-                                isUpdating={updatingMod === mod.fileName || !!activeDownloads[mod.modId]}
-                                formatSize={formatSize}
-                                isIconOnly={iconOnlyFolders.includes(folderName)}
-                                zoom={folderZooms[folderName] || 180}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      folderMods.map((mod) => {
-                        const status = getModStatus(mod);
-                        const updateInfo = getUpdateInfo(mod);
-                        const isUpdating = updatingMod === mod.fileName || !!activeDownloads[mod.modId];
-                        const isSelected = selectedMods.includes(mod.fileName);
-                        const modIdKey = mod.modId ? String(mod.modId) : mod.fileName;
-                        const isFavMod = favModIds.has(modIdKey);
-                        const authorName = mod.author || 'Unknown';
-                        const isFavAuthor = favAuthorNames.has(authorName.toLowerCase());
-                        const isMustHave = mustHaveIds.has(modIdKey);
-
-                        return (
-                          <div 
-                              className={`mod-row-compact ${isSelected ? 'mod-row-compact--selected' : ''}`} 
-                              key={mod.fileName} 
-                              draggable={true}
-                              onDragStart={(e) => {
-                                  e.stopPropagation();
-                                  e.dataTransfer.setData('sourceModFile', mod.fileName);
-                                  e.dataTransfer.effectAllowed = 'move';
-                                  setIsInternalDragging(true);
-                              }}
-                              onDragEnd={() => setIsInternalDragging(false)}
-                              style={{ 
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  padding: '16px 20px',
-                                  borderBottom: '1px solid var(--border-light)',
-                                  transition: 'all 0.15s',
-                                  background: isSelected ? 'var(--accent-dim)' : 'transparent',
-                                  cursor: 'grab',
-                                  contentVisibility: 'auto',
-                                  containIntrinsicSize: 'auto 110px'
-                              }}
-                          >
-                            <div 
-                              style={{ width: 32, cursor: 'pointer' }}
-                              onMouseDown={e => e.stopPropagation()}
-                              onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleSelect(mod.fileName);
-                              }}
-                            >
-                                <input 
-                                  type="checkbox" 
-                                  checked={isSelected}
-                                  readOnly
-                                  style={{ width: 18, height: 18, accentColor: 'var(--accent)', cursor: 'pointer' }}
-                                />
-                            </div>
-
-                            <div 
-                              onClick={() => navigate(`/installed/mod/${encodeURIComponent(mod.fileName)}`)}
-                              style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, cursor: 'pointer' }}
-                            >
-                              {(() => {
-                                const zoom = folderZooms[folderName] || 180;
-                                // Map 120-350 zoom value to 120-300 icon size
-                                const iconSize = Math.floor(120 + ((zoom - 120) / (350 - 120)) * (300 - 120));
-                                return (
-                                  <div style={{ 
-                                    width: iconSize, 
-                                    height: iconSize, 
-                                    marginRight: 20, 
-                                    borderRadius: 8, 
-                                    overflow: 'hidden', 
-                                    background: 'var(--bg-tertiary)', 
-                                    flexShrink: 0, 
-                                    border: '1px solid var(--border)',
-                                    transition: 'all 0.1s ease',
-                                    position: 'relative'
-                                  }}>
-                                      <LocalModIcon mod={mod} />
-                                      <div 
-                                          style={{ position: 'absolute', top: 4, right: 4, display: 'flex', flexDirection: 'column', gap: 4 }}
-                                          onClick={e => e.stopPropagation()}
-                                      >
-                                          <button onClick={() => toggleFavoriteMod(mod)} style={{ color: isFavMod ? '#fbbf24' : 'white', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' }}>
-                                              <Star size={14} fill={isFavMod ? 'currentColor' : 'none'} />
-                                          </button>
-                                          <button onClick={() => toggleFavoriteAuthor({ name: authorName, id: mod.modId || authorName })} style={{ color: isFavAuthor ? 'var(--danger)' : 'white', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' }}>
-                                              <Heart size={14} fill={isFavAuthor ? 'currentColor' : 'none'} />
-                                          </button>
-                                      </div>
-                                  </div>
-                                );
-                              })()}
-
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontWeight: 800, fontSize: 'var(--fs-md)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                                      {!mod.isDLC && <Package size={16} style={{ color: 'var(--accent)', opacity: 0.8 }} title="ZIP Archive" />}
-                                      <span>{mod.title}</span>
-                                      {status === 'update' && (
-                                          <span style={{ fontSize: 10, background: 'var(--warning)', color: 'black', padding: '2px 8px', borderRadius: 4, fontWeight: 900 }}>UPDATE</span>
-                                      )}
-                                      {status === 'removed' && (
-                                          <span style={{ fontSize: 10, background: 'var(--danger)', color: 'white', padding: '2px 8px', borderRadius: 4, fontWeight: 900 }}>REMOVED</span>
-                                      )}
-                                  </div>
-                                  <div style={{ fontSize: 13, color: isFavAuthor ? 'var(--danger)' : 'var(--text-secondary)', marginTop: 4, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 12 }}>
-                                    {!mod.isDLC && (
-                                        <span>by {authorName}</span>
-                                    )}
-                                    <span style={{ opacity: 0.5, fontWeight: 400 }}>{mod.fileName}</span>
-                                    <div style={{ display: 'flex', gap: 8 }}>
-                                        <button onClick={(e) => { e.stopPropagation(); toggleFavoriteMod(mod); }} style={{ background: 'transparent', border: 'none', padding: 0, color: isFavMod ? '#fbbf24' : 'var(--text-muted)', cursor: 'pointer' }}>
-                                            <Star size={14} fill={isFavMod ? 'currentColor' : 'none'} />
-                                        </button>
-                                        <button onClick={(e) => { e.stopPropagation(); toggleFavoriteAuthor({ name: authorName }); }} style={{ background: 'transparent', border: 'none', padding: 0, color: isFavAuthor ? 'var(--danger)' : 'var(--text-muted)', cursor: 'pointer' }}>
-                                            <Heart size={14} fill={isFavAuthor ? 'currentColor' : 'none'} />
-                                        </button>
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleMustHaveMod(mod);
-                                            }}
-                                            style={{ 
-                                                background: 'transparent', border: 'none', padding: 0,
-                                                color: isMustHave ? 'var(--accent)' : 'var(--text-muted)',
-                                                opacity: 1,
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            <Pin size={14} fill={isMustHave ? "currentColor" : "none"} strokeWidth={isMustHave ? 2.5 : 2} />
-                                        </button>
-                                    </div>
-                                </div>
-                                    {mod.isDLC && <span style={{ marginLeft: 8, fontSize: 10, background: '#3b82f6', color: 'white', padding: '1px 6px', borderRadius: 4, fontWeight: 900 }}>DLC</span>}
-                                  </div>
-                            </div>
-
-                            <div style={{ width: 120, textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                              {!mod.isDLC && (
-                                status === 'removed' ? (
-                                    <span style={{ color: 'var(--danger)', fontSize: 11, fontWeight: 800 }}>REMOVED FROM MODHUB</span>
-                                ) : status === 'update' ? (
-                                    <span style={{ color: 'var(--warning)', fontWeight: 800 }}>v{mod.version} → v{updateInfo.remoteVersion}</span>
-                                ) : `v${mod.version}`
-                              )}
-                            </div>
-
-                            <div style={{ flex: 1, minWidth: 120, display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-start', padding: '0 16px' }}>
-                                {mod.tags && mod.tags.slice(0, 3).map((tag, i) => (
-                                    <span key={i} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>
-                                        {tag}
-                                    </span>
-                                ))}
-                            </div>
-
-                            <div style={{ width: 100, textAlign: 'right', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                              {!mod.isDLC && formatSize(mod.size)}
-                            </div>
-
-                            <div style={{ width: 100, display: 'flex', justifyContent: 'flex-end', gap: 8, marginLeft: 20 }} onClick={e => e.stopPropagation()}>
-                              {status === 'update' && (
-                                  <button
-                                      className="btn btn--primary btn--icon btn--sm"
-                                      onClick={() => handleUpdate(mod.fileName, updateInfo.modId)}
-                                      disabled={isUpdating}
-                                      style={{ width: 32, height: 32 }}
-                                  >
-                                      {isUpdating ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
-                                  </button>
-                              )}
-                              {!mod.isDLC && (
-                                <button
-                                  className="btn btn--danger btn--icon btn--sm"
-                                  onClick={() => handleUninstall(mod)}
-                                  style={{ width: 32, height: 32, background: 'var(--danger)', color: 'white' }}
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )
+                    <LazyModList
+                      folderMods={folderMods}
+                      folderName={folderName}
+                      folderZooms={folderZooms}
+                      selectedMods={selectedMods}
+                      toggleSelect={toggleSelect}
+                      handleNavigate={handleNavigate}
+                      handleUpdateCallback={handleUpdateCallback}
+                      handleUninstallCallback={handleUninstallCallback}
+                      getModStatus={getModStatus}
+                      getUpdateInfo={getUpdateInfo}
+                      updatingMod={updatingMod}
+                      activeDownloads={activeDownloads}
+                      formatSize={formatSize}
+                      iconOnlyFolders={iconOnlyFolders}
+                      installedModsViewMode={installedModsViewMode}
+                      favModIds={favModIds}
+                      favAuthorNames={favAuthorNames}
+                      mustHaveIds={mustHaveIds}
+                      navigate={navigate}
+                      setIsInternalDragging={setIsInternalDragging}
+                      handleUpdate={handleUpdate}
+                      handleUninstall={handleUninstall}
+                    />
                   )}
                 </div>
               )}

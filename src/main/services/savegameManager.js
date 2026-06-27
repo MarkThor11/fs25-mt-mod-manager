@@ -1313,15 +1313,19 @@ async function swapArchiveToSlot(archivedFolderName, slotIndex) {
 
 async function renameArchivedSavegame() { return { success: true }; }
 
-
-async function getFleetPositions(savePath) {
+async function getFleetPositions(savePath, mapModName) {
     const fs = require('fs');
     const path = require('path');
     const { XMLParser } = require('fast-xml-parser');
-    try {
-        const xmlPath = path.join(savePath, 'vehicles.xml');
-        if (!fs.existsSync(xmlPath)) return { items: [] };
-        const xml = fs.readFileSync(xmlPath, 'utf8');
+    
+    const excludeKeywords = [
+        'pallet', 'bigbag', 'tree', 'bale', 'header', 'cutter', 'weight', 'implement', 'attachment', 
+        'trailer', 'wagon', 'plow', 'cultivator', 'seeder', 'planter', 'roller', 'weeder', 'sprayer', 
+        'spreader', 'slurry', 'manure', 'tank', 'windrower', 'tedder', 'baler', 'wrapper', 'conveyor', 
+        'silage', 'auger', 'fork', 'weight', 'grab', 'bucket'
+    ];
+    
+    const parseVehicleXml = (xml, isDefault = false) => {
         const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
         const data = parser.parse(xml);
         const fleet = [];
@@ -1330,41 +1334,123 @@ async function getFleetPositions(savePath) {
             for (const v of vehicles) {
                 const filename = v['@_filename'];
                 if (!filename) continue;
-                const gameAssignedId = v['@_id'];
-                let coords = [0,0,0];
-                if (v['@_xOffset']) {
-                    coords = [parseFloat(v['@_xOffset']||v['@_x']||0), parseFloat(v['@_yOffset']||v['@_y']||0), parseFloat(v['@_zOffset']||v['@_z']||0)];
-                } else if (v['@_x']) {
-                    coords = [parseFloat(v['@_x']), parseFloat(v['@_y']), parseFloat(v['@_z'])];
-                }
-                const base = path.basename(filename, '.xml');
-                const name = base.replace(/([a-z])([A-Z])/g, '$1 $2').trim().toUpperCase();
-                let brand = 'Unknown Brand';
-                const parts = filename.split('/');
-                if (parts.length > 2 && parts[0] === 'data') brand = parts[2].toUpperCase();
-                else if (v['@_modName']) brand = v['@_modName'].toUpperCase();
-                let type = 'tractor';
+                
+                // Exclude leased and mission items
+                if (v['@_isLeased'] === 'true' || v['@_propertyState'] === 'MISSION' || v['@_propertyState'] === 'NONE') continue;
+                
                 const fnLower = filename.toLowerCase();
-                if (fnLower.includes('truck') || fnLower.includes('lorry')) type = 'truck';
-                else if (fnLower.includes('car') || fnLower.includes('pickup') || fnLower.includes('van')) type = 'car';
-                else if (fnLower.includes('trailer') || fnLower.includes('wagon')) type = 'trailer';
-                else if (fnLower.includes('harvester') || fnLower.includes('combine')) type = 'harvester';
-                else if (fnLower.includes('loader') || fnLower.includes('fork')) type = 'loader';
-                else if (fnLower.includes('mower')) type = 'mower';
-                fleet.push({ id: gameAssignedId, name: name, brand: brand, type: type, category: 'vehicle', x: coords[0], y: coords[1], z: coords[2], filename: filename });
+                if (excludeKeywords.some(kw => fnLower.includes(kw))) continue;
+
+                // Check if it's enterable/drivable from XML structure (savegame runtime state)
+                const hasEnterableState = v.enterable !== undefined || v.motor !== undefined || v.drivable !== undefined;
+
+                // Heuristics + configuration filter for drivable vehicles
+                let hasMotorConfig = false;
+                if (v.configuration) {
+                    const configs = Array.isArray(v.configuration) ? v.configuration : [v.configuration];
+                    hasMotorConfig = configs.some(c => c['@_name'] === 'motor');
+                }
+                const isDrivableHeuristics = fnLower.includes('tractor') || fnLower.includes('truck') || fnLower.includes('lorry') || fnLower.includes('car') || fnLower.includes('pickup') || fnLower.includes('van') || fnLower.includes('suv') || fnLower.includes('jeep') || fnLower.includes('xuv') || fnLower.includes('harvester') || fnLower.includes('combine') || fnLower.includes('loader') || fnLower.includes('fendt') || fnLower.includes('johnDeere') || fnLower.includes('caseih') || fnLower.includes('valtra') || fnLower.includes('massey') || fnLower.includes('newholland') || fnLower.includes('jcb') || fnLower.includes('claas');
+                
+                if (!hasEnterableState && !hasMotorConfig && !isDrivableHeuristics) continue;
+                
+                // Require vehicle to be an OWNED player vehicle (farmId=1) unless it's default vehicles xml
+                if (!isDefault) {
+                    const farmId = parseInt(v['@_farmId'] || '0');
+                    if (farmId !== 1) continue;
+                }
+                
+                const gameAssignedId = v['@_id'];
+                
+                // Parse coordinates from component position (FS25 format)
+                let coords = [0, 0, 0];
+                let comp = v.component;
+                if (Array.isArray(comp)) comp = comp[0];
+                if (comp && comp['@_position']) {
+                    const parts = comp['@_position'].split(' ').map(parseFloat);
+                    if (parts.length >= 3 && !isNaN(parts[0])) coords = parts;
+                } else if (v['@_xPosition']) {
+                    // Fallback: some defaultVehicles.xml use xPosition/zPosition attributes
+                    coords = [parseFloat(v['@_xPosition'] || 0), parseFloat(v['@_yOffset'] || 0), parseFloat(v['@_zPosition'] || 0)];
+                }
+                
+                const base = path.basename(filename, '.xml');
+                let name = base.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').trim().toUpperCase();
+                let brand = 'Unknown';
+                const parts = filename.split('/');
+                if (parts.length > 2 && parts[0] === 'data') brand = parts[2].replace(/([a-z])([A-Z])/g, '$1 $2').trim().toUpperCase();
+                else if (v['@_modName']) brand = v['@_modName'].replace(/^FS\d+_/i, '').toUpperCase();
+                
+                // Remove word "Tractor" (case-insensitive) from brand and name
+                brand = brand.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim() || 'Unknown';
+                name = name.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim();
+                
+                const type = v['@_type'] || 'vehicle';
+                
+                fleet.push({ 
+                    id: gameAssignedId, 
+                    uniqueId: v['@_uniqueId'], 
+                    name, 
+                    brand, 
+                    type, 
+                    category: 'vehicle', 
+                    x: coords[0], 
+                    y: coords[1], 
+                    z: coords[2],
+                    filename
+                });
             }
-            return { items: fleet };
         }
-    } catch (e) { console.error('Error reading fleet positions:', e.message); }
+        return fleet;
+    };
+
+    try {
+        // 1. Try savegame's vehicles.xml first (always preferred)
+        const xmlPath = path.join(savePath, 'vehicles.xml');
+        if (fs.existsSync(xmlPath)) {
+            const xml = fs.readFileSync(xmlPath, 'utf8');
+            return { items: parseVehicleXml(xml, false), source: 'savegame' };
+        }
+        
+        // 2. Fallback: read default vehicles from the map mod's modDesc.xml
+        if (mapModName) {
+            const modManager = require('./modManager');
+            const modsDir = modManager.getModsPath();
+            const AdmZip = require('adm-zip');
+            
+            const modZip = path.join(modsDir, `${mapModName}.zip`);
+            if (fs.existsSync(modZip)) {
+                const zip = new AdmZip(modZip);
+                
+                // Parse modDesc.xml to find defaultVehiclesXMLFilename
+                const modDescEntry = zip.getEntry('modDesc.xml');
+                if (modDescEntry) {
+                    const modDescXml = modDescEntry.getData().toString('utf8');
+                    const match = modDescXml.match(/defaultVehiclesXMLFilename=["']([^"']+)["']/);
+                    if (match && match[1]) {
+                        const defaultVehiclesPath = match[1];
+                        const vehiclesEntry = zip.getEntry(defaultVehiclesPath);
+                        if (vehiclesEntry) {
+                            const xml = vehiclesEntry.getData().toString('utf8');
+                            return { items: parseVehicleXml(xml, true), source: 'map_defaults' };
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) { 
+        console.error('Error reading fleet positions:', e.message); 
+    }
     return { items: [] };
 }
+
 
 async function activatePlayerPersistence(savePath, mapId, includeBridge, includeDeliveries) { return { success: true }; }
 async function deactivatePlayerPersistence(savePath, mapId) { return { success: true }; }
 
 async function checkStoreDeliveries() {
     const modManager = require('./modManager');
-    const modsDir = modManager.getDefaultModsPath();
+    const modsDir = modManager.getModsPath();
     const destZip = require('path').join(modsDir, 'FS25_storeDeliveries.zip');
     return require('fs').existsSync(destZip);
 }
@@ -1372,7 +1458,7 @@ async function checkStoreDeliveries() {
 async function ensureStoreDeliveries() {
     try {
         const modManager = require('./modManager');
-        const modsDir = modManager.getDefaultModsPath();
+        const modsDir = modManager.getModsPath();
         const destZip = require('path').join(modsDir, 'FS25_storeDeliveries.zip');
         if (require('fs').existsSync(destZip)) return { success: true };
         const sourceDir = require('path').join(process.cwd(), 'scratch', 'storeDeliveries');
@@ -1401,6 +1487,7 @@ async function updateNativeEnhancement(savePath, includeBridge, includeDeliverie
             if (includeDeliveries && !hasDeliveries) mods.push({ '@_modName': 'FS25_storeDeliveries', '@_title': 'Store Deliveries', '@_version': '1.0.0.0', '@_required': 'false', '@_fileHash': '' });
             else if (!includeDeliveries && hasDeliveries) mods = mods.filter(m => m['@_modName'] !== 'FS25_storeDeliveries');
             obj.careerSavegame.mod = mods;
+            delete obj['?xml'];
             const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true });
             const newXml = builder.build(obj);
             fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
@@ -1410,15 +1497,10 @@ async function updateNativeEnhancement(savePath, includeBridge, includeDeliverie
             const storePath = path.join(savePath, 'storeDeliveries.xml');
             if (!fs.existsSync(storePath)) {
                 try {
-                    const playersPath = path.join(savePath, 'players.xml');
-                    if (fs.existsSync(playersPath)) {
-                        const pData = parser.parse(fs.readFileSync(playersPath, 'utf8'));
-                        const player = pData.players && pData.players.player ? (Array.isArray(pData.players.player) ? pData.players.player[0] : pData.players.player) : null;
-                        if (player && player['@_lastPosition']) {
-                            const coords = player['@_lastPosition'].split(' ');
-                            const storeXml = '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n<storeDeliveries>\n    <delivery x="' + coords[0] + '" y="' + coords[1] + '" z="' + coords[2] + '" rotation="0 0 0" />\n</storeDeliveries>';
-                            fs.writeFileSync(storePath, storeXml, 'utf8');
-                        }
+                    const pos = await getPlayerPosition(savePath);
+                    if (pos) {
+                        const storeXml = '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n<storeDeliveries>\n    <delivery x="' + pos.x + '" y="' + pos.y + '" z="' + pos.z + '" rotation="0 0 0" />\n</storeDeliveries>';
+                        fs.writeFileSync(storePath, storeXml, 'utf8');
                     }
                 } catch(err) { console.error('Failed to init storeDeliveries', err); }
             }
@@ -1427,11 +1509,599 @@ async function updateNativeEnhancement(savePath, includeBridge, includeDeliverie
     } catch (e) { return { success: false, error: e.message }; }
 }
 
-async function getMapShopCoordinates() { return { x: 0, y: 0, z: 0 }; }
-async function getMapHomeCoordinates() { return { x: 0, y: 0, z: 0 }; }
-async function getStoreDeliveryCoordinates() { return { x: 0, y: 0, z: 0 }; }
+async function getMapDefaultStartCoordinates(savePath, allowFallback = true) {
+    try {
+        const fs = require('fs-extra');
+        const path = require('path');
+        const { XMLParser } = require('fast-xml-parser');
+        
+        const careerPath = path.join(savePath, 'careerSavegame.xml');
+        if (!fs.existsSync(careerPath)) return { x: 0, y: 0, z: 0 };
+        
+        const xmlData = fs.readFileSync(careerPath, 'utf8');
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+        const obj = parser.parse(xmlData);
+        if (!obj || !obj.careerSavegame) return { x: 0, y: 0, z: 0 };
+        
+        const settings = obj.careerSavegame.settings || {};
+        const mapId = settings.mapId;
+        const mapTitle = settings.mapTitle;
+        
+        let mapModName = null;
+        if (mapId && mapId.includes('.')) {
+            mapModName = mapId.split('.')[0];
+        }
+        
+        const templatesDir = getTemplatesPath();
+        const cleanMapId = mapId ? mapId.replace(/[^a-z0-9]/gi, '_') : '';
+        
+        const candidates = new Set();
+        if (cleanMapId) candidates.add(cleanMapId);
+        if (mapModName) {
+            const cleanMod = mapModName.replace(/[^a-z0-9]/gi, '_');
+            candidates.add(`${cleanMod}_${cleanMapId}`);
+            candidates.add(`${cleanMod}.${cleanMapId}`.replace(/[^a-z0-9]/gi, '_'));
+            
+            const baseMod = mapModName.startsWith('pdlc_') ? mapModName.substring(5) : mapModName;
+            const cleanBase = baseMod.replace(/[^a-z0-9]/gi, '_');
+            candidates.add(`${cleanBase}_${cleanMapId}`);
+            candidates.add(`pdlc_${cleanBase}_${cleanMapId}`);
+        }
+        
+        let templateFolder = null;
+        for (const cand of candidates) {
+            const p = path.join(templatesDir, cand, 'careerSavegame.xml');
+            if (fs.existsSync(p)) {
+                templateFolder = cand;
+                break;
+            }
+        }
+        
+        if (!templateFolder && mapId) {
+            const folders = await fs.readdir(templatesDir);
+            for (const folder of folders) {
+                const folderPath = path.join(templatesDir, folder);
+                const tCareerPath = path.join(folderPath, 'careerSavegame.xml');
+                if (fs.existsSync(tCareerPath)) {
+                    const xml = await fs.readFile(tCareerPath, 'utf8');
+                    const internalId = getElementText(xml, 'mapId');
+                    const internalTitle = getElementText(xml, 'mapTitle');
+                    if (internalId === mapId || (mapTitle && internalTitle === mapTitle)) {
+                        templateFolder = folder;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (templateFolder) {
+            const tCareerPath = path.join(templatesDir, templateFolder, 'careerSavegame.xml');
+            const tCareerXml = fs.readFileSync(tCareerPath, 'utf8');
+            const tObj = parser.parse(tCareerXml);
+            if (tObj && tObj.careerSavegame && tObj.careerSavegame.player) {
+                const pTag = tObj.careerSavegame.player;
+                if (pTag['@_spawnPositionX'] !== undefined) {
+                    return {
+                        x: parseFloat(pTag['@_spawnPositionX']),
+                        y: parseFloat(pTag['@_spawnPositionY']),
+                        z: parseFloat(pTag['@_spawnPositionZ'])
+                    };
+                }
+            }
+            const tPlayersPath = path.join(templatesDir, templateFolder, 'players.xml');
+            if (fs.existsSync(tPlayersPath)) {
+                const tPlayersXml = fs.readFileSync(tPlayersPath, 'utf8');
+                const pObj = parser.parse(tPlayersXml);
+                if (pObj && pObj.players && pObj.players.player) {
+                    const player = Array.isArray(pObj.players.player) ? pObj.players.player[0] : pObj.players.player;
+                    if (player.spawn && player.spawn['@_position']) {
+                        const coords = player.spawn['@_position'].split(' ').map(parseFloat);
+                        if (coords.length >= 3 && !isNaN(coords[0])) {
+                            return { x: coords[0], y: coords[1], z: coords[2] };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback: parse map mod zip itself!
+        if (mapModName) {
+            const modManager = require('./modManager');
+            const modsDir = modManager.getModsPath();
+            const AdmZip = require('adm-zip');
+            const modZip = path.join(modsDir, `${mapModName}.zip`);
+            if (fs.existsSync(modZip)) {
+                const zip = new AdmZip(modZip);
+                
+                // Let's first search in modDesc.xml maps config
+                const modDescEntry = zip.getEntry('modDesc.xml');
+                if (modDescEntry) {
+                    const modDescXml = modDescEntry.getData().toString('utf8');
+                    const mdObj = parser.parse(modDescXml);
+                    if (mdObj && mdObj.modDesc && mdObj.modDesc.maps && mdObj.modDesc.maps.map) {
+                        const mNode = Array.isArray(mdObj.modDesc.maps.map) ? mdObj.modDesc.maps.map[0] : mdObj.modDesc.maps.map;
+                        const configFilename = mNode['@_configFilename'];
+                        if (configFilename) {
+                            const mapXmlEntry = zip.getEntry(configFilename);
+                            if (mapXmlEntry) {
+                                const mapXml = mapXmlEntry.getData().toString('utf8');
+                                const mapObj = parser.parse(mapXml);
+                                if (mapObj && mapObj.map && mapObj.map.playerStart) {
+                                    const pStart = mapObj.map.playerStart;
+                                    if (pStart['@_position']) {
+                                        const coords = pStart['@_position'].split(' ').map(parseFloat);
+                                        if (coords.length >= 3) {
+                                            return { x: coords[0], y: coords[1], z: coords[2] };
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Fallback search: look for any map.xml in zip
+                let mapXmlEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('map.xml'));
+                if (mapXmlEntry) {
+                    const mapXml = mapXmlEntry.getData().toString('utf8');
+                    const mapObj = parser.parse(mapXml);
+                    if (mapObj && mapObj.map && mapObj.map.playerStart) {
+                        const pStart = mapObj.map.playerStart;
+                        if (pStart['@_position']) {
+                            const coords = pStart['@_position'].split(' ').map(parseFloat);
+                            if (coords.length >= 3) {
+                                return { x: coords[0], y: coords[1], z: coords[2] };
+                            }
+                        }
+                    }
+                }
+                
+                const i3dEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('map.i3d'));
+                if (i3dEntry) {
+                    const i3dText = i3dEntry.getData().toString('utf8');
+                    const match = i3dText.match(/<TransformGroup\s+[^>]*name="[^"]*(?:careerStartPoint|playerStart)[^"]*"[^>]*translation="([^"]+)"/i) ||
+                                  i3dText.match(/name="[^"]*(?:careerStartPoint|playerStart)[^"]*"[^>]*translation="([^"]+)"/i) ||
+                                  i3dText.match(/translation="([^"]+)"[^>]*name="[^"]*(?:careerStartPoint|playerStart)[^"]*"/i);
+                    if (match && match[1]) {
+                        const coords = match[1].split(' ').map(parseFloat);
+                        if (coords.length >= 3 && !isNaN(coords[0])) {
+                            return { x: coords[0], y: coords[1], z: coords[2] };
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Error getting map default start coordinates:', e);
+    }
+    
+    // Shop fallback if default start coordinates couldn't be parsed
+    try {
+        const shopPos = allowFallback ? await getMapShopCoordinates(savePath, false) : null;
+        if (shopPos && (shopPos.x !== 0 || shopPos.y !== 0 || shopPos.z !== 0)) {
+            return shopPos;
+        }
+    } catch (err) {
+        console.error('Error getting shop fallback coordinates:', err);
+    }
+    return null;
+}
+
+async function getMapShopCoordinates(savePath, allowFallback = true) {
+    try {
+        const fs = require('fs-extra');
+        const path = require('path');
+        const { XMLParser } = require('fast-xml-parser');
+        
+        const careerPath = path.join(savePath, 'careerSavegame.xml');
+        if (!fs.existsSync(careerPath)) return null;
+        
+        const xmlData = fs.readFileSync(careerPath, 'utf8');
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+        const obj = parser.parse(xmlData);
+        if (!obj || !obj.careerSavegame) return null;
+        
+        const settings = obj.careerSavegame.settings || {};
+        const mapId = settings.mapId;
+        const mapTitle = settings.mapTitle;
+        
+        let mapModName = null;
+        if (mapId && mapId.includes('.')) {
+            mapModName = mapId.split('.')[0];
+        }
+        
+        if (mapId === 'MapUS') {
+            return { x: 1390.0, y: 42.0, z: -50.0 };
+        } else if (mapId === 'MapEU') {
+            return { x: -283.0, y: 60.0, z: 68.5 };
+        } else if (mapId === 'MapAS') {
+            return { x: -562.0, y: 43.8, z: 566.0 };
+        }
+        
+        const templatesDir = getTemplatesPath();
+        const cleanMapId = mapId ? mapId.replace(/[^a-z0-9]/gi, '_') : '';
+        
+        const candidates = new Set();
+        if (cleanMapId) candidates.add(cleanMapId);
+        if (mapModName) {
+            const cleanMod = mapModName.replace(/[^a-z0-9]/gi, '_');
+            candidates.add(`${cleanMod}_${cleanMapId}`);
+            candidates.add(`${cleanMod}.${cleanMapId}`.replace(/[^a-z0-9]/gi, '_'));
+        }
+        
+        let templateFolder = null;
+        for (const cand of candidates) {
+            const p = path.join(templatesDir, cand, 'placeables.xml');
+            if (fs.existsSync(p)) {
+                templateFolder = cand;
+                break;
+            }
+        }
+        
+        if (!templateFolder && mapId) {
+            const folders = await fs.readdir(templatesDir);
+            for (const folder of folders) {
+                const folderPath = path.join(templatesDir, folder);
+                const tCareerPath = path.join(folderPath, 'careerSavegame.xml');
+                if (fs.existsSync(tCareerPath)) {
+                    const xml = await fs.readFile(tCareerPath, 'utf8');
+                    const internalId = getElementText(xml, 'mapId');
+                    const internalTitle = getElementText(xml, 'mapTitle');
+                    if (internalId === mapId || (mapTitle && internalTitle === mapTitle)) {
+                        templateFolder = folder;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (templateFolder) {
+            const tPlaceablesPath = path.join(templatesDir, templateFolder, 'placeables.xml');
+            if (fs.existsSync(tPlaceablesPath)) {
+                const tPlaceablesXml = fs.readFileSync(tPlaceablesPath, 'utf8');
+                const pObj = parser.parse(tPlaceablesXml);
+                if (pObj && pObj.placeables && pObj.placeables.placeable) {
+                    const placeables = Array.isArray(pObj.placeables.placeable) ? pObj.placeables.placeable : [pObj.placeables.placeable];
+                    const shopPlaceable = placeables.find(p => {
+                        const filename = String(p['@_filename'] || '').toLowerCase();
+                        const uniqueId = String(p['@_uniqueId'] || '').toLowerCase();
+                        const nameL10nKey = String(p['@_nameL10nKey'] || '').toLowerCase();
+                        const hasPos = p['@_position'] !== undefined;
+                        return hasPos && (
+                            filename.includes('sellingstationvehicles') || 
+                            filename.includes('vehicletrader') || 
+                            filename.includes('sellingstationstore') ||
+                            uniqueId.includes('sellingstationvehicles') || 
+                            uniqueId.includes('vehicletrader') ||
+                            nameL10nKey.includes('shopitem_')
+                        );
+                    });
+                    
+                    if (shopPlaceable) {
+                        const coords = shopPlaceable['@_position'].split(' ').map(parseFloat);
+                        if (coords.length >= 3 && !isNaN(coords[0])) {
+                            return { x: coords[0], y: coords[1], z: coords[2] };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback: parse map mod zip placeables!
+        if (mapModName) {
+            const modManager = require('./modManager');
+            const modsDir = modManager.getModsPath();
+            const AdmZip = require('adm-zip');
+            const modZip = path.join(modsDir, `${mapModName}.zip`);
+            if (fs.existsSync(modZip)) {
+                const zip = new AdmZip(modZip);
+                let placeablesFilename = 'maps/placeables.xml'; // default guess
+                
+                let mapXmlEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('map.xml'));
+                if (mapXmlEntry) {
+                    const mapXml = mapXmlEntry.getData().toString('utf8');
+                    const mapObj = parser.parse(mapXml);
+                    if (mapObj && mapObj.map && mapObj.map.placeables && mapObj.map.placeables['@_filename']) {
+                        placeablesFilename = mapObj.map.placeables['@_filename'];
+                    }
+                }
+                
+                let placeablesEntry = zip.getEntry(placeablesFilename);
+                if (!placeablesEntry) {
+                    placeablesEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('placeables.xml'));
+                }
+                
+                let foundPos = null;
+                if (placeablesEntry) {
+                    const xml = placeablesEntry.getData().toString('utf8');
+                    const pObj = parser.parse(xml);
+                    if (pObj && pObj.placeables && pObj.placeables.placeable) {
+                        const placeables = Array.isArray(pObj.placeables.placeable) ? pObj.placeables.placeable : [pObj.placeables.placeable];
+                        const shopPlaceable = placeables.find(p => {
+                            const filename = String(p['@_filename'] || '').toLowerCase();
+                            const uniqueId = String(p['@_uniqueId'] || '').toLowerCase();
+                            const nameL10nKey = String(p['@_nameL10nKey'] || '').toLowerCase();
+                            const hasPos = p['@_position'] !== undefined;
+                            return hasPos && (
+                                filename.includes('sellingstationvehicles') || 
+                                filename.includes('vehicletrader') || 
+                                filename.includes('sellingstationstore') ||
+                                uniqueId.includes('sellingstationvehicles') || 
+                                uniqueId.includes('vehicletrader') ||
+                                nameL10nKey.includes('shopitem_')
+                            );
+                        });
+                        
+                        if (shopPlaceable && shopPlaceable['@_position']) {
+                            const coords = shopPlaceable['@_position'].split(' ').map(parseFloat);
+                            if (coords.length >= 3 && !isNaN(coords[0])) {
+                                foundPos = { x: coords[0], y: coords[1], z: coords[2] };
+                            }
+                        }
+                    }
+                }
+                
+                if (foundPos) return foundPos;
+                
+                // If not found or lacks position (e.g. preplaced in I3D), try to find it in map.i3d from the zip
+                const i3dEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('map.i3d'));
+                if (i3dEntry) {
+                    const i3dText = i3dEntry.getData().toString('utf8');
+                    const match = i3dText.match(/<TransformGroup\s+[^>]*name="[^"]*(?:vehicleShopPlayerSpawn|shopPlayerSpawn|playerShopTeleport|sellingStationVehicles)[^"]*"[^>]*translation="([^"]+)"/i) ||
+                                  i3dText.match(/name="[^"]*(?:vehicleShopPlayerSpawn|shopPlayerSpawn|playerShopTeleport|sellingStationVehicles)[^"]*"[^>]*translation="([^"]+)"/i) ||
+                                  i3dText.match(/translation="([^"]+)"[^>]*name="[^"]*(?:vehicleShopPlayerSpawn|shopPlayerSpawn|playerShopTeleport|sellingStationVehicles)[^"]*"/i);
+                    if (match && match[1]) {
+                        const coords = match[1].split(' ').map(parseFloat);
+                        if (coords.length >= 3 && !isNaN(coords[0])) {
+                            return { x: coords[0], y: coords[1], z: coords[2] };
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Error getting map shop coordinates:', e);
+    }
+    if (allowFallback) {
+        return await getMapDefaultStartCoordinates(savePath, false);
+    }
+    return null;
+}
+
+async function getMapHomeCoordinates(savePath) {
+    return await getMapDefaultStartCoordinates(savePath);
+}
+
+async function getStoreDeliveryCoordinates(savePath) { 
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const storePath = path.join(savePath, 'storeDeliveries.xml');
+        if (!fs.existsSync(storePath)) {
+            const coords = await getMapDefaultStartCoordinates(savePath);
+            return coords ? { ...coords, type: 'Home' } : null;
+        }
+        
+        const { XMLParser } = require('fast-xml-parser');
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+        const data = parser.parse(fs.readFileSync(storePath, 'utf8'));
+        if (data && data.storeDeliveries) {
+            const isLoaded = data.storeDeliveries['@_isLoaded'] === 'true' || data.storeDeliveries['@_isLoaded'] === true;
+            if (isLoaded) {
+                let x = null, y = null, z = null;
+                if (data.storeDeliveries.storeTeleportLocation) {
+                    const loc = data.storeDeliveries.storeTeleportLocation;
+                    x = parseFloat(loc['@_x']);
+                    y = parseFloat(loc['@_y']);
+                    z = parseFloat(loc['@_z']);
+                } else if (data.storeDeliveries.storeLocation) {
+                    const loc = data.storeDeliveries.storeLocation;
+                    x = parseFloat(loc['@_x']);
+                    y = parseFloat(loc['@_y']);
+                    z = parseFloat(loc['@_z']);
+                } else if (data.storeDeliveries.delivery) {
+                    const d = Array.isArray(data.storeDeliveries.delivery) ? data.storeDeliveries.delivery[0] : data.storeDeliveries.delivery;
+                    x = parseFloat(d['@_x']);
+                    y = parseFloat(d['@_y']);
+                    z = parseFloat(d['@_z']);
+                }
+                
+                if (x !== null && !isNaN(x)) {
+                    return { x, y, z, type: 'Custom' };
+                }
+            }
+        }
+    } catch(e) { console.error(e); }
+    const coords = await getMapDefaultStartCoordinates(savePath);
+    return coords ? { ...coords, type: 'Home' } : null;
+}
+
+async function resetPlayerSpawn(savePath) {
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const { XMLParser, XMLBuilder } = require('fast-xml-parser');
+        
+        // 1. Reset in players.xml
+        const xmlPath = path.join(savePath, 'players.xml');
+        if (fs.existsSync(xmlPath)) {
+            const xmlData = fs.readFileSync(xmlPath, 'utf8');
+            const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+            const obj = parser.parse(xmlData);
+            if (obj && obj.players && obj.players.player) {
+                let players = Array.isArray(obj.players.player) ? obj.players.player : [obj.players.player];
+                for (let p of players) {
+                    if (p.spawn) {
+                        delete p.spawn['@_position'];
+                        delete p.spawn['@_yaw'];
+                        delete p.spawn['@_vehicleUniqueId'];
+                    }
+                }
+                delete obj['?xml'];
+                const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true });
+                const newXml = builder.build(obj);
+                fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
+            }
+        }
+        
+        // 2. Reset in careerSavegame.xml
+        const careerPath = path.join(savePath, 'careerSavegame.xml');
+        if (fs.existsSync(careerPath)) {
+            const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+            const careerXml = fs.readFileSync(careerPath, 'utf8');
+            const careerObj = parser.parse(careerXml);
+            if (careerObj && careerObj.careerSavegame && careerObj.careerSavegame.player) {
+                delete careerObj.careerSavegame.player['@_spawnPositionX'];
+                delete careerObj.careerSavegame.player['@_spawnPositionY'];
+                delete careerObj.careerSavegame.player['@_spawnPositionZ'];
+                delete careerObj.careerSavegame.player['@_vehicleId'];
+                delete careerObj.careerSavegame.player['@_spawnYaw'];
+                delete careerObj['?xml'];
+                const careerBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true });
+                const newCareerXml = careerBuilder.build(careerObj);
+                fs.writeFileSync(careerPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newCareerXml, 'utf8');
+            }
+        }
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+}
+
+async function getPlayerPosition(savePath) {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const { XMLParser } = require('fast-xml-parser');
+        
+        let pos = null;
+        const xmlPath = path.join(savePath, 'players.xml');
+        if (fs.existsSync(xmlPath)) {
+            const xml = fs.readFileSync(xmlPath, 'utf8');
+            const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+            const data = parser.parse(xml);
+            if (data && data.players && data.players.player) {
+                const player = Array.isArray(data.players.player) ? data.players.player[0] : data.players.player;
+                if (player.spawn && player.spawn['@_position']) {
+                    const coords = player.spawn['@_position'].split(' ');
+                    pos = { x: parseFloat(coords[0]), y: parseFloat(coords[1]), z: parseFloat(coords[2]) };
+                } else if (player['@_lastPosition']) {
+                    const coords = player['@_lastPosition'].split(' ');
+                    pos = { x: parseFloat(coords[0]), y: parseFloat(coords[1]), z: parseFloat(coords[2]) };
+                }
+            }
+        }
+
+        if (!pos) {
+            const careerPath = path.join(savePath, 'careerSavegame.xml');
+            if (fs.existsSync(careerPath)) {
+                const xml = fs.readFileSync(careerPath, 'utf8');
+                const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+                const data = parser.parse(xml);
+                if (data && data.careerSavegame && data.careerSavegame.player) {
+                    const player = data.careerSavegame.player;
+                    if (player['@_spawnPositionX'] !== undefined) {
+                        pos = {
+                            x: parseFloat(player['@_spawnPositionX']),
+                            y: parseFloat(player['@_spawnPositionY']),
+                            z: parseFloat(player['@_spawnPositionZ'])
+                        };
+                    }
+                }
+            }
+        }
+        
+        // If no pos or pos is exactly 0,0,0 (default unspawned state), fallback to map default start
+        if (!pos || (pos.x === 0 && pos.y === 0 && pos.z === 0)) {
+            const defaultPos = await getMapDefaultStartCoordinates(savePath);
+            if (defaultPos) return defaultPos;
+        }
+        
+        if (pos) return pos;
+    } catch (e) {
+        console.error('Error reading player position:', e.message);
+    }
+    return null;
+}
+
+async function setPlayerPosition(options) {
+    let savePath, x, y, z, vehicleUniqueId;
+    if (typeof options === 'object') {
+        ({ savePath, x, y, z, vehicleUniqueId } = options);
+    } else {
+        savePath = arguments[0];
+        x = arguments[1];
+        y = arguments[2];
+        z = arguments[3];
+    }
+    
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const { XMLParser, XMLBuilder } = require('fast-xml-parser');
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+        
+        // 1. Update players.xml
+        const xmlPath = path.join(savePath, 'players.xml');
+        if (fs.existsSync(xmlPath)) {
+            const xmlData = fs.readFileSync(xmlPath, 'utf8');
+            const obj = parser.parse(xmlData);
+            if (obj && obj.players && obj.players.player) {
+                let players = Array.isArray(obj.players.player) ? obj.players.player : [obj.players.player];
+                for (let p of players) {
+                    if (!p.spawn) p.spawn = {};
+                    if (x !== undefined && y !== undefined && z !== undefined) {
+                        p.spawn['@_position'] = `${x.toFixed(3)} ${y.toFixed(3)} ${z.toFixed(3)}`;
+                    }
+                    if (vehicleUniqueId) {
+                        p.spawn['@_vehicleUniqueId'] = vehicleUniqueId;
+                    } else {
+                        delete p.spawn['@_vehicleUniqueId'];
+                    }
+                }
+                delete obj['?xml'];
+                const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true });
+                const newXml = builder.build(obj);
+                fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
+            }
+        }
+        
+        // 2. Update careerSavegame.xml
+        const careerPath = path.join(savePath, 'careerSavegame.xml');
+        if (fs.existsSync(careerPath)) {
+            const careerXml = fs.readFileSync(careerPath, 'utf8');
+            const careerObj = parser.parse(careerXml);
+            if (careerObj && careerObj.careerSavegame) {
+                if (!careerObj.careerSavegame.player) {
+                    careerObj.careerSavegame.player = {};
+                }
+                const player = careerObj.careerSavegame.player;
+                if (x !== undefined && y !== undefined && z !== undefined) {
+                    player['@_spawnPositionX'] = String(x.toFixed(3));
+                    player['@_spawnPositionY'] = String(y.toFixed(3));
+                    player['@_spawnPositionZ'] = String(z.toFixed(3));
+                }
+                if (vehicleUniqueId) {
+                    player['@_vehicleId'] = vehicleUniqueId;
+                } else {
+                    delete player['@_vehicleId'];
+                }
+                delete careerObj['?xml'];
+                const careerBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true });
+                const newCareerXml = careerBuilder.build(careerObj);
+                fs.writeFileSync(careerPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newCareerXml, 'utf8');
+            }
+        }
+        return { success: true };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+}
 
 module.exports = {
+    getPlayerPosition,
+    setPlayerPosition,
+    resetPlayerSpawn,
     getMapHomeCoordinates,
     getMapShopCoordinates,
     getFleetPositions,

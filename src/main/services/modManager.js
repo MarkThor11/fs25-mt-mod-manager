@@ -894,6 +894,9 @@ async function performScan(manualPaths = null) {
 	const allFolders = [];
 	const tasks = [];
 
+	// Fetch the ModHub metadata pool once to avoid heavy DB queries in the loop
+	const pool = cache.getModHubMetadataPool();
+
 	// ── SCAN DLCs ──
 	const dataRoot = getFS25DataRoot();
 	const pdlcPath = path.join(dataRoot, 'pdlc');
@@ -985,9 +988,16 @@ async function performScan(manualPaths = null) {
 			
 			let iconBase64 = cached?.icon_base64 || null;
 			let storeBase64 = cached?.store_base64 || null;
+
+			// Check if this is a third-party mod/map (not a DLC and not tracked on ModHub)
+			const fileId = `file_${entryName.toLowerCase()}`;
+			const isDlc = entryName.toLowerCase().startsWith('pdlc_') || fullPath.toLowerCase().includes('pdlc');
+			const isModHub = !!(pool[fileId] || (modDesc?.modId && pool[String(modDesc.modId)]) || (modDesc?.mapId && pool[String(modDesc.mapId)]));
+			let isThirdParty = !isDlc && !isModHub;
 			
 			// If missing icon, or if it's a placeholder, force a re-extraction
-			const isPlaceholder = iconBase64 === 'CATEGORY:map' || iconBase64 === 'CATEGORY:generic' || storeBase64 === 'CATEGORY:generic';
+			// Only check store icon placeholder for third-party mods, since we skip it for official/ModHub mods
+			const isPlaceholder = iconBase64 === 'CATEGORY:map' || iconBase64 === 'CATEGORY:generic' || (isThirdParty && storeBase64 === 'CATEGORY:generic');
 			if (!modDesc || !iconBase64 || !storeBase64 || isPlaceholder) {
 				try {
 					let zipInstance = null;
@@ -998,6 +1008,12 @@ async function performScan(manualPaths = null) {
 					const modDescResult = parseModDesc(fullPath, zipInstance);
 					if (modDescResult) {
 						modDesc = modDescResult;
+						
+						// Re-evaluate if third party with newly parsed modDesc info
+						if (isThirdParty && modDesc.modId && pool[String(modDesc.modId)]) {
+							isThirdParty = false;
+						}
+
 						// Extract images for new/changed mods
 						try {
 							const newIcon = await getModIcon(fullPath, modDesc.iconFile, modDesc, zipInstance, false);
@@ -1007,11 +1023,16 @@ async function performScan(manualPaths = null) {
 								iconBase64 = newIcon;
 							}
 							
-							const newStore = await getModIcon(fullPath, modDesc.iconFile, modDesc, zipInstance, true);
-							if (newStore && newStore !== 'CATEGORY:generic' && newStore !== 'CATEGORY:map') {
-								storeBase64 = newStore;
-							} else if (!storeBase64) {
-								storeBase64 = newStore;
+							// Only extract store icon for third-party mods/maps (saves heavy zip decompression/resizing)
+							if (isThirdParty) {
+								const newStore = await getModIcon(fullPath, modDesc.iconFile, modDesc, zipInstance, true);
+								if (newStore && newStore !== 'CATEGORY:generic' && newStore !== 'CATEGORY:map') {
+									storeBase64 = newStore;
+								} else if (!storeBase64) {
+									storeBase64 = newStore;
+								}
+							} else {
+								storeBase64 = 'CATEGORY:skipped';
 							}
 						} catch (e) {
 							console.error(`[IMAGE] Failed for ${entryName}:`, e.message);
@@ -1038,25 +1059,44 @@ async function performScan(manualPaths = null) {
 			let author = modDesc?.author || 'Unknown';
 			let title = modDesc?.title || entryName.replace('.zip', '');
 			let version = modDesc?.version || 'Unknown';
+            let dependencies = modDesc?.dependencies || [];
 
-			// If basic parsing failed to find useful metadata, try the persistent pool
-			if (author === 'Unknown' || title === entryName.replace('.zip', '') || version === 'Unknown') {
-				const pool = cache.getModHubMetadataPool();
-				
-				// Try match by filename first (strongest link)
-				const fileId = `file_${entryName.toLowerCase()}`;
-				const remoteMod = pool[fileId] || (modDesc?.modId ? pool[String(modDesc.modId)] : null);
-				
-				if (remoteMod) {
-					if (author === 'Unknown' && remoteMod.author) author = remoteMod.author;
-					if (author === 'Unknown' && remoteMod.title && remoteMod.title.includes('by ')) {
-						// Extract author from title if needed
-						author = remoteMod.title.split('by ')[1].trim();
-					}
-					if (version === 'Unknown' && remoteMod.version) version = remoteMod.version;
-					// Use the better title if the local one is just a filename
-					if (title === entryName.replace('.zip', '') && remoteMod.title) title = remoteMod.title;
+			const relativePath = subFolder ? `${subFolder}/${entryName}` : entryName;
+			
+			let calculatedModId = modDesc?.modId || null;
+			if (!calculatedModId) {
+				const tracked = cache.getModTrackingByFile(relativePath) || cache.getModTrackingByFile(entryName);
+				if (tracked?.mod_id) calculatedModId = tracked.mod_id;
+			}
+
+			let remoteMod = pool[fileId] || (calculatedModId ? pool[String(calculatedModId)] : null);
+
+            // Fallback for manually downloaded mods: fuzzy match title against pool
+            if (!remoteMod) {
+                const cleanName = entryName.replace('.zip', '').replace(/^fs25_/i, '').replace(/_/g, '').toLowerCase();
+                for (const [key, value] of Object.entries(pool)) {
+                    if (!value.title) continue;
+                    const cleanPoolTitle = value.title.replace(/\s+/g, '').replace(/_/g, '').toLowerCase();
+                    if (cleanPoolTitle === cleanName) {
+                        remoteMod = value;
+                        break;
+                    }
+                }
+            }
+
+			if (remoteMod) {
+                // Override local dependencies with ModHub ones if available (cleaner, more accurate)
+                if (remoteMod.dependencies && remoteMod.dependencies.length > 0) {
+                    dependencies = remoteMod.dependencies;
+                }
+
+                // Enrich missing metadata
+				if (author === 'Unknown' && remoteMod.author) author = remoteMod.author;
+				if (author === 'Unknown' && remoteMod.title && remoteMod.title.includes('by ')) {
+					author = remoteMod.title.split('by ')[1].trim();
 				}
+				if (version === 'Unknown' && remoteMod.version) version = remoteMod.version;
+				if (title === entryName.replace('.zip', '') && remoteMod.title) title = remoteMod.title;
 			}
 
 			mods.push({
@@ -1072,16 +1112,12 @@ async function performScan(manualPaths = null) {
 				mapTitle: modDesc?.mapTitle || null,
 				modName: modDesc?.techName || entryName.replace('.zip', ''),
 				technicalName: modDesc?.techName || '',
-				dependencies: modDesc?.dependencies || [],
+				dependencies,
 				conflicts: modDesc?.conflicts || [],
 				scripts: modDesc?.scripts || [],
 				specializations: modDesc?.specializations || [],
 				techData: modDesc?.techData || null,
-				modId: modDesc?.modId || (() => {
-					const relativePath = subFolder ? `${subFolder}/${entryName}` : entryName;
-					const tracked = cache.getModTrackingByFile(relativePath) || cache.getModTrackingByFile(entryName);
-					return tracked?.mod_id || null;
-				})(),
+				modId: calculatedModId,
 				iconFile: modDesc?.iconFile || '',
 				iconData: iconBase64,
 				storeData: storeBase64,
@@ -1091,8 +1127,7 @@ async function performScan(manualPaths = null) {
 
 			// ── CONSOLIDATED MOD METADATA REFINEMENT ──
 			const modObj = mods[mods.length - 1];
-			const trackingInfo = allTracking.find(t => String(t.mod_id) === String(modObj.modId));
-			const category = (trackingInfo?.category || '').toUpperCase();
+			const category = (modObj.category || '').toUpperCase();
 			const isMapViaCategory = category.includes('MAP');
             
             // Ensure category is set for local maps if we detected it via icon/heuristic
@@ -1133,7 +1168,7 @@ async function performScan(manualPaths = null) {
 					modDesc.isMap = modObj.isMap;
 					modDesc.title = modObj.title;
 					modDesc.mapTitle = modObj.mapTitle;
-					try { cache.setLocalModCache(fullPath, mtime, size, modDesc, iconBase64, fileHash); } catch (e) {}
+					try { cache.setLocalModCache(fullPath, mtime, size, modDesc, iconBase64, fileHash, storeBase64); } catch (e) {}
 				}
 			}
 		} catch (err) {
@@ -1262,10 +1297,12 @@ async function performScan(manualPaths = null) {
 	const missingDependencies = [];
 	for (const mod of finalMods) {
 		for (const dep of (mod.dependencies || [])) {
-			if (!modNames.has(dep.toLowerCase())) {
+			const depString = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
+			if (!depString) continue;
+			if (!modNames.has(depString.toLowerCase())) {
 				missingDependencies.push({
 					mod: mod.title,
-					dependency: dep,
+					dependency: depString,
 					modPath: mod.filePath
 				});
 			}
@@ -3862,7 +3899,7 @@ async function deepScanModIcons(onProgress) {
 					cache.setLocalModCache(mod.filePath, stats.mtimeMs, stats.size, {
 						...mod,
 						iconData: iconData
-					}, iconData, mod.fileHash);
+					}, iconData, mod.fileHash, mod.storeData);
 				}
 				
 				processed++;

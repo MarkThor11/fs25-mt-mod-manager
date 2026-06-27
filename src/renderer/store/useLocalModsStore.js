@@ -68,6 +68,9 @@ export const useLocalModsStore = create((set, get) => ({
 
     } catch (err) {
       set({ error: err.message, isLoading: false });
+      import('./useToastStore').then(m => {
+        m.useToastStore.getState().error('Scan failed: ' + err.message);
+      }).catch(() => {});
     }
   },
 

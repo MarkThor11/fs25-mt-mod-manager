@@ -50,7 +50,7 @@ const MapImage = ({ mapTitle, mapId, mods, opacity = 0.25 }) => {
         return false;
     });
 
-    if (mapMod && mapMod.iconData) {
+    if (mapMod && mapMod.iconData && !mapMod.iconData.startsWith('CATEGORY:')) {
         return <img src={mapMod.iconData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
     }
   }

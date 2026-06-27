@@ -596,8 +596,44 @@ ipcMain.handle('savegames:updateAttribute', async (_, { savePath, fileType, attr
   return savegameManager.updateSavegameAttribute(savePath, fileType, attribute, value);
 });
 
+ipcMain.handle('savegames:resetPlayerSpawn', async (_, savePath) => {
+  return savegameManager.resetPlayerSpawn(savePath);
+});
+
+ipcMain.handle('savegames:getPlayerPosition', async (_, savePath) => {
+  return savegameManager.getPlayerPosition(savePath);
+});
+
+ipcMain.handle('savegames:setPlayerPosition', async (_, args) => {
+  return savegameManager.setPlayerPosition(args);
+});
+
+ipcMain.handle('savegames:getFleetPositions', async (_, { savePath, mapModName }) => {
+  return savegameManager.getFleetPositions(savePath, mapModName);
+});
+
+ipcMain.handle('savegames:updateNativeEnhancement', async (_, { savePath, includeBridge, includeDeliveries }) => {
+  return savegameManager.updateNativeEnhancement(savePath, includeBridge, includeDeliveries);
+});
+
 ipcMain.handle('savegames:updateFleetMaintenance', async (_, { savePath, type, value }) => {
   return savegameManager.updateFleetMaintenance(savePath, type, value);
+});
+
+ipcMain.handle('savegames:checkStoreDeliveries', async () => {
+  return savegameManager.checkStoreDeliveries();
+});
+
+ipcMain.handle('savegames:ensureStoreDeliveries', async () => {
+  return savegameManager.ensureStoreDeliveries();
+});
+
+ipcMain.handle('savegames:getStoreDeliveryCoordinates', async (_, savePath) => {
+  return savegameManager.getStoreDeliveryCoordinates(savePath);
+});
+
+ipcMain.handle('savegames:getMapShopCoordinates', async (_, savePath) => {
+  return savegameManager.getMapShopCoordinates(savePath);
 });
 
 ipcMain.handle('savegames:getTransferData', async (_, { savePath }) => {

@@ -4,7 +4,7 @@ import {
   Save, Play, RefreshCw, Edit3, MapPin,
   Clock, DollarSign, Package, Check, X,
   Plus, ChevronDown, ChevronRight, Gamepad2, Trash2, TrendingUp, Shield,
-  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft
+  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft, Anchor
 } from 'lucide-react';
 import { useSavegameStore } from '../store/useSavegameStore';
 import { useToastStore } from '../store/useToastStore';
@@ -183,6 +183,56 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
   const [fleetRepairPct, setFleetRepairPct] = useState(100);
   const [fleetPaintPct, setFleetPaintPct] = useState(100);
 
+  // Spawn & Persistence State
+  const [isPersistenceActive, setIsPersistenceActive] = useState(false);
+  const [playerPos, setPlayerPos] = useState(null);
+  const [teleportMode, setTeleportMode] = useState(null); // 'custom', 'shop', 'vehicle'
+  const [searchFleetQuery, setSearchFleetQuery] = useState('');
+  const [fleet, setFleet] = useState([]);
+  const [hasStoreDeliveries, setHasStoreDeliveries] = useState(false);
+  const [customSpawnInfo, setCustomSpawnInfo] = useState({ x: 0, y: 0, z: 0, type: 'Home' });
+
+  useEffect(() => {
+    if (!window.api?.savegames) return;
+    
+    // Check Persistence
+    let hasDeliveries = (save.mods || []).some(m => m.modName === 'FS25_storeDeliveries');
+    setIsPersistenceActive(hasDeliveries);
+
+    // Auto-enable persistence if not already active and hasn't been manually toggled this session
+    const toggleKey = `persistence_toggled_${save.path}`;
+    if (!hasDeliveries && !sessionStorage.getItem(toggleKey)) {
+      window.api.savegames.updateNativeEnhancement({ savePath: save.path, includeBridge: true, includeDeliveries: true }).then(res => {
+        if (res.success) {
+          setIsPersistenceActive(true);
+          sessionStorage.setItem(toggleKey, 'true');
+          if (onRefresh) onRefresh();
+        }
+      });
+    }
+
+    // Fetch Player Position, Fleet & Mod Status if on spawn tab
+    if (activeTab === 'spawn') {
+      window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
+      const getMapModName = (mapId) => {
+        if (mapId && mapId.includes('.')) {
+          return mapId.split('.')[0];
+        }
+        return null;
+      };
+      const mapModName = getMapModName(save.mapId);
+      window.api.savegames.getFleetPositions(save.path, mapModName).then(res => setFleet(res?.items || []));
+      if (window.api.savegames.checkStoreDeliveries) {
+        window.api.savegames.checkStoreDeliveries().then(setHasStoreDeliveries);
+      }
+      if (window.api.savegames.getStoreDeliveryCoordinates) {
+        window.api.savegames.getStoreDeliveryCoordinates(save.path).then(res => {
+          if (res) setCustomSpawnInfo(res);
+        });
+      }
+    }
+  }, [activeTab, save.path, save.mods]);
+
   const handleUpdate = async (fileType, attribute, value) => {
     setLoading(true);
     if (!window.api?.savegames) return;
@@ -260,6 +310,9 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
           </button>
           <button className={`tab-btn ${activeTab === 'controls' ? 'tab-btn--active' : ''}`} onClick={() => setActiveTab('controls')}>
             <Gamepad2 size={14} /> Controls
+          </button>
+          <button className={`tab-btn ${activeTab === 'spawn' ? 'tab-btn--active' : ''}`} onClick={() => setActiveTab('spawn')}>
+            <MapPin size={14} /> Spawn & Persistence
           </button>
           <button className={`tab-btn ${activeTab === 'mods' ? 'tab-btn--active' : ''}`} onClick={() => setActiveTab('mods')}>
             <Package size={14} /> Selective Mods
@@ -648,6 +701,281 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
           )}
 
 
+          {activeTab === 'spawn' && (
+            <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
+              
+              {/* Manager-Managed Persistence Panel */}
+              <div style={{ 
+                background: isPersistenceActive ? 'rgba(var(--accent-rgb), 0.1)' : 'var(--bg-tertiary)', 
+                border: `1px solid ${isPersistenceActive ? 'var(--accent)' : 'var(--border)'}`, 
+                borderRadius: 8, 
+                padding: '16px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{ 
+                    width: 40, height: 40, borderRadius: 8, 
+                    background: isPersistenceActive ? 'var(--accent)' : 'var(--bg-secondary)', 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                    color: isPersistenceActive ? 'var(--bg-base)' : 'var(--text-tertiary)' 
+                  }}>
+                    <Zap size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: 'var(--text-primary)' }}>Manager-Managed Persistence</h3>
+                    <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Enable this to have the manager automatically ensure you spawn exactly where you left off.</p>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  {isPersistenceActive && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent)', fontSize: 11, fontWeight: 700, letterSpacing: '0.05em' }}>
+                      <Check size={14} /> NATIVE ENHANCEMENT ACTIVE
+                    </div>
+                  )}
+                  <button 
+                    className={`btn btn--sm ${isPersistenceActive ? 'btn--primary' : 'btn--ghost'}`}
+                    style={{ border: isPersistenceActive ? 'none' : '1px solid var(--border)' }}
+                    onClick={async () => {
+                      if (!window.api?.savegames) return;
+                      const newState = !isPersistenceActive;
+                      const res = await window.api.savegames.updateNativeEnhancement({ savePath: save.path, includeBridge: newState, includeDeliveries: newState });
+                      if (res.success) {
+                        setIsPersistenceActive(newState);
+                        sessionStorage.setItem(`persistence_toggled_${save.path}`, 'true');
+                        useToastStore.getState().success(newState ? "Persistence Activated" : "Persistence Deactivated");
+                      } else {
+                        useToastStore.getState().error("Failed: " + res.error);
+                      }
+                    }}
+                  >
+                    {isPersistenceActive ? 'DISABLE' : 'ENABLE'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Player Teleportation */}
+              <div className="settings-panel" style={{ padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <MapPin size={16} className="text-accent" />
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--text-primary)' }}>PLAYER TELEPORTATION</div>
+                </div>
+                
+                <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 8, padding: '16px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Current Saved Position</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                    {playerPos ? `${playerPos.x.toFixed(1)}, ${playerPos.y.toFixed(1)}, ${playerPos.z.toFixed(1)}` : 'Unknown or Not Saved'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Teleport Presets */}
+              <div className="settings-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', flex: teleportMode === 'vehicle' ? 1 : 'none', minHeight: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <MapIcon size={16} className="text-accent" />
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--text-primary)' }}>QUICK TELEPORT PRESETS</div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: teleportMode === 'vehicle' ? 16 : 0 }}>
+                  <div 
+                    onClick={async () => {
+                      if (!hasStoreDeliveries) return;
+                      if (teleportMode === 'custom') {
+                        setTeleportMode(null);
+                        return;
+                      }
+                      setTeleportMode('custom');
+                      const res = await window.api?.savegames?.getStoreDeliveryCoordinates(save.path);
+                      if (res) {
+                          const setRes = await window.api.savegames.setPlayerPosition({ savePath: save.path, x: res.x, y: res.y, z: res.z });
+                          if (setRes && setRes.success) {
+                              useToastStore.getState().success("Teleported to Custom Spawn Point");
+                              window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
+                          } else {
+                              useToastStore.getState().error("Failed to teleport: " + (setRes?.error || "Unknown error"));
+                          }
+                      } else {
+                          useToastStore.getState().error("Could not find Custom Spawn coordinates for this map.");
+                          setTeleportMode(null);
+                      }
+                    }}
+                    style={{ 
+                      padding: '16px', 
+                      background: teleportMode === 'custom' ? 'rgba(var(--accent-rgb), 0.1)' : 'var(--bg-base)', 
+                      border: `1px solid ${teleportMode === 'custom' ? 'var(--accent)' : 'var(--border)'}`, 
+                      borderRadius: 8, 
+                      cursor: hasStoreDeliveries ? 'pointer' : 'default', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      transition: 'all 0.2s', 
+                      opacity: hasStoreDeliveries ? 1 : 0.5
+                    }}
+                  >
+                    <Pin size={16} style={{ color: teleportMode === 'custom' ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 8 }} />
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
+                      Custom Spawn Point ({customSpawnInfo.type === 'Custom' ? 'Custom' : 'Home'})
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                      {hasStoreDeliveries ? (
+                        customSpawnInfo.type === 'Custom' ? "Custom spawn point active" : "Set spawn point with Store Deliveries mod"
+                      ) : (
+                        <span style={{ pointerEvents: 'auto' }}>
+                          Download{" "}
+                          <span 
+                            style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent)', fontWeight: 600 }} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.api?.savegames?.ensureStoreDeliveries) {
+                                useToastStore.getState().info("Downloading store deliveries mod...");
+                                window.api.savegames.ensureStoreDeliveries().then(res => {
+                                  if (res.success) {
+                                    useToastStore.getState().success("Store Deliveries mod downloaded!");
+                                    if (window.api.savegames.checkStoreDeliveries) {
+                                      window.api.savegames.checkStoreDeliveries().then(setHasStoreDeliveries);
+                                    }
+                                    if (window.api.savegames.getStoreDeliveryCoordinates) {
+                                      window.api.savegames.getStoreDeliveryCoordinates(save.path).then(setCustomSpawnInfo);
+                                    }
+                                  } else {
+                                    useToastStore.getState().error("Failed to download mod: " + res.error);
+                                  }
+                                });
+                              }
+                            }}
+                          >
+                            FS25_storeDeliveries
+                          </span>{" "}
+                          mod to use this feature
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div 
+                    onClick={async () => {
+                      if (teleportMode === 'shop') {
+                        setTeleportMode(null);
+                        return;
+                      }
+                      setTeleportMode('shop');
+                      const res = await window.api?.savegames?.getMapShopCoordinates(save.path);
+                      if (res) {
+                          const setRes = await window.api.savegames.setPlayerPosition({ savePath: save.path, x: res.x, y: res.y, z: res.z });
+                          if (setRes && setRes.success) {
+                              useToastStore.getState().success("Teleported to Vehicle Shop");
+                              window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
+                          } else {
+                              useToastStore.getState().error("Failed to teleport: " + (setRes?.error || "Unknown error"));
+                          }
+                      } else {
+                          useToastStore.getState().error("Could not find Vehicle Shop coordinates for this map.");
+                          setTeleportMode(null);
+                      }
+                    }}
+                    style={{ 
+                      padding: '16px', background: teleportMode === 'shop' ? 'rgba(var(--accent-rgb), 0.1)' : 'var(--bg-base)', 
+                      border: `1px solid ${teleportMode === 'shop' ? 'var(--accent)' : 'var(--border)'}`, 
+                      borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', transition: 'all 0.2s'
+                    }}
+                  >
+                    <MapPin size={16} style={{ color: teleportMode === 'shop' ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 8 }} />
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Vehicle Shop</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Ready to buy equipment</div>
+                  </div>
+
+                  <div 
+                    onClick={() => setTeleportMode(teleportMode === 'vehicle' ? null : 'vehicle')}
+                    style={{ 
+                      padding: '16px', background: teleportMode === 'vehicle' ? 'rgba(var(--accent-rgb), 0.1)' : 'var(--bg-base)', 
+                      border: `1px solid ${teleportMode === 'vehicle' ? 'var(--accent)' : 'var(--border)'}`, 
+                      borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', transition: 'all 0.2s'
+                    }}
+                  >
+                    <Gamepad2 size={16} style={{ color: teleportMode === 'vehicle' ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 8 }} />
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Vehicle of Choice</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Select From Available Vehicles</div>
+                  </div>
+                </div>
+
+                {/* Vehicle List (Only shows when Vehicle of Choice is active) */}
+                {teleportMode === 'vehicle' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 300, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-base)', overflow: 'hidden' }}>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>
+                        <Gamepad2 size={14} /> VEHICLE LIST
+                      </div>
+                      <button className="btn btn--ghost btn--sm" style={{ width: 24, height: 24, padding: 0 }} onClick={() => setTeleportMode(null)}><X size={14} /></button>
+                    </div>
+
+                    <div style={{ padding: '12px 16px', display: 'flex', gap: 8, borderBottom: '1px solid var(--border)' }}>
+                      <div className="search-input-wrapper" style={{ flex: 1, position: 'relative' }}>
+                        <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
+                        <input 
+                          type="text" 
+                          placeholder="Search by brand, model or field..." 
+                          value={searchFleetQuery} 
+                          onChange={e => setSearchFleetQuery(e.target.value)} 
+                          style={{ width: '100%', paddingLeft: 32, background: 'var(--bg-tertiary)', border: 'none' }} 
+                        />
+                      </div>
+                      <button className="btn btn--ghost btn--sm" style={{ width: 32, height: 32, padding: 0 }} onClick={async () => {
+                        if (window.api?.savegames) {
+                          const getMapModName = (mapId) => {
+                            if (mapId && mapId.includes('.')) {
+                              return mapId.split('.')[0];
+                            }
+                            return null;
+                          };
+                          const mapModName2 = getMapModName(save.mapId);
+                          const res = await window.api.savegames.getFleetPositions(save.path, mapModName2);
+                          setFleet(res?.items || []);
+                        }
+                      }}>
+                        <RefreshCw size={14} />
+                      </button>
+                    </div>
+
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, alignContent: 'start' }}>
+                      {fleet.filter(v => !searchFleetQuery || `${v.brand} ${v.name} ${v.type}`.toLowerCase().includes(searchFleetQuery.toLowerCase())).map((v, i) => (
+                        <div 
+                          key={i} 
+                          onClick={async () => {
+                            if (!window.api?.savegames) return;
+                            const res = await window.api.savegames.setPlayerPosition({ savePath: save.path, x: v.x, y: v.y, z: v.z, vehicleUniqueId: v.uniqueId });
+                            if (res.success) {
+                              useToastStore.getState().success(`Teleported to ${v.name}`);
+                              window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
+                            } else {
+                              useToastStore.getState().error("Failed to teleport: " + res.error);
+                            }
+                          }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid transparent', cursor: 'pointer', transition: 'border-color 0.2s' }}
+                          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
+                          onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}
+                        >
+                          <div style={{ overflow: 'hidden' }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.brand} {v.name}</div>
+                          </div>
+                        </div>
+                      ))}
+                      {fleet.length === 0 && (
+                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '32px', color: 'var(--text-tertiary)', fontSize: 13 }}>
+                          No drivable vehicles found in savegame.
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+
+
           {activeTab === 'mods' && (
             <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)', flex: 1, minHeight: 0 }}>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -762,7 +1090,17 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
 
           {/* Footer */}
           <div style={{ padding: '16px 24px', background: 'var(--bg-tertiary)', display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '1px solid var(--border)' }}>
-            <button className="btn btn--primary" onClick={() => { onRefresh(); onClose(); }}>Done</button>
+            <button className="btn btn--secondary" onClick={() => { onRefresh(); onClose(); }}>Done</button>
+            <button className="btn btn--primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={async () => {
+              onRefresh();
+              onClose();
+              useToastStore.getState().info("Launching game with savegame " + save.index + "...");
+              if (window.api?.game?.launch) {
+                await window.api.game.launch({ savegame: save.index });
+              }
+            }}>
+              <Gamepad2 size={16} /> Launch
+            </button>
           </div>
         </div>
       </div>

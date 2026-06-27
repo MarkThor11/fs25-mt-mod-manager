@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useLocalModsStore } from './useLocalModsStore';
 
 export const useSavegameStore = create((set) => ({
   savegames: [],
@@ -28,8 +29,7 @@ export const useSavegameStore = create((set) => ({
     set({ selectedSavegame: savegame });
     if (savegame) {
       try {
-        const result = await window.api.savegames.getInstalledMods();
-        const installed = result.mods || [];
+        const installed = useLocalModsStore.getState().mods || [];
         
         // Setup initial selected set from the savegame's existing mods
         const initialSelected = new Set(
