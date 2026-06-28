@@ -373,7 +373,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     const savegameData = {
         careerSavegame: {
             '@_revision': '2',
-            '@_valid': requiresEngineInit ? 'false' : 'true',
+            '@_valid': 'true',
             settings: {
                 savegameName: savegameName,
                 creationDate: today,
@@ -411,7 +411,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 <farms>
     <farm farmId="1" name="My farm" color="1" loan="0.000000" money="${money}.000000">
         <players>
-            <player farmManager="true" />
+            <player uniqueUserId="player" farmManager="true" />
         </players>
     </farm>
 </farms>`;
