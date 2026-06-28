@@ -357,6 +357,13 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         finalMods.unshift({ modName: mapModName, title: mapTitle, version: '1.0.0.0', required: true });
     }
 
+    // FS25 engine requires mod maps to have their mapId prefixed with the mod name (e.g. FS25_MapMod.MapId)
+    // If we don't do this, the engine can't find the map, marking the save as corrupted and greying out the Continue button.
+    let engineMapId = mapId;
+    if (mapModName && !engineMapId.startsWith(mapModName + '.') && !['MapUS', 'MapEU', 'MapAS', 'HighlandsFishingMap'].includes(engineMapId)) {
+        engineMapId = `${mapModName}.${engineMapId}`;
+    }
+
     const modData = finalMods.map(mod => {
         // The unshifted map mod has required: true
         const isRequired = mod.required === true || (mapModName && mod.modName === mapModName);
@@ -376,7 +383,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             settings: {
                 savegameName: savegameName,
                 creationDate: today,
-                mapId: mapId,
+                mapId: engineMapId,
                 mapTitle: mapTitle,
                 saveDateFormatted: today,
                 saveDate: today,
