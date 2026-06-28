@@ -342,8 +342,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     if (fs.existsSync(templatePath)) {
         console.log(`[CREATE] Copying template from ${templateFolder}`);
         await fs.copy(templatePath, slotPath);
-            console.warn(`[CREATE] No specific template found for ${mapId}. Creating minimal save with dummy terrain...`);
-            requiresEngineInit = true;
+    } else {
+        console.warn(`[CREATE] No specific template found for ${mapId}. Creating minimal save with dummy terrain...`);
+        requiresEngineInit = true;
+    }
 
     // 3. Update careerSavegame.xml
     const careerPath = path.join(slotPath, 'careerSavegame.xml');
