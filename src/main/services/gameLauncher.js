@@ -214,12 +214,27 @@ async function launch(options = {}) {
     const fs25Path = pathProvider.getFS25DataRoot();
     const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
     const initFile = path.join(savePath, 'terrain.heightmap.png');
-    const isInitialized = fs.existsSync(initFile);
+    
+    let isFullyInitialized = false;
+    let isDummy = false;
+    
+    if (fs.existsSync(initFile)) {
+      const stats = fs.statSync(initFile);
+      if (stats.size > 0) {
+          isFullyInitialized = true;
+      } else {
+          isDummy = true;
+      }
+    }
 
-    if (isInitialized) {
+    if (isFullyInitialized) {
       console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is already initialized. Enabling Auto-Start.`);
       args.push('-autoStartSavegameId', String(options.savegameIndex));
       args.push('-autoStart');
+    } else if (isDummy) {
+      console.log(`[LAUNCH] Target savegame ${options.savegameIndex} has a dummy map. Launching to slot selection.`);
+      args.push('-autoStartSavegameId', String(options.savegameIndex));
+      needsManualInit = true;
     } else {
       console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is NOT initialized. Omitting Auto-Start for manual first load.`);
       needsManualInit = true;

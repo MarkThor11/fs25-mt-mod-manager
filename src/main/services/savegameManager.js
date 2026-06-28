@@ -404,6 +404,12 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     await fs.writeFile(careerPath, xmlOutput);
 
+    // Create an empty terrain.heightmap.png to trick the engine into enabling the Continue button
+    if (requiresEngineInit) {
+        const dummyPath = path.join(slotPath, 'terrain.heightmap.png');
+        await fs.writeFile(dummyPath, '');
+    }
+
     return { success: true, path: slotPath, requiresEngineInit, mapId };
 }
 
