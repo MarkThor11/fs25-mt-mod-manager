@@ -342,27 +342,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     if (fs.existsSync(templatePath)) {
         console.log(`[CREATE] Copying template from ${templateFolder}`);
         await fs.copy(templatePath, slotPath);
-    } else {
-        console.warn(`[CREATE] No specific template found for ${mapId}. Attempting to use a fallback savegame to satisfy engine requirements...`);
-        // Fallback: Try to copy an existing savegame (e.g. savegame1) to trick the engine into enabling the Continue button.
-        let fallbackFound = false;
-        for (let i = 1; i <= 20; i++) {
-            if (i === savegameIndex) continue;
-            const fallbackPath = path.join(fs25Path, `savegame${i}`);
-            if (fs.existsSync(path.join(fallbackPath, 'careerSavegame.xml'))) {
-                console.log(`[CREATE] Using slot ${i} as a fallback template to bypass engine bug.`);
-                await fs.copy(fallbackPath, slotPath);
-                fallbackFound = true;
-                requiresEngineInit = false; // Set to false so gameLauncher.js pushes -autoStart, triggering the engine's abort behavior which enables the continue button!
-                break;
-            }
-        }
-        
-        if (!fallbackFound) {
-            console.warn(`[CREATE] No fallback savegames found. Creating minimal save (Continue button may be broken by engine bug).`);
+            console.warn(`[CREATE] No specific template found for ${mapId}. Creating minimal save with dummy terrain...`);
             requiresEngineInit = true;
-        }
-    }
 
     // 3. Update careerSavegame.xml
     const careerPath = path.join(slotPath, 'careerSavegame.xml');
@@ -420,7 +401,26 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     await fs.writeFile(careerPath, xmlOutput);
 
-    return { success: true, path: slotPath, requiresEngineInit, mapId };
+    // Create a 1x1 valid transparent PNG to trick the engine into enabling the Continue button.
+    // The engine reads the valid header, enables Continue, but rejects the dimensions and regenerates correct terrain!
+    if (requiresEngineInit) {
+        const dummyPath = path.join(slotPath, 'terrain.heightmap.png');
+        const pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+        await fs.writeFile(dummyPath, Buffer.from(pngBase64, 'base64'));
+
+        const farmsPath = path.join(slotPath, 'farms.xml');
+        const farmsXml = `<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<farms>
+    <farm farmId="1" name="My farm" color="1" loan="0.000000" money="${money}.000000">
+        <players>
+            <player uniqueUserId="player" farmManager="true" />
+        </players>
+    </farm>
+</farms>`;
+        await fs.writeFile(farmsPath, farmsXml);
+    }
+
+    return { success: true, path: slotPath, requiresEngineInit: false, mapId }; // Return false to force -autoStart
 }
 
 /**
