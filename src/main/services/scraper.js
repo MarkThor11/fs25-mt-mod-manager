@@ -796,27 +796,23 @@ async function fetchModDetail(modId) {
       .replace(/\s*v?\d+\.\d+\.\d+(?:\.\d+)?/i, '')    // strip version numbers
       .replace(/[^a-z0-9]/g, '');
 
+    const filename = dep.url ? dep.url.toLowerCase() : '';
+
     if (raw.length > 2) {
       let isDuplicate = false;
       
-      // Fuzzy Containment check:
-      // If "Kinlaig" is already seen, "KinlaigPack" or "Kinlaig (by GIANTS)" will be flagged as duplicates.
+      // Check for duplicates
       for (const entry of finalSeen) {
+        // If both have distinct URLs, they are definitely different mods, do not deduplicate by title!
+        if (filename && entry.filename && filename !== entry.filename) {
+          continue;
+        }
+        
         const existing = entry.raw;
         if (existing.includes(raw) || raw.includes(existing)) {
           const ratio = Math.min(existing.length, raw.length) / Math.max(existing.length, raw.length);
-          if (ratio > 0.6) {
-            isDuplicate = true;
-            break;
-          }
-        }
-      }
-
-      // Filename check: prevent "FS25_SiloPack" from appearing if "Small Grain Silos Pack" is already there
-      // because they share the same ZIP link.
-      if (!isDuplicate) {
-        for (const entry of finalSeen) {
-          if (entry.filename && (entry.filename.includes(raw) || raw.includes(entry.filename))) {
+          // Require a much stricter ratio to avoid matching "woodenshed" with "smallwoodenshed"
+          if (ratio > 0.85) {
             isDuplicate = true;
             break;
           }
@@ -824,7 +820,6 @@ async function fetchModDetail(modId) {
       }
 
       if (!isDuplicate) {
-        const filename = dep.url ? dep.url.split('/').pop().toLowerCase().replace(/\.zip$/, '').replace(/[^a-z0-9]/g, '') : '';
         dedupedDependencies.push(dep);
         finalSeen.add({ raw, filename });
       }
