@@ -422,7 +422,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         await fs.writeFile(farmsPath, farmsXml);
     }
 
-    return { success: true, path: slotPath, requiresEngineInit: false, mapId }; // Return false to force -autoStart
+    return { success: true, path: slotPath, requiresEngineInit: true, mapId };
 }
 
 /**
