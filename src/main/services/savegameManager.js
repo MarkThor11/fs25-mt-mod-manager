@@ -353,9 +353,61 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     const finalMods = [...selectedMods];
     // Add map mod if not already there
-    if (mapModName && !finalMods.find(m => m.modName === mapModName)) {
-        finalMods.unshift({ modName: mapModName, title: mapTitle, version: '1.0.0.0', required: true });
+    let mapModObj = finalMods.find(m => m.modName === mapModName);
+    if (mapModName && !mapModObj) {
+        mapModObj = { modName: mapModName, title: mapTitle, version: '1.0.0.0', required: true };
+        finalMods.unshift(mapModObj);
+    } else if (mapModObj) {
+        mapModObj.required = true;
     }
+
+    // --- AUTO-INJECT DEPENDENCIES FOR ALL SELECTED MODS ---
+    // If we don't do this, the FS25 engine pauses the launch and prompts: "Do you want to select all required mods?"
+    try {
+        const modManager = require('./modManager');
+        const { mods: allMods } = await modManager.scanLocalMods();
+        
+        let addedNewDep = true;
+        while(addedNewDep) {
+            addedNewDep = false;
+            const currentMods = [...finalMods];
+            for (const selMod of currentMods) {
+                const fullMod = allMods.find(m => m.modName === selMod.modName);
+                if (fullMod && fullMod.dependencies && fullMod.dependencies.length > 0) {
+                    for (const dep of fullMod.dependencies) {
+                        const depStr = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
+                        if (!depStr) continue;
+                        
+                        const installedDep = allMods.find(m => 
+                            m.modName.toLowerCase() === depStr.toLowerCase() || 
+                            m.title.toLowerCase() === depStr.toLowerCase() ||
+                            m.technicalName?.toLowerCase() === depStr.toLowerCase()
+                        );
+
+                        if (installedDep) {
+                            const alreadySelected = finalMods.find(m => m.modName === installedDep.modName);
+                            if (!alreadySelected) {
+                                console.log(`[CREATE] Auto-injecting dependency: ${installedDep.title} (required by ${selMod.title || selMod.modName})`);
+                                finalMods.push({
+                                    modName: installedDep.modName,
+                                    title: installedDep.title,
+                                    version: installedDep.version || '1.0.0.0',
+                                    required: true,
+                                    fileHash: installedDep.fileHash || ''
+                                });
+                                addedNewDep = true;
+                            } else {
+                                alreadySelected.required = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        console.error('[CREATE] Failed to auto-inject dependencies:', err);
+    }
+    // ------------------------------------
 
     // FS25 engine requires mod maps to have their mapId prefixed with the mod name (e.g. FS25_MapMod.MapId)
     // If we don't do this, the engine can't find the map, marking the save as corrupted and greying out the Continue button.
@@ -365,8 +417,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     const modData = finalMods.map(mod => {
-        // The unshifted map mod has required: true
-        const isRequired = mod.required === true || (mapModName && mod.modName === mapModName);
+        // We explicitly set required above for injected deps and the map.
+        const isRequired = mod.required === true;
         return {
             '@_modName': mod.modName,
             '@_title': mod.title || mod.modName,
