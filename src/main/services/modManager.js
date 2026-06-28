@@ -1085,9 +1085,28 @@ async function performScan(manualPaths = null) {
             }
 
 			if (remoteMod) {
-                // Override local dependencies with ModHub ones if available (cleaner, more accurate)
+                // Merge local dependencies with ModHub ones (do not overwrite, as local has exact filenames while remote has Mod IDs and titles)
                 if (remoteMod.dependencies && remoteMod.dependencies.length > 0) {
-                    dependencies = remoteMod.dependencies;
+                    const mergedDeps = [...remoteMod.dependencies];
+                    
+                    // Add local dependencies that aren't already covered by a ModHub remote URL
+                    dependencies.forEach(localDep => {
+                        const localStr = (typeof localDep === 'string' ? localDep : (localDep.modName || localDep.title || '')).toLowerCase();
+                        if (!localStr) return;
+                        
+                        const isCovered = remoteMod.dependencies.some(remoteDep => {
+                            if (!remoteDep.url) return false;
+                            const remoteUrlStr = remoteDep.url.toLowerCase();
+                            // If the remote URL contains the local filename (e.g. FS25_Average_Wooden_Shelter), it's a duplicate
+                            return remoteUrlStr.includes(localStr) || remoteUrlStr.includes(localStr.replace(/^fs25_/, ''));
+                        });
+                        
+                        if (!isCovered) {
+                            mergedDeps.push(localDep);
+                        }
+                    });
+                    
+                    dependencies = mergedDeps;
                 }
 
                 // Enrich missing metadata

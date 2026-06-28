@@ -18,12 +18,19 @@ export const resolveRecursiveDependencies = (targetModName, allMods) => {
   const resolve = (depObjOrString) => {
     let depString = '';
     let depId = null;
+    let fallbackFileName = null;
     
     if (typeof depObjOrString === 'string') {
         depString = depObjOrString;
     } else {
-        depString = depObjOrString.modName || depObjOrString.technicalName || depObjOrString.title || depObjOrString.fileName || '';
         const url = depObjOrString.url || '';
+        if (url) {
+            const fileMatch = url.match(/\/([^\/]+\.zip)$/i);
+            if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
+        }
+        
+        depString = fallbackFileName || depObjOrString.modName || depObjOrString.technicalName || depObjOrString.title || depObjOrString.fileName || '';
+        
         const idMatch = url.match(/mod_id=(\d+)/) || url.match(/storage\/(\d+)\//);
         if (idMatch) depId = parseInt(idMatch[1], 10).toString();
     }
