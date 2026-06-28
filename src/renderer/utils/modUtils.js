@@ -16,7 +16,8 @@ export const resolveRecursiveDependencies = (targetModName, allMods) => {
   };
 
   const resolve = (name) => {
-    const cleanedName = cleanModName(name);
+    const depString = typeof name === 'string' ? name : (name.modName || name.technicalName || name.title || name.fileName || '');
+    const cleanedName = cleanModName(depString);
     if (!cleanedName) return;
     
     const nameLower = cleanedName.toLowerCase();
