@@ -29,6 +29,7 @@ import { useSettingsStore } from './store/useSettingsStore';
 import { useLocalModsStore } from './store/useLocalModsStore';
 import { useMapStore } from './store/useMapStore';
 import { useToastStore } from './store/useToastStore';
+import { useSavegameStore } from './store/useSavegameStore';
 
 export default function App() {
   const { theme, loadSettings, isLoaded } = useSettingsStore();
@@ -238,6 +239,31 @@ export default function App() {
       clearTimeout(initialTimer);
       clearInterval(interval);
     };
+  }, [isLoaded]);
+
+  // ── Game State Poller ──
+  useEffect(() => {
+    if (!isLoaded || !window.api?.game) return;
+    
+    const pollGameState = async () => {
+      try {
+        const isRunning = await window.api.game.isRunning();
+        const { isGameRunning, playingSlot } = useSavegameStore.getState();
+        
+        if (isRunning !== isGameRunning) {
+          useSavegameStore.setState({ isGameRunning: isRunning });
+          // If the game just stopped, clear the playing slot
+          if (!isRunning && playingSlot !== null) {
+            useSavegameStore.setState({ playingSlot: null });
+          }
+        }
+      } catch (err) {
+        // Ignore errors if game API is unresponsive
+      }
+    };
+    
+    const gamePollInterval = setInterval(pollGameState, 3000);
+    return () => clearInterval(gamePollInterval);
   }, [isLoaded]);
 
   if (!isLoaded) return null;

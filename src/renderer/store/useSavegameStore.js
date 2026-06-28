@@ -8,6 +8,8 @@ export const useSavegameStore = create((set) => ({
   selectedSavegame: null,
   installedMods: [],
   selectedMods: new Set(),
+  playingSlot: null,
+  isGameRunning: false,
 
   fetchSavegames: async () => {
     if (!window.api?.savegames) return;

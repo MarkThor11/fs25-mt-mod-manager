@@ -1108,7 +1108,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
   );
 }
 
-function SaveSlotCard({ save, onPlay, onArchive, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop }) {
+function SaveSlotCard({ save, onPlay, onArchive, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop, isPlaying }) {
     const isEmpty = save.modCount === 0 && (save.farmName || '').startsWith('Empty');
     const [isDragOver, setIsDragOver] = useState(false);
     
@@ -1281,7 +1281,14 @@ function SaveSlotCard({ save, onPlay, onArchive, onCreate, onEdit, onAudit, onRe
                 <div style={{ flex: 1 }} />
 
 
-                <button className="btn btn--ghost btn--sm" onClick={onPlay} title="Play Now" style={{ color: 'white' }}><Play size={16} /></button>
+                <button 
+                  className={`btn btn--sm ${isPlaying ? 'btn--primary' : 'btn--ghost'}`} 
+                  onClick={onPlay} 
+                  title={isPlaying ? "Game is Running" : "Play Now"} 
+                  style={{ color: 'white', ...(isPlaying ? { background: 'var(--color-success)', boxShadow: '0 0 10px var(--color-success)', animation: 'pulse 2s infinite' } : {}) }}
+                >
+                  <Play size={16} />
+                </button>
                 {!save.isGhost && (
                   <>
                     <button className="btn btn--ghost btn--sm" onClick={onAudit} title="Audit Mods & Versions" style={{ color: 'rgba(255,255,255,0.7)' }}><ShieldAlert size={16} /></button>
@@ -1301,6 +1308,7 @@ export default function SavegamesPage() {
   const { mods } = useLocalModsStore();
   const {
     savegames, isLoading: isSavesLoading, fetchSavegames,
+    isGameRunning, playingSlot
   } = useSavegameStore();
 
   const { skipIntro } = useSettingsStore();
@@ -1440,6 +1448,8 @@ export default function SavegamesPage() {
         skipIntro: skipIntro !== false,
         ...extraOptions
     });
+    
+    useSavegameStore.setState({ playingSlot: slotIndex });
     
     if (result.success) {
       if (result.needsManualInit) {
@@ -1878,6 +1888,7 @@ export default function SavegamesPage() {
                     }
                 }}
                 editingName={editingName}
+                isPlaying={isGameRunning && playingSlot === save.index}
                 newName={newName}
                 setNewName={setNewName}
                 handleRename={() => handleRename(save)}
