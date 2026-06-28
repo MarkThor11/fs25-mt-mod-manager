@@ -343,9 +343,25 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         console.log(`[CREATE] Copying template from ${templateFolder}`);
         await fs.copy(templatePath, slotPath);
     } else {
-        // Create minimal savegame structure if no template
-        console.warn(`[CREATE] No template found for ${mapId}. Creating minimal save.`);
-        requiresEngineInit = true;
+        console.warn(`[CREATE] No specific template found for ${mapId}. Attempting to use a fallback savegame to satisfy engine requirements...`);
+        // Fallback: Try to copy an existing savegame (e.g. savegame1) to trick the engine into enabling the Continue button.
+        let fallbackFound = false;
+        for (let i = 1; i <= 20; i++) {
+            if (i === savegameIndex) continue;
+            const fallbackPath = path.join(fs25Path, `savegame${i}`);
+            if (fs.existsSync(path.join(fallbackPath, 'careerSavegame.xml'))) {
+                console.log(`[CREATE] Using slot ${i} as a fallback template to bypass engine bug.`);
+                await fs.copy(fallbackPath, slotPath);
+                fallbackFound = true;
+                requiresEngineInit = false; // We copied a full save, so the engine thinks it's initialized!
+                break;
+            }
+        }
+        
+        if (!fallbackFound) {
+            console.warn(`[CREATE] No fallback savegames found. Creating minimal save (Continue button may be broken by engine bug).`);
+            requiresEngineInit = true;
+        }
     }
 
     // 3. Update careerSavegame.xml
@@ -403,12 +419,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     await fs.writeFile(careerPath, xmlOutput);
-
-    // Create an empty terrain.heightmap.png to trick the engine into enabling the Continue button
-    if (requiresEngineInit) {
-        const dummyPath = path.join(slotPath, 'terrain.heightmap.png');
-        await fs.writeFile(dummyPath, '');
-    }
 
     return { success: true, path: slotPath, requiresEngineInit, mapId };
 }
