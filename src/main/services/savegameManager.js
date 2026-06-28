@@ -339,11 +339,36 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     const templatePath = path.join(templatesDir, templateFolder);
+    let usedFallback = false;
     if (fs.existsSync(templatePath)) {
         console.log(`[CREATE] Copying template from ${templateFolder}`);
         await fs.copy(templatePath, slotPath);
     } else {
-        console.warn(`[CREATE] No specific template found for ${mapId}. Creating minimal save with dummy terrain...`);
+        console.warn(`[CREATE] No specific template found for ${mapId}. Attempting to use a fallback savegame to satisfy engine requirements...`);
+        let fallbackFound = false;
+        for (let i = 1; i <= 20; i++) {
+            if (i === savegameIndex) continue;
+            const fallbackPath = path.join(fs25Path, `savegame${i}`);
+            if (fs.existsSync(path.join(fallbackPath, 'careerSavegame.xml'))) {
+                console.log(`[CREATE] Using slot ${i} as a fallback template to bypass engine bug.`);
+                await fs.copy(fallbackPath, slotPath);
+                
+                // Clear map-specific caches to prevent old terrain bleeding
+                const files = await fs.readdir(slotPath);
+                for (const file of files) {
+                    if (file.endsWith('.gdm') || file.endsWith('.cache') || file.endsWith('.gm') || file.endsWith('.grle')) {
+                        await fs.remove(path.join(slotPath, file));
+                    }
+                }
+                fallbackFound = true;
+                usedFallback = true;
+                break;
+            }
+        }
+        
+        if (!fallbackFound) {
+            console.warn(`[CREATE] No fallback savegames found. Creating minimal save (Continue button may be broken by engine bug).`);
+        }
         requiresEngineInit = true;
     }
 
@@ -410,8 +435,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         const pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
         await fs.writeFile(dummyPath, Buffer.from(pngBase64, 'base64'));
 
-        const farmsPath = path.join(slotPath, 'farms.xml');
-        const farmsXml = `<?xml version="1.0" encoding="utf-8" standalone="no"?>
+        // If we didn't use a fallback, we need a basic farms.xml to avoid complete corruption
+        if (!usedFallback) {
+            const farmsPath = path.join(slotPath, 'farms.xml');
+            const farmsXml = `<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <farms>
     <farm farmId="1" name="My farm" color="1" loan="0.000000" money="${money}.000000">
         <players>
@@ -419,10 +446,11 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         </players>
     </farm>
 </farms>`;
-        await fs.writeFile(farmsPath, farmsXml);
+            await fs.writeFile(farmsPath, farmsXml);
+        }
     }
 
-    return { success: true, path: slotPath, requiresEngineInit: true, mapId };
+    return { success: true, path: slotPath, requiresEngineInit, mapId };
 }
 
 /**
