@@ -714,7 +714,7 @@ async function fetchModDetail(modId) {
 
   // ── Dependencies (Required Mods) ──
   const dependencies = [];
-  const seenUrls = new Set();
+  const depSeenUrls = new Set();
   const seenTitles = new Set();
 
   try {
@@ -745,9 +745,9 @@ async function fetchModDetail(modId) {
         if (dTitle && dHref && dTitle.length > 2) {
           if (dHref.includes('mod.php') || dHref.startsWith('/') || dHref.includes('farming-simulator.com')) {
             const resolved = resolveUrl(dHref);
-            if (!seenUrls.has(resolved)) {
+            if (!depSeenUrls.has(resolved)) {
               dependencies.push({ title: dTitle, url: resolved });
-              seenUrls.add(resolved);
+              depSeenUrls.add(resolved);
               seenTitles.add(dTitle.toLowerCase());
             }
           }
