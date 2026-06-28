@@ -3390,7 +3390,7 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 			// 0. Resolve ID from URL if possible (High reliability)
 			if (modUrl) {
 				const idMatch = modUrl.match(/mod_id=(\d+)/) || modUrl.match(/storage\/(\d+)\//);
-				if (idMatch) modId = idMatch[1];
+				if (idMatch) modId = parseInt(idMatch[1], 10).toString();
 			}
 
 			// 0.5 REGISTRY CHECK: Is this mod currently being installed or in queue?

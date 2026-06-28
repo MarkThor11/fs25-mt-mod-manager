@@ -743,7 +743,7 @@ async function fetchModDetail(modId) {
         
         // Ensure it's a valid mod link (or relative link) and not just a social media link
         if (dTitle && dHref && dTitle.length > 2) {
-          if (dHref.includes('mod.php') || dHref.startsWith('/') || dHref.includes('farming-simulator.com')) {
+          if (dHref.includes('mod.php') || dHref.startsWith('/') || dHref.includes('farming-simulator.com') || dHref.includes('giants-software.com')) {
             const resolved = resolveUrl(dHref);
             if (!depSeenUrls.has(resolved)) {
               dependencies.push({ title: dTitle, url: resolved });
