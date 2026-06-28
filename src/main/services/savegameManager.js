@@ -462,14 +462,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     await fs.writeFile(careerPath, xmlOutput);
 
-    // Create a 1x1 valid transparent PNG to trick the engine into enabling the Continue button.
-    // The engine reads the valid header, enables Continue, but rejects the dimensions and regenerates correct terrain!
+    // Fetch the REAL uniqueUserId from an existing save so the game recognizes the user!
     if (requiresEngineInit) {
-        const dummyPath = path.join(slotPath, 'terrain.heightmap.png');
-        const pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
-        await fs.writeFile(dummyPath, Buffer.from(pngBase64, 'base64'));
-
-        // Fetch the REAL uniqueUserId from an existing save so the game recognizes the user!
         let realUserId = "player";
         for (let i = 1; i <= 20; i++) {
             if (i === savegameIndex) continue;

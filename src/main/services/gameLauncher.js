@@ -211,20 +211,9 @@ async function launch(options = {}) {
   // Check if this savegame is "Officialized" (initialized by the engine)
   let needsManualInit = false;
     if (options.savegameIndex !== undefined) {
-      const fs25Path = pathProvider.getFS25DataRoot();
-      const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
-      const initFile = path.join(savePath, 'terrain.heightmap.png');
-      const isInitialized = fs.existsSync(initFile);
-
-      if (isInitialized) {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is already initialized. Enabling Auto-Start.`);
-        args.push('-autoStartSavegameId', String(options.savegameIndex));
-        args.push('-autoStart');
-      } else {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is NOT initialized. Launching to save slot selection.`);
-        args.push('-autoStartSavegameId', String(options.savegameIndex));
-        needsManualInit = true;
-      }
+      console.log(`[LAUNCH] Targeting savegame ${options.savegameIndex}. Enabling Auto-Start.`);
+      args.push('-autoStartSavegameId', String(options.savegameIndex));
+      args.push('-autoStart');
     }
 
   if (options.cheats) {
