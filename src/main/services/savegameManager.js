@@ -352,17 +352,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             if (fs.existsSync(path.join(fallbackPath, 'careerSavegame.xml'))) {
                 console.log(`[CREATE] Using slot ${i} as a fallback template to bypass engine bug.`);
                 await fs.copy(fallbackPath, slotPath);
-                
-                // CRITICAL: Delete map-specific caches so the engine is forced to generate the correct terrain for the Mod Map
-                const files = await fs.readdir(slotPath);
-                for (const file of files) {
-                    if (file.endsWith('.png') || file.endsWith('.gdm') || file.endsWith('.cache') || file.endsWith('.gm')) {
-                        await fs.remove(path.join(slotPath, file));
-                    }
-                }
-                
                 fallbackFound = true;
-                requiresEngineInit = true; // Set to true so gameLauncher.js omits -autoStart (since terrain.heightmap.png is now gone)
+                requiresEngineInit = false; // Set to false so gameLauncher.js pushes -autoStart, triggering the engine's abort behavior which enables the continue button!
                 break;
             }
         }
