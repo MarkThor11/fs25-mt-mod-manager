@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useModHubStore } from '../store/useModHubStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { compareVersions } from '../utils/modUtils';
+import { compareVersions, resolveRecursiveDependencies } from '../utils/modUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 
 // Shared Ultra Normalization (matches InstalledModsPage)
@@ -105,30 +105,14 @@ export default function ModDetailPage() {
     if (uniqueDependencies.length === 0) return true;
     if (!localMods) return false;
 
-    return uniqueDependencies.every(dep => {
-      const depTitle = typeof dep === 'string' ? dep : dep.title;
-      const normalizedDep = ultraNormalize(depTitle);
-      const depId = typeof dep === 'object' && dep.url ? (dep.url.match(/mod_id=(\d+)/)?.[1] || dep.url.match(/storage\/(\d+)\//)?.[1]) : null;
-
-      return localMods.some(lm => {
-        // 1. Direct ID Match (Strongest)
-        if (depId && lm.modId && String(lm.modId) === String(depId)) return true;
-        
-        // 2. Ultra Normalization match for Title, Name, and FileName
-        const localUltraTitle = ultraNormalize(lm.title || '');
-        const localUltraName = ultraNormalize(lm.modName || '');
-        const localUltraFile = ultraNormalize(lm.fileName || '');
-        
-        if (localUltraTitle === normalizedDep || localUltraName === normalizedDep || localUltraFile === normalizedDep) return true;
-        
-        // 3. Containment (Safe fuzzy check)
-        if (normalizedDep.length > 3 && (localUltraTitle.includes(normalizedDep) || normalizedDep.includes(localUltraTitle))) return true;
-        if (normalizedDep.length > 3 && (localUltraName.includes(normalizedDep) || normalizedDep.includes(localUltraName))) return true;
-
+    try {
+        const { missing } = resolveRecursiveDependencies(mod.modName || mod.fileName, localMods);
+        return missing.size === 0;
+    } catch (e) {
+        console.error("Failed to check dependencies", e);
         return false;
-      });
-    });
-  }, [uniqueDependencies, localMods]);
+    }
+  }, [uniqueDependencies, localMods, mod]);
 
   const images = useMemo(() => {
     if (!mod) return [];
@@ -524,32 +508,17 @@ export default function ModDetailPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {uniqueDependencies.map((dep) => {
                   const depTitle = typeof dep === 'string' ? dep : dep.title;
-                  const normalizedDep = ultraNormalize(depTitle);
-                  const depId = typeof dep === 'object' && dep.url ? (dep.url.match(/mod_id=(\d+)/)?.[1] || dep.url.match(/storage\/(\d+)\//)?.[1]) : null;
 
-                  const isInstalled = localMods.some(lm => {
-                    // 1. Direct ID Match (Strongest)
-                    if (depId && lm.modId && String(lm.modId) === String(depId)) return true;
-                    
-                    // 2. Exact match against modName or fileName (handling subfolders)
-                    // Since modDesc.xml dependencies are exactly the required zip filenames (minus .zip)
-                    if (lm.modName && lm.modName.toLowerCase() === depTitle.toLowerCase()) return true;
-                    const cleanFileName = lm.fileName ? lm.fileName.split('/').pop().toLowerCase() : '';
-                    if (cleanFileName === depTitle.toLowerCase() + '.zip') return true;
-
-                    // 3. Fallback fuzzy match for titles
-                    const localUltraTitle = ultraNormalize(lm.title || '');
-                    const localUltraName = ultraNormalize(lm.modName || '');
-                    const localUltraFile = ultraNormalize(lm.fileName || '');
-                    
-                    if (localUltraTitle === normalizedDep || localUltraName === normalizedDep || localUltraFile === normalizedDep) return true;
-                    
-                    // 3. Containment (Safe fuzzy check)
-                    if (normalizedDep.length > 3 && localUltraTitle && (localUltraTitle.includes(normalizedDep) || normalizedDep.includes(localUltraTitle))) return true;
-                    if (normalizedDep.length > 3 && localUltraName && (localUltraName.includes(normalizedDep) || normalizedDep.includes(localUltraName))) return true;
-
-                    return false;
-                  });
+                  let isInstalled = false;
+                  try {
+                      const { missing } = resolveRecursiveDependencies(mod.modName || mod.fileName, localMods);
+                      isInstalled = !Array.from(missing).some(m => {
+                          const mTitle = typeof m === 'string' ? m : (m.title || m.modName);
+                          return mTitle === depTitle;
+                      });
+                  } catch (e) {
+                      console.error("Failed to check dependency status:", e);
+                  }
                   
                   return (
                     <div key={depTitle} style={{ 

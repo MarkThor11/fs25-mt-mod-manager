@@ -1422,9 +1422,8 @@ export default function SavegamesPage() {
 
           if (missing.size > 0) {
             console.log(`[CAREER MODAL] Missing dependencies detected:`, Array.from(missing));
-            setMissingDeps(Array.from(missing));
-          } else {
-            setMissingDeps(null);
+            // User requested to disable the automatic download modal. 
+            // They will handle missing dependencies manually via the map details page.
           }
         } catch (e) {
           console.error('[CAREER MODAL] Dependency auto-select failed:', e);

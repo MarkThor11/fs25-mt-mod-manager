@@ -12,6 +12,7 @@ import { useToastStore } from '../store/useToastStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useModHubStore } from '../store/useModHubStore';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
+import { resolveRecursiveDependencies } from '../utils/modUtils';
 
 // -- UTILITIES (Extracted for Performance) --
 const ultraNormalize = (str) => {
