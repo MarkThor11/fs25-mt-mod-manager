@@ -15,23 +15,43 @@ export const resolveRecursiveDependencies = (targetModName, allMods) => {
     return name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim();
   };
 
-  const resolve = (name) => {
-    const depString = typeof name === 'string' ? name : (name.modName || name.technicalName || name.title || name.fileName || '');
+  const resolve = (depObjOrString) => {
+    let depString = '';
+    let depId = null;
+    
+    if (typeof depObjOrString === 'string') {
+        depString = depObjOrString;
+    } else {
+        depString = depObjOrString.modName || depObjOrString.technicalName || depObjOrString.title || depObjOrString.fileName || '';
+        const url = depObjOrString.url || '';
+        const idMatch = url.match(/mod_id=(\d+)/) || url.match(/storage\/(\d+)\//);
+        if (idMatch) depId = parseInt(idMatch[1], 10).toString();
+    }
+
     const cleanedName = cleanModName(depString);
     if (!cleanedName) return;
     
     const nameLower = cleanedName.toLowerCase();
+    
+    // To prevent infinite loops, we track by nameLower. If we have depId, we could track by ID too, but nameLower is safe enough.
     if (processed.has(nameLower)) return;
     processed.add(nameLower);
 
     const match = allMods.find(m => {
-        const mName = m.modName.toLowerCase();
-        // 1. Exact match
-        if (mName === nameLower) return true;
-        // 2. DLC prefix mismatch: scanner has "highlands", request has "pdlc_highlands"
-        if (nameLower.startsWith('pdlc_') && mName === nameLower.substring(5)) return true;
-        // 3. DLC prefix mismatch reverse: scanner has "pdlc_highlands", request has "highlands"
-        if (mName.startsWith('pdlc_') && mName.substring(5) === nameLower) return true;
+        // 1. Mod ID Match (100% accurate)
+        if (depId && m.modId && String(m.modId) === depId) return true;
+        
+        // 2. String Fallback Match
+        const mName = (m.modName || '').toLowerCase();
+        
+        // Normalize by removing all non-alphanumeric chars and common prefixes
+        const cleanForMatch = (str) => str.replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
+        
+        const reqClean = cleanForMatch(nameLower);
+        const mClean = cleanForMatch(mName);
+        
+        if (reqClean === mClean && reqClean.length > 0) return true;
+        
         return false;
     });
     
