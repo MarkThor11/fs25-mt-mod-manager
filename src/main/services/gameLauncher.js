@@ -221,8 +221,9 @@ async function launch(options = {}) {
       args.push('-autoStartSavegameId', String(options.savegameIndex));
       args.push('-autoStart');
     } else {
-      console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is NOT initialized. Omitting -autoStart for manual first load, but selecting slot.`);
+      console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is NOT initialized. Enabling Auto-Start anyway to bypass engine bug.`);
       args.push('-autoStartSavegameId', String(options.savegameIndex));
+      args.push('-autoStart');
       needsManualInit = true;
     }
   }
