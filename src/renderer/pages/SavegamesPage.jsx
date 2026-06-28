@@ -31,8 +31,10 @@ function ModAuditModal({ save, allInstalledMods, onClose, onRefresh }) {
   const [resolving, setResolving] = useState(false);
   const [syncStatus, setSyncStatus] = useState({}); // modName -> status
 
-  const auditResults = (save.mods || []).map(req => {
-    const installed = allInstalledMods.find(m => m.modName.toLowerCase() === req.modName.toLowerCase());
+  const auditResults = (save.mods || []).map(reqRaw => {
+    const reqModName = typeof reqRaw === 'string' ? reqRaw : reqRaw?.modName || '';
+    const reqVersion = typeof reqRaw === 'string' ? null : reqRaw?.version;
+    const installed = allInstalledMods.find(m => m.modName.toLowerCase() === reqModName.toLowerCase());
     
     let status = 'MISSING';
     let localVersion = null;
@@ -42,17 +44,24 @@ function ModAuditModal({ save, allInstalledMods, onClose, onRefresh }) {
       status = 'INSTALLED';
       localVersion = installed.version;
       
-      if (req.version && installed.version) {
+      if (reqVersion && installed.version) {
         // Simple version check (we can use semantic compare in backend later, 
         // but for UI red/green mismatch is the primary concern)
-        if (installed.version !== req.version) {
+        if (installed.version !== reqVersion) {
           status = 'VERSION_MISMATCH';
           needsUpdate = true;
         }
       }
     }
 
-    return { ...req, status, localVersion, needsUpdate };
+    return { 
+        ...(typeof reqRaw === 'string' ? { modName: reqRaw } : reqRaw), 
+        modName: reqModName, 
+        version: reqVersion,
+        status, 
+        localVersion, 
+        needsUpdate 
+    };
   });
 
   const missingOrMismatch = auditResults.filter(r => r.status !== 'INSTALLED');
@@ -176,7 +185,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const [modSearchQuery, setModSearchQuery] = useState('');
-  const [selectedMods, setSelectedMods] = useState(new Set((save.mods || []).map(m => m.modName)));
+  const [selectedMods, setSelectedMods] = useState(new Set((save.mods || []).map(m => typeof m === 'string' ? m : m?.modName)));
   const { mods: installedMods } = useLocalModsStore();
   const [expandedFolders, setExpandedFolders] = useState(new Set(['MAIN']));
   const [fleetCleanPct, setFleetCleanPct] = useState(100);
@@ -196,7 +205,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
     if (!window.api?.savegames) return;
     
     // Check Persistence
-    let hasDeliveries = (save.mods || []).some(m => m.modName === 'FS25_storeDeliveries');
+    let hasDeliveries = (save.mods || []).some(m => m === 'FS25_storeDeliveries' || m?.modName === 'FS25_storeDeliveries');
     setIsPersistenceActive(hasDeliveries);
 
     // Auto-enable persistence if not already active and hasn't been manually toggled this session
