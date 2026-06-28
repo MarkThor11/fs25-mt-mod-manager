@@ -714,55 +714,36 @@ async function fetchModDetail(modId) {
 
   // ── Dependencies (Required Mods) ──
   const dependencies = [];
-  // FS25 ModHub uses various heading levels and text for required mods
-  const headings = $('h3, h4, h2');
-  const requiredHeading = headings.filter((_, el) => {
-    // Normalize spaces (convert &nbsp; or multiple spaces to single space)
-    const text = $(el).text().replace(/\s+/g, ' ').trim().toLowerCase();
-    return /required.*mods|necessary.*mods|nécessaires|erforderliche|benötigte|necessary/i.test(text);
-  }).first();
+  const seenUrls = new Set();
+  const seenTitles = new Set();
 
-  if (requiredHeading.length) {
-    seenUrls.clear(); // Re-use for dependency de-duping
-    const seenTitles = new Set();
-    
-    // We must traverse ALL siblings (including text nodes) after the heading 
-    // because some ModHub layouts list them as shared siblings, not in a container.
-    let foundHeading = false;
-    requiredHeading.parent().contents().each((_, node) => {
-      if (node === requiredHeading[0]) {
-        foundHeading = true;
-        return;
-      }
-      if (!foundHeading) return;
+  try {
+    const fullHtml = $.html();
+    const reqRegex = /(?:required|necessary|erforderliche|benötigte|nécessaires)\s*(?:mods?|modifications?)/i;
+    const reqMatch = fullHtml.match(reqRegex);
+
+    if (reqMatch) {
+      // Get everything after the "Required Mods" text
+      const afterHtml = fullHtml.substring(reqMatch.index);
       
-      // Stop if we hit another major heading
-      if (node.type === 'tag' && /^h[1-6]$/i.test(node.tagName)) {
-        foundHeading = false;
-        return;
+      // Stop at the next major heading, or a <hr>, or end of description div
+      let stopIndex = afterHtml.length;
+      const stopMatch = afterHtml.substring(reqMatch[0].length).match(/<h[1-6][^>]*>|<hr[^>]*>|<div class="alert/i);
+      if (stopMatch) {
+        stopIndex = reqMatch[0].length + stopMatch.index;
       }
-
-      const $node = $(node);
-
-      // Strategy A: Direct matches (Links)
-      if (node.type === 'tag' && node.tagName === 'a') {
-        const dTitle = $node.text().trim();
-        const dHref = $node.attr('href') || '';
+      
+      const relevantHtml = afterHtml.substring(0, stopIndex);
+      const $rel = cheerio.load(relevantHtml);
+      
+      // Strategy A: Extract all links in this section
+      $rel('a').each((_, el) => {
+        const dTitle = $rel(el).text().trim();
+        const dHref = $rel(el).attr('href') || '';
+        
+        // Ensure it's a valid mod link (or relative link) and not just a social media link
         if (dTitle && dHref && dTitle.length > 2) {
-          const resolved = resolveUrl(dHref);
-          if (!seenUrls.has(resolved)) {
-            dependencies.push({ title: dTitle, url: resolved });
-            seenUrls.add(resolved);
-            seenTitles.add(dTitle.toLowerCase());
-          }
-        }
-      } 
-      // Strategy B: Deep search in elements (if they aren't anchor tags themselves)
-      else if (node.type === 'tag') {
-        $node.find('a').each((_, el) => {
-          const dTitle = $(el).text().trim();
-          const dHref = $(el).attr('href') || '';
-          if (dTitle && dHref && dTitle.length > 2) {
+          if (dHref.includes('mod.php') || dHref.startsWith('/') || dHref.includes('farming-simulator.com')) {
             const resolved = resolveUrl(dHref);
             if (!seenUrls.has(resolved)) {
               dependencies.push({ title: dTitle, url: resolved });
@@ -770,32 +751,34 @@ async function fetchModDetail(modId) {
               seenTitles.add(dTitle.toLowerCase());
             }
           }
-        });
-      }
+        }
+      });
 
-      // Strategy C: Text parsing (for mods listed without links)
-      // Capture text from text nodes OR non-anchor tags
-      const rawText = (node.type === 'text') ? node.data : $node.text();
-      if (rawText && rawText.trim().length > 3) {
-        // Split by typical list delimiters
-        const lines = rawText.split(/,|\n|;|•|\|/);
-        lines.forEach(line => {
-          let clean = line.trim()
-            .replace(/^[•\-\+]\s*/, '') // Remove bullets
-            .replace(/\(By:.*?\)/i, '') // Remove author info
-            .trim();
-          
-          if (clean && clean.length > 3 && clean.length < 100 &&
-              !seenTitles.has(clean.toLowerCase()) && 
-              !clean.toLowerCase().includes('required mods') &&
-              !clean.toLowerCase().includes('necessary') &&
-              !clean.toLowerCase().includes('included')) {
-            dependencies.push({ title: clean, url: '' });
-            seenTitles.add(clean.toLowerCase());
-          }
-        });
-      }
-    });
+      // Strategy B: Text parsing for unlinked mods (e.g. "Required: Map Pack, Wide Garage")
+      $rel('*').each((_, el) => {
+        // Only look at text nodes inside p, li, or div directly
+        if (!['p', 'li', 'div', 'span'].includes(el.tagName)) return;
+        
+        // If this element contains anchor tags, we probably already got the links above.
+        // But some authors mix them. We'll parse text nodes.
+        const text = $rel(el).contents().filter((_, child) => child.type === 'text').text().trim();
+        if (text && text.length > 3) {
+          const lines = text.split(/,|\n|;|•|\|/);
+          lines.forEach(line => {
+            let clean = line.replace(/^[•\-\+]\s*/, '').replace(/\(By:.*?\)/i, '').trim();
+            if (clean && clean.length > 3 && clean.length < 60 &&
+                !seenTitles.has(clean.toLowerCase()) && 
+                !clean.toLowerCase().includes('required mods') &&
+                !clean.toLowerCase().includes('necessary')) {
+              dependencies.push({ title: clean, url: '' });
+              seenTitles.add(clean.toLowerCase());
+            }
+          });
+        }
+      });
+    }
+  } catch (err) {
+    console.error('[SCRAPER] Error parsing dependencies:', err);
   }
 
   // Final deep deduplication of dependencies
