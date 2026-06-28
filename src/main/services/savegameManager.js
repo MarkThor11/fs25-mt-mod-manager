@@ -403,6 +403,21 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     await fs.writeFile(careerPath, xmlOutput);
+
+    // Ensure farms.xml exists to prevent game engine from disabling the 'Continue' button
+    if (requiresEngineInit) {
+        const farmsPath = path.join(slotPath, 'farms.xml');
+        const farmsXml = `<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<farms>
+    <farm farmId="1" name="My farm" color="1" loan="0.000000" money="${money}.000000">
+        <players>
+            <player farmManager="true" />
+        </players>
+    </farm>
+</farms>`;
+        await fs.writeFile(farmsPath, farmsXml);
+    }
+
     return { success: true, path: slotPath, requiresEngineInit, mapId };
 }
 
