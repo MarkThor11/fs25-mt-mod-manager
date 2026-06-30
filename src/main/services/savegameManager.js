@@ -428,30 +428,80 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         };
     });
 
-    const savegameData = {
-        careerSavegame: {
-            '@_revision': '2',
-            '@_valid': 'true',
-            settings: {
-                savegameName: savegameName,
-                creationDate: today,
-                mapId: engineMapId,
-                mapTitle: mapTitle,
-                saveDateFormatted: today,
-                saveDate: today,
-                initialMoney: String(money),
-                difficulty: String(difficulty),
-                economicDifficulty: 'NORMAL',
-                loadDefaultFarm: 'true',
-                loadDefaultVehicles: 'true',
-                isCrossPlatformSavegame: 'true'
-            },
-            statistics: {
-                money: String(money)
-            },
-            mod: modData
+    let savegameData;
+    if (!requiresEngineInit && fs.existsSync(careerPath)) {
+        // We copied a template, so preserve its initialized state!
+        try {
+            const xml = await fs.readFile(careerPath, 'utf8');
+            savegameData = parser.parse(xml);
+            
+            // Only update necessary fields
+            if (!savegameData.careerSavegame.settings) savegameData.careerSavegame.settings = {};
+            savegameData.careerSavegame.settings.savegameName = savegameName;
+            savegameData.careerSavegame.settings.mapId = engineMapId;
+            savegameData.careerSavegame.settings.mapTitle = mapTitle;
+            savegameData.careerSavegame.settings.saveDateFormatted = today;
+            savegameData.careerSavegame.settings.saveDate = today;
+            savegameData.careerSavegame.settings.initialMoney = String(money);
+            if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
+            
+            if (!savegameData.careerSavegame.statistics) savegameData.careerSavegame.statistics = {};
+            savegameData.careerSavegame.statistics.money = String(money);
+            
+            // Overwrite mods with the new selection
+            savegameData.careerSavegame.mod = modData;
+
+            // Since it's an initialized save, we must also update farms.xml to give the player the money
+            const farmsPath = path.join(slotPath, 'farms.xml');
+            if (fs.existsSync(farmsPath)) {
+                try {
+                    const farmsXml = await fs.readFile(farmsPath, 'utf8');
+                    const farmsData = parser.parse(farmsXml);
+                    if (farmsData.farms && farmsData.farms.farm) {
+                        if (Array.isArray(farmsData.farms.farm)) {
+                            farmsData.farms.farm[0]['@_money'] = String(money);
+                        } else {
+                            farmsData.farms.farm['@_money'] = String(money);
+                        }
+                        await fs.writeFile(farmsPath, builder.build(farmsData));
+                        console.log('[CREATE] Updated farms.xml with starting money.');
+                    }
+                } catch (err) {
+                    console.error('[CREATE] Failed to update farms.xml:', err);
+                }
+            }
+        } catch (err) {
+            console.error('[CREATE] Failed to parse template careerSavegame.xml, falling back to barebones:', err);
         }
-    };
+    }
+
+    if (!savegameData) {
+        // Fallback for fresh uninitialized maps (or if parsing failed)
+        savegameData = {
+            careerSavegame: {
+                '@_revision': '2',
+                '@_valid': 'true',
+                settings: {
+                    savegameName: savegameName,
+                    creationDate: today,
+                    mapId: engineMapId,
+                    mapTitle: mapTitle,
+                    saveDateFormatted: today,
+                    saveDate: today,
+                    initialMoney: String(money),
+                    difficulty: String(difficulty),
+                    economicDifficulty: 'NORMAL',
+                    loadDefaultFarm: 'true',
+                    loadDefaultVehicles: 'true',
+                    isCrossPlatformSavegame: 'true'
+                },
+                statistics: {
+                    money: String(money)
+                },
+                mod: modData
+            }
+        };
+    }
 
     let xmlOutput = builder.build(savegameData);
     
