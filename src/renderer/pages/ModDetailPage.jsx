@@ -509,13 +509,24 @@ export default function ModDetailPage() {
                 {uniqueDependencies.map((dep) => {
                   const depTitle = typeof dep === 'string' ? dep : dep.title;
 
+                  // Extract the file name or ID exactly like resolveRecursiveDependencies does
+                  let depId = null;
+                  let fallbackFileName = null;
+                  if (typeof dep === 'object' && dep.url) {
+                      const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
+                      if (idMatch) depId = idMatch[1];
+                      const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
+                      if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
+                  }
+                  const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
+                  const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
+                  const cleanedName = cleanModName(depString);
+
                   let isInstalled = false;
                   try {
                       const { missing } = resolveRecursiveDependencies(mod.modName || mod.fileName, localMods);
-                      isInstalled = !Array.from(missing).some(m => {
-                          const mTitle = typeof m === 'string' ? m : (m.title || m.modName);
-                          return mTitle === depTitle;
-                      });
+                      // If it's missing, it will be in the missing set
+                      isInstalled = !missing.has(cleanedName);
                   } catch (e) {
                       console.error("Failed to check dependency status:", e);
                   }

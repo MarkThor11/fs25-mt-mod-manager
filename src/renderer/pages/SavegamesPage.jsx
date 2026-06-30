@@ -198,7 +198,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
   const [teleportMode, setTeleportMode] = useState(null); // 'custom', 'shop', 'vehicle'
   const [searchFleetQuery, setSearchFleetQuery] = useState('');
   const [fleet, setFleet] = useState([]);
-  const [hasStoreDeliveries, setHasStoreDeliveries] = useState(false);
+  const [hasStoreDeliveries, setHasStoreDeliveries] = useState(null); // null = optimistically true to prevent flashing
   const [customSpawnInfo, setCustomSpawnInfo] = useState({ x: 0, y: 0, z: 0, type: 'Home' });
 
   useEffect(() => {
@@ -208,13 +208,12 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
     let hasDeliveries = (save.mods || []).some(m => m === 'FS25_storeDeliveries' || m?.modName === 'FS25_storeDeliveries');
     setIsPersistenceActive(hasDeliveries);
 
-    // Auto-enable persistence if not already active and hasn't been manually toggled this session
-    const toggleKey = `persistence_toggled_${save.path}`;
-    if (!hasDeliveries && !sessionStorage.getItem(toggleKey)) {
+    // Auto-enable persistence if not already active and hasn't been manually disabled by the user
+    const disableKey = `persistence_disabled_${save.path}`;
+    if (!hasDeliveries && localStorage.getItem(disableKey) !== 'true') {
       window.api.savegames.updateNativeEnhancement({ savePath: save.path, includeBridge: true, includeDeliveries: true }).then(res => {
         if (res.success) {
           setIsPersistenceActive(true);
-          sessionStorage.setItem(toggleKey, 'true');
           if (onRefresh) onRefresh();
         }
       });
@@ -753,7 +752,11 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                       const res = await window.api.savegames.updateNativeEnhancement({ savePath: save.path, includeBridge: newState, includeDeliveries: newState });
                       if (res.success) {
                         setIsPersistenceActive(newState);
-                        sessionStorage.setItem(`persistence_toggled_${save.path}`, 'true');
+                        if (!newState) {
+                          localStorage.setItem(`persistence_disabled_${save.path}`, 'true');
+                        } else {
+                          localStorage.removeItem(`persistence_disabled_${save.path}`);
+                        }
                         useToastStore.getState().success(newState ? "Persistence Activated" : "Persistence Deactivated");
                       } else {
                         useToastStore.getState().error("Failed: " + res.error);
@@ -790,7 +793,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: teleportMode === 'vehicle' ? 16 : 0 }}>
                   <div 
                     onClick={async () => {
-                      if (!hasStoreDeliveries) return;
+                      if (hasStoreDeliveries === false) return; // Prevent clicking if downloading/disabled
                       if (teleportMode === 'custom') {
                         setTeleportMode(null);
                         return;
@@ -815,11 +818,11 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                       background: teleportMode === 'custom' ? 'rgba(var(--accent-rgb), 0.1)' : 'var(--bg-base)', 
                       border: `1px solid ${teleportMode === 'custom' ? 'var(--accent)' : 'var(--border)'}`, 
                       borderRadius: 8, 
-                      cursor: hasStoreDeliveries ? 'pointer' : 'default', 
+                      cursor: hasStoreDeliveries !== false ? 'pointer' : 'default', 
                       display: 'flex', 
                       flexDirection: 'column', 
                       transition: 'all 0.2s', 
-                      opacity: hasStoreDeliveries ? 1 : 0.5
+                      opacity: hasStoreDeliveries !== false ? 1 : 0.5
                     }}
                   >
                     <Pin size={16} style={{ color: teleportMode === 'custom' ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 8 }} />
@@ -827,11 +830,10 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                       Custom Spawn Point ({customSpawnInfo.type === 'Custom' ? 'Custom' : 'Home'})
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                      {hasStoreDeliveries ? (
+                      {hasStoreDeliveries !== false ? (
                         customSpawnInfo.type === 'Custom' ? "Custom spawn point active" : "Set spawn point with Store Deliveries mod"
                       ) : (
                         <span style={{ pointerEvents: 'auto' }}>
-                          Download{" "}
                           <span 
                             style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent)', fontWeight: 600 }} 
                             onClick={(e) => {
@@ -854,11 +856,11 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                               }
                             }}
                           >
-                            FS25_storeDeliveries
-                          </span>{" "}
-                          mod to use this feature
+                            Download the Store Deliveries mod
+                          </span>
+                          {" to enable this feature"}
                         </span>
-                      )}
+                      )}       )}
                     </div>
                   </div>
 
@@ -1032,7 +1034,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                     return m.title?.toLowerCase().includes(modSearchQuery.toLowerCase()) || m.modName.toLowerCase().includes(modSearchQuery.toLowerCase());
                   });
                   if (items.length === 0) return null;
-                  const isExpanded = expandedFolders[folderName];
+                  const isExpanded = expandedFolders.has(folderName);
 
                   return (
                     <div key={folderName} style={{ marginBottom: 4 }}>
@@ -1105,7 +1107,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
               onClose();
               useToastStore.getState().info("Launching game with savegame " + save.index + "...");
               if (window.api?.game?.launch) {
-                await window.api.game.launch({ savegame: save.index });
+                await window.api.game.launch({ savegameIndex: save.index });
               }
             }}>
               <Gamepad2 size={16} /> Launch

@@ -287,8 +287,8 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 						const xml = await fs.readFile(careerPath, 'utf8');
 						const mapMatch = xml.match(/mapId="([^"]+)"/);
 						if (mapMatch && mapMatch[1] && !['MapUS', 'MapEU', 'MapAS', 'HighlandsFishingMap'].includes(mapMatch[1])) {
-							// It's likely a mod map (e.g. FS25_Riverview)
-							mapModName = mapMatch[1].toLowerCase();
+							// It's likely a mod map (e.g. FS25_Riverview.TemplateMap)
+							mapModName = mapMatch[1].split('.')[0].toLowerCase();
 							activeModNames.add(mapModName);
 						}
 					}
@@ -333,6 +333,11 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 					}
 				}
 			}
+		}
+
+		// Inject internal bridge mods directly if requested by the savegame
+		if (activeModNames) {
+			// Removed bridge mod symlink logic as it is now handled via pdlc
 		}
 
 		debugLog(`[VIRTUAL] Successfully synthesized ${linkedCount} mods for launch.`);
@@ -977,9 +982,6 @@ async function performScan(manualPaths = null) {
 			if (cached && cached.mtime === Math.floor(mtime) && cached.size === size) {
 				try {
 					modDesc = JSON.parse(cached.json_data);
-					if (modDesc && modDesc.mapTitle === undefined) {
-						modDesc = null;
-					}
 					fileHash = cached.file_hash;
 				} catch (e) {
 					modDesc = null;
@@ -996,9 +998,8 @@ async function performScan(manualPaths = null) {
 			let isThirdParty = !isDlc && !isModHub;
 			
 			// If missing icon, or if it's a placeholder, force a re-extraction
-			// Only check store icon placeholder for third-party mods, since we skip it for official/ModHub mods
-			const isPlaceholder = iconBase64 === 'CATEGORY:map' || iconBase64 === 'CATEGORY:generic' || (isThirdParty && storeBase64 === 'CATEGORY:generic');
-			if (!modDesc || !iconBase64 || !storeBase64 || isPlaceholder) {
+			const isPlaceholder = iconBase64 === 'CATEGORY:map' || iconBase64 === 'CATEGORY:generic';
+			if (!modDesc || !iconBase64 || isPlaceholder) {
 				try {
 					let zipInstance = null;
 					if (fullPath.toLowerCase().endsWith('.zip')) {
@@ -1119,8 +1120,8 @@ async function performScan(manualPaths = null) {
 				techData: modDesc?.techData || null,
 				modId: calculatedModId,
 				iconFile: modDesc?.iconFile || '',
-				iconData: iconBase64,
-				storeData: storeBase64,
+				iconData: iconBase64 && iconBase64.startsWith('CATEGORY:') ? iconBase64 : null,
+				storeData: null,
 				fileHash: fileHash || '',
 				tags: cached?.tags ? JSON.parse(cached.tags) : [],
 			});

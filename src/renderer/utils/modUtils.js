@@ -48,16 +48,12 @@ export const resolveRecursiveDependencies = (targetModName, allMods) => {
         // 1. Mod ID Match (100% accurate)
         if (depId && m.modId && String(m.modId) === depId) return true;
         
-        // 2. String Fallback Match
-        const mName = (m.modName || '').toLowerCase();
-        
-        // Normalize by removing all non-alphanumeric chars and common prefixes
+        // 2. FileName Match (User explicitly requested zip file names only, avoiding unreliable titles)
         const cleanForMatch = (str) => str.replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
-        
         const reqClean = cleanForMatch(nameLower);
-        const mClean = cleanForMatch(mName);
         
-        if (reqClean === mClean && reqClean.length > 0) return true;
+        const cleanFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
+        if (reqClean === cleanForMatch(cleanFile) && reqClean.length > 0) return true;
         
         return false;
     });

@@ -462,8 +462,12 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     await fs.writeFile(careerPath, xmlOutput);
 
-    // Fetch the REAL uniqueUserId from an existing save so the game recognizes the user!
     if (requiresEngineInit) {
+        const dummyPath = path.join(slotPath, 'terrain.heightmap.png');
+        const pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+        await fs.writeFile(dummyPath, Buffer.from(pngBase64, 'base64'));
+
+        // Fetch the REAL uniqueUserId from an existing save so the game recognizes the user!
         let realUserId = "player";
         for (let i = 1; i <= 20; i++) {
             if (i === savegameIndex) continue;
@@ -1416,7 +1420,7 @@ async function getFleetPositions(savePath, mapModName) {
     ];
     
     const parseVehicleXml = (xml, isDefault = false) => {
-        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
         const data = parser.parse(xml);
         const fleet = [];
         if (data && data.vehicles && data.vehicles.vehicle) {
@@ -1551,8 +1555,11 @@ async function ensureStoreDeliveries() {
         const modsDir = modManager.getModsPath();
         const destZip = require('path').join(modsDir, 'FS25_storeDeliveries.zip');
         if (require('fs').existsSync(destZip)) return { success: true };
-        const sourceDir = require('path').join(process.cwd(), 'scratch', 'storeDeliveries');
-        if (!require('fs').existsSync(sourceDir)) return { success: false, error: 'Source files not found' };
+        
+        const appPath = require('electron').app ? require('electron').app.getAppPath() : process.cwd();
+        const sourceDir = require('path').join(appPath, 'scratch', 'storeDeliveries_unzipped');
+        if (!require('fs').existsSync(sourceDir)) return { success: false, error: 'Source files not found at ' + sourceDir };
+        
         const AdmZip = require('adm-zip');
         const zip = new AdmZip();
         zip.addLocalFolder(sourceDir);
@@ -1569,16 +1576,58 @@ async function updateNativeEnhancement(savePath, includeBridge, includeDeliverie
         const xmlPath = path.join(savePath, 'careerSavegame.xml');
         if (!fs.existsSync(xmlPath)) return { success: false, error: 'careerSavegame.xml not found' };
         const xmlData = fs.readFileSync(xmlPath, 'utf8');
-        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
         const obj = parser.parse(xmlData);
         if (obj && obj.careerSavegame && obj.careerSavegame.mod) {
             let mods = Array.isArray(obj.careerSavegame.mod) ? obj.careerSavegame.mod : [obj.careerSavegame.mod];
             let hasDeliveries = mods.some(m => m['@_modName'] === 'FS25_storeDeliveries');
-            if (includeDeliveries && !hasDeliveries) mods.push({ '@_modName': 'FS25_storeDeliveries', '@_title': 'Store Deliveries', '@_version': '1.0.0.0', '@_required': 'false', '@_fileHash': '' });
-            else if (!includeDeliveries && hasDeliveries) mods = mods.filter(m => m['@_modName'] !== 'FS25_storeDeliveries');
+            let hasBridge = mods.some(m => m['@_modName'] === 'FS25_rememberPositions');
+
+            if (includeDeliveries && !hasDeliveries) {
+                mods.push({ '@_modName': 'FS25_storeDeliveries', '@_title': 'Store Deliveries', '@_version': '1.0.0.0', '@_required': 'false', '@_fileHash': '' });
+                // Automatically restore the backup if they changed their mind
+                try {
+                    const backupPath = path.join(savePath, 'manager_spawn_backup.json');
+                    if (fs.existsSync(backupPath)) {
+                        const pos = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+                        if (pos && pos.x !== undefined) {
+                            await setPlayerPosition({ savePath, x: pos.x, y: pos.y, z: pos.z, vehicleUniqueId: pos.vehicleUniqueId });
+                        }
+                    }
+                } catch(e) {}
+            } else if (!includeDeliveries) {
+                if (hasDeliveries) mods = mods.filter(m => m['@_modName'] !== 'FS25_storeDeliveries');
+                
+                // BACKUP the coordinates before wiping them, just in case!
+                try {
+                    const pos = await getPlayerPosition(savePath);
+                    if (pos) {
+                        let vehicleUniqueId = null;
+                        const xmlPath = path.join(savePath, 'players.xml');
+                        if (fs.existsSync(xmlPath)) {
+                            const { XMLParser } = require('fast-xml-parser');
+                            const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
+                            const data = parser.parse(fs.readFileSync(xmlPath, 'utf8'));
+                            const player = Array.isArray(data?.players?.player) ? data.players.player[0] : data?.players?.player;
+                            if (player?.spawn?.['@_vehicleUniqueId']) vehicleUniqueId = player.spawn['@_vehicleUniqueId'];
+                        }
+                        fs.writeFileSync(path.join(savePath, 'manager_spawn_backup.json'), JSON.stringify({ ...pos, vehicleUniqueId }), 'utf8');
+                    }
+                } catch(e) {}
+
+                // Completely hand over all spawn control back to the game engine
+                await resetPlayerSpawn(savePath);
+            }
+            
+            if (includeBridge && !hasBridge) {
+                mods.push({ '@_modName': 'FS25_rememberPositions', '@_title': 'Remember Player Positions', '@_version': '1.0.2.1', '@_required': 'false', '@_fileHash': '' });
+            } else if (!includeBridge) {
+                if (hasBridge) mods = mods.filter(m => m['@_modName'] !== 'FS25_rememberPositions');
+            }
             obj.careerSavegame.mod = mods;
+            if (obj.careerSavegame) obj.careerSavegame['@_valid'] = 'true';
             delete obj['?xml'];
-            const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true });
+            const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false });
             const newXml = builder.build(obj);
             fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
         }
@@ -1609,7 +1658,7 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true) {
         if (!fs.existsSync(careerPath)) return { x: 0, y: 0, z: 0 };
         
         const xmlData = fs.readFileSync(careerPath, 'utf8');
-        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
         const obj = parser.parse(xmlData);
         if (!obj || !obj.careerSavegame) return { x: 0, y: 0, z: 0 };
         
@@ -1787,7 +1836,7 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
         if (!fs.existsSync(careerPath)) return null;
         
         const xmlData = fs.readFileSync(careerPath, 'utf8');
-        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
         const obj = parser.parse(xmlData);
         if (!obj || !obj.careerSavegame) return null;
         
@@ -1973,7 +2022,7 @@ async function getStoreDeliveryCoordinates(savePath) {
         }
         
         const { XMLParser } = require('fast-xml-parser');
-        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
         const data = parser.parse(fs.readFileSync(storePath, 'utf8'));
         if (data && data.storeDeliveries) {
             const isLoaded = data.storeDeliveries['@_isLoaded'] === 'true' || data.storeDeliveries['@_isLoaded'] === true;
@@ -2016,7 +2065,7 @@ async function resetPlayerSpawn(savePath) {
         const xmlPath = path.join(savePath, 'players.xml');
         if (fs.existsSync(xmlPath)) {
             const xmlData = fs.readFileSync(xmlPath, 'utf8');
-            const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+            const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
             const obj = parser.parse(xmlData);
             if (obj && obj.players && obj.players.player) {
                 let players = Array.isArray(obj.players.player) ? obj.players.player : [obj.players.player];
@@ -2028,7 +2077,7 @@ async function resetPlayerSpawn(savePath) {
                     }
                 }
                 delete obj['?xml'];
-                const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true });
+                const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false });
                 const newXml = builder.build(obj);
                 fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
             }
@@ -2037,7 +2086,7 @@ async function resetPlayerSpawn(savePath) {
         // 2. Reset in careerSavegame.xml
         const careerPath = path.join(savePath, 'careerSavegame.xml');
         if (fs.existsSync(careerPath)) {
-            const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+            const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
             const careerXml = fs.readFileSync(careerPath, 'utf8');
             const careerObj = parser.parse(careerXml);
             if (careerObj && careerObj.careerSavegame && careerObj.careerSavegame.player) {
@@ -2047,7 +2096,7 @@ async function resetPlayerSpawn(savePath) {
                 delete careerObj.careerSavegame.player['@_vehicleId'];
                 delete careerObj.careerSavegame.player['@_spawnYaw'];
                 delete careerObj['?xml'];
-                const careerBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true });
+                const careerBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false });
                 const newCareerXml = careerBuilder.build(careerObj);
                 fs.writeFileSync(careerPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newCareerXml, 'utf8');
             }
@@ -2068,7 +2117,7 @@ async function getPlayerPosition(savePath) {
         const xmlPath = path.join(savePath, 'players.xml');
         if (fs.existsSync(xmlPath)) {
             const xml = fs.readFileSync(xmlPath, 'utf8');
-            const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+            const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
             const data = parser.parse(xml);
             if (data && data.players && data.players.player) {
                 const player = Array.isArray(data.players.player) ? data.players.player[0] : data.players.player;
@@ -2086,7 +2135,7 @@ async function getPlayerPosition(savePath) {
             const careerPath = path.join(savePath, 'careerSavegame.xml');
             if (fs.existsSync(careerPath)) {
                 const xml = fs.readFileSync(careerPath, 'utf8');
-                const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+                const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
                 const data = parser.parse(xml);
                 if (data && data.careerSavegame && data.careerSavegame.player) {
                     const player = data.careerSavegame.player;
@@ -2129,7 +2178,7 @@ async function setPlayerPosition(options) {
         const fs = require('fs');
         const path = require('path');
         const { XMLParser, XMLBuilder } = require('fast-xml-parser');
-        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
         
         // 1. Update players.xml
         const xmlPath = path.join(savePath, 'players.xml');
@@ -2150,7 +2199,7 @@ async function setPlayerPosition(options) {
                     }
                 }
                 delete obj['?xml'];
-                const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true });
+                const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false });
                 const newXml = builder.build(obj);
                 fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
             }
@@ -2177,7 +2226,7 @@ async function setPlayerPosition(options) {
                     delete player['@_vehicleId'];
                 }
                 delete careerObj['?xml'];
-                const careerBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true });
+                const careerBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false });
                 const newCareerXml = careerBuilder.build(careerObj);
                 fs.writeFileSync(careerPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newCareerXml, 'utf8');
             }

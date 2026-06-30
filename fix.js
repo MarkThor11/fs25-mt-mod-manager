@@ -1,0 +1,1 @@
+const fs = require("fs"); const path = "C:/Users/Mark/Documents/My Games/FarmingSimulator2025/savegame6/careerSavegame.xml"; let content = fs.readFileSync(path, "utf8"); content = content.replace(/<careerSavegame revision="2"( valid)?>/, "<careerSavegame revision=\"2\" valid=\"true\">"); fs.writeFileSync(path, content);

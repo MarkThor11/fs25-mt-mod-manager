@@ -16,7 +16,7 @@ const { initAppUpdater } = require('./services/appUpdater');
 const CATEGORIES = require('./resources/data/categories');
 const isDev = !app.isPackaged;
 
-// Register radio-proxy as privileged
+// Register radio-proxy and mod-icon as privileged
 protocol.registerSchemesAsPrivileged([
   { 
     scheme: 'radio-proxy', 
@@ -28,12 +28,23 @@ protocol.registerSchemesAsPrivileged([
       supportFetchAPI: true,
       corsEnabled: true 
     } 
+  },
+  { 
+    scheme: 'mod-icon', 
+    privileges: { 
+      standard: true, 
+      secure: true, 
+      bypassCSP: true, 
+      supportFetchAPI: true,
+      corsEnabled: true 
+    } 
   }
 ]);
 
-// Register radio-proxy protocol handler
+// Register protocol handlers
 app.whenReady().then(() => {
   if (protocol.handle) {
+    // Radio stream proxy
     protocol.handle('radio-proxy', async (request) => {
       try {
         let url = request.url.replace('radio-proxy://', '');
@@ -51,6 +62,44 @@ app.whenReady().then(() => {
       } catch (err) {
         console.error('[RADIO-PROXY] Error:', err);
         return new Response(err.message, { status: 500 });
+      }
+    });
+
+    // Mod icon local stream protocol
+    protocol.handle('mod-icon', async (request) => {
+      try {
+        const urlObj = new URL(request.url);
+        let filePath = urlObj.searchParams.get('path');
+        
+        if (!filePath) {
+           return new Response('Not Found', { status: 404 });
+        }
+
+        // 1. Check SQLite Cache
+        const cached = cache.getLocalModCache(filePath);
+        if (cached && cached.icon_base64 && !cached.icon_base64.startsWith('CATEGORY:')) {
+          const base64Data = cached.icon_base64.replace(/^data:image\/\w+;base64,/, '');
+          const buffer = Buffer.from(base64Data, 'base64');
+          return new Response(buffer, {
+            headers: { 'Content-Type': 'image/png' }
+          });
+        }
+
+        // 2. Extract on the fly if not in cache (Browser lazy-loading naturally staggers this)
+        const base64 = await modManager.getModIcon(filePath);
+        if (base64 && !base64.startsWith('CATEGORY:')) {
+          cache.updateLocalModIcon(filePath, base64);
+          const base64Data = base64.replace(/^data:image\/\w+;base64,/, '');
+          const buffer = Buffer.from(base64Data, 'base64');
+          return new Response(buffer, {
+            headers: { 'Content-Type': 'image/png' }
+          });
+        }
+        
+        return new Response('Not Found', { status: 404 });
+      } catch (err) {
+        console.error('[MOD-ICON] Error:', err);
+        return new Response('Internal Server Error', { status: 500 });
       }
     });
   }
@@ -420,17 +469,52 @@ ipcMain.handle('mods:setTags', async (_, { identifier, tags }) => {
   return cache.setModTags(identifier, tags);
 });
 
+let activeIconRequests = 0;
+const iconQueue = [];
+
+async function enqueueIconRequest(task) {
+  return new Promise((resolve, reject) => {
+    iconQueue.push({ task, resolve, reject });
+    processIconQueue();
+  });
+}
+
+async function processIconQueue() {
+  if (activeIconRequests >= 2 || iconQueue.length === 0) return;
+  activeIconRequests++;
+  const { task, resolve, reject } = iconQueue.shift();
+  try {
+    // Yield to event loop to keep the Electron main thread perfectly responsive
+    await new Promise(r => setTimeout(r, 15)); 
+    const result = await task();
+    resolve(result);
+  } catch (err) {
+    reject(err);
+  } finally {
+    activeIconRequests--;
+    processIconQueue();
+  }
+}
+
 ipcMain.handle('mods:getIcon', async (_, { filePath, iconFile }) => {
   try {
     if (!filePath) return null;
 
-    // ── CHECK CACHE FIRST ──
+    // CHECK CACHE FIRST (but ignore placeholders, we want the real image)
     const cached = cache.getLocalModCache(filePath);
-    if (cached && cached.icon_base64) {
+    if (cached && cached.icon_base64 && !cached.icon_base64.startsWith('CATEGORY:')) {
       return cached.icon_base64;
     }
 
-    return await modManager.getModIcon(filePath, iconFile);
+    // Enqueue the extraction to prevent `adm-zip` from synchronously freezing the main thread
+    return enqueueIconRequest(async () => {
+      const base64 = await modManager.getModIcon(filePath, iconFile);
+      if (base64 && base64 !== 'CATEGORY:generic' && !base64.startsWith('CATEGORY:')) {
+        // PERSIST DECODED IMAGE TO CACHE
+        cache.updateLocalModIcon(filePath, base64);
+      }
+      return base64;
+    });
   } catch (err) {
     console.error('Failed to get mod icon:', err);
     return null;
@@ -808,10 +892,9 @@ ipcMain.handle('profiles:import', async () => {
 // ── Game Launch ──
 ipcMain.handle('game:launch', async (_, options) => {
   try {
-    // Automatically include the active mods folder if not provided
+    // gameLauncher.js will automatically generate the Virtual Mods Folder if no modsPath is provided
     const launchOptions = {
-        ...options,
-        modsPath: options.modsPath || modManager.getModsPath()
+        ...options
     };
     
     console.log(`[LAUNCH] Launching game with mods folder: ${launchOptions.modsPath}`);

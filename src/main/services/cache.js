@@ -129,12 +129,12 @@ function init() {
   // One-time purge for inverted icons (v1.0.3 — removed incorrect Y-flip)
   try {
     const row = db.prepare('SELECT value FROM settings WHERE key = ?').get('iconFixVersion');
-    if (!row || row.value !== 'v1.1.2') {
-      // v1.1.2: Force re-scan to apply aggressive downscaling to icons
+    if (!row || row.value !== 'v1.1.3') {
+      // v1.1.3: Force re-scan to apply aggressive downscaling to icons
       db.prepare('DELETE FROM local_mod_cache').run();
-      db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('iconFixVersion', 'v1.1.2');
-      debugLog('Performed cache purge for icon downscaling improvements (v1.1.2).');
-      console.log('[CACHE] Purged local_mod_cache for v1.1.2 icon downscaling.');
+      db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('iconFixVersion', 'v1.1.3');
+      debugLog('Performed cache purge for icon downscaling improvements (v1.1.3).');
+      console.log('[CACHE] Purged local_mod_cache for v1.1.3 icon downscaling.');
     }
   } catch (e) {
     debugLog('One-time purge check failed: ' + e.message);
@@ -382,6 +382,8 @@ function getLocalModCache(filePath) {
 
 function getAllLocalModCache() {
   if (!db) return [];
+  // The database is now kept small by aggressive 256x256 downscaling in getModIcon,
+  // so we can safely load the full cache into memory without V8 crashing.
   return db.prepare('SELECT * FROM local_mod_cache').all();
 }
 
@@ -391,6 +393,15 @@ function setLocalModCache(filePath, mtime, size, data, iconBase64 = null, fileHa
     INSERT OR REPLACE INTO local_mod_cache (file_path, mtime, size, json_data, icon_base64, file_hash, store_base64)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(filePath, Math.floor(mtime), size, JSON.stringify(data), iconBase64, fileHash, storeBase64);
+}
+
+function updateLocalModIcon(filePath, iconBase64) {
+  if (!db) return;
+  try {
+    db.prepare('UPDATE local_mod_cache SET icon_base64 = ? WHERE file_path = ?').run(iconBase64, filePath);
+  } catch (e) {
+    console.error('[CACHE] Failed to update local mod icon:', e.message);
+  }
 }
 
 function removeLocalModCache(filePath) {
@@ -464,7 +475,7 @@ module.exports = {
   getSetting, setSetting, getAllSettings,
   getModTracking, setModTracking, removeModTracking, removeModTrackingByFile, getAllModTracking, getModTrackingByFile,
   setModTags, setModLocation,
-  getLocalModCache, getAllLocalModCache, setLocalModCache, removeLocalModCache, clearLocalModCache,
+  getLocalModCache, getAllLocalModCache, setLocalModCache, removeLocalModCache, clearLocalModCache, updateLocalModIcon,
   updateLocalModCachePath, updateModTrackingFileInfo,
   getModHubMetadataPool,
   getRemoteImage, setRemoteImage,

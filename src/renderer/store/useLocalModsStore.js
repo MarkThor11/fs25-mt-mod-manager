@@ -28,18 +28,15 @@ export const useLocalModsStore = create((set, get) => ({
     } catch (e) {
       console.error("Failed to parse mod cache", e);
     }
+    // Background sync to find new/deleted files
+    get().scanMods();
   },
 
   scanMods: async (manualPaths = null, force = false) => {
     // Prevent multiple concurrent scans unless forced
     if (get().isLoading && !force && get().mods.length > 0) return;
 
-    const hasCachedData = get().mods.length > 0;
-    if (!hasCachedData) {
-      set({ isLoading: true, error: null });
-    } else {
-      set({ isLoading: true, error: null }); // Still set loading but keep existing data
-    }
+    set({ isLoading: true, error: null });
 
     try {
       if (!window.api?.localMods) {

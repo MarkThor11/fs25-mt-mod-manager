@@ -25,96 +25,73 @@ const ultraNormalize = (str) => {
         .replace(/[^a-z0-9]/g, ''); // Squash everything else
 };
 
+// --- GLOBAL VIRTUALIZATION OBSERVER ---
+const observerCallbacks = new Map();
+let globalObserver = null;
+
+const getGlobalObserver = () => {
+  if (!globalObserver) {
+    globalObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const callback = observerCallbacks.get(entry.target);
+          if (callback) callback(entry.isIntersecting);
+        });
+      },
+      { rootMargin: '600px' } // Preload 600px ahead to prevent blank flashes
+    );
+  }
+  return globalObserver;
+};
+
+const VirtualModCard = React.memo((props) => {
+  const height = props.isIconOnly ? (props.zoom || 180) : 320;
+  return (
+    <div style={{ minHeight: height, width: '100%', contentVisibility: 'auto', containIntrinsicSize: `auto ${height}px` }}>
+      <ModCard {...props} />
+    </div>
+  );
+});
+
 // --- MAIN COMPONENT ---
 const LocalModIcon = React.memo(({ mod }) => {
-  const iconData = mod.iconData;
+  const [error, setError] = useState(false);
+  const fallbackCategory = mod.iconData || mod.storeData || 'CATEGORY:generic';
+  const categoryType = fallbackCategory.startsWith('CATEGORY:') ? fallbackCategory.split(':')[1] : 'generic';
 
-  // FAST PATH: If we already have the icon data, render it statically
-  if (iconData) {
-    if (iconData.startsWith('CATEGORY:')) {
-      const CatIcon = (() => {
-        switch (iconData.split(':')[1]) {
-          case 'map': return Layers;
-          case 'vehicle': return Zap;
-          case 'tool': return Package;
-          case 'pack': return Layers;
-          default: return Package;
-        }
-      })();
-      return (
-        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-tertiary)', color: 'var(--accent)' }}>
-          <CatIcon size={64} strokeWidth={1} style={{ opacity: 0.7 }} />
-        </div>
-      );
-    }
+  if (error || (mod.iconData && mod.iconData.startsWith('CATEGORY:'))) {
+    const CatIcon = (() => {
+      switch (categoryType) {
+        case 'map': return Layers;
+        case 'vehicle': return Zap;
+        case 'tool': return Package;
+        case 'pack': return Layers;
+        default: return Package;
+      }
+    })();
     return (
-      <img src={iconData} style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid var(--border)' }} alt="" loading="lazy" />
+      <div style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-tertiary)', color: 'var(--accent)' }}>
+          <CatIcon size={64} strokeWidth={1} style={{ opacity: 0.3 }} />
+        </div>
+      </div>
     );
   }
 
-  // SLOW PATH: If iconData is missing, lazy-load it from the main process on visibility
-  return <LazyLocalModIcon mod={mod} />;
-});
-
-const LazyLocalModIcon = ({ mod }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [iconData, setIconData] = useState(null);
-  const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const containerRef = React.useRef(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setIsVisible(true);
-        observer.disconnect();
-      }
-    }, { rootMargin: '100px' });
-    
-    if (containerRef.current) observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!isVisible) return;
-    let active = true;
-
-    const loadIcon = async () => {
-      if (mod.filePath && window.api?.mods?.getIcon) {
-        setLoading(true);
-        try {
-          const base64 = await window.api.mods.getIcon({ 
-            filePath: mod.filePath, 
-            iconFile: mod.iconFile 
-          });
-          if (active && base64) setIconData(base64);
-          else if (active) setError(true);
-        } catch (err) {
-          if (active) setError(true);
-        } finally {
-          if (active) setLoading(false);
-        }
-      } else {
-        setError(true);
-      }
-    };
-
-    loadIcon();
-    return () => { active = false; };
-  }, [mod.filePath, mod.iconFile, isVisible]);
-
+  // Uses native browser lazy loading and the custom mod-icon protocol!
+  // Bypasses React state, IPC payloads, and snapshot caching entirely.
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
-      {!iconData ? (
-        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-tertiary)', opacity: 0.5 }}>
-            <Package size={22} />
-        </div>
-      ) : (
-        <img src={iconData} style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid var(--border)' }} alt="" />
-      )}
+    <div style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+      <img 
+        src={`mod-icon://icon?path=${encodeURIComponent(mod.filePath)}`} 
+        style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid var(--border)' }} 
+        alt="" 
+        loading="lazy" 
+        onError={() => setError(true)}
+      />
     </div>
   );
-};
+});
 
 const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpdate, onUninstall, status, updateInfo, isUpdating, formatSize, isIconOnly }) => {
   const { toggleFavoriteMod, favoriteMods, toggleFavoriteAuthor, favoriteAuthors, toggleMustHaveMod } = useModHubStore();
@@ -513,7 +490,7 @@ const LazyModList = ({
                   containIntrinsicSize: `auto 250px` 
               }}
             >
-              <ModCard 
+              <VirtualModCard 
                   mod={mod}
                   isSelected={selectedMods.includes(mod.fileName)}
                   onToggleSelect={toggleSelect}

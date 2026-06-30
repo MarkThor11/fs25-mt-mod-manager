@@ -1,0 +1,1 @@
+const AdmZip = require("adm-zip"); const zip = new AdmZip(); zip.addLocalFolder("C:/Users/Mark/Desktop/GoogleModManager/scratch/rememberPositions_unzipped"); zip.writeZip("C:/Users/Mark/Desktop/GoogleModManager/scratch/FS25_rememberPositions.zip"); console.log("Done");
