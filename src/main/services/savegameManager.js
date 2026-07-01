@@ -306,8 +306,17 @@ async function setSavegameMods(savegamePath, mods) {
     
     // Remove the old wrapper if it exists
     if (data.careerSavegame.mods) delete data.careerSavegame.mods;
+    
+    // Crucially ensure valid="true" is present, otherwise the engine treats it as an Empty Slot
+    data.careerSavegame['@_valid'] = 'true';
 
-    const newXml = builder.build(data);
+    let newXml = builder.build(data);
+    
+    // Ensure XML declaration is strictly formatted so the engine accepts it
+    if (!newXml.startsWith('<?xml')) {
+        newXml = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n' + newXml;
+    }
+    
     await fs.writeFile(careerPath, newXml);
     return { success: true };
 }
