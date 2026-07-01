@@ -292,17 +292,34 @@ async function setSavegameMods(savegamePath, mods) {
     const mapId = data.careerSavegame.settings?.mapId;
     const mapTitle = data.careerSavegame.settings?.mapTitle;
 
-    data.careerSavegame.mod = mods.map(m => {
-        // If it's a map (either explicitly marked or matches mapId/title), set required="true"
+    // Get existing required mods (e.g. map dependencies)
+    const existingMods = data.careerSavegame.mod || (data.careerSavegame.mods?.mod) || [];
+    const existingModsArray = Array.isArray(existingMods) ? existingMods : [existingMods];
+    const requiredExisting = existingModsArray.filter(m => m['@_required'] === 'true');
+
+    // Build the new mod array
+    const newModsMap = new Map();
+    
+    // First, preserve all required existing mods
+    requiredExisting.forEach(m => {
+        newModsMap.set(m['@_modName'], m);
+    });
+
+    // Then, add/update the user-selected mods
+    mods.forEach(m => {
         const isMap = m.required || (mapId && m.modName === mapId.split('.')[0]) || (mapTitle && m.title === mapTitle);
-        return {
+        // Exclude the Player Positions mod if we want to hide it completely from being listed, BUT wait, if we don't list it, it won't load! 
+        // We will keep it but maybe set something else? Actually let's just add it normally here.
+        newModsMap.set(m.modName, {
             '@_modName': m.modName,
             '@_title': m.title,
             '@_version': m.version || '1.0.0.0',
             '@_required': isMap ? 'true' : 'false',
             '@_fileHash': m.fileHash || ''
-        };
+        });
     });
+
+    data.careerSavegame.mod = Array.from(newModsMap.values());
     
     // Remove the old wrapper if it exists
     if (data.careerSavegame.mods) delete data.careerSavegame.mods;
