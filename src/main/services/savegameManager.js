@@ -402,14 +402,28 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 const fullMod = allMods.find(m => m.modName === selMod.modName);
                 if (fullMod && fullMod.dependencies && fullMod.dependencies.length > 0) {
                     for (const dep of fullMod.dependencies) {
-                        const depStr = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
-                        if (!depStr) continue;
-                        
-                        const installedDep = allMods.find(m => 
-                            m.modName.toLowerCase() === depStr.toLowerCase() || 
-                            m.title.toLowerCase() === depStr.toLowerCase() ||
-                            m.technicalName?.toLowerCase() === depStr.toLowerCase()
-                        );
+                        let installedDep = null;
+
+                        // 1. Resolve EXACT match from ModHub ID if available
+                        if (typeof dep === 'object' && dep.url) {
+                            const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
+                            if (idMatch) {
+                                const depId = idMatch[1];
+                                installedDep = allMods.find(m => m.modId && String(m.modId) === String(depId));
+                            }
+                        }
+
+                        // 2. Fallback to string matching
+                        if (!installedDep) {
+                            const depStr = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
+                            if (!depStr) continue;
+                            
+                            installedDep = allMods.find(m => 
+                                m.modName.toLowerCase() === depStr.toLowerCase() || 
+                                m.title.toLowerCase() === depStr.toLowerCase() ||
+                                m.technicalName?.toLowerCase() === depStr.toLowerCase()
+                            );
+                        }
 
                         if (installedDep) {
                             const alreadySelected = finalMods.find(m => m.modName === installedDep.modName);
