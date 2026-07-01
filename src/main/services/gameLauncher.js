@@ -214,15 +214,17 @@ async function launch(options = {}) {
       const fs25Path = pathProvider.getFS25DataRoot();
       const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
       const farmsFile = path.join(savePath, 'farms.xml');
+      const initFile = path.join(savePath, 'terrain.heightmap.png');
       
-      let isFullyInitialized = fs.existsSync(farmsFile);
+      // The game engine will crash if autoStart is used on an existing save that is missing its terrain.heightmap.png
+      let isFullyInitialized = fs.existsSync(farmsFile) && fs.existsSync(initFile);
 
       if (isFullyInitialized) {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is already initialized (farms.xml exists). Enabling Auto-Start.`);
+        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is already initialized (farms.xml and heightmap exist). Enabling Auto-Start.`);
         args.push('-autoStartSavegameId', String(options.savegameIndex));
         args.push('-autoStart');
       } else {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is NOT initialized (no farms.xml). Launching to slot selection for first time setup.`);
+        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is NOT fully initialized. Launching to slot selection.`);
         args.push('-autoStartSavegameId', String(options.savegameIndex));
         needsManualInit = true;
       }
