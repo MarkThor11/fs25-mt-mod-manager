@@ -1793,7 +1793,7 @@ async function updateNativeEnhancement(savePath, includeBridge, includeDeliverie
             }
             
             if (includeBridge && !hasBridge) {
-                mods.push({ '@_modName': 'FS25_rememberPositions', '@_title': 'Remember Player Positions', '@_version': '1.0.2.1', '@_required': 'false', '@_fileHash': '' });
+                mods.push({ '@_modName': 'FS25_rememberPositions', '@_title': 'Remember Player Positions', '@_version': '9.9.9.9', '@_required': 'false', '@_fileHash': '' });
             } else if (!includeBridge) {
                 if (hasBridge) mods = mods.filter(m => m['@_modName'] !== 'FS25_rememberPositions');
             }

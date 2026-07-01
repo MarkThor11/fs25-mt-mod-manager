@@ -3932,7 +3932,6 @@ async function deepScanModIcons(onProgress) {
 async function autoResolveMissingDependencies(mods) {
 	// Use global ultraNormalize
 
-
 	const maps = mods.filter(m => m.isMap);
 	if (maps.length === 0) {
 		return;
@@ -3944,7 +3943,29 @@ async function autoResolveMissingDependencies(mods) {
 	for (const map of maps) {
 		if (!map.dependencies || map.dependencies.length === 0) continue;
 		
-		for (const dep of map.dependencies) {
+        let mapDeps = map.dependencies;
+        const needsModHubFetch = mapDeps.some(d => typeof d === 'string' || !d.url);
+        
+        if (needsModHubFetch) {
+            console.log(`[AUTO-RESOLVE] Map ${map.title} has raw string dependencies. Fetching exact dependencies from ModHub...`);
+            try {
+                const scraper = require('./scraper');
+                const searchResult = await scraper.searchMods(map.title || map.modName);
+                const remoteMap = searchResult && searchResult.mods && searchResult.mods[0];
+                
+                if (remoteMap && remoteMap.modId) {
+                    const detail = await scraper.fetchModDetail(remoteMap.modId);
+                    if (detail && detail.dependencies && detail.dependencies.length > 0) {
+                        console.log(`[AUTO-RESOLVE] Successfully fetched exact ModHub dependencies for map.`);
+                        mapDeps = detail.dependencies;
+                    }
+                }
+            } catch (err) {
+                console.error(`[AUTO-RESOLVE] Failed to fetch exact ModHub dependencies for map:`, err);
+            }
+        }
+        
+		for (const dep of mapDeps) {
 			const depTitle = typeof dep === 'string' ? dep : dep.title;
 			const depId = typeof dep === 'object' && dep.url ? (dep.url.match(/mod_id=(\d+)/)?.[1] || dep.url.match(/storage\/(\d+)\//)?.[1]) : null;
 			const normalizedDep = ultraNormalize(depTitle);
