@@ -70,8 +70,6 @@ export default function ModDetailPage() {
   const { conflicts, missingDependencies, setModTags, restoreModVersion } = useLocalModsStore();
   const [newTag, setNewTag] = useState('');
   const [restoring, setRestoring] = useState(false);
-  const [missingDeps, setMissingDeps] = useState(null);
-  const [pendingInstallTask, setPendingInstallTask] = useState(null);
   const [hasBak, setHasBak] = useState(false);
 
   // ── Dependency Management ──
@@ -247,40 +245,6 @@ export default function ModDetailPage() {
       console.error('Failed to load mod detail:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDownloadAllRequired = () => {
-    const ultraNormalize = (str) => {
-        if (!str) return '';
-        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-            .replace(/\[[^\]]*\]/g, '')
-            .replace(/\([^)]*\)/g, '')
-            .replace(/^(?:fs\d{2}|dlc|pdlc|mod|fendt|jcb|caseih|newholland|massey|farming\s*simulator(?:\s*\d{2})?)(?:[\s_\.]+)/gi, '')
-            .replace(/[\s_\.]+(?:by\s+.*|author:.*|pack|package|dlc|mod|map|expansion|set|kit|collection|building|shed|v\d+.*)\s*$/gi, '')
-            .replace(/[^a-z0-9]/g, '');
-    };
-
-    const missing = uniqueDependencies.filter(dep => {
-      const depTitle = typeof dep === 'string' ? dep : dep.title;
-      const depId = typeof dep === 'object' && dep.url ? (dep.url.match(/mod_id=(\d+)/)?.[1] || dep.url.match(/storage\/(\d+)\//)?.[1]) : null;
-      const normalizedDep = ultraNormalize(depTitle);
-
-      return !localMods.some(lm => {
-        if (depId && lm.modId && String(lm.modId) === String(depId)) return true;
-        const localUltraTitle = ultraNormalize(lm.title || '');
-        const localUltraName = ultraNormalize(lm.modName || '');
-        const localUltraFile = ultraNormalize(lm.fileName || '');
-        if (localUltraTitle === normalizedDep || localUltraName === normalizedDep || localUltraFile === normalizedDep) return true;
-        if (normalizedDep.length > 3 && (localUltraTitle.includes(normalizedDep) || normalizedDep.includes(localUltraTitle))) return true;
-        return false;
-      });
-    });
-
-    if (missing.length > 0) {
-      setMissingDeps(missing);
-    } else {
-      useToastStore.getState().success('All required mods are already installed!');
     }
   };
 
@@ -903,23 +867,6 @@ export default function ModDetailPage() {
         </div>
       </div>
 
-      {missingDeps && (
-        <DependencyDownloadModal 
-          missingMods={missingDeps}
-          subFolder={localMod?.folder || (mod.isMap || mod.category?.toUpperCase().includes('MAP') ? mod.title : null)}
-          mainTask={pendingInstallTask}
-          onComplete={() => {
-            setMissingDeps(null);
-            setPendingInstallTask(null);
-          }}
-          onCancel={() => {
-            setMissingDeps(null);
-            setPendingInstallTask(null);
-          }}
-        />
-      )}
-
-
-    </div>
-  );
-}
+      </div>
+    );
+  }
