@@ -3929,10 +3929,10 @@ async function deepScanModIcons(onProgress) {
  * Background service to silently fix missing map dependencies.
  * Exported at bottom for use by other services.
  */
-async function autoResolveMissingDependencies(mods) {
+async function autoResolveMissingDependencies(mods, targetMapName = null) {
 	// Use global ultraNormalize
 
-	const maps = mods.filter(m => m.isMap);
+	const maps = mods.filter(m => m.isMap && (!targetMapName || m.modName === targetMapName));
 	if (maps.length === 0) {
 		return;
 	}
@@ -4073,6 +4073,7 @@ module.exports = {
 	deepScanModIcons,
 	updateMod,
 	autoInstallDependencies,
+	autoResolveMissingDependencies,
 	looksLikeMap,
     getFolderSize,
 	resumePendingDownloads,

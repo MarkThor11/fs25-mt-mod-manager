@@ -392,7 +392,15 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     // If we don't do this, the FS25 engine pauses the launch and prompts: "Do you want to select all required mods?"
     try {
         const modManager = require('./modManager');
-        const { mods: allMods } = await modManager.scanLocalMods();
+        let { mods: allMods } = await modManager.scanLocalMods();
+        
+        if (modManager.autoResolveMissingDependencies && mapModName) {
+            console.log(`[CREATE] Synchronously fetching exact ModHub dependencies for map: ${mapModName}`);
+            await modManager.autoResolveMissingDependencies(allMods, mapModName);
+            // Refresh allMods after potential downloads
+            const res = await modManager.scanLocalMods();
+            allMods = res.mods;
+        }
         
         let addedNewDep = true;
         while(addedNewDep) {
