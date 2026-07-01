@@ -1555,16 +1555,10 @@ export default function SavegamesPage() {
   const openCreateModal = (slot = 'auto') => {
     setCreateSlot(slot.toString());
     setCreateName('New Farming Career');
+    
+    // Auto-select "Must Have" mods conceptually handled by toggle
     setModalSelectedMods(new Set());
-    setCreateActiveTab('basic');
-    setMapId('');
-    setTitle('');
-    setModName('');
-    setMapHasTemplate(false);
     setShowCreateModal(true);
-    setCreateMode('NEW_FARMER');
-    setCreateEco('EASY');
-    setAutoLaunchOnCreate(true);
   };
 
   const openRollback = async (save) => {
