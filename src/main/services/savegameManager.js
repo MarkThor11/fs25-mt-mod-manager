@@ -4,6 +4,7 @@ const os = require('os');
 const { app } = require('electron');
 const nodeFs = require('fs');
 const { XMLParser, XMLBuilder } = require('fast-xml-parser');
+const AdmZip = require('adm-zip');
 const pathProvider = require('./pathProvider');
 
 // 🛠️ DIAGNOSTIC UTILITY 🛠️
@@ -516,7 +517,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         let extractedDem = false;
         if (mapModName) {
             try {
-                const AdmZip = require('adm-zip');
                 const modZipPath = fs.realpathSync(path.join(getFs25Path(), 'mods', mapModName + '.zip'));
                 if (fs.existsSync(modZipPath)) {
                     const stats = fs.statSync(modZipPath);
@@ -536,12 +536,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             }
         }
         
-        // Fallback to dummy if extraction fails (this may cause the 43% crash if they click Start, but it enables the Continue button)
         if (!extractedDem) {
-            const dummyPath = path.join(slotPath, 'terrain.heightmap.png');
-            const pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
-            await fs.writeFile(dummyPath, Buffer.from(pngBase64, 'base64'));
-            console.log(`[CREATE] Fell back to 1x1 dummy terrain.heightmap.png`);
+            console.error(`[CREATE] Could not extract dem.png. The savegame will be unplayable to prevent an engine crash.`);
         }
 
         // Fetch the REAL uniqueUserId from an existing save so the game recognizes the user!
