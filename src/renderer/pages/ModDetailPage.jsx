@@ -181,6 +181,7 @@ export default function ModDetailPage() {
                   ],
                   fileSize: local.size ? `${(local.size / (1024 * 1024)).toFixed(2)} MB` : null
               };
+              
               if (local.modId) effectiveModId = local.modId;
           }
       } else if (modId) {
@@ -194,6 +195,22 @@ export default function ModDetailPage() {
                   ],
                   fileSize: local.size ? `${(local.size / (1024 * 1024)).toFixed(2)} MB` : null
               };
+          }
+      }
+
+      // If it's a map and has raw string dependencies, dynamically resolve exact ModHub dependencies
+      if (modData && modData.isMap && modData.dependencies && modData.dependencies.some(d => typeof d === 'string' || !d.url)) {
+          try {
+              const searchRes = await window.api.modhub.search({ query: modData.title || modData.modName, page: 0 });
+              const remoteMap = searchRes?.mods?.[0];
+              if (remoteMap && remoteMap.modId) {
+                  const detail = await window.api.modhub.fetchModDetail({ modId: remoteMap.modId });
+                  if (detail && detail.dependencies && detail.dependencies.length > 0) {
+                      modData.dependencies = detail.dependencies;
+                  }
+              }
+          } catch (e) {
+              console.error('Failed to dynamically fetch map dependencies from ModHub', e);
           }
       }
 
