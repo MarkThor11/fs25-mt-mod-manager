@@ -213,30 +213,17 @@ async function launch(options = {}) {
     if (options.savegameIndex !== undefined) {
       const fs25Path = pathProvider.getFS25DataRoot();
       const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
-      const initFile = path.join(savePath, 'terrain.heightmap.png');
+      const farmsFile = path.join(savePath, 'farms.xml');
       
-      let isFullyInitialized = false;
-      let isDummy = false;
-      
-      if (fs.existsSync(initFile)) {
-        const stats = fs.statSync(initFile);
-        if (stats.size > 100) {
-            isFullyInitialized = true;
-        } else {
-            isDummy = true;
-        }
-      }
+      let isFullyInitialized = fs.existsSync(farmsFile);
 
       if (isFullyInitialized) {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is already initialized. Enabling Auto-Start.`);
+        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is already initialized (farms.xml exists). Enabling Auto-Start.`);
         args.push('-autoStartSavegameId', String(options.savegameIndex));
         args.push('-autoStart');
-      } else if (isDummy) {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} has a dummy map. Launching to slot selection.`);
-        args.push('-autoStartSavegameId', String(options.savegameIndex));
-        needsManualInit = true;
       } else {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is NOT initialized. Omitting Auto-Start for manual first load.`);
+        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is NOT initialized (no farms.xml). Launching to slot selection for first time setup.`);
+        args.push('-autoStartSavegameId', String(options.savegameIndex));
         needsManualInit = true;
       }
     }

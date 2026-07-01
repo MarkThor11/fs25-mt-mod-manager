@@ -513,9 +513,36 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     await fs.writeFile(careerPath, xmlOutput);
 
     if (requiresEngineInit) {
-        const dummyPath = path.join(slotPath, 'terrain.heightmap.png');
-        const pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
-        await fs.writeFile(dummyPath, Buffer.from(pngBase64, 'base64'));
+        let extractedDem = false;
+        if (mapModName) {
+            try {
+                const AdmZip = require('adm-zip');
+                const modZipPath = fs.realpathSync(path.join(getFs25Path(), 'mods', mapModName + '.zip'));
+                if (fs.existsSync(modZipPath)) {
+                    const stats = fs.statSync(modZipPath);
+                    if (stats.isFile()) {
+                        const zip = new AdmZip(modZipPath);
+                        const entry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('dem.png'));
+                        if (entry) {
+                            const targetPath = path.join(slotPath, 'terrain.heightmap.png');
+                            await fs.writeFile(targetPath, entry.getData());
+                            console.log(`[CREATE] Extracted real dem.png to terrain.heightmap.png to prevent engine crash.`);
+                            extractedDem = true;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error(`[CREATE] Failed to extract dem.png from map mod:`, err);
+            }
+        }
+        
+        // Fallback to dummy if extraction fails (this may cause the 43% crash if they click Start, but it enables the Continue button)
+        if (!extractedDem) {
+            const dummyPath = path.join(slotPath, 'terrain.heightmap.png');
+            const pngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+            await fs.writeFile(dummyPath, Buffer.from(pngBase64, 'base64'));
+            console.log(`[CREATE] Fell back to 1x1 dummy terrain.heightmap.png`);
+        }
 
         // Fetch the REAL uniqueUserId from an existing save so the game recognizes the user!
         let realUserId = "player";
