@@ -1119,7 +1119,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
   );
 }
 
-function SaveSlotCard({ save, onPlay, onArchive, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop, isPlaying }) {
+function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop, isPlaying }) {
     const isEmpty = save.modCount === 0 && (save.farmName || '').startsWith('Empty');
     const [isDragOver, setIsDragOver] = useState(false);
     
@@ -1306,6 +1306,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onCreate, onEdit, onAudit, onRe
                     <button className="btn btn--ghost btn--sm" onClick={onEdit} title="Surgical Editor" style={{ color: 'rgba(255,255,255,0.7)' }}><Sliders size={16} /></button>
                   </>
                 )}
+                <button className="btn btn--ghost btn--sm" onClick={onRollback} title="Rollback from Engine Backup" style={{ color: 'rgba(255,255,255,0.7)' }}><RotateCcw size={16} /></button>
                 <button className="btn btn--ghost btn--sm" onClick={onArchive} title={save.isGhost ? "Initialize map to archive" : "Archive"} disabled={save.isGhost} style={{ color: 'rgba(255,255,255,0.7)' }}><Archive size={16} /></button>
                 <button className="btn btn--ghost btn--sm" onClick={onDelete} title="Delete Permamently" style={{ color: 'var(--danger)' }}><Trash2 size={16} /></button>
             </div>
@@ -1363,6 +1364,9 @@ export default function SavegamesPage() {
   // Savegame Editor state
   const [showEditor, setShowEditor] = useState(null); // Save object
   const [showAudit, setShowAudit] = useState(null); // Save object
+  const [showRollback, setShowRollback] = useState(null); // Save object
+  const [engineBackups, setEngineBackups] = useState([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
 
   const handleModeChange = (mode) => {
     setCreateMode(mode);
@@ -1551,10 +1555,42 @@ export default function SavegamesPage() {
   const openCreateModal = (slot = 'auto') => {
     setCreateSlot(slot.toString());
     setCreateName('New Farming Career');
-    
-    // Auto-select "Must Have" mods conceptually handled by toggle
     setModalSelectedMods(new Set());
+    setCreateActiveTab('basic');
+    setMapId('');
+    setTitle('');
+    setModName('');
+    setMapHasTemplate(false);
     setShowCreateModal(true);
+    setCreateMode('NEW_FARMER');
+    setCreateEco('EASY');
+    setAutoLaunchOnCreate(true);
+  };
+
+  const openRollback = async (save) => {
+    setShowRollback(save);
+    setLoadingBackups(true);
+    const result = await window.api.savegames.getEngineBackups({ slotIndex: save.index });
+    setEngineBackups(result.backups || []);
+    setLoadingBackups(false);
+  };
+
+  const handleEngineRollback = async (backupFolderName) => {
+    const save = showRollback;
+    if (window.confirm(`WARNING: This will permanently overwrite Slot ${save.index} with this backup. Are you sure?`)) {
+        useToastStore.getState().info('Restoring backup...');
+        const result = await window.api.savegames.restoreEngineBackup({ 
+            slotIndex: save.index, 
+            backupFolderName 
+        });
+        if (result.success) {
+            useToastStore.getState().success(`Slot ${save.index} restored successfully!`);
+            setShowRollback(null);
+            fetchSavegames();
+        } else {
+            useToastStore.getState().error('Failed to restore backup: ' + result.error);
+        }
+    }
   };
 
   const handleCreate = async () => {
@@ -1885,6 +1921,7 @@ export default function SavegamesPage() {
                 save={save}
                 onPlay={() => handleLaunch(save.index)}
                 onArchive={() => handleArchive(save)}
+                onRollback={() => openRollback(save)}
                 onCreate={() => openCreateModal(save.index)}
                 onRename={() => { setEditingName(save.folderName); setNewName(save.farmName); }}
                 onAdopt={() => handleAdopt(save.index)}
@@ -2362,6 +2399,48 @@ export default function SavegamesPage() {
                     <button className="btn btn--ghost" onClick={() => setShowRestoreModal(null)}>Cancel</button>
                     <button className="btn btn--primary" onClick={handleRestore}>Restore Now</button>
                 </div>
+              </div>
+          </div>
+      )}
+
+      {showRollback && (
+          <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowRollback(null)}>
+              <div className="modal-content" style={{ width: 500, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                      <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <RotateCcw className="text-accent" /> Engine Backups
+                      </h2>
+                      <button className="btn btn--ghost btn--icon" onClick={() => setShowRollback(null)}><X size={24} /></button>
+                  </div>
+                  
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.5 }}>
+                      Farming Simulator automatically creates a backup every time you save your game. You can instantly restore Slot {showRollback.index} to any of these historical points.
+                  </p>
+
+                  <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-tertiary)', borderRadius: 8, padding: 8, minHeight: 200 }}>
+                      {loadingBackups ? (
+                          <div style={{ padding: 32, textAlign: 'center', opacity: 0.5 }}>Loading engine backups...</div>
+                      ) : engineBackups.length === 0 ? (
+                          <div style={{ padding: 32, textAlign: 'center', opacity: 0.5 }}>No backups found for Slot {showRollback.index}</div>
+                      ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {engineBackups.map(backup => (
+                                  <div key={backup.folderName} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 6 }}>
+                                      <div>
+                                          <div style={{ fontWeight: 800, fontSize: 14 }}>{backup.date}</div>
+                                          <div style={{ fontSize: 11, opacity: 0.5 }}>{backup.folderName}</div>
+                                      </div>
+                                      <button 
+                                          className="btn btn--primary btn--sm" 
+                                          onClick={() => handleEngineRollback(backup.folderName)}
+                                      >
+                                          RESTORE
+                                      </button>
+                                  </div>
+                              ))}
+                          </div>
+                      )}
+                  </div>
               </div>
           </div>
       )}

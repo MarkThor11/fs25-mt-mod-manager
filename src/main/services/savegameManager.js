@@ -1381,6 +1381,66 @@ function getArchivesPath() {
     return p;
 }
 
+/**
+ * Retrieve a list of native FS25 engine backups for a given save slot.
+ */
+async function getEngineBackups(slotIndex) {
+    try {
+        const backupDir = path.join(getFs25Path(), 'savegameBackup');
+        if (!fs.existsSync(backupDir)) return { backups: [] };
+        
+        const folders = await fs.readdir(backupDir);
+        const prefix = `savegame${slotIndex}_backup`;
+        const backups = folders
+            .filter(f => f.startsWith(prefix))
+            .map(f => {
+                const stat = fs.statSync(path.join(backupDir, f));
+                // Extract timestamp from folder name: savegame1_backupYYYY-MM-DD_HH-mm
+                let formattedDate = stat.mtime.toLocaleString();
+                const match = f.match(/backup(\d{4}-\d{2}-\d{2}_\d{2}-\d{2})/);
+                if (match) {
+                    formattedDate = match[1].replace('_', ' ').replace('-', '/').replace('-', '/');
+                }
+                return {
+                    folderName: f,
+                    date: formattedDate,
+                    timestamp: stat.mtimeMs
+                };
+            })
+            .sort((a, b) => b.timestamp - a.timestamp); // Newest first
+            
+        return { backups };
+    } catch (err) {
+        return { backups: [], error: err.message };
+    }
+}
+
+/**
+ * Restore a save slot from a native FS25 engine backup.
+ */
+async function restoreEngineBackup(slotIndex, backupFolderName) {
+    try {
+        const backupDir = path.join(getFs25Path(), 'savegameBackup');
+        const sourceFolder = path.join(backupDir, backupFolderName);
+        if (!fs.existsSync(sourceFolder)) throw new Error('Backup folder not found');
+
+        const destFolder = path.join(getFs25Path(), `savegame${slotIndex}`);
+        
+        // Wipe current slot contents safely
+        if (fs.existsSync(destFolder)) {
+            await fs.emptyDir(destFolder);
+        } else {
+            await fs.ensureDir(destFolder);
+        }
+
+        // Copy backup contents
+        await fs.copy(sourceFolder, destFolder);
+        return { success: true };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+}
+
 async function archiveSavegame(savePath) {
     if (!fs.existsSync(savePath)) return { success: false, error: 'Savegame not found' };
     const archivesDir = getArchivesPath();
@@ -2345,6 +2405,8 @@ module.exports = {
     archiveSavegame,
     getArchivedSavegames,
     restoreSavegame,
+    getEngineBackups,
+    restoreEngineBackup,
     swapArchiveToSlot,
     deleteArchivedSavegame,
     renameArchivedSavegame,

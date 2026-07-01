@@ -824,6 +824,22 @@ ipcMain.handle('savegames:restore', async (_, { archivedFolderName, slotIndex })
   }
 });
 
+ipcMain.handle('savegames:getEngineBackups', async (_, { slotIndex }) => {
+  try {
+    return await savegameManager.getEngineBackups(slotIndex);
+  } catch (err) {
+    return { backups: [], error: err.message };
+  }
+});
+
+ipcMain.handle('savegames:restoreEngineBackup', async (_, { slotIndex, backupFolderName }) => {
+  try {
+    return await savegameManager.restoreEngineBackup(slotIndex, backupFolderName);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
 ipcMain.handle('savegames:swapToSlot', async (_, { archivedFolderName, slotIndex }) => {
   try {
     return await savegameManager.swapArchiveToSlot(archivedFolderName, slotIndex);

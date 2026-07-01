@@ -89,6 +89,8 @@ contextBridge.exposeInMainWorld('api', {
     archive: (params) => ipcRenderer.invoke('savegames:archive', params),
     getArchives: () => ipcRenderer.invoke('savegames:getArchives'),
     restore: (params) => ipcRenderer.invoke('savegames:restore', params),
+    getEngineBackups: (params) => ipcRenderer.invoke('savegames:getEngineBackups', params),
+    restoreEngineBackup: (params) => ipcRenderer.invoke('savegames:restoreEngineBackup', params),
     swapToSlot: (params) => ipcRenderer.invoke('savegames:swapToSlot', params),
     deleteArchive: (params) => ipcRenderer.invoke('savegames:deleteArchive', params),
     renameArchive: (params) => ipcRenderer.invoke('savegames:renameArchive', params),
