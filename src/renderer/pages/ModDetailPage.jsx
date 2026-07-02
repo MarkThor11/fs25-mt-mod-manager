@@ -46,11 +46,30 @@ export default function ModDetailPage() {
     const idMatch = localMods.find(lm => lm.modId && String(lm.modId) === String(mod.modId));
     if (idMatch) return idMatch;
 
-    // 2. Fallback to fuzzy title match (for mods not from ModHub but with similar names)
+    // 2. Try strict fileName match first (stripping FS25 prefix)
+    if (mod.fileName || mod.downloadUrl) {
+      const getBaseName = (str) => {
+        if (!str) return '';
+        const match = str.match(/([^/\\]+)\.zip$/i) || [null, str];
+        return match[1].replace(/^(?:fs25|fs22|pdlc)_/i, '').toLowerCase();
+      };
+      
+      const remoteFileName = getBaseName(mod.fileName || mod.downloadUrl);
+      if (remoteFileName) {
+        const fileMatch = localMods.find(lm => {
+           if (!lm.fileName) return false;
+           return getBaseName(lm.fileName) === remoteFileName;
+        });
+        if (fileMatch) return fileMatch;
+      }
+    }
+
+    // 3. Fallback to strict ultraNormalize title match, no substring `.includes()` which causes false positives!
     return localMods.find(lm => {
-      const remoteTitle = mod.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const localTitle = lm.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-      return remoteTitle === localTitle || remoteTitle.includes(localTitle) || localTitle.includes(remoteTitle);
+      if (!lm.title || !mod.title) return false;
+      const remoteTitle = ultraNormalize(mod.title);
+      const localTitle = ultraNormalize(lm.title);
+      return remoteTitle === localTitle && remoteTitle.length > 0;
     });
   }, [mod, localMods]);
 
@@ -452,41 +471,12 @@ export default function ModDetailPage() {
                 border: '1px solid rgba(251, 191, 36, 0.15)',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sp-5)' }}>
-                <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Package size={16} /> Required Mods & Dependencies
-                </div>
-                {!requirementsMet && (
-                  <div 
-                    title={!showAsInstalled ? "Install the main mod first to enable batch dependency downloading" : ""}
-                    style={{ cursor: showAsInstalled ? 'default' : 'not-allowed' }}
-                  >
-                    <button 
-                        className="btn btn--primary btn--xs"
-                        onClick={handleDownloadAllRequired}
-                        disabled={!showAsInstalled}
-                        style={{ 
-                            background: '#fbbf24', 
-                            color: 'black',
-                            padding: '4px 12px',
-                            fontSize: '10px',
-                            fontWeight: 900,
-                            borderRadius: 'var(--radius-sm)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            boxShadow: '0 4px 12px rgba(251, 191, 36, 0.2)',
-                            opacity: showAsInstalled ? 1 : 0.5,
-                            cursor: showAsInstalled ? 'pointer' : 'not-allowed',
-                            pointerEvents: showAsInstalled ? 'auto' : 'none'
-                        }}
-                    >
-                        <Download size={12} strokeWidth={3} /> DOWNLOAD ALL MISSING
-                    </button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sp-5)' }}>
+                  <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Package size={16} /> Required Mods & Dependencies
                   </div>
-                )}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {uniqueDependencies.map((dep) => {
                   const depTitle = typeof dep === 'string' ? dep : dep.title;
 
