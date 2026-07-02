@@ -1008,47 +1008,16 @@ export default function InstalledModsPage() {
         let requirementStatus = { status: 'none', missing: [] };
         
         if (maps.length > 0) {
-            const missingMods = [];
+            const missingMods = new Set();
             for (const map of maps) {
                 if (!map.dependencies || map.dependencies.length === 0) continue;
                 
-                // For each dependency (which will be ModHub ones if the backend enriched them,
-                // or local FS25_ names if not), we check if it's installed.
-                for (const dep of map.dependencies) {
-                    const depTitle = typeof dep === 'string' ? dep : dep.title;
-                    const normalizedDep = ultraNormalize(depTitle);
-                    const depId = typeof dep === 'object' && dep.url ? (dep.url.match(/mod_id=(\d+)/)?.[1] || dep.url.match(/storage\/(\d+)\//)?.[1]) : null;
-
-                    const exactCheckStr = (dep.fileName || depTitle || '').toString();
-
-                    const found = mods.some(lm => {
-                        // 1. Direct ID Match (Strongest)
-                        if (depId && lm.modId && String(lm.modId) === String(depId)) return true;
-                        
-                        // 2. Exact match against modName or fileName (handling subfolders)
-                        // Since modDesc.xml dependencies are exactly the required zip filenames (minus .zip)
-                        if (lm.modName && lm.modName.toLowerCase() === exactCheckStr.toLowerCase()) return true;
-                        const cleanFileName = lm.fileName ? lm.fileName.split('/').pop().toLowerCase() : '';
-                        if (cleanFileName === exactCheckStr.toLowerCase() + '.zip') return true;
-
-                        // 3. Fallback fuzzy match for titles
-                        const localUltraTitle = ultraNormalize(lm.title || '');
-                        const localUltraName = ultraNormalize(lm.modName || '');
-                        const localUltraFile = ultraNormalize(lm.fileName || '');
-                        if (localUltraTitle === normalizedDep || localUltraName === normalizedDep || localUltraFile === normalizedDep) return true;
-                        if (normalizedDep.length > 3 && localUltraTitle && (localUltraTitle.includes(normalizedDep) || normalizedDep.includes(localUltraTitle))) return true;
-                        if (normalizedDep.length > 3 && localUltraName && (localUltraName.includes(normalizedDep) || normalizedDep.includes(localUltraName))) return true;
-                        return false;
-                    });
-                    
-                    if (!found && !missingMods.includes(depTitle)) {
-                        missingMods.push(depTitle);
-                    }
-                }
+                const { missing } = resolveRecursiveDependencies(map.modName || map.fileName, mods);
+                missing.forEach(m => missingMods.add(m));
             }
             requirementStatus = { 
-                status: missingMods.length === 0 ? 'satisfied' : 'missing', 
-                missing: missingMods 
+                status: missingMods.size === 0 ? 'satisfied' : 'missing', 
+                missing: Array.from(missingMods) 
             };
         }
 
@@ -1101,56 +1070,6 @@ export default function InstalledModsPage() {
     const newIndex = flatViewList.findIndex(m => m.fileName === fileName);
     setLastSelectedIndex(newIndex);
   }, [flatViewList, lastSelectedIndex]);
-
-  const checkFolderRequirements = (folderMods) => {
-
-    // Check for maps
-    const maps = folderMods.filter(m => {
-        if (m.isMap) return true;
-        const name = ((m.title || '') + ' ' + (m.fileName || '') + ' ' + (m.folder || '')).toLowerCase();
-        return name.match(/map|terrain/i) && m.size > 80 * 1024 * 1024;
-    });
-
-    if (maps.length === 0) return { status: 'none', missing: [] };
-
-    const missingMods = [];
-    for (const map of maps) {
-      if (!map.dependencies || map.dependencies.length === 0) continue;
-      
-      for (const dep of map.dependencies) {
-        const depTitle = typeof dep === 'string' ? dep : dep.title;
-        const normalizedDep = ultraNormalize(depTitle);
-        const depId = typeof dep === 'object' && dep.url ? (dep.url.match(/mod_id=(\d+)/)?.[1] || dep.url.match(/storage\/(\d+)\//)?.[1]) : null;
-
-        const found = mods.some(lm => {
-          // 1. ID Match
-          if (depId && lm.modId && String(lm.modId) === String(depId)) return true;
-          
-          // 2. Ultra Normalization match for Title, Name, and FileName
-          const localUltraTitle = ultraNormalize(lm.title || '');
-          const localUltraName = ultraNormalize(lm.modName || '');
-          const localUltraFile = ultraNormalize(lm.fileName || '');
-          
-          if (localUltraTitle === normalizedDep || localUltraName === normalizedDep || localUltraFile === normalizedDep) return true;
-          
-          // 3. Containment (Safe fuzzy check)
-          if (normalizedDep.length > 3 && (localUltraTitle.includes(normalizedDep) || normalizedDep.includes(localUltraTitle))) return true;
-          if (normalizedDep.length > 3 && (localUltraName.includes(normalizedDep) || normalizedDep.includes(localUltraName))) return true;
-
-          return false;
-        });
-
-        if (!found) {
-           if (!missingMods.includes(depTitle)) missingMods.push(depTitle);
-        }
-      }
-    }
-    
-    return { 
-        status: missingMods.length === 0 ? 'satisfied' : 'missing', 
-        missing: missingMods 
-    };
-  };
 
   const toggleAllInFolder = (folderName, modsInFolder) => {
     const fileNames = modsInFolder.map(m => m.fileName);

@@ -64,13 +64,7 @@ export default function ModDetailPage() {
       }
     }
 
-    // 3. Fallback to strict ultraNormalize title match, no substring `.includes()` which causes false positives!
-    return localMods.find(lm => {
-      if (!lm.title || !mod.title) return false;
-      const remoteTitle = ultraNormalize(mod.title);
-      const localTitle = ultraNormalize(lm.title);
-      return remoteTitle === localTitle && remoteTitle.length > 0;
-    });
+    return null;
   }, [mod, localMods]);
 
   const hasUpdate = useMemo(() => {
