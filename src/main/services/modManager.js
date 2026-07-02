@@ -4040,7 +4040,7 @@ async function resumePendingDownloads(onProgress) {
 		}
 	}
 	
-	return { success: true, count: results.length };
+	return { success: true, count: results.length, items: pending };
 }
 
 module.exports = {

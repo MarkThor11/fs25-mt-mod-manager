@@ -28,6 +28,7 @@ import { useModHubStore } from './store/useModHubStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useLocalModsStore } from './store/useLocalModsStore';
 import { useMapStore } from './store/useMapStore';
+import { useDownloadStore } from './store/useDownloadStore';
 import { useToastStore } from './store/useToastStore';
 import { useSavegameStore } from './store/useSavegameStore';
 
@@ -71,8 +72,12 @@ export default function App() {
         // Check if there were any interrupted downloads and resume them automatically
         if (window.api?.localMods?.resumePending) {
             window.api.localMods.resumePending().then(res => {
-                if (res?.count > 0) {
+                if (res?.count > 0 && res.items) {
                     console.log(`[APP] Resumed ${res.count} pending downloads.`);
+                    const { addDownload } = useDownloadStore.getState();
+                    res.items.forEach(item => {
+                        addDownload(item.mod_id, item.mod_title, null);
+                    });
                 }
             }).catch(err => console.error('[APP] Failed to resume downloads:', err));
         }

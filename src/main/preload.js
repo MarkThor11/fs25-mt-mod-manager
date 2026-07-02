@@ -61,6 +61,7 @@ contextBridge.exposeInMainWorld('api', {
     updateMod: (params) => ipcRenderer.invoke('localMods:updateMod', params),
     restoreVersion: (params) => ipcRenderer.invoke('localMods:restoreVersion', params),
     autoInstallDependencies: (params) => ipcRenderer.invoke('localMods:autoInstallDependencies', params),
+    resumePending: () => ipcRenderer.invoke('mods:resumePending'),
   },
 
   // Third Party Tracker
