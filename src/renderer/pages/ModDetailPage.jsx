@@ -112,17 +112,51 @@ export default function ModDetailPage() {
     return deduped;
   }, [mod?.dependencies]);
 
-  const requirementsMet = useMemo(() => {
-    if (uniqueDependencies.length === 0) return true;
-    if (!localMods) return false;
+  const dependencyStatus = useMemo(() => {
+    if (uniqueDependencies.length === 0) return { allMet: true, missingCount: 0, statuses: {} };
+    if (!localMods) return { allMet: false, missingCount: uniqueDependencies.length, statuses: {} };
 
-    try {
-        const { missing } = resolveRecursiveDependencies(mod.modName || mod.fileName, localMods);
-        return missing.size === 0;
-    } catch (e) {
-        console.error("Failed to check dependencies", e);
-        return false;
-    }
+    let missingCount = 0;
+    const statuses = {};
+
+    uniqueDependencies.forEach(dep => {
+        let isInstalled = false;
+        let depId = null;
+        let fallbackFileName = null;
+        
+        if (typeof dep === 'object' && dep.url) {
+            const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
+            if (idMatch) depId = idMatch[1];
+            const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
+            if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
+        }
+        
+        const depTitle = typeof dep === 'string' ? dep : dep.title;
+        const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
+        const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
+        const cleanedName = cleanModName(depString).toLowerCase();
+        
+        isInstalled = localMods.some(m => {
+            if (depId && m.modId && String(m.modId) === depId) return true;
+            
+            const cleanForMatch = (str) => str.replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
+            const reqClean = cleanForMatch(cleanedName);
+            
+            const mFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
+            if (reqClean && reqClean === cleanForMatch(mFile)) return true;
+            
+            return false;
+        });
+
+        statuses[depTitle] = isInstalled;
+        if (!isInstalled) missingCount++;
+    });
+
+    return {
+        allMet: missingCount === 0,
+        missingCount,
+        statuses
+    };
   }, [uniqueDependencies, localMods, mod]);
 
   const images = useMemo(() => {
@@ -487,14 +521,7 @@ export default function ModDetailPage() {
                   const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
                   const cleanedName = cleanModName(depString);
 
-                  let isInstalled = false;
-                  try {
-                      const { missing } = resolveRecursiveDependencies(mod.modName || mod.fileName, localMods);
-                      // If it's missing, it will be in the missing set
-                      isInstalled = !missing.has(cleanedName);
-                  } catch (e) {
-                      console.error("Failed to check dependency status:", e);
-                  }
+                  const isInstalled = dependencyStatus.statuses[depTitle] || false;
                   
                   return (
                     <div key={depTitle} style={{ 
@@ -567,29 +594,29 @@ export default function ModDetailPage() {
           {/* Action Buttons */}
           <div className="mod-detail__actions">
             {uniqueDependencies.length > 0 && (
-              <div className={`alert alert--${requirementsMet ? 'success' : 'warning'}`} style={{ 
-                marginBottom: 'var(--sp-4)', 
-                padding: '12px', 
-                fontSize: 'var(--fs-xs)', 
-                border: requirementsMet ? '1px solid var(--success)' : '1px solid #fbbf24',
-                background: requirementsMet ? 'rgba(var(--success-rgb), 0.1)' : 'rgba(251, 191, 36, 0.1)',
-                color: requirementsMet ? 'var(--success)' : '#fbbf24',
-                borderRadius: 'var(--radius-md)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, marginBottom: 4 }}>
-                  {requirementsMet ? <Check size={16} /> : <Package size={16} />}
-                  <span style={{ textTransform: 'uppercase' }}>
-                    {requirementsMet ? 'All Requirements Satisfied' : 'Required Mods Detected'}
-                  </span>
+                <div className={`alert alert--${dependencyStatus.allMet ? 'success' : 'warning'}`} style={{ 
+                  marginBottom: 'var(--sp-4)', 
+                  padding: '12px', 
+                  fontSize: 'var(--fs-xs)', 
+                  border: dependencyStatus.allMet ? '1px solid var(--success)' : '1px solid #fbbf24',
+                  background: dependencyStatus.allMet ? 'rgba(var(--success-rgb), 0.1)' : 'rgba(251, 191, 36, 0.1)',
+                  color: dependencyStatus.allMet ? 'var(--success)' : '#fbbf24',
+                  borderRadius: 'var(--radius-md)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, marginBottom: 4 }}>
+                    {dependencyStatus.allMet ? <Check size={16} /> : <Package size={16} />}
+                    <span style={{ textTransform: 'uppercase' }}>
+                      {dependencyStatus.allMet ? 'All Requirements Satisfied' : 'Required Mods Detected'}
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, opacity: 0.9 }}>
+                    {dependencyStatus.allMet 
+                      ? `All ${uniqueDependencies.length} required mods are currently installed and active.`
+                      : `You are missing ${dependencyStatus.missingCount} of the ${uniqueDependencies.length} required mods needed for this mod to function correctly.`
+                    }
+                  </p>
                 </div>
-                <p style={{ margin: 0, opacity: 0.9 }}>
-                  {requirementsMet 
-                    ? `All ${uniqueDependencies.length} required mods are currently installed and active.`
-                    : `This mod requires ${uniqueDependencies.length} additional mod${uniqueDependencies.length !== 1 ? 's' : ''} to function correctly. Checking requirements below before install is recommended.`
-                  }
-                </p>
-              </div>
-            )}
+              )}
             {showAsInstalled ? (
               hasUpdate ? (
                 <button
