@@ -1805,13 +1805,23 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 			const disposition = response.headers['content-disposition'];
 			let fileName = existingFileName;
 			if (!fileName) {
-				// Sanitize title: replace spaces/specials with underscores
-				let sanitized = modTitle.replace(/[^a-zA-Z0-9_]/g, '_');
-				// Ensure it doesn't start with a digit (required by GIANTS engine)
-				if (/^[0-9]/.test(sanitized)) {
-					sanitized = `FS25_${sanitized}`;
+				// 1. Try to extract from download URL first (ModHub URLs contain the exact filename)
+				if (downloadUrl && downloadUrl.toLowerCase().includes('.zip')) {
+					const urlName = downloadUrl.split('/').pop().split('?')[0];
+					if (urlName && urlName.toLowerCase().endsWith('.zip')) {
+						fileName = urlName;
+					}
 				}
-				fileName = `${sanitized}.zip`;
+
+				// 2. Fallback to sanitized title if URL didn't have a filename
+				if (!fileName) {
+					let sanitized = modTitle.replace(/[^a-zA-Z0-9_]/g, '_');
+					// Ensure it doesn't start with a digit (required by GIANTS engine)
+					if (/^[0-9]/.test(sanitized)) {
+						sanitized = `FS25_${sanitized}`;
+					}
+					fileName = `${sanitized}.zip`;
+				}
 			}
 			
 			if (disposition && !existingFileName) {
