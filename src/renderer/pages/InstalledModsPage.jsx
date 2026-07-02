@@ -1939,36 +1939,6 @@ export default function InstalledModsPage() {
                                               : `${result.missing.length} Missing`}
                                      </div>
                                    </div>
-                                     
-                                   {result.status === 'missing' && result.missing.length > 0 && (
-                                       <div className="badge-tooltip" style={{
-                                           position: 'absolute',
-                                           bottom: '100%',
-                                           left: '50%',
-                                           transform: 'translateX(-50%)',
-                                           marginBottom: 8,
-                                           padding: '8px 12px',
-                                           background: 'rgba(20, 25, 40, 0.95)',
-                                           backdropFilter: 'blur(10px)',
-                                           border: '1px solid var(--border)',
-                                           borderRadius: 8,
-                                           width: 'max-content',
-                                           maxWidth: 250,
-                                           zIndex: 1000,
-                                           boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-                                           pointerEvents: 'none',
-                                           opacity: 0,
-                                           transition: 'opacity 0.2s',
-                                           color: 'var(--text-primary)',
-                                           textAlign: 'left'
-                                       }}>
-                                           <div style={{ fontWeight: 800, color: 'var(--accent)', fontSize: 10, marginBottom: 4, textTransform: 'uppercase' }}>Missing Mods:</div>
-                                           {result.missing.map((m, idx) => (
-                                               <div key={idx} style={{ fontSize: 11, opacity: 0.9, lineHeight: 1.4, marginBottom: 2 }}>• {m}</div>
-                                           ))}
-                                       </div>
-                                   )}
-                                   <style>{`.dependency-badge:hover + .badge-tooltip, .dependency-badge:hover .badge-tooltip { opacity: 1 !important; }`}</style>
                                  </>
                                );
                             })()}
