@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('api', {
   // Mod Installation
   mods: {
     install: (params) => ipcRenderer.invoke('mods:install', params),
+    cancelInstall: (params) => ipcRenderer.invoke('mods:cancelInstall', params),
     uninstall: (params) => ipcRenderer.invoke('mods:uninstall', params),
     getIcon: (data) => ipcRenderer.invoke('mods:getIcon', data),
     setCustomCategory: (modId, category) => ipcRenderer.invoke('mods:setCustomCategory', { modId, category }),
