@@ -1646,7 +1646,7 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 				item.setSavePath(savePath);
 				item.resume();
 
-				activeInstalls.set(modId, { 
+				activeInstalls.set(String(modId), { 
 					type: 'window',
 					window: hiddenWin,
 					item: item,
@@ -1687,7 +1687,7 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 					} else {
 						wrappedReject(new Error(`Download failed: ${state}`));
 					}
-					activeInstalls.delete(modId);
+					activeInstalls.delete(String(modId));
 				});
 			});
 
@@ -1873,7 +1873,7 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 				});
 			}
 
-			activeInstalls.set(modId, { type: 'https', request, fileStream, targetDirPath: modsPath, techData });
+			activeInstalls.set(String(modId), { type: 'https', request, fileStream, targetDirPath: modsPath, techData });
 
 			response.on('data', (chunk) => {
 				receivedBytes += chunk.length;
@@ -1903,7 +1903,7 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 			response.on('error', (err) => {
 				debugLog(`[HTTPS-DL] Response Stream Error: ${err.message}`);
 				fileStream.destroy();
-				activeInstalls.delete(modId);
+				activeInstalls.delete(String(modId));
 				broadcastStatus?.(modId, 'error');
 				reject(err);
 			});
@@ -1922,14 +1922,14 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 
 				// Remove from pending
 				cache.removePendingDownload(String(modId));
-				activeInstalls.delete(modId);
+				activeInstalls.delete(String(modId));
 				resolve({ success: true, fileName, filePath: savePath, size: receivedBytes });
 			});
 
 			fileStream.on('error', (err) => {
 				debugLog(`[HTTPS-DL] Stream Error: ${err.message}`);
 				fileStream.destroy();
-				activeInstalls.delete(modId);
+				activeInstalls.delete(String(modId));
 				broadcastStatus?.(modId, 'error');
 				reject(err);
 			});
@@ -1937,7 +1937,7 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 
 		request.on('error', (err) => {
 			debugLog(`[HTTPS-DL] Request Error: ${err.message}`);
-			activeInstalls.delete(modId);
+			activeInstalls.delete(String(modId));
 			broadcastStatus?.(modId, 'error');
 			reject(err);
 		});
@@ -2323,7 +2323,7 @@ async function cancelInstall(modId) {
 		return { success: true };
 	}
 
-	const task = activeInstalls.get(modId);
+	const task = activeInstalls.get(String(modId));
 	
 	// Also check if this is a parentId for a batch
 	if (activeBatchTasks.has(modId)) {
@@ -2354,7 +2354,7 @@ async function cancelInstall(modId) {
 			} catch (e) {
 				console.warn('[CANCEL] Window cleanup warning:', e.message);
 			}
-		} else if (task.type === 'net') {
+		} else if (task.type === 'net' || task.type === 'https') {
 			try {
 				if (task.request) task.request.abort();
 				if (task.response) task.response.destroy();
@@ -2364,7 +2364,7 @@ async function cancelInstall(modId) {
 			}
 		}
 
-		activeInstalls.delete(modId);
+		activeInstalls.delete(String(modId));
 		broadcastStatus?.(modId, 'cancelled');
 
 		// Clean up partial file
