@@ -1523,14 +1523,19 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 	
 	let targetDirPath = modsPath;
 	if (subFolder && typeof subFolder === 'string') {
-		// Better sanitization that allows path separators (for nested folders) but cleans names
-		const sanitized = subFolder.split(/[\\/]/).map(part => 
-			part.replace(/[^a-zA-Z0-9_\-\.\s\(\)\[\]]/g, '').trim()
-		).filter(part => part && part.length > 0).join(path.sep);
+		if (path.isAbsolute(subFolder)) {
+			targetDirPath = subFolder;
+			console.log(`[INSTALL] Folder Routing: Using absolute path: ${targetDirPath}`);
+		} else {
+			// Better sanitization that allows path separators (for nested folders) but cleans names
+			const sanitized = subFolder.split(/[\\/]/).map(part => 
+				part.replace(/[^a-zA-Z0-9_\-\.\s\(\)\[\]]/g, '').trim()
+			).filter(part => part && part.length > 0).join(path.sep);
 
-		if (sanitized) {
-			targetDirPath = path.join(modsPath, sanitized);
-			console.log(`[INSTALL] Folder Routing: Using subfolder "${sanitized}" -> Full path: ${targetDirPath}`);
+			if (sanitized) {
+				targetDirPath = path.join(modsPath, sanitized);
+				console.log(`[INSTALL] Folder Routing: Using subfolder "${sanitized}" -> Full path: ${targetDirPath}`);
+			}
 		}
 	}
 
@@ -4031,7 +4036,7 @@ async function resumePendingDownloads(onProgress) {
 				item.download_url, 
 				(progress) => onProgress?.(item.mod_id, progress),
 				item.category,
-				item.target_dir.split(path.sep).pop(), // simplified subfolder extraction
+				item.target_dir, // use exact absolute path
 				techData
 			);
 			results.push(promise);
