@@ -1806,8 +1806,8 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 			let fileName = existingFileName;
 			if (!fileName) {
 				// 1. Try to extract from download URL first (ModHub URLs contain the exact filename)
-				if (downloadUrl && downloadUrl.toLowerCase().includes('.zip')) {
-					const urlName = downloadUrl.split('/').pop().split('?')[0];
+				if (url && url.toLowerCase().includes('.zip')) {
+					const urlName = url.split('/').pop().split('?')[0];
 					if (urlName && urlName.toLowerCase().endsWith('.zip')) {
 						fileName = urlName;
 					}
