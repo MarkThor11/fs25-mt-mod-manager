@@ -728,7 +728,7 @@ async function fetchModDetail(modId) {
       
       // Stop at the next major heading, or a <hr>, or end of description div
       let stopIndex = afterHtml.length;
-      const stopMatch = afterHtml.substring(reqMatch[0].length).match(/<h[1-6][^>]*>|<hr[^>]*>|<div class="alert/i);
+      const stopMatch = afterHtml.substring(reqMatch[0].length).match(/<h[1-6][^>]*>|<hr[^>]*>|<div class="alert|<div class="table/i);
       if (stopMatch) {
         stopIndex = reqMatch[0].length + stopMatch.index;
       }

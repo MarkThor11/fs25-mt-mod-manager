@@ -647,14 +647,8 @@ export default function ModDetailPage() {
                 </button>
               )
             ) : (
-                <button
-                  className="btn btn--primary btn--lg btn--full"
-                  onClick={handleInstall}
-                  disabled={isCurrentlyInstalling || batchProgress[modId] || !isOnline}
-                  id="install-mod-btn"
-                  title={!isOnline ? "Internet connection required" : ""}
-                >
                 {(isCurrentlyInstalling || batchProgress[modId]) ? (
+                  <div className="btn btn--primary btn--lg btn--full" style={{ cursor: 'default' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', position: 'relative' }}>
                       {(downloadProgress > 0 || batchProgress[modId]) && (
                         <div style={{ 
@@ -694,18 +688,25 @@ export default function ModDetailPage() {
                           fontSize: '11px', 
                           fontWeight: 700, 
                           cursor: 'pointer',
-                          marginLeft: 'auto'
+                          marginLeft: 'auto',
+                          pointerEvents: 'auto'
                         }}
                       >
                         CANCEL
                       </button>
                     </div>
+                  </div>
                 ) : (
-                  <>
+                  <button
+                    className="btn btn--primary btn--lg btn--full"
+                    onClick={handleInstall}
+                    disabled={!isOnline}
+                    id="install-mod-btn"
+                    title={!isOnline ? "Internet connection required" : ""}
+                  >
                     <Download size={18} style={{ marginRight: 8 }} /> {!isOnline ? 'Internet Required' : 'Download & Install'}
-                  </>
+                  </button>
                 )}
-                </button>
             )}
 
             {/* Rollback Support */}

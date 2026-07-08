@@ -218,8 +218,9 @@ if (window.api?.on) {
 
   if (window.api.on.dependencyProgress) {
     window.api.on.dependencyProgress((data) => {
-      const { type, modId, status, percent, title, parentId } = data;
-      if (!modId) return;
+      const { type, modId, status, percent, title, parentId, modName } = data;
+      const displayTitle = title || modName;
+      if (!modId && !displayTitle) return;
 
       if (type === 'STATUS') {
         if (status === 'DOWNLOADING') {
@@ -263,25 +264,25 @@ if (window.api?.on) {
             get().removeDownload(modId);
           }, 3000);
         } else if (status === 'error' || status === 'NOT_FOUND_ON_MODHUB') {
-          useDownloadStore.getState().setStatus(modId || title, 'error');
+          useDownloadStore.getState().setStatus(modId || displayTitle, 'error');
           
           // Still increment batch so the parent doesn't hang forever, but it will show failed deps
           if (parentId) {
             const batch = useDownloadStore.getState().batchProgress[parentId];
             if (batch) {
                 // For NOT_FOUND_ON_MODHUB, title is often the name itself as modId might be null
-                useDownloadStore.getState().updateBatchProgress(parentId, batch.completed + 1, modId || title);
+                useDownloadStore.getState().updateBatchProgress(parentId, batch.completed + 1, modId || displayTitle);
             }
           }
           if (status === 'error') {
-            console.error(`Dependency ${modId} (Title: ${title}) failed to install for parent ${parentId}`);
+            console.error(`Dependency ${modId} (Title: ${displayTitle}) failed to install for parent ${parentId}`);
           } else {
-            console.warn(`Dependency ${title} not found on ModHub for parent ${parentId}`);
+            console.warn(`Dependency ${displayTitle} not found on ModHub for parent ${parentId}`);
           }
 
           // Auto-clear failed dependencies after a delay
           setTimeout(() => {
-            useDownloadStore.getState().removeDownload(modId || title);
+            useDownloadStore.getState().removeDownload(modId || displayTitle);
           }, 15000); // 15 seconds for errors
         }
       } else if (type === 'PROGRESS') {
