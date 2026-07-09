@@ -646,21 +646,20 @@ export default function ModDetailPage() {
                   <Check size={18} style={{ marginRight: 8 }} /> Installed (Latest)
                 </button>
               )
-            ) : (
-                {(isCurrentlyInstalling || batchProgress[modId]) ? (
+            ) : (isCurrentlyInstalling || batchProgress[modId]) ? (
                   <div className="btn btn--primary btn--lg btn--full" style={{ cursor: 'default' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', position: 'relative' }}>
                       {(downloadProgress > 0 || batchProgress[modId]) && (
-                        <div style={{ 
-                          position: 'absolute', 
-                          bottom: -12, 
-                          left: -16, 
-                          right: -16, 
-                          height: 4, 
-                          width: batchProgress[modId] ? `${Math.round((batchProgress[modId].completed / batchProgress[modId].total) * 100)}%` : `${downloadProgress}%`, 
-                          background: 'var(--accent)', 
-                          transition: 'width 0.3s ease-out', 
-                          opacity: 0.5 
+                        <div style={{
+                          position: 'absolute',
+                          bottom: -12,
+                          left: -16,
+                          right: -16,
+                          height: 4,
+                          width: (batchProgress[modId] ? `${Math.round((batchProgress[modId].completed / batchProgress[modId].total) * 100)}%` : `${downloadProgress}%`),
+                          background: 'var(--accent)',
+                          transition: 'width 0.3s ease-out',
+                          opacity: 0.5
                         }} />
                       )}
                       <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -707,7 +706,6 @@ export default function ModDetailPage() {
                     <Download size={18} style={{ marginRight: 8 }} /> {!isOnline ? 'Internet Required' : 'Download & Install'}
                   </button>
                 )}
-            )}
 
             {/* Rollback Support */}
             {localMod && hasBak && (
