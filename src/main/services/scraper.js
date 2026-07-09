@@ -753,29 +753,6 @@ async function fetchModDetail(modId) {
           }
         }
       });
-
-      // Strategy B: Text parsing for unlinked mods (e.g. "Required: Map Pack, Wide Garage")
-      $rel('*').each((_, el) => {
-        // Only look at text nodes inside p, li, or div directly
-        if (!['p', 'li', 'div', 'span'].includes(el.tagName)) return;
-        
-        // If this element contains anchor tags, we probably already got the links above.
-        // But some authors mix them. We'll parse text nodes.
-        const text = $rel(el).contents().filter((_, child) => child.type === 'text').text().trim();
-        if (text && text.length > 3) {
-          const lines = text.split(/,|\n|;|•|\|/);
-          lines.forEach(line => {
-            let clean = line.replace(/^[•\-\+]\s*/, '').replace(/\(By:.*?\)/i, '').trim();
-            if (clean && clean.length > 3 && clean.length < 60 &&
-                !seenTitles.has(clean.toLowerCase()) && 
-                !clean.toLowerCase().includes('required mods') &&
-                !clean.toLowerCase().includes('necessary')) {
-              dependencies.push({ title: clean, url: '' });
-              seenTitles.add(clean.toLowerCase());
-            }
-          });
-        }
-      });
     }
   } catch (err) {
     console.error('[SCRAPER] Error parsing dependencies:', err);
