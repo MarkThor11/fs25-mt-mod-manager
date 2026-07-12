@@ -176,6 +176,8 @@ function set(key, value, ttlMs = 24 * 60 * 60 * 1000) {
 
 function clearAll() {
   if (!db) return;
+  db.prepare('DELETE FROM cache').run();
+  db.prepare('DELETE FROM image_cache').run();
 }
   
 function getModHubMetadataPool() {
