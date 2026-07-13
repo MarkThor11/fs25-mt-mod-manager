@@ -386,6 +386,11 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     return true;
   }, [mod.category, mod.techData, mod.title, currentFilter]);
 
+  const { activeDownloads, sessionInstalled } = useDownloadStore(s => ({
+    activeDownloads: s.activeDownloads,
+    sessionInstalled: s.sessionInstalled
+  }));
+
   const requirementsMet = useMemo(() => {
     if (!mod.dependencies || mod.dependencies.length === 0) return true;
     if (!localMods) return false;
@@ -410,13 +415,17 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
 
       if (isDepInstalled) return true;
 
+      // Check Session Installed (Optimistic UI)
+      if (depId && sessionInstalled[depId]) return true;
+      if (Object.values(sessionInstalled).some(val => val && val.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '') === normalizedDep.replace(/^(?:fs25|pdlc)+/, ''))) return true;
+
       // Check Active/Queued Downloads
       if (depId && queuedModIds.includes(String(depId))) return true;
       if (queuedModNames.some(qn => qn === normalizedDep || qn.includes(normalizedDep) || normalizedDep.includes(qn))) return true;
 
       return false;
     });
-  }, [mod.dependencies, localMods, activeDownloads, getInstalledVersion]);
+  }, [mod.dependencies, localMods, activeDownloads, getInstalledVersion, sessionInstalled]);
 
 
   const handleSetReference = async (e) => {
