@@ -386,10 +386,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     return true;
   }, [mod.category, mod.techData, mod.title, currentFilter]);
 
-  const { activeDownloads, sessionInstalled } = useDownloadStore(s => ({
-    activeDownloads: s.activeDownloads,
-    sessionInstalled: s.sessionInstalled
-  }));
+  const sessionInstalled = useDownloadStore(s => s.sessionInstalled);
 
   const requirementsMet = useMemo(() => {
     if (!mod.dependencies || mod.dependencies.length === 0) return true;

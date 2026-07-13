@@ -1792,11 +1792,9 @@ async function updateNativeEnhancement(savePath, includeBridge, includeDeliverie
                 await resetPlayerSpawn(savePath);
             }
             
-            if (includeBridge && !hasBridge) {
-                mods.push({ '@_modName': 'FS25_rememberPositions', '@_title': 'Remember Player Positions', '@_version': '9.9.9.9', '@_required': 'false', '@_fileHash': '' });
-            } else if (!includeBridge) {
-                if (hasBridge) mods = mods.filter(m => m['@_modName'] !== 'FS25_rememberPositions');
-            }
+            // Always remove the bridge mod as it's no longer used and causes UI issues in-game
+            mods = mods.filter(m => m['@_modName'] !== 'FS25_rememberPositions');
+            
             obj.careerSavegame.mod = mods;
             if (obj.careerSavegame) obj.careerSavegame['@_valid'] = 'true';
             delete obj['?xml'];
@@ -2410,6 +2408,89 @@ async function setPlayerPosition(options) {
     }
 }
 
+async function autoInjectDependencies(savegamePath) {
+    const careerPath = path.join(savegamePath, 'careerSavegame.xml');
+    if (!fs.existsSync(careerPath)) return { success: false, error: 'careerSavegame.xml not found' };
+
+    try {
+        const xml = await fs.readFile(careerPath, 'utf8');
+        const data = parser.parse(xml);
+        if (!data || !data.careerSavegame || !data.careerSavegame.mod) return { success: true };
+
+        const modEntries = data.careerSavegame.mod || data.careerSavegame.mods?.mod || [];
+        let mods = Array.isArray(modEntries) ? modEntries : [modEntries];
+
+        const modManager = require('./modManager');
+        const { mods: allMods } = await modManager.scanLocalMods();
+
+        let addedNewDep = true;
+        let didChange = false;
+        
+        while (addedNewDep) {
+            addedNewDep = false;
+            const currentMods = [...mods];
+            for (const selMod of currentMods) {
+                const fullMod = allMods.find(m => m.modName === selMod['@_modName']);
+                if (fullMod && fullMod.dependencies && fullMod.dependencies.length > 0) {
+                    for (const dep of fullMod.dependencies) {
+                        let installedDep = null;
+                        if (typeof dep === 'object' && dep.url) {
+                            const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
+                            if (idMatch) {
+                                installedDep = allMods.find(m => m.modId && String(m.modId) === String(idMatch[1]));
+                            }
+                        }
+                        if (!installedDep) {
+                            const depStr = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
+                            if (!depStr) continue;
+                            installedDep = allMods.find(m => 
+                                m.modName.toLowerCase() === depStr.toLowerCase() || 
+                                m.title.toLowerCase() === depStr.toLowerCase() ||
+                                m.technicalName?.toLowerCase() === depStr.toLowerCase()
+                            );
+                        }
+                        if (installedDep) {
+                            const alreadySelected = mods.find(m => m['@_modName'] === installedDep.modName);
+                            if (!alreadySelected) {
+                                console.log(`[AUTO-INJECT] Injecting dependency: ${installedDep.title} (required by ${selMod['@_title'] || selMod['@_modName']})`);
+                                mods.push({
+                                    '@_modName': installedDep.modName,
+                                    '@_title': installedDep.title,
+                                    '@_version': installedDep.version || '1.0.0.0',
+                                    '@_required': 'true',
+                                    '@_fileHash': installedDep.fileHash || ''
+                                });
+                                addedNewDep = true;
+                                didChange = true;
+                            } else if (alreadySelected['@_required'] !== 'true') {
+                                alreadySelected['@_required'] = 'true';
+                                didChange = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (didChange) {
+            data.careerSavegame.mod = mods;
+            delete data['?xml'];
+            const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false });
+            let newXml = builder.build(data);
+            if (!newXml.startsWith('<?xml')) {
+                newXml = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n' + newXml;
+            }
+            await fs.writeFile(careerPath, newXml, 'utf8');
+            console.log(`[AUTO-INJECT] Successfully updated dependencies in ${careerPath}`);
+        }
+        
+        return { success: true };
+    } catch (err) {
+        console.error('[AUTO-INJECT] Failed:', err);
+        return { success: false, error: err.message };
+    }
+}
+
 module.exports = {
     getPlayerPosition,
     setPlayerPosition,
@@ -2445,5 +2526,6 @@ module.exports = {
     updateSavegameAttribute,
     updateFleetMaintenance,
     getSavegameTransferData,
-    executeTransfer
+    executeTransfer,
+    autoInjectDependencies
 };

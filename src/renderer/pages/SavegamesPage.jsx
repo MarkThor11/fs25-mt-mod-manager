@@ -860,7 +860,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                           </span>
                           {" to enable this feature"}
                         </span>
-                      )}       )}
+                      )}
                     </div>
                   </div>
 
