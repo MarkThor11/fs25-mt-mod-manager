@@ -722,7 +722,7 @@ export default function InstalledModsPage() {
     iconOnlyFolders, toggleIconOnlyFolder, isOnline, isLoaded
   } = useSettingsStore();
   const { toggleFavoriteMod, toggleFavoriteAuthor, favoriteMods, favoriteAuthors } = useModHubStore();
-  const { activeDownloads } = useDownloadStore();
+  const { activeDownloads, sessionInstalled } = useDownloadStore();
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -871,42 +871,38 @@ export default function InstalledModsPage() {
   });
 
   const folders = useMemo(() => {
-    // 0. Pre-index all mods for O(1) lookup during dependency injection
-    const modNameMap = new Map();
-    const normalizedTitleMap = new Map();
+    // 0. Pre-compute fast lookup maps
+    const fileNameMap = new Map();
 
-    mods.forEach(m => {
-        const modName = (m.modName || '').toLowerCase();
-        const normTitle = ultraNormalize(m.title || '');
-        const normLocalName = ultraNormalize(m.modName || '');
-        
-        if (modName) {
-          if (!modNameMap.get(modName)) modNameMap.set(modName, m);
-        }
-        if (normTitle && normTitle.length > 2) {
-          if (!normalizedTitleMap.get(normTitle)) normalizedTitleMap.set(normTitle, m);
-        }
-        if (normLocalName && normLocalName.length > 2) {
-          if (!normalizedTitleMap.get(normLocalName)) normalizedTitleMap.set(normLocalName, m);
+    const ultraNormalize = (str) => {
+        if (!str) return '';
+        return str.toString().toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
+    };
+
+    filteredMods.forEach(m => {
+        const fileClean = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
+        const normFile = ultraNormalize(fileClean);
+        if (normFile && normFile.length > 0) {
+            if (!fileNameMap.has(normFile)) fileNameMap.set(normFile, m);
         }
     });
 
     const findFastMatch = (dep) => {
         if (!dep) return null;
-        const depStr = typeof dep === 'string' ? dep : (dep.title || dep.modName || dep.technicalName || dep.fileName || '');
+        
+        let fallbackFileName = null;
+        if (typeof dep === 'object' && dep.url) {
+            const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
+            if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
+        }
+
+        const depStr = fallbackFileName || (typeof dep === 'string' ? dep : (dep.fileName || dep.modName || dep.technicalName || dep.title || ''));
         if (!depStr) return null;
         
-        const targetName = depStr.toLowerCase();
         const targetUltra = ultraNormalize(depStr);
-        
-        // 1. Exact Name
-        let match = modNameMap.get(targetName);
-        if (match) return match;
-
-        // 2. Ultra Normalization match
-        if (targetUltra.length > 2) {
-          match = normalizedTitleMap.get(targetUltra);
-          if (match) return match;
+        if (targetUltra.length > 0) {
+            const match = fileNameMap.get(targetUltra);
+            if (match) return match;
         }
 
         return null;
@@ -935,12 +931,11 @@ export default function InstalledModsPage() {
                     if (!depStr) return;
 
                     // Check if it's already visible in this folder (physical or already virtualized)
-                    const titleSafe = depStr.toLowerCase().replace(/[^a-z0-9]/g, '');
                     const isVisible = modsInThisFolder.some(m => {
-                        const localName = (m.modName || '').toLowerCase();
-                        const localUltra = ultraNormalize(m.title || '') || ultraNormalize(m.modName || '');
+                        const mFileClean = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
+                        const localUltra = ultraNormalize(mFileClean);
                         const targetUltra = ultraNormalize(depStr);
-                        return localName === depStr.toLowerCase() || (targetUltra.length > 2 && localUltra === targetUltra);
+                        return targetUltra.length > 0 && localUltra === targetUltra;
                     });
                     
                     if (!isVisible) {
@@ -1012,13 +1007,18 @@ export default function InstalledModsPage() {
             for (const map of maps) {
                 if (!map.dependencies || map.dependencies.length === 0) continue;
                 
-                const { missing } = resolveRecursiveDependencies(map.modName || map.fileName, mods);
+                const { missing } = resolveRecursiveDependencies(map.modName || map.fileName, mods, sessionInstalled);
                 missing.forEach(m => missingMods.add(m));
+
+                if (missingMods.size > 0 && map.modName === 'FS25_The_Peasant_Valley') {
+                    console.log(`[DEBUG-MISSING] The Peasant Valley is missing:`, Array.from(missingMods));
+                }
+
+                requirementStatus = { 
+                    status: missingMods.size === 0 ? 'satisfied' : 'missing', 
+                    missing: Array.from(missingMods) 
+                };
             }
-            requirementStatus = { 
-                status: missingMods.size === 0 ? 'satisfied' : 'missing', 
-                missing: Array.from(missingMods) 
-            };
         }
 
         acc[name] = {
@@ -1028,7 +1028,7 @@ export default function InstalledModsPage() {
         };
         return acc;
     }, {});
-  }, [mods, filteredMods, allFolders, searchQuery, hiddenFolders, folderOrder, selectedTags, showOnlyFavorites]);
+  }, [mods, filteredMods, allFolders, searchQuery, hiddenFolders, folderOrder, selectedTags, showOnlyFavorites, sessionInstalled]);
 
   const flatViewList = useMemo(() => {
     return Object.values(folders).flatMap(f => f.mods);

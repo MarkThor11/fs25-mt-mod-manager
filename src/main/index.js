@@ -420,6 +420,13 @@ ipcMain.handle('mods:install', async (event, { modId, modTitle, downloadUrl, cat
     const result = await modManager.installMod(modId, modTitle, downloadUrl, (progress) => {
       mainWindow?.webContents.send('download:progress', { modId, progress });
     }, category, subFolder);
+    
+    // Clear download state completely to trigger full refresh on client ONLY if not queued
+    if (result && result.success && !result.queued) {
+      mainWindow?.webContents.send('download:status', { modId, status: 'success' });
+      // Tell renderer to rescan
+      setTimeout(() => mainWindow?.webContents.send('scanner:complete'), 1000);
+    }
     return result;
   } catch (err) {
     console.error('Install failed:', err);

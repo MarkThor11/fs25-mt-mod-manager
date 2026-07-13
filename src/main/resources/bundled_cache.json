@@ -3321,12 +3321,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Placeable Ramp",
-      "Low Cost Grain Silo",
-      "Old Storage Shed",
-      "Vanquish081)- Low Cost Grain Silo )"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "309244": {
@@ -5726,11 +5721,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Buying Slurry Manure And Lime",
-      "Farm Fence Pack",
-      "Small Farm Pack"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "313685": {
@@ -6505,9 +6496,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Peat Equipment Pack"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "314529": {
@@ -6557,48 +6546,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "More Animal Husbandries Possible (64)",
-      "Sheds and Storages",
-      "PlanET Modular BGA",
-      "Placeable Hedges",
-      "Wind Turbine Package",
-      "Shelter and Storage",
-      "Small Shed Pack",
-      "Farm Decoration Pack",
-      "Farmhouse Package Volume 3",
-      "Shed Pack",
-      "Cowshed Pack",
-      "Modern House Set",
-      "Old Farm Package",
-      "Addable Triggers",
-      "Big Decoration Package",
-      "Farmhouse Package Volume 2",
-      "Storage Rack",
-      "Meadow Fence Pack",
-      "Grain Flourmill",
-      "Placeable Dairy Farm Package",
-      "Bunkersilo Pack",
-      "Weinzierl Silo Pack",
-      "Hall 45x20m",
-      "Storage Shed",
-      "Bale Storage",
-      "Decorative Car Pack",
-      "Modern Pigsty",
-      "Modern Cow Stable",
-      "BunkerWallSet",
-      "Dutch Shed Pack",
-      "Pack Of Manure Heap",
-      "Modern Shed",
-      "North Frisian Pack",
-      "Wood Decoration Set",
-      "Liquid Manure Basin Pack",
-      "Old Shed",
-      "Placeable Farm Package",
-      "Advanced Silage Types",
-      "German Grain Mill Pack",
-      "Normandy)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "314612": {
@@ -6773,10 +6721,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Production Points Pack",
-      "Elmcreek Placeables Pack"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "314835": {
@@ -7251,9 +7196,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Horsch Pronto Pack"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "315279": {
@@ -7278,10 +7221,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Komatsu Harvester 911",
-      "Volvo Pack"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "315388": {
@@ -8156,9 +8096,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Workshop"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "316157": {
@@ -9258,9 +9196,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Peat Equipment Pack"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "317479": {
@@ -9810,15 +9746,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Cow Barn XL",
-      "IMAK DF2000",
-      "IMAK Grain Trailer CG 28500",
-      "IMAK RC 2000",
-      "Cow Barn XL - IMAK DF2000 (By: IMAK",
-      "ML Studio)",
-      "ML Studio)- IMAK RC 2000 (By: IMAK"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "318081": {
@@ -11118,10 +11046,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Small Grain Silos Pack",
-      "Peat Equipment Pack"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "320715": {
@@ -11146,12 +11071,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Barbed Wire Fence And Wooden Gate",
-      "South Brazil Silos Package",
-      "South American Classic Sheds",
-      "ESC Houses Pack"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "320726": {
@@ -11976,12 +11896,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Olives + Olive Picker",
-      "Scrap For The Farm",
-      "Loading Ramp With Dock Leveler",
-      "Olives + Olive Picker - Scrap For The Farm (By: Setka Simulators)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "322603": {
@@ -13731,30 +13646,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Sheds and Storages",
-      "Large Storage Halls",
-      "Wind Turbine Package",
-      "Shelter and Storage",
-      "Bunker Silo Set Modular",
-      "Shed Pack",
-      "Old Farm Package",
-      "Farmsilo Package",
-      "Pigshed",
-      "Workshop",
-      "Lizard Calf Huts",
-      "ProductionStorageControl",
-      "BunkerWallSet",
-      "Bunkersilo Pack",
-      "Lizard Cow Barns",
-      "Lizard Animal Barns",
-      "Feeding Storage",
-      "Lizard Multipurpose Sheds",
-      "Lizard Grain Storage And Pig Food Maker",
-      "Bulk Vegetable Storage.",
-      "Modern Shed",
-      "Wood Storage"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "326838": {
@@ -14004,9 +13896,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Salvage Halls Package"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "327420": {
@@ -14231,16 +14121,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Wooden Shed",
-      "Stone Agricultural Annex",
-      "Ivoy Straw Hangar",
-      "Ivoy Piggery",
-      "Ivoy Chicken Coop",
-      "Ivoy Cereal",
-      "Ivoy Farm Garage",
-      "Ivoy Chicken Coop - Ivoy Cereal (By: MA7Studio)- Ivoy Farm Garage (By: MA7Studio)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "327831": {
@@ -14390,22 +14271,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Wooden Shed",
-      "BR Metal Shed",
-      "Barbed Wire Fence And Wooden Gate",
-      "Silo Deep Ranch",
-      "Houses Deep Ranch",
-      "BR Small Shed",
-      "Pilzer Pack",
-      "Repair Workshop",
-      "Cow Pasture With Milking Barn",
-      "Grain Silo BR",
-      "Fertilizer And Herbicide Factory",
-      "Covered Silage Silo",
-      "DH Modding",
-      "Gian FS)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "328169": {
@@ -14430,12 +14296,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Production Points Pack",
-      "Animals Placeables Pack",
-      "Goldcrest Decoration Pack",
-      "Production Points Pack - Animals Placeables Pack (By: Puma 145)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "328201": {
@@ -14535,10 +14396,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Gas Station BR",
-      "Package Mega Silo"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "328291": {
@@ -14838,13 +14696,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Open Shed",
-      "Small Machine And Bale Shed",
-      "Steel Shed",
-      "Cow Barn XL",
-      "Steel Shed - Cow Barn XL (By: FSG Modding - FSG TAZ_MAN)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "328871": {
@@ -15194,10 +15046,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Animal Transports",
-      "Kotte Garant VE8000"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "329692": {
@@ -15322,18 +15171,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Meridian Grain Bin Pack",
-      "Farm Decoration Pack",
-      "Decorative Objects Pack",
-      "Additional Decoration Package",
-      "North American Shed Pack",
-      "Old Time Shed Pack",
-      "Big Decoration Package",
-      "Wood Shelter",
-      "South American Classic Sheds",
-      "Seriousmods)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "330256": {
@@ -15508,15 +15346,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Workshop",
-      "Pole Barn",
-      "Sheep Goat Barn",
-      "Horse Stable",
-      "AGI Grain Dryer",
-      "Workshop - Pole Barn (By: celobuki)- Sheep Goat Barn (By: celobuki)",
-      "Horse Stable - AGI Grain Dryer (By: celobuki)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "330396": {
@@ -16166,17 +15996,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Feed Mixing Plants",
-      "Garden Plot",
-      "Fermenter 60000L",
-      "Cowshed 3+0",
-      "Pigshed",
-      "Carpenter Old Pallets And Bale Storage",
-      "Liquidfertilizer Herbicide Production",
-      "Seeds Production S",
-      "Dutch Shed Pack"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "331420": {
@@ -16251,14 +16071,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Metal Medium Shed",
-      "Shop With Storage",
-      "Metal Open Shed",
-      "Case Service Workshop",
-      "Metal Medium Shed - Shop With Storage (By: ikas)",
-      "Metal Open Shed - Case Service Workshop (By: ikas)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "331447": {
@@ -16683,12 +16496,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Water Pump Pack",
-      "Lizard Gravity Wagon",
-      "American Barn",
-      "Garage With Tool Table"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "332014": {
@@ -17213,31 +17021,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Placeable Hedges",
-      "Old Sheds",
-      "Meridian Grain Bin Pack",
-      "Floor Plane Weighing Station",
-      "Radio Tower",
-      "American Farmhouse",
-      "Small Hall",
-      "Old Barn",
-      "Big Cow Barn",
-      "Old Polish Garage",
-      "North American Shed Pack",
-      "Welker Farm Shed Pack",
-      "Hall 15x38",
-      "Steel Shed",
-      "Farm Houses",
-      "Cow Barn XL",
-      "Extra Large Workshop",
-      "US Cow Barn With Vector",
-      "Pallegney Buildings Pack",
-      "Outdoor Silos",
-      "Liquid Manure Tank",
-      "Pig Farm Building Package",
-      "Seriousmods)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "332978": {
@@ -17437,21 +17221,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Old Sheds",
-      "Steel Shed",
-      "Meadow Fence Pack",
-      "Cow Barn XL",
-      "US Cow Barn With Vector",
-      "American Silos Production Pack",
-      "Sheep Goat Barn",
-      "American Shed Pack",
-      "Old Skool Pack",
-      "Fenceless Pastures",
-      "Monoslope Cow Barn",
-      "Long Chicken Barn",
-      "Barney)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "333283": {
@@ -19751,10 +19521,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Small Grain Silos Pack",
-      "Peat Equipment Pack"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "336936": {
@@ -20029,30 +19796,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "BR Metal Shed",
-      "Open Chicken Coop",
-      "Lizard Medium Silos Pack",
-      "Farm Entrance",
-      "Scarabelot Green 9000 Knife Roller",
-      "Scarabelot Reversible Leveling Blade",
-      "Scarabelot Rear Dump Agricultural Platform",
-      "Scarabelot RDS900 Clod Crusher/Compactor",
-      "Scarabelot RFS-400 Knife Roller",
-      "Small Houses",
-      "BR Small Shed",
-      "Pilzer Pack",
-      "Rice Fields SA",
-      "Scarabelot Hydraulic Reversible Leveling Blade",
-      "Scarabelot Hydraulic Leveling Board",
-      "Massey Ferguson 4700 / 5700 Series",
-      "Scarabelot Triangle Chain TRC 6000",
-      "ML Studio)",
-      "ML Studio)- Small Houses - BR Small Shed (By: ML Modding",
-      "DH Modding",
-      "Gian FS)- Pilzer Pack (By: Pilzer",
-      "ML Studio)- Massey Ferguson 4700 / 5700 Series - Scarabelot Triangle Chain TRC 6000 (By: Scarabelot"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "337165": {
@@ -20077,14 +19821,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Diesel Pallet",
-      "Garden Plot",
-      "Storage Pallets",
-      "Carpenter Old Pallets And Bale Storage",
-      "Dutch Shed Pack",
-      "Diesel Pallet - Garden Plot (By: DS-Power)- Storage Pallets (By: DS-Power)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "337167": {
@@ -20434,15 +20171,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Cowshed With Garage",
-      "Big White Cow Barn",
-      "Building Farm Set",
-      "Farm Buildings Set",
-      "Big Garage",
-      "Barn With Grain Loft",
-      "RajotGPLAY)- Big White Cow Barn - Building Farm Set (By: RajotGPLAY)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "338088": {
@@ -20867,18 +20596,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Shed Vologne",
-      "Old Manure Heap",
-      "Wooden Shed",
-      "Old Structure Pack",
-      "New Holland TX 32",
-      "Olives + Olive Picker",
-      "Greenhouse And Nursery",
-      "Silos FS Pack",
-      "Grape Production Pack",
-      "Small Rustic Bale Shed"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "338947": {
@@ -21253,25 +20971,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Small Bunker Silo",
-      "Placeable Hedges",
-      "Silage Silo",
-      "Modern House Set",
-      "Old Rusty Shed",
-      "Cowshed With Garage",
-      "Village Shop",
-      "Church Schondorf",
-      "Lizard Silo Pack",
-      "Garage With Cowshed",
-      "Barn With Garage",
-      "Small Garage",
-      "Hall CowBarn",
-      "Biogas Station",
-      "Pack Of Manure Heap",
-      "Medium Sized Cow Barn",
-      "Machine Hall With Workshop"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "339498": {
@@ -21296,23 +20996,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "American Midwest Maintenance Shop",
-      "American Midwest Cold Storage",
-      "Package Mega Silo",
-      "Big Metal Shed",
-      "Small American Metal Hall",
-      "American Midwest Fertilizer Shed",
-      "Big Storage",
-      "Shop With Storage",
-      "Shed With Xtra Wide Doors",
-      "Lizard Cow Barns",
-      "Chicken Coop Br",
-      "Pig Fattening",
-      "Shed",
-      "Shed With Double Slides",
-      "ikas)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "339598": {
@@ -21687,14 +21371,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Farmlander Shed",
-      "Buildable Feedlot Pack",
-      "Horse Barn With Storage",
-      "Hog Confinement",
-      "Central Ethanol And Feed",
-      "Commodity Shed"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "340083": {
@@ -21894,20 +21571,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "PlanET Modular BGA",
-      "Modern Barn With Workshop",
-      "Modern House Set",
-      "Open Shed",
-      "Wholesale Market",
-      "Lizard Export Company",
-      "Double Rod Mat Fence Pack",
-      "Hedges Pack",
-      "Dairy Production",
-      "Super S Gas Station",
-      "Town Productions",
-      "Modern Car Garage"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "340315": {
@@ -22532,18 +22196,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Small Workshop",
-      "Wooden Shed",
-      "Stone Agricultural Annex",
-      "Lime Production",
-      "Fertilizer Plant",
-      "Pallegney Buildings Pack",
-      "Ivoy Straw Hangar",
-      "Ivoy Cereal",
-      "Ivoy Farm Garage",
-      "Bio Tank"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "341389": {
@@ -22593,11 +22246,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Big Storage",
-      "Shed With Xtra Wide Doors",
-      "Shed"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "341466": {
@@ -22722,18 +22371,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Placeable Hedges",
-      "Wood Tower",
-      "Addable Triggers",
-      "Church Schondorf",
-      "Apple Tree",
-      "Bavarian House Pack",
-      "Engelmaier Farm",
-      "Manor Farm Schoeffelding",
-      "Bavarian Barns",
-      "Bavarian Farm House With Hall"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "341814": {
@@ -23133,14 +22771,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Old Time Shed Pack",
-      "Package Mega Silo",
-      "Stone Decorations",
-      "Old Polish Fences Pack",
-      "Old Time Shed Pack - Package Mega Silo (By: Lostgamer)",
-      "Stone Decorations - Old Polish Fences Pack (By: RolCeb)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "342802": {
@@ -23540,21 +23171,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Vehicle Shed",
-      "Bunker Silo Set Modular",
-      "Placeable Tire Tracks",
-      "Double Rod Mat Fence Pack",
-      "GDR Building Package",
-      "Breeding Stable",
-      "Machine Hall",
-      "Old Wire Mesh And Pasture Fences",
-      "BGA Construction Set",
-      "Silo System Package",
-      "Sawmill Pack",
-      "Crate Storage Shed",
-      "Farm Building Pack"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "343628": {
@@ -23579,45 +23196,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Old Barn With Shelter",
-      "Large Storage Halls",
-      "Wind Turbine Package",
-      "Shelter and Storage",
-      "Small Shed Pack",
-      "Farm Decoration Pack",
-      "Medium Biogas Plant Package",
-      "Farmhouse Package Volume 3",
-      "Shed Pack",
-      "Cowshed Pack",
-      "Concrete Free Land Silo Pack",
-      "Automatic Grain Sampler",
-      "Modern House Set",
-      "Slurry Storage Pack",
-      "Old Polish Garage",
-      "Old Farm Package",
-      "Pigshed",
-      "Old German Barn Pack",
-      "Farmhouse Package Volume 2",
-      "Meadow Fence Pack",
-      "Grain Flourmill",
-      "Lizard Silo Pack",
-      "Hall 45x20m",
-      "Manure Bassin",
-      "Three Sided Farm",
-      "Workshop",
-      "Double Rod Mat Fence Pack",
-      "Modern Cow Stable",
-      "Liquid Manure Tank",
-      "BunkerWallSet",
-      "Bunkersilo Pack",
-      "Dutch Shed Pack",
-      "Machine Hall",
-      "Modern Shed",
-      "North Frisian Pack",
-      "Wood Decoration Set",
-      "Old Shed"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "343662": {
@@ -23692,11 +23271,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Barbed Wire Fence And Wooden Gate",
-      "Placeable Ramp",
-      "Southern Brazil Wood House"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "343695": {
@@ -23921,14 +23496,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Open Shed",
-      "Small Machine And Bale Shed",
-      "Steel Shed",
-      "Cow Barn XL",
-      "Farm Gate Pack",
-      "Cow Barn XL - Farm Gate Pack (By: FSG Modding - FSG TAZ_MAN)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "344163": {
@@ -24003,16 +23571,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "BR Metal Shed",
-      "Farm Fence Pack",
-      "Confining Cows",
-      "House With Pool",
-      "Cow Pasture With Milking Barn",
-      "Southern Brazil Wood House",
-      "Shed House 6X1",
-      "Brazilian Cow Barn"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "344198": {
@@ -24212,10 +23771,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Root Crop Storage",
-      "Multi Farm Buildings Pack"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "344737": {
@@ -24615,30 +24171,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Half-Timbered Barn",
-      "Small Bunker Silo",
-      "Machine Barn",
-      "Farm Decoration Pack",
-      "Modern House Set",
-      "Modern Pigsty",
-      "Butter Co. Factory",
-      "Placeable Dairy Farm Package",
-      "Lizard Silo Pack",
-      "Slurry Tanks",
-      "Lizard Calf Huts",
-      "Grain Storage Hall",
-      "Barn With Workshop",
-      "Small Composite Hall",
-      "Roofed Bunker Silo & Wood Chip Storage",
-      "Restaurant",
-      "Bavarian House Pack",
-      "Bavarian Barns",
-      "Bavarian Farm House",
-      "Medium Sized Cow Barn",
-      "Modern Cow Barn",
-      "Building Pack"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "346247": {
@@ -24888,14 +24421,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Production Points Pack",
-      "Animals Placeables Pack",
-      "Refillable Tanks",
-      "Sosnovka Placeables Pack",
-      "Production Points Pack - Animals Placeables Pack (By: Puma 145)",
-      "Refillable Tanks - Sosnovka Placeables Pack (By: Puma 145)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "347177": {
@@ -24920,37 +24446,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Placeable Hedges",
-      "Wind Turbine Package",
-      "Farmhouse Package Volume 3",
-      "Hunting Pulpit",
-      "Natural Water Rivers And Ponds Pack",
-      "Cowshed Pack",
-      "Placeable Wall Lights",
-      "Modern House Set",
-      "Old Farm Package",
-      "Addable Triggers",
-      "Bunkersilo Set",
-      "Pigshed",
-      "Farmhouse Package Volume 2",
-      "Meadow Fence Pack",
-      "Natural Waterplants",
-      "Storage Shed",
-      "Open Air Garden",
-      "Manure Bassin",
-      "Manure Pit",
-      "Decorative Car Pack",
-      "Double Rod Mat Fence Pack",
-      "EU Factories",
-      "Modern Cow Stable",
-      "Small Old Wooden Shed",
-      "Potatohall",
-      "Dutch Shed Pack",
-      "100 Ton Silo",
-      "Farmhouse Package Volume 5",
-      "No Entry Gate"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "347189": {
@@ -25275,12 +24771,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Lapacho Farm House",
-      "Lapacho Warehouse",
-      "Lapacho Decoration",
-      "Lapacho Farm House - Lapacho Warehouse (By: naimog mod)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "347891": {
@@ -25805,13 +25296,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Package Mega Silo",
-      "ESC Houses Pack",
-      "Faucet And Water Tank Set",
-      "Corteva Circular Pivot Irrigation",
-      "ESC Sheds"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "348763": {
@@ -26036,18 +25521,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Large Storage Halls",
-      "Placeable Hedges",
-      "Modern House Set",
-      "Village Shop",
-      "Church Schondorf",
-      "Fenceless Pastures",
-      "Biogas Station",
-      "Bavarian House Pack",
-      "Engelmaier Farm",
-      "Manor Farm Schoeffelding"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "349039": {
@@ -26122,66 +25596,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Vehicle Shed",
-      "Large Storage Halls",
-      "Half-Timbered Barn",
-      "Small Bunker Silo",
-      "Old Storage Shed",
-      "Open Garage",
-      "Small Shed Pack",
-      "Bulk Material Warehouse",
-      "Floor Plane Weighing Station",
-      "Meadow Fence",
-      "Buying Slurry Manure And Lime",
-      "Medium Biogas Plant Package",
-      "Cowshed Pack",
-      "Concrete Free Land Silo Pack",
-      "Siloplate",
-      "Renovated House",
-      "Hörmann Hall 18x9",
-      "Slurry Storage Pack",
-      "Old Rusty Shed",
-      "Crop Inputs Co-operative",
-      "Pigshed",
-      "Old German Barn Pack",
-      "Hall 15x38",
-      "Grain Hall",
-      "Garage With Vehicle Workshop",
-      "John Deere Dealer Sign",
-      "Five Bay Cow Shed",
-      "Liquid Manure Storage",
-      "Grain Flourmill",
-      "Manure Bunker",
-      "Wooden Shed",
-      "Rudolf Hoermann Equestrian Pack",
-      "Shed Pack",
-      "Hall 45x20m",
-      "Grain Complex",
-      "Sugar Beet Shredder",
-      "British Field Gates",
-      "Silage Silo Pack",
-      "Three Sided Farm",
-      "Grain Storage With Drying Floor",
-      "Workshop",
-      "Modern Pigsty",
-      "Modern Cow Stable",
-      "Liquid Manure Tank",
-      "Potatohall",
-      "Market Place",
-      "Half-Timbered Farm Buildings",
-      "Manor House In Krajow",
-      "Weighing Station PGR",
-      "UK Style Grain Shed",
-      "Bavarian System Hall Set",
-      "Pack Of Manure Heap",
-      "100 Ton Silo",
-      "Modern Shed",
-      "Medium Bunker Silo",
-      "Pig Fattening",
-      "Old Shed",
-      "Modern House"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "349449": {
@@ -26206,9 +25621,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Orchards And Greenhouses"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "349494": {
@@ -26708,13 +26121,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Old Time Shed Pack",
-      "Palfinger FLC-253 Pack",
-      "FarmCon24 - Fendt Pack",
-      "Volvo Pack",
-      "MAN 19.322 With Sliding Curtain"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "350840": {
@@ -27139,31 +26546,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Bale Storage",
-      "PlanET Modular BGA",
-      "Root Crop Storage",
-      "Wind Turbine Package",
-      "Old Storage Shed",
-      "Straw Storage",
-      "Bunker Silo Set Modular",
-      "Farmhouse Package Volume 3",
-      "Hunting Pulpit",
-      "Shed Pack",
-      "Modern House Set",
-      "Old Farm Package",
-      "Butter Co. Factory",
-      "Storage Building Package",
-      "Old German Barn Pack",
-      "Farmhouse Package Volume 2",
-      "Pack Of Large Cowsheds",
-      "Village Shop",
-      "Grain Flourmill",
-      "Kubota Workshop",
-      "Three Sided Farm",
-      "Half-Timbered Farm Buildings",
-      "Restaurant"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "351613": {
@@ -27488,15 +26871,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Big Decoration Package",
-      "Wooden Shed",
-      "Garage With Cowshed",
-      "Cow Farm Pack",
-      "European Decorative Buildings Pack",
-      "Pigsty And Garage Package",
-      "Big Decoration Package - Wooden Shed (By: MA7Studio)- Garage With Cowshed (By: Mr.BuBeR)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "352214": {
@@ -27646,11 +27021,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Farm Production",
-      "Bigger Animal Barns",
-      "Monkey Show Modding)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "352430": {
@@ -28025,18 +27396,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Cow Fences",
-      "Pallegney Buildings Pack",
-      "Restaurant",
-      "Engelmaier Farm",
-      "Wooden Fountain",
-      "Building Pack",
-      "Old Wooden Sheepfold",
-      "Dairy",
-      "Constructible Wood Shed",
-      "The Pichonnière Buildings Pack"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "353398": {
@@ -28111,15 +27471,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Buying Slurry Manure And Lime",
-      "Old Grain Mills",
-      "Small Biogas Plants",
-      "Old Small Buildings Pack",
-      "Dairy",
-      "Universal Purchase Of All Products",
-      "Old Grain Silo"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "353449": {
@@ -28144,18 +27496,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Elegant House",
-      "Big Cow Barn",
-      "Old Farm Building Set",
-      "Big White Cow Barn",
-      "Large Package Of Houses",
-      "Building Farm Set",
-      "Pack Of Large Cowsheds",
-      "European Decorative Buildings Pack",
-      "Arch Hall",
-      "Normandy House"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "353494": {
@@ -28280,22 +27621,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "BR Metal Shed",
-      "South Brazil Silos Package",
-      "Confining Cows",
-      "Small Houses",
-      "BR Small Shed",
-      "Pilzer Pack",
-      "Grain Silo BR",
-      "Small Covered Fuel Tank",
-      "Lapacho Palms",
-      "Brazilian Cow Barn",
-      "Brazilian Cow Pen With Loader",
-      "DH Modding",
-      "Gian FS)- Pilzer Pack (By: Pilzer",
-      "ML Studio)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "353901": {
@@ -28670,12 +27996,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "American Double Silo",
-      "Crude Oil Production",
-      "Universal Purchase Of All Products",
-      "American Double Silo - Crude Oil Production (By: BartsoNv3)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "354317": {
@@ -28825,19 +28146,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "American Carport",
-      "American Midwest Maintenance Shop",
-      "Old Skool Pack",
-      "Shop With Storage",
-      "Metal Open Shed",
-      "Small Garage With Workshop",
-      "Old American Shed",
-      "Small Barndominium",
-      "All In One Production",
-      "Greenhouse With Canned Packaged Foods Production",
-      "InsaneSimGuy)"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "354628": {
@@ -29112,19 +28421,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Placeable Hedges",
-      "Farm Decoration Pack",
-      "Hunting Pulpit",
-      "Barbed Wire Fence And Wooden Gate",
-      "Very Old Timberframe Barn",
-      "Manure Pit",
-      "Roofed Bunker Silo & Wood Chip Storage",
-      "Field Barn",
-      "Eifel Farm",
-      "Wood Decoration Set",
-      "Silo System Package"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "355031": {
@@ -30074,40 +29371,7 @@
       "capacity": 0,
       "hpIsRequirement": false
     },
-    "dependencies": [
-      "Vehicle Shed",
-      "Large Storage Halls",
-      "Placeable Hedges",
-      "Shelter and Storage",
-      "Machinery Shed",
-      "Farm Decoration Pack",
-      "Warehouse Shelter",
-      "Bulk Material Warehouse",
-      "Floor Plane Weighing Station",
-      "Old Manure Heap",
-      "Medium Biogas Plant Package",
-      "Decorative Objects Pack",
-      "Modern House Set",
-      "Salvage Halls Package",
-      "Old German Barn Pack",
-      "Grain Hall",
-      "Grain Flourmill",
-      "House From The 70s",
-      "Manure Bassin",
-      "TMR And Pigfood Production",
-      "Concrete Curbs",
-      "Double Rod Mat Fence Pack",
-      "Modern Pigsty",
-      "Vehicle Workshop",
-      "BunkerWallSet",
-      "Bunkersilo Pack",
-      "European Fence Pack",
-      "Fence Pack",
-      "Lizard Cow Barns",
-      "Feeding Storage",
-      "Modern Car Garage",
-      "Placeable Farm Package"
-    ],
+    "dependencies": [],
     "description": "Pre-cached map metadata."
   },
   "357331": {

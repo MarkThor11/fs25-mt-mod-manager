@@ -204,7 +204,30 @@ async function launch(options = {}) {
   const defaultModsPath = modManager.getDefaultModsPath();
   
   if (targetModsPath && targetModsPath.toLowerCase() !== defaultModsPath.toLowerCase()) {
-    args.push('-mods', targetModsPath);
+    const fs25DataRoot = pathProvider.getFS25DataRoot();
+    const gameSettingsPath = path.join(fs25DataRoot, 'gameSettings.xml');
+    if (fs.existsSync(gameSettingsPath)) {
+      let settingsXml = fs.readFileSync(gameSettingsPath, 'utf8');
+      const overrideRegex = /<modsDirectoryOverride[^>]*\/>/i;
+      const newTag = `<modsDirectoryOverride active="true" directory="${targetModsPath.replace(/\\/g, '/')}"/>`;
+      
+      if (overrideRegex.test(settingsXml)) {
+        settingsXml = settingsXml.replace(overrideRegex, newTag);
+      } else {
+        settingsXml = settingsXml.replace(/(<gameSettings[^>]*>)/i, `$1\n    ${newTag}`);
+      }
+      fs.writeFileSync(gameSettingsPath, settingsXml, 'utf8');
+      console.log('[LAUNCH] Enabled modsDirectoryOverride in gameSettings.xml:', targetModsPath);
+    }
+  } else {
+    const fs25DataRoot = pathProvider.getFS25DataRoot();
+    const gameSettingsPath = path.join(fs25DataRoot, 'gameSettings.xml');
+    if (fs.existsSync(gameSettingsPath)) {
+      let settingsXml = fs.readFileSync(gameSettingsPath, 'utf8');
+      settingsXml = settingsXml.replace(/(<modsDirectoryOverride\s+active=)["']true["']/ig, `$1"false"`);
+      fs.writeFileSync(gameSettingsPath, settingsXml, 'utf8');
+      console.log('[LAUNCH] Disabled modsDirectoryOverride in gameSettings.xml');
+    }
   }
 
   // ── DYNAMIC INITIALIZATION HANDSHAKE ──

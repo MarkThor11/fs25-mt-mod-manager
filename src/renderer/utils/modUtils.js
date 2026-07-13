@@ -4,7 +4,7 @@
  * @param {Array} allMods - The list of all installed mods.
  * @returns {Object} - { installed: Set(names), missing: Set(names) }
  */
-export const resolveRecursiveDependencies = (targetModName, allMods) => {
+export const resolveRecursiveDependencies = (targetModName, allMods, sessionInstalled = {}) => {
   const installed = new Set();
   const missing = new Set();
   const processed = new Set();
@@ -46,25 +46,39 @@ export const resolveRecursiveDependencies = (targetModName, allMods) => {
 
     const match = allMods.find(m => {
         // 1. Mod ID Match (100% accurate)
-        if (depId && m.modId && String(m.modId) === depId) return true;
+        if (depId && m.modId) {
+            const safeModId = String(m.modId).replace(/^0+/, '');
+            if (safeModId === depId) return true;
+        }
         
         // 2. FileName Match (User explicitly requested zip file names only, avoiding unreliable titles)
         const cleanForMatch = (str) => str.replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
         const reqClean = cleanForMatch(nameLower);
         
         const cleanFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
-        if (reqClean === cleanForMatch(cleanFile) && reqClean.length > 0) return true;
+        const fileMatch = reqClean === cleanForMatch(cleanFile) && reqClean.length > 0;
+        if (nameLower.includes('wooden') || cleanFile.includes('wooden')) {
+            console.log(`[DEBUG] depId=${depId} m.modId=${m.modId} reqClean=${reqClean} cleanFile=${cleanFile} cleaned=${cleanForMatch(cleanFile)} match=${fileMatch}`);
+        }
+        if (fileMatch) return true;
         
         return false;
     });
     
+    // Check if any value in sessionInstalled matches the requested dependency name
+    const reqClean = nameLower.replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
+    const isSessionInstalledByName = Object.values(sessionInstalled).some(val => val && val.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '') === reqClean);
+
     if (match) {
-      if (match.modName.toLowerCase() !== targetModName.toLowerCase()) {
+      if (match.modName && match.modName.toLowerCase() !== targetModName.toLowerCase()) {
         installed.add(match.modName);
       }
       if (match.dependencies) {
         match.dependencies.forEach(dep => resolve(dep));
       }
+    } else if ((depId && sessionInstalled[depId]) || isSessionInstalledByName) {
+      // Optimistic UI: If we just installed this in the current session, assume it's installed
+      installed.add(cleanedName);
     } else {
       missing.add(cleanedName);
     }

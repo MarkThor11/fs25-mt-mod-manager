@@ -28,7 +28,8 @@ export default function ModDetailPage() {
   const { modId, fileName } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const parentFolder = location.state?.parentFolder;
+  const parentFolder = location.state?.parentFolder || '';
+
   const [mod, setMod] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
@@ -86,6 +87,8 @@ export default function ModDetailPage() {
   const [hasBak, setHasBak] = useState(false);
 
   // ── Dependency Management ──
+  const sessionInstalled = useDownloadStore(s => s.sessionInstalled);
+
   const uniqueDependencies = useMemo(() => {
     if (!mod || !mod.dependencies) return [];
     
@@ -124,29 +127,51 @@ export default function ModDetailPage() {
         let depId = null;
         let fallbackFileName = null;
         
+        const depTitle = typeof dep === 'string' ? dep : dep.title;
+
         if (typeof dep === 'object' && dep.url) {
             const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
-            if (idMatch) depId = idMatch[1];
+            if (idMatch) {
+                depId = parseInt(idMatch[1], 10).toString();
+            }
+            
             const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
             if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
         }
         
-        const depTitle = typeof dep === 'string' ? dep : dep.title;
+        // Optimistic UI check: did we just install this in the current session?
+        if (depId && sessionInstalled[depId]) {
+            isInstalled = true;
+        } else {
+            const depClean = (fallbackFileName || depTitle).toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
+            if (Object.values(sessionInstalled).some(val => val && val.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '') === depClean)) {
+                isInstalled = true;
+            }
+        }
+        
         const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
         const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
         const cleanedName = cleanModName(depString).toLowerCase();
         
-        isInstalled = localMods.some(m => {
-            if (depId && m.modId && String(m.modId) === depId) return true;
-            
-            const cleanForMatch = (str) => str.replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
+        if (!isInstalled) {
+            isInstalled = localMods.some(m => {
+                if (depId && m.modId) {
+                    const safeModId = String(m.modId).replace(/^0+/, '');
+                    if (safeModId === depId) return true;
+                }
+                
+                const cleanForMatch = (str) => str.replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
             const reqClean = cleanForMatch(cleanedName);
-            
             const mFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
-            if (reqClean && reqClean === cleanForMatch(mFile)) return true;
+            const mClean = cleanForMatch(mFile);
+            if (reqClean.includes('wooden') || mClean.includes('wooden')) {
+                console.log(`[DEBUG-MODDETAIL] depId=${depId} reqClean=${reqClean} mFile=${mFile} mClean=${mClean} match=${reqClean === mClean}`);
+            }
+            if (reqClean && reqClean === mClean) return true;
             
             return false;
         });
+        }
 
         statuses[depTitle] = isInstalled;
         if (!isInstalled) missingCount++;
@@ -157,7 +182,7 @@ export default function ModDetailPage() {
         missingCount,
         statuses
     };
-  }, [uniqueDependencies, localMods, mod]);
+  }, [uniqueDependencies, localMods, mod, sessionInstalled]);
 
   const images = useMemo(() => {
     if (!mod) return [];
@@ -273,7 +298,7 @@ export default function ModDetailPage() {
               modData = { 
                   ...modData, 
                   ...remote, 
-                  dependencies: remoteDeps.length > 0 ? remoteDeps : (modData.dependencies || []) 
+                  dependencies: remoteDeps 
               };
           }
         } catch (err) {
@@ -511,9 +536,14 @@ export default function ModDetailPage() {
                   // Extract the file name or ID exactly like resolveRecursiveDependencies does
                   let depId = null;
                   let fallbackFileName = null;
+                  let externalUrl = null;
                   if (typeof dep === 'object' && dep.url) {
                       const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
-                      if (idMatch) depId = idMatch[1];
+                      if (idMatch) {
+                          depId = idMatch[1];
+                      } else {
+                          externalUrl = dep.url;
+                      }
                       const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
                       if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
                   }
@@ -538,36 +568,54 @@ export default function ModDetailPage() {
                         <div style={{ color: isInstalled ? 'var(--success)' : 'var(--text-secondary)' }}>
                           {isInstalled ? <Check size={16} /> : <AlertCircle size={16} />}
                         </div>
-                        <span 
-                          style={{ 
-                            fontWeight: 600, 
-                            cursor: 'pointer',
-                            textDecoration: 'none'
-                          }}
-                          className="hover-underline"
-                          onClick={() => {
-                            if (depId) {
-                              navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? mod.title.replace(/\([^)]+\)/g, '').trim() : parentFolder } });
-                            } else {
-                              navigate(`/modhub?search=${depTitle}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? mod.title.replace(/\([^)]+\)/g, '').trim() : parentFolder } });
-                            }
-                          }}
-                        >
-                          {depTitle}
-                        </span>
+                        {depId ? (
+                          <span 
+                            style={{ 
+                              fontWeight: 600, 
+                              cursor: 'pointer',
+                              textDecoration: 'none'
+                            }}
+                            className="hover-underline"
+                            onClick={() => navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? mod.title.replace(/\([^)]+\)/g, '').trim() : parentFolder } })}
+                          >
+                            {depTitle}
+                          </span>
+                        ) : externalUrl ? (
+                          <span 
+                            style={{ 
+                              fontWeight: 600, 
+                              cursor: 'pointer',
+                              textDecoration: 'none',
+                              color: 'var(--accent)'
+                            }}
+                            className="hover-underline"
+                            onClick={() => window.api?.shell?.openExternal(externalUrl)}
+                            title={externalUrl}
+                          >
+                            {depTitle}
+                          </span>
+                        ) : (
+                          <span style={{ fontWeight: 600 }}>
+                            {depTitle}
+                          </span>
+                        )}
                       </div>
-                      <button 
-                        className="btn btn--secondary btn--xs"
-                        onClick={() => {
-                          if (depId) {
-                            navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? mod.title.replace(/\([^)]+\)/g, '').trim() : parentFolder } });
-                          } else {
-                            navigate(`/modhub?search=${depTitle}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? mod.title.replace(/\([^)]+\)/g, '').trim() : parentFolder } });
-                          }
-                        }}
-                      >
-                        {isInstalled ? 'View Mod' : 'Find on ModHub'}
-                      </button>
+                      {depId ? (
+                        <button 
+                          className="btn btn--secondary btn--xs"
+                          onClick={() => navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? mod.title.replace(/\([^)]+\)/g, '').trim() : parentFolder } })}
+                        >
+                          {isInstalled ? 'View Mod' : 'View on ModHub'}
+                        </button>
+                      ) : externalUrl ? (
+                        <button 
+                          className="btn btn--secondary btn--xs"
+                          onClick={() => window.api?.shell?.openExternal(externalUrl)}
+                          title={externalUrl}
+                        >
+                          Get Third Party Mod
+                        </button>
+                      ) : null}
                     </div>
                   );
                 })}

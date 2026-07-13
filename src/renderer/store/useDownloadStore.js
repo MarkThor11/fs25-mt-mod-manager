@@ -68,6 +68,12 @@ export const useDownloadStore = create((set, get) => ({
     const active = get().activeDownloads[modId];
     if (!active) return;
 
+    // The backend sometimes sends { status: 'success' } via the progress stream.
+    // If it does, ignore it here, as it is properly handled by setStatus via the downloadStatus listener.
+    if (progressData && typeof progressData === 'object' && progressData.status) {
+       return;
+    }
+
     const progress = typeof progressData === 'object' ? progressData.percent : progressData;
     const receivedBytes = typeof progressData === 'object' ? progressData.receivedBytes : active.receivedBytes;
     const totalBytes = typeof progressData === 'object' ? progressData.totalBytes : active.totalBytes;

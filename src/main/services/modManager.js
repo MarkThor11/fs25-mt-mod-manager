@@ -1087,7 +1087,7 @@ async function performScan(manualPaths = null) {
 
 			if (remoteMod) {
                 // Strictly use ModHub dependencies, ignoring modDesc.xml to avoid interference
-                if (remoteMod.dependencies && remoteMod.dependencies.length > 0) {
+                if (remoteMod.dependencies) {
                     dependencies = remoteMod.dependencies;
                 }
 
@@ -1270,9 +1270,9 @@ async function performScan(manualPaths = null) {
 		const idKey = m.modId ? `ID_${m.modId}` : null;
 		const nameKey = m.technicalName ? `NAME_${m.technicalName.toLowerCase()}` : null;
 		const fileKey = `FILE_${path.basename(m.fileName).toLowerCase()}`;
-		const titleKey = `TITLE_${(m.title || '').toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+		// We deliberately do NOT dedupe by title. Many different mods share generic titles like "Wooden Shed".
 
-		const keys = [idKey, nameKey, fileKey, titleKey].filter(Boolean);
+		const keys = [idKey, nameKey, fileKey].filter(Boolean);
 		let alreadySeen = false;
 		for (const k of keys) {
 			if (uniqueModsMap.has(k)) {
@@ -1875,6 +1875,16 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 
 			activeInstalls.set(String(modId), { type: 'https', request, fileStream, targetDirPath: modsPath, techData });
 
+			let dlStallTimer = setInterval(() => {
+				const now = Date.now();
+				if (lastUpdate && now - lastUpdate > 30000 && receivedBytes < totalBytes) {
+					// 30 seconds no data
+					clearInterval(dlStallTimer);
+					fileStream.destroy();
+					request.destroy(new Error('Download stalled for 30s'));
+				}
+			}, 5000);
+
 			response.on('data', (chunk) => {
 				receivedBytes += chunk.length;
 				if (!fileStream.write(chunk)) {
@@ -1901,6 +1911,7 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 			});
 
 			response.on('error', (err) => {
+				clearInterval(dlStallTimer);
 				debugLog(`[HTTPS-DL] Response Stream Error: ${err.message}`);
 				fileStream.destroy();
 				activeInstalls.delete(String(modId));
@@ -1909,6 +1920,7 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 			});
 
 			fileStream.on('finish', () => {
+				clearInterval(dlStallTimer);
 				debugLog(`[HTTPS-DL] Success: ${fileName}`);
 				
 				// Final Tracking
@@ -1927,6 +1939,7 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 			});
 
 			fileStream.on('error', (err) => {
+				clearInterval(dlStallTimer);
 				debugLog(`[HTTPS-DL] Stream Error: ${err.message}`);
 				fileStream.destroy();
 				activeInstalls.delete(String(modId));
