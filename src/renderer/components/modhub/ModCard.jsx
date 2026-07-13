@@ -392,13 +392,23 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     if (!mod.dependencies || mod.dependencies.length === 0) return true;
     if (!localMods) return false;
 
+    const ultraNormalize = (str) => {
+        if (!str) return '';
+        let s = str.toLowerCase();
+        s = s.replace(/[^a-z0-9]/g, '');
+        s = s.replace(/v\d+.*$/, '');
+        s = s.replace(/(?:fs25|fs22|fs19|pdlc)+/g, '');
+        s = s.replace(/(?:mod|pack|prefab|map)+/g, '');
+        return s;
+    };
+
     // Convert active downloads to a comparable list of titles/IDs
-    const queuedModNames = Object.values(activeDownloads).map(d => (d.title || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+    const queuedModNames = Object.values(activeDownloads).map(d => ultraNormalize(d.title || ''));
     const queuedModIds = Object.values(activeDownloads).map(d => String(d.modId));
 
     return mod.dependencies.every(dep => {
       const depTitle = typeof dep === 'string' ? dep : dep.title;
-      const normalizedDep = depTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const normalizedDep = ultraNormalize(depTitle);
       const depId = typeof dep === 'object' && dep.url ? dep.url.match(/mod_id=(\d+)/)?.[1] : null;
 
       // Check Local Mods
@@ -406,7 +416,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
         ? !!getInstalledVersion({ title: depTitle, modId: depId })
         : localMods.some(lm => {
             if (depId && lm.modId && String(lm.modId) === String(depId)) return true;
-            const localTitle = (lm.title || lm.modName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const localTitle = ultraNormalize(lm.title || lm.modName || '');
             return localTitle === normalizedDep || localTitle.includes(normalizedDep) || normalizedDep.includes(localTitle);
           });
 
@@ -414,7 +424,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
 
       // Check Session Installed (Optimistic UI)
       if (depId && sessionInstalled[depId]) return true;
-      if (Object.values(sessionInstalled).some(val => val && val.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '') === normalizedDep.replace(/^(?:fs25|pdlc)+/, ''))) return true;
+      if (Object.values(sessionInstalled).some(val => val && ultraNormalize(val) === normalizedDep)) return true;
 
       // Check Active/Queued Downloads
       if (depId && queuedModIds.includes(String(depId))) return true;
@@ -423,7 +433,6 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
       return false;
     });
   }, [mod.dependencies, localMods, activeDownloads, getInstalledVersion, sessionInstalled]);
-
 
   const handleSetReference = async (e) => {
     e.stopPropagation();

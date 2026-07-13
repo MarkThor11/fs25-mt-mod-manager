@@ -1741,6 +1741,22 @@ async function ensureStoreDeliveries() {
     } catch (err) { return { success: false, error: err.message }; }
 }
 
+async function ensureBridgeMod() {
+    try {
+        const modManager = require('./modManager');
+        const modsDir = modManager.getModsPath();
+        const destZip = require('path').join(modsDir, 'FS25_rememberPositions.zip');
+        if (require('fs').existsSync(destZip)) return { success: true };
+        
+        const appPath = require('electron').app ? require('electron').app.getAppPath() : process.cwd();
+        const sourceZip = require('path').join(appPath, 'src', 'main', 'assets', 'FS25_rememberPositions.zip');
+        if (!require('fs').existsSync(sourceZip)) return { success: false, error: 'Source file not found at ' + sourceZip };
+        
+        await require('fs').promises.copyFile(sourceZip, destZip);
+        return { success: true };
+    } catch (err) { return { success: false, error: err.message }; }
+}
+
 async function updateNativeEnhancement(savePath, includeBridge, includeDeliveries) {
     try {
         const path = require('path');
@@ -1791,9 +1807,11 @@ async function updateNativeEnhancement(savePath, includeBridge, includeDeliverie
                 // Completely hand over all spawn control back to the game engine
                 await resetPlayerSpawn(savePath);
             }
-            
-            // Always remove the bridge mod as it's no longer used and causes UI issues in-game
-            mods = mods.filter(m => m['@_modName'] !== 'FS25_rememberPositions');
+                if (includeBridge && !hasBridge) {
+                mods.push({ '@_modName': 'FS25_rememberPositions', '@_title': 'Remember Player Positions', '@_version': '9.9.9.9', '@_required': 'false', '@_fileHash': '' });
+            } else if (!includeBridge) {
+                if (hasBridge) mods = mods.filter(m => m['@_modName'] !== 'FS25_rememberPositions');
+            }
             
             obj.careerSavegame.mod = mods;
             if (obj.careerSavegame) obj.careerSavegame['@_valid'] = 'true';
