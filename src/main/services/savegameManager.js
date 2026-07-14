@@ -7,6 +7,15 @@ const { XMLParser, XMLBuilder } = require('fast-xml-parser');
 const AdmZip = require('adm-zip');
 const pathProvider = require('./pathProvider');
 
+function ultraNormalize(str) {
+    if (!str) return '';
+    let s = str.toLowerCase();
+    s = s.replace(/[^a-z0-9]/g, '');
+    s = s.replace(/v\d+.*$/, '');
+    s = s.replace(/(?:fs25|fs22|fs19|pdlc)+/g, '');
+    s = s.replace(/(?:mod|pack|prefab|map)+/g, '');
+    return s;
+}
 // 🛠️ DIAGNOSTIC UTILITY 🛠️
 const logFile = (app && typeof app.getPath === 'function') 
     ? path.join(app.getPath('userData'), 'download_debug.log')
@@ -335,6 +344,10 @@ async function setSavegameMods(savegamePath, mods) {
     }
     
     await fs.writeFile(careerPath, newXml);
+    
+    // Auto-inject any missing dependencies required by the user's selected mods
+    await autoInjectDependencies(savegamePath);
+    
     return { success: true };
 }
 
@@ -417,12 +430,21 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         if (!installedDep) {
                             const depStr = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
                             if (!depStr) continue;
+                            const normalizedDep = ultraNormalize(depStr);
                             
-                            installedDep = allMods.find(m => 
-                                m.modName.toLowerCase() === depStr.toLowerCase() || 
-                                m.title.toLowerCase() === depStr.toLowerCase() ||
-                                m.technicalName?.toLowerCase() === depStr.toLowerCase()
-                            );
+                            installedDep = allMods.find(m => {
+                                const localName = ultraNormalize(m.modName);
+                                const localTitle = ultraNormalize(m.title);
+                                const localTech = ultraNormalize(m.technicalName);
+                                
+                                if (!normalizedDep) return false;
+                                
+                                if (localName && (localName === normalizedDep || localName.includes(normalizedDep) || normalizedDep.includes(localName))) return true;
+                                if (localTitle && (localTitle === normalizedDep || localTitle.includes(normalizedDep) || normalizedDep.includes(localTitle))) return true;
+                                if (localTech && (localTech === normalizedDep || localTech.includes(normalizedDep) || normalizedDep.includes(localTech))) return true;
+                                
+                                return false;
+                            });
                         }
 
                         if (installedDep) {
@@ -2461,11 +2483,21 @@ async function autoInjectDependencies(savegamePath) {
                         if (!installedDep) {
                             const depStr = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
                             if (!depStr) continue;
-                            installedDep = allMods.find(m => 
-                                m.modName.toLowerCase() === depStr.toLowerCase() || 
-                                m.title.toLowerCase() === depStr.toLowerCase() ||
-                                m.technicalName?.toLowerCase() === depStr.toLowerCase()
-                            );
+                            const normalizedDep = ultraNormalize(depStr);
+                            
+                            installedDep = allMods.find(m => {
+                                const localName = ultraNormalize(m.modName);
+                                const localTitle = ultraNormalize(m.title);
+                                const localTech = ultraNormalize(m.technicalName);
+                                
+                                if (!normalizedDep) return false;
+                                
+                                if (localName && (localName === normalizedDep || localName.includes(normalizedDep) || normalizedDep.includes(localName))) return true;
+                                if (localTitle && (localTitle === normalizedDep || localTitle.includes(normalizedDep) || normalizedDep.includes(localTitle))) return true;
+                                if (localTech && (localTech === normalizedDep || localTech.includes(normalizedDep) || normalizedDep.includes(localTech))) return true;
+                                
+                                return false;
+                            });
                         }
                         if (installedDep) {
                             const alreadySelected = mods.find(m => m['@_modName'] === installedDep.modName);
