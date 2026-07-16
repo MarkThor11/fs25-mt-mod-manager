@@ -66,8 +66,7 @@ const builder = new XMLBuilder({
     format: true,
     suppressEmptyNode: true,
     processEntities: false,
-    suppressBooleanAttributes: false
-});
+    suppressBooleanAttributes: false, suppressEmptyNode: true });
 
 function getFs25Path() {
     return pathProvider.getFS25DataRoot();
@@ -511,6 +510,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.saveDateFormatted = today;
             savegameData.careerSavegame.settings.saveDate = today;
             savegameData.careerSavegame.settings.initialMoney = String(money);
+            savegameData.careerSavegame.settings.isCrossPlatformSavegame = 'false';
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
             
             if (!savegameData.careerSavegame.statistics) savegameData.careerSavegame.statistics = {};
@@ -561,7 +561,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     economicDifficulty: 'NORMAL',
                     loadDefaultFarm: 'true',
                     loadDefaultVehicles: 'true',
-                    isCrossPlatformSavegame: 'true'
+                    isCrossPlatformSavegame: 'false'
                 },
                 statistics: {
                     money: String(money)
@@ -1843,7 +1843,7 @@ async function updateNativeEnhancement(savePath, includeBridge, includeDeliverie
             obj.careerSavegame.mod = mods;
             if (obj.careerSavegame) obj.careerSavegame['@_valid'] = 'true';
             delete obj['?xml'];
-            const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false });
+            const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
             const newXml = builder.build(obj);
             fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
         }
@@ -2293,7 +2293,7 @@ async function resetPlayerSpawn(savePath) {
                     }
                 }
                 delete obj['?xml'];
-                const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false });
+                const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
                 const newXml = builder.build(obj);
                 fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
             }
@@ -2312,7 +2312,7 @@ async function resetPlayerSpawn(savePath) {
                 delete careerObj.careerSavegame.player['@_vehicleId'];
                 delete careerObj.careerSavegame.player['@_spawnYaw'];
                 delete careerObj['?xml'];
-                const careerBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false });
+                const careerBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
                 const newCareerXml = careerBuilder.build(careerObj);
                 fs.writeFileSync(careerPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newCareerXml, 'utf8');
             }
@@ -2415,7 +2415,7 @@ async function setPlayerPosition(options) {
                     }
                 }
                 delete obj['?xml'];
-                const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false });
+                const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
                 const newXml = builder.build(obj);
                 fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
             }
@@ -2442,7 +2442,7 @@ async function setPlayerPosition(options) {
                     delete player['@_vehicleId'];
                 }
                 delete careerObj['?xml'];
-                const careerBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false });
+                const careerBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
                 const newCareerXml = careerBuilder.build(careerObj);
                 fs.writeFileSync(careerPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newCareerXml, 'utf8');
             }
@@ -2577,7 +2577,7 @@ async function autoInjectDependencies(savegamePath) {
         if (didChange) {
             data.careerSavegame.mod = mods;
             delete data['?xml'];
-            const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false });
+            const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
             let newXml = builder.build(data);
             if (!newXml.startsWith('<?xml')) {
                 newXml = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n' + newXml;
