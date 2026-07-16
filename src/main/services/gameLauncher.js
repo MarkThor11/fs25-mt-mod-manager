@@ -197,17 +197,6 @@ async function launch(options = {}) {
     const isSelectiveEnabled = cache.getSetting('selectiveLoading') !== 'false';
     const effectiveIndex = isSelectiveEnabled ? options.savegameIndex : null;
     
-    if (effectiveIndex !== null && effectiveIndex !== undefined) {
-      try {
-        const savegameManager = require('./savegameManager');
-        const fs25Path = require('./pathProvider').getFS25DataRoot();
-        const savePath = path.join(fs25Path, `savegame${effectiveIndex}`);
-        await savegameManager.autoInjectDependencies(savePath);
-      } catch (err) {
-        console.error('[LAUNCH] Auto-inject dependencies failed:', err);
-      }
-    }
-    
     console.log(`[LAUNCH] ${effectiveIndex ? `Selective (Savegame ${effectiveIndex})` : 'Global'} Mod Synthesis...`);
     targetModsPath = await modManager.prepareVirtualModsFolder(effectiveIndex);
   }

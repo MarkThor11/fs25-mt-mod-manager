@@ -1,0 +1,30 @@
+Testing 1
+Result for 1: {"success":true}
+Testing 2
+Result for 2: {"success":true}
+Testing 3
+Result for 3: {"success":true}
+Testing 4
+Result for 4: {"success":true}
+Testing 5
+Result for 5: {"success":true}
+Testing 9
+Result for 9: {"success":false,"error":"careerSavegame.xml not found"}
+Testing 12
+Result for 12: {"success":false,"error":"careerSavegame.xml not found"}
+Testing 13
+Result for 13: {"success":false,"error":"careerSavegame.xml not found"}
+Testing 14
+Result for 14: {"success":false,"error":"careerSavegame.xml not found"}
+Testing 15
+Result for 15: {"success":false,"error":"careerSavegame.xml not found"}
+Testing 16
+Result for 16: {"success":false,"error":"careerSavegame.xml not found"}
+Testing 17
+Result for 17: {"success":false,"error":"careerSavegame.xml not found"}
+Testing 18
+Result for 18: {"success":false,"error":"careerSavegame.xml not found"}
+Testing 19
+Result for 19: {"success":false,"error":"careerSavegame.xml not found"}
+Testing 20
+Result for 20: {"success":false,"error":"careerSavegame.xml not found"}

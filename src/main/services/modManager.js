@@ -301,12 +301,33 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 		let linkedCount = 0;
 		const seenFiles = new Set();
 
+		// Helper to recursively find zip files in non-mod folders
+		async function findModZips(dir, depth = 0) {
+			if (depth > 3) return []; // prevent infinite recursion
+			const results = [];
+			try {
+				const entries = await fs.readdir(dir, { withFileTypes: true });
+				for (const entry of entries) {
+					if (entry.name.toLowerCase().endsWith('.zip')) {
+						results.push({ name: entry.name, path: path.join(dir, entry.name), isDir: false });
+					} else if (entry.isDirectory() && !entry.name.startsWith('.')) {
+						if (fs.existsSync(path.join(dir, entry.name, 'modDesc.xml'))) {
+							results.push({ name: entry.name, path: path.join(dir, entry.name), isDir: true });
+						} else {
+							results.push(...(await findModZips(path.join(dir, entry.name), depth + 1)));
+						}
+					}
+				}
+			} catch (e) { }
+			return results;
+		}
+
 		// Iterate paths in reverse priority (first path in getModsPaths has highest priority)
 		for (let i = allPaths.length - 1; i >= 0; i--) {
 			const sourceDir = allPaths[i];
 			if (!fs.existsSync(sourceDir)) continue;
 
-			const entries = await fs.readdir(sourceDir, { withFileTypes: true });
+			const entries = await findModZips(sourceDir);
 			for (const entry of entries) {
 				const name = entry.name;
 				const modNameNoExt = name.toLowerCase().replace(/\.zip$/, '');
@@ -316,21 +337,19 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 					continue;
 				}
 
-				if (name.toLowerCase().endsWith('.zip') || (entry.isDirectory() && fs.existsSync(path.join(sourceDir, name, 'modDesc.xml')))) {
-					const destPath = path.join(virtualPath, name);
-					const srcPath = path.join(sourceDir, name);
+				const destPath = path.join(virtualPath, name);
+				const srcPath = entry.path;
 
-					try {
-						// Remove existing if it somehow persisted
-						if (fs.existsSync(destPath)) await fs.remove(destPath);
-						
-						const type = entry.isDirectory() ? 'junction' : 'file';
-						await fs.symlink(srcPath, destPath, type);
-						linkedCount++;
-						seenFiles.add(name.toLowerCase());
-					} catch (e) {
-						debugLog(`[VIRTUAL] Symlink failed for ${name}: ${e.message}`);
-					}
+				try {
+					// Remove existing if it somehow persisted
+					if (fs.existsSync(destPath)) await fs.remove(destPath);
+					
+					const type = entry.isDir ? 'junction' : 'file';
+					await fs.symlink(srcPath, destPath, type);
+					linkedCount++;
+					seenFiles.add(name.toLowerCase());
+				} catch (e) {
+					debugLog(`[VIRTUAL] Symlink failed for ${name}: ${e.message}`);
 				}
 			}
 		}
