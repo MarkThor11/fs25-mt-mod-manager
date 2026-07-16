@@ -301,58 +301,33 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 		let linkedCount = 0;
 		const seenFiles = new Set();
 
-		// Helper to recursively find zip files in non-mod folders
-		async function findModZips(dir, depth = 0) {
-			if (depth > 3) return []; // prevent infinite recursion
-			const results = [];
-			try {
-				const entries = await fs.readdir(dir, { withFileTypes: true });
-				for (const entry of entries) {
-					if (entry.name.toLowerCase().endsWith('.zip')) {
-						results.push({ name: entry.name, path: path.join(dir, entry.name), isDir: false });
-					} else if (entry.isDirectory() && !entry.name.startsWith('.')) {
-						if (fs.existsSync(path.join(dir, entry.name, 'modDesc.xml'))) {
-							results.push({ name: entry.name, path: path.join(dir, entry.name), isDir: true });
-						} else {
-							results.push(...(await findModZips(path.join(dir, entry.name), depth + 1)));
-						}
-					}
-				}
-			} catch (e) { }
-			return results;
-		}
+        // Fetch all authoritative mods
+        const { mods } = await scanLocalMods();
+        
+        for (const m of mods) {
+            const modNameLower = m.modName.toLowerCase();
+            
+            // FILTER: If we are in selective mode, only link if it's in the active set
+            if (activeModNames && !activeModNames.has(modNameLower)) {
+                continue;
+            }
 
-		// Iterate paths in reverse priority (first path in getModsPaths has highest priority)
-		for (let i = allPaths.length - 1; i >= 0; i--) {
-			const sourceDir = allPaths[i];
-			if (!fs.existsSync(sourceDir)) continue;
+            // Name the symlink EXACTLY what the engine expects (m.modName + .zip if it was a zip)
+            const isZip = m.filePath.toLowerCase().endsWith('.zip');
+            const destPath = path.join(virtualPath, m.modName + (isZip ? '.zip' : ''));
 
-			const entries = await findModZips(sourceDir);
-			for (const entry of entries) {
-				const name = entry.name;
-				const modNameNoExt = name.toLowerCase().replace(/\.zip$/, '');
-				
-				// FILTER: If we are in selective mode, only link if it's in the active set
-				if (activeModNames && !activeModNames.has(modNameNoExt)) {
-					continue;
-				}
-
-				const destPath = path.join(virtualPath, name);
-				const srcPath = entry.path;
-
-				try {
-					// Remove existing if it somehow persisted
-					if (fs.existsSync(destPath)) await fs.remove(destPath);
-					
-					const type = entry.isDir ? 'junction' : 'file';
-					await fs.symlink(srcPath, destPath, type);
-					linkedCount++;
-					seenFiles.add(name.toLowerCase());
-				} catch (e) {
-					debugLog(`[VIRTUAL] Symlink failed for ${name}: ${e.message}`);
-				}
-			}
-		}
+            try {
+                // Remove existing if it somehow persisted
+                if (fs.existsSync(destPath)) await fs.remove(destPath);
+                
+                const type = isZip ? 'file' : 'junction';
+                await fs.symlink(m.filePath, destPath, type);
+                linkedCount++;
+                seenFiles.add(m.modName.toLowerCase());
+            } catch (e) {
+                debugLog(`[VIRTUAL] Symlink failed for ${m.modName}: ${e.message}`);
+            }
+        }
 
 		// Inject internal bridge mods directly if requested by the savegame
 		if (activeModNames) {
@@ -1130,7 +1105,7 @@ async function performScan(manualPaths = null) {
 				isMap: modDesc?.isMap || false,
 				mapId: modDesc?.mapId || null,
 				mapTitle: modDesc?.mapTitle || null,
-				modName: modDesc?.techName || entryName.replace('.zip', ''),
+				modName: modDesc?.techName || entryName.replace(/\.zip$/i, '').replace(/[_\\-]v\d+([_\\.]\d+)*$/i, ''),
 				technicalName: modDesc?.techName || '',
 				dependencies,
 				conflicts: modDesc?.conflicts || [],
