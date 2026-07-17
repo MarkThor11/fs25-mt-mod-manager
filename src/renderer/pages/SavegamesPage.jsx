@@ -1556,7 +1556,8 @@ export default function SavegamesPage() {
     setCreateSlot(slot.toString());
     setCreateName('New Farming Career');
     
-    // Auto-select "Must Have" mods conceptually handled by toggle
+    // Reset map to default so the useEffect always re-fires when user picks a map
+    setCreateMap('MapUS|Riverbend Springs|');
     setModalSelectedMods(new Set());
     setShowCreateModal(true);
   };
@@ -1611,6 +1612,19 @@ export default function SavegamesPage() {
           .filter(m => !m.isMap && favoriteMods.some(fm => fm.isMustHave && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && m.fileName && fm.fileName === m.fileName))))
           .forEach(m => finalModNames.add(m.modName));
       }
+
+      // Safety net: always resolve map dependencies even if UI missed them
+      const [, , mapModForDeps] = createMap.split('|');
+      if (mapModForDeps) {
+        try {
+          const { installed } = resolveRecursiveDependencies(mapModForDeps, mods);
+          installed.forEach(d => finalModNames.add(d));
+          console.log(`[CREATE] Safety net resolved ${installed.size} map dependencies`);
+        } catch (e) {
+          console.error('[CREATE] Safety net dependency resolution failed:', e);
+        }
+      }
+
       const modsToAdd = mods.filter(m => finalModNames.has(m.modName));
       const [mapId, mapTitle, mapModName] = createMap.split('|');
       
