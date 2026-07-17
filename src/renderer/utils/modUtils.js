@@ -51,16 +51,16 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
             if (safeModId === depId) return true;
         }
         
-        // 2. FileName Match (User explicitly requested zip file names only, avoiding unreliable titles)
+        // 2. FileName or ModName Match (User explicitly requested avoiding unreliable titles)
         const cleanForMatch = (str) => str.replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
         const reqClean = cleanForMatch(nameLower);
         
-        const cleanFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
-        const fileMatch = reqClean === cleanForMatch(cleanFile) && reqClean.length > 0;
-        if (nameLower.includes('wooden') || cleanFile.includes('wooden')) {
-            console.log(`[DEBUG] depId=${depId} m.modId=${m.modId} reqClean=${reqClean} cleanFile=${cleanFile} cleaned=${cleanForMatch(cleanFile)} match=${fileMatch}`);
-        }
-        if (fileMatch) return true;
+        // Check modName first since backend now reliably cleans it
+        if (m.modName && reqClean === cleanForMatch(m.modName.toLowerCase()) && reqClean.length > 0) return true;
+
+        // Fallback to fileName but strip version suffixes like _v1_0
+        const cleanFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase().replace(/[_\\-]v\d+([_\\.]\d+)*$/i, '') : '';
+        if (reqClean === cleanForMatch(cleanFile) && reqClean.length > 0) return true;
         
         return false;
     });
