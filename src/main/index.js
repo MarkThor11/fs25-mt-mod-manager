@@ -142,6 +142,13 @@ function createWindow() {
     },
     icon: path.join(__dirname, '../../assets/icon.png'),
   });
+
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    try {
+      const logPath = path.join(app.getPath('userData'), 'renderer_console.log');
+      fs.appendFileSync(logPath, `[Renderer] [L${level}] [${path.basename(sourceId)}:${line}] ${message}\n`, 'utf8');
+    } catch(e) {}
+  });
   
   const appFullscreen = cache.getSetting('appFullscreen') !== 'false';
   if (appFullscreen) {
