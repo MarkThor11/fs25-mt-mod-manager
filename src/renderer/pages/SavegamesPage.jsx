@@ -1433,7 +1433,12 @@ export default function SavegamesPage() {
             console.log(`[CAREER MODAL] Auto-selecting ${installed.size} mods:`, Array.from(installed));
             setModalSelectedMods(prev => {
               const next = new Set(prev);
-              installed.forEach(d => next.add(d));
+              installed.forEach(d => {
+                const isMapMod = mods.some(m => m.modName === d && m.isMap);
+                if (!isMapMod) {
+                  next.add(d);
+                }
+              });
               return next;
             });
           }
