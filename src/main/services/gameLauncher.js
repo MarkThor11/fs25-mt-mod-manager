@@ -251,8 +251,8 @@ async function launch(options = {}) {
       const farmsFile = path.join(savePath, 'farms.xml');
       const initFile = path.join(savePath, 'terrain.heightmap.png');
       
-      // The game engine will crash if autoStart is used on an existing save that is missing its terrain.heightmap.png
-      let isFullyInitialized = fs.existsSync(farmsFile) && fs.existsSync(initFile);
+      // The game engine will crash if autoStart is used on an existing save that is missing its terrain.heightmap.png or placeables.xml
+      let isFullyInitialized = fs.existsSync(farmsFile) && fs.existsSync(initFile) && fs.existsSync(path.join(savePath, 'placeables.xml'));
 
       if (isFullyInitialized) {
         console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is already initialized (farms.xml and heightmap exist). Enabling Auto-Start.`);
