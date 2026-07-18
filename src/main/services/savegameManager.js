@@ -499,7 +499,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     for (const dep of fullMod.dependencies) {
                         let installedDep = null;
 
-                        // 1. Resolve EXACT match from ModHub ID if available
+                        // 1. Resolve match from ModHub ID if available
                         if (typeof dep === 'object' && dep.url) {
                             const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
                             if (idMatch) {
@@ -508,33 +508,16 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             }
                         }
 
-                        // 2. Fallback to string matching
+                        // 2. Resolve exact literal match from the dependency name string
                         if (!installedDep) {
                             const depStr = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
                             if (!depStr) continue;
                             
-                            // Try exact literal match first
-                            installedDep = allMods.find(m => m.modName && m.modName.toLowerCase() === depStr.toLowerCase());
-                            
-                            if (!installedDep) {
-                                const normalizedDep = ultraNormalize(depStr);
-                                if (normalizedDep) {
-                                    installedDep = allMods.find(m => {
-                                        const localName = ultraNormalize(m.modName);
-                                        const localTitle = ultraNormalize(m.title);
-                                        const localTech = ultraNormalize(m.technicalName);
-                                        
-                                        if (localName && (localName === normalizedDep || localName.includes(normalizedDep) || normalizedDep.includes(localName))) return true;
-                                        if (localTitle && (localTitle === normalizedDep || localTitle.includes(normalizedDep) || normalizedDep.includes(localTitle))) return true;
-                                        if (localTech && (localTech === normalizedDep || localTech.includes(normalizedDep) || normalizedDep.includes(localTech))) return true;
-                                        
-                                        return false;
-                                    });
-                                }
-                            }
+                            // Spelling, casing, spacing, and underscores must match exactly
+                            installedDep = allMods.find(m => m.modName === depStr);
                         }
 
-                        if (installedDep && installedDep.modName !== mapModName && !finalMods.some(m => m.modName.toLowerCase() === installedDep.modName.toLowerCase())) {
+                        if (installedDep && installedDep.modName !== mapModName && !finalMods.some(m => m.modName === installedDep.modName)) {
                             console.log(`[CREATE] Auto-injecting dependency: ${installedDep.title} (required by ${selMod.title || selMod.modName})`);
                             finalMods.push({
                                 modName: installedDep.modName,
@@ -545,7 +528,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             });
                             addedNewDep = true;
                         } else if (installedDep) {
-                            const alreadySelected = finalMods.find(m => m.modName.toLowerCase() === installedDep.modName.toLowerCase());
+                            const alreadySelected = finalMods.find(m => m.modName === installedDep.modName);
                             if (alreadySelected) {
                                 alreadySelected.required = true;
                             }
