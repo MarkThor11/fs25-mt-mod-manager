@@ -1414,7 +1414,19 @@ export default function SavegamesPage() {
       // Auto-select required mods for modded maps
       if (modName) {
         try {
-          console.log(`[CAREER MODAL] Resolving dependencies for map: ${modName}`);
+          console.log(`[CAREER MODAL] Resolving dependencies for map: ${modName}. Total mods available: ${mods ? mods.length : 0}`);
+          const birglandMod = mods ? mods.find(m => m.modName === modName || m.modName.toLowerCase() === modName.toLowerCase()) : null;
+          if (birglandMod) {
+            console.log(`[CAREER MODAL] Found map mod in mods array:`, JSON.stringify({
+                modName: birglandMod.modName,
+                isMap: birglandMod.isMap,
+                dependenciesCount: birglandMod.dependencies ? birglandMod.dependencies.length : 0,
+                dependencies: birglandMod.dependencies
+            }));
+          } else {
+            console.log(`[CAREER MODAL] Map mod '${modName}' NOT found in mods array! Available map mods:`, mods ? mods.filter(m => m.isMap).map(m => m.modName).join(', ') : 'none');
+          }
+
           const { installed, missing } = resolveRecursiveDependencies(modName, mods);
           
           if (installed.size > 0) {
@@ -1617,9 +1629,10 @@ export default function SavegamesPage() {
       const [, , mapModForDeps] = createMap.split('|');
       if (mapModForDeps) {
         try {
+          console.log(`[CREATE-SAFETY] Resolving dependencies for ${mapModForDeps}. Total mods: ${mods ? mods.length : 0}`);
           const { installed } = resolveRecursiveDependencies(mapModForDeps, mods);
           installed.forEach(d => finalModNames.add(d));
-          console.log(`[CREATE] Safety net resolved ${installed.size} map dependencies`);
+          console.log(`[CREATE] Safety net resolved ${installed.size} map dependencies:`, Array.from(installed));
         } catch (e) {
           console.error('[CREATE] Safety net dependency resolution failed:', e);
         }

@@ -474,7 +474,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     } catch (err) {
         console.error('[CREATE] Failed to auto-inject dependencies:', err);
     }
-    // ------------------------------------
+    // Ensure bridge mod is copied if included
+    if (finalMods.some(m => m.modName === 'FS25_rememberPositions')) {
+        await ensureBridgeMod();
+    }
 
     // FS25 engine requires mod maps to have their mapId prefixed with the mod name (e.g. FS25_MapMod.MapId)
     // If we don't do this, the engine can't find the map, marking the save as corrupted and greying out the Continue button.
@@ -1834,7 +1837,8 @@ async function updateNativeEnhancement(savePath, includeBridge, includeDeliverie
                 // Completely hand over all spawn control back to the game engine
                 await resetPlayerSpawn(savePath);
             }
-                if (includeBridge && !hasBridge) {
+            if (includeBridge && !hasBridge) {
+                await ensureBridgeMod();
                 mods.push({ '@_modName': 'FS25_rememberPositions', '@_title': 'Remember Player Positions', '@_version': '9.9.9.9', '@_required': 'false', '@_fileHash': '' });
             } else if (!includeBridge) {
                 if (hasBridge) mods = mods.filter(m => m['@_modName'] !== 'FS25_rememberPositions');

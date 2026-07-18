@@ -5,6 +5,7 @@
  * @returns {Object} - { installed: Set(names), missing: Set(names) }
  */
 export const resolveRecursiveDependencies = (targetModName, allMods, sessionInstalled = {}) => {
+  console.log(`[RESOLVE] targetModName=${targetModName} allMods.length=${allMods ? allMods.length : 0}`);
   const installed = new Set();
   const missing = new Set();
   const processed = new Set();
@@ -65,6 +66,8 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
         return false;
     });
     
+    console.log(`[RESOLVE-STEP] depString=${depString} cleanedName=${cleanedName} foundMatch=${match ? 'YES' : 'NO'}`);
+
     // Check if any value in sessionInstalled matches the requested dependency name
     const reqClean = nameLower.replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
     const isSessionInstalledByName = Object.values(sessionInstalled).some(val => val && val.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '') === reqClean);
@@ -74,6 +77,7 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
         installed.add(match.modName);
       }
       if (match.dependencies) {
+        console.log(`[RESOLVE-DEPS] Match ${match.modName} has ${match.dependencies.length} deps:`, match.dependencies);
         match.dependencies.forEach(dep => resolve(dep));
       }
     } else if ((depId && sessionInstalled[depId]) || isSessionInstalledByName) {
