@@ -702,7 +702,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         }
     }
 
-    if (requiresEngineInit) {
+    if (requiresEngineInit || !fs.existsSync(path.join(slotPath, 'farms.xml'))) {
         // Fetch the REAL uniqueUserId from an existing save so the game recognizes the user!
         let realUserId = "player";
         for (let i = 1; i <= 20; i++) {
