@@ -1080,8 +1080,8 @@ async function performScan(manualPaths = null) {
             }
 
 			if (remoteMod) {
-                // Strictly use ModHub dependencies, ignoring modDesc.xml to avoid interference
-                if (remoteMod.dependencies) {
+                // Use ModHub dependencies if available and non-empty, otherwise keep modDesc.xml dependencies
+                if (remoteMod.dependencies && remoteMod.dependencies.length > 0) {
                     dependencies = remoteMod.dependencies;
                 }
 
