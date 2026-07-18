@@ -192,6 +192,17 @@ async function launch(options = {}) {
   let targetModsPath = options.modsPath;
   const modManager = require('./modManager');
 
+  if (options.savegameIndex) {
+    try {
+      const savegameManager = require('./savegameManager');
+      const fs25Path = pathProvider.getFS25DataRoot();
+      const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
+      await savegameManager.cleanupBridgeModFromSavegame(savePath);
+    } catch (e) {
+      console.error('[LAUNCH] Failed to clean bridge mod:', e.message);
+    }
+  }
+
   if (!targetModsPath) {
     const cache = require('./cache');
     const isSelectiveEnabled = cache.getSetting('selectiveLoading') !== 'false';

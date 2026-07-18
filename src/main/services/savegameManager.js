@@ -2590,7 +2590,38 @@ async function autoInjectDependencies(savegamePath) {
     }
 }
 
+async function cleanupBridgeModFromSavegame(savePath) {
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const { XMLParser, XMLBuilder } = require('fast-xml-parser');
+        const xmlPath = path.join(savePath, 'careerSavegame.xml');
+        if (!fs.existsSync(xmlPath)) return;
+        
+        const xmlData = fs.readFileSync(xmlPath, 'utf8');
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
+        const obj = parser.parse(xmlData);
+        if (obj && obj.careerSavegame && obj.careerSavegame.mod) {
+            let mods = Array.isArray(obj.careerSavegame.mod) ? obj.careerSavegame.mod : [obj.careerSavegame.mod];
+            const hasBridge = mods.some(m => m['@_modName'] === 'FS25_rememberPositions');
+            if (hasBridge) {
+                console.log(`[CLEANUP] Stripping FS25_rememberPositions from careerSavegame.xml of launching save.`);
+                mods = mods.filter(m => m['@_modName'] !== 'FS25_rememberPositions');
+                obj.careerSavegame.mod = mods;
+                if (obj.careerSavegame) obj.careerSavegame['@_valid'] = 'true';
+                delete obj['?xml'];
+                const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
+                const newXml = builder.build(obj);
+                fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
+            }
+        }
+    } catch (e) {
+        console.error('[CLEANUP] Failed to strip rememberPositions:', e.message);
+    }
+}
+
 module.exports = {
+    cleanupBridgeModFromSavegame,
     getPlayerPosition,
     setPlayerPosition,
     resetPlayerSpawn,
