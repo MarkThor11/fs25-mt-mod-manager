@@ -363,10 +363,27 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     // 1. Prepare Slot
     if (fs.existsSync(slotPath)) {
-        // Archive existing if needed? For now just overwrite safely if empty
         await fs.emptyDir(slotPath);
     } else {
         await fs.ensureDir(slotPath);
+    }
+
+    // Scan mods first so we can resolve the correct path of the map mod (even if in a subfolder)
+    const modManager = require('./modManager');
+    let allMods = [];
+    try {
+        const scanRes = await modManager.scanLocalMods();
+        allMods = scanRes.mods || [];
+    } catch (err) {
+        console.error('[CREATE] Failed to scan local mods:', err);
+    }
+
+    let modZipPath = null;
+    if (mapModName) {
+        const mapModObjInAll = allMods.find(m => m.modName === mapModName);
+        if (mapModObjInAll && mapModObjInAll.filePath && mapModObjInAll.filePath.toLowerCase().endsWith('.zip')) {
+            modZipPath = mapModObjInAll.filePath;
+        }
     }
 
     // 2. Identify and Copy Template
@@ -381,32 +398,29 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     let placeablesXmlPath = null;
     let vehiclesXmlPath = null;
     let itemsXmlPath = null;
-    if (mapModName) {
+    if (modZipPath) {
         try {
-            const modZipPath = fs.realpathSync(path.join(getFs25Path(), 'mods', mapModName + '.zip'));
-            if (fs.existsSync(modZipPath)) {
-                const AdmZip = require('adm-zip');
-                const zip = new AdmZip(modZipPath);
-                const entry = zip.getEntry('modDesc.xml');
-                if (entry) {
-                    const xmlText = entry.getData().toString('utf8');
-                    const configMatch = xmlText.match(/configFilename="([^"]+)"/i);
-                    if (configMatch && configMatch[1]) {
-                        const pathLower = configMatch[1].toLowerCase();
-                        if (pathLower.includes('mapas')) baseTemplate = 'MapAS';
-                        else if (pathLower.includes('mapeu')) baseTemplate = 'MapEU';
-                        else if (pathLower.includes('mapus')) baseTemplate = 'MapUS';
-                    }
-                    
-                    const placeablesMatch = xmlText.match(/defaultPlaceablesXMLFilename="([^"]+)"/i);
-                    if (placeablesMatch && placeablesMatch[1]) placeablesXmlPath = placeablesMatch[1];
-
-                    const vehiclesMatch = xmlText.match(/defaultVehiclesXMLFilename="([^"]+)"/i);
-                    if (vehiclesMatch && vehiclesMatch[1]) vehiclesXmlPath = vehiclesMatch[1];
-
-                    const itemsMatch = xmlText.match(/defaultItemsXMLFilename="([^"]+)"/i);
-                    if (itemsMatch && itemsMatch[1]) itemsXmlPath = itemsMatch[1];
+            const AdmZip = require('adm-zip');
+            const zip = new AdmZip(modZipPath);
+            const entry = zip.getEntry('modDesc.xml');
+            if (entry) {
+                const xmlText = entry.getData().toString('utf8');
+                const configMatch = xmlText.match(/configFilename="([^"]+)"/i);
+                if (configMatch && configMatch[1]) {
+                    const pathLower = configMatch[1].toLowerCase();
+                    if (pathLower.includes('mapas')) baseTemplate = 'MapAS';
+                    else if (pathLower.includes('mapeu')) baseTemplate = 'MapEU';
+                    else if (pathLower.includes('mapus')) baseTemplate = 'MapUS';
                 }
+                
+                const placeablesMatch = xmlText.match(/defaultPlaceablesXMLFilename="([^"]+)"/i);
+                if (placeablesMatch && placeablesMatch[1]) placeablesXmlPath = placeablesMatch[1];
+
+                const vehiclesMatch = xmlText.match(/defaultVehiclesXMLFilename="([^"]+)"/i);
+                if (vehiclesMatch && vehiclesMatch[1]) vehiclesXmlPath = vehiclesMatch[1];
+
+                const itemsMatch = xmlText.match(/defaultItemsXMLFilename="([^"]+)"/i);
+                if (itemsMatch && itemsMatch[1]) itemsXmlPath = itemsMatch[1];
             }
         } catch (e) {
             console.error('[CREATE] Failed to determine base template from zip:', e.message);
@@ -436,9 +450,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             }
 
             // Extract the map's own default starting XML files from the map's zip file
-            if (mapModName) {
+            if (modZipPath) {
                 try {
-                    const modZipPath = fs.realpathSync(path.join(getFs25Path(), 'mods', mapModName + '.zip'));
                     const AdmZip = require('adm-zip');
                     const zip = new AdmZip(modZipPath);
                     
@@ -486,8 +499,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     // --- AUTO-INJECT DEPENDENCIES FOR ALL SELECTED MODS ---
     // If we don't do this, the FS25 engine pauses the launch and prompts: "Do you want to select all required mods?"
     try {
-        const modManager = require('./modManager');
-        let { mods: allMods } = await modManager.scanLocalMods();
         
         let addedNewDep = true;
         while(addedNewDep) {
@@ -667,9 +678,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     await fs.writeFile(careerPath, xmlOutput);
 
     let extractedDem = false;
-    if (mapModName) {
+    if (modZipPath) {
         try {
-            const modZipPath = fs.realpathSync(path.join(getFs25Path(), 'mods', mapModName + '.zip'));
             if (fs.existsSync(modZipPath)) {
                 const stats = fs.statSync(modZipPath);
                 if (stats.isFile()) {
