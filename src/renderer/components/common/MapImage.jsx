@@ -50,8 +50,13 @@ const MapImage = ({ mapTitle, mapId, mods, opacity = 0.25 }) => {
         return false;
     });
 
-    if (mapMod && mapMod.iconData && !mapMod.iconData.startsWith('CATEGORY:')) {
-        return <img src={mapMod.iconData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+    if (mapMod) {
+        if (mapMod.iconData && !mapMod.iconData.startsWith('CATEGORY:')) {
+            return <img src={mapMod.iconData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+        }
+        if (mapMod.filePath) {
+            return <img src={`mod-icon://icon?path=${encodeURIComponent(mapMod.filePath)}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+        }
     }
   }
 
