@@ -1901,7 +1901,15 @@ export default function InstalledModsPage() {
                         {!isHidden && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)', fontWeight: 500 }}>
-                              ({folderMods.length} mods)
+                              {(() => {
+                                const hasMap = folderMods.some(m => m.isMap);
+                                if (hasMap) {
+                                  const depCount = folderMods.length - 1;
+                                  if (depCount === 0) return '(Map only)';
+                                  return `(Map + ${depCount} mod${depCount === 1 ? '' : 's'})`;
+                                }
+                                return `(${folderMods.length} mods)`;
+                              })()}
                             </span>
                             
                             {/* Requirements Badge for Maps */}
