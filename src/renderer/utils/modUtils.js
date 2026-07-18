@@ -10,6 +10,21 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
   const missing = new Set();
   const processed = new Set();
 
+  // If the target mod resides in a subfolder (organizational folder),
+  // automatically include all other mods sharing the exact same subfolder.
+  if (targetModName && allMods) {
+    const targetMod = allMods.find(m => m.modName && m.modName.toLowerCase() === targetModName.toLowerCase());
+    if (targetMod && targetMod.folder && targetMod.folder.toLowerCase() !== 'mods' && targetMod.folder.toLowerCase() !== '') {
+      const folderLower = targetMod.folder.toLowerCase();
+      console.log(`[RESOLVE] Target mod is in subfolder '${targetMod.folder}'. Auto-selecting sibling mods...`);
+      allMods.forEach(m => {
+        if (m.folder && m.folder.toLowerCase() === folderLower && m.modName && m.modName.toLowerCase() !== targetModName.toLowerCase()) {
+          installed.add(m.modName);
+        }
+      });
+    }
+  }
+
   const cleanModName = (name) => {
     if (!name) return "";
     // Strip version requirements like "ModName (1.2.3.4)" or "ModName*"
