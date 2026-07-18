@@ -664,29 +664,6 @@ export default function ModDetailPage() {
                       : `You are missing ${dependencyStatus.missingCount} of the ${uniqueDependencies.length} required mods needed for this mod to function correctly.`
                     }
                   </p>
-                  {!dependencyStatus.allMet && (
-                    <button
-                      className="btn btn--primary btn--sm"
-                      style={{ 
-                          marginTop: 'var(--sp-3)', 
-                          background: '#fbbf24', 
-                          color: 'black', 
-                          fontWeight: 800, 
-                          width: '100%', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center',
-                          gap: 6,
-                          fontSize: 12
-                      }}
-                      onClick={(e) => {
-                          e.stopPropagation();
-                          setShowDepModal(true);
-                      }}
-                    >
-                      <Download size={14} /> Download Missing Dependencies ({dependencyStatus.missingCount})
-                    </button>
-                  )}
                 </div>
               )}
             {showAsInstalled ? (
@@ -949,17 +926,6 @@ export default function ModDetailPage() {
         </div>
       </div>
 
-      {showDepModal && (
-          <DependencyDownloadModal 
-              missingMods={dependencyStatus.missingList}
-              subFolder={mod.folder || ''}
-              onCancel={() => setShowDepModal(false)}
-              onComplete={() => {
-                  setShowDepModal(false);
-                  loadModDetail();
-              }}
-          />
-      )}
       </div>
     );
   }
