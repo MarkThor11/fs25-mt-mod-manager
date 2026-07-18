@@ -857,6 +857,11 @@ async function getAllSavegames() {
             let hasTemplate = false;
             try {
                 hasTemplate = await hasMapTemplate(mapId, mapTitle, mapModName);
+                if (isInitialized && !hasTemplate && mapId && !isOfficialMap(mapId)) {
+                    console.log(`[AUTO-HARVEST] Automatically learning master template for map ${mapId} from savegame slot ${i}...`);
+                    await adoptSaveAsTemplate(i);
+                    hasTemplate = true;
+                }
             } catch (e) {
                 console.error('[SAVEGAMES] Failed to check template for', mapId, e);
             }
@@ -2805,7 +2810,63 @@ async function syncSubfolderMapDependencies(savePath) {
     }
 }
 
+async function adoptSaveAsTemplate(saveIndex) {
+    try {
+        const fs25Path = getFs25Path();
+        const savePath = path.join(fs25Path, `savegame${saveIndex}`);
+        const careerPath = path.join(savePath, 'careerSavegame.xml');
+        
+        if (!fs.existsSync(careerPath)) {
+            return { success: false, error: `Savegame ${saveIndex} is empty or missing careerSavegame.xml` };
+        }
+        
+        const xml = await fs.readFile(careerPath, 'utf8');
+        const data = parser.parse(xml);
+        const settings = data.careerSavegame.settings;
+        const mapId = settings['@_mapId'] || settings.mapId;
+        const mapTitle = settings['@_mapTitle'] || settings.mapTitle;
+        
+        if (!mapId) {
+            return { success: false, error: 'Map ID not found in savegame' };
+        }
+        
+        let mapModName = null;
+        if (mapId && mapId.includes('.')) {
+            mapModName = mapId.split('.')[0];
+        }
+        
+        // Construct template name
+        let templateFolder = mapId.replace(/[^a-z0-9]/gi, '_');
+        if (mapModName) {
+            const cleanMod = mapModName.replace(/[^a-z0-9]/gi, '_');
+            templateFolder = `${cleanMod}_${templateFolder}`;
+        }
+        
+        const templatesDir = getTemplatesPath();
+        const destPath = path.join(templatesDir, templateFolder);
+        
+        console.log(`[HARVEST] Adopting savegame ${saveIndex} to template ${templateFolder}`);
+        await fs.ensureDir(destPath);
+        await fs.copy(savePath, destPath);
+        
+        // Clean up temporary/user files in template
+        const filesToRemove = ['steam_autocloud.vdf', 'modManager.json'];
+        for (const f of filesToRemove) {
+            const p = path.join(destPath, f);
+            if (fs.existsSync(p)) {
+                await fs.remove(p);
+            }
+        }
+        
+        return { success: true };
+    } catch (err) {
+        console.error('[HARVEST] Failed to adopt template:', err);
+        return { success: false, error: err.message };
+    }
+}
+
 module.exports = {
+    adoptSaveAsTemplate,
     cleanupBridgeModFromSavegame,
     syncSubfolderMapDependencies,
     getPlayerPosition,
