@@ -378,6 +378,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     let baseTemplate = null;
+    let placeablesXmlPath = null;
+    let vehiclesXmlPath = null;
+    let itemsXmlPath = null;
     if (mapModName) {
         try {
             const modZipPath = fs.realpathSync(path.join(getFs25Path(), 'mods', mapModName + '.zip'));
@@ -394,6 +397,15 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         else if (pathLower.includes('mapeu')) baseTemplate = 'MapEU';
                         else if (pathLower.includes('mapus')) baseTemplate = 'MapUS';
                     }
+                    
+                    const placeablesMatch = xmlText.match(/defaultPlaceablesXMLFilename="([^"]+)"/i);
+                    if (placeablesMatch && placeablesMatch[1]) placeablesXmlPath = placeablesMatch[1];
+
+                    const vehiclesMatch = xmlText.match(/defaultVehiclesXMLFilename="([^"]+)"/i);
+                    if (vehiclesMatch && vehiclesMatch[1]) vehiclesXmlPath = vehiclesMatch[1];
+
+                    const itemsMatch = xmlText.match(/defaultItemsXMLFilename="([^"]+)"/i);
+                    if (itemsMatch && itemsMatch[1]) itemsXmlPath = itemsMatch[1];
                 }
             }
         } catch (e) {
@@ -414,12 +426,39 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             await fs.copy(baseTemplatePath, slotPath);
             copiedTemplate = true;
             
-            // Remove the default base map's gameplay XMLs so the game loads the modded map's own defaults
+            // Remove the default base map's gameplay XMLs
             const filesToRemove = ['placeables.xml', 'vehicles.xml', 'items.xml', 'farmland.xml'];
             for (const f of filesToRemove) {
                 const p = path.join(slotPath, f);
                 if (fs.existsSync(p)) {
                     await fs.remove(p);
+                }
+            }
+
+            // Extract the map's own default starting XML files from the map's zip file
+            if (mapModName) {
+                try {
+                    const modZipPath = fs.realpathSync(path.join(getFs25Path(), 'mods', mapModName + '.zip'));
+                    const AdmZip = require('adm-zip');
+                    const zip = new AdmZip(modZipPath);
+                    
+                    const filesToExtract = [
+                        { zipPath: placeablesXmlPath, destName: 'placeables.xml' },
+                        { zipPath: vehiclesXmlPath, destName: 'vehicles.xml' },
+                        { zipPath: itemsXmlPath, destName: 'items.xml' }
+                    ];
+
+                    for (const item of filesToExtract) {
+                        if (item.zipPath) {
+                            const entry = zip.getEntry(item.zipPath);
+                            if (entry) {
+                                await fs.writeFile(path.join(slotPath, item.destName), entry.getData());
+                                console.log(`[CREATE] Extracted custom map default ${item.destName} from zip.`);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error('[CREATE] Failed to extract custom map default XMLs:', err.message);
                 }
             }
         }
