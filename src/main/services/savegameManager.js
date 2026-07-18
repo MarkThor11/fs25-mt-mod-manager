@@ -2620,8 +2620,76 @@ async function cleanupBridgeModFromSavegame(savePath) {
     }
 }
 
+async function syncSubfolderMapDependencies(savePath) {
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const { XMLParser, XMLBuilder } = require('fast-xml-parser');
+        const xmlPath = path.join(savePath, 'careerSavegame.xml');
+        if (!fs.existsSync(xmlPath)) return;
+
+        const xmlData = fs.readFileSync(xmlPath, 'utf8');
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
+        const obj = parser.parse(xmlData);
+        if (!obj || !obj.careerSavegame) return;
+
+        // Try to identify the map mod
+        const mapMatch = xmlData.match(/mapId="([^"]+)"/);
+        if (!mapMatch || !mapMatch[1]) return;
+        const mapId = mapMatch[1].split('.')[0];
+        
+        // Skip default maps
+        if (['MapUS', 'MapEU', 'MapAS', 'HighlandsFishingMap'].includes(mapId)) return;
+
+        // Scan local mods
+        const modManager = require('./modManager');
+        const { mods: localMods } = await modManager.scanLocalMods();
+        const mapModObj = localMods.find(m => m.modName && m.modName.toLowerCase() === mapId.toLowerCase());
+        
+        if (mapModObj && mapModObj.folder && mapModObj.folder.toLowerCase() !== 'mods' && mapModObj.folder.toLowerCase() !== '') {
+            const folderLower = mapModObj.folder.toLowerCase();
+            const siblingMods = localMods.filter(m => m.folder && m.folder.toLowerCase() === folderLower && m.modName && m.modName.toLowerCase() !== mapId.toLowerCase());
+            
+            if (siblingMods.length > 0) {
+                let mods = obj.careerSavegame.mod;
+                if (!mods) mods = [];
+                else if (!Array.isArray(mods)) mods = [mods];
+
+                let modified = false;
+                for (const sib of siblingMods) {
+                    const hasMod = mods.some(m => m['@_modName'] && m['@_modName'].toLowerCase() === sib.modName.toLowerCase());
+                    if (!hasMod) {
+                        console.log(`[SYNC-DEPS] Auto-activating missing sibling mod in careerSavegame.xml: ${sib.modName}`);
+                        mods.push({
+                            '@_modName': sib.modName,
+                            '@_title': sib.title || sib.modName,
+                            '@_version': sib.version || '1.0.0.0',
+                            '@_required': 'false',
+                            '@_fileHash': sib.fileHash || ''
+                        });
+                        modified = true;
+                    }
+                }
+
+                if (modified) {
+                    obj.careerSavegame.mod = mods;
+                    obj.careerSavegame['@_valid'] = 'true';
+                    delete obj['?xml'];
+                    const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
+                    const newXml = builder.build(obj);
+                    fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
+                    console.log(`[SYNC-DEPS] Successfully updated careerSavegame.xml with subfolder map dependencies.`);
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[SYNC-DEPS] Failed to sync map dependencies:', e.message);
+    }
+}
+
 module.exports = {
     cleanupBridgeModFromSavegame,
+    syncSubfolderMapDependencies,
     getPlayerPosition,
     setPlayerPosition,
     resetPlayerSpawn,
