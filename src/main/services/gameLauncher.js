@@ -255,12 +255,11 @@ async function launch(options = {}) {
       let isFullyInitialized = fs.existsSync(farmsFile) && fs.existsSync(initFile) && fs.existsSync(path.join(savePath, 'placeables.xml'));
 
       if (isFullyInitialized) {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is already initialized (farms.xml and heightmap exist). Enabling Auto-Start.`);
+        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is already initialized (farms.xml, heightmap, and placeables exist). Enabling Auto-Start.`);
         args.push('-autoStartSavegameId', String(options.savegameIndex));
         args.push('-autoStart');
       } else {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is NOT fully initialized. Launching to slot selection.`);
-        args.push('-autoStartSavegameId', String(options.savegameIndex));
+        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is NOT fully initialized. Launching to main menu/slot selection.`);
         needsManualInit = true;
       }
     }
