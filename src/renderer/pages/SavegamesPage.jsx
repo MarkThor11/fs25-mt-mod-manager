@@ -1691,6 +1691,11 @@ export default function SavegamesPage() {
           useToastStore.getState().success(`Career created in Slot ${slotIndex}`);
           setShowCreateModal(false);
           fetchSavegames();
+          if (autoLaunchOnCreate) {
+              setTimeout(() => {
+                handleLaunch(slotIndex);
+              }, 1500);
+          }
         }
       } else {
         useToastStore.getState().error(result.error);
