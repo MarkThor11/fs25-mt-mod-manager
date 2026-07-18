@@ -195,7 +195,7 @@ if (window.api?.on) {
 
       // Auto-clear successful downloads after a delay
       if (status === 'success') {
-        const active = get().activeDownloads[modId];
+        const active = useDownloadStore.getState().activeDownloads[modId];
         if (active) {
             useToastStore.getState().success(`${active.title || 'Mod'} updated successfully!`);
         }
@@ -206,9 +206,9 @@ if (window.api?.on) {
 
         setTimeout(() => {
           useDownloadStore.getState().removeDownload(modId);
-        }, 3000);
+        }, 1000);
       } else if (status === 'error') {
-        const active = get().activeDownloads[modId];
+        const active = useDownloadStore.getState().activeDownloads[modId];
         if (active) {
             useToastStore.getState().error(`Download failed: ${active.title || modId}`);
         }
@@ -236,7 +236,7 @@ if (window.api?.on) {
           }
         } else if (status === 'success') {
           // Atomic update: Status + Session Cache + Scan Trigger
-          set(state => {
+          useDownloadStore.setState(state => {
             const nextActive = { ...state.activeDownloads };
             if (nextActive[modId]) {
               nextActive[modId] = { ...nextActive[modId], status: 'success' };
@@ -254,21 +254,21 @@ if (window.api?.on) {
 
           // Update Batch Progress if part of a group
           if (parentId) {
-            const batch = get().batchProgress[parentId];
+            const batch = useDownloadStore.getState().batchProgress[parentId];
             if (batch) {
               const nextCompleted = batch.completed + 1;
-              get().updateBatchProgress(parentId, nextCompleted, modId);
+              useDownloadStore.getState().updateBatchProgress(parentId, nextCompleted, modId);
               if (nextCompleted >= batch.total) {
-                setTimeout(() => get().removeBatch(parentId), 5000);
+                setTimeout(() => useDownloadStore.getState().removeBatch(parentId), 5000);
               }
             }
           }
 
-          get().triggerScan();
+          useDownloadStore.getState().triggerScan();
 
           setTimeout(() => {
-            get().removeDownload(modId);
-          }, 3000);
+            useDownloadStore.getState().removeDownload(modId);
+          }, 1000);
         } else if (status === 'error' || status === 'NOT_FOUND_ON_MODHUB') {
           useDownloadStore.getState().setStatus(modId || displayTitle, 'error');
           
