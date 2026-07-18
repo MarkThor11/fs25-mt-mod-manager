@@ -303,6 +303,20 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 
         // Fetch all authoritative mods
         const { mods } = await scanLocalMods();
+
+        // If mapModName is active, find its folder and auto-add sibling mods from the same subfolder
+        if (mapModName && activeModNames) {
+            const mapModObj = mods.find(m => m.modName && m.modName.toLowerCase() === mapModName);
+            if (mapModObj && mapModObj.folder && mapModObj.folder.toLowerCase() !== 'mods' && mapModObj.folder.toLowerCase() !== '') {
+                const folderLower = mapModObj.folder.toLowerCase();
+                debugLog(`[VIRTUAL] Map '${mapModName}' resides in subfolder '${mapModObj.folder}'. Auto-activating all sibling mods from that folder.`);
+                mods.forEach(m => {
+                    if (m.folder && m.folder.toLowerCase() === folderLower && m.modName) {
+                        activeModNames.add(m.modName.toLowerCase());
+                    }
+                });
+            }
+        }
         
         for (const m of mods) {
             const modNameLower = m.modName.toLowerCase();
