@@ -560,12 +560,33 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     economicDifficulty: 'NORMAL',
                     loadDefaultFarm: 'true',
                     loadDefaultVehicles: 'true',
-                    isCrossPlatformSavegame: 'false'
+                    isCrossPlatformSavegame: 'false',
+                    densityMapRevision: '4',
+                    terrainTextureRevision: '1',
+                    terrainLodTextureRevision: '2',
+                    splitShapesRevision: '2',
+                    tipCollisionRevision: '2',
+                    placementCollisionRevision: '2',
+                    navigationCollisionRevision: '2',
+                    mapDensityMapRevision: '1',
+                    mapTerrainTextureRevision: '1',
+                    mapTerrainLodTextureRevision: '1',
+                    mapSplitShapesRevision: '1',
+                    mapTipCollisionRevision: '1',
+                    mapPlacementCollisionRevision: '1',
+                    mapNavigationCollisionRevision: '1'
                 },
                 statistics: {
-                    money: String(money)
+                    money: String(money),
+                    playTime: '0.000000'
                 },
-                mod: modData
+                mod: modData,
+                mapsSplitShapeFileIds: {
+                    '@_count': '0'
+                },
+                slotSystem: {
+                    '@_slotUsage': '0'
+                }
             }
         };
     }
