@@ -257,9 +257,10 @@ export default function App() {
         
         if (isRunning !== isGameRunning) {
           useSavegameStore.setState({ isGameRunning: isRunning });
-          // If the game just stopped, clear the playing slot
+          // If the game just stopped, clear the playing slot and refresh saves to trigger auto-harvesting
           if (!isRunning && playingSlot !== null) {
             useSavegameStore.setState({ playingSlot: null });
+            useSavegameStore.getState().fetchSavegames();
           }
         }
       } catch (err) {
