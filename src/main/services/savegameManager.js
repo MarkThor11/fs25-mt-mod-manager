@@ -534,7 +534,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             }
                         }
 
-                        if (installedDep && installedDep.modName !== mapModName && !finalMods.some(m => m.modName === installedDep.modName)) {
+                        if (installedDep && installedDep.modName !== mapModName && !finalMods.some(m => m.modName.toLowerCase() === installedDep.modName.toLowerCase())) {
                             console.log(`[CREATE] Auto-injecting dependency: ${installedDep.title} (required by ${selMod.title || selMod.modName})`);
                             finalMods.push({
                                 modName: installedDep.modName,
@@ -545,7 +545,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             });
                             addedNewDep = true;
                         } else if (installedDep) {
-                            const alreadySelected = finalMods.find(m => m.modName === installedDep.modName);
+                            const alreadySelected = finalMods.find(m => m.modName.toLowerCase() === installedDep.modName.toLowerCase());
                             if (alreadySelected) {
                                 alreadySelected.required = true;
                             }
