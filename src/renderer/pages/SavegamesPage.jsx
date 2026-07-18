@@ -2392,7 +2392,19 @@ export default function SavegamesPage() {
                 <div style={{ display: 'flex', gap: 'var(--sp-4)', justifyContent: 'flex-end', padding: '24px 32px', background: 'var(--bg-tertiary)', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
                     <div style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 16 }}>
                         <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
-                            <strong style={{ color: 'var(--text-primary)' }}>{modalSelectedMods.size + (includeMustHaves ? 10 : 0)}</strong> Mods Selected
+                            <strong style={{ color: 'var(--text-primary)' }}>
+                                {(() => {
+                                    const mustHavesCount = includeMustHaves ? mods.filter(m => 
+                                      !m.isMap && (useModHubStore.getState().favoriteMods || []).some(fm => 
+                                        fm.isMustHave && (
+                                          (fm.modId && m.modId && String(fm.modId) === String(m.modId)) || 
+                                          (fm.fileName && m.fileName && fm.fileName === m.fileName)
+                                        )
+                                      )
+                                    ).length : 0;
+                                    return modalSelectedMods.size + mustHavesCount;
+                                })()}
+                            </strong> Mods Selected
                         </div>
                     </div>
                     <button className="btn btn--ghost" style={{ height: 48, padding: '0 32px', fontSize: 16 }} onClick={() => setShowCreateModal(false)}>Cancel</button>
