@@ -377,12 +377,56 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         if (fs.existsSync(p1)) templateFolder = `${cleanMod}_${templateFolder}`;
     }
 
+    let baseTemplate = null;
+    if (mapModName) {
+        try {
+            const modZipPath = fs.realpathSync(path.join(getFs25Path(), 'mods', mapModName + '.zip'));
+            if (fs.existsSync(modZipPath)) {
+                const AdmZip = require('adm-zip');
+                const zip = new AdmZip(modZipPath);
+                const entry = zip.getEntry('modDesc.xml');
+                if (entry) {
+                    const xmlText = entry.getData().toString('utf8');
+                    const configMatch = xmlText.match(/configFilename="([^"]+)"/i);
+                    if (configMatch && configMatch[1]) {
+                        const pathLower = configMatch[1].toLowerCase();
+                        if (pathLower.includes('mapas')) baseTemplate = 'MapAS';
+                        else if (pathLower.includes('mapeu')) baseTemplate = 'MapEU';
+                        else if (pathLower.includes('mapus')) baseTemplate = 'MapUS';
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('[CREATE] Failed to determine base template from zip:', e.message);
+        }
+    }
+
     const templatePath = path.join(templatesDir, templateFolder);
+    let copiedTemplate = false;
     if (fs.existsSync(templatePath)) {
         console.log(`[CREATE] Copying template from ${templateFolder}`);
         await fs.copy(templatePath, slotPath);
-    } else {
-        console.warn(`[CREATE] No specific template found for ${mapId}. Creating minimal save to force terrain generation.`);
+        copiedTemplate = true;
+    } else if (baseTemplate) {
+        const baseTemplatePath = path.join(templatesDir, baseTemplate);
+        if (fs.existsSync(baseTemplatePath)) {
+            console.log(`[CREATE] Copying base template ${baseTemplate} for modded map ${mapId}`);
+            await fs.copy(baseTemplatePath, slotPath);
+            copiedTemplate = true;
+            
+            // Remove the default base map's gameplay XMLs so the game loads the modded map's own defaults
+            const filesToRemove = ['placeables.xml', 'vehicles.xml', 'items.xml', 'farmland.xml'];
+            for (const f of filesToRemove) {
+                const p = path.join(slotPath, f);
+                if (fs.existsSync(p)) {
+                    await fs.remove(p);
+                }
+            }
+        }
+    }
+
+    if (!copiedTemplate) {
+        console.warn(`[CREATE] No specific or base template found for ${mapId}. Creating minimal save to force terrain generation.`);
         requiresEngineInit = true;
     }
 
@@ -600,33 +644,33 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     await fs.writeFile(careerPath, xmlOutput);
 
-    if (requiresEngineInit) {
-        let extractedDem = false;
-        if (mapModName) {
-            try {
-                const modZipPath = fs.realpathSync(path.join(getFs25Path(), 'mods', mapModName + '.zip'));
-                if (fs.existsSync(modZipPath)) {
-                    const stats = fs.statSync(modZipPath);
-                    if (stats.isFile()) {
-                        const zip = new AdmZip(modZipPath);
-                        const entry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('dem.png'));
-                        if (entry) {
-                            const targetPath = path.join(slotPath, 'terrain.heightmap.png');
-                            await fs.writeFile(targetPath, entry.getData());
-                            console.log(`[CREATE] Extracted real dem.png to terrain.heightmap.png to prevent engine crash.`);
-                            extractedDem = true;
-                        }
+    let extractedDem = false;
+    if (mapModName) {
+        try {
+            const modZipPath = fs.realpathSync(path.join(getFs25Path(), 'mods', mapModName + '.zip'));
+            if (fs.existsSync(modZipPath)) {
+                const stats = fs.statSync(modZipPath);
+                if (stats.isFile()) {
+                    const zip = new AdmZip(modZipPath);
+                    const entry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('dem.png'));
+                    if (entry) {
+                        const targetPath = path.join(slotPath, 'terrain.heightmap.png');
+                        await fs.writeFile(targetPath, entry.getData());
+                        console.log(`[CREATE] Extracted real dem.png to terrain.heightmap.png to prevent engine crash.`);
+                        extractedDem = true;
                     }
                 }
-            } catch (err) {
-                console.error(`[CREATE] Failed to extract dem.png from map mod:`, err);
             }
+        } catch (err) {
+            console.error(`[CREATE] Failed to extract dem.png from map mod:`, err);
         }
-        
+
         if (!extractedDem) {
             console.error(`[CREATE] Could not extract dem.png. The savegame will be unplayable to prevent an engine crash.`);
         }
+    }
 
+    if (requiresEngineInit) {
         // Fetch the REAL uniqueUserId from an existing save so the game recognizes the user!
         let realUserId = "player";
         for (let i = 1; i <= 20; i++) {
