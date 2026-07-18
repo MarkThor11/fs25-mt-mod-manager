@@ -140,7 +140,7 @@ export default function DownloadsPage() {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                   <div style={{ fontSize: 20, fontWeight: 900, color: dl.status === 'success' ? 'var(--success)' : 'var(--accent)', minWidth: '60px', textAlign: 'right' }}>
-                    {Math.round(dl.progress || 0)}%
+                    {dl.status === 'success' ? 100 : Math.round(dl.progress || 0)}%
                   </div>
                   
                   {dl.progress < 100 && dl.status !== 'success' ? (
@@ -184,10 +184,9 @@ export default function DownloadsPage() {
                 </div>
               </div>
 
-              {/* Enhanced Progress Bar */}
               <div style={{ width: '100%', height: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px', overflow: 'hidden', zIndex: 1, position: 'relative' }}>
                 <div style={{ 
-                  width: `${dl.progress}%`, 
+                  width: `${dl.status === 'success' ? 100 : dl.progress}%`, 
                   height: '100%', 
                   background: dl.status === 'success' || dl.progress >= 100 
                     ? 'var(--success)' 

@@ -42,7 +42,9 @@ export default function Sidebar() {
   const favCount = (favoriteAuthors?.length || 0) + (favoriteMods?.length || 0);
   const hiddenCount = useModHubStore((s) => s.hiddenMods?.length || 0);
   const activeDownloads = useDownloadStore((s) => s.activeDownloads);
-  const downloadCount = Object.keys(activeDownloads).length;
+  const downloadCount = Object.values(activeDownloads).filter(
+    (dl) => dl.status !== 'success' && dl.status !== 'failed' && dl.status !== 'error'
+  ).length;
 
   const toggleCollapse = () => {
     const newVal = !isCollapsed;
