@@ -842,14 +842,35 @@ async function getAllSavegames() {
             const settings = data.careerSavegame.settings;
             const stats = data.careerSavegame.statistics;
 
+            const mapId = settings['@_mapId'] || settings.mapId;
+            const mapTitle = settings['@_mapTitle'] || settings.mapTitle;
+            let mapModName = null;
+            if (mapId && mapId.includes('.')) {
+                mapModName = mapId.split('.')[0];
+            }
+
+            const farmsFile = path.join(savePath, 'farms.xml');
+            const initFile = path.join(savePath, 'terrain.heightmap.png');
+            const placeablesFile = path.join(savePath, 'placeables.xml');
+            const isInitialized = fs.existsSync(farmsFile) && fs.existsSync(initFile) && fs.existsSync(placeablesFile);
+
+            let hasTemplate = false;
+            try {
+                hasTemplate = await hasMapTemplate(mapId, mapTitle, mapModName);
+            } catch (e) {
+                console.error('[SAVEGAMES] Failed to check template for', mapId, e);
+            }
+
             savegames.push({
                 index: i,
                 path: savePath,
                 folderName: `savegame${i}`,
                 farmName: settings['@_savegameName'] || settings.savegameName || 'Unnamed Farm',
                 playerName: settings['@_playerName'] || settings.playerName || 'Farmer',
-                mapId: settings['@_mapId'] || settings.mapId,
-                mapTitle: settings['@_mapTitle'] || settings.mapTitle,
+                mapId,
+                mapTitle,
+                isInitialized,
+                hasTemplate,
                 money: parseFloat(stats?.['@_money'] || stats?.money || 0),
                 playTime: parseFloat(stats?.['@_playTime'] || stats?.playTime || 0),
                 lastSaveDate: settings['@_saveDateFormatted'] || settings.saveDateFormatted,
