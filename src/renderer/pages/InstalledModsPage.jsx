@@ -1912,17 +1912,6 @@ export default function InstalledModsPage() {
                                  <>
                                    <div 
                                      className="dependency-badge"
-                                     onClick={(e) => {
-                                         e.stopPropagation();
-                                         if (result.status !== 'satisfied') {
-                                             setDepFixState({
-                                                 active: true,
-                                                 mapMod: folderName,
-                                                 missing: result.missing,
-                                                 subFolder: folderName
-                                             });
-                                         }
-                                     }}
                                      style={{ 
                                          display: 'flex', 
                                          alignItems: 'center', 
@@ -1936,7 +1925,7 @@ export default function InstalledModsPage() {
                                          border: `1px solid ${result.status === 'satisfied' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(251, 191, 36, 0.3)'}`,
                                          textTransform: 'uppercase',
                                          letterSpacing: '0.06em',
-                                         cursor: result.status === 'satisfied' ? 'default' : 'pointer',
+                                         cursor: 'default',
                                          position: 'relative',
                                          transition: 'all 0.2s ease'
                                      }}
