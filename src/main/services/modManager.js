@@ -317,6 +317,84 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                 });
             }
         }
+
+        // Recursively resolve all dependencies of active mods (including shared mods outside the subfolder)
+        if (activeModNames) {
+            const queue = Array.from(activeModNames);
+            const resolved = new Set(queue);
+            
+            const modsByName = new Map();
+            const modsByNormalized = new Map();
+            
+            const ultraNormalizeName = (str) => {
+                if (!str) return '';
+                return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+                    .replace(/[^a-z0-9]/g, '');
+            };
+
+            for (const m of mods) {
+                if (m.modName) {
+                    modsByName.set(m.modName.toLowerCase(), m);
+                }
+                const mFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
+                if (mFile) {
+                    modsByNormalized.set(ultraNormalizeName(mFile), m);
+                }
+                if (m.title) {
+                    modsByNormalized.set(ultraNormalizeName(m.title), m);
+                }
+            }
+
+            while (queue.length > 0) {
+                const currentName = queue.shift();
+                const mObj = modsByName.get(currentName);
+                if (mObj && mObj.dependencies && mObj.dependencies.length > 0) {
+                    for (const dep of mObj.dependencies) {
+                        let depTitle = typeof dep === 'string' ? dep : dep.title;
+                        
+                        let foundMod = null;
+                        
+                        // A. Direct modName match
+                        const depClean = depTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+                        if (modsByName.has(depClean)) {
+                            foundMod = modsByName.get(depClean);
+                        }
+                        
+                        // B. Normalized match
+                        if (!foundMod) {
+                            const depNorm = ultraNormalizeName(depTitle);
+                            if (modsByNormalized.has(depNorm)) {
+                                foundMod = modsByNormalized.get(depNorm);
+                            }
+                        }
+                        
+                        // C. Fallback from URL filename
+                        if (!foundMod && typeof dep === 'object' && dep.url) {
+                            const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
+                            if (fileMatch) {
+                                const fallbackFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
+                                const fileNorm = ultraNormalizeName(fallbackFileName);
+                                if (modsByNormalized.has(fileNorm)) {
+                                    foundMod = modsByNormalized.get(fileNorm);
+                                } else if (modsByName.has(fallbackFileName)) {
+                                    foundMod = modsByName.get(fallbackFileName);
+                                }
+                            }
+                        }
+
+                        if (foundMod && foundMod.modName) {
+                            const resolvedName = foundMod.modName.toLowerCase();
+                            if (!resolved.has(resolvedName)) {
+                                resolved.add(resolvedName);
+                                activeModNames.add(resolvedName);
+                                queue.push(resolvedName);
+                                debugLog(`[VIRTUAL] Auto-activated shared dependency mod: ${foundMod.modName}`);
+                            }
+                        }
+                    }
+                }
+            }
+        }
         
         for (const m of mods) {
             const modNameLower = m.modName.toLowerCase();
