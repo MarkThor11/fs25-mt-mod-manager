@@ -718,19 +718,37 @@ async function fetchModDetail(modId) {
   const seenTitles = new Set();
 
   try {
-    // Strategy: Giants creates a specific section for Required Mods at the bottom
-    const reqModsContainer = $('.title-mods-label').next('.clearfix');
-    if (reqModsContainer.length > 0) {
-      reqModsContainer.find('a').each((_, el) => {
-        const dTitle = $(el).text().trim();
-        const dHref = $(el).attr('href') || '';
+    const fullHtml = $.html();
+    const reqRegex = /(?:required|necessary|erforderliche|benötigte|nécessaires)\s*(?:mods?|modifications?)/i;
+    const reqMatch = fullHtml.match(reqRegex);
+
+    if (reqMatch) {
+      // Get everything after the "Required Mods" text
+      const afterHtml = fullHtml.substring(reqMatch.index);
+      
+      // Stop at the next major heading, or a <hr>, or end of description div
+      let stopIndex = afterHtml.length;
+      const stopMatch = afterHtml.substring(reqMatch[0].length).match(/<h[1-6][^>]*>|<hr[^>]*>|<div class="alert|<div class="table/i);
+      if (stopMatch) {
+        stopIndex = reqMatch[0].length + stopMatch.index;
+      }
+      
+      const relevantHtml = afterHtml.substring(0, stopIndex);
+      const $rel = cheerio.load(relevantHtml);
+      
+      // Extract all links in this section
+      $rel('a').each((_, el) => {
+        const dTitle = $rel(el).text().trim();
+        const dHref = $rel(el).attr('href') || '';
         
         if (dTitle && dHref && dTitle.length > 2) {
-          const resolved = resolveUrl(dHref);
-          if (!depSeenUrls.has(resolved)) {
-            dependencies.push({ title: dTitle, url: resolved });
-            depSeenUrls.add(resolved);
-            seenTitles.add(dTitle.toLowerCase());
+          if (dHref.includes('mod.php') || dHref.startsWith('/') || dHref.includes('farming-simulator.com') || dHref.includes('giants-software.com')) {
+            const resolved = resolveUrl(dHref);
+            if (!depSeenUrls.has(resolved)) {
+              dependencies.push({ title: dTitle, url: resolved });
+              depSeenUrls.add(resolved);
+              seenTitles.add(dTitle.toLowerCase());
+            }
           }
         }
       });
