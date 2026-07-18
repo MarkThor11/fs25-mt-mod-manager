@@ -718,40 +718,37 @@ async function fetchModDetail(modId) {
   const seenTitles = new Set();
 
   try {
-    const fullHtml = $.html();
-    const reqRegex = /(?:required|necessary|erforderliche|benötigte|nécessaires)\s*(?:mods?|modifications?)/i;
-    const reqMatch = fullHtml.match(reqRegex);
-
-    if (reqMatch) {
-      // Get everything after the "Required Mods" text
-      const afterHtml = fullHtml.substring(reqMatch.index);
-      
-      // Stop at the next major heading, or a <hr>, or end of description div
-      let stopIndex = afterHtml.length;
-      const stopMatch = afterHtml.substring(reqMatch[0].length).match(/<h[1-6][^>]*>|<hr[^>]*>|<div class="alert|<div class="table/i);
-      if (stopMatch) {
-        stopIndex = reqMatch[0].length + stopMatch.index;
+    let requiredSection = null;
+    $('h2, h3, h4, .title-mods-label').each((_, el) => {
+      const text = $(el).text().trim().toLowerCase();
+      if (/required\s*mods|necessary\s*mods|erforderliche\s*mods|benötigte\s*mods|mods\s*nécessaires/i.test(text)) {
+        requiredSection = $(el);
       }
-      
-      const relevantHtml = afterHtml.substring(0, stopIndex);
-      const $rel = cheerio.load(relevantHtml);
-      
-      // Extract all links in this section
-      $rel('a').each((_, el) => {
-        const dTitle = $rel(el).text().trim();
-        const dHref = $rel(el).attr('href') || '';
-        
-        if (dTitle && dHref && dTitle.length > 2) {
-          if (dHref.includes('mod.php') || dHref.startsWith('/') || dHref.includes('farming-simulator.com') || dHref.includes('giants-software.com')) {
-            const resolved = resolveUrl(dHref);
-            if (!depSeenUrls.has(resolved)) {
-              dependencies.push({ title: dTitle, url: resolved });
-              depSeenUrls.add(resolved);
-              seenTitles.add(dTitle.toLowerCase());
+    });
+
+    if (requiredSection) {
+      let sibling = requiredSection.next();
+      while (sibling.length > 0) {
+        if (sibling.is('h1, h2, h3, h4, h5, h6, hr')) {
+          break;
+        }
+        sibling.find('a').each((_, el) => {
+          const dTitle = $(el).text().trim();
+          const dHref = $(el).attr('href') || '';
+          
+          if (dTitle && dHref && dTitle.length > 2) {
+            if (dHref.includes('mod.php') || dHref.startsWith('/') || dHref.includes('farming-simulator.com') || dHref.includes('giants-software.com')) {
+              const resolved = resolveUrl(dHref);
+              if (!depSeenUrls.has(resolved)) {
+                dependencies.push({ title: dTitle, url: resolved });
+                depSeenUrls.add(resolved);
+                seenTitles.add(dTitle.toLowerCase());
+              }
             }
           }
-        }
-      });
+        });
+        sibling = sibling.next();
+      }
     }
   } catch (err) {
     console.error('[SCRAPER] Error parsing dependencies:', err);
