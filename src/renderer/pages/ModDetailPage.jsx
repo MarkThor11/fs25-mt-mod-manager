@@ -85,6 +85,7 @@ export default function ModDetailPage() {
   const [newTag, setNewTag] = useState('');
   const [restoring, setRestoring] = useState(false);
   const [hasBak, setHasBak] = useState(false);
+  const [showDepModal, setShowDepModal] = useState(false);
 
   // ── Dependency Management ──
   const sessionInstalled = useDownloadStore(s => s.sessionInstalled);
@@ -99,28 +100,24 @@ export default function ModDetailPage() {
       return (bUrl ? 1 : 0) - (aUrl ? 1 : 0);
     });
 
-    const deduped = [];
-    const seenTitles = new Set();
-
-    for (const dep of sorted) {
-      const title = typeof dep === 'string' ? dep : dep.title;
-      if (!title) continue;
-      
-      const lowerTitle = title.toLowerCase();
-      if (!seenTitles.has(lowerTitle)) {
-        deduped.push(dep);
-        seenTitles.add(lowerTitle);
-      }
-    }
+    const seen = new Set();
+    const deduped = sorted.filter(dep => {
+        const title = typeof dep === 'string' ? dep : dep.title;
+        const key = title.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
     return deduped;
   }, [mod?.dependencies]);
 
   const dependencyStatus = useMemo(() => {
-    if (uniqueDependencies.length === 0) return { allMet: true, missingCount: 0, statuses: {} };
-    if (!localMods) return { allMet: false, missingCount: uniqueDependencies.length, statuses: {} };
+    if (uniqueDependencies.length === 0) return { allMet: true, missingCount: 0, statuses: {}, missingList: [] };
+    if (!localMods) return { allMet: false, missingCount: uniqueDependencies.length, statuses: {}, missingList: uniqueDependencies };
 
     let missingCount = 0;
     const statuses = {};
+    const missingList = [];
 
     uniqueDependencies.forEach(dep => {
         let isInstalled = false;
@@ -174,13 +171,17 @@ export default function ModDetailPage() {
         }
 
         statuses[depTitle] = isInstalled;
-        if (!isInstalled) missingCount++;
+        if (!isInstalled) {
+            missingCount++;
+            missingList.push(dep);
+        }
     });
 
     return {
         allMet: missingCount === 0,
         missingCount,
-        statuses
+        statuses,
+        missingList
     };
   }, [uniqueDependencies, localMods, mod, sessionInstalled]);
 
@@ -663,6 +664,29 @@ export default function ModDetailPage() {
                       : `You are missing ${dependencyStatus.missingCount} of the ${uniqueDependencies.length} required mods needed for this mod to function correctly.`
                     }
                   </p>
+                  {!dependencyStatus.allMet && (
+                    <button
+                      className="btn btn--primary btn--sm"
+                      style={{ 
+                          marginTop: 'var(--sp-3)', 
+                          background: '#fbbf24', 
+                          color: 'black', 
+                          fontWeight: 800, 
+                          width: '100%', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          gap: 6,
+                          fontSize: 12
+                      }}
+                      onClick={(e) => {
+                          e.stopPropagation();
+                          setShowDepModal(true);
+                      }}
+                    >
+                      <Download size={14} /> Download Missing Dependencies ({dependencyStatus.missingCount})
+                    </button>
+                  )}
                 </div>
               )}
             {showAsInstalled ? (
@@ -925,6 +949,17 @@ export default function ModDetailPage() {
         </div>
       </div>
 
+      {showDepModal && (
+          <DependencyDownloadModal 
+              missingMods={dependencyStatus.missingList}
+              subFolder={mod.folder || ''}
+              onCancel={() => setShowDepModal(false)}
+              onComplete={() => {
+                  setShowDepModal(false);
+                  loadModDetail();
+              }}
+          />
+      )}
       </div>
     );
   }
