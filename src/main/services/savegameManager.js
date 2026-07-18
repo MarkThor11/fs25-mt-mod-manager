@@ -390,7 +390,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     const careerPath = path.join(slotPath, 'careerSavegame.xml');
     const today = new Date().toISOString().split('T')[0];
 
-    const finalMods = [...selectedMods];
+    const finalMods = selectedMods.filter(m => m.modName !== 'FS25_rememberPositions');
     // Add map mod if not already there
     let mapModObj = finalMods.find(m => m.modName === mapModName);
     if (mapModName && !mapModObj) {
@@ -451,19 +451,19 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             }
                         }
 
-                        if (installedDep) {
+                        if (installedDep && installedDep.modName !== mapModName && !finalMods.some(m => m.modName === installedDep.modName)) {
+                            console.log(`[CREATE] Auto-injecting dependency: ${installedDep.title} (required by ${selMod.title || selMod.modName})`);
+                            finalMods.push({
+                                modName: installedDep.modName,
+                                title: installedDep.title,
+                                version: installedDep.version || '1.0.0.0',
+                                required: false,
+                                fileHash: installedDep.fileHash || ''
+                            });
+                            addedNewDep = true;
+                        } else if (installedDep) {
                             const alreadySelected = finalMods.find(m => m.modName === installedDep.modName);
-                            if (!alreadySelected) {
-                                console.log(`[CREATE] Auto-injecting dependency: ${installedDep.title} (required by ${selMod.title || selMod.modName})`);
-                                finalMods.push({
-                                    modName: installedDep.modName,
-                                    title: installedDep.title,
-                                    version: installedDep.version || '1.0.0.0',
-                                    required: true,
-                                    fileHash: installedDep.fileHash || ''
-                                });
-                                addedNewDep = true;
-                            } else {
+                            if (alreadySelected) {
                                 alreadySelected.required = true;
                             }
                         }
@@ -473,10 +473,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         }
     } catch (err) {
         console.error('[CREATE] Failed to auto-inject dependencies:', err);
-    }
-    // Ensure bridge mod is copied if included
-    if (finalMods.some(m => m.modName === 'FS25_rememberPositions')) {
-        await ensureBridgeMod();
     }
 
     // FS25 engine requires mod maps to have their mapId prefixed with the mod name (e.g. FS25_MapMod.MapId)
@@ -1837,12 +1833,9 @@ async function updateNativeEnhancement(savePath, includeBridge, includeDeliverie
                 // Completely hand over all spawn control back to the game engine
                 await resetPlayerSpawn(savePath);
             }
-            if (includeBridge && !hasBridge) {
-                await ensureBridgeMod();
-                mods.push({ '@_modName': 'FS25_rememberPositions', '@_title': 'Remember Player Positions', '@_version': '9.9.9.9', '@_required': 'false', '@_fileHash': '' });
-            } else if (!includeBridge) {
-                if (hasBridge) mods = mods.filter(m => m['@_modName'] !== 'FS25_rememberPositions');
-            }
+            
+            // Always strip the rememberPositions mod as it is no longer used and causes UI issues/prompts
+            mods = mods.filter(m => m['@_modName'] !== 'FS25_rememberPositions');
             
             obj.careerSavegame.mod = mods;
             if (obj.careerSavegame) obj.careerSavegame['@_valid'] = 'true';
