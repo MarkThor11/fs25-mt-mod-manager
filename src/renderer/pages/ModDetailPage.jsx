@@ -100,31 +100,35 @@ export default function ModDetailPage() {
     const resolveDeps = (depList) => {
         if (!depList) return;
         depList.forEach(dep => {
-            let key = '';
-            if (typeof dep === 'string') {
-                key = dep.toLowerCase().trim();
-            } else {
-                key = (dep.url || dep.modId || dep.modName || dep.title || '').toLowerCase().trim();
+            let depId = null;
+            let fallbackFileName = null;
+            const depTitle = typeof dep === 'string' ? dep : dep.title;
+            
+            if (typeof dep === 'object' && dep.url) {
+                const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
+                if (idMatch) depId = parseInt(idMatch[1], 10).toString();
+                const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
+                if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
+            } else if (typeof dep === 'object' && dep.modId) {
+                depId = String(dep.modId);
             }
+            
+            const resolvedObj = resolvedMetadata[depTitle];
+            if (resolvedObj && resolvedObj.modId) {
+                depId = String(resolvedObj.modId);
+            }
+            
+            const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
+            const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
+            const cleanedName = cleanModName(depString).toLowerCase();
+            
+            const key = depId ? `id_${depId}` : `name_${cleanedName}`;
             
             if (!seenKeys.has(key)) {
                 seenKeys.add(key);
                 depsList.push(dep);
                 
                 // Recursively check if this dependency is installed and has its own dependencies
-                let depId = null;
-                let fallbackFileName = null;
-                const depTitle = typeof dep === 'string' ? dep : dep.title;
-                if (typeof dep === 'object' && dep.url) {
-                    const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
-                    if (idMatch) depId = parseInt(idMatch[1], 10).toString();
-                    const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
-                    if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
-                }
-                const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
-                const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
-                const cleanedName = cleanModName(depString).toLowerCase();
-                
                 const match = localMods ? localMods.find(m => {
                     if (depId && m.modId) {
                         const safeModId = String(m.modId).replace(/^0+/, '');
@@ -151,7 +155,7 @@ export default function ModDetailPage() {
       const bUrl = typeof b === 'object' && b.url;
       return (bUrl ? 1 : 0) - (aUrl ? 1 : 0);
     });
-  }, [mod?.dependencies, localMods]);
+  }, [mod?.dependencies, localMods, resolvedMetadata]);
 
   const dependencyStatus = useMemo(() => {
     if (uniqueDependencies.length === 0) return { allMet: true, missingCount: 0, statuses: {}, missingList: [] };
