@@ -163,11 +163,12 @@ export default function ModDetailPage() {
 
     uniqueDependencies.forEach(dep => {
         let isInstalled = false;
-        let depId = null;
+        const depTitle = typeof dep === 'string' ? dep : dep.title;
+        const resolvedObj = resolvedMetadata[depTitle];
+        
+        let depId = resolvedObj ? resolvedObj.modId : null;
         let fallbackFileName = null;
         
-        const depTitle = typeof dep === 'string' ? dep : dep.title;
-
         if (typeof dep === 'object' && dep.url) {
             const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
             if (idMatch) {
@@ -196,7 +197,7 @@ export default function ModDetailPage() {
             isInstalled = localMods.some(m => {
                 if (depId && m.modId) {
                     const safeModId = String(m.modId).replace(/^0+/, '');
-                    if (safeModId === depId) return true;
+                    if (safeModId === String(depId)) return true;
                 }
                 
                 // Exact ModName match (case-insensitive)
@@ -223,7 +224,7 @@ export default function ModDetailPage() {
         statuses,
         missingList
     };
-  }, [uniqueDependencies, localMods, mod, sessionInstalled]);
+  }, [uniqueDependencies, localMods, sessionInstalled, resolvedMetadata]);
 
   const images = useMemo(() => {
     if (!mod) return [];
