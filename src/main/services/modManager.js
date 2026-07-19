@@ -1177,7 +1177,6 @@ async function performScan(manualPaths = null) {
                 // the remote ModHub object to upgrade it with ModHub URL and friendly title.
                 const localDeps = dependencies || [];
                 const remoteDeps = remoteMod.dependencies || [];
-                const merged = [...localDeps];
                 
                 const getTechnicalKey = (dep) => {
                     if (typeof dep === 'string') return dep.toLowerCase().trim();
@@ -1188,6 +1187,32 @@ async function performScan(manualPaths = null) {
                     }
                     return (dep.modName || dep.technicalName || dep.title || dep.fileName || '').toLowerCase().trim();
                 };
+
+                // Helper to resolve raw string dependencies to ModHub objects using the remote pool
+                const resolveToRemoteMod = (dep) => {
+                    if (typeof dep === 'object') return dep;
+                    const key = dep.toLowerCase().trim();
+                    for (const poolKey of Object.keys(pool)) {
+                        const pm = pool[poolKey];
+                        if (!pm) continue;
+                        const pName = (pm.fileName || '').replace(/\.zip$/i, '').toLowerCase().trim();
+                        const pModName = (pm.modName || '').toLowerCase().trim();
+                        if (poolKey.toLowerCase() === key || pName === key || pModName === key) {
+                            if (pm.modId) {
+                                return {
+                                    title: pm.title || dep,
+                                    url: `https://www.farming-simulator.com/mod.php?mod_id=${pm.modId}`,
+                                    modId: pm.modId
+                                };
+                            }
+                        }
+                    }
+                    return dep;
+                };
+
+                // Resolve all local raw strings first using the pool
+                const resolvedLocal = localDeps.map(dep => resolveToRemoteMod(dep));
+                const merged = [...resolvedLocal];
 
                 for (const rDep of remoteDeps) {
                     const rKey = getTechnicalKey(rDep);
