@@ -102,8 +102,12 @@ export default function ModDetailPage() {
 
     const seen = new Set();
     const deduped = sorted.filter(dep => {
-        const title = typeof dep === 'string' ? dep : dep.title;
-        const key = title.toLowerCase().replace(/[^a-z0-9]/g, '');
+        let key = '';
+        if (typeof dep === 'string') {
+            key = dep.toLowerCase().trim();
+        } else {
+            key = (dep.url || dep.modId || dep.modName || dep.title || '').toLowerCase().trim();
+        }
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
