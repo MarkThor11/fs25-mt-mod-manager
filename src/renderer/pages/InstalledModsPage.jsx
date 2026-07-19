@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  RefreshCw, Download, Trash2, FolderOpen, Package,
+  RefreshCw, Download, Trash2, FolderOpen, Package, Lock,
   CheckCircle, Check, AlertTriangle, HardDrive, Search, List, LayoutGrid, ChevronDown, ChevronRight,
   Tag, Plus, X, Settings2, Folder, FolderPlus, Eye, EyeOff, MoreVertical, Zap, Layers, RefreshCcw,
   Heart, Star, Share2, Pencil, GripVertical, User, Pin
@@ -172,6 +172,26 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
                         title={isMustHave ? "Remove from Must-Haves" : "Mark as Must-Have"}
                     >
                         <Pin size={16} fill={isMustHave ? "currentColor" : "none"} strokeWidth={isMustHave ? 2.5 : 2} />
+                    </button>
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            const { setModTags } = useLocalModsStore.getState();
+                            const isLocked = (mod.tags || []).includes('lock-updates');
+                            const newTags = isLocked 
+                                ? mod.tags.filter(t => t !== 'lock-updates') 
+                                : [...(mod.tags || []), 'lock-updates'];
+                            setModTags(mod.fileName || mod.modId, [...new Set(newTags)]);
+                            useToastStore.getState().success(isLocked ? `Auto-updates unlocked for ${mod.title}` : `Auto-updates locked for ${mod.title}`);
+                        }}
+                        style={{ 
+                            color: (mod.tags || []).includes('lock-updates') ? 'var(--danger)' : 'rgba(255,255,255,0.8)', 
+                            filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))', 
+                            background: 'transparent', border: 'none', padding: 0, cursor: 'pointer'
+                        }}
+                        title={(mod.tags || []).includes('lock-updates') ? "Unlock auto-updates for this mod" : "Lock mod version (Disable auto-update)"}
+                    >
+                        <Lock size={16} fill={(mod.tags || []).includes('lock-updates') ? "currentColor" : "none"} />
                     </button>
                 </div>
             )}
@@ -345,6 +365,25 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
                                 title={isMustHave ? "Remove from Must-Haves" : "Mark as Must-Have"}
                             >
                                 <Pin size={14} fill={isMustHave ? "currentColor" : "none"} strokeWidth={isMustHave ? 2.5 : 2} />
+                            </button>
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const { setModTags } = useLocalModsStore.getState();
+                                    const isLocked = (mod.tags || []).includes('lock-updates');
+                                    const newTags = isLocked 
+                                        ? mod.tags.filter(t => t !== 'lock-updates') 
+                                        : [...(mod.tags || []), 'lock-updates'];
+                                    setModTags(mod.fileName || mod.modId, [...new Set(newTags)]);
+                                    useToastStore.getState().success(isLocked ? `Auto-updates unlocked for ${mod.title}` : `Auto-updates locked for ${mod.title}`);
+                                }}
+                                style={{ 
+                                    color: (mod.tags || []).includes('lock-updates') ? 'var(--danger)' : 'var(--text-muted)', 
+                                    background: 'transparent', border: 'none', padding: 0, display: 'flex', cursor: 'pointer'
+                                }}
+                                title={(mod.tags || []).includes('lock-updates') ? "Unlock auto-updates for this mod" : "Lock mod version (Disable auto-update)"}
+                            >
+                                <Lock size={14} fill={(mod.tags || []).includes('lock-updates') ? "currentColor" : "none"} />
                             </button>
                         </div>
                     </div>
@@ -672,13 +711,37 @@ const LazyModList = ({
                     </button>
                 )}
                 {!mod.isDLC && (
-                  <button
-                    className="btn btn--danger btn--icon btn--sm"
-                    onClick={() => handleUninstall(mod)}
-                    style={{ width: 32, height: 32, background: 'var(--danger)', color: 'white' }}
-                  >
-                      <Trash2 size={14} />
-                  </button>
+                  <>
+                    <button
+                      className={`btn btn--icon btn--sm ${(mod.tags || []).includes('lock-updates') ? 'btn--accent' : 'btn--secondary'}`}
+                      onClick={() => {
+                        const { setModTags } = useLocalModsStore.getState();
+                        const isLocked = (mod.tags || []).includes('lock-updates');
+                        const newTags = isLocked 
+                            ? mod.tags.filter(t => t !== 'lock-updates') 
+                            : [...(mod.tags || []), 'lock-updates'];
+                        setModTags(mod.fileName || mod.modId, [...new Set(newTags)]);
+                        useToastStore.getState().success(isLocked ? `Auto-updates unlocked for ${mod.title}` : `Auto-updates locked for ${mod.title}`);
+                      }}
+                      style={{ 
+                          width: 32, 
+                          height: 32, 
+                          color: (mod.tags || []).includes('lock-updates') ? 'var(--danger)' : 'var(--text-muted)',
+                          background: (mod.tags || []).includes('lock-updates') ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
+                          borderColor: (mod.tags || []).includes('lock-updates') ? 'var(--danger)' : 'var(--border)'
+                      }}
+                      title={(mod.tags || []).includes('lock-updates') ? "Unlock auto-updates for this mod" : "Lock mod version (Disable auto-update)"}
+                    >
+                        <Lock size={14} fill={(mod.tags || []).includes('lock-updates') ? "currentColor" : "none"} />
+                    </button>
+                    <button
+                      className="btn btn--danger btn--icon btn--sm"
+                      onClick={() => handleUninstall(mod)}
+                      style={{ width: 32, height: 32, background: 'var(--danger)', color: 'white' }}
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                  </>
                 )}
               </div>
             </div>
