@@ -93,27 +93,64 @@ export default function ModDetailPage() {
   const uniqueDependencies = useMemo(() => {
     if (!mod || !mod.dependencies) return [];
     
+    const depsList = [];
+    const seenKeys = new Set();
+    
+    const resolveDeps = (depList) => {
+        if (!depList) return;
+        depList.forEach(dep => {
+            let key = '';
+            if (typeof dep === 'string') {
+                key = dep.toLowerCase().trim();
+            } else {
+                key = (dep.url || dep.modId || dep.modName || dep.title || '').toLowerCase().trim();
+            }
+            
+            if (!seenKeys.has(key)) {
+                seenKeys.add(key);
+                depsList.push(dep);
+                
+                // Recursively check if this dependency is installed and has its own dependencies
+                let depId = null;
+                let fallbackFileName = null;
+                const depTitle = typeof dep === 'string' ? dep : dep.title;
+                if (typeof dep === 'object' && dep.url) {
+                    const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
+                    if (idMatch) depId = parseInt(idMatch[1], 10).toString();
+                    const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
+                    if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
+                }
+                const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
+                const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
+                const cleanedName = cleanModName(depString).toLowerCase();
+                
+                const match = localMods ? localMods.find(m => {
+                    if (depId && m.modId) {
+                        const safeModId = String(m.modId).replace(/^0+/, '');
+                        if (safeModId === depId) return true;
+                    }
+                    if (m.modName && m.modName.toLowerCase() === cleanedName) return true;
+                    const cleanFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
+                    if (cleanFile && cleanFile === cleanedName) return true;
+                    return false;
+                }) : null;
+                
+                if (match && match.dependencies && match.dependencies.length > 0) {
+                    resolveDeps(match.dependencies);
+                }
+            }
+        });
+    };
+    
+    resolveDeps(mod.dependencies);
+    
     // Sort to prioritize dependencies with ModHub URLs
-    const sorted = [...mod.dependencies].sort((a, b) => {
+    return depsList.sort((a, b) => {
       const aUrl = typeof a === 'object' && a.url;
       const bUrl = typeof b === 'object' && b.url;
       return (bUrl ? 1 : 0) - (aUrl ? 1 : 0);
     });
-
-    const seen = new Set();
-    const deduped = sorted.filter(dep => {
-        let key = '';
-        if (typeof dep === 'string') {
-            key = dep.toLowerCase().trim();
-        } else {
-            key = (dep.url || dep.modId || dep.modName || dep.title || '').toLowerCase().trim();
-        }
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-    });
-    return deduped;
-  }, [mod?.dependencies]);
+  }, [mod?.dependencies, localMods]);
 
   const dependencyStatus = useMemo(() => {
     if (uniqueDependencies.length === 0) return { allMet: true, missingCount: 0, statuses: {}, missingList: [] };
