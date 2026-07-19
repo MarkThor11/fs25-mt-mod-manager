@@ -83,6 +83,7 @@ export default function ModDetailPage() {
   const isOnline = useSettingsStore(s => s.isOnline);
   const { conflicts, missingDependencies, setModTags, restoreModVersion } = useLocalModsStore();
   const [newTag, setNewTag] = useState('');
+  const [resolvedMetadata, setResolvedMetadata] = useState({});
   const [restoring, setRestoring] = useState(false);
   const [hasBak, setHasBak] = useState(false);
   const [showDepModal, setShowDepModal] = useState(false);
@@ -383,6 +384,47 @@ export default function ModDetailPage() {
     }
   };
 
+  useEffect(() => {
+    if (!isOnline || uniqueDependencies.length === 0) return;
+    
+    // Find all dependencies that are raw strings and are missing
+    const unresolved = uniqueDependencies.filter(dep => {
+        if (typeof dep !== 'string') return false;
+        const isInstalled = dependencyStatus.statuses[dep] || false;
+        return !isInstalled;
+    });
+    
+    if (unresolved.length === 0) return;
+    
+    unresolved.forEach(async (rawName) => {
+        try {
+            const cleanName = rawName.replace(/^fs25_/i, '').replace(/[_\\-]/g, ' ');
+            const res = await window.api.modhub.search({ query: cleanName, page: 0 });
+            if (res && res.mods && res.mods.length > 0) {
+                // Find a mod that has a matching fileName or title
+                const match = res.mods.find(m => {
+                    const cleanFile = m.fileName ? m.fileName.replace(/\.zip$/i, '').toLowerCase() : '';
+                    const cleanTarget = rawName.toLowerCase();
+                    return cleanFile === cleanTarget || m.title.toLowerCase().includes(cleanTarget) || cleanTarget.includes(cleanFile);
+                }) || res.mods[0];
+                
+                if (match && match.modId) {
+                    setResolvedMetadata(prev => ({
+                        ...prev,
+                        [rawName]: {
+                            modId: match.modId,
+                            title: match.title,
+                            url: `https://www.farming-simulator.com/mod.php?mod_id=${match.modId}`
+                        }
+                    }));
+                }
+            }
+        } catch (e) {
+            console.error('Failed to resolve metadata for', rawName, e);
+        }
+    });
+  }, [uniqueDependencies, dependencyStatus.statuses, isOnline]);
+
   const handleInstall = async () => {
     if (isCurrentlyInstalling || !mod || !isOnline) return;
     
@@ -596,10 +638,12 @@ export default function ModDetailPage() {
                 {uniqueDependencies.map((dep) => {
                   const depTitle = typeof dep === 'string' ? dep : dep.title;
 
+                  const resolvedObj = resolvedMetadata[depTitle];
+
                   // Extract the file name or ID exactly like resolveRecursiveDependencies does
-                  let depId = null;
+                  let depId = resolvedObj ? resolvedObj.modId : null;
                   let fallbackFileName = null;
-                  let externalUrl = null;
+                  let externalUrl = resolvedObj ? resolvedObj.url : null;
                   if (typeof dep === 'object' && dep.url) {
                       const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
                       if (idMatch) {
@@ -615,7 +659,20 @@ export default function ModDetailPage() {
                   const cleanedName = cleanModName(depString).toLowerCase();
                   const isInstalled = dependencyStatus.statuses[depTitle] || false;
                   
-                  const displayLabel = depTitle.replace(/^fs25_/i, '');
+                  // If we retrieved a ModHub ID from local metadata, apply it
+                  if (!depId && isInstalled) {
+                      const localMatch = localMods.find(m => {
+                          if (m.modName && m.modName.toLowerCase() === cleanedName) return true;
+                          const cleanFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
+                          if (cleanFile && cleanFile === cleanedName) return true;
+                          return false;
+                      });
+                      if (localMatch && localMatch.modId) {
+                          depId = String(localMatch.modId);
+                      }
+                  }
+
+                  const displayLabel = resolvedObj ? resolvedObj.title : depTitle.replace(/^fs25_/i, '');
                   
                   const matchedLocal = isInstalled ? localMods.find(m => {
                       if (depId && m.modId) {
