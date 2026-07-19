@@ -1358,6 +1358,7 @@ export default function SavegamesPage() {
   const [autoLaunchOnCreate, setAutoLaunchOnCreate] = useState(false);
   const [createMode, setCreateMode] = useState('NEW_FARMER');
   const [mapHasTemplate, setMapHasTemplate] = useState(true);
+  const [selectedSaves, setSelectedSaves] = useState(new Set());
   const [includeMustHaves, setIncludeMustHaves] = useState(true);
   const [localMissingDeps, setLocalMissingDeps] = useState([]);
   
