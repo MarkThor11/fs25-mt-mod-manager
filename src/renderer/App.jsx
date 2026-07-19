@@ -215,21 +215,28 @@ export default function App() {
           return;
         }
 
-        toast.info(`Background Update: Installing ${updates.length} mod updates...`);
-        
-        let successCount = 0;
-        for (const update of updates) {
-          try {
-            const result = await updateMod(update.fileName, update.modId);
-            if (result.success) successCount++;
-          } catch (err) {
-            console.error(`[AUTO-UPDATE] Failed to update ${update.fileName}:`, err);
-          }
-        }
+        const modsToUpdate = updates.filter(update => {
+          const localMod = useLocalModsStore.getState().mods.find(m => m.fileName === update.fileName);
+          return !(localMod && (localMod.tags || []).includes('lock-updates'));
+        });
 
-        if (successCount > 0) {
-          toast.success(`Background Update: Successfully installed ${successCount} mod updates.`);
-          await scanMods(); // Final refresh
+        if (modsToUpdate.length > 0) {
+          toast.info(`Background Update: Installing ${modsToUpdate.length} mod updates...`);
+          
+          let successCount = 0;
+          for (const update of modsToUpdate) {
+            try {
+              const result = await updateMod(update.fileName, update.modId);
+              if (result.success) successCount++;
+            } catch (err) {
+              console.error(`[AUTO-UPDATE] Failed to update ${update.fileName}:`, err);
+            }
+          }
+
+          if (successCount > 0) {
+            toast.success(`Background Update: Successfully installed ${successCount} mod updates.`);
+            await scanMods(); // Final refresh
+          }
         }
       }
     };

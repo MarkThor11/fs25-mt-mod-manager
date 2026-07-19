@@ -4,7 +4,7 @@ import { useDownloadStore } from '../store/useDownloadStore';
 import { useLocalModsStore } from '../store/useLocalModsStore';
 import { useToastStore } from '../store/useToastStore';
 import { 
-  ArrowLeft, Download, ExternalLink, Package,
+  ArrowLeft, Download, ExternalLink, Package, Lock,
   Calendar, User, HardDrive, Tag, Gauge, Zap, Coins, Weight, Clock, Check, AlertCircle, Info, Milestone, Star, Pin, Heart,
   RotateCcw, RefreshCw, AlertTriangle, ShieldAlert, Search
 } from 'lucide-react';
@@ -1006,6 +1006,24 @@ export default function ModDetailPage() {
               <Pin size={16} fill={favoriteMods.find(m => (m.modId && modId && String(m.modId) === String(modId)) || (m.fileName && mod.fileName && m.fileName === mod.fileName))?.isMustHave ? "currentColor" : "none"} />
               {favoriteMods.find(m => (m.modId && modId && String(m.modId) === String(modId)) || (m.fileName && mod.fileName && m.fileName === mod.fileName))?.isMustHave ? 'Must-Have Mod' : 'Designate as Must-Have'}
             </button>
+
+            {localMod && (
+              <button 
+                className={`btn btn--full ${(localMod.tags || []).includes('lock-updates') ? 'btn--accent' : 'btn--secondary'}`}
+                onClick={() => {
+                  const isLocked = (localMod.tags || []).includes('lock-updates');
+                  const tags = isLocked 
+                    ? localMod.tags.filter(t => t !== 'lock-updates') 
+                    : [...(localMod.tags || []), 'lock-updates'];
+                  setModTags(localMod.fileName || localMod.modId, [...new Set(tags)]);
+                  useToastStore.getState().success(isLocked ? 'Auto-updates unlocked' : 'Auto-updates locked for this mod');
+                }}
+                style={(localMod.tags || []).includes('lock-updates') ? { background: 'rgba(239, 68, 68, 0.1)', borderColor: 'var(--danger)', color: 'var(--danger)', fontWeight: 800 } : { fontWeight: 800 }}
+              >
+                <Lock size={16} fill={(localMod.tags || []).includes('lock-updates') ? "currentColor" : "none"} />
+                {(localMod.tags || []).includes('lock-updates') ? 'Auto-Updates Locked' : 'Lock Version (Disable Auto-Update)'}
+              </button>
+            )}
           </div>
 
           {/* Metadata Card */}
