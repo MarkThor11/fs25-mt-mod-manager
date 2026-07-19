@@ -2201,12 +2201,28 @@ async function syncLibraryMetadata() {
 				const detail = await scraper.fetchModDetail(modId);
 				
 				if (detail) {
+					// 1. Prevent false matches by comparing author name
 					const cleanAuthorName = (name) => name ? name.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
 					const detailAuth = cleanAuthorName(detail.author);
 					const modAuth = cleanAuthorName(mod.author);
 					if (detailAuth && modAuth && !detailAuth.includes(modAuth) && !modAuth.includes(detailAuth)) {
 						console.log(`[SYNC] Author mismatch for ${mod.title}: remote '${detail.author}' vs local '${mod.author}'. Skipping.`);
 						continue;
+					}
+
+					// 2. Prevent false matches by comparing filename bases
+					if (detail.fileName && mod.fileName) {
+						const getBaseName = (str) => {
+							if (!str) return '';
+							const match = str.match(/([^/\\]+)\.zip$/i) || [null, str];
+							return match[1].replace(/^(?:fs25|fs22|pdlc)_/i, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+						};
+						const detailFile = getBaseName(detail.fileName);
+						const localFile = getBaseName(mod.fileName);
+						if (detailFile && localFile && detailFile !== localFile) {
+							console.log(`[SYNC] Filename mismatch for ${mod.title}: remote '${detail.fileName}' vs local '${mod.fileName}'. Skipping.`);
+							continue;
+						}
 					}
 				}
 
