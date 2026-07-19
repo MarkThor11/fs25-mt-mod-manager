@@ -1193,12 +1193,17 @@ async function performScan(manualPaths = null) {
                 const resolveToRemoteMod = (dep) => {
                     if (typeof dep === 'object') return dep;
                     const key = dep.toLowerCase().trim();
+                    const cleanKey = key.replace(/^fs25_/i, '').replace(/[^a-z0-9]/g, '').toLowerCase().trim();
+                    
                     for (const poolKey of Object.keys(pool)) {
                         const pm = pool[poolKey];
                         if (!pm) continue;
-                        const pName = (pm.fileName || '').replace(/\.zip$/i, '').toLowerCase().trim();
-                        const pModName = (pm.modName || '').toLowerCase().trim();
-                        if (poolKey.toLowerCase() === key || pName === key || pModName === key) {
+                        
+                        const pName = (pm.fileName || '').split(/[/\\]/).pop().replace(/\.zip$/i, '').replace(/^fs25_/i, '').replace(/[^a-z0-9]/g, '').toLowerCase().trim();
+                        const pModName = (pm.modName || '').replace(/^fs25_/i, '').replace(/[^a-z0-9]/g, '').toLowerCase().trim();
+                        const pTitle = (pm.title || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim();
+                        
+                        if (poolKey.toLowerCase() === key || pName === cleanKey || pModName === cleanKey || pTitle === cleanKey) {
                             if (pm.modId) {
                                 return {
                                     title: pm.title || dep,
