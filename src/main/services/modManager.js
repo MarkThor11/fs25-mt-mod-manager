@@ -1172,11 +1172,28 @@ async function performScan(manualPaths = null) {
             }
 
 			if (remoteMod) {
-                // Keep local modDesc.xml dependencies since they represent what is actually needed for the installed file.
-                // Only fall back to ModHub dependencies if local dependencies are empty.
-                if ((!dependencies || dependencies.length === 0) && remoteMod.dependencies && remoteMod.dependencies.length > 0) {
-                    dependencies = remoteMod.dependencies;
+                // Cross-check and merge local dependencies and remote ModHub dependencies without duplicates
+                const localDeps = dependencies || [];
+                const remoteDeps = remoteMod.dependencies || [];
+                const merged = [...localDeps];
+                for (const rDep of remoteDeps) {
+                    const rTitle = typeof rDep === 'string' ? rDep : rDep.title;
+                    const rUrl = typeof rDep === 'object' && rDep.url ? rDep.url : '';
+                    
+                    const exists = merged.some(lDep => {
+                        const lTitle = typeof lDep === 'string' ? lDep : lDep.title;
+                        const lUrl = typeof lDep === 'object' && lDep.url ? lDep.url : '';
+                        
+                        if (lTitle && rTitle && lTitle.toLowerCase() === rTitle.toLowerCase()) return true;
+                        if (lUrl && rUrl && lUrl.toLowerCase() === rUrl.toLowerCase()) return true;
+                        return false;
+                    });
+                    
+                    if (!exists) {
+                        merged.push(rDep);
+                    }
                 }
+                dependencies = merged;
 
                 // Enrich missing metadata
 				if (author === 'Unknown' && remoteMod.author) author = remoteMod.author;
