@@ -1427,7 +1427,7 @@ async function performScan(manualPaths = null) {
 	let finalMods = Array.from(new Set(uniqueModsMap.values()));
 
 	// Filter out internal background logic mods so they don't appear in UI
-	const internalMods = ['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge'];
+	const internalMods = ['fs25_rememberpositions', 'fs25_managerpersistencebridge'];
 	finalMods = finalMods.filter(m => !internalMods.includes((m.modName || '').toLowerCase()));
 
 	finalMods.sort((a, b) => a.title.localeCompare(b.title));
