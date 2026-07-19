@@ -1358,8 +1358,8 @@ export default function SavegamesPage() {
   const [autoLaunchOnCreate, setAutoLaunchOnCreate] = useState(false);
   const [createMode, setCreateMode] = useState('NEW_FARMER');
   const [mapHasTemplate, setMapHasTemplate] = useState(true);
-  const [selectedSaves, setSelectedSaves] = useState(new Set());
   const [includeMustHaves, setIncludeMustHaves] = useState(true);
+  const [localMissingDeps, setLocalMissingDeps] = useState([]);
   
   // Savegame Editor state
   const [showEditor, setShowEditor] = useState(null); // Save object
@@ -1401,6 +1401,7 @@ export default function SavegamesPage() {
     const [mapId, title, modName] = createMap.split('|');
     setMissingDeps(null); // Reset missing deps
     setModalSelectedMods(new Set()); // Reset selected mods to prevent accumulation from previous map selections
+    setLocalMissingDeps([]); // Clear previous missing deps
     if (mapId && window.api?.maps) {
       window.api.maps.checkTemplate(mapId, title, modName).then(exists => {
           setMapHasTemplate(exists);
@@ -1446,8 +1447,7 @@ export default function SavegamesPage() {
 
           if (missing.size > 0) {
             console.log(`[CAREER MODAL] Missing dependencies detected:`, Array.from(missing));
-            // User requested to disable the automatic download modal. 
-            // They will handle missing dependencies manually via the map details page.
+            setLocalMissingDeps(Array.from(missing));
           }
         } catch (e) {
           console.error('[CAREER MODAL] Dependency auto-select failed:', e);
@@ -2198,6 +2198,24 @@ export default function SavegamesPage() {
                                             </optgroup>
                                         )}
                                     </select>
+                                    
+                                    {localMissingDeps.length > 0 && (
+                                        <div style={{ marginTop: 12, padding: '12px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8, color: '#f87171', fontSize: 13 }} className="animate-fade-in">
+                                            <div style={{ fontWeight: 800, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <AlertTriangle size={14} style={{ color: '#ef4444' }} /> MISSING DEPENDENCIES ({localMissingDeps.length})
+                                            </div>
+                                            <div style={{ opacity: 0.9, fontSize: 12, lineHeight: 1.5 }}>
+                                                This map requires the following mods which are not installed:
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 8px', marginTop: 6, fontWeight: 700, color: 'var(--text-primary)' }}>
+                                                    {localMissingDeps.map(dep => (
+                                                        <span key={dep} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                            {dep}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
