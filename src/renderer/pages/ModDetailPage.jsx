@@ -308,6 +308,25 @@ export default function ModDetailPage() {
           }
       }
 
+      const mergeDeps = (localList, remoteList) => {
+          const merged = [...(localList || [])];
+          for (const rDep of (remoteList || [])) {
+              const rTitle = typeof rDep === 'string' ? rDep : rDep.title;
+              const rUrl = typeof rDep === 'object' && rDep.url ? rDep.url : '';
+              const exists = merged.some(lDep => {
+                  const lTitle = typeof lDep === 'string' ? lDep : lDep.title;
+                  const lUrl = typeof lDep === 'object' && lDep.url ? lDep.url : '';
+                  if (lTitle && rTitle && lTitle.toLowerCase() === rTitle.toLowerCase()) return true;
+                  if (lUrl && rUrl && lUrl.toLowerCase() === rUrl.toLowerCase()) return true;
+                  return false;
+              });
+              if (!exists) {
+                  merged.push(rDep);
+              }
+          }
+          return merged;
+      };
+
       // If it's a map and has raw string dependencies, dynamically resolve exact ModHub dependencies
       if (modData && modData.isMap && modData.dependencies && modData.dependencies.some(d => typeof d === 'string' || !d.url)) {
           try {
@@ -316,7 +335,7 @@ export default function ModDetailPage() {
               if (remoteMap && remoteMap.modId) {
                   const detail = await window.api.modhub.fetchModDetail({ modId: remoteMap.modId });
                   if (detail && detail.dependencies && detail.dependencies.length > 0) {
-                      modData.dependencies = detail.dependencies;
+                      modData.dependencies = mergeDeps(modData.dependencies, detail.dependencies);
                   }
               }
           } catch (e) {
@@ -330,15 +349,14 @@ export default function ModDetailPage() {
           const remote = await window.api.modhub.fetchModDetail({ modId: effectiveModId });
           if (remote && !remote.error) {
               // Merge remote data over local (prefer remote descriptions/images)
-              // If ModHub provides dependencies, use ONLY ModHub dependencies.
-              // This ensures the list exactly matches the ModHub page and avoids duplicates
-              // or conflicting internal zip names from modDesc.xml.
+              // Cross-check and merge local and remote dependencies so we don't discard third-party mods
               const remoteDeps = remote.dependencies || [];
+              const mergedDeps = mergeDeps(modData ? modData.dependencies : [], remoteDeps);
               
               modData = { 
                   ...modData, 
                   ...remote, 
-                  dependencies: remoteDeps 
+                  dependencies: mergedDeps 
               };
           }
         } catch (err) {
