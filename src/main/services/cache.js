@@ -454,6 +454,17 @@ function getModTrackingByFile(identifier) {
   `).get(identifier, String(identifier));
 }
 
+function getModTrackingByBaseName(fileName) {
+  if (!db) return null;
+  const lowerName = fileName.toLowerCase();
+  return db.prepare(`
+    SELECT * FROM mod_tracking 
+    WHERE LOWER(local_file_name) = ? 
+       OR local_file_name LIKE ? 
+       OR local_file_name LIKE ?
+  `).get(lowerName, '%/' + lowerName, '%\\' + lowerName);
+}
+
 function getRemoteImage(url) {
   if (!db) return null;
   const row = db.prepare('SELECT base64 FROM image_cache WHERE url = ?').get(url);
@@ -475,7 +486,7 @@ function close() {
 module.exports = {
   init, get, set, clearAll,
   getSetting, setSetting, getAllSettings,
-  getModTracking, setModTracking, removeModTracking, removeModTrackingByFile, getAllModTracking, getModTrackingByFile,
+  getModTracking, setModTracking, removeModTracking, removeModTrackingByFile, getAllModTracking, getModTrackingByFile, getModTrackingByBaseName,
   setModTags, setModLocation,
   getLocalModCache, getAllLocalModCache, setLocalModCache, removeLocalModCache, clearLocalModCache, updateLocalModIcon,
   updateLocalModCachePath, updateModTrackingFileInfo,

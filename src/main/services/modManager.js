@@ -1154,7 +1154,12 @@ async function performScan(manualPaths = null) {
 			let calculatedModId = modDesc?.modId || null;
 			if (!calculatedModId) {
 				const tracked = cache.getModTrackingByFile(relativePath) || cache.getModTrackingByFile(entryName);
-				if (tracked?.mod_id) calculatedModId = tracked.mod_id;
+				if (tracked?.mod_id) {
+					calculatedModId = tracked.mod_id;
+				} else {
+					const trackedBase = cache.getModTrackingByBaseName(entryName);
+					if (trackedBase?.mod_id) calculatedModId = trackedBase.mod_id;
+				}
 			}
 
 			let remoteMod = pool[fileId] || (calculatedModId ? pool[String(calculatedModId)] : null);
