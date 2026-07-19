@@ -398,23 +398,52 @@ export default function ModDetailPage() {
     
     unresolved.forEach(async (rawName) => {
         try {
-            const cleanName = rawName.replace(/^fs25_/i, '').replace(/[_\\-]/g, ' ');
-            const res = await window.api.modhub.search({ query: cleanName, page: 0 });
-            if (res && res.mods && res.mods.length > 0) {
-                // Find a mod that has a matching fileName or title
-                const match = res.mods.find(m => {
-                    const cleanFile = m.fileName ? m.fileName.replace(/\.zip$/i, '').toLowerCase() : '';
-                    const cleanTarget = rawName.toLowerCase();
-                    return cleanFile === cleanTarget || m.title.toLowerCase().includes(cleanTarget) || cleanTarget.includes(cleanFile);
-                }) || res.mods[0];
+            // Split camelCase, PascalCase, numbers, and clean up for searching
+            const cleanName = rawName
+                .replace(/^fs25_/i, '')
+                .replace(/([a-z])([A-Z])/g, '$1 $2')
+                .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+                .replace(/([0-9]+)/g, ' $1')
+                .replace(/[_\\-]/g, ' ')
+                .trim();
                 
-                if (match && match.modId) {
+            let res = await window.api.modhub.search({ query: cleanName, page: 0 });
+            
+            // Fallback: search by first word if search was empty
+            if (!res || !res.mods || res.mods.length === 0) {
+                const simplified = cleanName.split(' ')[0];
+                if (simplified && simplified.length > 2) {
+                    res = await window.api.modhub.search({ query: simplified, page: 0 });
+                }
+            }
+            
+            if (res && res.mods && res.mods.length > 0) {
+                const targetLower = rawName.replace(/^fs25_/i, '').toLowerCase();
+                
+                const scored = res.mods.map(m => {
+                    const titleClean = m.title.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                    const fileClean = m.fileName ? m.fileName.replace(/\.zip$/i, '').replace(/^fs25_/i, '').toLowerCase() : '';
+                    
+                    let score = 0;
+                    if (titleClean === targetLower || fileClean === targetLower) {
+                        score = 100;
+                    } else if (titleClean.includes(targetLower) || targetLower.includes(titleClean)) {
+                        score = 50;
+                    } else if (fileClean && (fileClean.includes(targetLower) || targetLower.includes(fileClean))) {
+                        score = 40;
+                    }
+                    return { mod: m, score };
+                }).filter(x => x.score > 0).sort((a, b) => b.score - a.score);
+                
+                const bestMatch = scored.length > 0 ? scored[0].mod : res.mods[0];
+                
+                if (bestMatch && bestMatch.modId) {
                     setResolvedMetadata(prev => ({
                         ...prev,
                         [rawName]: {
-                            modId: match.modId,
-                            title: match.title,
-                            url: `https://www.farming-simulator.com/mod.php?mod_id=${match.modId}`
+                            modId: bestMatch.modId,
+                            title: bestMatch.title,
+                            url: `https://www.farming-simulator.com/mod.php?mod_id=${bestMatch.modId}`
                         }
                     }));
                 }
