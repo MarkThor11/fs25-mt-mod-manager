@@ -548,11 +548,15 @@ export default function ModDetailPage() {
                       const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
                       if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
                   }
-                  const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
+                   const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
                   const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
                   const cleanedName = cleanModName(depString);
 
                   const isInstalled = dependencyStatus.statuses[depTitle] || false;
+                  
+                  const cleanNameForCompare = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
+                  const showTechName = depString && cleanNameForCompare(depTitle) !== cleanNameForCompare(depString);
+                  const displayLabel = showTechName ? `${depTitle} (${depString})` : depTitle;
                   
                   return (
                     <div key={depTitle} style={{ 
@@ -570,35 +574,35 @@ export default function ModDetailPage() {
                           {isInstalled ? <Check size={16} /> : <AlertCircle size={16} />}
                         </div>
                         {depId ? (
-                          <span 
-                            style={{ 
-                              fontWeight: 600, 
-                              cursor: 'pointer',
-                              textDecoration: 'none'
-                            }}
-                            className="hover-underline"
-                            onClick={() => navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? mod.title.replace(/\([^)]+\)/g, '').trim() : parentFolder } })}
-                          >
-                            {depTitle}
-                          </span>
+                           <span 
+                             style={{ 
+                               fontWeight: 600, 
+                               cursor: 'pointer',
+                               textDecoration: 'none'
+                             }}
+                             className="hover-underline"
+                             onClick={() => navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? mod.title.replace(/\([^)]+\)/g, '').trim() : parentFolder } })}
+                           >
+                             {displayLabel}
+                           </span>
                         ) : externalUrl ? (
-                          <span 
-                            style={{ 
-                              fontWeight: 600, 
-                              cursor: 'pointer',
-                              textDecoration: 'none',
-                              color: 'var(--accent)'
-                            }}
-                            className="hover-underline"
-                            onClick={() => window.api?.shell?.openExternal(externalUrl)}
-                            title={externalUrl}
-                          >
-                            {depTitle}
-                          </span>
+                           <span 
+                             style={{ 
+                               fontWeight: 600, 
+                               cursor: 'pointer',
+                               textDecoration: 'none',
+                               color: 'var(--accent)'
+                             }}
+                             className="hover-underline"
+                             onClick={() => window.api?.shell?.openExternal(externalUrl)}
+                             title={externalUrl}
+                           >
+                             {displayLabel}
+                           </span>
                         ) : (
-                          <span style={{ fontWeight: 600 }}>
-                            {depTitle}
-                          </span>
+                           <span style={{ fontWeight: 600 }}>
+                             {displayLabel}
+                           </span>
                         )}
                       </div>
                       {depId ? (
