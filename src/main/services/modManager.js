@@ -1172,8 +1172,9 @@ async function performScan(manualPaths = null) {
             }
 
 			if (remoteMod) {
-                // Use ModHub dependencies if available and non-empty, otherwise keep modDesc.xml dependencies
-                if (remoteMod.dependencies && remoteMod.dependencies.length > 0) {
+                // Keep local modDesc.xml dependencies since they represent what is actually needed for the installed file.
+                // Only fall back to ModHub dependencies if local dependencies are empty.
+                if ((!dependencies || dependencies.length === 0) && remoteMod.dependencies && remoteMod.dependencies.length > 0) {
                     dependencies = remoteMod.dependencies;
                 }
 
