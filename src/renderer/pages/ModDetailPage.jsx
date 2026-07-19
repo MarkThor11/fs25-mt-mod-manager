@@ -612,13 +612,38 @@ export default function ModDetailPage() {
                   }
                    const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
                   const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
-                  const cleanedName = cleanModName(depString);
-
+                  const cleanedName = cleanModName(depString).toLowerCase();
                   const isInstalled = dependencyStatus.statuses[depTitle] || false;
                   
-                  const cleanNameForCompare = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
-                  const showTechName = depString && cleanNameForCompare(depTitle) !== cleanNameForCompare(depString);
-                  const displayLabel = showTechName ? `${depTitle} (${depString})` : depTitle;
+                  const displayLabel = depTitle.replace(/^fs25_/i, '');
+                  
+                  const matchedLocal = isInstalled ? localMods.find(m => {
+                      if (depId && m.modId) {
+                          const safeModId = String(m.modId).replace(/^0+/, '');
+                          if (safeModId === depId) return true;
+                      }
+                      if (m.modName && m.modName.toLowerCase() === cleanedName) return true;
+                      const cleanFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
+                      if (cleanFile && cleanFile === cleanedName) return true;
+                      return false;
+                  }) : null;
+
+                  const handleLocalNavigate = () => {
+                      if (!matchedLocal) return;
+                      navigate(`/mod-detail`, { 
+                          state: { 
+                              mod: { 
+                                  ...matchedLocal, 
+                                  images: [ 
+                                      ...(matchedLocal.iconData ? [matchedLocal.iconData] : []), 
+                                      ...(matchedLocal.extraImages || []) 
+                                  ], 
+                                  fileSize: matchedLocal.size ? `${(matchedLocal.size / (1024 * 1024)).toFixed(2)} MB` : null 
+                              }, 
+                              parentFolder 
+                          } 
+                      });
+                  };
                   
                   return (
                     <div key={depTitle} style={{ 
@@ -644,6 +669,18 @@ export default function ModDetailPage() {
                              }}
                              className="hover-underline"
                              onClick={() => navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? mod.title.replace(/\([^)]+\)/g, '').trim() : parentFolder } })}
+                           >
+                             {displayLabel}
+                           </span>
+                        ) : matchedLocal ? (
+                           <span 
+                             style={{ 
+                               fontWeight: 600, 
+                               cursor: 'pointer',
+                               textDecoration: 'none'
+                             }}
+                             className="hover-underline"
+                             onClick={handleLocalNavigate}
                            >
                              {displayLabel}
                            </span>
@@ -673,6 +710,13 @@ export default function ModDetailPage() {
                           onClick={() => navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? mod.title.replace(/\([^)]+\)/g, '').trim() : parentFolder } })}
                         >
                           {isInstalled ? 'View Mod' : 'View on ModHub'}
+                        </button>
+                      ) : matchedLocal ? (
+                        <button 
+                          className="btn btn--secondary btn--xs"
+                          onClick={handleLocalNavigate}
+                        >
+                          View Mod
                         </button>
                       ) : externalUrl ? (
                         <button 
