@@ -724,11 +724,11 @@ function parseModDesc(modPath, zipInstance = null) {
 		
 		// Dependencies
 		const dependencies = [];
-		const depBlock = getTag(xmlContent, 'dependencies');
+		const xmlWithoutComments = xmlContent.replace(/<!--[\s\S]*?-->/g, '');
+		const depBlock = getTag(xmlWithoutComments, 'dependencies');
 		
-		// Strategy: Check inside <dependencies> block first, fallback to all <dependency> tags if block missing.
-		// Strip comments first to ignore commented-out dependencies.
-		const contentToSearch = (depBlock || xmlContent).replace(/<!--[\s\S]*?-->/g, '');
+		// Strategy: Check inside <dependencies> block first, fallback to all <dependency> tags if block missing
+		const contentToSearch = depBlock || xmlWithoutComments;
 		const depRegex = /<dependency\s*([^>]*)\/?>([^<]*)(?:<\/dependency>)?/gi;
 		let match;
 		while ((match = depRegex.exec(contentToSearch)) !== null) {
