@@ -144,8 +144,8 @@ export default function ModDetailPage() {
         if (depId && sessionInstalled[depId]) {
             isInstalled = true;
         } else {
-            const depClean = (fallbackFileName || depTitle).toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
-            if (Object.values(sessionInstalled).some(val => val && val.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '') === depClean)) {
+            const depClean = (fallbackFileName || depTitle).toLowerCase();
+            if (Object.values(sessionInstalled).some(val => val && val.toLowerCase() === depClean)) {
                 isInstalled = true;
             }
         }
@@ -161,17 +161,15 @@ export default function ModDetailPage() {
                     if (safeModId === depId) return true;
                 }
                 
-                const cleanForMatch = (str) => str.replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
-            const reqClean = cleanForMatch(cleanedName);
-            const mFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
-            const mClean = cleanForMatch(mFile);
-            if (reqClean.includes('wooden') || mClean.includes('wooden')) {
-                console.log(`[DEBUG-MODDETAIL] depId=${depId} reqClean=${reqClean} mFile=${mFile} mClean=${mClean} match=${reqClean === mClean}`);
-            }
-            if (reqClean && reqClean === mClean) return true;
-            
-            return false;
-        });
+                // Exact ModName match (case-insensitive)
+                if (m.modName && m.modName.toLowerCase() === cleanedName) return true;
+
+                // Exact FileName match (case-insensitive, without .zip)
+                const cleanFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
+                if (cleanFile && cleanFile === cleanedName) return true;
+                
+                return false;
+            });
         }
 
         statuses[depTitle] = isInstalled;

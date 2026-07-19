@@ -67,16 +67,12 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
             if (safeModId === depId) return true;
         }
         
-        // 2. FileName or ModName Match (User explicitly requested avoiding unreliable titles)
-        const cleanForMatch = (str) => str.replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
-        const reqClean = cleanForMatch(nameLower);
-        
-        // Check modName first since backend now reliably cleans it
-        if (m.modName && reqClean === cleanForMatch(m.modName.toLowerCase()) && reqClean.length > 0) return true;
+        // Exact ModName match (case-insensitive)
+        if (m.modName && m.modName.toLowerCase() === nameLower) return true;
 
-        // Fallback to fileName but strip version suffixes like _v1_0
-        const cleanFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase().replace(/[_\\-]v\d+([_\\.]\d+)*$/i, '') : '';
-        if (reqClean === cleanForMatch(cleanFile) && reqClean.length > 0) return true;
+        // Exact FileName match (case-insensitive, without .zip)
+        const cleanFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
+        if (cleanFile && cleanFile === nameLower) return true;
         
         return false;
     });
@@ -84,8 +80,7 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
     console.log(`[RESOLVE-STEP] depString=${depString} cleanedName=${cleanedName} foundMatch=${match ? 'YES' : 'NO'}`);
 
     // Check if any value in sessionInstalled matches the requested dependency name
-    const reqClean = nameLower.replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '');
-    const isSessionInstalledByName = Object.values(sessionInstalled).some(val => val && val.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^(?:fs25|pdlc)+/, '') === reqClean);
+    const isSessionInstalledByName = Object.values(sessionInstalled).some(val => val && val.toLowerCase() === nameLower);
 
     if (match) {
       if (match.modName && match.modName.toLowerCase() !== targetModName.toLowerCase()) {
