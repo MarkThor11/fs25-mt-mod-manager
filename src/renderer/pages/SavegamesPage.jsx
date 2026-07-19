@@ -1400,6 +1400,7 @@ export default function SavegamesPage() {
     // Check if the selected map has a master template whenever it changes
     const [mapId, title, modName] = createMap.split('|');
     setMissingDeps(null); // Reset missing deps
+    setModalSelectedMods(new Set()); // Reset selected mods to prevent accumulation from previous map selections
     if (mapId && window.api?.maps) {
       window.api.maps.checkTemplate(mapId, title, modName).then(exists => {
           setMapHasTemplate(exists);
