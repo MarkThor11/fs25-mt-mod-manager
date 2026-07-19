@@ -2200,6 +2200,16 @@ async function syncLibraryMetadata() {
 				await new Promise(r => setTimeout(r, 600)); // Respect rate limits
 				const detail = await scraper.fetchModDetail(modId);
 				
+				if (detail) {
+					const cleanAuthorName = (name) => name ? name.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+					const detailAuth = cleanAuthorName(detail.author);
+					const modAuth = cleanAuthorName(mod.author);
+					if (detailAuth && modAuth && !detailAuth.includes(modAuth) && !modAuth.includes(detailAuth)) {
+						console.log(`[SYNC] Author mismatch for ${mod.title}: remote '${detail.author}' vs local '${mod.author}'. Skipping.`);
+						continue;
+					}
+				}
+
 				let modhubTitle = detail?.title || mod.title;
 				const targetCategory = (detail?.category || '').toUpperCase();
 				const isMapResult = targetCategory.includes('MAP');
