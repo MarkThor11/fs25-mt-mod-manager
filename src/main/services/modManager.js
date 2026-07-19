@@ -1172,24 +1172,30 @@ async function performScan(manualPaths = null) {
             }
 
 			if (remoteMod) {
-                // Cross-check and merge local dependencies and remote ModHub dependencies without duplicates
+                // Cross-check and merge local dependencies and remote ModHub dependencies without duplicates.
+                // If a remote dependency matches a local raw string dependency, we replace the raw string with
+                // the remote ModHub object to upgrade it with ModHub URL and friendly title.
                 const localDeps = dependencies || [];
                 const remoteDeps = remoteMod.dependencies || [];
                 const merged = [...localDeps];
+                
+                const getTechnicalKey = (dep) => {
+                    if (typeof dep === 'string') return dep.toLowerCase().trim();
+                    const url = dep.url || '';
+                    if (url) {
+                        const fileMatch = url.match(/\/([^\/]+\.zip)$/i);
+                        if (fileMatch) return fileMatch[1].replace(/\.zip$/i, '').toLowerCase().trim();
+                    }
+                    return (dep.modName || dep.technicalName || dep.title || dep.fileName || '').toLowerCase().trim();
+                };
+
                 for (const rDep of remoteDeps) {
-                    const rTitle = typeof rDep === 'string' ? rDep : rDep.title;
-                    const rUrl = typeof rDep === 'object' && rDep.url ? rDep.url : '';
+                    const rKey = getTechnicalKey(rDep);
+                    const localIdx = merged.findIndex(lDep => getTechnicalKey(lDep) === rKey);
                     
-                    const exists = merged.some(lDep => {
-                        const lTitle = typeof lDep === 'string' ? lDep : lDep.title;
-                        const lUrl = typeof lDep === 'object' && lDep.url ? lDep.url : '';
-                        
-                        if (lTitle && rTitle && lTitle.toLowerCase() === rTitle.toLowerCase()) return true;
-                        if (lUrl && rUrl && lUrl.toLowerCase() === rUrl.toLowerCase()) return true;
-                        return false;
-                    });
-                    
-                    if (!exists) {
+                    if (localIdx !== -1) {
+                        merged[localIdx] = rDep;
+                    } else {
                         merged.push(rDep);
                     }
                 }

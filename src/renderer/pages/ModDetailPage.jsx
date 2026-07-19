@@ -309,18 +309,23 @@ export default function ModDetailPage() {
       }
 
       const mergeDeps = (localList, remoteList) => {
+          const getTechnicalKey = (dep) => {
+              if (typeof dep === 'string') return dep.toLowerCase().trim();
+              const url = dep.url || '';
+              if (url) {
+                  const fileMatch = url.match(/\/([^\/]+\.zip)$/i);
+                  if (fileMatch) return fileMatch[1].replace(/\.zip$/i, '').toLowerCase().trim();
+              }
+              return (dep.modName || dep.technicalName || dep.title || dep.fileName || '').toLowerCase().trim();
+          };
+
           const merged = [...(localList || [])];
           for (const rDep of (remoteList || [])) {
-              const rTitle = typeof rDep === 'string' ? rDep : rDep.title;
-              const rUrl = typeof rDep === 'object' && rDep.url ? rDep.url : '';
-              const exists = merged.some(lDep => {
-                  const lTitle = typeof lDep === 'string' ? lDep : lDep.title;
-                  const lUrl = typeof lDep === 'object' && lDep.url ? lDep.url : '';
-                  if (lTitle && rTitle && lTitle.toLowerCase() === rTitle.toLowerCase()) return true;
-                  if (lUrl && rUrl && lUrl.toLowerCase() === rUrl.toLowerCase()) return true;
-                  return false;
-              });
-              if (!exists) {
+              const rKey = getTechnicalKey(rDep);
+              const localIdx = merged.findIndex(lDep => getTechnicalKey(lDep) === rKey);
+              if (localIdx !== -1) {
+                  merged[localIdx] = rDep;
+              } else {
                   merged.push(rDep);
               }
           }
