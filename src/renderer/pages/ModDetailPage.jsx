@@ -298,15 +298,27 @@ export default function ModDetailPage() {
           }
       }
 
-      const mergeDeps = (localList, remoteList) => {
+      // Helper to normalize strings for comparison
+      const normalizeForMatching = (str) => {
+          if (!str) return '';
+          const fileClean = str.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
+          return fileClean.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+      };
+
+      const mergeDeps = (localList, remoteList, resolvedMeta = {}) => {
           const getTechnicalKey = (dep) => {
-              if (typeof dep === 'string') return dep.toLowerCase().trim();
+              if (typeof dep === 'string') return normalizeForMatching(dep);
+              
+              const resolvedObj = resolvedMeta[dep.title] || (dep.url ? resolvedMeta[dep.url] : null);
+              const fileName = dep.fileName || resolvedObj?.fileName;
+              if (fileName) return normalizeForMatching(fileName);
+              
               const url = dep.url || '';
               if (url) {
                   const fileMatch = url.match(/\/([^\/]+\.zip)$/i);
-                  if (fileMatch) return fileMatch[1].replace(/\.zip$/i, '').toLowerCase().trim();
+                  if (fileMatch) return normalizeForMatching(fileMatch[1]);
               }
-              return (dep.modName || dep.technicalName || dep.title || dep.fileName || '').toLowerCase().trim();
+              return normalizeForMatching(dep.modName || dep.technicalName || dep.title || dep.fileName || '');
           };
 
           const merged = [...(localList || [])];
@@ -314,7 +326,13 @@ export default function ModDetailPage() {
               const rKey = getTechnicalKey(rDep);
               const localIdx = merged.findIndex(lDep => getTechnicalKey(lDep) === rKey);
               if (localIdx !== -1) {
-                  merged[localIdx] = rDep;
+                  // Merge the remote details (e.g. url, modId, title) into the local entry
+                  const localEntry = merged[localIdx];
+                  if (typeof localEntry === 'string') {
+                      merged[localIdx] = rDep;
+                  } else {
+                      merged[localIdx] = { ...localEntry, ...rDep };
+                  }
               } else {
                   merged.push(rDep);
               }
@@ -322,47 +340,101 @@ export default function ModDetailPage() {
           return merged;
       };
 
-      // If it's a map and has raw string dependencies, dynamically resolve exact ModHub dependencies
-      if (modData && modData.isMap && modData.dependencies && modData.dependencies.some(d => typeof d === 'string' || !d.url)) {
+      const prefetchDependencies = async (depsList) => {
+          if (!depsList || depsList.length === 0) return {};
+          
+          const depIdsToFetch = depsList
+              .map(d => {
+                  if (typeof d === 'object' && d.url) {
+                      const idMatch = d.url.match(/mod_id=(\d+)/) || d.url.match(/storage\/(\d+)\//);
+                      return idMatch ? idMatch[1] : null;
+                  }
+                  return null;
+              })
+              .filter(Boolean);
+
+          if (depIdsToFetch.length === 0) return {};
+
+          try {
+              const detailsList = await Promise.all(
+                  depIdsToFetch.map(async (id) => {
+                      try {
+                          return await window.api.modhub.fetchModDetail({ modId: id });
+                      } catch (e) {
+                          return null;
+                      }
+                  })
+              );
+
+              const resolvedMetaUpdate = {};
+              detailsList.forEach(detail => {
+                  if (detail && detail.modId) {
+                      resolvedMetaUpdate[detail.title] = detail;
+                      if (detail.url) resolvedMetaUpdate[detail.url] = detail;
+                      if (detail.fileName) {
+                          const techName = detail.fileName.replace(/\.zip$/i, '');
+                          resolvedMetaUpdate[techName] = detail;
+                      }
+                  }
+              });
+              return resolvedMetaUpdate;
+          } catch (err) {
+              console.error('Failed to prefetch dependency details:', err);
+              return {};
+          }
+      };
+
+      // 1. Resolve remote map data if online
+      let remoteDeps = [];
+      let resolvedMetaUpdate = {};
+
+      if (effectiveModId) {
+          try {
+              const remote = await window.api.modhub.fetchModDetail({ modId: effectiveModId });
+              if (remote && !remote.error) {
+                  remoteDeps = remote.dependencies || [];
+                  // Prefetch filenames for all remote dependencies listed on the map page
+                  resolvedMetaUpdate = await prefetchDependencies(remoteDeps);
+                  
+                  modData = { 
+                      ...modData, 
+                      ...remote
+                  };
+              }
+          } catch (err) {
+              console.warn('Remote fetch failed, falling back to local metadata');
+          }
+      } else if (modData && modData.isMap && modData.dependencies && modData.dependencies.some(d => typeof d === 'string' || !d.url)) {
+          // If we only have local map metadata, search by map title to locate its ModHub ID and page
           try {
               const searchRes = await window.api.modhub.search({ query: modData.title || modData.modName, page: 0 });
               const remoteMap = searchRes?.mods?.[0];
               if (remoteMap && remoteMap.modId) {
                   const detail = await window.api.modhub.fetchModDetail({ modId: remoteMap.modId });
-                  if (detail && detail.dependencies && detail.dependencies.length > 0) {
-                      modData.dependencies = mergeDeps(modData.dependencies, detail.dependencies);
+                  if (detail && detail.dependencies) {
+                      remoteDeps = detail.dependencies;
+                      resolvedMetaUpdate = await prefetchDependencies(remoteDeps);
+                      modData = {
+                          ...modData,
+                          ...detail
+                      };
                   }
               }
           } catch (e) {
-              console.error('Failed to dynamically fetch map dependencies from ModHub', e);
+              console.error('Failed to dynamically fetch map details from ModHub', e);
           }
       }
 
-      // 2. If we have a modId (from URL or local data), try to fetch full remote details
-      if (effectiveModId) {
-        try {
-          const remote = await window.api.modhub.fetchModDetail({ modId: effectiveModId });
-          if (remote && !remote.error) {
-              // Merge remote data over local (prefer remote descriptions/images)
-              // Cross-check and merge local and remote dependencies so we don't discard third-party mods
-              const remoteDeps = remote.dependencies || [];
-              const mergedDeps = mergeDeps(modData ? modData.dependencies : [], remoteDeps);
-              
-              modData = { 
-                  ...modData, 
-                  ...remote, 
-                  dependencies: mergedDeps 
-              };
-          }
-        } catch (err) {
-          console.warn('Remote fetch failed, falling back to local metadata');
-        }
-      }
-
+      // 2. Perform the merge using the prefetched metadata (so filenames are resolved)
       if (modData) {
-        setMod(modData);
+          const mergedDeps = mergeDeps(modData.dependencies, remoteDeps, resolvedMetaUpdate);
+          modData.dependencies = mergedDeps;
+          
+          if (Object.keys(resolvedMetaUpdate).length > 0) {
+              setResolvedMetadata(prev => ({ ...prev, ...resolvedMetaUpdate }));
+          }
+          setMod(modData);
       } else if (modId) {
-          // Fallback if no local data and only modId
           const result = await window.api.modhub.fetchModDetail({ modId });
           setMod(result);
       }
