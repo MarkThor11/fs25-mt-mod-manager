@@ -396,11 +396,9 @@ export default function ModDetailPage() {
                   // Prefetch filenames for all remote dependencies listed on the map page
                   resolvedMetaUpdate = await prefetchDependencies(remoteDeps);
                   
-                  const localDeps = modData?.dependencies || [];
                   modData = { 
                       ...modData, 
-                      ...remote,
-                      dependencies: localDeps
+                      ...remote
                   };
               }
           } catch (err) {
@@ -416,11 +414,9 @@ export default function ModDetailPage() {
                   if (detail && detail.dependencies) {
                       remoteDeps = detail.dependencies;
                       resolvedMetaUpdate = await prefetchDependencies(remoteDeps);
-                      const localDeps = modData?.dependencies || [];
                       modData = {
                           ...modData,
-                          ...detail,
-                          dependencies: localDeps
+                          ...detail
                       };
                   }
               }
@@ -429,10 +425,11 @@ export default function ModDetailPage() {
           }
       }
 
-      // 2. Perform the merge using the prefetched metadata (so filenames are resolved)
+      // 2. Use remote dependencies if available (prefetched metadata resolves the filenames)
       if (modData) {
-          const mergedDeps = mergeDeps(modData.dependencies, remoteDeps, resolvedMetaUpdate);
-          modData.dependencies = mergedDeps;
+          if (remoteDeps && remoteDeps.length > 0) {
+              modData.dependencies = remoteDeps;
+          }
           
           if (Object.keys(resolvedMetaUpdate).length > 0) {
               setResolvedMetadata(prev => ({ ...prev, ...resolvedMetaUpdate }));

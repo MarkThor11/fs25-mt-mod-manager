@@ -1178,64 +1178,8 @@ async function performScan(manualPaths = null) {
             }
 
 			if (remoteMod) {
-                // Cross-check and merge local dependencies and remote ModHub dependencies without duplicates.
-                // If a remote dependency matches a local raw string dependency, we replace the raw string with
-                // the remote ModHub object to upgrade it with ModHub URL and friendly title.
-                const localDeps = dependencies || [];
-                const remoteDeps = remoteMod.dependencies || [];
-                
-                const getTechnicalKey = (dep) => {
-                    if (typeof dep === 'string') return dep.toLowerCase().trim();
-                    const url = dep.url || '';
-                    if (url) {
-                        const fileMatch = url.match(/\/([^\/]+\.zip)$/i);
-                        if (fileMatch) return fileMatch[1].replace(/\.zip$/i, '').toLowerCase().trim();
-                    }
-                    return (dep.modName || dep.technicalName || dep.title || dep.fileName || '').toLowerCase().trim();
-                };
-
-                // Helper to resolve raw string dependencies to ModHub objects using the remote pool
-                const resolveToRemoteMod = (dep) => {
-                    if (typeof dep === 'object') return dep;
-                    const key = dep.toLowerCase().trim();
-                    const cleanKey = key.replace(/^fs25_/i, '').replace(/[^a-z0-9]/g, '').toLowerCase().trim();
-                    
-                    for (const poolKey of Object.keys(pool)) {
-                        const pm = pool[poolKey];
-                        if (!pm) continue;
-                        
-                        const pName = (pm.fileName || '').split(/[/\\]/).pop().replace(/\.zip$/i, '').replace(/^fs25_/i, '').replace(/[^a-z0-9]/g, '').toLowerCase().trim();
-                        const pModName = (pm.modName || '').replace(/^fs25_/i, '').replace(/[^a-z0-9]/g, '').toLowerCase().trim();
-                        
-                        if (poolKey.toLowerCase() === key || pName === cleanKey || pModName === cleanKey) {
-                            if (pm.modId) {
-                                return {
-                                    title: pm.title || dep,
-                                    url: `https://www.farming-simulator.com/mod.php?mod_id=${pm.modId}`,
-                                    modId: pm.modId,
-                                    fileName: pm.fileName || null
-                                };
-                            }
-                        }
-                    }
-                    return dep;
-                };
-
-                // Resolve all local raw strings first using the pool
-                const resolvedLocal = localDeps.map(dep => resolveToRemoteMod(dep));
-                const merged = [...resolvedLocal];
-
-                for (const rDep of remoteDeps) {
-                    const rKey = getTechnicalKey(rDep);
-                    const localIdx = merged.findIndex(lDep => getTechnicalKey(lDep) === rKey);
-                    
-                    if (localIdx !== -1) {
-                        merged[localIdx] = rDep;
-                    } else {
-                        merged.push(rDep);
-                    }
-                }
-                dependencies = merged;
+				// Concentrate solely on dependencies listed on the ModHub website.
+				dependencies = remoteMod.dependencies || [];
 
                 // Enrich missing metadata
 				if (author === 'Unknown' && remoteMod.author) author = remoteMod.author;
