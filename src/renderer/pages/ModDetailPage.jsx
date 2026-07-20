@@ -407,14 +407,29 @@ export default function ModDetailPage() {
             }
             
             if (res && res.mods && res.mods.length > 0) {
+                // Fetch full details for the top 5 candidates in parallel to get their true fileNames!
+                const candidates = res.mods.slice(0, 5);
+                const detailedCandidates = await Promise.all(
+                    candidates.map(async (c) => {
+                        try {
+                            const detail = await window.api.modhub.fetchModDetail({ modId: c.modId });
+                            return { ...c, ...detail };
+                        } catch (err) {
+                            return c;
+                        }
+                    })
+                );
+
                 const targetLower = rawName.replace(/^fs25_/i, '').toLowerCase();
                 
-                const scored = res.mods.map(m => {
+                const scored = detailedCandidates.map(m => {
                     const titleClean = m.title.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-                    const fileClean = m.fileName ? m.fileName.replace(/\.zip$/i, '').replace(/^fs25_/i, '').toLowerCase() : '';
+                    const fileClean = m.fileName ? m.fileName.replace(/\.zip$/i, '').replace(/^(?:fs25|fs22|pdlc)_/i, '').toLowerCase() : '';
                     
                     let score = 0;
-                    if (titleClean === targetLower || fileClean === targetLower) {
+                    if (fileClean === targetLower) {
+                        score = 150; // Extra high priority for exact filename match!
+                    } else if (titleClean === targetLower) {
                         score = 100;
                     } else if (titleClean.includes(targetLower) || targetLower.includes(titleClean)) {
                         score = 50;
