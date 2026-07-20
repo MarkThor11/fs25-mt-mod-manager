@@ -807,6 +807,7 @@ async function fetchModDetail(modId) {
     description,
     images,
     downloadUrl,
+    fileName: downloadUrl ? downloadUrl.split('/').pop().split('?')[0] : null,
     rating,
     metadata,
     version: versionVal,
