@@ -817,8 +817,12 @@ async function getAllSavegames() {
                 hasTemplate = await hasMapTemplate(mapId, mapTitle, mapModName);
                 if (isInitialized && !hasTemplate && mapId && !isOfficialMap(mapId)) {
                     console.log(`[AUTO-HARVEST] Automatically learning master template for map ${mapId} from savegame slot ${i}...`);
-                    await adoptSaveAsTemplate(i);
-                    hasTemplate = true;
+                    const harvestResult = await adoptSaveAsTemplate(i);
+                    if (harvestResult && harvestResult.success) {
+                        hasTemplate = true;
+                    } else {
+                        console.error(`[AUTO-HARVEST] Failed to automatically learn template for ${mapId}:`, harvestResult ? harvestResult.error : 'Unknown error');
+                    }
                 }
             } catch (e) {
                 console.error('[SAVEGAMES] Failed to check template for', mapId, e);
@@ -2806,7 +2810,7 @@ async function adoptSaveAsTemplate(saveIndex) {
         console.log(`[HARVEST] Adopting savegame ${saveIndex} to template ${templateFolder}`);
         await fs.ensureDir(destPath);
         
-        let retries = 5;
+        let retries = 10;
         while (retries > 0) {
             try {
                 await fs.copy(savePath, destPath);
