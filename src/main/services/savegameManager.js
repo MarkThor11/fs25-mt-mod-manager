@@ -433,49 +433,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         console.log(`[CREATE] Copying template from ${templateFolder}`);
         await fs.copy(templatePath, slotPath);
         copiedTemplate = true;
-    } else if (baseTemplate) {
-        const baseTemplatePath = path.join(templatesDir, baseTemplate);
-        if (fs.existsSync(baseTemplatePath)) {
-            console.log(`[CREATE] Copying base template ${baseTemplate} for modded map ${mapId}`);
-            await fs.copy(baseTemplatePath, slotPath);
-            copiedTemplate = true;
-            
-            // Remove the default base map's gameplay XMLs
-            const filesToRemove = ['placeables.xml', 'vehicles.xml', 'items.xml', 'farmland.xml'];
-            for (const f of filesToRemove) {
-                const p = path.join(slotPath, f);
-                if (fs.existsSync(p)) {
-                    await fs.remove(p);
-                }
-            }
 
-            // Extract the map's own default starting XML files from the map's zip file
-            if (modZipPath) {
-                try {
-                    const AdmZip = require('adm-zip');
-                    const zip = new AdmZip(modZipPath);
-                    
-                    const filesToExtract = [
-                        { zipPath: placeablesXmlPath, destName: 'placeables.xml' },
-                        { zipPath: vehiclesXmlPath, destName: 'vehicles.xml' },
-                        { zipPath: itemsXmlPath, destName: 'items.xml' }
-                    ];
-
-                    for (const item of filesToExtract) {
-                        if (item.zipPath) {
-                            const entry = zip.getEntry(item.zipPath);
-                            if (entry) {
-                                await fs.writeFile(path.join(slotPath, item.destName), entry.getData());
-                                console.log(`[CREATE] Extracted custom map default ${item.destName} from zip.`);
-                            }
-                        }
-                    }
-                } catch (err) {
-                    console.error('[CREATE] Failed to extract custom map default XMLs:', err.message);
-                }
-            }
-        }
-    }
 
     if (!copiedTemplate) {
         console.warn(`[CREATE] No specific or base template found for ${mapId}. Creating minimal save to force terrain generation.`);
