@@ -204,6 +204,10 @@ export default function ModDetailPage() {
                     if (safeModId === String(depId)) return true;
                 }
 
+                // ModHub Title fallback if titles match case-insensitively
+                const resolvedTitle = resolvedObj?.title;
+                if (resolvedTitle && m.title && resolvedTitle.toLowerCase() === m.title.toLowerCase()) return true;
+
                 // Filename fallback if ModHub ID was resolved but ID match failed
                 const resolvedFile = resolvedObj?.fileName;
                 if (resolvedFile) {

@@ -36,6 +36,7 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
     let depId = null;
     let fallbackFileName = null;
     let resolvedFileName = null;
+    let resolvedTitle = null;
     
     if (typeof depObjOrString === 'string') {
         depString = depObjOrString;
@@ -48,6 +49,7 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
         
         depString = fallbackFileName || depObjOrString.modName || depObjOrString.technicalName || depObjOrString.title || depObjOrString.fileName || '';
         resolvedFileName = depObjOrString.fileName || null;
+        resolvedTitle = depObjOrString.title || null;
         
         const idMatch = url.match(/mod_id=(\d+)/) || url.match(/storage\/(\d+)\//);
         if (idMatch) depId = parseInt(idMatch[1], 10).toString();
@@ -68,6 +70,9 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
             const safeModId = String(m.modId).replace(/^0+/, '');
             if (safeModId === depId) return true;
         }
+
+        // ModHub Title fallback if titles match case-insensitively
+        if (resolvedTitle && m.title && resolvedTitle.toLowerCase() === m.title.toLowerCase()) return true;
 
         // Filename fallback if ModHub ID was resolved but ID match failed
         if (resolvedFileName) {
