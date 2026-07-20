@@ -268,6 +268,7 @@ export default function App() {
           if (!isRunning && playingSlot !== null) {
             useSavegameStore.setState({ playingSlot: null });
             useSavegameStore.getState().fetchSavegames();
+            useMapStore.getState().fetchTemplates();
           }
         }
       } catch (err) {
@@ -276,7 +277,22 @@ export default function App() {
     };
     
     const gamePollInterval = setInterval(pollGameState, 3000);
-    return () => clearInterval(gamePollInterval);
+    
+    // Listen to event-driven gameExited channel for instant updates
+    let unsubscribeGameExited = () => {};
+    if (window.api?.on?.gameExited) {
+      unsubscribeGameExited = window.api.on.gameExited(() => {
+        console.log('[APP] Game exited event received. Refreshing savegames and templates...');
+        useSavegameStore.setState({ isGameRunning: false, playingSlot: null });
+        useSavegameStore.getState().fetchSavegames();
+        useMapStore.getState().fetchTemplates();
+      });
+    }
+    
+    return () => {
+      clearInterval(gamePollInterval);
+      unsubscribeGameExited();
+    };
   }, [isLoaded]);
 
   if (!isLoaded) return null;

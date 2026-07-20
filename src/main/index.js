@@ -927,13 +927,34 @@ ipcMain.handle('profiles:import', async () => {
 // ── Game Launch ──
 ipcMain.handle('game:launch', async (_, options) => {
   try {
-    // gameLauncher.js will automatically generate the Virtual Mods Folder if no modsPath is provided
     const launchOptions = {
         ...options
     };
     
     console.log(`[LAUNCH] Launching game with mods folder: ${launchOptions.modsPath}`);
     const result = await gameLauncher.launch(launchOptions);
+    
+    if (result.success && result.child) {
+      result.child.on('close', async (code) => {
+        console.log(`[LAUNCH] Game process exited with code ${code}. Running post-game checks...`);
+        
+        if (options.savegameIndex) {
+          try {
+            // Trigger auto-harvesting immediately inside the main process
+            await savegameManager.getAllSavegames();
+          } catch (harvestErr) {
+            console.error('[LAUNCH] Auto-harvesting failed on game exit:', harvestErr);
+          }
+        }
+        
+        // Notify the frontend instantly
+        mainWindow?.webContents.send('game:exited', { 
+          savegameIndex: options.savegameIndex,
+          exitCode: code 
+        });
+      });
+    }
+    
     return { 
       success: result.success, 
       error: result.error, 
