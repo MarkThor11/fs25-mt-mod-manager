@@ -1206,9 +1206,8 @@ async function performScan(manualPaths = null) {
                         
                         const pName = (pm.fileName || '').split(/[/\\]/).pop().replace(/\.zip$/i, '').replace(/^fs25_/i, '').replace(/[^a-z0-9]/g, '').toLowerCase().trim();
                         const pModName = (pm.modName || '').replace(/^fs25_/i, '').replace(/[^a-z0-9]/g, '').toLowerCase().trim();
-                        const pTitle = (pm.title || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim();
                         
-                        if (poolKey.toLowerCase() === key || pName === cleanKey || pModName === cleanKey || pTitle === cleanKey) {
+                        if (poolKey.toLowerCase() === key || pName === cleanKey || pModName === cleanKey) {
                             if (pm.modId) {
                                 return {
                                     title: pm.title || dep,
