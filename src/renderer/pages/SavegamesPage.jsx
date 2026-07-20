@@ -1677,16 +1677,12 @@ export default function SavegamesPage() {
           useToastStore.getState().success(`Map needs engine initialization. Launching Slot ${slotIndex} to build world...`);
           setShowCreateModal(false);
           
-          // Get the mods path to ensure the engine sees the map mod
-          const modsPath = await window.api.mods.detectPath();
-
           // Wait a moment for the user to read the toast
           if (autoLaunchOnCreate) {
               setTimeout(() => {
                 handleLaunch(slotIndex, { 
                     requiresEngineInit: true, 
-                    mapId: result.mapId,
-                    modsPath: modsPath?.path || modsPath // Extract .path if it's an object
+                    mapId: result.mapId 
                 });
                 fetchSavegames();
               }, 1500);
