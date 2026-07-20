@@ -167,10 +167,12 @@ export default function ModDetailPage() {
 
     uniqueDependencies.forEach(dep => {
         let isInstalled = false;
-        const depTitle = typeof dep === 'string' ? dep : dep.title;
-        const resolvedObj = resolvedMetadata[depTitle];
         
-        let depId = resolvedObj ? resolvedObj.modId : null;
+        const depTitle = typeof dep === 'string' ? dep : dep.title;
+        // Search resolvedMetadata either by original string or by current title
+        const resolvedObj = resolvedMetadata[depTitle] || (typeof dep === 'object' ? (resolvedMetadata[dep.title] || resolvedMetadata[dep.modName] || resolvedMetadata[dep.fileName]) : null);
+        
+        let depId = (typeof dep === 'object' && dep.modId) ? String(dep.modId) : (resolvedObj ? String(resolvedObj.modId) : null);
         let fallbackFileName = null;
         
         if (typeof dep === 'object' && dep.url) {
@@ -195,38 +197,48 @@ export default function ModDetailPage() {
         
         const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
         const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
-        const cleanedName = cleanModName(depString).toLowerCase();
+        const cleanedName = cleanModName(depString);
+        
+        const normalizeForMatching = (str) => {
+            if (!str) return '';
+            const fileClean = str.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
+            return fileClean.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+        };
+
+        const targetNormalized = normalizeForMatching(cleanedName);
         
         if (!isInstalled) {
             isInstalled = localMods.some(m => {
+                // 1. ID Check
                 if (depId && m.modId) {
                     const safeModId = String(m.modId).replace(/^0+/, '');
                     if (safeModId === String(depId)) return true;
                 }
 
-                // ModHub Title fallback if titles match case-insensitively
-                const resolvedTitle = resolvedObj?.title;
+                // 2. ModHub Title fallback if titles match case-insensitively
+                const resolvedTitle = (typeof dep === 'object' && dep.title) ? dep.title : resolvedObj?.title;
                 if (resolvedTitle && m.title && resolvedTitle.toLowerCase() === m.title.toLowerCase()) return true;
 
-                // Filename fallback if ModHub ID was resolved but ID match failed
-                const resolvedFile = resolvedObj?.fileName;
+                // 3. Filename fallback if ModHub ID was resolved but ID match failed
+                const resolvedFile = (typeof dep === 'object' && dep.fileName) ? dep.fileName : resolvedObj?.fileName;
                 if (resolvedFile) {
-                    const getBaseName = (str) => {
-                        if (!str) return '';
-                        const match = str.match(/([^/\\]+)\.zip$/i) || [null, str];
-                        return match[1].replace(/^(?:fs25|fs22|pdlc)_/i, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-                    };
-                    const rFile = getBaseName(resolvedFile);
-                    const lFile = getBaseName(m.fileName);
+                    const rFile = normalizeForMatching(resolvedFile);
+                    const lFile = normalizeForMatching(m.fileName);
                     if (rFile && lFile && rFile === lFile) return true;
                 }
                 
-                // Exact ModName match (case-insensitive)
-                if (m.modName && m.modName.toLowerCase() === cleanedName) return true;
+                // 4. Exact/Normalized ModName match
+                if (m.modName) {
+                    if (m.modName.toLowerCase() === cleanedName.toLowerCase()) return true;
+                    if (normalizeForMatching(m.modName) === targetNormalized) return true;
+                }
 
-                // Exact FileName match (case-insensitive, without .zip)
-                const cleanFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
-                if (cleanFile && cleanFile === cleanedName) return true;
+                // 5. Exact/Normalized FileName match
+                if (m.fileName) {
+                    const cleanFile = m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '');
+                    if (cleanFile.toLowerCase() === cleanedName.toLowerCase()) return true;
+                    if (normalizeForMatching(m.fileName) === targetNormalized) return true;
+                }
                 
                 return false;
             });

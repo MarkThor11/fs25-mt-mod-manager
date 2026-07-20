@@ -57,12 +57,19 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
 
     const cleanedName = cleanModName(depString);
     if (!cleanedName) return;
-    
     const nameLower = cleanedName.toLowerCase();
     
     // To prevent infinite loops, we track by nameLower. If we have depId, we could track by ID too, but nameLower is safe enough.
     if (processed.has(nameLower)) return;
     processed.add(nameLower);
+
+    const normalizeForMatching = (str) => {
+        if (!str) return '';
+        const fileClean = str.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
+        return fileClean.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+    };
+
+    const targetNormalized = normalizeForMatching(cleanedName);
 
     const match = allMods.find(m => {
         // 1. Mod ID Match (100% accurate)
@@ -71,27 +78,28 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
             if (safeModId === depId) return true;
         }
 
-        // ModHub Title fallback if titles match case-insensitively
+        // 2. ModHub Title fallback if titles match case-insensitively
         if (resolvedTitle && m.title && resolvedTitle.toLowerCase() === m.title.toLowerCase()) return true;
 
-        // Filename fallback if ModHub ID was resolved but ID match failed
+        // 3. Filename fallback if ModHub ID was resolved but ID match failed
         if (resolvedFileName) {
-            const getBaseName = (str) => {
-                if (!str) return '';
-                const match = str.match(/([^/\\]+)\.zip$/i) || [null, str];
-                return match[1].replace(/^(?:fs25|fs22|pdlc)_/i, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            };
-            const rFile = getBaseName(resolvedFileName);
-            const lFile = getBaseName(m.fileName);
+            const rFile = normalizeForMatching(resolvedFileName);
+            const lFile = normalizeForMatching(m.fileName);
             if (rFile && lFile && rFile === lFile) return true;
         }
         
-        // Exact ModName match (case-insensitive)
-        if (m.modName && m.modName.toLowerCase() === nameLower) return true;
+        // 4. Exact/Normalized ModName match
+        if (m.modName) {
+            if (m.modName.toLowerCase() === nameLower) return true;
+            if (normalizeForMatching(m.modName) === targetNormalized) return true;
+        }
 
-        // Exact FileName match (case-insensitive, without .zip)
-        const cleanFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
-        if (cleanFile && cleanFile === nameLower) return true;
+        // 5. Exact/Normalized FileName match
+        if (m.fileName) {
+            const cleanFile = m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
+            if (cleanFile === nameLower) return true;
+            if (normalizeForMatching(m.fileName) === targetNormalized) return true;
+        }
         
         return false;
     });
