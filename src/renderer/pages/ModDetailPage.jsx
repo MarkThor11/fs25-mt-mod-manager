@@ -396,9 +396,11 @@ export default function ModDetailPage() {
                   // Prefetch filenames for all remote dependencies listed on the map page
                   resolvedMetaUpdate = await prefetchDependencies(remoteDeps);
                   
+                  const localDeps = modData?.dependencies || [];
                   modData = { 
                       ...modData, 
-                      ...remote
+                      ...remote,
+                      dependencies: localDeps
                   };
               }
           } catch (err) {
@@ -414,9 +416,11 @@ export default function ModDetailPage() {
                   if (detail && detail.dependencies) {
                       remoteDeps = detail.dependencies;
                       resolvedMetaUpdate = await prefetchDependencies(remoteDeps);
+                      const localDeps = modData?.dependencies || [];
                       modData = {
                           ...modData,
-                          ...detail
+                          ...detail,
+                          dependencies: localDeps
                       };
                   }
               }
