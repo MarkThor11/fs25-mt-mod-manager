@@ -1213,7 +1213,8 @@ async function performScan(manualPaths = null) {
                                 return {
                                     title: pm.title || dep,
                                     url: `https://www.farming-simulator.com/mod.php?mod_id=${pm.modId}`,
-                                    modId: pm.modId
+                                    modId: pm.modId,
+                                    fileName: pm.fileName || null
                                 };
                             }
                         }

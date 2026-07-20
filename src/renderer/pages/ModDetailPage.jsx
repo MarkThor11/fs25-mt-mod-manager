@@ -203,6 +203,19 @@ export default function ModDetailPage() {
                     const safeModId = String(m.modId).replace(/^0+/, '');
                     if (safeModId === String(depId)) return true;
                 }
+
+                // Filename fallback if ModHub ID was resolved but ID match failed
+                const resolvedFile = resolvedObj?.fileName;
+                if (resolvedFile) {
+                    const getBaseName = (str) => {
+                        if (!str) return '';
+                        const match = str.match(/([^/\\]+)\.zip$/i) || [null, str];
+                        return match[1].replace(/^(?:fs25|fs22|pdlc)_/i, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                    };
+                    const rFile = getBaseName(resolvedFile);
+                    const lFile = getBaseName(m.fileName);
+                    if (rFile && lFile && rFile === lFile) return true;
+                }
                 
                 // Exact ModName match (case-insensitive)
                 if (m.modName && m.modName.toLowerCase() === cleanedName) return true;
@@ -448,7 +461,8 @@ export default function ModDetailPage() {
                         [rawName]: {
                             modId: bestMatch.modId,
                             title: bestMatch.title,
-                            url: `https://www.farming-simulator.com/mod.php?mod_id=${bestMatch.modId}`
+                            url: `https://www.farming-simulator.com/mod.php?mod_id=${bestMatch.modId}`,
+                            fileName: bestMatch.fileName
                         }
                     }));
                 }
