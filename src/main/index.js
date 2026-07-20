@@ -308,8 +308,13 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
     const cacheKey = `modDetail_${modId}`;
     if (!bustCache) {
       const cached = cache.get(cacheKey);
-      // Automatically invalidate the cache if downloadUrl is missing to recover from previous scraper bugs
-      if (cached && cached.downloadUrl) return cached;
+      if (cached && cached.downloadUrl) {
+        if (!cached.fileName) {
+          cached.fileName = cached.downloadUrl.split('/').pop().split('?')[0];
+          cache.set(cacheKey, cached, 7 * 24 * 60 * 60 * 1000);
+        }
+        return cached;
+      }
     }
 
     const result = await scraper.fetchModDetail(modId);
