@@ -1070,7 +1070,7 @@ export default function InstalledModsPage() {
             for (const map of maps) {
                 if (!map.dependencies || map.dependencies.length === 0) continue;
                 
-                const { missing } = resolveRecursiveDependencies(map.modName || map.fileName, mods, sessionInstalled);
+                const { missing } = resolveRecursiveDependencies(map.modName || map.fileName, uniqueModsInFolder, sessionInstalled);
                 missing.forEach(m => missingMods.add(m));
 
                 if (missingMods.size > 0 && map.modName === 'FS25_The_Peasant_Valley') {
