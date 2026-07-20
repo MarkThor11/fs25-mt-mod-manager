@@ -433,7 +433,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         console.log(`[CREATE] Copying template from ${templateFolder}`);
         await fs.copy(templatePath, slotPath);
         copiedTemplate = true;
-
+    }
 
     if (!copiedTemplate) {
         console.warn(`[CREATE] No specific or base template found for ${mapId}. Creating minimal save to force terrain generation.`);
