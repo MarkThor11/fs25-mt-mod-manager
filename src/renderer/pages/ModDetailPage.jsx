@@ -198,7 +198,7 @@ export default function ModDetailPage() {
         const cleanedName = cleanModName(depString).toLowerCase();
         
         if (!isInstalled) {
-            isInstalled = localMods.some(m => {
+            isInstalled = mods.some(m => {
                 if (depId && m.modId) {
                     const safeModId = String(m.modId).replace(/^0+/, '');
                     if (safeModId === String(depId)) return true;
@@ -241,7 +241,7 @@ export default function ModDetailPage() {
         statuses,
         missingList
     };
-  }, [uniqueDependencies, localMods, sessionInstalled, resolvedMetadata]);
+  }, [uniqueDependencies, mods, sessionInstalled, resolvedMetadata]);
 
   const images = useMemo(() => {
     if (!mod) return [];
