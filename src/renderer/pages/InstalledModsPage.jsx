@@ -12,7 +12,7 @@ import { useToastStore } from '../store/useToastStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useModHubStore } from '../store/useModHubStore';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
-import { resolveRecursiveDependencies } from '../utils/modUtils';
+import { resolveRecursiveDependencies, matchModWithDependency } from '../utils/modUtils';
 
 // -- UTILITIES (Extracted for Performance) --
 const ultraNormalize = (str) => {
@@ -934,69 +934,6 @@ export default function InstalledModsPage() {
   });
 
   const folders = useMemo(() => {
-    const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
-
-    const matchModWithDependency = (m, dep) => {
-        if (!dep || !m) return false;
-        
-        let depString = '';
-        let depId = null;
-        let fallbackFileName = null;
-        let resolvedFileName = null;
-        let resolvedTitle = null;
-        
-        if (typeof dep === 'string') {
-            depString = dep;
-        } else {
-            const url = dep.url || '';
-            if (url) {
-                const fileMatch = url.match(/\/([^\/]+\.zip)$/i);
-                if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
-            }
-            
-            depString = fallbackFileName || dep.modName || dep.technicalName || dep.title || dep.fileName || '';
-            resolvedFileName = dep.fileName || null;
-            resolvedTitle = dep.title || null;
-            
-            const idMatch = url.match(/mod_id=(\d+)/) || url.match(/storage\/(\d+)\//);
-            if (idMatch) depId = parseInt(idMatch[1], 10).toString();
-        }
-
-        const cleanedName = cleanModName(depString);
-        if (!cleanedName) return false;
-        const nameLower = cleanedName.toLowerCase();
-
-        // 1. Mod ID Match (100% accurate)
-        if (depId && m.modId) {
-            const safeModId = String(m.modId).replace(/^0+/, '');
-            if (safeModId === depId) return true;
-        }
-
-        // 2. ModHub Title fallback if titles match case-insensitively
-        if (resolvedTitle && m.title && resolvedTitle.toLowerCase() === m.title.toLowerCase()) return true;
-
-        // 3. Filename fallback if ModHub ID was resolved but ID match failed
-        if (resolvedFileName) {
-            const getBaseName = (str) => {
-                if (!str) return '';
-                const match = str.match(/([^/\\]+)\.zip$/i) || [null, str];
-                return match[1].replace(/^(?:fs25|fs22|pdlc)_/i, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            };
-            const rFile = getBaseName(resolvedFileName);
-            const lFile = getBaseName(m.fileName);
-            if (rFile && lFile && rFile === lFile) return true;
-        }
-        
-        // 4. Exact ModName match (case-insensitive)
-        if (m.modName && m.modName.toLowerCase() === nameLower) return true;
-
-        // 5. Exact FileName match (case-insensitive, without .zip)
-        const cleanFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
-        if (cleanFile && cleanFile === nameLower) return true;
-        
-        return false;
-    };
-
     const findFastMatch = (dep) => {
         if (!dep) return null;
         return filteredMods.find(m => matchModWithDependency(m, dep));

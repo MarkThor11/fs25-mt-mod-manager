@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useModHubStore } from '../store/useModHubStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { compareVersions, resolveRecursiveDependencies } from '../utils/modUtils';
+import { compareVersions, resolveRecursiveDependencies, matchModWithDependency } from '../utils/modUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 
 // Shared Ultra Normalization (matches InstalledModsPage)
@@ -195,53 +195,8 @@ export default function ModDetailPage() {
             }
         }
         
-        const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
-        const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
-        const cleanedName = cleanModName(depString);
-        
-        const normalizeForMatching = (str) => {
-            if (!str) return '';
-            const fileClean = str.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
-            return fileClean.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
-        };
-
-        const targetNormalized = normalizeForMatching(cleanedName);
-        
         if (!isInstalled) {
-            isInstalled = localMods.some(m => {
-                // 1. ID Check
-                if (depId && m.modId) {
-                    const safeModId = String(m.modId).replace(/^0+/, '');
-                    if (safeModId === String(depId)) return true;
-                }
-
-                // 2. ModHub Title fallback if titles match case-insensitively
-                const resolvedTitle = (typeof dep === 'object' && dep.title) ? dep.title : resolvedObj?.title;
-                if (resolvedTitle && m.title && resolvedTitle.toLowerCase() === m.title.toLowerCase()) return true;
-
-                // 3. Filename fallback if ModHub ID was resolved but ID match failed
-                const resolvedFile = (typeof dep === 'object' && dep.fileName) ? dep.fileName : resolvedObj?.fileName;
-                if (resolvedFile) {
-                    const rFile = normalizeForMatching(resolvedFile);
-                    const lFile = normalizeForMatching(m.fileName);
-                    if (rFile && lFile && rFile === lFile) return true;
-                }
-                
-                // 4. Exact/Normalized ModName match
-                if (m.modName) {
-                    if (m.modName.toLowerCase() === cleanedName.toLowerCase()) return true;
-                    if (normalizeForMatching(m.modName) === targetNormalized) return true;
-                }
-
-                // 5. Exact/Normalized FileName match
-                if (m.fileName) {
-                    const cleanFile = m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '');
-                    if (cleanFile.toLowerCase() === cleanedName.toLowerCase()) return true;
-                    if (normalizeForMatching(m.fileName) === targetNormalized) return true;
-                }
-                
-                return false;
-            });
+            isInstalled = localMods.some(m => matchModWithDependency(m, dep, resolvedMetadata));
         }
 
         statuses[depTitle] = isInstalled;

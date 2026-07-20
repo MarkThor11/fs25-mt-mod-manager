@@ -4,7 +4,105 @@
  * @param {Array} allMods - The list of all installed mods.
  * @returns {Object} - { installed: Set(names), missing: Set(names) }
  */
-export const resolveRecursiveDependencies = (targetModName, allMods, sessionInstalled = {}) => {
+export const cleanModName = (name) => {
+  if (!name) return "";
+  // Strip version requirements like "ModName (1.2.3.4)" or "ModName*"
+  return name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim();
+};
+
+export const normalizeForMatching = (str) => {
+  if (!str) return '';
+  const fileClean = str.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
+  return fileClean.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+};
+
+/**
+ * Checks if an installed mod matches a dependency requirement.
+ * @param {Object} m - The installed mod object.
+ * @param {string|Object} dep - The dependency requirement.
+ * @param {Object} [resolvedMetadata] - Optional ModHub resolved metadata pool/lookup.
+ */
+export const matchModWithDependency = (m, dep, resolvedMetadata = {}) => {
+  if (!dep || !m) return false;
+  
+  let depString = '';
+  let depId = null;
+  let fallbackFileName = null;
+  let resolvedFileName = null;
+  let resolvedTitle = null;
+  
+  if (typeof dep === 'string') {
+      depString = dep;
+  } else {
+      const url = dep.url || '';
+      if (url) {
+          const fileMatch = url.match(/\/([^\/]+\.zip)$/i);
+          if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
+      }
+      
+      depString = fallbackFileName || dep.modName || dep.technicalName || dep.title || dep.fileName || '';
+      resolvedFileName = dep.fileName || null;
+      resolvedTitle = dep.title || null;
+      
+      const idMatch = url.match(/mod_id=(\d+)/) || url.match(/storage\/(\d+)\//);
+      if (idMatch) depId = parseInt(idMatch[1], 10).toString();
+  }
+
+  const cleanedName = cleanModName(depString);
+  if (!cleanedName) return false;
+  
+  // Attempt lookup in resolvedMetadata if available
+  const depTitle = typeof dep === 'string' ? dep : dep.title;
+  const resolvedObj = resolvedMetadata[depTitle] || (typeof dep === 'object' ? (resolvedMetadata[dep.title] || resolvedMetadata[dep.modName] || resolvedMetadata[dep.fileName]) : null);
+  
+  if (resolvedObj) {
+      if (resolvedObj.modId) depId = String(resolvedObj.modId);
+      if (resolvedObj.fileName) resolvedFileName = resolvedObj.fileName;
+      if (resolvedObj.title) resolvedTitle = resolvedObj.title;
+  }
+
+  // 1. Mod ID Match (100% accurate)
+  if (depId && m.modId) {
+      const safeModId = String(m.modId).replace(/^0+/, '');
+      if (safeModId === depId) return true;
+  }
+
+  // 2. ModHub Title fallback if titles match case-insensitively
+  const titleToCheck = resolvedTitle || (typeof dep === 'object' && dep.title ? dep.title : null);
+  if (titleToCheck && m.title && titleToCheck.toLowerCase() === m.title.toLowerCase()) return true;
+
+  // 3. Filename fallback if ModHub ID was resolved but ID match failed
+  const fileToCheck = resolvedFileName || (typeof dep === 'object' && dep.fileName ? dep.fileName : null);
+  if (fileToCheck) {
+      const rFile = normalizeForMatching(fileToCheck);
+      const lFile = normalizeForMatching(m.fileName);
+      if (rFile && lFile && rFile === lFile) return true;
+  }
+  
+  // 4. Exact/Normalized ModName match
+  const targetNormalized = normalizeForMatching(cleanedName);
+  if (m.modName) {
+      if (m.modName.toLowerCase() === cleanedName.toLowerCase()) return true;
+      if (normalizeForMatching(m.modName) === targetNormalized) return true;
+  }
+
+  // 5. Exact/Normalized FileName match
+  if (m.fileName) {
+      const cleanFile = m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
+      if (cleanFile === cleanedName.toLowerCase()) return true;
+      if (normalizeForMatching(m.fileName) === targetNormalized) return true;
+  }
+  
+  return false;
+};
+
+/**
+ * Recursively resolves dependencies for a given mod.
+ * @param {string} targetModName - The name of the mod to check.
+ * @param {Array} allMods - The list of all installed mods.
+ * @returns {Object} - { installed: Set(names), missing: Set(names) }
+ */
+export const resolveRecursiveDependencies = (targetModName, allMods, sessionInstalled = {}, resolvedMetadata = {}) => {
   console.log(`[RESOLVE] targetModName=${targetModName} allMods.length=${allMods ? allMods.length : 0}`);
   const installed = new Set();
   const missing = new Set();
@@ -25,18 +123,10 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
     }
   }
 
-  const cleanModName = (name) => {
-    if (!name) return "";
-    // Strip version requirements like "ModName (1.2.3.4)" or "ModName*"
-    return name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim();
-  };
-
   const resolve = (depObjOrString) => {
     let depString = '';
     let depId = null;
     let fallbackFileName = null;
-    let resolvedFileName = null;
-    let resolvedTitle = null;
     
     if (typeof depObjOrString === 'string') {
         depString = depObjOrString;
@@ -46,10 +136,7 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
             const fileMatch = url.match(/\/([^\/]+\.zip)$/i);
             if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
         }
-        
         depString = fallbackFileName || depObjOrString.modName || depObjOrString.technicalName || depObjOrString.title || depObjOrString.fileName || '';
-        resolvedFileName = depObjOrString.fileName || null;
-        resolvedTitle = depObjOrString.title || null;
         
         const idMatch = url.match(/mod_id=(\d+)/) || url.match(/storage\/(\d+)\//);
         if (idMatch) depId = parseInt(idMatch[1], 10).toString();
@@ -63,46 +150,7 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
     if (processed.has(nameLower)) return;
     processed.add(nameLower);
 
-    const normalizeForMatching = (str) => {
-        if (!str) return '';
-        const fileClean = str.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
-        return fileClean.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
-    };
-
-    const targetNormalized = normalizeForMatching(cleanedName);
-
-    const match = allMods.find(m => {
-        // 1. Mod ID Match (100% accurate)
-        if (depId && m.modId) {
-            const safeModId = String(m.modId).replace(/^0+/, '');
-            if (safeModId === depId) return true;
-        }
-
-        // 2. ModHub Title fallback if titles match case-insensitively
-        if (resolvedTitle && m.title && resolvedTitle.toLowerCase() === m.title.toLowerCase()) return true;
-
-        // 3. Filename fallback if ModHub ID was resolved but ID match failed
-        if (resolvedFileName) {
-            const rFile = normalizeForMatching(resolvedFileName);
-            const lFile = normalizeForMatching(m.fileName);
-            if (rFile && lFile && rFile === lFile) return true;
-        }
-        
-        // 4. Exact/Normalized ModName match
-        if (m.modName) {
-            if (m.modName.toLowerCase() === nameLower) return true;
-            if (normalizeForMatching(m.modName) === targetNormalized) return true;
-        }
-
-        // 5. Exact/Normalized FileName match
-        if (m.fileName) {
-            const cleanFile = m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
-            if (cleanFile === nameLower) return true;
-            if (normalizeForMatching(m.fileName) === targetNormalized) return true;
-        }
-        
-        return false;
-    });
+    const match = allMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata));
     
     console.log(`[RESOLVE-STEP] depString=${depString} cleanedName=${cleanedName} foundMatch=${match ? 'YES' : 'NO'}`);
 
@@ -126,7 +174,7 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
   };
 
   resolve(targetModName);
-  return { installed, missing };
+  return { installed: Array.from(installed), missing: Array.from(missing) };
 };
 
 /**
