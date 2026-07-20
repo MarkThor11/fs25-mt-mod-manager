@@ -260,6 +260,7 @@ async function launch(options = {}) {
         args.push('-autoStart');
       } else {
         console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is NOT fully initialized. Launching to slot selection.`);
+        args.push('-autoStartSavegameId', String(options.savegameIndex));
         needsManualInit = true;
       }
     }
