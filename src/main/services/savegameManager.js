@@ -2847,7 +2847,19 @@ async function adoptSaveAsTemplate(saveIndex) {
         
         console.log(`[HARVEST] Adopting savegame ${saveIndex} to template ${templateFolder}`);
         await fs.ensureDir(destPath);
-        await fs.copy(savePath, destPath);
+        
+        let retries = 5;
+        while (retries > 0) {
+            try {
+                await fs.copy(savePath, destPath);
+                break;
+            } catch (copyErr) {
+                retries--;
+                if (retries === 0) throw copyErr;
+                console.warn(`[HARVEST] Savegame files locked, retrying in 1 second... (${retries} retries left)`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        }
         
         // Clean up temporary/user files in template
         const filesToRemove = ['steam_autocloud.vdf', 'modManager.json'];
