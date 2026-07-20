@@ -1910,14 +1910,14 @@ export default function InstalledModsPage() {
                            className="editable-label"
                            style={{ fontWeight: 800, fontSize: isHidden ? 11 : 'var(--fs-sm)', letterSpacing: '0.05em' }}
                            onClick={(e) => {
-                             if (folderName === '' || folderName === 'DLC') return;
+                             if (folderName === 'DLC') return;
                              e.stopPropagation();
                              handleRenameFolder(folderName);
                            }}
-                           title={folderName === '' || folderName === 'DLC' ? "" : "Click to rename folder"}
+                           title={folderName === 'DLC' ? "" : "Click to rename folder"}
                          >
                            {folderName === '' ? 'MAIN' : folderName.toUpperCase()}
-                           {folderName !== '' && folderName !== 'DLC' && (
+                           {folderName !== 'DLC' && (
                              <Pencil size={12} className="editable-label__icon" style={{ marginLeft: 8 }} />
                            )}
                          </span>

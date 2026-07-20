@@ -3817,6 +3817,41 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 
 async function renameFolder(oldName, newName) {
 	const allPaths = getModsPaths();
+	
+	if (oldName === '') {
+		debugLog(`[RENAME] Renaming MAIN folder. Moving root zip files to subdirectory: ${newName}`);
+		let filesMoved = 0;
+		try {
+			for (const p of allPaths) {
+				const newPath = path.join(p, newName);
+				if (!fs.existsSync(newPath)) {
+					await fs.mkdir(newPath, { recursive: true });
+				}
+				
+				const entries = await fs.readdir(p, { withFileTypes: true });
+				for (const entry of entries) {
+					if (entry.isFile() && entry.name.toLowerCase().endsWith('.zip')) {
+						const oldFilePath = path.join(p, entry.name);
+						const newFilePath = path.join(newPath, entry.name);
+						
+						await fs.rename(oldFilePath, newFilePath);
+						
+						// Sync cache and tracking
+						const oldRelative = entry.name;
+						const newRelative = `${newName}/${entry.name}`;
+						cache.updateLocalModCachePath(oldFilePath, newFilePath);
+						cache.updateModTrackingFileInfo(oldRelative, newRelative);
+						filesMoved++;
+					}
+				}
+			}
+			return { success: true, filesMoved };
+		} catch (err) {
+			console.error(`[RENAME-MAIN] Failed to move files:`, err.message);
+			throw new Error(`Failed to group MAIN mods: ${err.message}`);
+		}
+	}
+
 	let oldPath = null;
 	let newPath = null;
 	
