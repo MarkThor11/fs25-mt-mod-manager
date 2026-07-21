@@ -1295,8 +1295,20 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 <button 
                   className={`btn btn--sm ${isPlaying ? 'btn--primary' : 'btn--ghost'}`} 
                   onClick={onPlay} 
-                  title={isPlaying ? "Game is Running" : "Play Now"} 
-                  style={{ color: 'white', ...(isPlaying ? { background: 'var(--color-success)', boxShadow: '0 0 10px var(--color-success)', animation: 'pulse 2s infinite' } : {}) }}
+                  disabled={isGameRunning && !isPlaying}
+                  title={isPlaying ? "Game is Running" : (isGameRunning ? "Another slot is running" : "Play Now")} 
+                  style={{ 
+                    color: 'white', 
+                    ...(isPlaying ? { 
+                      background: 'var(--success)', 
+                      borderColor: 'var(--success)',
+                      boxShadow: '0 0 12px var(--success)', 
+                      animation: 'pulse 2s infinite' 
+                    } : (isGameRunning ? { 
+                      opacity: 0.4, 
+                      cursor: 'not-allowed' 
+                    } : {})) 
+                  }}
                 >
                   <Play size={16} />
                 </button>
