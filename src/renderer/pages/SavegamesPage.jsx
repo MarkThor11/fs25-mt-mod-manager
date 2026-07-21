@@ -1486,7 +1486,7 @@ export default function SavegamesPage() {
     
     if (result.success) {
       if (result.needsManualInit) {
-        useToastStore.getState().info(`GHOST SLOT: Slot ${slotIndex} is preparing for first-time load. Verify your mods are selected, click Start, and SAVE ONCE in-game to initialize.`, 20000);
+        useToastStore.getState().info(`GHOST SLOT: Slot ${slotIndex} is preparing for first-time load. Once the map loads, SAVE ONCE in-game to initialize.`, 20000);
       } else {
         useToastStore.getState().success(`Launching Slot ${slotIndex}...`);
       }
