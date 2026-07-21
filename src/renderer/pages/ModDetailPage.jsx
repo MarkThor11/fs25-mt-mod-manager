@@ -24,6 +24,32 @@ const ultraNormalize = (str) => {
         .replace(/[^a-z0-9]/g, ''); // Squash everything else
 };
 
+const getDependencyUniqueKey = (dep, resolvedMetadata = {}) => {
+  let depId = null;
+  let fallbackFileName = null;
+  const depTitle = typeof dep === 'string' ? dep : dep.title;
+  
+  if (typeof dep === 'object' && dep.url) {
+      const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
+      if (idMatch) depId = parseInt(idMatch[1], 10).toString();
+      const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
+      if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
+  } else if (typeof dep === 'object' && dep.modId) {
+      depId = String(dep.modId);
+  }
+  
+  const resolvedObj = resolvedMetadata[depTitle] || (typeof dep === 'object' ? (resolvedMetadata[dep.title] || resolvedMetadata[dep.modName] || resolvedMetadata[dep.fileName]) : null);
+  if (resolvedObj && resolvedObj.modId) {
+      depId = String(resolvedObj.modId);
+  }
+  
+  const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
+  const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
+  const cleanedName = cleanModName(depString).toLowerCase();
+  
+  return depId ? `id_${depId}` : `name_${cleanedName}`;
+};
+
 export default function ModDetailPage() {
   const { modId, fileName } = useParams();
   const navigate = useNavigate();
@@ -100,45 +126,14 @@ export default function ModDetailPage() {
     const resolveDeps = (depList) => {
         if (!depList) return;
         depList.forEach(dep => {
-            let depId = null;
-            let fallbackFileName = null;
-            const depTitle = typeof dep === 'string' ? dep : dep.title;
-            
-            if (typeof dep === 'object' && dep.url) {
-                const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
-                if (idMatch) depId = parseInt(idMatch[1], 10).toString();
-                const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
-                if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
-            } else if (typeof dep === 'object' && dep.modId) {
-                depId = String(dep.modId);
-            }
-            
-            const resolvedObj = resolvedMetadata[depTitle];
-            if (resolvedObj && resolvedObj.modId) {
-                depId = String(resolvedObj.modId);
-            }
-            
-            const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
-            const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
-            const cleanedName = cleanModName(depString).toLowerCase();
-            
-            const key = depId ? `id_${depId}` : `name_${cleanedName}`;
+            const key = getDependencyUniqueKey(dep, resolvedMetadata);
             
             if (!seenKeys.has(key)) {
                 seenKeys.add(key);
                 depsList.push(dep);
                 
                 // Recursively check if this dependency is installed and has its own dependencies
-                const match = localMods ? localMods.find(m => {
-                    if (depId && m.modId) {
-                        const safeModId = String(m.modId).replace(/^0+/, '');
-                        if (safeModId === depId) return true;
-                    }
-                    if (m.modName && m.modName.toLowerCase() === cleanedName) return true;
-                    const cleanFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
-                    if (cleanFile && cleanFile === cleanedName) return true;
-                    return false;
-                }) : null;
+                const match = localMods ? localMods.find(m => matchModWithDependency(m, dep, resolvedMetadata)) : null;
                 
                 if (match && match.dependencies && match.dependencies.length > 0) {
                     resolveDeps(match.dependencies);
@@ -199,7 +194,8 @@ export default function ModDetailPage() {
             isInstalled = localMods.some(m => matchModWithDependency(m, dep, resolvedMetadata));
         }
 
-        statuses[depTitle] = isInstalled;
+        const key = getDependencyUniqueKey(dep, resolvedMetadata);
+        statuses[key] = isInstalled;
         if (!isInstalled) {
             missingCount++;
             missingList.push(dep);
@@ -742,6 +738,7 @@ export default function ModDetailPage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {uniqueDependencies.map((dep) => {
+                  const depKey = getDependencyUniqueKey(dep, resolvedMetadata);
                   const depTitle = typeof dep === 'string' ? dep : dep.title;
 
                   const resolvedObj = resolvedMetadata[depTitle];
@@ -763,7 +760,7 @@ export default function ModDetailPage() {
                    const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
                   const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
                   const cleanedName = cleanModName(depString).toLowerCase();
-                  const isInstalled = dependencyStatus.statuses[depTitle] || false;
+                  const isInstalled = dependencyStatus.statuses[depKey] || false;
                   
                   // If we retrieved a ModHub ID from local metadata, apply it
                   if (!depId && isInstalled) {
@@ -809,7 +806,7 @@ export default function ModDetailPage() {
                   };
                   
                   return (
-                    <div key={depTitle} style={{ 
+                    <div key={depKey} style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
                         justifyContent: 'space-between', 
