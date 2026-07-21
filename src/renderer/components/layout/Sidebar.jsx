@@ -64,7 +64,7 @@ export default function Sidebar() {
       const result = await window.api.game.launch(options);
       if (result.success) {
         if (result.needsManualInit) {
-          useToastStore.getState().info(`GHOST SLOT: Slot ${savegameSlot} will show as 'Empty'. Select it, start the map, and SAVE ONCE to initialize.`, { duration: 10000 });
+          useToastStore.getState().info(`GHOST SLOT: Slot ${savegameSlot} is preparing for first-time load. Verify your mods are selected, click Start, and SAVE ONCE in-game to initialize.`, { duration: 10000 });
         } else {
           useToastStore.getState().success(`Launching Slot ${savegameSlot}...`);
         }
