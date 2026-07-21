@@ -326,18 +326,12 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
             const modsByName = new Map();
             const modsByNormalized = new Map();
             
-            const ultraNormalizeName = (str) => {
-                if (!str) return '';
-                return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-                    .replace(/[^a-z0-9]/g, '');
-            };
-
             for (const m of mods) {
                 if (m.modName) {
                     modsByName.set(m.modName.toLowerCase(), m);
                 }
             }
-
+            
             while (queue.length > 0) {
                 const currentName = queue.shift();
                 const mObj = modsByName.get(currentName);
@@ -349,39 +343,41 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                         let foundMod = null;
                         const depLower = depTitle.toLowerCase();
                         
-                        // 1. Exact case-insensitive modName match
+                        // 1. Exact case-insensitive modName/fileName match
                         if (modsByName.has(depLower)) {
                             foundMod = modsByName.get(depLower);
                         }
                         
-                        // 2. Exact match using normalized modName (stripping symbols)
                         if (!foundMod) {
-                            const depClean = depLower.replace(/[^a-z0-9]/g, '');
-                            foundMod = mods.find(m => m.modName && m.modName.toLowerCase().replace(/[^a-z0-9]/g, '') === depClean);
+                            foundMod = mods.find(m => {
+                                const mFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
+                                return mFile === depLower;
+                            });
                         }
 
-                        // 3. Fallback from URL filename if available (very high signal)
+                        // 2. Fallback from URL filename if available (exact match)
                         if (!foundMod && typeof dep === 'object' && dep.url) {
                             const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
                             if (fileMatch) {
                                 const fallbackFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
                                 foundMod = mods.find(m => m.modName && m.modName.toLowerCase() === fallbackFileName);
                                 if (!foundMod) {
-                                    const fallbackClean = fallbackFileName.replace(/[^a-z0-9]/g, '');
-                                    foundMod = mods.find(m => m.modName && m.modName.toLowerCase().replace(/[^a-z0-9]/g, '') === fallbackClean);
+                                    foundMod = mods.find(m => {
+                                        const mFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
+                                        return mFile === fallbackFileName;
+                                    });
                                 }
                             }
                         }
                         
-                        // 4. Fallback by Title (lowest priority fallback, checked case-insensitively)
+                        // 3. Fallback by Title (lowest priority fallback, checked case-insensitively, no name alterations)
                         if (!foundMod) {
                             const depTitleLower = depLower;
                             foundMod = mods.find(m => {
                                 if (m.title && m.title.toLowerCase() === depTitleLower) {
+                                    // If both have technical names but they don't match exactly, reject
                                     if (depTitle && m.modName) {
-                                        const targetNorm = depTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
-                                        const mNorm = m.modName.toLowerCase().replace(/[^a-z0-9]/g, '');
-                                        if (targetNorm !== mNorm) return false;
+                                        if (depTitle.toLowerCase() !== m.modName.toLowerCase()) return false;
                                     }
                                     return true;
                                 }
