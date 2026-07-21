@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Map, Trash2, RefreshCw, Zap, Search, Info, ExternalLink, MapPin, HardDrive } from 'lucide-react';
+import { Map, Trash2, RefreshCw, Zap, Search, Info, ExternalLink, MapPin, HardDrive, X, ArrowUpDown, Calendar } from 'lucide-react';
 import { useToastStore } from '../store/useToastStore';
 import { useLocalModsStore } from '../store/useLocalModsStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -12,6 +12,7 @@ export default function MapsPage() {
     const { templates, isLoading: loading, fetchTemplates, deleteTemplate } = useMapStore();
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('automated'); // 'automated' or 'installed'
+    const [sortBy, setSortBy] = useState('alphabetical'); // 'alphabetical' or 'date'
 
     const handleDelete = async (folderName, title) => {
         const skipConfirm = useSettingsStore.getState().skipDeleteConfirm;
@@ -38,6 +39,34 @@ export default function MapsPage() {
         m.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
         m.modName.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    // Sort Automated Templates
+    const sortedTemplates = [...filteredTemplates].sort((a, b) => {
+        if (sortBy === 'alphabetical') {
+            return a.title.localeCompare(b.title);
+        } else {
+            // Sort by creation date (newest first)
+            return new Date(b.created) - new Date(a.created);
+        }
+    });
+
+    // Sort Installed Maps
+    const sortedInstalled = [...filteredInstalled].sort((a, b) => {
+        if (sortBy === 'alphabetical') {
+            return a.title.localeCompare(b.title);
+        } else {
+            // Parse releasedDate (e.g. "18.02.2025") or fallback to title
+            const parseDate = (dStr) => {
+                if (!dStr) return new Date(0);
+                const parts = dStr.split('.');
+                if (parts.length === 3) {
+                    return new Date(parts[2], parts[1] - 1, parts[0]);
+                }
+                return new Date(dStr);
+            };
+            return parseDate(b.releasedDate) - parseDate(a.releasedDate);
+        }
+    });
 
     return (
         <div className="page animate-fade-in">
@@ -86,24 +115,68 @@ export default function MapsPage() {
             </div>
 
             <div style={{ marginBottom: 'var(--sp-6)', display: 'flex', gap: 'var(--sp-4)', alignItems: 'center' }}>
-            <div style={{ position: 'relative', flex: 1 }}>
-                <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
-                <input 
-                    type="text" 
-                    placeholder={activeTab === 'automated' ? "Search learned maps..." : "Search installed map mods..."}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{ width: '100%', padding: '10px 40px 10px 40px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }} 
-                />
-                {searchTerm && (
-                    <X 
-                        size={14} 
-                        style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.5 }} 
-                        onClick={() => setSearchTerm('')}
-                        className="hover-opacity-1"
+                <div style={{ position: 'relative', flex: 1 }}>
+                    <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
+                    <input 
+                        type="text" 
+                        placeholder={activeTab === 'automated' ? "Search learned maps..." : "Search installed map mods..."}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{ width: '100%', padding: '10px 40px 10px 40px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }} 
                     />
-                )}
-            </div>
+                    {searchTerm && (
+                        <X 
+                            size={14} 
+                            style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.5 }} 
+                            onClick={() => setSearchTerm('')}
+                            className="hover-opacity-1"
+                        />
+                    )}
+                </div>
+                
+                {/* Sorting Controls */}
+                <div style={{ display: 'flex', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 2, gap: 2 }}>
+                    <button
+                        onClick={() => setSortBy('alphabetical')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '8px 12px',
+                            borderRadius: 'calc(var(--radius-md) - 2px)',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            background: sortBy === 'alphabetical' ? 'var(--bg-tertiary)' : 'transparent',
+                            color: sortBy === 'alphabetical' ? 'var(--accent)' : 'var(--text-secondary)',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s'
+                        }}
+                    >
+                        <ArrowUpDown size={14} />
+                        A-Z
+                    </button>
+                    <button
+                        onClick={() => setSortBy('date')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '8px 12px',
+                            borderRadius: 'calc(var(--radius-md) - 2px)',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            background: sortBy === 'date' ? 'var(--bg-tertiary)' : 'transparent',
+                            color: sortBy === 'date' ? 'var(--accent)' : 'var(--text-secondary)',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s'
+                        }}
+                    >
+                        <Calendar size={14} />
+                        {activeTab === 'automated' ? 'Date Learned' : 'Released'}
+                    </button>
+                </div>
             </div>
 
             {activeTab === 'automated' ? (
@@ -119,7 +192,7 @@ export default function MapsPage() {
                     </div>
                 ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 'var(--sp-4)' }}>
-                        {filteredTemplates.map(template => (
+                        {sortedTemplates.map(template => (
                             <div key={template.id} className="save-card" style={{ padding: 'var(--sp-4)', position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 180, overflow: 'hidden' }}>
                                 {/* Map Preview Background */}
                                 <div style={{ 
@@ -208,7 +281,7 @@ export default function MapsPage() {
                     </div>
                 ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: 'var(--sp-4)' }}>
-                        {filteredInstalled.map(mod => {
+                        {sortedInstalled.map(mod => {
                             const hasAutomated = templates.some(t => t.mapId === mod.mapId || t.title === mod.title);
                             return (
                                 <div key={mod.fileName} className="save-card" style={{ padding: 'var(--sp-4)', position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 180, overflow: 'hidden' }}>
