@@ -301,8 +301,7 @@ export default function ModDetailPage() {
       // Helper to normalize strings for comparison
       const normalizeForMatching = (str) => {
           if (!str) return '';
-          const fileClean = str.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
-          return fileClean.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+          return str.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase().trim();
       };
 
       const mergeDeps = (localList, remoteList, resolvedMeta = {}) => {
