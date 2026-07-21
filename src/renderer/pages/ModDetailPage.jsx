@@ -447,7 +447,8 @@ export default function ModDetailPage() {
     // Find all dependencies that are raw strings and are missing
     const unresolved = uniqueDependencies.filter(dep => {
         if (typeof dep !== 'string') return false;
-        const isInstalled = dependencyStatus.statuses[dep] || false;
+        const key = getDependencyUniqueKey(dep, resolvedMetadata);
+        const isInstalled = dependencyStatus.statuses[key] || false;
         return !isInstalled;
     });
     
