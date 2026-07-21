@@ -1346,7 +1346,7 @@ export default function SavegamesPage() {
   const [creating, setCreating] = useState(false);
 
   // Advanced start states
-  const [createMap, setCreateMap] = useState('MapUS|Riverbend Springs|');
+  const [createMap, setCreateMap] = useState('MapUS|Riverbend Springs|||');
   const [createDifficulty, setCreateDifficulty] = useState(1);
   const [createEconomy, setCreateEconomy] = useState('NORMAL');
   const [createMoney, setCreateMoney] = useState(1000000);
@@ -2181,16 +2181,16 @@ export default function SavegamesPage() {
                                     </label>
                                     <select value={createMap} onChange={e => setCreateMap(e.target.value)} style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: mapHasTemplate ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 8 }}>
                                         <optgroup label="Official Maps">
-                                            <option value="MapUS|Riverbend Springs|">Riverbend Springs (US)</option>
-                                            <option value="MapAS|Hutan Pantai|">Hutan Pantai (Asia)</option>
-                                            <option value="MapEU|Zielonka|">Zielonka (Europe)</option>
-                                            <option value="HighlandsFishingMap|Kinlaig|pdlc_highlandsFishingPack">Kinlaig (DLC)</option>
+                                            <option value="MapUS|Riverbend Springs|||">Riverbend Springs (US)</option>
+                                            <option value="MapAS|Hutan Pantai|||">Hutan Pantai (Asia)</option>
+                                            <option value="MapEU|Zielonka|||">Zielonka (Europe)</option>
+                                            <option value="HighlandsFishingMap|Kinlaig|pdlc_highlandsFishingPack||">Kinlaig (DLC)</option>
                                         </optgroup>
                                         
                                         {mods.filter(m => m.isMap).length > 0 && (
                                             <optgroup label="Modded Maps">
                                                 {mods.filter(m => m.isMap).map(m => (
-                                                    <option key={m.modName} value={`${m.mapId || m.modName}|${m.title}|${m.modName}`}>{m.title}</option>
+                                                    <option key={m.modName} value={`${m.mapId || m.modName}|${m.title}|${m.modName}|${m.iconData || ''}|${m.filePath || ''}`}>{m.title}</option>
                                                 ))}
                                             </optgroup>
                                         )}
@@ -2219,15 +2219,23 @@ export default function SavegamesPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                                 <label style={{ fontSize: 12, fontWeight: 800, display: 'block', color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>MAP PREVIEW</label>
                                 <div style={{ flex: 1, borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg-tertiary)', position: 'relative', boxShadow: 'var(--shadow-lg)' }}>
-                                    {(() => {
-                                        const [mapId, title, modName] = createMap.split('|');
-                                        return <MapImage mapTitle={title} mapId={mapId} mods={mods} />;
-                                    })()}
-                                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, background: 'linear-gradient(transparent, rgba(0,0,0,0.8))', color: 'white' }}>
-                                        <div style={{ fontWeight: 800, fontSize: 18 }}>{createMap.split('|')[1]}</div>
-                                        <div style={{ fontSize: 12, opacity: 0.8 }}>{createMap.split('|')[0]}</div>
-                                    </div>
-                                </div>
+                                     {(() => {
+                                         const [mapId, title, modName, iconData, filePath] = createMap.split('|');
+                                         if (iconData || filePath) {
+                                             if (iconData && !iconData.startsWith('CATEGORY:')) {
+                                                 return <img src={iconData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+                                             }
+                                             if (filePath) {
+                                                 return <img src={`mod-icon://icon?path=${encodeURIComponent(filePath)}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+                                             }
+                                         }
+                                         return <MapImage mapTitle={title} mapId={mapId} mods={mods} />;
+                                     })()}
+                                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, background: 'linear-gradient(transparent, rgba(0,0,0,0.8))', color: 'white' }}>
+                                         <div style={{ fontWeight: 800, fontSize: 18 }}>{createMap.split('|')[1]}</div>
+                                         <div style={{ fontSize: 12, opacity: 0.8 }}>{createMap.split('|')[0]}</div>
+                                     </div>
+                                 </div>
                             </div>
                         </div>
                     )}
