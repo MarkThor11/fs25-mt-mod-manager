@@ -1119,7 +1119,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
   );
 }
 
-function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop, isPlaying }) {
+function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop, isPlaying, isGameRunning }) {
     const isEmpty = save.modCount === 0 && (save.farmName || '').startsWith('Empty');
     const [isDragOver, setIsDragOver] = useState(false);
     
@@ -1977,6 +1977,7 @@ export default function SavegamesPage() {
                 }}
                 editingName={editingName}
                 isPlaying={isGameRunning && playingSlot === save.index}
+                isGameRunning={isGameRunning}
                 newName={newName}
                 setNewName={setNewName}
                 handleRename={() => handleRename(save)}
