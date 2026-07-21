@@ -22,7 +22,7 @@ export const normalizeForMatching = (str) => {
  * @param {string|Object} dep - The dependency requirement.
  * @param {Object} [resolvedMetadata] - Optional ModHub resolved metadata pool/lookup.
  */
-export const matchModWithDependency = (m, dep, resolvedMetadata = {}) => {
+export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = false) => {
   if (!dep || !m) return false;
   
   let depString = '';
@@ -89,6 +89,8 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}) => {
       if (rFile && lFile && rFile === lFile) return true;
   }
 
+  if (strict) return false;
+
   // 5. ModHub Title fallback if titles match case-insensitively (lowest priority, last resort)
   const titleToCheck = resolvedTitle || (typeof dep === 'object' && dep.title ? dep.title : null);
   if (titleToCheck && m.title && titleToCheck.toLowerCase() === m.title.toLowerCase()) return true;
@@ -150,7 +152,11 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
     if (processed.has(nameLower)) return;
     processed.add(nameLower);
 
-    const match = allMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata));
+    // Two-pass matching: strong match first (strict = true), fallback to weak title match (strict = false)
+    let match = allMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, true));
+    if (!match) {
+        match = allMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, false));
+    }
     
     console.log(`[RESOLVE-STEP] depString=${depString} cleanedName=${cleanedName} foundMatch=${match ? 'YES' : 'NO'}`);
 
