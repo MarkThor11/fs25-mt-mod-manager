@@ -35,20 +35,30 @@ const MapImage = ({ mapTitle, mapId, mods, opacity = 0.25 }) => {
 
   // 2. Mod map match (using mapId or Title)
   if (mods) {
-    const mapMod = mods.find(m => {
-        if (!m.isMap) return false;
-        
-        // a. Exact match by ID
-        if (mapId && m.mapId === mapId) return true;
-        
-        // b. Match by Title (case insensitive)
-        if (mapTitle && m.title && m.title.toLowerCase() === mapTitle.toLowerCase()) return true;
-        
-        // c. Match by "Cleaned" ID (folder name consistency)
-        if (mapId && m.mapId && m.mapId.replace(/[^a-z0-9]/gi, '_') === mapId.replace(/[^a-z0-9]/gi, '_')) return true;
+    let mapMod = null;
+    
+    // a. Try matching by parsed modName from mapId containing a dot (e.g. ModName.MapId)
+    if (mapId && mapId.includes('.')) {
+        const parsedModName = mapId.split('.')[0];
+        mapMod = mods.find(m => m.isMap && m.modName && m.modName.toLowerCase() === parsedModName.toLowerCase());
+    }
+    
+    if (!mapMod) {
+        mapMod = mods.find(m => {
+            if (!m.isMap) return false;
+            
+            // b. Exact match by ID
+            if (mapId && m.mapId === mapId) return true;
+            
+            // c. Match by Title (case insensitive)
+            if (mapTitle && m.title && m.title.toLowerCase() === mapTitle.toLowerCase()) return true;
+            
+            // d. Match by "Cleaned" ID (folder name consistency)
+            if (mapId && m.mapId && m.mapId.replace(/[^a-z0-9]/gi, '_') === mapId.replace(/[^a-z0-9]/gi, '_')) return true;
 
-        return false;
-    });
+            return false;
+        });
+    }
 
     if (mapMod) {
         if (mapMod.iconData && !mapMod.iconData.startsWith('CATEGORY:')) {
