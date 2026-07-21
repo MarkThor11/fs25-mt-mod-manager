@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Map, Trash2, RefreshCw, Zap, Search, Info, ExternalLink, MapPin, HardDrive, X, ArrowUpDown, Calendar } from 'lucide-react';
+import { Map, Trash2, Zap, Search, Info, ExternalLink, MapPin, HardDrive, X, ArrowUpDown, Calendar } from 'lucide-react';
 import { useToastStore } from '../store/useToastStore';
 import { useLocalModsStore } from '../store/useLocalModsStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -108,9 +108,6 @@ export default function MapsPage() {
                             INSTALLED
                         </button>
                     </div>
-                    <button className="btn btn--secondary btn--sm" onClick={fetchTemplates}>
-                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-                    </button>
                 </div>
             </div>
 
