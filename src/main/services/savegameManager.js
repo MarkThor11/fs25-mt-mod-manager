@@ -85,7 +85,10 @@ function getElementText(xml, tag) {
 
 function isOfficialMap(mapId) {
     if (!mapId) return false;
-    return ['MapUS', 'MapEU', 'MapAS', 'HighlandsFishingMap'].includes(mapId);
+    const lower = mapId.toLowerCase();
+    return ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(lower) || 
+           lower.startsWith('pdlc_') || 
+           lower.includes('highlandsfishing');
 }
 
 let cachedMapMods = null;
@@ -187,7 +190,7 @@ async function getMapTemplates() {
     });
 
     const results = await Promise.all(templatePromises);
-    return results.filter(t => t !== null);
+    return results.filter(t => t !== null && !isOfficialMap(t.mapId));
 }
 
 /**
