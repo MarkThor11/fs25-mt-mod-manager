@@ -93,7 +93,15 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
 
   // 5. ModHub Title fallback if titles match case-insensitively (lowest priority, last resort)
   const titleToCheck = resolvedTitle || (typeof dep === 'object' && dep.title ? dep.title : null);
-  if (titleToCheck && m.title && titleToCheck.toLowerCase() === m.title.toLowerCase()) return true;
+  if (titleToCheck && m.title && titleToCheck.toLowerCase() === m.title.toLowerCase()) {
+      // Reject if both have technical names but they don't match
+      if (cleanedName && m.modName) {
+          const targetNorm = normalizeForMatching(cleanedName);
+          const mNorm = normalizeForMatching(m.modName);
+          if (targetNorm !== mNorm) return false;
+      }
+      return true;
+  }
   
   return false;
 };

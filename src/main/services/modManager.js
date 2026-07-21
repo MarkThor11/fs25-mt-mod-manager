@@ -376,7 +376,17 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                         // 4. Fallback by Title (lowest priority fallback, checked case-insensitively)
                         if (!foundMod) {
                             const depTitleLower = depLower;
-                            foundMod = mods.find(m => m.title && m.title.toLowerCase() === depTitleLower);
+                            foundMod = mods.find(m => {
+                                if (m.title && m.title.toLowerCase() === depTitleLower) {
+                                    if (depTitle && m.modName) {
+                                        const targetNorm = depTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                        const mNorm = m.modName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                        if (targetNorm !== mNorm) return false;
+                                    }
+                                    return true;
+                                }
+                                return false;
+                            });
                         }
 
                         if (foundMod && foundMod.modName) {
