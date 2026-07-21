@@ -67,31 +67,31 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}) => {
       if (safeModId === depId) return true;
   }
 
-  // 2. ModHub Title fallback if titles match case-insensitively
-  const titleToCheck = resolvedTitle || (typeof dep === 'object' && dep.title ? dep.title : null);
-  if (titleToCheck && m.title && titleToCheck.toLowerCase() === m.title.toLowerCase()) return true;
-
-  // 3. Filename fallback if ModHub ID was resolved but ID match failed
-  const fileToCheck = resolvedFileName || (typeof dep === 'object' && dep.fileName ? dep.fileName : null);
-  if (fileToCheck) {
-      const rFile = normalizeForMatching(fileToCheck);
-      const lFile = normalizeForMatching(m.fileName);
-      if (rFile && lFile && rFile === lFile) return true;
-  }
-  
-  // 4. Exact/Normalized ModName match
+  // 2. Exact/Normalized ModName match
   const targetNormalized = normalizeForMatching(cleanedName);
   if (m.modName) {
       if (m.modName.toLowerCase() === cleanedName.toLowerCase()) return true;
       if (normalizeForMatching(m.modName) === targetNormalized) return true;
   }
 
-  // 5. Exact/Normalized FileName match
+  // 3. Exact/Normalized FileName match
   if (m.fileName) {
       const cleanFile = m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
       if (cleanFile === cleanedName.toLowerCase()) return true;
       if (normalizeForMatching(m.fileName) === targetNormalized) return true;
   }
+
+  // 4. Filename fallback if ModHub ID was resolved but ID match failed
+  const fileToCheck = resolvedFileName || (typeof dep === 'object' && dep.fileName ? dep.fileName : null);
+  if (fileToCheck) {
+      const rFile = normalizeForMatching(fileToCheck);
+      const lFile = normalizeForMatching(m.fileName);
+      if (rFile && lFile && rFile === lFile) return true;
+  }
+
+  // 5. ModHub Title fallback if titles match case-insensitively (lowest priority, last resort)
+  const titleToCheck = resolvedTitle || (typeof dep === 'object' && dep.title ? dep.title : null);
+  if (titleToCheck && m.title && titleToCheck.toLowerCase() === m.title.toLowerCase()) return true;
   
   return false;
 };
