@@ -15,10 +15,51 @@ import DependencyDownloadModal from '../components/common/DependencyDownloadModa
 
 
 
+const getResolvedMetadataObj = (dep, resolvedMetadata = {}) => {
+  if (!dep || !resolvedMetadata) return null;
+  
+  if (typeof dep === 'object') {
+    if (dep.url && resolvedMetadata[dep.url]) return resolvedMetadata[dep.url];
+    if (dep.url) {
+      const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
+      if (idMatch) {
+        const idKey = `id_${parseInt(idMatch[1], 10)}`;
+        if (resolvedMetadata[idKey]) return resolvedMetadata[idKey];
+      }
+      const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
+      if (fileMatch) {
+        const fileKey = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
+        if (resolvedMetadata[fileKey]) return resolvedMetadata[fileKey];
+      }
+    }
+    if (dep.modId && resolvedMetadata[`id_${dep.modId}`]) return resolvedMetadata[`id_${dep.modId}`];
+    if (dep.fileName && resolvedMetadata[dep.fileName.replace(/\.zip$/i, '').toLowerCase()]) {
+      return resolvedMetadata[dep.fileName.replace(/\.zip$/i, '').toLowerCase()];
+    }
+    if (dep.modName && resolvedMetadata[dep.modName.toLowerCase()]) {
+      return resolvedMetadata[dep.modName.toLowerCase()];
+    }
+  }
+  
+  if (typeof dep === 'string') {
+    const clean = dep.replace(/\.zip$/i, '').toLowerCase();
+    if (resolvedMetadata[clean]) return resolvedMetadata[clean];
+  }
+  
+  const depTitle = typeof dep === 'string' ? dep : dep.title;
+  if (depTitle) {
+    if (resolvedMetadata[depTitle]) return resolvedMetadata[depTitle];
+    if (resolvedMetadata[`title_${depTitle.toLowerCase()}`]) {
+      return resolvedMetadata[`title_${depTitle.toLowerCase()}`];
+    }
+  }
+  
+  return null;
+};
+
 const getDependencyUniqueKey = (dep, resolvedMetadata = {}) => {
   let depId = null;
   let fallbackFileName = null;
-  const depTitle = typeof dep === 'string' ? dep : dep.title;
   
   if (typeof dep === 'object' && dep.url) {
       const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
@@ -29,12 +70,12 @@ const getDependencyUniqueKey = (dep, resolvedMetadata = {}) => {
       depId = String(dep.modId);
   }
   
-  const resolvedObj = resolvedMetadata[depTitle] || (typeof dep === 'object' ? (resolvedMetadata[dep.title] || resolvedMetadata[dep.modName] || resolvedMetadata[dep.fileName]) : null);
+  const resolvedObj = getResolvedMetadataObj(dep, resolvedMetadata);
   if (resolvedObj && resolvedObj.modId) {
       depId = String(resolvedObj.modId);
   }
   
-  const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || ''));
+  const depString = fallbackFileName || (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.fileName || dep.title || ''));
   const cleanModName = (name) => name ? name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim() : '';
   const cleanedName = cleanModName(depString).toLowerCase();
   
@@ -154,9 +195,7 @@ export default function ModDetailPage() {
     uniqueDependencies.forEach(dep => {
         let isInstalled = false;
         
-        const depTitle = typeof dep === 'string' ? dep : dep.title;
-        // Search resolvedMetadata either by original string or by current title
-        const resolvedObj = resolvedMetadata[depTitle] || (typeof dep === 'object' ? (resolvedMetadata[dep.title] || resolvedMetadata[dep.modName] || resolvedMetadata[dep.fileName]) : null);
+        const resolvedObj = getResolvedMetadataObj(dep, resolvedMetadata);
         
         let depId = (typeof dep === 'object' && dep.modId) ? String(dep.modId) : (resolvedObj ? String(resolvedObj.modId) : null);
         let fallbackFileName = null;
@@ -355,11 +394,15 @@ export default function ModDetailPage() {
               const resolvedMetaUpdate = {};
               detailsList.forEach(detail => {
                   if (detail && detail.modId) {
-                      resolvedMetaUpdate[detail.title] = detail;
+                      const cleanId = String(parseInt(detail.modId, 10));
+                      resolvedMetaUpdate[`id_${cleanId}`] = detail;
                       if (detail.url) resolvedMetaUpdate[detail.url] = detail;
                       if (detail.fileName) {
-                          const techName = detail.fileName.replace(/\.zip$/i, '');
+                          const techName = detail.fileName.replace(/\.zip$/i, '').toLowerCase();
                           resolvedMetaUpdate[techName] = detail;
+                      }
+                      if (detail.title) {
+                          resolvedMetaUpdate[`title_${detail.title.toLowerCase()}`] = detail;
                       }
                   }
               });
@@ -733,7 +776,7 @@ export default function ModDetailPage() {
                   const depKey = getDependencyUniqueKey(dep, resolvedMetadata);
                   const depTitle = typeof dep === 'string' ? dep : dep.title;
 
-                  const resolvedObj = resolvedMetadata[depTitle];
+                  const resolvedObj = getResolvedMetadataObj(dep, resolvedMetadata);
 
                   // Extract the file name or ID exactly like resolveRecursiveDependencies does
                   let depId = resolvedObj ? resolvedObj.modId : null;
