@@ -635,7 +635,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     await fs.writeFile(careerPath, xmlOutput);
 
-    let extractedDem = false;
     let extractedGrles = 0;
     if (modZipPath) {
         try {
@@ -643,15 +642,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 const stats = fs.statSync(modZipPath);
                 if (stats.isFile()) {
                     const zip = new AdmZip(modZipPath);
-                    
-                    // Extract dem.png
-                    const demEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('dem.png'));
-                    if (demEntry) {
-                        const targetPath = path.join(slotPath, 'terrain.heightmap.png');
-                        await fs.writeFile(targetPath, demEntry.getData());
-                        console.log(`[CREATE] Extracted real dem.png to terrain.heightmap.png to prevent engine crash.`);
-                        extractedDem = true;
-                    }
                     
                     // Extract infoLayer grle files
                     for (const entry of zip.getEntries()) {
@@ -667,10 +657,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             }
         } catch (err) {
             console.error(`[CREATE] Failed to extract map files from zip:`, err);
-        }
-
-        if (!extractedDem) {
-            console.error(`[CREATE] Could not extract dem.png. The savegame will be unplayable to prevent an engine crash.`);
         }
     }
 
