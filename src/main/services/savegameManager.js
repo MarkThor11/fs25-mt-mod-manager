@@ -636,23 +636,37 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     await fs.writeFile(careerPath, xmlOutput);
 
     let extractedDem = false;
+    let extractedGrles = 0;
     if (modZipPath) {
         try {
             if (fs.existsSync(modZipPath)) {
                 const stats = fs.statSync(modZipPath);
                 if (stats.isFile()) {
                     const zip = new AdmZip(modZipPath);
-                    const entry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('dem.png'));
-                    if (entry) {
+                    
+                    // Extract dem.png
+                    const demEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('dem.png'));
+                    if (demEntry) {
                         const targetPath = path.join(slotPath, 'terrain.heightmap.png');
-                        await fs.writeFile(targetPath, entry.getData());
+                        await fs.writeFile(targetPath, demEntry.getData());
                         console.log(`[CREATE] Extracted real dem.png to terrain.heightmap.png to prevent engine crash.`);
                         extractedDem = true;
                     }
+                    
+                    // Extract infoLayer grle files
+                    for (const entry of zip.getEntries()) {
+                        const baseName = path.basename(entry.entryName);
+                        if (baseName.toLowerCase().startsWith('infolayer_') && baseName.toLowerCase().endsWith('.grle')) {
+                            const targetPath = path.join(slotPath, baseName);
+                            await fs.writeFile(targetPath, entry.getData());
+                            extractedGrles++;
+                        }
+                    }
+                    console.log(`[CREATE] Extracted ${extractedGrles} infoLayer GRLE files from map zip.`);
                 }
             }
         } catch (err) {
-            console.error(`[CREATE] Failed to extract dem.png from map mod:`, err);
+            console.error(`[CREATE] Failed to extract map files from zip:`, err);
         }
 
         if (!extractedDem) {
