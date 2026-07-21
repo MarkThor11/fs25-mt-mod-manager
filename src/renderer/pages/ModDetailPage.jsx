@@ -13,16 +13,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { compareVersions, resolveRecursiveDependencies, matchModWithDependency } from '../utils/modUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 
-// Shared Ultra Normalization (matches InstalledModsPage)
-const ultraNormalize = (str) => {
-    if (!str) return '';
-    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-        .replace(/\[[^\]]*\]/g, '') // Strip [Tags]
-        .replace(/\([^)]*\)/g, '') // Strip (By Author) or (v1.0)
-        .replace(/^(?:fs\d{2}|dlc|pdlc|mod|fendt|jcb|caseih|newholland|massey|farming\s*simulator(?:\s*\d{2})?)(?:[\s_\.]+)/gi, '') // Common prefixes
-        .replace(/[\s_\.]+(?:by\s+.*|author:.*|pack|package|dlc|mod|map|expansion|set|kit|collection|building|shed|v\d+.*)\s*$/gi, '') // Trailing noise
-        .replace(/[^a-z0-9]/g, ''); // Squash everything else
-};
+
 
 const getDependencyUniqueKey = (dep, resolvedMetadata = {}) => {
   let depId = null;

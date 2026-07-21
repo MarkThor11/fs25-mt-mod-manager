@@ -14,16 +14,7 @@ import { useModHubStore } from '../store/useModHubStore';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 import { resolveRecursiveDependencies, matchModWithDependency } from '../utils/modUtils';
 
-// -- UTILITIES (Extracted for Performance) --
-const ultraNormalize = (str) => {
-    if (!str) return '';
-    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-        .replace(/\[[^\]]*\]/g, '') // Strip [Tags]
-        .replace(/\([^)]*\)/g, '') // Strip (By Author) or (v1.0)
-        .replace(/^(?:fs\d{2}|dlc|pdlc|mod|fendt|jcb|caseih|newholland|massey|farming\s*simulator(?:\s*\d{2})?)(?:[\s_\.]+)/gi, '') // Common prefixes (tech or game)
-        .replace(/[\s_\.]+(?:by\s+.*|author:.*|pack|package|dlc|mod|map|expansion|set|kit|collection|building|shed|v\d+.*)\s*$/gi, '') // Trailing noise & authors
-        .replace(/[^a-z0-9]/g, ''); // Squash everything else
-};
+
 
 // --- GLOBAL VIRTUALIZATION OBSERVER ---
 const observerCallbacks = new Map();
