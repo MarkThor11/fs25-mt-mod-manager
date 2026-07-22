@@ -950,7 +950,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                     </div>
 
                     <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, alignContent: 'start' }}>
-                      {fleet.filter(v => !searchFleetQuery || `${v.brand} ${v.name} ${v.type}`.toLowerCase().includes(searchFleetQuery.toLowerCase())).map((v, i) => (
+                      {fleet.filter(v => !searchFleetQuery || `${v.brand} ${v.name} ${v.displayType || v.type}`.toLowerCase().includes(searchFleetQuery.toLowerCase())).map((v, i) => (
                         <div 
                           key={i} 
                           onClick={async () => {
@@ -967,8 +967,12 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                           onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
                           onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}
                         >
-                          <div style={{ overflow: 'hidden' }}>
+                          <div style={{ width: 36, height: 36, borderRadius: 6, background: 'rgba(var(--accent-rgb), 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--accent)' }}>
+                            <Truck size={18} />
+                          </div>
+                          <div style={{ overflow: 'hidden', flex: 1 }}>
                             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.brand} {v.name}</div>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', marginTop: 2, textTransform: 'capitalize' }}>{v.displayType || v.type || 'Vehicle'}</div>
                           </div>
                         </div>
                       ))}

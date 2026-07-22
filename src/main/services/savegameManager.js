@@ -1751,14 +1751,30 @@ async function getFleetPositions(savePath, mapModName) {
                 brand = brand.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim() || 'Unknown';
                 name = name.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim();
                 
-                const type = v['@_type'] || 'vehicle';
+                const deriveVehicleType = (fn, rawType) => {
+                    const fnL = (fn || '').toLowerCase();
+                    const tL = (rawType || '').toLowerCase();
+                    
+                    if (tL.includes('combine') || fnL.includes('combine') || fnL.includes('harvester') || fnL.includes('evion') || fnL.includes('lexion') || fnL.includes('ideal')) return 'Combine Harvester';
+                    if (tL.includes('truck') || fnL.includes('truck') || fnL.includes('lorry') || fnL.includes('tgx') || fnL.includes('mack') || fnL.includes('superliner')) return 'Truck';
+                    if (tL.includes('car') || tL.includes('pickup') || fnL.includes('pickup') || fnL.includes('car') || fnL.includes('van') || fnL.includes('suv')) return 'Car / Pickup';
+                    if (tL.includes('telehandler') || fnL.includes('telehandler')) return 'Telehandler';
+                    if (tL.includes('wheelloader') || fnL.includes('wheelloader') || fnL.includes('torion')) return 'Wheel Loader';
+                    if (tL.includes('skidsteer') || fnL.includes('skidsteer')) return 'Skid Steer';
+                    if (tL.includes('mower') || fnL.includes('mower')) return 'Self-Propelled Mower';
+                    if (tL.includes('sprayer') || fnL.includes('sprayer')) return 'Self-Propelled Sprayer';
+                    return 'Tractor';
+                };
+
+                const displayType = deriveVehicleType(filename, v['@_type']);
                 
                 fleet.push({ 
                     id: gameAssignedId, 
                     uniqueId: v['@_uniqueId'], 
                     name, 
                     brand, 
-                    type, 
+                    type: displayType,
+                    displayType, 
                     category: 'vehicle', 
                     x: coords[0], 
                     y: coords[1], 
