@@ -266,6 +266,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
         }
         return null;
       };
+      const mapModName = getMapModName(save.mapId);
       window.api.savegames.getFleetPositions(save.path, mapModName).then(res => setFleet(Array.isArray(res) ? res : (res?.items || [])));
       if (window.api.savegames.checkStoreDeliveries) {
         window.api.savegames.checkStoreDeliveries().then(setHasStoreDeliveries);
