@@ -1678,7 +1678,8 @@ async function getFleetPositions(savePath, mapModName) {
         'pallet', 'bigbag', 'tree', 'bale', 'header', 'cutter', 'weight', 'implement', 'attachment', 
         'trailer', 'wagon', 'plow', 'cultivator', 'seeder', 'planter', 'roller', 'weeder', 'sprayer', 
         'spreader', 'slurry', 'manure', 'tank', 'windrower', 'tedder', 'baler', 'wrapper', 'conveyor', 
-        'silage', 'auger', 'fork', 'weight', 'grab', 'bucket', 'shovel', 'palletfork', 'frontloader'
+        'silage', 'auger', 'fork', 'weight', 'grab', 'bucket', 'shovel', 'palletfork', 'frontloader',
+        'kaercher', 'karcher', 'washer', 'pressurewasher', 'hds9184'
     ];
     
     const parseVehicleXml = (xml, isDefault = false) => {
@@ -1698,7 +1699,7 @@ async function getFleetPositions(savePath, mapModName) {
                 
                 // 1. PRIMARY RULE: Check vehicle type & runtime XML structure (enterable, motor, drivable, motor configs)
                 const vType = (v['@_type'] || '').toLowerCase();
-                const nonDrivableTypes = ['shovel', 'shovelleveler', 'implement', 'weight', 'attachable', 'handtool', 'pallet', 'bigbag', 'bale', 'cutter', 'header'];
+                const nonDrivableTypes = ['shovel', 'shovelleveler', 'implement', 'weight', 'attachable', 'handtool', 'pallet', 'bigbag', 'bale', 'cutter', 'header', 'washer', 'pressurewasher', 'kaercher'];
                 if (vType && nonDrivableTypes.some(t => vType.includes(t))) continue;
 
                 const hasEnterableState = v.enterable !== undefined || v.motor !== undefined || v.drivable !== undefined;
@@ -1759,7 +1760,7 @@ async function getFleetPositions(savePath, mapModName) {
                     if (tL.includes('truck') || fnL.includes('truck') || fnL.includes('lorry') || fnL.includes('tgx') || fnL.includes('mack') || fnL.includes('superliner') || fnL.includes('man/')) return 'Truck';
                     if (tL.includes('car') || tL.includes('pickup') || fnL.includes('pickup') || fnL.includes('car') || fnL.includes('van') || fnL.includes('suv') || fnL.includes('mahindra')) return 'Car / Pickup';
                     if (tL.includes('telehandler') || fnL.includes('telehandler')) return 'Telehandler';
-                    if (tL.includes('wheelloader') || fnL.includes('wheelloader') || fnL.includes('torion')) return 'Wheel Loader';
+                    if (tL.includes('wheelloader') || fnL.includes('wheelloader') || fnL.includes('torion') || fnL.includes('r640')) return 'Wheel Loader';
                     if (tL.includes('skidsteer') || fnL.includes('skidsteer')) return 'Skid Steer';
                     if (tL.includes('mower') || fnL.includes('mower')) return 'Self-Propelled Mower';
                     if (tL.includes('sprayer') || fnL.includes('sprayer')) return 'Self-Propelled Sprayer';
