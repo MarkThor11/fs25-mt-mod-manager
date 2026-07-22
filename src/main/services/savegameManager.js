@@ -2534,7 +2534,7 @@ async function setPlayerPosition(options) {
         }
         
         // AUTO-INJECT DEPENDENCIES AT CREATION TIME
-        if (opts.autoInject !== false) {
+        if (options && options.autoInject) {
             await autoInjectDependencies(savePath);
         }
         
