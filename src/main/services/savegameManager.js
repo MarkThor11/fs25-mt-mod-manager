@@ -206,50 +206,62 @@ async function deleteMapTemplate(folderName) {
     return { success: false, error: 'Template not found' };
 }
 
+async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) {
+    if (!mapId) return null;
+    const templatesDir = getTemplatesPath();
+    if (!fs.existsSync(templatesDir)) return null;
+
+    const ultraNorm = (s) => {
+        if (!s) return '';
+        return s.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^(?:fs\d{2}|pdlc)_/, '');
+    };
+
+    const targetMapIdNorm = ultraNorm(mapId);
+    const targetModNorm = ultraNorm(mapModName);
+    const targetTitleNorm = ultraNorm(mapTitle);
+
+    const folders = await fs.readdir(templatesDir);
+
+    // 1. Direct folder check (matches folder name containing mod name, title, or mapId)
+    for (const folder of folders) {
+        const folderPath = path.join(templatesDir, folder);
+        const stat = await fs.stat(folderPath).catch(() => null);
+        if (!stat || !stat.isDirectory()) continue;
+
+        if (!fs.existsSync(path.join(folderPath, 'terrain.heightmap.png'))) continue;
+
+        const fNorm = ultraNorm(folder);
+        if (targetModNorm && fNorm.includes(targetModNorm)) return folder;
+        if (targetTitleNorm && fNorm.includes(targetTitleNorm)) return folder;
+        if (targetMapIdNorm && fNorm.includes(targetMapIdNorm)) return folder;
+    }
+
+    // 2. XML Deep Scan check inside templates
+    for (const folder of folders) {
+        const folderPath = path.join(templatesDir, folder);
+        const careerPath = path.join(folderPath, 'careerSavegame.xml');
+        if (fs.existsSync(careerPath) && fs.existsSync(path.join(folderPath, 'terrain.heightmap.png'))) {
+            try {
+                const xml = await fs.readFile(careerPath, 'utf8');
+                const internalId = getElementText(xml, 'mapId');
+                const internalTitle = getElementText(xml, 'mapTitle');
+                if ((internalId && ultraNorm(internalId) === targetMapIdNorm) || 
+                    (internalTitle && targetTitleNorm && ultraNorm(internalTitle) === targetTitleNorm)) {
+                    return folder;
+                }
+            } catch (e) {}
+        }
+    }
+
+    return null;
+}
+
 /**
  * Check if a map has a template.
  */
 async function hasMapTemplate(mapId, mapTitle = null, modName = null) {
-    if (!mapId) return false;
-    const templatesDir = getTemplatesPath();
-    const cleanMapId = mapId.replace(/[^a-z0-9]/gi, '_');
-    
-    // 1. Candidate folder names to check (Pre-calculate for speed)
-    const candidates = new Set([cleanMapId]);
-    if (modName) {
-        const cleanMod = modName.replace(/[^a-z0-9]/gi, '_');
-        candidates.add(`${cleanMod}_${cleanMapId}`);
-        candidates.add(`${cleanMod}.${cleanMapId}`.replace(/[^a-z0-9]/gi, '_'));
-        
-        // Handle pdlc_ prefix bidirectional
-        const baseMod = modName.startsWith('pdlc_') ? modName.substring(5) : modName;
-        const cleanBase = baseMod.replace(/[^a-z0-9]/gi, '_');
-        
-        candidates.add(`${cleanBase}_${cleanMapId}`);
-        candidates.add(`pdlc_${cleanBase}_${cleanMapId}`);
-    }
-
-    for (const cand of candidates) {
-        const p = path.join(templatesDir, cand, 'terrain.heightmap.png');
-        if (fs.existsSync(p)) return true;
-    }
-
-    // 2. Deep Scan Fallback (Look inside XMLs)
-    const folders = await fs.readdir(templatesDir);
-    for (const folder of folders) {
-        const folderPath = path.join(templatesDir, folder);
-        const careerPath = path.join(folderPath, 'careerSavegame.xml');
-        if (fs.existsSync(careerPath)) {
-            const xml = await fs.readFile(careerPath, 'utf8');
-            const internalId = getElementText(xml, 'mapId');
-            const internalTitle = getElementText(xml, 'mapTitle');
-            
-            if (internalId === mapId) return true;
-            if (mapTitle && internalTitle === mapTitle) return true;
-        }
-    }
-
-    return false;
+    const folder = await resolveTemplateFolder(mapId, modName, mapTitle);
+    return !!folder;
 }
 
 /**
@@ -390,52 +402,15 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     // 2. Identify and Copy Template
-    let templateFolder = mapId.replace(/[^a-z0-9]/gi, '_');
-    if (mapModName) {
-        const cleanMod = mapModName.replace(/[^a-z0-9]/gi, '_');
-        const p1 = path.join(templatesDir, `${cleanMod}_${templateFolder}`);
-        if (fs.existsSync(p1)) templateFolder = `${cleanMod}_${templateFolder}`;
-    }
-
-    let baseTemplate = null;
-    let placeablesXmlPath = null;
-    let vehiclesXmlPath = null;
-    let itemsXmlPath = null;
-    if (modZipPath) {
-        try {
-            const AdmZip = require('adm-zip');
-            const zip = new AdmZip(modZipPath);
-            const entry = zip.getEntry('modDesc.xml');
-            if (entry) {
-                const xmlText = entry.getData().toString('utf8');
-                const configMatch = xmlText.match(/configFilename="([^"]+)"/i);
-                if (configMatch && configMatch[1]) {
-                    const pathLower = configMatch[1].toLowerCase();
-                    if (pathLower.includes('mapas')) baseTemplate = 'MapAS';
-                    else if (pathLower.includes('mapeu')) baseTemplate = 'MapEU';
-                    else if (pathLower.includes('mapus')) baseTemplate = 'MapUS';
-                }
-                
-                const placeablesMatch = xmlText.match(/defaultPlaceablesXMLFilename="([^"]+)"/i);
-                if (placeablesMatch && placeablesMatch[1]) placeablesXmlPath = placeablesMatch[1];
-
-                const vehiclesMatch = xmlText.match(/defaultVehiclesXMLFilename="([^"]+)"/i);
-                if (vehiclesMatch && vehiclesMatch[1]) vehiclesXmlPath = vehiclesMatch[1];
-
-                const itemsMatch = xmlText.match(/defaultItemsXMLFilename="([^"]+)"/i);
-                if (itemsMatch && itemsMatch[1]) itemsXmlPath = itemsMatch[1];
-            }
-        } catch (e) {
-            console.error('[CREATE] Failed to determine base template from zip:', e.message);
-        }
-    }
-
-    const templatePath = path.join(templatesDir, templateFolder);
+    const resolvedFolder = await resolveTemplateFolder(mapId, mapModName, mapTitle);
     let copiedTemplate = false;
-    if (fs.existsSync(templatePath)) {
-        console.log(`[CREATE] Copying template from ${templateFolder}`);
-        await fs.copy(templatePath, slotPath);
-        copiedTemplate = true;
+    if (resolvedFolder) {
+        const templatePath = path.join(templatesDir, resolvedFolder);
+        if (fs.existsSync(templatePath)) {
+            console.log(`[CREATE] Copying master template from ${resolvedFolder}`);
+            await fs.copy(templatePath, slotPath);
+            copiedTemplate = true;
+        }
     }
 
     if (!copiedTemplate) {
