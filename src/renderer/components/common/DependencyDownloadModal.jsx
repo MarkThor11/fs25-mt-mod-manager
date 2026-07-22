@@ -2,29 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { Download, X, Search, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useDownloadStore } from '../../store/useDownloadStore';
 
+const getModKey = (m) => {
+    if (!m) return '';
+    if (typeof m === 'string') return m.toLowerCase();
+    if (m.url) return m.url;
+    if (m.modId) return `id_${m.modId}`;
+    if (m.fileName) return m.fileName.toLowerCase();
+    if (m.modName) return m.modName.toLowerCase();
+    if (m.technicalName) return m.technicalName.toLowerCase();
+    return `title_${m.title ? m.title.toLowerCase() : ''}`;
+};
+
 export default function DependencyDownloadModal({ missingMods, onComplete, onCancel, subFolder, parentId, mainTask }) {
     const registerBatch = useDownloadStore(s => s.registerBatch);
     const [status, setStatus] = useState('confirming'); // confirming, processing, complete
     
-    // --- Deduplicate internally ---
+    // --- Deduplicate internally by unique mod key ---
     const uniqueMods = React.useMemo(() => {
         const seen = new Set();
-        return missingMods.filter(m => {
-                const norm = (m.title || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-                    .replace(/\[[^\]]*\]/g, '') // Strip [Tags]
-                    .replace(/\([^)]*\)/g, '') // Strip (By Author) or (v1.0)
-                    .replace(/^(?:fs\d{2}|dlc|pdlc|mod|fendt|jcb|caseih|newholland|massey|farming\s*simulator(?:\s*\d{2})?)(?:[\s_\.]+)/gi, '') // Common prefixes
-                    .replace(/[\s_\.]+(?:by\s+.*|author:.*|pack|package|dlc|mod|map|expansion|set|kit|collection|building|shed|v\d+.*)\s*$/gi, '') // Trailing noise
-                    .replace(/[^a-z0-9]/g, '');
-            if (seen.has(norm)) return false;
-            seen.add(norm);
+        return (missingMods || []).filter(m => {
+            const key = getModKey(m);
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
             return true;
         });
     }, [missingMods]);
 
-    // We use mod.title as the lookup key for progress updates
     const [modStatuses, setModStatuses] = useState(
-        uniqueMods.reduce((acc, mod) => ({ ...acc, [mod.title]: { status: 'pending', progress: 0 } }), {})
+        uniqueMods.reduce((acc, mod) => {
+            const key = getModKey(mod);
+            return { ...acc, [key]: { status: 'pending', progress: 0, title: mod.title || mod.modName || key } };
+        }, {})
     );
 
     useEffect(() => {
@@ -33,8 +41,8 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
             const { type, modName, status, percent, title } = data;
             
             setModStatuses(prev => {
-                // modName from the backend corresponds to mod.title passed into the start
-                const current = prev[modName] || { status: 'pending', progress: 0 };
+                const depKey = getModKey({ title: modName, modName });
+                const current = prev[depKey] || prev[modName] || { status: 'pending', progress: 0 };
                 const next = { ...current };
                 
                 if (type === 'STATUS') {
@@ -45,7 +53,7 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
                     next.status = 'downloading';
                 }
                 
-                return { ...prev, [modName]: next };
+                return { ...prev, [depKey]: next, [modName]: next };
             });
         });
 
@@ -117,14 +125,15 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {uniqueMods.map(m => {
-                            const mod = modStatuses[m.title];
+                            const depKey = getModKey(m);
+                            const mod = modStatuses[depKey] || modStatuses[m.title];
                             if (!mod) return null;
                             
                             const isNotFound = mod.status === 'NOT_FOUND_ON_MODHUB';
                             const isError = mod.status === 'error';
 
                             return (
-                                <div key={m.title} style={{ 
+                                <div key={depKey} style={{ 
                                     padding: '12px 16px', 
                                     background: 'var(--bg-primary)', 
                                     borderRadius: 12, 

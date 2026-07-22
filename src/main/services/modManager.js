@@ -3537,18 +3537,20 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 		try {
 			let modId = null;
 			let downloadUrl = null;
+			let targetFileName = null;
 			let modTitle = modName;
 
-			// 0. Resolve ID from URL if possible (High reliability)
+			// 0. Resolve ID & filename from URL if possible (High reliability)
 			if (modUrl) {
 				const idMatch = modUrl.match(/mod_id=(\d+)/) || modUrl.match(/storage\/(\d+)\//);
 				if (idMatch) modId = parseInt(idMatch[1], 10).toString();
+				const fileMatch = modUrl.match(/\/([^\/]+\.zip)$/i);
+				if (fileMatch) targetFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
 			}
 
 			// 0.5 REGISTRY CHECK: Is this mod currently being installed or in queue?
-			// This prevents race conditions in batch installs.
 			const isCurrentlyInstalling = (modId && activeInstalls.has(modId)) || 
-										 downloadQueue.some(q => (modId && q.modId === modId) || ultraNormalize(q.modTitle) === ultraNormalize(modName));
+										 downloadQueue.some(q => (modId && q.modId === modId) || (targetFileName && q.fileName && q.fileName.replace(/\.zip$/i, '').toLowerCase() === targetFileName));
 			
 			if (isCurrentlyInstalling) {
 				console.log(`[AUTO-INSTALL] Skipping ${modName} - Already in download queue/active installs.`);
@@ -3556,7 +3558,6 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 			}
 
 			// 1. SMART CHECK: Is this mod already installed anywhere?
-			// Refresh local pool for every mod to handle ones that finished during the loop
 			const currentLocalPool = cache.getModHubMetadataPool();
 			let alreadyInstalled = false;
 			let localMod = null;
@@ -3564,13 +3565,11 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 			if (modId && currentLocalPool[modId]) {
 				localMod = currentLocalPool[modId];
 				alreadyInstalled = true;
-			} else {
-				// Aggressive Title-based search in local pool
-				const normName = ultraNormalize(modName);
+			} else if (targetFileName) {
+				// Exact match by technical filename / modName
 				localMod = Object.values(currentLocalPool).find(m => {
-					const localTitle = ultraNormalize(m.title || m.modhubTitle || '');
-					const localName = ultraNormalize(m.modName || '');
-					return normName && (normName === localTitle || normName === localName);
+					const lName = m.modName ? m.modName.toLowerCase() : (m.fileName ? m.fileName.replace(/\.zip$/i, '').toLowerCase() : '');
+					return lName && lName === targetFileName;
 				});
 				if (localMod) alreadyInstalled = true;
 			}
