@@ -24,6 +24,31 @@ const getLocalizedString = (val, defaultVal = 'Unknown') => {
     return String(val);
 };
 
+const CombineHarvesterIcon = ({ size = 18, color = 'currentColor', style = {} }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke={color} 
+    strokeWidth="1.8" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    style={style}
+  >
+    <circle cx="3.5" cy="14.5" r="2" />
+    <path d="M2 14.5H5M3.5 13V16" />
+    <path d="M5.5 14.5L8.5 13" />
+    <path d="M9 13V7H13.5L16 10.5V13" />
+    <path d="M11 7V10.5H16" />
+    <path d="M8.5 13H19.5V16" />
+    <path d="M13 7L18.5 4.5H21" />
+    <circle cx="10" cy="17.5" r="2.5" />
+    <circle cx="18" cy="18" r="1.5" />
+    <path d="M12.5 18H16.5" />
+  </svg>
+);
+
 /**
  * Mod Audit Modal - Checks versions and missing mods for a savegame
  */
@@ -971,7 +996,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                             {(() => {
                               const t = (v.displayType || v.type || '').toLowerCase();
                               if (t.includes('tractor')) return <Tractor size={18} />;
-                              if (t.includes('combine') || t.includes('harvester')) return <Wheat size={18} />;
+                              if (t.includes('combine') || t.includes('harvester')) return <CombineHarvesterIcon size={18} />;
                               if (t.includes('truck')) return <Truck size={18} />;
                               if (t.includes('car') || t.includes('pickup')) return <Car size={18} />;
                               return <Truck size={18} />;
