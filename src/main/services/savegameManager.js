@@ -1678,7 +1678,7 @@ async function getFleetPositions(savePath, mapModName) {
         'pallet', 'bigbag', 'tree', 'bale', 'header', 'cutter', 'weight', 'implement', 'attachment', 
         'trailer', 'wagon', 'plow', 'cultivator', 'seeder', 'planter', 'roller', 'weeder', 'sprayer', 
         'spreader', 'slurry', 'manure', 'tank', 'windrower', 'tedder', 'baler', 'wrapper', 'conveyor', 
-        'silage', 'auger', 'fork', 'weight', 'grab', 'bucket'
+        'silage', 'auger', 'fork', 'weight', 'grab', 'bucket', 'shovel', 'palletfork', 'frontloader'
     ];
     
     const parseVehicleXml = (xml, isDefault = false) => {
