@@ -1008,7 +1008,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                             {(() => {
                               const t = (v.displayType || v.type || '').toLowerCase();
                               if (t.includes('tractor')) return <Tractor size={24} />;
-                              if (t.includes('combine') || t.includes('harvester')) return <CombineHarvesterIcon size={24} />;
+                              if (t.includes('combine') || t.includes('harvester')) return <Wheat size={24} />;
                               if (t.includes('truck')) return <Truck size={24} />;
                               if (t.includes('car') || t.includes('pickup')) return <Car size={24} />;
                               return <Truck size={24} />;
