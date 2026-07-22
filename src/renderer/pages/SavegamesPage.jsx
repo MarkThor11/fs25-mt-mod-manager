@@ -4,7 +4,7 @@ import {
   Save, Play, RefreshCw, Edit3, MapPin,
   Clock, DollarSign, Package, Check, X,
   Plus, ChevronDown, ChevronRight, Gamepad2, Trash2, TrendingUp, Shield,
-  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft, Anchor
+  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft, Anchor, Truck
 } from 'lucide-react';
 import { useSavegameStore } from '../store/useSavegameStore';
 import { useToastStore } from '../store/useToastStore';
