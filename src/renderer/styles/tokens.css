@@ -102,6 +102,6 @@
   /* ── Z-index ── */
   --z-dropdown: 100;
   --z-modal: 200;
-  --z-toast: 300;
   --z-titlebar: 400;
+  --z-toast: 20000;
 }

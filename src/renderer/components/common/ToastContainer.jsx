@@ -13,7 +13,7 @@ export default function ToastContainer() {
   const { toasts, removeToast } = useToastStore();
 
   return (
-    <div className="toast-container">
+    <div className="toast-container" style={{ zIndex: 99999 }}>
       {toasts.map((toast) => {
         const Icon = ICONS[toast.type] || Info;
         return (
