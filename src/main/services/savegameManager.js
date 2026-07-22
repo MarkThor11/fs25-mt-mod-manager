@@ -1947,47 +1947,8 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true) {
             mapModName = mapId.split('.')[0];
         }
         
+        const templateFolder = await resolveTemplateFolder(mapId, mapModName, mapTitle);
         const templatesDir = getTemplatesPath();
-        const cleanMapId = mapId ? mapId.replace(/[^a-z0-9]/gi, '_') : '';
-        
-        const candidates = new Set();
-        if (cleanMapId) candidates.add(cleanMapId);
-        if (mapModName) {
-            const cleanMod = mapModName.replace(/[^a-z0-9]/gi, '_');
-            candidates.add(`${cleanMod}_${cleanMapId}`);
-            candidates.add(`${cleanMod}.${cleanMapId}`.replace(/[^a-z0-9]/gi, '_'));
-            
-            const baseMod = mapModName.startsWith('pdlc_') ? mapModName.substring(5) : mapModName;
-            const cleanBase = baseMod.replace(/[^a-z0-9]/gi, '_');
-            candidates.add(`${cleanBase}_${cleanMapId}`);
-            candidates.add(`pdlc_${cleanBase}_${cleanMapId}`);
-        }
-        
-        let templateFolder = null;
-        for (const cand of candidates) {
-            const p = path.join(templatesDir, cand, 'careerSavegame.xml');
-            if (fs.existsSync(p)) {
-                templateFolder = cand;
-                break;
-            }
-        }
-        
-        if (!templateFolder && mapId) {
-            const folders = await fs.readdir(templatesDir);
-            for (const folder of folders) {
-                const folderPath = path.join(templatesDir, folder);
-                const tCareerPath = path.join(folderPath, 'careerSavegame.xml');
-                if (fs.existsSync(tCareerPath)) {
-                    const xml = await fs.readFile(tCareerPath, 'utf8');
-                    const internalId = getElementText(xml, 'mapId');
-                    const internalTitle = getElementText(xml, 'mapTitle');
-                    if (internalId === mapId || (mapTitle && internalTitle === mapTitle)) {
-                        templateFolder = folder;
-                        break;
-                    }
-                }
-            }
-        }
         
         if (templateFolder) {
             const tCareerPath = path.join(templatesDir, templateFolder, 'careerSavegame.xml');
@@ -2133,42 +2094,8 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
             return { x: -562.0, y: 43.8, z: 566.0 };
         }
         
+        const templateFolder = await resolveTemplateFolder(mapId, mapModName, mapTitle);
         const templatesDir = getTemplatesPath();
-        const cleanMapId = mapId ? mapId.replace(/[^a-z0-9]/gi, '_') : '';
-        
-        const candidates = new Set();
-        if (cleanMapId) candidates.add(cleanMapId);
-        if (mapModName) {
-            const cleanMod = mapModName.replace(/[^a-z0-9]/gi, '_');
-            candidates.add(`${cleanMod}_${cleanMapId}`);
-            candidates.add(`${cleanMod}.${cleanMapId}`.replace(/[^a-z0-9]/gi, '_'));
-        }
-        
-        let templateFolder = null;
-        for (const cand of candidates) {
-            const p = path.join(templatesDir, cand, 'placeables.xml');
-            if (fs.existsSync(p)) {
-                templateFolder = cand;
-                break;
-            }
-        }
-        
-        if (!templateFolder && mapId) {
-            const folders = await fs.readdir(templatesDir);
-            for (const folder of folders) {
-                const folderPath = path.join(templatesDir, folder);
-                const tCareerPath = path.join(folderPath, 'careerSavegame.xml');
-                if (fs.existsSync(tCareerPath)) {
-                    const xml = await fs.readFile(tCareerPath, 'utf8');
-                    const internalId = getElementText(xml, 'mapId');
-                    const internalTitle = getElementText(xml, 'mapTitle');
-                    if (internalId === mapId || (mapTitle && internalTitle === mapTitle)) {
-                        templateFolder = folder;
-                        break;
-                    }
-                }
-            }
-        }
         
         if (templateFolder) {
             const tPlaceablesPath = path.join(templatesDir, templateFolder, 'placeables.xml');
