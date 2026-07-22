@@ -4,7 +4,7 @@ import {
   Save, Play, RefreshCw, Edit3, MapPin,
   Clock, DollarSign, Package, Check, X,
   Plus, ChevronDown, ChevronRight, Gamepad2, Trash2, TrendingUp, Shield,
-  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft, Anchor, Truck
+  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft, Anchor, Truck, Tractor, Car, Wheat
 } from 'lucide-react';
 import { useSavegameStore } from '../store/useSavegameStore';
 import { useToastStore } from '../store/useToastStore';
@@ -968,7 +968,14 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                           onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}
                         >
                           <div style={{ width: 36, height: 36, borderRadius: 6, background: 'rgba(var(--accent-rgb), 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--accent)' }}>
-                            <Truck size={18} />
+                            {(() => {
+                              const t = (v.displayType || v.type || '').toLowerCase();
+                              if (t.includes('tractor')) return <Tractor size={18} />;
+                              if (t.includes('combine') || t.includes('harvester')) return <Wheat size={18} />;
+                              if (t.includes('truck')) return <Truck size={18} />;
+                              if (t.includes('car') || t.includes('pickup')) return <Car size={18} />;
+                              return <Gamepad2 size={18} />;
+                            })()}
                           </div>
                           <div style={{ overflow: 'hidden', flex: 1 }}>
                             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.brand} {v.name}</div>
