@@ -1009,7 +1009,23 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                             {(() => {
                               const t = (v.displayType || v.type || '').toLowerCase();
                               if (t.includes('tractor')) return <Tractor size={24} />;
-                              if (t.includes('combine') || t.includes('harvester')) return <img src={COMBINE_HARVESTER_ICON} style={{ width: 30, height: 30, objectFit: 'contain' }} alt="Combine Harvester" />;
+                              if (t.includes('combine') || t.includes('harvester')) return (
+                                <div 
+                                  style={{ 
+                                    width: 26, 
+                                    height: 26, 
+                                    backgroundColor: 'var(--accent)', 
+                                    maskImage: `url(${COMBINE_HARVESTER_ICON})`, 
+                                    WebkitMaskImage: `url(${COMBINE_HARVESTER_ICON})`, 
+                                    maskSize: 'contain', 
+                                    WebkitMaskSize: 'contain', 
+                                    maskRepeat: 'no-repeat', 
+                                    WebkitMaskRepeat: 'no-repeat', 
+                                    maskPosition: 'center', 
+                                    WebkitMaskPosition: 'center' 
+                                  }} 
+                                />
+                              );
                               if (t.includes('truck')) return <Truck size={24} />;
                               if (t.includes('car') || t.includes('pickup')) return <Car size={24} />;
                               return <Truck size={24} />;

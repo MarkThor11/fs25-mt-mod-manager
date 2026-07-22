@@ -1741,7 +1741,7 @@ async function getFleetPositions(savePath, mapModName) {
                 }
                 
                 const base = path.basename(filename, '.xml');
-                let name = base.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').trim().toUpperCase();
+                let name = base.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').replace(/([a-zA-Z])([0-9])/g, '$1 $2').replace(/([0-9])([a-zA-Z])/g, '$1 $2').trim().toUpperCase();
                 let brand = 'Unknown';
                 const parts = filename.split('/');
                 if (parts.length > 2 && parts[0] === 'data') brand = parts[2].replace(/([a-z])([A-Z])/g, '$1 $2').trim().toUpperCase();
