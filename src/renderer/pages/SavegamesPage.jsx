@@ -266,8 +266,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
         }
         return null;
       };
-      const mapModName = getMapModName(save.mapId);
-      window.api.savegames.getFleetPositions(save.path, mapModName).then(res => setFleet(res?.items || []));
+      window.api.savegames.getFleetPositions(save.path, mapModName).then(res => setFleet(Array.isArray(res) ? res : (res?.items || [])));
       if (window.api.savegames.checkStoreDeliveries) {
         window.api.savegames.checkStoreDeliveries().then(setHasStoreDeliveries);
       }
@@ -980,7 +979,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                           };
                           const mapModName2 = getMapModName(save.mapId);
                           const res = await window.api.savegames.getFleetPositions(save.path, mapModName2);
-                          setFleet(res?.items || []);
+                          setFleet(Array.isArray(res) ? res : (res?.items || []));
                         }
                       }}>
                         <RefreshCw size={14} />
