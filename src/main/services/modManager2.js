@@ -1268,11 +1268,12 @@ async function performScan(manualPaths = null) {
 
 	for (const m of sortedForDedupe) {
 		const idKey = m.modId ? `ID_${m.modId}` : null;
+		const modNameKey = m.modName ? `MODNAME_${m.modName.toLowerCase()}` : null;
 		const nameKey = m.technicalName ? `NAME_${m.technicalName.toLowerCase()}` : null;
-		const fileKey = `FILE_${path.basename(m.fileName).toLowerCase()}`;
+		const fileKey = `FILE_${path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '')}`;
 		// We deliberately do NOT dedupe by title. Many different mods share generic titles like "Wooden Shed".
 
-		const keys = [idKey, nameKey, fileKey].filter(Boolean);
+		const keys = [idKey, modNameKey, nameKey, fileKey].filter(Boolean);
 		let alreadySeen = false;
 		for (const k of keys) {
 			if (uniqueModsMap.has(k)) {
