@@ -1711,7 +1711,7 @@ async function getFleetPositions(savePath, mapModName) {
                 const isStructurallyDrivable = hasEnterableState || hasMotorConfig;
 
                 // 2. FALLBACK HEURISTICS (Only for default map templates where runtime tags haven't instantiated)
-                const isDrivableHeuristics = fnLower.includes('tractor') || fnLower.includes('truck') || fnLower.includes('lorry') || fnLower.includes('car') || fnLower.includes('pickup') || fnLower.includes('van') || fnLower.includes('suv') || fnLower.includes('jeep') || fnLower.includes('xuv') || fnLower.includes('harvester') || fnLower.includes('combine') || fnLower.includes('fendt') || fnLower.includes('johndeere') || fnLower.includes('caseih') || fnLower.includes('valtra') || fnLower.includes('massey') || fnLower.includes('newholland') || fnLower.includes('jcb') || fnLower.includes('claas');
+                const isDrivableHeuristics = fnLower.includes('tractor') || fnLower.includes('truck') || fnLower.includes('lorry') || fnLower.includes('car') || fnLower.includes('pickup') || fnLower.includes('van') || fnLower.includes('suv') || fnLower.includes('jeep') || fnLower.includes('xuv') || fnLower.includes('harvester') || fnLower.includes('combine') || fnLower.includes('telehandler') || fnLower.includes('wheelloader') || fnLower.includes('skidsteer');
 
                 // Determine if drivable: primary XML structure first, fallback heuristics second
                 const isDrivable = isDefault ? (isStructurallyDrivable || isDrivableHeuristics) : isStructurallyDrivable;
