@@ -16,6 +16,7 @@ import { useModHubStore } from '../store/useModHubStore';
 import MapImage, { MAP_PREVIEWS } from '../components/common/MapImage';
 import { resolveRecursiveDependencies } from '../utils/modUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
+import { COMBINE_HARVESTER_ICON } from '../assets/combineIconData';
 
 const getLocalizedString = (val, defaultVal = 'Unknown') => {
     if (!val) return defaultVal;
@@ -1008,7 +1009,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                             {(() => {
                               const t = (v.displayType || v.type || '').toLowerCase();
                               if (t.includes('tractor')) return <Tractor size={24} />;
-                              if (t.includes('combine') || t.includes('harvester')) return <img src="/combine_harvester.png" style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 4 }} alt="Combine Harvester" />;
+                              if (t.includes('combine') || t.includes('harvester')) return <img src={COMBINE_HARVESTER_ICON} style={{ width: 30, height: 30, objectFit: 'contain' }} alt="Combine Harvester" />;
                               if (t.includes('truck')) return <Truck size={24} />;
                               if (t.includes('car') || t.includes('pickup')) return <Car size={24} />;
                               return <Truck size={24} />;
