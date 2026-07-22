@@ -254,12 +254,13 @@ async function launch(options = {}) {
       // The game engine will crash if autoStart is used on an existing save that is missing its terrain.heightmap.png or placeables.xml
       let isFullyInitialized = fs.existsSync(farmsFile) && fs.existsSync(initFile) && fs.existsSync(path.join(savePath, 'placeables.xml'));
       
-      console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is launching. Enabling Auto-Start.`);
-      args.push('-autoStartSavegameId', String(options.savegameIndex));
-      args.push('-autoStart');
       if (!isFullyInitialized) {
-        console.log(`[LAUNCH] Savegame is not fully initialized yet. Setting needsManualInit = true.`);
+        console.log(`[LAUNCH] Savegame ${options.savegameIndex} is not fully initialized yet. Bypassing autoStart so engine can generate initial heightmap.`);
         needsManualInit = true;
+      } else {
+        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is fully initialized. Enabling Auto-Start.`);
+        args.push('-autoStartSavegameId', String(options.savegameIndex));
+        args.push('-autoStart');
       }
     }
 
