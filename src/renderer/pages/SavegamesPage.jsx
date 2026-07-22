@@ -36,28 +36,28 @@ const CombineHarvesterIcon = ({ size = 24, color = 'currentColor', style = {} })
     strokeLinejoin="round" 
     style={style}
   >
-    {/* Large Prominent Cutter Reel */}
-    <circle cx="4.5" cy="13.5" r="3.5" />
-    <path d="M1 13.5H8" />
-    <path d="M4.5 10V17" />
-    <path d="M2 11L7 16" />
-    <path d="M2 16L7 11" />
-    {/* Header Cutter Bar */}
-    <path d="M1 18H8.5" />
-    {/* Feeder House */}
-    <path d="M8 13.5L10.5 12" />
+    {/* Detached Front Cutter Reel */}
+    <circle cx="3" cy="14" r="2.8" />
+    <path d="M0.2 14H5.8" />
+    <path d="M3 11.2V16.8" />
+    <path d="M1 12L5 16" />
+    <path d="M1 16L5 12" />
+    {/* Cutter Bar Under Reel */}
+    <path d="M0.2 17.5H6.5" />
+    {/* Feeder House Arm (Creating the Gap) */}
+    <path d="M5.8 14.5L10 12.5" />
     {/* Driver Cabin */}
-    <path d="M10.5 12V6.5H15L17.5 10.5V12" />
-    <path d="M12.5 6.5V10.5H17.5" />
-    {/* Body & Threshing Tank */}
-    <path d="M10.5 12H21.5V16" />
+    <path d="M10 12.5V6.5H14.5L17 10.5V12.5" />
+    <path d="M12 6.5V10.5H17" />
+    {/* Grain Body & Rear */}
+    <path d="M10 12.5H22V16.5" />
     {/* Unloading Spout */}
-    <path d="M14.5 6.5L19.5 4H22" />
+    <path d="M14 6.5L19.5 4H22" />
     {/* Front Large Wheel */}
     <circle cx="11.5" cy="17.5" r="2.5" />
     {/* Rear Wheel */}
     <circle cx="19.5" cy="18" r="1.5" />
-    <path d="M14 18H18" />
+    <path d="M14 18.5H18" />
   </svg>
 );
 
