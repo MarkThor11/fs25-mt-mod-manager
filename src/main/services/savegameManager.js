@@ -1694,21 +1694,25 @@ async function getFleetPositions(savePath, mapModName) {
                 // Exclude leased and mission items
                 if (v['@_isLeased'] === 'true' || v['@_propertyState'] === 'MISSION' || v['@_propertyState'] === 'NONE') continue;
                 
-                const fnLower = filename.toLowerCase();
-                if (excludeKeywords.some(kw => fnLower.includes(kw))) continue;
-
-                // Check if it's enterable/drivable from XML structure (savegame runtime state)
+                // 1. PRIMARY STRUCTURAL RULE: Check runtime XML tags (enterable, motor, drivable, motor configs)
                 const hasEnterableState = v.enterable !== undefined || v.motor !== undefined || v.drivable !== undefined;
-
-                // Heuristics + configuration filter for drivable vehicles
                 let hasMotorConfig = false;
                 if (v.configuration) {
                     const configs = Array.isArray(v.configuration) ? v.configuration : [v.configuration];
                     hasMotorConfig = configs.some(c => c['@_name'] === 'motor');
                 }
-                const isDrivableHeuristics = fnLower.includes('tractor') || fnLower.includes('truck') || fnLower.includes('lorry') || fnLower.includes('car') || fnLower.includes('pickup') || fnLower.includes('van') || fnLower.includes('suv') || fnLower.includes('jeep') || fnLower.includes('xuv') || fnLower.includes('harvester') || fnLower.includes('combine') || fnLower.includes('loader') || fnLower.includes('fendt') || fnLower.includes('johnDeere') || fnLower.includes('caseih') || fnLower.includes('valtra') || fnLower.includes('massey') || fnLower.includes('newholland') || fnLower.includes('jcb') || fnLower.includes('claas');
-                
-                if (!hasEnterableState && !hasMotorConfig && !isDrivableHeuristics) continue;
+
+                const isStructurallyDrivable = hasEnterableState || hasMotorConfig;
+
+                // 2. FALLBACK HEURISTICS (Only for default map templates where runtime tags haven't instantiated)
+                const isDrivableHeuristics = fnLower.includes('tractor') || fnLower.includes('truck') || fnLower.includes('lorry') || fnLower.includes('car') || fnLower.includes('pickup') || fnLower.includes('van') || fnLower.includes('suv') || fnLower.includes('jeep') || fnLower.includes('xuv') || fnLower.includes('harvester') || fnLower.includes('combine') || fnLower.includes('fendt') || fnLower.includes('johnDeere') || fnLower.includes('caseih') || fnLower.includes('valtra') || fnLower.includes('massey') || fnLower.includes('newholland') || fnLower.includes('jcb') || fnLower.includes('claas');
+
+                // Determine if drivable: primary XML structure first, fallback heuristics second
+                const isDrivable = isDefault ? (isStructurallyDrivable || isDrivableHeuristics) : isStructurallyDrivable;
+                if (!isDrivable) continue;
+
+                // 3. FALLBACK EXCLUSION LIST (Safety check)
+                if (excludeKeywords.some(kw => fnLower.includes(kw))) continue;
                 
                 // Require vehicle to be an OWNED player vehicle (farmId=1) unless it's default vehicles xml
                 if (!isDefault) {
