@@ -904,7 +904,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                       borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', transition: 'all 0.2s'
                     }}
                   >
-                    <Gamepad2 size={16} style={{ color: teleportMode === 'vehicle' ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 8 }} />
+                    <Tractor size={16} style={{ color: teleportMode === 'vehicle' ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 8 }} />
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Vehicle of Choice</div>
                     <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Select From Available Vehicles</div>
                   </div>
@@ -916,7 +916,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                     
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>
-                        <Gamepad2 size={14} /> VEHICLE LIST
+                        <Tractor size={14} /> VEHICLE LIST
                       </div>
                       <button className="btn btn--ghost btn--sm" style={{ width: 24, height: 24, padding: 0 }} onClick={() => setTeleportMode(null)}><X size={14} /></button>
                     </div>
@@ -974,7 +974,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                               if (t.includes('combine') || t.includes('harvester')) return <Wheat size={18} />;
                               if (t.includes('truck')) return <Truck size={18} />;
                               if (t.includes('car') || t.includes('pickup')) return <Car size={18} />;
-                              return <Gamepad2 size={18} />;
+                              return <Truck size={18} />;
                             })()}
                           </div>
                           <div style={{ overflow: 'hidden', flex: 1 }}>
