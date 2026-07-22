@@ -24,14 +24,14 @@ const getLocalizedString = (val, defaultVal = 'Unknown') => {
     return String(val);
 };
 
-const CombineHarvesterIcon = ({ size = 18, color = 'currentColor', style = {} }) => (
+const CombineHarvesterIcon = ({ size = 24, color = 'currentColor', style = {} }) => (
   <svg 
     width={size} 
     height={size} 
     viewBox="0 0 24 24" 
     fill="none" 
     stroke={color} 
-    strokeWidth="1.6" 
+    strokeWidth="2" 
     strokeLinecap="round" 
     strokeLinejoin="round" 
     style={style}
@@ -1004,14 +1004,14 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                           onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
                           onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}
                         >
-                          <div style={{ width: 36, height: 36, borderRadius: 6, background: 'rgba(var(--accent-rgb), 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--accent)' }}>
+                          <div style={{ width: 42, height: 42, borderRadius: 8, background: 'rgba(var(--accent-rgb), 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--accent)' }}>
                             {(() => {
                               const t = (v.displayType || v.type || '').toLowerCase();
-                              if (t.includes('tractor')) return <Tractor size={18} />;
-                              if (t.includes('combine') || t.includes('harvester')) return <CombineHarvesterIcon size={18} />;
-                              if (t.includes('truck')) return <Truck size={18} />;
-                              if (t.includes('car') || t.includes('pickup')) return <Car size={18} />;
-                              return <Truck size={18} />;
+                              if (t.includes('tractor')) return <Tractor size={24} />;
+                              if (t.includes('combine') || t.includes('harvester')) return <CombineHarvesterIcon size={24} />;
+                              if (t.includes('truck')) return <Truck size={24} />;
+                              if (t.includes('car') || t.includes('pickup')) return <Car size={24} />;
+                              return <Truck size={24} />;
                             })()}
                           </div>
                           <div style={{ overflow: 'hidden', flex: 1 }}>
