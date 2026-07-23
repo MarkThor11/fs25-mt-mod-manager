@@ -2353,8 +2353,62 @@ async function resetPlayerSpawn(savePath) {
     }
 }
 
+function ensureValidPlayerXml(savePath) {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const { XMLParser, XMLBuilder } = require('fast-xml-parser');
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
+        
+        // 1. Check players.xml
+        const pPath = path.join(savePath, 'players.xml');
+        if (fs.existsSync(pPath)) {
+            const pContent = fs.readFileSync(pPath, 'utf8');
+            const pObj = parser.parse(pContent);
+            if (pObj && pObj.players && pObj.players.player) {
+                let players = Array.isArray(pObj.players.player) ? pObj.players.player : [pObj.players.player];
+                let modified = false;
+                for (let p of players) {
+                    if (p['@_uniqueUserId'] && !p['@_uniqueUserId'].endsWith('=')) {
+                        p['@_uniqueUserId'] += '=';
+                        modified = true;
+                    }
+                    if (p.spawn && p.spawn['@_yaw'] !== undefined) {
+                        delete p.spawn['@_yaw'];
+                        modified = true;
+                    }
+                }
+                if (modified) {
+                    delete pObj['?xml'];
+                    const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
+                    const newXml = builder.build(pObj);
+                    fs.writeFileSync(pPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
+                }
+            }
+        }
+
+        // 2. Check careerSavegame.xml for invalid vehicleFilename
+        const cPath = path.join(savePath, 'careerSavegame.xml');
+        if (fs.existsSync(cPath)) {
+            const cContent = fs.readFileSync(cPath, 'utf8');
+            if (cContent.includes('vehicleFilename=')) {
+                const cObj = parser.parse(cContent);
+                if (cObj && cObj.careerSavegame && cObj.careerSavegame.player) {
+                    delete cObj.careerSavegame.player['@_vehicleFilename'];
+                    delete cObj.careerSavegame.player['@_spawnYaw'];
+                    delete cObj['?xml'];
+                    const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
+                    const newXml = builder.build(cObj);
+                    fs.writeFileSync(cPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
+                }
+            }
+        }
+    } catch(e) {}
+}
+
 async function getPlayerPosition(savePath) {
     try {
+        ensureValidPlayerXml(savePath);
         const fs = require('fs');
         const path = require('path');
         const { XMLParser } = require('fast-xml-parser');
