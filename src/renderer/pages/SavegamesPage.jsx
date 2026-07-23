@@ -62,6 +62,37 @@ const CombineHarvesterIcon = ({ size = 24, color = 'currentColor', style = {} })
   </svg>
 );
 
+const TelehandlerIcon = ({ size = 24, color = 'currentColor', style = {} }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke={color} 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    style={style}
+  >
+    {/* Extended Telescopic Boom Arm */}
+    <path d="M16 11.5L5 5.5" />
+    <path d="M17 13.5L7.5 8" />
+    {/* Front Pallet Fork Attachment */}
+    <path d="M5 5.5L2.5 5.5V10H5" />
+    {/* Driver Cabin */}
+    <path d="M8 13.5V7.5H12L14.5 10.5V13.5" />
+    <path d="M10 7.5V10.5H14.5" />
+    {/* Lower Body Frame */}
+    <path d="M9.5 16H14.5" />
+    <path d="M4.5 16H2.5V13.5H8" />
+    <path d="M19.5 16H21.5V12.5H16" />
+    {/* Front Wheel */}
+    <circle cx="7" cy="16.5" r="2.5" />
+    {/* Rear Wheel */}
+    <circle cx="17" cy="16.5" r="2.5" />
+  </svg>
+);
+
 /**
  * Mod Audit Modal - Checks versions and missing mods for a savegame
  */
@@ -1094,6 +1125,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                                 const t = (v.displayType || v.type || '').toLowerCase();
                                 if (t.includes('tractor')) return <Tractor size={24} />;
                                 if (t.includes('combine') || t.includes('harvester')) return <CombineHarvesterIcon size={24} />;
+                                if (t.includes('telehandler') || t.includes('teleloader')) return <TelehandlerIcon size={24} />;
                                 if (t.includes('truck')) return <Truck size={24} />;
                                 if (t.includes('car') || t.includes('pickup')) return <Car size={24} />;
                                 return <Truck size={24} />;
