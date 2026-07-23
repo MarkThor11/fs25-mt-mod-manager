@@ -2448,6 +2448,9 @@ async function setPlayerPosition(options) {
                     } else {
                         delete p.spawn['@_vehicleUniqueId'];
                     }
+                    if (p['@_uniqueUserId'] && !p['@_uniqueUserId'].endsWith('=')) {
+                        p['@_uniqueUserId'] = p['@_uniqueUserId'] + '=';
+                    }
                 }
                 delete obj['?xml'];
                 const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
