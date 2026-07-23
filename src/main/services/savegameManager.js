@@ -1752,29 +1752,23 @@ async function getFleetPositions(savePath, mapModName) {
                 brand = brand.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim() || 'Unknown';
                 name = name.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim();
                 
-                // Direct inspection of GIANTS base game XML or mod file if available
+                // Embedded base game vehicle database lookup
                 let baseType = null;
                 let baseCategory = null;
+                let staticDisplayType = null;
                 try {
-                    const pathProvider = require('./pathProvider');
-                    const gameDataRoot = pathProvider.getFS25DataRoot();
-                    let targetXmlPath = null;
-                    if (/^(\$data\/|data\/)/i.test(filename)) {
-                        targetXmlPath = path.join(gameDataRoot, filename.replace(/^(\$data\/|data\/)/i, ''));
-                    }
-                    if (targetXmlPath && fs.existsSync(targetXmlPath)) {
-                        const baseContent = fs.readFileSync(targetXmlPath, 'utf8');
-                        const baseData = parser.parse(baseContent);
-                        if (baseData && baseData.vehicle) {
-                            baseType = baseData.vehicle['@_type'] || null;
-                            if (baseData.vehicle.storeData && baseData.vehicle.storeData.category) {
-                                baseCategory = String(baseData.vehicle.storeData.category);
-                            }
-                        }
+                    const baseGameDb = require('../resources/data/baseGameVehicles.json');
+                    const fnKey = (filename || '').toLowerCase().replace(/\\/g, '/');
+                    const dbMatch = baseGameDb[fnKey] || baseGameDb[fnKey.replace(/^\$data\//, 'data/')];
+                    if (dbMatch) {
+                        staticDisplayType = dbMatch.displayType;
+                        baseType = dbMatch.type;
+                        baseCategory = dbMatch.category;
                     }
                 } catch(err) {}
 
-                const deriveVehicleType = (fn, rawType, bType, bCat) => {
+                const deriveVehicleType = (fn, rawType, bType, bCat, sDisplay) => {
+                    if (sDisplay) return sDisplay;
                     const fnL = (fn || '').toLowerCase();
                     const tL = (rawType || '').toLowerCase();
                     const bTL = (bType || '').toLowerCase();
@@ -1791,7 +1785,7 @@ async function getFleetPositions(savePath, mapModName) {
                     return 'Tractor';
                 };
 
-                const displayType = deriveVehicleType(filename, v['@_type'], baseType, baseCategory);
+                const displayType = deriveVehicleType(filename, v['@_type'], baseType, baseCategory, staticDisplayType);
                 
                 fleet.push({ 
                     id: gameAssignedId, 

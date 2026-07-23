@@ -1,0 +1,4850 @@
+{
+  "data/vehicles/abi/watertrailer1600/watertrailer1600.xml": {
+    "relPath": "data/vehicles/abi/waterTrailer1600/waterTrailer1600.xml",
+    "type": "waterTrailer",
+    "category": "barrels",
+    "displayType": "Tractor",
+    "brand": "ABI",
+    "name": "1600"
+  },
+  "data/vehicles/abi/watertrailer550/watertrailer550.xml": {
+    "relPath": "data/vehicles/abi/waterTrailer550/waterTrailer550.xml",
+    "type": "waterTrailer",
+    "category": "barrels",
+    "displayType": "Tractor",
+    "brand": "ABI",
+    "name": "550"
+  },
+  "data/vehicles/agco/series8000/series8000.xml": {
+    "relPath": "data/vehicles/agco/series8000/series8000.xml",
+    "type": "combineDrivable",
+    "category": "tractorsM",
+    "displayType": "Combine Harvester",
+    "brand": "AGCO",
+    "name": "8010 Series"
+  },
+  "data/vehicles/agco/weight1100/weight1100.xml": {
+    "relPath": "data/vehicles/agco/weight1100/weight1100.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "AGCO",
+    "name": "1100"
+  },
+  "data/vehicles/agco/weight1500/weight1500.xml": {
+    "relPath": "data/vehicles/agco/weight1500/weight1500.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "AGCO",
+    "name": "1500"
+  },
+  "data/vehicles/agco/weight2300/weight2300.xml": {
+    "relPath": "data/vehicles/agco/weight2300/weight2300.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "AGCO",
+    "name": "2300"
+  },
+  "data/vehicles/agco/weight650/weight650.xml": {
+    "relPath": "data/vehicles/agco/weight650/weight650.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "AGCO",
+    "name": "650"
+  },
+  "data/vehicles/agi/bcx3/bcx3.xml": {
+    "relPath": "data/vehicles/agi/bcx3/bcx3.xml",
+    "type": "conveyorBelt",
+    "category": "belts",
+    "displayType": "Tractor",
+    "brand": "AGIBATCO",
+    "name": "BCX\u00b3 1549 - MY2022"
+  },
+  "data/vehicles/agi/mkx13/mkx13.xml": {
+    "relPath": "data/vehicles/agi/mkx13/mkx13.xml",
+    "type": "conveyorBeltUnpowered",
+    "category": "belts",
+    "displayType": "Tractor",
+    "brand": "AGIWESTFIELD",
+    "name": "MKX 13-94 - MY2022"
+  },
+  "data/vehicles/agi/stormfx/stormfx.xml": {
+    "relPath": "data/vehicles/agi/stormFX/stormFX.xml",
+    "type": "seedTreater",
+    "category": "belts",
+    "displayType": "Tractor",
+    "brand": "AGISTORM",
+    "name": "FX Seed Treater"
+  },
+  "data/vehicles/agi/stx2/stx2.xml": {
+    "relPath": "data/vehicles/agi/stx2/stx2.xml",
+    "type": "pickupConveyorBelt",
+    "category": "belts",
+    "displayType": "Tractor",
+    "brand": "AGIWESTFIELD",
+    "name": "STX\u00b2 10-51"
+  },
+  "data/vehicles/agi/utx44/utx44.xml": {
+    "relPath": "data/vehicles/agi/utx44/utx44.xml",
+    "type": "conveyorBelt",
+    "category": "belts",
+    "displayType": "Tractor",
+    "brand": "AGIWESTFIELD",
+    "name": "UTX 44"
+  },
+  "data/vehicles/agrifac/condorendurance2/condorendurance2.xml": {
+    "relPath": "data/vehicles/agrifac/condorEndurance2/condorEndurance2.xml",
+    "type": "selfPropelledSprayer",
+    "category": "sprayers",
+    "displayType": "Self-Propelled Sprayer",
+    "brand": "AGRIFAC",
+    "name": "Condor Endurance II"
+  },
+  "data/vehicles/agrifac/lightoptitraxx/lightoptitraxx.xml": {
+    "relPath": "data/vehicles/agrifac/lightOptitraxx/lightOptitraxx.xml",
+    "type": "combineCutterFruitPreparer",
+    "category": "beetHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "AGRIFAC",
+    "name": "LightTraxx"
+  },
+  "data/vehicles/agrio/dinoii/dinoii.xml": {
+    "relPath": "data/vehicles/agrio/dinoII/dinoII.xml",
+    "type": "selfPropelledSprayer",
+    "category": "sprayers",
+    "displayType": "Self-Propelled Sprayer",
+    "brand": "AGRIO",
+    "name": "DINO II"
+  },
+  "data/vehicles/agrisem/combiplow/combiplow.xml": {
+    "relPath": "data/vehicles/agrisem/combiplow/combiplow.xml",
+    "type": "cultivator",
+    "category": "subsoilers",
+    "displayType": "Tractor",
+    "brand": "AGRISEM",
+    "name": "Combiplow Gold"
+  },
+  "data/vehicles/agrisem/discovigne/discovigne.xml": {
+    "relPath": "data/vehicles/agrisem/discOVigne/discOVigne.xml",
+    "type": "cultivator",
+    "category": "subsoilers grapeTools",
+    "displayType": "Tractor",
+    "brand": "AGRISEM",
+    "name": "Disc-O-Vigne V"
+  },
+  "data/vehicles/agromasz/aquiladrive400/aquiladrive400.xml": {
+    "relPath": "data/vehicles/agromasz/aquilaDrive400/aquilaDrive400.xml",
+    "type": "sowingMachine",
+    "category": "seeders",
+    "displayType": "Tractor",
+    "brand": "AGROMASZ",
+    "name": "AQUILA DRIVE 400"
+  },
+  "data/vehicles/agromasz/grizzlyx4/grizzlyx4.xml": {
+    "relPath": "data/vehicles/agromasz/grizzlyX4/grizzlyX4.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "AGROMASZ",
+    "name": "GRIZZLY X4"
+  },
+  "data/vehicles/agromasz/pov5xl/pov5xl.xml": {
+    "relPath": "data/vehicles/agromasz/pov5xl/pov5xl.xml",
+    "type": "plowPacker",
+    "category": "plows",
+    "displayType": "Tractor",
+    "brand": "AGROMASZ",
+    "name": "POV 5 XL"
+  },
+  "data/vehicles/albutt/f155a/f155a.xml": {
+    "relPath": "data/vehicles/albutt/f155A/f155A.xml",
+    "type": "implementDynamicMountAttacher",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "ALBUTT",
+    "name": "%s %s (%s)"
+  },
+  "data/vehicles/albutt/f155a/f155a_telehandler.xml": {
+    "relPath": "data/vehicles/albutt/f155A/f155A_telehandler.xml",
+    "type": "baleGrab",
+    "category": "teleLoaderTools",
+    "displayType": "Telehandler",
+    "brand": "ALBUTT",
+    "name": "F155A (Telehandler)"
+  },
+  "data/vehicles/albutt/f155a/f155a_wheelloader.xml": {
+    "relPath": "data/vehicles/albutt/f155A/f155A_wheelLoader.xml",
+    "type": "baleGrab",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "ALBUTT",
+    "name": "F155A (Wheel Loader)"
+  },
+  "data/vehicles/albutt/frontloaderbaleking/frontloaderbaleking.xml": {
+    "relPath": "data/vehicles/albutt/frontloaderBaleKing/frontloaderBaleKing.xml",
+    "type": "implementDynamicMountAttacher",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "ALBUTT",
+    "name": "Bale King"
+  },
+  "data/vehicles/albutt/frontloaderbalespike/frontloaderbalespike.xml": {
+    "relPath": "data/vehicles/albutt/frontloaderBaleSpike/frontloaderBaleSpike.xml",
+    "type": "implementDynamicMountAttacher",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "ALBUTT",
+    "name": "$l10n_shopItem_frontloaderBaleFork"
+  },
+  "data/vehicles/albutt/frontloaderlogfork/frontloaderlogfork.xml": {
+    "relPath": "data/vehicles/albutt/frontloaderLogFork/frontloaderLogFork.xml",
+    "type": "logGrab",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "ALBUTT",
+    "name": "$l10n_shopItem_frontloaderLogFork"
+  },
+  "data/vehicles/albutt/frontloadermanurefork/frontloadermanurefork.xml": {
+    "relPath": "data/vehicles/albutt/frontloaderManureFork/frontloaderManureFork.xml",
+    "type": "dynamicMountAttacherShovel",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "ALBUTT",
+    "name": "$l10n_shopItem_frontloaderManureFork"
+  },
+  "data/vehicles/albutt/frontloadermanuregrab/frontloadermanuregrab.xml": {
+    "relPath": "data/vehicles/albutt/frontloaderManureGrab/frontloaderManureGrab.xml",
+    "type": "dynamicMountAttacherShovel",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "ALBUTT",
+    "name": "$l10n_shopItem_frontloaderManureGrabFork"
+  },
+  "data/vehicles/albutt/frontloaderpalletfork/frontloaderpalletfork.xml": {
+    "relPath": "data/vehicles/albutt/frontloaderPalletFork/frontloaderPalletFork.xml",
+    "type": "implementDynamicMountAttacher",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "ALBUTT",
+    "name": "$l10n_shopItem_frontloaderPalletFork"
+  },
+  "data/vehicles/albutt/frontloaderroundbalefork/frontloaderroundbalefork.xml": {
+    "relPath": "data/vehicles/albutt/frontloaderRoundBaleFork/frontloaderRoundBaleFork.xml",
+    "type": "dynamicMountAttacherShovel",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "ALBUTT",
+    "name": "$l10n_shopItem_frontloaderRoundBaleFork"
+  },
+  "data/vehicles/albutt/frontloadershovel/frontloadershovel.xml": {
+    "relPath": "data/vehicles/albutt/frontloaderShovel/frontloaderShovel.xml",
+    "type": "shovelLeveler",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "ALBUTT",
+    "name": "$l10n_shopItem_frontloaderShovel"
+  },
+  "data/vehicles/albutt/frontloadersilagecutter/frontloadersilagecutter.xml": {
+    "relPath": "data/vehicles/albutt/frontloaderSilageCutter/frontloaderSilageCutter.xml",
+    "type": "dynamicMountAttacherShovel",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "ALBUTT",
+    "name": "$l10n_shopItem_frontloaderSilageCutter"
+  },
+  "data/vehicles/albutt/frontloadersquarebalegrab/frontloadersquarebalegrab.xml": {
+    "relPath": "data/vehicles/albutt/frontloaderSquareBaleGrab/frontloaderSquareBaleGrab.xml",
+    "type": "baleGrab",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "ALBUTT",
+    "name": "$l10n_shopItem_frontloaderBaleGrab"
+  },
+  "data/vehicles/albutt/wheelloaderlogfork/wheelloaderlogfork.xml": {
+    "relPath": "data/vehicles/albutt/wheelLoaderLogFork/wheelLoaderLogFork.xml",
+    "type": "logGrab",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "ALBUTT",
+    "name": "SitePro"
+  },
+  "data/vehicles/albutt/wheelloadersilagefork/wheelloadersilagefork.xml": {
+    "relPath": "data/vehicles/albutt/wheelLoaderSilageFork/wheelLoaderSilageFork.xml",
+    "type": "dynamicMountAttacherShovelLeveler",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "ALBUTT",
+    "name": "$l10n_shopItem_wheelLoaderSilageFork"
+  },
+  "data/vehicles/alpego/kdyno200/kdyno200.xml": {
+    "relPath": "data/vehicles/alpego/kDyno200/kDyno200.xml",
+    "type": "cultivator",
+    "category": "subsoilers",
+    "displayType": "Tractor",
+    "brand": "ALPEGO",
+    "name": "K-Dyno 5-200"
+  },
+  "data/vehicles/alpego/kextreme500/kextreme500.xml": {
+    "relPath": "data/vehicles/alpego/kExtreme500/kExtreme500.xml",
+    "type": "cultivator",
+    "category": "subsoilers",
+    "displayType": "Tractor",
+    "brand": "ALPEGO",
+    "name": "K-Extreme 11-500"
+  },
+  "data/vehicles/alpego/kforce400/kforce400.xml": {
+    "relPath": "data/vehicles/alpego/kForce400/kForce400.xml",
+    "type": "cultivator",
+    "category": "subsoilers",
+    "displayType": "Tractor",
+    "brand": "ALPEGO",
+    "name": "K-Force 400"
+  },
+  "data/vehicles/amazone/cenio4000/cenio4000.xml": {
+    "relPath": "data/vehicles/amazone/cenio4000/cenio4000.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "AMAZONE",
+    "name": "Cenio 4000 Super"
+  },
+  "data/vehicles/amazone/citan15001c/citan15001c.xml": {
+    "relPath": "data/vehicles/amazone/citan15001C/citan15001C.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "seeders",
+    "displayType": "Tractor",
+    "brand": "AMAZONE",
+    "name": "Citan 15001-C"
+  },
+  "data/vehicles/amazone/precea4500/precea4500.xml": {
+    "relPath": "data/vehicles/amazone/precea4500/precea4500.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "planters",
+    "displayType": "Tractor",
+    "brand": "AMAZONE",
+    "name": "Precea 4500-2C Super"
+  },
+  "data/vehicles/amazone/ux5201super/ux5201super.xml": {
+    "relPath": "data/vehicles/amazone/ux5201Super/ux5201Super.xml",
+    "type": "sprayer",
+    "category": "sprayers",
+    "displayType": "Self-Propelled Sprayer",
+    "brand": "AMAZONE",
+    "name": "UX 5201 Super"
+  },
+  "data/vehicles/amazone/zats3200/zats3200.xml": {
+    "relPath": "data/vehicles/amazone/zats3200/zats3200.xml",
+    "type": "spreader",
+    "category": "fertilizerSpreaders",
+    "displayType": "Tractor",
+    "brand": "AMAZONE",
+    "name": "ZA-TS 3200"
+  },
+  "data/vehicles/amazone/zgts10001/zgts10001.xml": {
+    "relPath": "data/vehicles/amazone/zgts10001/zgts10001.xml",
+    "type": "spreader",
+    "category": "fertilizerSpreaders",
+    "displayType": "Tractor",
+    "brand": "AMAZONE",
+    "name": "ZG-TS 10001"
+  },
+  "data/vehicles/amitytechnology/cc1000/cc1000.xml": {
+    "relPath": "data/vehicles/amityTechnology/cc1000/cc1000.xml",
+    "type": "augerWagon",
+    "category": "augerWagons",
+    "displayType": "Tractor",
+    "brand": "AMITYTECH",
+    "name": "Crop Chaser 1000"
+  },
+  "data/vehicles/amitytechnology/defoliator3750/defoliator3750.xml": {
+    "relPath": "data/vehicles/amityTechnology/defoliator3750/defoliator3750.xml",
+    "type": "fruitPreparer",
+    "category": "beetHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "AMITYTECH",
+    "name": "3750 Defoliator"
+  },
+  "data/vehicles/amitytechnology/hrv12r/hrv12r.xml": {
+    "relPath": "data/vehicles/amityTechnology/hrv12R/hrv12R.xml",
+    "type": "attachableCombine",
+    "category": "beetHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "AMITYTECH",
+    "name": "2720 Harvester Scrub"
+  },
+  "data/vehicles/andersongroup/biobalerwb55/biobalerfronttool.xml": {
+    "relPath": "data/vehicles/andersonGroup/bioBalerWB55/bioBalerFrontTool.xml",
+    "type": "implement",
+    "category": "balingMisc",
+    "displayType": "Tractor",
+    "brand": "ANDERSONGROUP",
+    "name": "Bumper"
+  },
+  "data/vehicles/andersongroup/biobalerwb55/biobalerwb55.xml": {
+    "relPath": "data/vehicles/andersonGroup/bioBalerWB55/bioBalerWB55.xml",
+    "type": "cuttingBaler",
+    "category": "balersRound",
+    "displayType": "Tractor",
+    "brand": "ANDERSONGROUP",
+    "name": "BioBaler WB-55"
+  },
+  "data/vehicles/andersongroup/hybridx/hybridx.xml": {
+    "relPath": "data/vehicles/andersonGroup/hybridX/hybridX.xml",
+    "type": "inlineWrapper",
+    "category": "baleWrappers",
+    "displayType": "Tractor",
+    "brand": "ANDERSONGROUP",
+    "name": "HYBRID X XTRACTOR"
+  },
+  "data/vehicles/andersongroup/mergepro915/mergepro915.xml": {
+    "relPath": "data/vehicles/andersonGroup/mergePro915/mergePro915.xml",
+    "type": "windrower",
+    "category": "windrowers",
+    "displayType": "Tractor",
+    "brand": "ANDERSONGROUP",
+    "name": "MERGEPRO 915"
+  },
+  "data/vehicles/andersongroup/rbm2000/rbm2000.xml": {
+    "relPath": "data/vehicles/andersonGroup/rbm2000/rbm2000.xml",
+    "type": "baleLoader",
+    "category": "baleLoaders",
+    "displayType": "Tractor",
+    "brand": "ANDERSONGROUP",
+    "name": "RBM2000"
+  },
+  "data/vehicles/annaburger/aw2207/aw2207.xml": {
+    "relPath": "data/vehicles/annaburger/aw2207/aw2207.xml",
+    "type": "trailer",
+    "category": "trailersChangingSystem",
+    "displayType": "Tractor",
+    "brand": "ANNABURGER",
+    "name": "AW 22.07"
+  },
+  "data/vehicles/annaburger/aw2216/aw2216.xml": {
+    "relPath": "data/vehicles/annaburger/aw2216/aw2216.xml",
+    "type": "augerWagon",
+    "category": "trailersChangingSystem",
+    "displayType": "Tractor",
+    "brand": "ANNABURGER",
+    "name": "AW 22.16"
+  },
+  "data/vehicles/annaburger/aw2217/aw2217.xml": {
+    "relPath": "data/vehicles/annaburger/aw2217/aw2217.xml",
+    "type": "trailer",
+    "category": "trailersChangingSystem",
+    "displayType": "Tractor",
+    "brand": "ANNABURGER",
+    "name": "AW 22.17"
+  },
+  "data/vehicles/annaburger/aw2227/aw2227.xml": {
+    "relPath": "data/vehicles/annaburger/aw2227/aw2227.xml",
+    "type": "manureBarrel",
+    "category": "slurryTanks trailersChangingSystem",
+    "displayType": "Tractor",
+    "brand": "ANNABURGER",
+    "name": "AW 22.27"
+  },
+  "data/vehicles/annaburger/hts22b79/hts22b79.xml": {
+    "relPath": "data/vehicles/annaburger/hts22b79/hts22b79.xml",
+    "type": "trailer",
+    "category": "trailersChangingSystem",
+    "displayType": "Tractor",
+    "brand": "ANNABURGER",
+    "name": "HTS 22B.79"
+  },
+  "data/vehicles/antoniocarraro/mach4r/mach4r.xml": {
+    "relPath": "data/vehicles/antonioCarraro/mach4R/mach4R.xml",
+    "type": "tractorReverseDriving",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "ANTONIOCARRARO",
+    "name": "Mach 4R"
+  },
+  "data/vehicles/antoniocarraro/tigrecar3200/tigrecar3200.xml": {
+    "relPath": "data/vehicles/antonioCarraro/tigrecar3200/tigrecar3200.xml",
+    "type": "carFillable",
+    "category": "cars",
+    "displayType": "Car / Pickup",
+    "brand": "ANTONIOCARRARO",
+    "name": "Tigrecar 3200 GST"
+  },
+  "data/vehicles/antoniocarraro/tony10900ttr/tony10900ttr.xml": {
+    "relPath": "data/vehicles/antonioCarraro/tony10900TTR/tony10900TTR.xml",
+    "type": "tractorReverseDriving",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "ANTONIOCARRARO",
+    "name": "Tony 10900 TTR"
+  },
+  "data/vehicles/aprilia/rx125/rx125.xml": {
+    "relPath": "data/vehicles/aprilia/rx125/rx125.xml",
+    "type": "motorbike",
+    "category": "cars",
+    "displayType": "Car / Pickup",
+    "brand": "APRILIA",
+    "name": "RX 125"
+  },
+  "data/vehicles/arcusin/fsx6372/fsx6372.xml": {
+    "relPath": "data/vehicles/arcusin/fsx6372/fsx6372.xml",
+    "type": "baleLoader",
+    "category": "baleLoaders",
+    "displayType": "Tractor",
+    "brand": "ARCUSIN",
+    "name": "FSX 63.72"
+  },
+  "data/vehicles/arcusin/multipackd14/multipackd14.xml": {
+    "relPath": "data/vehicles/arcusin/multipackD14/multipackD14.xml",
+    "type": "baleLoader",
+    "category": "baleLoaders",
+    "displayType": "Tractor",
+    "brand": "ARCUSIN",
+    "name": "Multipack D14"
+  },
+  "data/vehicles/bednar/katorknprofi8000/katorknprofi8000.xml": {
+    "relPath": "data/vehicles/bednar/katorKNProfi8000/katorKNProfi8000.xml",
+    "type": "turnOnCultivator",
+    "category": "powerHarrows",
+    "displayType": "Tractor",
+    "brand": "BEDNAR",
+    "name": "KATOR KN 8000Q PROFI"
+  },
+  "data/vehicles/bednar/mm7000/mm7000.xml": {
+    "relPath": "data/vehicles/bednar/mm7000/mm7000.xml",
+    "type": "mulcher",
+    "category": "mulchers",
+    "displayType": "Tractor",
+    "brand": "BEDNAR",
+    "name": "MULCHER MM 7000"
+  },
+  "data/vehicles/bednar/omega6000fl/omega6000fl.xml": {
+    "relPath": "data/vehicles/bednar/omega6000FL/omega6000FL.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "seeders",
+    "displayType": "Tractor",
+    "brand": "BEDNAR",
+    "name": "OMEGA OO 6000 FL"
+  },
+  "data/vehicles/bednar/swifterdiscxemega/swifterdiscxemega.xml": {
+    "relPath": "data/vehicles/bednar/swifterdiscXEmega/swifterdiscXEmega.xml",
+    "type": "cultivator",
+    "category": "discHarrows",
+    "displayType": "Tractor",
+    "brand": "BEDNAR",
+    "name": "SWIFTERDISC XE 18400 MEGA"
+  },
+  "data/vehicles/bergmann/gtw330/gtw330.xml": {
+    "relPath": "data/vehicles/bergmann/gtw330/gtw330.xml",
+    "type": "augerWagon",
+    "category": "augerWagons",
+    "displayType": "Tractor",
+    "brand": "BERGMANN",
+    "name": "GTW 330"
+  },
+  "data/vehicles/bergmann/htw65/htw65.xml": {
+    "relPath": "data/vehicles/bergmann/htw65/htw65.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "BERGMANN",
+    "name": "HTW 65"
+  },
+  "data/vehicles/bergmann/rrw500/rrw500.xml": {
+    "relPath": "data/vehicles/bergmann/rrw500/rrw500.xml",
+    "type": "augerWagon",
+    "category": "augerWagons",
+    "displayType": "Tractor",
+    "brand": "BERGMANN",
+    "name": "RRW 500"
+  },
+  "data/vehicles/bergmann/shuttle490s/shuttle490s.xml": {
+    "relPath": "data/vehicles/bergmann/shuttle490S/shuttle490S.xml",
+    "type": "forageWagon",
+    "category": "loaderWagons",
+    "displayType": "Tractor",
+    "brand": "BERGMANN",
+    "name": "SHUTTLE 490 S"
+  },
+  "data/vehicles/bergmann/tsw6240w/tsw6240w.xml": {
+    "relPath": "data/vehicles/bergmann/tsw6240w/tsw6240w.xml",
+    "type": "manureSpreader",
+    "category": "manureSpreaders",
+    "displayType": "Tractor",
+    "brand": "BERGMANN",
+    "name": "TSW 6240 W"
+  },
+  "data/vehicles/berthoud/vantage4300/vantage4300.xml": {
+    "relPath": "data/vehicles/berthoud/vantage4300/vantage4300.xml",
+    "type": "sprayer",
+    "category": "sprayers",
+    "displayType": "Car / Pickup",
+    "brand": "BERTHOUD",
+    "name": "Vantage 4300"
+  },
+  "data/vehicles/berthoud/winair/winair.xml": {
+    "relPath": "data/vehicles/berthoud/winAir/winAir.xml",
+    "type": "sprayer",
+    "category": "grapeTools",
+    "displayType": "Self-Propelled Sprayer",
+    "brand": "BERTHOUD",
+    "name": "WinAir 1000"
+  },
+  "data/vehicles/bomech/multi4xl/multi4xl.xml": {
+    "relPath": "data/vehicles/bomech/multi4XL/multi4XL.xml",
+    "type": "sprayer",
+    "category": "slurryTools",
+    "displayType": "Self-Propelled Sprayer",
+    "brand": "BOMECH",
+    "name": "Multi 4XL"
+  },
+  "data/vehicles/bomech/multiprofi/multiprofi.xml": {
+    "relPath": "data/vehicles/bomech/multiProfi/multiProfi.xml",
+    "type": "sprayer",
+    "category": "slurryTools",
+    "displayType": "Self-Propelled Sprayer",
+    "brand": "BOMECH",
+    "name": "Multi Profi 21/15"
+  },
+  "data/vehicles/bomech/tracpack/tracpack.xml": {
+    "relPath": "data/vehicles/bomech/tracPack/tracPack.xml",
+    "type": "sprayer",
+    "category": "slurryTools",
+    "displayType": "Self-Propelled Sprayer",
+    "brand": "BOMECH",
+    "name": "Trac-Pack"
+  },
+  "data/vehicles/brandt/h550/h550.xml": {
+    "relPath": "data/vehicles/brandt/h550/h550.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "lowloaders",
+    "displayType": "Tractor",
+    "brand": "BRANDT",
+    "name": "H550 Beavertail"
+  },
+  "data/vehicles/brandt/h550/h550bundle.xml": {
+    "relPath": "data/vehicles/brandt/h550/h550Bundle.xml",
+    "type": "",
+    "category": "lowloaders trailersSemi",
+    "displayType": "Tractor",
+    "brand": "BRANDT",
+    "name": "H550 Beavertail"
+  },
+  "data/vehicles/brandt/h550/h550gooseneck.xml": {
+    "relPath": "data/vehicles/brandt/h550/h550Gooseneck.xml",
+    "type": "semiTrailerFront",
+    "category": "lowloaders",
+    "displayType": "Tractor",
+    "brand": "BRANDT",
+    "name": "H550 Gooseneck"
+  },
+  "data/vehicles/brandt/landroller591a/landroller591a.xml": {
+    "relPath": "data/vehicles/brandt/landRoller591A/landRoller591A.xml",
+    "type": "roller",
+    "category": "rollers",
+    "displayType": "Tractor",
+    "brand": "BRANDT",
+    "name": "LandRoller 591A"
+  },
+  "data/vehicles/brantner/dd24073/dd24073.xml": {
+    "relPath": "data/vehicles/brantner/dd24073/dd24073.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "BRANTNER",
+    "name": "DD 24073/2 XXL"
+  },
+  "data/vehicles/brantner/ta12050/ta12050.xml": {
+    "relPath": "data/vehicles/brantner/ta12050/ta12050.xml",
+    "type": "manureSpreader",
+    "category": "manureSpreaders",
+    "displayType": "Tractor",
+    "brand": "BRANTNER",
+    "name": "TA 12050 Power Spread +"
+  },
+  "data/vehicles/brantner/tr34090/tr34090.xml": {
+    "relPath": "data/vehicles/brantner/tr34090/tr34090.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "BRANTNER",
+    "name": "TR 34090/2 PT+"
+  },
+  "data/vehicles/brantner/z18051/z18051.xml": {
+    "relPath": "data/vehicles/brantner/z18051/z18051.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "BRANTNER",
+    "name": "Z 18051/2 XXL Power Flex"
+  },
+  "data/vehicles/bredal/k105/k105.xml": {
+    "relPath": "data/vehicles/bredal/k105/k105.xml",
+    "type": "spreader",
+    "category": "fertilizerSpreaders",
+    "displayType": "Tractor",
+    "brand": "BREDAL",
+    "name": "K105"
+  },
+  "data/vehicles/bredal/sg/sg.xml": {
+    "relPath": "data/vehicles/bredal/sg/sg.xml",
+    "type": "saltSpreader",
+    "category": "winterEquipment",
+    "displayType": "Tractor",
+    "brand": "BREDAL",
+    "name": "SG2000"
+  },
+  "data/vehicles/brielmaier/motormower29efi/motormower29efi.xml": {
+    "relPath": "data/vehicles/brielmaier/motorMower29EFI/motorMower29EFI.xml",
+    "type": "handToolMower",
+    "category": "handtoolsMisc",
+    "displayType": "Self-Propelled Mower",
+    "brand": "BRIELMAIER",
+    "name": "29 EFI"
+  },
+  "data/vehicles/capello/diamant8/diamant8.xml": {
+    "relPath": "data/vehicles/capello/diamant8/diamant8.xml",
+    "type": "cutter",
+    "category": "cornHeaders",
+    "displayType": "Tractor",
+    "brand": "CAPELLO",
+    "name": "Diamant 8"
+  },
+  "data/vehicles/caseih/a8800mr/a8800mr.xml": {
+    "relPath": "data/vehicles/caseIH/a8800MR/a8800MR.xml",
+    "type": "combineCutterFruitPreparer",
+    "category": "sugarcaneHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "CASEIH",
+    "name": "Austoft 8800 Multi-Row"
+  },
+  "data/vehicles/caseih/af11/af11.xml": {
+    "relPath": "data/vehicles/caseIH/af11/af11.xml",
+    "type": "combineDrivable",
+    "category": "harvesters",
+    "displayType": "Combine Harvester",
+    "brand": "CASEIH",
+    "name": "AF11"
+  },
+  "data/vehicles/caseih/axialflow150/axialflow150.xml": {
+    "relPath": "data/vehicles/caseIH/axialFlow150/axialFlow150.xml",
+    "type": "combineDrivable",
+    "category": "harvesters",
+    "displayType": "Combine Harvester",
+    "brand": "CASEIH",
+    "name": "Axial-Flow 7160"
+  },
+  "data/vehicles/caseih/farmall120c/farmall120c.xml": {
+    "relPath": "data/vehicles/caseIH/farmall120C/farmall120C.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "CASEIH",
+    "name": "Farmall C Series"
+  },
+  "data/vehicles/caseih/fd250/fd250.xml": {
+    "relPath": "data/vehicles/caseIH/fd250/fd250.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "CASEIH",
+    "name": "FD250 FlexDraper\u00ae"
+  },
+  "data/vehicles/caseih/frontloaderl630/frontloaderl630.xml": {
+    "relPath": "data/vehicles/caseIH/frontloaderL630/frontloaderL630.xml",
+    "type": "attachableFrontloader",
+    "category": "frontLoaders",
+    "displayType": "Tractor",
+    "brand": "CASEIH",
+    "name": "L630"
+  },
+  "data/vehicles/caseih/header4408/header4408.xml": {
+    "relPath": "data/vehicles/caseIH/header4408/header4408.xml",
+    "type": "cutter",
+    "category": "cornHeaders",
+    "displayType": "Tractor",
+    "brand": "CASEIH",
+    "name": "4408"
+  },
+  "data/vehicles/caseih/header4418n/header4418n.xml": {
+    "relPath": "data/vehicles/caseIH/header4418N/header4418N.xml",
+    "type": "cutter",
+    "category": "cornHeaders",
+    "displayType": "Tractor",
+    "brand": "CASEIH",
+    "name": "4418 N"
+  },
+  "data/vehicles/caseih/magnumt4b/magnumt4b.xml": {
+    "relPath": "data/vehicles/caseIH/magnumT4B/magnumT4B.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "CASEIH",
+    "name": "Magnum Series"
+  },
+  "data/vehicles/caseih/moduleexpress635/moduleexpress635.xml": {
+    "relPath": "data/vehicles/caseIH/moduleExpress635/moduleExpress635.xml",
+    "type": "cottonHarvester",
+    "category": "cottonHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "CASEIH",
+    "name": "Module Express 635"
+  },
+  "data/vehicles/caseih/patriot50/patriot50.xml": {
+    "relPath": "data/vehicles/caseIH/patriot50/patriot50.xml",
+    "type": "selfPropelledSprayer",
+    "category": "sprayers",
+    "displayType": "Self-Propelled Sprayer",
+    "brand": "CASEIH",
+    "name": "Patriot 4450"
+  },
+  "data/vehicles/caseih/puma/puma.xml": {
+    "relPath": "data/vehicles/caseIH/puma/puma.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "CASEIH",
+    "name": "Puma Series"
+  },
+  "data/vehicles/caseih/quadtrac715/quadtrac715.xml": {
+    "relPath": "data/vehicles/caseIH/quadtrac715/quadtrac715.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "CASEIH",
+    "name": "Steiger Series"
+  },
+  "data/vehicles/caseih/rb456/rb456.xml": {
+    "relPath": "data/vehicles/caseIH/rb456/rb456.xml",
+    "type": "baler",
+    "category": "balers",
+    "displayType": "Tractor",
+    "brand": "CASEIH",
+    "name": "RB 456 HD Pro"
+  },
+  "data/vehicles/caseih/terraflex3020/terraflex3020.xml": {
+    "relPath": "data/vehicles/caseIH/terraFlex3020/terraFlex3020.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "CASEIH",
+    "name": "3020 TerraFlex 25FT"
+  },
+  "data/vehicles/caseih/terraflex3050_28/terraflex3050_28.xml": {
+    "relPath": "data/vehicles/caseIH/terraFlex3050_28/terraFlex3050_28.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "CASEIH",
+    "name": "3050 TerraFlex 28FT"
+  },
+  "data/vehicles/caseih/vestrum130/vestrum130.xml": {
+    "relPath": "data/vehicles/caseIH/vestrum130/vestrum130.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "CASEIH",
+    "name": "$l10n_shopItem_seriesX"
+  },
+  "data/vehicles/caseih/weight1000/weight1000.xml": {
+    "relPath": "data/vehicles/caseIH/weight1000/weight1000.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "CASEIH",
+    "name": "1000"
+  },
+  "data/vehicles/challenger/mt655/mt655.xml": {
+    "relPath": "data/vehicles/challenger/mt655/mt655.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "CHALLENGER",
+    "name": "MT600 Series"
+  },
+  "data/vehicles/claas/arion400/arion400.xml": {
+    "relPath": "data/vehicles/claas/arion400/arion400.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "CLAAS",
+    "name": "ARION 470-410"
+  },
+  "data/vehicles/claas/arion550/arion550.xml": {
+    "relPath": "data/vehicles/claas/arion550/arion550.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "CLAAS",
+    "name": "ARION 570-530"
+  },
+  "data/vehicles/claas/convioflex1080/convioflex1080.xml": {
+    "relPath": "data/vehicles/claas/convioFlex1080/convioFlex1080.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "CLAAS",
+    "name": "CONVIO FLEX 1080"
+  },
+  "data/vehicles/claas/convioflex1380/convioflex1380.xml": {
+    "relPath": "data/vehicles/claas/convioFlex1380/convioFlex1380.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "CLAAS",
+    "name": "CONVIO FLEX 1380"
+  },
+  "data/vehicles/claas/directdisc500/directdisc500.xml": {
+    "relPath": "data/vehicles/claas/directDisc500/directDisc500.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "CLAAS",
+    "name": "DIRECT DISC 500"
+  },
+  "data/vehicles/claas/directdisc500trailer/directdisc500trailer.xml": {
+    "relPath": "data/vehicles/claas/directDisc500Trailer/directDisc500Trailer.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "forageHarvesterCutterTrailers",
+    "displayType": "Combine Harvester",
+    "brand": "CLAAS",
+    "name": "DIRECT DISC 500 %s"
+  },
+  "data/vehicles/claas/evion450/evion450.xml": {
+    "relPath": "data/vehicles/claas/evion450/evion450.xml",
+    "type": "combineDrivable",
+    "category": "harvesters",
+    "displayType": "Combine Harvester",
+    "brand": "CLAAS",
+    "name": "EVION 450"
+  },
+  "data/vehicles/claas/frontloader140/frontloader140.xml": {
+    "relPath": "data/vehicles/claas/frontLoader140/frontLoader140.xml",
+    "type": "attachableFrontloader",
+    "category": "frontLoaders",
+    "displayType": "Tractor",
+    "brand": "CLAAS",
+    "name": "FL 140"
+  },
+  "data/vehicles/claas/jaguar990tt/jaguar990tt.xml": {
+    "relPath": "data/vehicles/claas/jaguar990TT/jaguar990TT.xml",
+    "type": "combineDrivable",
+    "category": "forageHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "CLAAS",
+    "name": "JAGUAR 990 TERRA TRAC"
+  },
+  "data/vehicles/claas/lexion6900/lexion6900.xml": {
+    "relPath": "data/vehicles/claas/lexion6900/lexion6900.xml",
+    "type": "tractor",
+    "category": "harvesters",
+    "displayType": "Combine Harvester",
+    "brand": "CLAAS",
+    "name": "LEXION 6900"
+  },
+  "data/vehicles/claas/lexion8900/lexion8900.xml": {
+    "relPath": "data/vehicles/claas/lexion8900/lexion8900.xml",
+    "type": "combineDrivable",
+    "category": "harvesters",
+    "displayType": "Combine Harvester",
+    "brand": "CLAAS",
+    "name": "LEXION 8000"
+  },
+  "data/vehicles/claas/orbis900/orbis900.xml": {
+    "relPath": "data/vehicles/claas/orbis900/orbis900.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "CLAAS",
+    "name": "ORBIS 900"
+  },
+  "data/vehicles/claas/pickup300/pickup300.xml": {
+    "relPath": "data/vehicles/claas/pickUp300/pickUp300.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "CLAAS",
+    "name": "PICK UP 300"
+  },
+  "data/vehicles/claas/quadrant5300/quadrant5300.xml": {
+    "relPath": "data/vehicles/claas/quadrant5300/quadrant5300.xml",
+    "type": "baler",
+    "category": "balersSquare",
+    "displayType": "Tractor",
+    "brand": "CLAAS",
+    "name": "QUADRANT 5300 FC"
+  },
+  "data/vehicles/claas/vario620/vario620.xml": {
+    "relPath": "data/vehicles/claas/vario620/vario620.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "CLAAS",
+    "name": "VARIO 620"
+  },
+  "data/vehicles/claas/w1800/w1800.xml": {
+    "relPath": "data/vehicles/claas/w1800/w1800.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "CLAAS",
+    "name": "W 1800"
+  },
+  "data/vehicles/claas/w600/w600.xml": {
+    "relPath": "data/vehicles/claas/w600/w600.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "CLAAS",
+    "name": "W 600"
+  },
+  "data/vehicles/claas/w900/w900.xml": {
+    "relPath": "data/vehicles/claas/w900/w900.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "CLAAS",
+    "name": "W 900"
+  },
+  "data/vehicles/claas/xerion12/xerion12.xml": {
+    "relPath": "data/vehicles/claas/xerion12/xerion12.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "CLAAS",
+    "name": "XERION 12"
+  },
+  "data/vehicles/dalbo/maxiroll630greenline/maxiroll630greenline.xml": {
+    "relPath": "data/vehicles/dalbo/maxiroll630Greenline/maxiroll630Greenline.xml",
+    "type": "roller",
+    "category": "grasslandCare",
+    "displayType": "Car / Pickup",
+    "brand": "DALBO",
+    "name": "MaxiRoll 630 Greenline"
+  },
+  "data/vehicles/dalbo/powerchain800/powerchain800.xml": {
+    "relPath": "data/vehicles/dalbo/powerchain800/powerchain800.xml",
+    "type": "cultivator",
+    "category": "discHarrows",
+    "displayType": "Tractor",
+    "brand": "DALBO",
+    "name": "POWERCHAIN 800"
+  },
+  "data/vehicles/damcon/pl75/pl75.xml": {
+    "relPath": "data/vehicles/damcon/pl75/pl75.xml",
+    "type": "treePlanter",
+    "category": "forestryPlanters",
+    "displayType": "Tractor",
+    "brand": "DAMCON",
+    "name": "PL-75"
+  },
+  "data/vehicles/demco/hdht52/hdht52.xml": {
+    "relPath": "data/vehicles/demco/hdht52/hdht52.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "cutterTrailers",
+    "displayType": "Tractor",
+    "brand": "DEMCO",
+    "name": "HDHT 52"
+  },
+  "data/vehicles/demco/series850/series850.xml": {
+    "relPath": "data/vehicles/demco/series850/series850.xml",
+    "type": "augerWagon",
+    "category": "augerWagons",
+    "displayType": "Tractor",
+    "brand": "DEMCO",
+    "name": "850 Single Auger Grain Cart"
+  },
+  "data/vehicles/demco/steeldropdeck/steeldropdeck.xml": {
+    "relPath": "data/vehicles/demco/steelDropDeck/steelDropDeck.xml",
+    "type": "trailer",
+    "category": "lowloaders trailersSemi",
+    "displayType": "Tractor",
+    "brand": "DEMCO",
+    "name": "Steel Drop Deck"
+  },
+  "data/vehicles/deutzfahr/agrostar831/agrostar831.xml": {
+    "relPath": "data/vehicles/deutzFahr/agroStar831/agroStar831.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "DEUTZFAHR",
+    "name": "AgroStar 8.31"
+  },
+  "data/vehicles/deutzfahr/series6c/series6c.xml": {
+    "relPath": "data/vehicles/deutzFahr/series6C/series6C.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "DEUTZFAHR",
+    "name": "6C RVshift"
+  },
+  "data/vehicles/deutzfahr/series7/series7.xml": {
+    "relPath": "data/vehicles/deutzFahr/series7/series7.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "DEUTZFAHR",
+    "name": "Series 7 TTV HD"
+  },
+  "data/vehicles/deutzfahr/series8/series8.xml": {
+    "relPath": "data/vehicles/deutzFahr/series8/series8.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "DEUTZFAHR",
+    "name": "Series 8 TTV"
+  },
+  "data/vehicles/dewulf/gbc/gbc.xml": {
+    "relPath": "data/vehicles/dewulf/gbc/gbc.xml",
+    "type": "attachableCombine",
+    "category": "vegetableHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "DEWULF",
+    "name": "GBC"
+  },
+  "data/vehicles/dewulf/gcci/gccigii.xml": {
+    "relPath": "data/vehicles/dewulf/gcci/gcciGii.xml",
+    "type": "attachableCombinePalletFiller",
+    "category": "vegetableHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "DEWULF",
+    "name": "GCCI"
+  },
+  "data/vehicles/dewulf/p3profi/p3clprofi.xml": {
+    "relPath": "data/vehicles/dewulf/p3Profi/p3CLProfi.xml",
+    "type": "attachableCombine",
+    "category": "vegetableHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "DEWULF",
+    "name": "P3CL Profi"
+  },
+  "data/vehicles/dewulf/p3profi/p3profi.xml": {
+    "relPath": "data/vehicles/dewulf/p3Profi/p3Profi.xml",
+    "type": "attachableCombine",
+    "category": "vegetableHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "DEWULF",
+    "name": "P3K Profi"
+  },
+  "data/vehicles/dewulf/zkivse/zkivse.xml": {
+    "relPath": "data/vehicles/dewulf/zkivSe/zkivSe.xml",
+    "type": "combineCutter",
+    "category": "vegetableHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "DEWULF",
+    "name": "ZKIVSE"
+  },
+  "data/vehicles/einboeck/aerostar2400/aerostar2400.xml": {
+    "relPath": "data/vehicles/einboeck/aerostar2400/aerostar2400.xml",
+    "type": "weeder",
+    "category": "weeders",
+    "displayType": "Tractor",
+    "brand": "EINBOECK",
+    "name": "AEROSTAR-CLASSIC XXL 2400"
+  },
+  "data/vehicles/einboeck/pneumaticstarpro1200/pneumaticstarpro1200.xml": {
+    "relPath": "data/vehicles/einboeck/pneumaticstarPro1200/pneumaticstarPro1200.xml",
+    "type": "weederSowingmachine",
+    "category": "weeders",
+    "displayType": "Tractor",
+    "brand": "EINBOECK",
+    "name": "PNEUMATICSTAR-PRO 1200"
+  },
+  "data/vehicles/einboeck/taifun900/taifun900.xml": {
+    "relPath": "data/vehicles/einboeck/taifun900/taifun900.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "EINBOECK",
+    "name": "TAIFUN 900 RP58"
+  },
+  "data/vehicles/elho/duett7300/duett7300.xml": {
+    "relPath": "data/vehicles/elho/duett7300/duett7300.xml",
+    "type": "mower",
+    "category": "mowers",
+    "displayType": "Self-Propelled Mower",
+    "brand": "ELHO",
+    "name": "Duett 7300"
+  },
+  "data/vehicles/elho/scorpio550/scorpio550.xml": {
+    "relPath": "data/vehicles/elho/scorpio550/scorpio550.xml",
+    "type": "stonePicker",
+    "category": "stonePickers",
+    "displayType": "Tractor",
+    "brand": "ELHO",
+    "name": "Scorpio 550"
+  },
+  "data/vehicles/elmersmfg/haulmaster/haulmaster.xml": {
+    "relPath": "data/vehicles/elmersMfg/haulMaster/haulMaster.xml",
+    "type": "augerWagon",
+    "category": "augerWagons",
+    "displayType": "Tractor",
+    "brand": "ELMERSMFG",
+    "name": "HaulMaster"
+  },
+  "data/vehicles/elmersmfg/ravage/ravage.xml": {
+    "relPath": "data/vehicles/elmersMfg/ravage/ravage.xml",
+    "type": "strawBlower",
+    "category": "strawBlowers",
+    "displayType": "Tractor",
+    "brand": "ELMERSMFG",
+    "name": "Ravage"
+  },
+  "data/vehicles/elmersmfg/super7/super7.xml": {
+    "relPath": "data/vehicles/elmersMfg/super7/super7.xml",
+    "type": "weeder",
+    "category": "weeders",
+    "displayType": "Tractor",
+    "brand": "ELMERSMFG",
+    "name": "Super 7"
+  },
+  "data/vehicles/ero/grapeliner7000/grapeliner7000.xml": {
+    "relPath": "data/vehicles/ero/grapeliner7000/grapeliner7000.xml",
+    "type": "vineHarvester",
+    "category": "grapeHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "ERO",
+    "name": "Grapeliner Series 7000"
+  },
+  "data/vehicles/faresin/pf224/pf224.xml": {
+    "relPath": "data/vehicles/faresin/pf224/pf224.xml",
+    "type": "mixerWagon",
+    "category": "forageMixers",
+    "displayType": "Tractor",
+    "brand": "FARESIN",
+    "name": "PF 2.24 Plus"
+  },
+  "data/vehicles/faresin/pf226/pf226.xml": {
+    "relPath": "data/vehicles/faresin/pf226/pf226.xml",
+    "type": "drivableMixerWagon",
+    "category": "forageMixers",
+    "displayType": "Tractor",
+    "brand": "FARESIN",
+    "name": "Leader PF 2.26 Plus Ecomode"
+  },
+  "data/vehicles/farmax/rapidtrailed/rapidtrailed.xml": {
+    "relPath": "data/vehicles/farmax/rapidTrailed/rapidTrailed.xml",
+    "type": "turnOnCultivator",
+    "category": "spaders",
+    "displayType": "Tractor",
+    "brand": "FARMAX",
+    "name": "Rapide 450 Trailed"
+  },
+  "data/vehicles/farmet/softer11/softer11.xml": {
+    "relPath": "data/vehicles/farmet/softer11/softer11.xml",
+    "type": "cultivator",
+    "category": "discHarrows",
+    "displayType": "Tractor",
+    "brand": "FARMET",
+    "name": "Softer 11 PS"
+  },
+  "data/vehicles/farmtech/ddk2400/ddk2400.xml": {
+    "relPath": "data/vehicles/farmtech/ddk2400/ddk2400.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "FARMTECH",
+    "name": "DDK 2400"
+  },
+  "data/vehicles/farmtech/dpw1800/dpw1800.xml": {
+    "relPath": "data/vehicles/farmtech/dpw1800/dpw1800.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "baleLoaders trailersFlatbed",
+    "displayType": "Tractor",
+    "brand": "FARMTECH",
+    "name": "DPW 1800"
+  },
+  "data/vehicles/farmtech/edk650/edk650.xml": {
+    "relPath": "data/vehicles/farmtech/edk650/edk650.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "FARMTECH",
+    "name": "EDK 650"
+  },
+  "data/vehicles/farmtech/supercis800/supercis800.xml": {
+    "relPath": "data/vehicles/farmtech/supercis800/supercis800.xml",
+    "type": "manureBarrel",
+    "category": "slurryTanks",
+    "displayType": "Tractor",
+    "brand": "FARMTECH",
+    "name": "Supercis 800"
+  },
+  "data/vehicles/farmtech/variofex750/variofex750.xml": {
+    "relPath": "data/vehicles/farmtech/variofex750/variofex750.xml",
+    "type": "manureSpreader",
+    "category": "manureSpreaders grapeTools",
+    "displayType": "Tractor",
+    "brand": "FARMTECH",
+    "name": "Variofex 750"
+  },
+  "data/vehicles/fendt/cargot740/cargot740.xml": {
+    "relPath": "data/vehicles/fendt/cargoT740/cargoT740.xml",
+    "type": "teleHandler",
+    "category": "teleLoaderVehicles",
+    "displayType": "Telehandler",
+    "brand": "FENDT",
+    "name": "Cargo T740"
+  },
+  "data/vehicles/fendt/freeflow25ft/freeflow25ft.xml": {
+    "relPath": "data/vehicles/fendt/freeFlow25FT/freeFlow25FT.xml",
+    "type": "tractor",
+    "category": "harvesters",
+    "displayType": "Combine Harvester",
+    "brand": "FENDT",
+    "name": "FreeFlow 25FT"
+  },
+  "data/vehicles/fendt/katana/katana.xml": {
+    "relPath": "data/vehicles/fendt/katana/katana.xml",
+    "type": "combineDrivable",
+    "category": "forageHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "FENDT",
+    "name": "Katana"
+  },
+  "data/vehicles/fendt/mt1100/mt1100.xml": {
+    "relPath": "data/vehicles/fendt/mt1100/mt1100.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "FENDT",
+    "name": "1100 Vario MT"
+  },
+  "data/vehicles/fendt/rotana160v/rotana160v.xml": {
+    "relPath": "data/vehicles/fendt/rotana160V/rotana160V.xml",
+    "type": "balerWrapper",
+    "category": "balers",
+    "displayType": "Tractor",
+    "brand": "FENDT",
+    "name": "Rotana 160 V Combi"
+  },
+  "data/vehicles/fendt/series5275csl/series5275csl.xml": {
+    "relPath": "data/vehicles/fendt/series5275csl/series5275csl.xml",
+    "type": "tractor",
+    "category": "harvesters",
+    "displayType": "Combine Harvester",
+    "brand": "FENDT",
+    "name": "5275 C SL"
+  },
+  "data/vehicles/fendt/squadra1290/squadra1290.xml": {
+    "relPath": "data/vehicles/fendt/squadra1290/squadra1290.xml",
+    "type": "baler",
+    "category": "balersSquare",
+    "displayType": "Tractor",
+    "brand": "FENDT",
+    "name": "Squadra 1290 N UD"
+  },
+  "data/vehicles/fendt/tigo75vr/tigo75vr.xml": {
+    "relPath": "data/vehicles/fendt/tigo75VR/tigo75VR.xml",
+    "type": "forageWagon",
+    "category": "loaderWagons",
+    "displayType": "Tractor",
+    "brand": "FENDT",
+    "name": "Tigo 75 VR D"
+  },
+  "data/vehicles/fendt/vario1000/vario1000.xml": {
+    "relPath": "data/vehicles/fendt/vario1000/vario1000.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "FENDT",
+    "name": "1000 Vario"
+  },
+  "data/vehicles/fendt/vario200/vario200.xml": {
+    "relPath": "data/vehicles/fendt/vario200/vario200.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "FENDT",
+    "name": "200 V Vario"
+  },
+  "data/vehicles/fendt/vario300/vario300.xml": {
+    "relPath": "data/vehicles/fendt/vario300/vario300.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "FENDT",
+    "name": "300 Vario"
+  },
+  "data/vehicles/fendt/vario500/vario500.xml": {
+    "relPath": "data/vehicles/fendt/vario500/vario500.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "FENDT",
+    "name": "500 Vario"
+  },
+  "data/vehicles/fendt/vario700/vario700.xml": {
+    "relPath": "data/vehicles/fendt/vario700/vario700.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "FENDT",
+    "name": "700 Vario"
+  },
+  "data/vehicles/fendt/vario900/vario900.xml": {
+    "relPath": "data/vehicles/fendt/vario900/vario900.xml",
+    "type": "tractorReverseDriving",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "FENDT",
+    "name": "900 Vario"
+  },
+  "data/vehicles/fendt/weight3300/weight3300.xml": {
+    "relPath": "data/vehicles/fendt/weight3300/weight3300.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "FENDT",
+    "name": "3300"
+  },
+  "data/vehicles/fiat/series90/series90.xml": {
+    "relPath": "data/vehicles/fiat/series90/series90.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "FIAT",
+    "name": "160-90 DT"
+  },
+  "data/vehicles/fliegl/asw271/asw271.xml": {
+    "relPath": "data/vehicles/fliegl/asw271/asw271.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "FLIEGL",
+    "name": "ASW 271"
+  },
+  "data/vehicles/fliegl/bueffel/bueffel.xml": {
+    "relPath": "data/vehicles/fliegl/bueffel/bueffel.xml",
+    "type": "overloadingForageWagon",
+    "category": "augerWagons",
+    "displayType": "Tractor",
+    "brand": "FLIEGL",
+    "name": "B\u00fcffel"
+  },
+  "data/vehicles/fliegl/butterfly/butterfly.xml": {
+    "relPath": "data/vehicles/fliegl/butterfly/butterfly.xml",
+    "type": "dynamicMountAttacherFork",
+    "category": "baleLoaders",
+    "displayType": "Tractor",
+    "brand": "FLIEGL",
+    "name": "Schmetterling"
+  },
+  "data/vehicles/fliegl/dts59/dts59.xml": {
+    "relPath": "data/vehicles/fliegl/dts59/dts59.xml",
+    "type": "trailer",
+    "category": "lowloaders",
+    "displayType": "Tractor",
+    "brand": "FLIEGL",
+    "name": "DTS 5.9"
+  },
+  "data/vehicles/fliegl/noahttw140/noahttw140.xml": {
+    "relPath": "data/vehicles/fliegl/noahTTW140/noahTTW140.xml",
+    "type": "livestockTrailer",
+    "category": "animalTransport",
+    "displayType": "Tractor",
+    "brand": "FLIEGL",
+    "name": "Noah TTW 140"
+  },
+  "data/vehicles/fliegl/pfw18000maxxlineplus/pfw18000maxxlineplus.xml": {
+    "relPath": "data/vehicles/fliegl/pfw18000MaxxLinePlus/pfw18000MaxxLinePlus.xml",
+    "type": "manureBarrel",
+    "category": "slurryTanks",
+    "displayType": "Tractor",
+    "brand": "FLIEGL",
+    "name": "PFW 18000 MaxxLine Plus"
+  },
+  "data/vehicles/fliegl/ruby/ruby.xml": {
+    "relPath": "data/vehicles/fliegl/ruby/ruby.xml",
+    "type": "turnOnShovel",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "FLIEGL",
+    "name": "Ruby 2000"
+  },
+  "data/vehicles/fliegl/variov2/variov2.xml": {
+    "relPath": "data/vehicles/fliegl/varioV2/varioV2.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "trailersSemi",
+    "displayType": "Tractor",
+    "brand": "FLIEGL",
+    "name": "Vario Chassis V2"
+  },
+  "data/vehicles/fuhrmann/trailer12000l/trailer12000l.xml": {
+    "relPath": "data/vehicles/fuhrmann/trailer12000L/trailer12000L.xml",
+    "type": "trailer",
+    "category": "grapeTrailers",
+    "displayType": "Tractor",
+    "brand": "FUHRMANN",
+    "name": "LWS 12000"
+  },
+  "data/vehicles/fuhrmann/trailer6000l/trailer6000l.xml": {
+    "relPath": "data/vehicles/fuhrmann/trailer6000L/trailer6000L.xml",
+    "type": "trailer",
+    "category": "grapeTrailers",
+    "displayType": "Tractor",
+    "brand": "FUHRMANN",
+    "name": "MRWK 6000"
+  },
+  "data/vehicles/geringhoff/milostar1630/milostar1630.xml": {
+    "relPath": "data/vehicles/geringhoff/miloStar1630/miloStar1630.xml",
+    "type": "cutter",
+    "category": "specialHeaders",
+    "displayType": "Tractor",
+    "brand": "GERINGHOFF",
+    "name": "MiloStar 1630"
+  },
+  "data/vehicles/geringhoff/northstar1230fb/northstar1230fb.xml": {
+    "relPath": "data/vehicles/geringhoff/northStar1230FB/northStar1230FB.xml",
+    "type": "cutter",
+    "category": "cornHeaders",
+    "displayType": "Tractor",
+    "brand": "GERINGHOFF",
+    "name": "NorthStar 1230 FB"
+  },
+  "data/vehicles/geringhoff/northstar1830/northstar1830.xml": {
+    "relPath": "data/vehicles/geringhoff/northStar1830/northStar1830.xml",
+    "type": "cutter",
+    "category": "cornHeaders",
+    "displayType": "Tractor",
+    "brand": "GERINGHOFF",
+    "name": "NorthStar 1830"
+  },
+  "data/vehicles/geringhoff/sunlite40/sunlite40.xml": {
+    "relPath": "data/vehicles/geringhoff/sunLite40/sunLite40.xml",
+    "type": "cutter",
+    "category": "specialHeaders",
+    "displayType": "Tractor",
+    "brand": "GERINGHOFF",
+    "name": "SunLite 40"
+  },
+  "data/vehicles/gessner/singlerow/singlerow.xml": {
+    "relPath": "data/vehicles/gessner/singleRow/singleRow.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "sugarcanePlanters",
+    "displayType": "Tractor",
+    "brand": "GESSNER",
+    "name": "Single Row Billet Planter"
+  },
+  "data/vehicles/gessner/tworow/tworow.xml": {
+    "relPath": "data/vehicles/gessner/twoRow/twoRow.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "sugarcanePlanters",
+    "displayType": "Tractor",
+    "brand": "GESSNER",
+    "name": "Two Row Billet Planter"
+  },
+  "data/vehicles/goeweil/btgqu/btgqu.xml": {
+    "relPath": "data/vehicles/goeweil/btgqu/btgqu.xml",
+    "type": "baleGrab",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "GOEWEIL",
+    "name": "%s %s"
+  },
+  "data/vehicles/goeweil/btgqu/btgqu_telehandler.xml": {
+    "relPath": "data/vehicles/goeweil/btgqu/btgqu_telehandler.xml",
+    "type": "baleGrab",
+    "category": "teleLoaderTools",
+    "displayType": "Telehandler",
+    "brand": "GOEWEIL",
+    "name": "BTGQU (Telehandler)"
+  },
+  "data/vehicles/goeweil/g1015/g1015.xml": {
+    "relPath": "data/vehicles/goeweil/g1015/g1015.xml",
+    "type": "baleWrapper",
+    "category": "baleWrappers",
+    "displayType": "Tractor",
+    "brand": "GOEWEIL",
+    "name": "G1015"
+  },
+  "data/vehicles/goeweil/g1f125/g1f125.xml": {
+    "relPath": "data/vehicles/goeweil/g1F125/g1F125.xml",
+    "type": "baler",
+    "category": "balersRound",
+    "displayType": "Tractor",
+    "brand": "GOEWEIL",
+    "name": "G-1 F125"
+  },
+  "data/vehicles/goeweil/g1f125kombi/g1f125kombi.xml": {
+    "relPath": "data/vehicles/goeweil/g1F125Kombi/g1F125Kombi.xml",
+    "type": "balerWrapper",
+    "category": "balersRound",
+    "displayType": "Tractor",
+    "brand": "GOEWEIL",
+    "name": "G-1 F125 Kombi"
+  },
+  "data/vehicles/goeweil/g4010q/g4010q.xml": {
+    "relPath": "data/vehicles/goeweil/g4010Q/g4010Q.xml",
+    "type": "baleWrapperStandalone",
+    "category": "baleWrappers",
+    "displayType": "Tractor",
+    "brand": "GOEWEIL",
+    "name": "G4010 Q Profi"
+  },
+  "data/vehicles/goeweil/g5020/g5020.xml": {
+    "relPath": "data/vehicles/goeweil/g5020/g5020.xml",
+    "type": "baleWrapper",
+    "category": "baleWrappers",
+    "displayType": "Tractor",
+    "brand": "GOEWEIL",
+    "name": "G5020"
+  },
+  "data/vehicles/goeweil/rbg/rbg.xml": {
+    "relPath": "data/vehicles/goeweil/rbg/rbg.xml",
+    "type": "baleGrab",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "GOEWEIL",
+    "name": "%s %s"
+  },
+  "data/vehicles/goeweil/rbg/rbg_telehandler.xml": {
+    "relPath": "data/vehicles/goeweil/rbg/rbg_telehandler.xml",
+    "type": "baleGrab",
+    "category": "teleLoaderTools",
+    "displayType": "Telehandler",
+    "brand": "GOEWEIL",
+    "name": "RBG (Telehandler)"
+  },
+  "data/vehicles/goeweil/variomaster/variomaster.xml": {
+    "relPath": "data/vehicles/goeweil/varioMaster/varioMaster.xml",
+    "type": "balerStationary",
+    "category": "balersRound",
+    "displayType": "Tractor",
+    "brand": "GOEWEIL",
+    "name": "VARIO-Master V140"
+  },
+  "data/vehicles/gorenc/puler600/puler600.xml": {
+    "relPath": "data/vehicles/gorenc/puler600/puler600.xml",
+    "type": "weeder",
+    "category": "weeders",
+    "displayType": "Tractor",
+    "brand": "GORENC",
+    "name": "Puler 600"
+  },
+  "data/vehicles/greatplains/seeder1500/seeder1500.xml": {
+    "relPath": "data/vehicles/greatPlains/seeder1500/seeder1500.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "seeders",
+    "displayType": "Tractor",
+    "brand": "GREATPLAINS",
+    "name": "SOLID STAND 1500"
+  },
+  "data/vehicles/gregoire/gl86/gl86.xml": {
+    "relPath": "data/vehicles/gregoire/gl86/gl86.xml",
+    "type": "vineHarvester",
+    "category": "grapeHarvesters oliveHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "GREGOIRE",
+    "name": "GL"
+  },
+  "data/vehicles/grimme/evo290/evo290.xml": {
+    "relPath": "data/vehicles/grimme/evo290/evo290.xml",
+    "type": "attachableCombineCutterFruitPreparer",
+    "category": "potatoHarvesting",
+    "displayType": "Combine Harvester",
+    "brand": "GRIMME",
+    "name": "Evo 290"
+  },
+  "data/vehicles/grimme/gf400/gf400.xml": {
+    "relPath": "data/vehicles/grimme/gf400/gf400.xml",
+    "type": "ridgeFormer",
+    "category": "vegetablePlanters",
+    "displayType": "Tractor",
+    "brand": "GRIMME",
+    "name": "GF 400"
+  },
+  "data/vehicles/grimme/gf800/gf800.xml": {
+    "relPath": "data/vehicles/grimme/gf800/gf800.xml",
+    "type": "ridgeFormer",
+    "category": "vegetablePlanters",
+    "displayType": "Tractor",
+    "brand": "GRIMME",
+    "name": "GF 800"
+  },
+  "data/vehicles/grimme/gl420/gl420.xml": {
+    "relPath": "data/vehicles/grimme/gl420/gl420.xml",
+    "type": "sowingMachine",
+    "category": "potatoPlanting",
+    "displayType": "Tractor",
+    "brand": "GRIMME",
+    "name": "GL 420"
+  },
+  "data/vehicles/grimme/gl860/gl860.xml": {
+    "relPath": "data/vehicles/grimme/gl860/gl860.xml",
+    "type": "sowingMachine",
+    "category": "potatoPlanting",
+    "displayType": "Tractor",
+    "brand": "GRIMME",
+    "name": "GL 860 Compacta"
+  },
+  "data/vehicles/grimme/matrix1800/matrix1800.xml": {
+    "relPath": "data/vehicles/grimme/matrix1800/matrix1800.xml",
+    "type": "sowingMachine",
+    "category": "planters",
+    "displayType": "Tractor",
+    "brand": "GRIMME",
+    "name": "MATRIX 1800"
+  },
+  "data/vehicles/grimme/prios440/prios440.xml": {
+    "relPath": "data/vehicles/grimme/prios440/prios440.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "potatoPlanting",
+    "displayType": "Tractor",
+    "brand": "GRIMME",
+    "name": "Prios 440"
+  },
+  "data/vehicles/grimme/rh2460/rh2460.xml": {
+    "relPath": "data/vehicles/grimme/rh2460/rh2460.xml",
+    "type": "receivingHopper",
+    "category": "belts",
+    "displayType": "Tractor",
+    "brand": "GRIMME",
+    "name": "RH 24-60"
+  },
+  "data/vehicles/grimme/sl8022/sl8022.xml": {
+    "relPath": "data/vehicles/grimme/sl8022/sl8022.xml",
+    "type": "conveyorBelt",
+    "category": "belts",
+    "displayType": "Tractor",
+    "brand": "GRIMME",
+    "name": "SL 80-22 Quantum"
+  },
+  "data/vehicles/grimme/tc816/tc816.xml": {
+    "relPath": "data/vehicles/grimme/tc816/tc816.xml",
+    "type": "conveyorBelt",
+    "category": "belts",
+    "displayType": "Tractor",
+    "brand": "GRIMME",
+    "name": "TC 816"
+  },
+  "data/vehicles/grimme/ventor4150/ventor4150.xml": {
+    "relPath": "data/vehicles/grimme/ventor4150/ventor4150.xml",
+    "type": "combineCutterFruitPreparer",
+    "category": "potatoHarvesting",
+    "displayType": "Combine Harvester",
+    "brand": "GRIMME",
+    "name": "Ventor 4150"
+  },
+  "data/vehicles/hardi/aeon5200/aeon5200.xml": {
+    "relPath": "data/vehicles/hardi/aeon5200/aeon5200.xml",
+    "type": "sprayer",
+    "category": "sprayers",
+    "displayType": "Self-Propelled Sprayer",
+    "brand": "HARDI",
+    "name": "AEON 5200 DELTA FORCE"
+  },
+  "data/vehicles/hardi/mega1200l/mega1200l.xml": {
+    "relPath": "data/vehicles/hardi/mega1200L/mega1200L.xml",
+    "type": "sprayer",
+    "category": "sprayers",
+    "displayType": "Self-Propelled Sprayer",
+    "brand": "HARDI",
+    "name": "MEGA 1200L"
+  },
+  "data/vehicles/hardi/mega1200l/mega1200ltank.xml": {
+    "relPath": "data/vehicles/hardi/mega1200L/mega1200LTank.xml",
+    "type": "fillableImplement",
+    "category": "sprayers",
+    "displayType": "Self-Propelled Sprayer",
+    "brand": "HARDI",
+    "name": "MEGA 1200L TANK"
+  },
+  "data/vehicles/hardi/mercury4000l/mercury4000l.xml": {
+    "relPath": "data/vehicles/hardi/mercury4000L/mercury4000L.xml",
+    "type": "sprayer",
+    "category": "grapeTools",
+    "displayType": "Self-Propelled Sprayer",
+    "brand": "HARDI",
+    "name": "MERCURY 4000L"
+  },
+  "data/vehicles/hauer/xb150/xb150.xml": {
+    "relPath": "data/vehicles/hauer/xb150/xb150.xml",
+    "type": "attachableFrontloader",
+    "category": "frontLoaders",
+    "displayType": "Tractor",
+    "brand": "HAUER",
+    "name": "XB 150"
+  },
+  "data/vehicles/hauer/xb190/xb190.xml": {
+    "relPath": "data/vehicles/hauer/xb190/xb190.xml",
+    "type": "attachableFrontloader",
+    "category": "frontLoaders",
+    "displayType": "Tractor",
+    "brand": "HAUER",
+    "name": "XB 190"
+  },
+  "data/vehicles/hawe/dst16/dst16.xml": {
+    "relPath": "data/vehicles/hawe/dst16/dst16.xml",
+    "type": "manureSpreader",
+    "category": "manureSpreaders",
+    "displayType": "Tractor",
+    "brand": "HAWE",
+    "name": "DST 16"
+  },
+  "data/vehicles/hawe/kuw2000/kuw2000.xml": {
+    "relPath": "data/vehicles/hawe/kuw2000/kuw2000.xml",
+    "type": "augerWagon",
+    "category": "augerWagons",
+    "displayType": "Tractor",
+    "brand": "HAWE",
+    "name": "KUW 2000"
+  },
+  "data/vehicles/hawe/suw5000/suw5000.xml": {
+    "relPath": "data/vehicles/hawe/suw5000/suw5000.xml",
+    "type": "augerWagon",
+    "category": "augerWagons",
+    "displayType": "Tractor",
+    "brand": "HAWE",
+    "name": "SUW 5000"
+  },
+  "data/vehicles/heizomat/hm10500kf/hm10500kf.xml": {
+    "relPath": "data/vehicles/heizomat/hm10500KF/hm10500KF.xml",
+    "type": "woodCrusherTrailer",
+    "category": "woodChippers",
+    "displayType": "Tractor",
+    "brand": "HEIZOMAT",
+    "name": "HM 10-500 KF"
+  },
+  "data/vehicles/holaras/mes400/mes400.xml": {
+    "relPath": "data/vehicles/holaras/mes400/mes400.xml",
+    "type": "leveler",
+    "category": "leveler",
+    "displayType": "Tractor",
+    "brand": "HOLARAS",
+    "name": "MES 400"
+  },
+  "data/vehicles/holaras/stego485pro/stego485pro.xml": {
+    "relPath": "data/vehicles/holaras/stego485Pro/stego485Pro.xml",
+    "type": "silageRoller",
+    "category": "silocompaction",
+    "displayType": "Tractor",
+    "brand": "HOLARAS",
+    "name": "Stego 485 Pro"
+  },
+  "data/vehicles/holmer/terradost540/terradost540.xml": {
+    "relPath": "data/vehicles/holmer/terraDosT540/terraDosT540.xml",
+    "type": "combineDrivable",
+    "category": "beetHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "HOLMER",
+    "name": "Terra Dos 5\u201140"
+  },
+  "data/vehicles/holmer/terradost540header/terradost540header.xml": {
+    "relPath": "data/vehicles/holmer/terraDosT540Header/terraDosT540Header.xml",
+    "type": "cutterFruitPreparer",
+    "category": "beetHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "HOLMER",
+    "name": "HR 6"
+  },
+  "data/vehicles/horsch/avatar1225/avatar1225.xml": {
+    "relPath": "data/vehicles/horsch/avatar1225/avatar1225.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "seeders",
+    "displayType": "Tractor",
+    "brand": "HORSCH",
+    "name": "Avatar 12.25 SD"
+  },
+  "data/vehicles/horsch/cultro12tc/cultro12tc.xml": {
+    "relPath": "data/vehicles/horsch/cultro12TC/cultro12TC.xml",
+    "type": "mulcherRoll",
+    "category": "mulchers",
+    "displayType": "Tractor",
+    "brand": "HORSCH",
+    "name": "Cultro 12 TC"
+  },
+  "data/vehicles/horsch/finer6sl/finer6sl.xml": {
+    "relPath": "data/vehicles/horsch/finer6SL/finer6SL.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "HORSCH",
+    "name": "Finer 6 SL"
+  },
+  "data/vehicles/horsch/maestro2450sv/maestro2450sv.xml": {
+    "relPath": "data/vehicles/horsch/maestro2450SV/maestro2450SV.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "planters",
+    "displayType": "Tractor",
+    "brand": "HORSCH",
+    "name": "Maestro 24.50 SV"
+  },
+  "data/vehicles/horsch/maestro975rx/maestro975rx.xml": {
+    "relPath": "data/vehicles/horsch/maestro975RX/maestro975RX.xml",
+    "type": "sowingMachine",
+    "category": "planters",
+    "displayType": "Tractor",
+    "brand": "HORSCH",
+    "name": "Maestro 9.75 RX"
+  },
+  "data/vehicles/horsch/partner1600ft/partner1600ft.xml": {
+    "relPath": "data/vehicles/horsch/partner1600FT/partner1600FT.xml",
+    "type": "fillableImplement",
+    "category": "seedTanks",
+    "displayType": "Tractor",
+    "brand": "HORSCH",
+    "name": "Partner 1600 FT"
+  },
+  "data/vehicles/horsch/tiger8mt/tiger8mt.xml": {
+    "relPath": "data/vehicles/horsch/tiger8MT/tiger8MT.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "HORSCH",
+    "name": "Tiger 8 MT"
+  },
+  "data/vehicles/horsch/versa3kr/kredo.xml": {
+    "relPath": "data/vehicles/horsch/versa3KR/kredo.xml",
+    "type": "turnOnCultivator",
+    "category": "powerHarrows",
+    "displayType": "Tractor",
+    "brand": "HORSCH",
+    "name": "Kredo 3"
+  },
+  "data/vehicles/horsch/versa3kr/versa.xml": {
+    "relPath": "data/vehicles/horsch/versa3KR/versa.xml",
+    "type": "sowingMachine",
+    "category": "seeders",
+    "displayType": "Tractor",
+    "brand": "HORSCH",
+    "name": "Versa"
+  },
+  "data/vehicles/horsch/versa3kr/versa3kr.xml": {
+    "relPath": "data/vehicles/horsch/versa3KR/versa3KR.xml",
+    "type": "sowingMachine",
+    "category": "seeders",
+    "displayType": "Tractor",
+    "brand": "HORSCH",
+    "name": "Versa 3 KR"
+  },
+  "data/vehicles/impex/hannibalt50/hannibalt50.xml": {
+    "relPath": "data/vehicles/impex/hannibalT50/hannibalT50.xml",
+    "type": "woodHarvester",
+    "category": "forestryHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "IMPEX",
+    "name": "Hannibal T50"
+  },
+  "data/vehicles/international/cvseries/cvseries.xml": {
+    "relPath": "data/vehicles/international/cvSeries/cvSeries.xml",
+    "type": "carFillable",
+    "category": "trucks",
+    "displayType": "Truck",
+    "brand": "INTERNATIONAL",
+    "name": "CV Series"
+  },
+  "data/vehicles/international/series200/series200.xml": {
+    "relPath": "data/vehicles/international/series200/series200.xml",
+    "type": "car",
+    "category": "cars",
+    "displayType": "Car / Pickup",
+    "brand": "INTERNATIONAL",
+    "name": "Series 200"
+  },
+  "data/vehicles/international/transtarii/transtariieagle.xml": {
+    "relPath": "data/vehicles/international/transtarII/transtarIIEagle.xml",
+    "type": "tractor",
+    "category": "trucks",
+    "displayType": "Truck",
+    "brand": "INTERNATIONAL",
+    "name": "Transtar II Eagle"
+  },
+  "data/vehicles/iseki/hj6130/hj6130.xml": {
+    "relPath": "data/vehicles/iseki/hj6130/hj6130.xml",
+    "type": "riceHarvester",
+    "category": "riceHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "ISEKI",
+    "name": "HJ6130"
+  },
+  "data/vehicles/iseki/prj8d/prj8d.xml": {
+    "relPath": "data/vehicles/iseki/prj8d/prj8d.xml",
+    "type": "selfPropelledSowingMachineConsumable",
+    "category": "ricePlanters",
+    "displayType": "Tractor",
+    "brand": "ISEKI",
+    "name": "PRJ8D"
+  },
+  "data/vehicles/iseki/seriestjw/seriestjw.xml": {
+    "relPath": "data/vehicles/iseki/seriesTJW/seriesTJW.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "ISEKI",
+    "name": "TJW"
+  },
+  "data/vehicles/jcb/series547/series547.xml": {
+    "relPath": "data/vehicles/jcb/series547/series547.xml",
+    "type": "teleHandler",
+    "category": "teleLoaderVehicles",
+    "displayType": "Telehandler",
+    "brand": "JCB",
+    "name": "541-70 AGRI PRO"
+  },
+  "data/vehicles/jcb/wheelloader435s/wheelloader435s.xml": {
+    "relPath": "data/vehicles/jcb/wheelLoader435S/wheelLoader435S.xml",
+    "type": "tractor",
+    "category": "wheelLoaderVehicles",
+    "displayType": "Wheel Loader",
+    "brand": "JCB",
+    "name": "435S"
+  },
+  "data/vehicles/jenz/cobrahybrid/cobrahybrid.xml": {
+    "relPath": "data/vehicles/jenz/cobraHybrid/cobraHybrid.xml",
+    "type": "woodCrusherDrivable",
+    "category": "woodChippers",
+    "displayType": "Tractor",
+    "brand": "JENZ",
+    "name": "HEM 922 DQ Cobra hybrid"
+  },
+  "data/vehicles/jmmanufacturing/x1112/x1112.xml": {
+    "relPath": "data/vehicles/jmManufacturing/x1112/x1112.xml",
+    "type": "augerWagon",
+    "category": "augerWagons",
+    "displayType": "Tractor",
+    "brand": "JMMANUFACTURING",
+    "name": "X-Tended Reach 1112"
+  },
+  "data/vehicles/johndeere/c441r/c441r.xml": {
+    "relPath": "data/vehicles/johnDeere/c441R/c441R.xml",
+    "type": "balerWrapper",
+    "category": "balersRound",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "C441R"
+  },
+  "data/vehicles/johndeere/cp690/cp690.xml": {
+    "relPath": "data/vehicles/johnDeere/cp690/cp690.xml",
+    "type": "cottonHarvester",
+    "category": "cottonHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "JOHNDEERE",
+    "name": "CP690"
+  },
+  "data/vehicles/johndeere/cultivator980/cultivator980.xml": {
+    "relPath": "data/vehicles/johnDeere/cultivator980/cultivator980.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "980"
+  },
+  "data/vehicles/johndeere/fellerbuncher843l/fellerbuncher843l.xml": {
+    "relPath": "data/vehicles/johnDeere/fellerBuncher843L/fellerBuncher843L.xml",
+    "type": "selfPropelledFellerBuncher",
+    "category": "forestryHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "JOHNDEERE",
+    "name": "843L-II"
+  },
+  "data/vehicles/johndeere/frontloader600r/frontloader623r.xml": {
+    "relPath": "data/vehicles/johnDeere/frontloader600R/frontloader623R.xml",
+    "type": "attachableFrontloader",
+    "category": "frontLoaders",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "623R"
+  },
+  "data/vehicles/johndeere/frontloader600r/frontloader663r.xml": {
+    "relPath": "data/vehicles/johnDeere/frontloader600R/frontloader663R.xml",
+    "type": "attachableFrontloader",
+    "category": "frontLoaders",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "663R"
+  },
+  "data/vehicles/johndeere/frontloader600r/frontloader683r.xml": {
+    "relPath": "data/vehicles/johnDeere/frontloader600R/frontloader683R.xml",
+    "type": "attachableFrontloader",
+    "category": "frontLoaders",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "683R"
+  },
+  "data/vehicles/johndeere/frontloader700m/frontloader700m.xml": {
+    "relPath": "data/vehicles/johnDeere/frontloader700M/frontloader700M.xml",
+    "type": "attachableFrontloader",
+    "category": "frontLoaders",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "700M"
+  },
+  "data/vehicles/johndeere/harvester1270g/harvester1270g.xml": {
+    "relPath": "data/vehicles/johnDeere/harvester1270G/harvester1270G.xml",
+    "type": "woodHarvester",
+    "category": "forestryHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "JOHNDEERE",
+    "name": "1270G"
+  },
+  "data/vehicles/johndeere/header639/header639.xml": {
+    "relPath": "data/vehicles/johnDeere/header639/header639.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "JOHNDEERE",
+    "name": "639 Premium"
+  },
+  "data/vehicles/johndeere/headerc16f/headerc16f.xml": {
+    "relPath": "data/vehicles/johnDeere/headerC16F/headerC16F.xml",
+    "type": "cutter",
+    "category": "cornHeaders",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "C16F"
+  },
+  "data/vehicles/johndeere/headerhd45x/headerhd45x.xml": {
+    "relPath": "data/vehicles/johnDeere/headerHD45X/headerHD45X.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "HD45X"
+  },
+  "data/vehicles/johndeere/headerhd50f/headerhd50f.xml": {
+    "relPath": "data/vehicles/johnDeere/headerHD50F/headerHD50F.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "HD50F"
+  },
+  "data/vehicles/johndeere/headerrd35f/headerrd35f.xml": {
+    "relPath": "data/vehicles/johnDeere/headerRD35F/headerRD35F.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "RDF35"
+  },
+  "data/vehicles/johndeere/laforgeez/laforgeez.xml": {
+    "relPath": "data/vehicles/johnDeere/laforgeEZ/laforgeEZ.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "Laforge EZ 1700"
+  },
+  "data/vehicles/johndeere/pickup1150/pickup1150.xml": {
+    "relPath": "data/vehicles/johnDeere/pickUp1150/pickUp1150.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Car / Pickup",
+    "brand": "JOHNDEERE",
+    "name": "PickUp 1150"
+  },
+  "data/vehicles/johndeere/pickup1800/pickup1800.xml": {
+    "relPath": "data/vehicles/johnDeere/pickUp1800/pickUp1800.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Car / Pickup",
+    "brand": "JOHNDEERE",
+    "name": "PickUp 1800"
+  },
+  "data/vehicles/johndeere/pickup900/pickup900.xml": {
+    "relPath": "data/vehicles/johnDeere/pickUp900/pickUp900.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Car / Pickup",
+    "brand": "JOHNDEERE",
+    "name": "PickUp 900"
+  },
+  "data/vehicles/johndeere/series3650/series3650.xml": {
+    "relPath": "data/vehicles/johnDeere/series3650/series3650.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "3650"
+  },
+  "data/vehicles/johndeere/series6m/series6m.xml": {
+    "relPath": "data/vehicles/johnDeere/series6M/series6M.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "$l10n_shopItem_seriesXAdd"
+  },
+  "data/vehicles/johndeere/series6r/series6rextralarge.xml": {
+    "relPath": "data/vehicles/johnDeere/series6R/series6RExtraLarge.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "$l10n_shopItem_seriesXAdd"
+  },
+  "data/vehicles/johndeere/series6r/series6rlarge.xml": {
+    "relPath": "data/vehicles/johnDeere/series6R/series6RLarge.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "$l10n_shopItem_seriesXAdd"
+  },
+  "data/vehicles/johndeere/series7r/series7r.xml": {
+    "relPath": "data/vehicles/johnDeere/series7R/series7R.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "$l10n_shopItem_seriesX"
+  },
+  "data/vehicles/johndeere/series848l/series848l.xml": {
+    "relPath": "data/vehicles/johnDeere/series848L/series848L.xml",
+    "type": "forwarder",
+    "category": "forestryForwarders",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "848L-II"
+  },
+  "data/vehicles/johndeere/series8r/series8r.xml": {
+    "relPath": "data/vehicles/johnDeere/series8R/series8R.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "$l10n_shopItem_seriesX"
+  },
+  "data/vehicles/johndeere/series8rt/series8rt.xml": {
+    "relPath": "data/vehicles/johnDeere/series8RT/series8RT.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "$l10n_shopItem_seriesX"
+  },
+  "data/vehicles/johndeere/series8rx/series8rx.xml": {
+    "relPath": "data/vehicles/johnDeere/series8RX/series8RX.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "$l10n_shopItem_seriesX"
+  },
+  "data/vehicles/johndeere/series9000/series9000.xml": {
+    "relPath": "data/vehicles/johnDeere/series9000/series9000.xml",
+    "type": "combineDrivable",
+    "category": "forageHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "JOHNDEERE",
+    "name": "$l10n_shopItem_seriesX"
+  },
+  "data/vehicles/johndeere/series9r/series9r.xml": {
+    "relPath": "data/vehicles/johnDeere/series9R/series9R.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "9R Series (440-640)"
+  },
+  "data/vehicles/johndeere/series9rx/series9rx.xml": {
+    "relPath": "data/vehicles/johnDeere/series9RX/series9RX.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "9RX Series"
+  },
+  "data/vehicles/johndeere/series9rx830/series9rx830.xml": {
+    "relPath": "data/vehicles/johnDeere/series9RX830/series9RX830.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "9RX Series (710-830)"
+  },
+  "data/vehicles/johndeere/seriess7/seriess7.xml": {
+    "relPath": "data/vehicles/johnDeere/seriesS7/seriesS7.xml",
+    "type": "combineDrivable",
+    "category": "harvesters",
+    "displayType": "Combine Harvester",
+    "brand": "JOHNDEERE",
+    "name": "S7"
+  },
+  "data/vehicles/johndeere/seriesx9/seriesx9.xml": {
+    "relPath": "data/vehicles/johnDeere/seriesX9/seriesX9.xml",
+    "type": "combineDrivable",
+    "category": "harvesters",
+    "displayType": "Combine Harvester",
+    "brand": "JOHNDEERE",
+    "name": "X9 1100"
+  },
+  "data/vehicles/johndeere/v452r/v452r.xml": {
+    "relPath": "data/vehicles/johnDeere/v452R/v452R.xml",
+    "type": "baler",
+    "category": "balersRound",
+    "displayType": "Tractor",
+    "brand": "JOHNDEERE",
+    "name": "V452R"
+  },
+  "data/vehicles/jungheinrich/efgs50s/efgs50s.xml": {
+    "relPath": "data/vehicles/jungheinrich/efgS50S/efgS50S.xml",
+    "type": "teleHandler",
+    "category": "forklifts",
+    "displayType": "Telehandler",
+    "brand": "JUNGHEINRICH",
+    "name": "EFG S50"
+  },
+  "data/vehicles/kaercher/hds9184m/hds9184m.xml": {
+    "relPath": "data/vehicles/kaercher/hds9184M/hds9184M.xml",
+    "type": "highPressureWasher",
+    "category": "handtoolsMisc",
+    "displayType": "Tractor",
+    "brand": "KAERCHER",
+    "name": "HDS 9/18-4 M"
+  },
+  "data/vehicles/kaweco/profi2/profi2.xml": {
+    "relPath": "data/vehicles/kaweco/profi2/profi2.xml",
+    "type": "manureBarrel",
+    "category": "slurryTanks",
+    "displayType": "Tractor",
+    "brand": "KAWECO",
+    "name": "Profi II"
+  },
+  "data/vehicles/kaweco/radium255/radium255.xml": {
+    "relPath": "data/vehicles/kaweco/radium255/radium255.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "KAWECO",
+    "name": "Radium 255"
+  },
+  "data/vehicles/kemper/comfortsupportwheel/comfortsupportwheel.xml": {
+    "relPath": "data/vehicles/kemper/comfortSupportWheel/comfortSupportWheel.xml",
+    "type": "implement",
+    "category": "forageHarvesterCutterTrailers",
+    "displayType": "Combine Harvester",
+    "brand": "KEMPER",
+    "name": "$l10n_shopItem_comfortSupportWheel"
+  },
+  "data/vehicles/kemper/n3003/n3003.xml": {
+    "relPath": "data/vehicles/kemper/n3003/n3003.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "KEMPER",
+    "name": "3003"
+  },
+  "data/vehicles/kemper/plus345/plus345.xml": {
+    "relPath": "data/vehicles/kemper/plus345/plus345.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "KEMPER",
+    "name": "345 Plus"
+  },
+  "data/vehicles/kemper/plus345/plus345_johndeere.xml": {
+    "relPath": "data/vehicles/kemper/plus345/plus345_johnDeere.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "JOHNDEERE",
+    "name": "345 Plus"
+  },
+  "data/vehicles/kemper/plus345/plus345_newholland.xml": {
+    "relPath": "data/vehicles/kemper/plus345/plus345_newHolland.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "NEWHOLLAND",
+    "name": "450 SFI"
+  },
+  "data/vehicles/kemper/plus360/plus360.xml": {
+    "relPath": "data/vehicles/kemper/plus360/plus360.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "KEMPER",
+    "name": "360 Plus"
+  },
+  "data/vehicles/kemper/plus360/plus360_johndeere.xml": {
+    "relPath": "data/vehicles/kemper/plus360/plus360_johnDeere.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "JOHNDEERE",
+    "name": "360 Plus"
+  },
+  "data/vehicles/kemper/plus360/plus360_newholland.xml": {
+    "relPath": "data/vehicles/kemper/plus360/plus360_newHolland.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "NEWHOLLAND",
+    "name": "600 SFI"
+  },
+  "data/vehicles/kemper/plus375/plus375.xml": {
+    "relPath": "data/vehicles/kemper/plus375/plus375.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "KEMPER",
+    "name": "375 Plus"
+  },
+  "data/vehicles/kemper/plus375/plus375_johndeere.xml": {
+    "relPath": "data/vehicles/kemper/plus375/plus375_johnDeere.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "JOHNDEERE",
+    "name": "375 Plus"
+  },
+  "data/vehicles/kemper/plus375/plus375_newholland.xml": {
+    "relPath": "data/vehicles/kemper/plus375/plus375_newHolland.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "NEWHOLLAND",
+    "name": "750 SFI"
+  },
+  "data/vehicles/kemper/plus390/plus390.xml": {
+    "relPath": "data/vehicles/kemper/plus390/plus390.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "KEMPER",
+    "name": "390 Plus"
+  },
+  "data/vehicles/kemper/plus390/plus390_johndeere.xml": {
+    "relPath": "data/vehicles/kemper/plus390/plus390_johnDeere.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "JOHNDEERE",
+    "name": "390 Plus"
+  },
+  "data/vehicles/kemper/plus390/plus390_newholland.xml": {
+    "relPath": "data/vehicles/kemper/plus390/plus390_newHolland.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "NEWHOLLAND",
+    "name": "900 SFI"
+  },
+  "data/vehicles/kesla/nd144/nd144.xml": {
+    "relPath": "data/vehicles/kesla/nd144/nd144.xml",
+    "type": "craneTrailer",
+    "category": "woodTransport",
+    "displayType": "Tractor",
+    "brand": "KESLA",
+    "name": "144ND"
+  },
+  "data/vehicles/kingstontrailers/belvedere/belvedere.xml": {
+    "relPath": "data/vehicles/kingstonTrailers/belvedere/belvedere.xml",
+    "type": "livestockTrailer",
+    "category": "animalTransport",
+    "displayType": "Tractor",
+    "brand": "KINGSTON",
+    "name": "Belvedere"
+  },
+  "data/vehicles/kinze/machtill401/machtill401.xml": {
+    "relPath": "data/vehicles/kinze/machTill401/machTill401.xml",
+    "type": "cultivator",
+    "category": "discHarrows",
+    "displayType": "Tractor",
+    "brand": "KINZE",
+    "name": "Mach Till 412"
+  },
+  "data/vehicles/kinze/planter4900/planter4900.xml": {
+    "relPath": "data/vehicles/kinze/planter4900/planter4900.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "planters",
+    "displayType": "Tractor",
+    "brand": "KINZE",
+    "name": "4905 Blue Drive"
+  },
+  "data/vehicles/knoche/crossmax300/crossmax300.xml": {
+    "relPath": "data/vehicles/knoche/crossmax300/crossmax300.xml",
+    "type": "cultivator",
+    "category": "discHarrows",
+    "displayType": "Tractor",
+    "brand": "KNOCHE",
+    "name": "CROSSMAX 300"
+  },
+  "data/vehicles/knoche/ecocultivator300/ecocultivator300.xml": {
+    "relPath": "data/vehicles/knoche/ecoCultivator300/ecoCultivator300.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "KNOCHE",
+    "name": "ECO-CULTIVATOR 300"
+  },
+  "data/vehicles/knoche/speedmax300/speedmax300.xml": {
+    "relPath": "data/vehicles/knoche/speedmax300/speedmax300.xml",
+    "type": "mulcherRoll",
+    "category": "mulchers",
+    "displayType": "Tractor",
+    "brand": "KNOCHE",
+    "name": "SPEEDMAX 300"
+  },
+  "data/vehicles/knoche/speedmax560/speedmax560.xml": {
+    "relPath": "data/vehicles/knoche/speedmax560/speedmax560.xml",
+    "type": "mulcherRoll",
+    "category": "mulchers",
+    "displayType": "Tractor",
+    "brand": "KNOCHE",
+    "name": "SPEEDMAX 560"
+  },
+  "data/vehicles/koeckerling/ultima800/ultima800.xml": {
+    "relPath": "data/vehicles/koeckerling/ultima800/ultima800.xml",
+    "type": "sowingMachine",
+    "category": "seeders",
+    "displayType": "Tractor",
+    "brand": "KOCKERLING",
+    "name": "Ultima 800"
+  },
+  "data/vehicles/koller/eckoflex/eckoflex.xml": {
+    "relPath": "data/vehicles/koller/eckoFlex/eckoFlex.xml",
+    "type": "yarderCarriage",
+    "category": "forestryWinches",
+    "displayType": "Car / Pickup",
+    "brand": "KOLLER",
+    "name": "ECKO FLEX"
+  },
+  "data/vehicles/koller/k300/k300.xml": {
+    "relPath": "data/vehicles/koller/k300/k300.xml",
+    "type": "yarderTower",
+    "category": "forestryWinches",
+    "displayType": "Tractor",
+    "brand": "KOLLER",
+    "name": "K 300-T + SKA 1-Z"
+  },
+  "data/vehicles/koller/k307/k307.xml": {
+    "relPath": "data/vehicles/koller/k307/k307.xml",
+    "type": "yarderTower",
+    "category": "forestryWinches",
+    "displayType": "Tractor",
+    "brand": "KOLLER",
+    "name": "K 307c-H + ECKO FLEX"
+  },
+  "data/vehicles/koller/ska1/ska1.xml": {
+    "relPath": "data/vehicles/koller/ska1/ska1.xml",
+    "type": "yarderCarriage",
+    "category": "forestryWinches",
+    "displayType": "Car / Pickup",
+    "brand": "KOLLER",
+    "name": "SKA1"
+  },
+  "data/vehicles/komatsu/harvester951/harvester951.xml": {
+    "relPath": "data/vehicles/komatsu/harvester951/harvester951.xml",
+    "type": "woodHarvester",
+    "category": "forestryHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "KOMATSU",
+    "name": "951"
+  },
+  "data/vehicles/kotte/frc65/frc65.xml": {
+    "relPath": "data/vehicles/kotte/frc65/frc65.xml",
+    "type": "manureTrailer",
+    "category": "slurryTransport",
+    "displayType": "Tractor",
+    "brand": "KOTTE",
+    "name": "FRC 65"
+  },
+  "data/vehicles/kotte/pq32000/pq32000.xml": {
+    "relPath": "data/vehicles/kotte/pq32000/pq32000.xml",
+    "type": "manureBarrel",
+    "category": "slurryTanks",
+    "displayType": "Tractor",
+    "brand": "KOTTE",
+    "name": "PQ 32.000"
+  },
+  "data/vehicles/kotte/tsa/tsa.xml": {
+    "relPath": "data/vehicles/kotte/tsa/tsa.xml",
+    "type": "manureTrailer",
+    "category": "slurryTransport",
+    "displayType": "Tractor",
+    "brand": "KOTTE",
+    "name": "TSA 30000"
+  },
+  "data/vehicles/kramer/kt557/kt557.xml": {
+    "relPath": "data/vehicles/kramer/kt557/kt557.xml",
+    "type": "teleHandler",
+    "category": "teleLoaderVehicles",
+    "displayType": "Telehandler",
+    "brand": "KRAMER",
+    "name": "KT577"
+  },
+  "data/vehicles/krampe/bigbodys750/bigbodys750.xml": {
+    "relPath": "data/vehicles/krampe/bigBodyS750/bigBodyS750.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "KRAMPE",
+    "name": "Big Body 750 S"
+  },
+  "data/vehicles/krampe/dolly10l/dolly10l.xml": {
+    "relPath": "data/vehicles/krampe/dolly10L/dolly10L.xml",
+    "type": "dolly",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "KRAMPE",
+    "name": "Dolly 10 L"
+  },
+  "data/vehicles/krampe/hp20/hp20.xml": {
+    "relPath": "data/vehicles/krampe/hp20/hp20.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "KRAMPE",
+    "name": "HALFPIPE HP 20"
+  },
+  "data/vehicles/krampe/rambodyas750/rambodyas750.xml": {
+    "relPath": "data/vehicles/krampe/ramBodyAS750/ramBodyAS750.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "KRAMPE",
+    "name": "RamBody AS 750+"
+  },
+  "data/vehicles/krampe/sks30_150/sks30_150.xml": {
+    "relPath": "data/vehicles/krampe/sks30_150/sks30_150.xml",
+    "type": "trailer",
+    "category": "trailersSemi",
+    "displayType": "Tractor",
+    "brand": "KRAMPE",
+    "name": "SKS 30/1050"
+  },
+  "data/vehicles/kroeger/pwo24/pwo24.xml": {
+    "relPath": "data/vehicles/kroeger/pwo24/pwo24.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "baleLoaders trailersFlatbed",
+    "displayType": "Tractor",
+    "brand": "KROEGER",
+    "name": "PWO 24"
+  },
+  "data/vehicles/krone/agriliner520/agriliner520.xml": {
+    "relPath": "data/vehicles/krone/agriliner520/agriliner520.xml",
+    "type": "trailerLiftableAxle",
+    "category": "trailersSemi",
+    "displayType": "Tractor",
+    "brand": "KRONE",
+    "name": "GX AgriLiner 520"
+  },
+  "data/vehicles/krone/bigm450/bigm450.xml": {
+    "relPath": "data/vehicles/krone/bigM450/bigM450.xml",
+    "type": "selfPropelledMower",
+    "category": "mowers",
+    "displayType": "Self-Propelled Mower",
+    "brand": "KRONE",
+    "name": "BiG M 450"
+  },
+  "data/vehicles/krone/bigpack1290hdpvc/bigpack1290hdpvc.xml": {
+    "relPath": "data/vehicles/krone/bigPack1290HDPVC/bigPack1290HDPVC.xml",
+    "type": "baler",
+    "category": "balersSquare",
+    "displayType": "Tractor",
+    "brand": "KRONE",
+    "name": "BiG Pack 1290 HDP VC"
+  },
+  "data/vehicles/krone/bigx1180/bigx1180.xml": {
+    "relPath": "data/vehicles/krone/bigX1180/bigX1180.xml",
+    "type": "combineDrivable",
+    "category": "forageHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "KRONE",
+    "name": "BiG X 1180"
+  },
+  "data/vehicles/krone/collect900_3/collect900_3.xml": {
+    "relPath": "data/vehicles/krone/collect900_3/collect900_3.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "KRONE",
+    "name": "X-Collect 900-3"
+  },
+  "data/vehicles/krone/easyflow300s/easyflow300s.xml": {
+    "relPath": "data/vehicles/krone/easyFlow300S/easyFlow300S.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "KRONE",
+    "name": "EasyFlow 300 S"
+  },
+  "data/vehicles/krone/gx520/gx520.xml": {
+    "relPath": "data/vehicles/krone/gx520/gx520.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "KRONE",
+    "name": "GX 520"
+  },
+  "data/vehicles/krone/profiliner/profiliner.xml": {
+    "relPath": "data/vehicles/krone/profiLiner/profiLiner.xml",
+    "type": "trailer",
+    "category": "trailersSemi trailersFlatbed",
+    "displayType": "Tractor",
+    "brand": "KRONETRAILER",
+    "name": "Profi Liner"
+  },
+  "data/vehicles/krone/swadros350highland/swadros350highland.xml": {
+    "relPath": "data/vehicles/krone/swadroS350Highland/swadroS350Highland.xml",
+    "type": "windrower",
+    "category": "windrowers",
+    "displayType": "Tractor",
+    "brand": "KRONE",
+    "name": "Swadro S 350 Highland"
+  },
+  "data/vehicles/krone/swadrots970/swadrots970.xml": {
+    "relPath": "data/vehicles/krone/swadroTS970/swadroTS970.xml",
+    "type": "windrower",
+    "category": "windrowers",
+    "displayType": "Tractor",
+    "brand": "KRONE",
+    "name": "Swadro TS 970"
+  },
+  "data/vehicles/krone/varipackv190xc/varipackv190xc.xml": {
+    "relPath": "data/vehicles/krone/varipackV190XC/varipackV190XC.xml",
+    "type": "baler",
+    "category": "balersRound",
+    "displayType": "Tractor",
+    "brand": "KRONE",
+    "name": "VariPack V 190 XC Plus"
+  },
+  "data/vehicles/krone/vendrokw820highland/vendrokw820highland.xml": {
+    "relPath": "data/vehicles/krone/vendroKW820Highland/vendroKW820Highland.xml",
+    "type": "tedder",
+    "category": "tedders",
+    "displayType": "Tractor",
+    "brand": "KRONE",
+    "name": "Vendro 820 Highland"
+  },
+  "data/vehicles/krone/xdisc620/xdisc620.xml": {
+    "relPath": "data/vehicles/krone/xDisc620/xDisc620.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "KRONE",
+    "name": "XDisc 620"
+  },
+  "data/vehicles/krone/xdisc620trailer/xdisc620trailer.xml": {
+    "relPath": "data/vehicles/krone/xDisc620Trailer/xDisc620Trailer.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "forageHarvesterCutterTrailers",
+    "displayType": "Combine Harvester",
+    "brand": "KRONE",
+    "name": "XDisc 620 %s"
+  },
+  "data/vehicles/kubota/m77/m77.xml": {
+    "relPath": "data/vehicles/kubota/m77/m77.xml",
+    "type": "baler",
+    "category": "frontLoaders",
+    "displayType": "Tractor",
+    "brand": "KUBOTA",
+    "name": "M77"
+  },
+  "data/vehicles/kubota/r640/r640.xml": {
+    "relPath": "data/vehicles/kubota/r640/r640.xml",
+    "type": "tractor",
+    "category": "frontLoaderVehicles",
+    "displayType": "Wheel Loader",
+    "brand": "KUBOTA",
+    "name": "R640"
+  },
+  "data/vehicles/kubota/rtvx1140/rtvx1140.xml": {
+    "relPath": "data/vehicles/kubota/rtvx1140/rtvx1140.xml",
+    "type": "carFillable",
+    "category": "cars",
+    "displayType": "Car / Pickup",
+    "brand": "KUBOTA",
+    "name": "RTV-X1140W-H"
+  },
+  "data/vehicles/kubota/rtvxg850/rtvxg850.xml": {
+    "relPath": "data/vehicles/kubota/rtvxG850/rtvxg850.xml",
+    "type": "carFillable",
+    "category": "cars",
+    "displayType": "Car / Pickup",
+    "brand": "KUBOTA",
+    "name": "RTV-XG850 SIDEKICK"
+  },
+  "data/vehicles/kubota/seriesm8/seriesm8.xml": {
+    "relPath": "data/vehicles/kubota/seriesM8/seriesM8.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "KUBOTA",
+    "name": "$l10n_shopItem_seriesXUpper"
+  },
+  "data/vehicles/kubota/svl972/svl972.xml": {
+    "relPath": "data/vehicles/kubota/svl972/svl972.xml",
+    "type": "teleHandler",
+    "category": "skidSteerVehicles",
+    "displayType": "Telehandler",
+    "brand": "KUBOTA",
+    "name": "SVL 97-2"
+  },
+  "data/vehicles/kuhn/btfr6030/btfr6030.xml": {
+    "relPath": "data/vehicles/kuhn/btfr6030/btfr6030.xml",
+    "type": "sowingMachine",
+    "category": "seeders",
+    "displayType": "Tractor",
+    "brand": "KUHN",
+    "name": "HR 6040 RCS + BTFR 6030"
+  },
+  "data/vehicles/kuhn/espro6000rc/espro6000rc.xml": {
+    "relPath": "data/vehicles/kuhn/espro6000RC/espro6000RC.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "seeders",
+    "displayType": "Tractor",
+    "brand": "KUHN",
+    "name": "ESPRO 6000 RC"
+  },
+  "data/vehicles/kuhn/ga4731/ga4731.xml": {
+    "relPath": "data/vehicles/kuhn/ga4731/ga4731.xml",
+    "type": "windrower",
+    "category": "windrowers",
+    "displayType": "Tractor",
+    "brand": "KUHN",
+    "name": "GA 4731"
+  },
+  "data/vehicles/kuhn/gmd3123f/gmd3123f.xml": {
+    "relPath": "data/vehicles/kuhn/gmd3123F/gmd3123F.xml",
+    "type": "mower",
+    "category": "mowers",
+    "displayType": "Self-Propelled Mower",
+    "brand": "KUHN",
+    "name": "GMD 3123 F"
+  },
+  "data/vehicles/kuhn/gmd8730/gmd8730.xml": {
+    "relPath": "data/vehicles/kuhn/gmd8730/gmd8730.xml",
+    "type": "mower",
+    "category": "mowers",
+    "displayType": "Self-Propelled Mower",
+    "brand": "KUHN",
+    "name": "GMD 8730-FF"
+  },
+  "data/vehicles/kuhn/hr6040rcs/hr6040rcs.xml": {
+    "relPath": "data/vehicles/kuhn/hr6040RCS/hr6040RCS.xml",
+    "type": "turnOnCultivator",
+    "category": "powerHarrows",
+    "displayType": "Tractor",
+    "brand": "KUHN",
+    "name": "HR 6040 RCS"
+  },
+  "data/vehicles/kuhn/maxima3til/maxima3til.xml": {
+    "relPath": "data/vehicles/kuhn/maxima3TIL/maxima3TIL.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "planters",
+    "displayType": "Tractor",
+    "brand": "KUHN",
+    "name": "MAXIMA 3 TI L"
+  },
+  "data/vehicles/kuhn/primor15070/primor15070.xml": {
+    "relPath": "data/vehicles/kuhn/primor15070/primor15070.xml",
+    "type": "strawBlower",
+    "category": "strawBlowers",
+    "displayType": "Tractor",
+    "brand": "KUHN",
+    "name": "PRIMOR 15070 M"
+  },
+  "data/vehicles/kuhn/prolander7500/prolander7500.xml": {
+    "relPath": "data/vehicles/kuhn/prolander7500/prolander7500.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "KUHN",
+    "name": "PROLANDER 7500"
+  },
+  "data/vehicles/kuhn/ra142/ra142.xml": {
+    "relPath": "data/vehicles/kuhn/ra142/ra142.xml",
+    "type": "mixerWagon",
+    "category": "forageMixers",
+    "displayType": "Tractor",
+    "brand": "KUHN",
+    "name": "RA 142"
+  },
+  "data/vehicles/kuhn/sb1290id/sb1290id.xml": {
+    "relPath": "data/vehicles/kuhn/sb1290ID/sb1290ID.xml",
+    "type": "baler",
+    "category": "balersSquare",
+    "displayType": "Tractor",
+    "brand": "KUHN",
+    "name": "SB 1290 iD"
+  },
+  "data/vehicles/kuhn/spwintense/spwintense.xml": {
+    "relPath": "data/vehicles/kuhn/spwIntense/spwIntense.xml",
+    "type": "drivableMixerWagon",
+    "category": "forageMixers",
+    "displayType": "Tractor",
+    "brand": "KUHN",
+    "name": "SPW INTENSE 25.2 CL"
+  },
+  "data/vehicles/kuhn/sw4014/sw4014.xml": {
+    "relPath": "data/vehicles/kuhn/sw4014/sw4014.xml",
+    "type": "baleWrapper",
+    "category": "baleWrappers",
+    "displayType": "Tractor",
+    "brand": "KUHN",
+    "name": "SW 4014"
+  },
+  "data/vehicles/kuhn/tf1512/tf1512.xml": {
+    "relPath": "data/vehicles/kuhn/tf1512/tf1512.xml",
+    "type": "fillableImplement",
+    "category": "seedTanks",
+    "displayType": "Tractor",
+    "brand": "KUHN",
+    "name": "TF 1512"
+  },
+  "data/vehicles/kuhn/vb3190/vb3190.xml": {
+    "relPath": "data/vehicles/kuhn/vb3190/vb3190.xml",
+    "type": "baler",
+    "category": "balersRound",
+    "displayType": "Tractor",
+    "brand": "KUHN",
+    "name": "VB 3190"
+  },
+  "data/vehicles/kverneland/miniairnova3m/miniairnova3m.xml": {
+    "relPath": "data/vehicles/kverneland/miniairNova3m/miniairNova3m.xml",
+    "type": "sowingMachine",
+    "category": "vegetablePlanters",
+    "displayType": "Tractor",
+    "brand": "KVERNELAND",
+    "name": "Miniair Nova %s"
+  },
+  "data/vehicles/kverneland/miniairnova6m/miniairnova6m.xml": {
+    "relPath": "data/vehicles/kverneland/miniairNova6m/miniairNova6m.xml",
+    "type": "sowingMachine",
+    "category": "vegetablePlanters",
+    "displayType": "Tractor",
+    "brand": "KVERNELAND",
+    "name": "Miniair Nova %s"
+  },
+  "data/vehicles/kverneland/optimars9m/optimars9m.xml": {
+    "relPath": "data/vehicles/kverneland/optimaRS9m/optimaRS9m.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "planters",
+    "displayType": "Tractor",
+    "brand": "KVERNELAND",
+    "name": "Optima RS"
+  },
+  "data/vehicles/kverneland/pw10012/pw10012.xml": {
+    "relPath": "data/vehicles/kverneland/pw10012/pw10012.xml",
+    "type": "plowPacker",
+    "category": "plows",
+    "displayType": "Tractor",
+    "brand": "KVERNELAND",
+    "name": "PW 100 - 12"
+  },
+  "data/vehicles/lacotec/lhii/lhii.xml": {
+    "relPath": "data/vehicles/lacotec/lhII/lhII.xml",
+    "type": "attachableCombineWithoutCutter",
+    "category": "forageHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "LACOTEC",
+    "name": "LH II"
+  },
+  "data/vehicles/landini/seriesrex4/seriesrex4.xml": {
+    "relPath": "data/vehicles/landini/seriesREX4/seriesREX4.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "LANDINI",
+    "name": "REX 4 GT"
+  },
+  "data/vehicles/lemken/juwel6/juwel6.xml": {
+    "relPath": "data/vehicles/lemken/juwel6/juwel6.xml",
+    "type": "plow",
+    "category": "plows",
+    "displayType": "Tractor",
+    "brand": "LEMKEN",
+    "name": "Juwel 6 M V"
+  },
+  "data/vehicles/lemken/koralin9840/koralin9840.xml": {
+    "relPath": "data/vehicles/lemken/koralin9840/koralin9840.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "LEMKEN",
+    "name": "Koralin 9-840"
+  },
+  "data/vehicles/lemken/smaragd9_500k/smaragd9_500k.xml": {
+    "relPath": "data/vehicles/lemken/smaragd9_500k/smaragd9_500k.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "LEMKEN",
+    "name": "Smaragd 9/500K"
+  },
+  "data/vehicles/lemken/solitair12/solitair12.xml": {
+    "relPath": "data/vehicles/lemken/solitair12/solitair12.xml",
+    "type": "sowingMachine",
+    "category": "seeders",
+    "displayType": "Tractor",
+    "brand": "LEMKEN",
+    "name": "Solitair 12"
+  },
+  "data/vehicles/lemken/titan18/titan18.xml": {
+    "relPath": "data/vehicles/lemken/titan18/titan18.xml",
+    "type": "plow",
+    "category": "plows",
+    "displayType": "Tractor",
+    "brand": "LEMKEN",
+    "name": "Titan 18"
+  },
+  "data/vehicles/lindner/lintrac130/lintrac130.xml": {
+    "relPath": "data/vehicles/lindner/lintrac130/lintrac130.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "LINDNER",
+    "name": "Lintrac 130"
+  },
+  "data/vehicles/lizard/mks32/mks32.xml": {
+    "relPath": "data/vehicles/lizard/mks32/mks32.xml",
+    "type": "waterTrailer",
+    "category": "barrels",
+    "displayType": "Tractor",
+    "brand": "LIZARD",
+    "name": "MKS 32"
+  },
+  "data/vehicles/lizard/mks8/mks8.xml": {
+    "relPath": "data/vehicles/lizard/mks8/mks8.xml",
+    "type": "waterTrailer",
+    "category": "barrels",
+    "displayType": "Tractor",
+    "brand": "LIZARD",
+    "name": "MKS 8"
+  },
+  "data/vehicles/lizard/module4/module4.xml": {
+    "relPath": "data/vehicles/lizard/module4/module4.xml",
+    "type": "baleLoader",
+    "category": "cottonTransport",
+    "displayType": "Tractor",
+    "brand": "LIZARD",
+    "name": "Module 4"
+  },
+  "data/vehicles/lizard/modulex/modulex.xml": {
+    "relPath": "data/vehicles/lizard/moduleX/moduleX.xml",
+    "type": "baleLoader",
+    "category": "cottonTransport",
+    "displayType": "Tractor",
+    "brand": "LIZARD",
+    "name": "Module X Semi"
+  },
+  "data/vehicles/lizard/multipurposetruck/multipurposetruck.xml": {
+    "relPath": "data/vehicles/lizard/multiPurposeTruck/multiPurposeTruck.xml",
+    "type": "carFillable",
+    "category": "trucks",
+    "displayType": "Truck",
+    "brand": "LIZARD",
+    "name": "Dragon"
+  },
+  "data/vehicles/lizard/pickup2017/pickup2017.xml": {
+    "relPath": "data/vehicles/lizard/pickup2017/pickup2017.xml",
+    "type": "car",
+    "category": "cars",
+    "displayType": "Car / Pickup",
+    "brand": "LIZARD",
+    "name": "Pickup 2017"
+  },
+  "data/vehicles/lizard/s710/s710.xml": {
+    "relPath": "data/vehicles/lizard/s710/s710.xml",
+    "type": "pickupConveyorBelt",
+    "category": "belts",
+    "displayType": "Tractor",
+    "brand": "LIZARD",
+    "name": "S-710"
+  },
+  "data/vehicles/lodeking/distinctiontriplehopper/distinctiontriplehopper.xml": {
+    "relPath": "data/vehicles/lodeKing/distinctionTripleHopper/distinctionTripleHopper.xml",
+    "type": "trailer",
+    "category": "trailersSemi",
+    "displayType": "Tractor",
+    "brand": "LODEKING",
+    "name": "Distinction Triple Hopper"
+  },
+  "data/vehicles/lodeking/prestigesuperbtrailer/prestigesuperb.xml": {
+    "relPath": "data/vehicles/lodeKing/prestigeSuperBTrailer/prestigeSuperB.xml",
+    "type": "trailer",
+    "category": "trailersSemi",
+    "displayType": "Tractor",
+    "brand": "LODEKING",
+    "name": "Prestige Super-B"
+  },
+  "data/vehicles/lodeking/prestigesuperbtrailer/prestigesuperb_back.xml": {
+    "relPath": "data/vehicles/lodeKing/prestigeSuperBTrailer/prestigeSuperB_back.xml",
+    "type": "trailer",
+    "category": "trailersSemi",
+    "displayType": "Tractor",
+    "brand": "LODEKING",
+    "name": "Prestige Super-B Pull trailer"
+  },
+  "data/vehicles/lodeking/prestigesuperbtrailer/prestigesuperb_front.xml": {
+    "relPath": "data/vehicles/lodeKing/prestigeSuperBTrailer/prestigeSuperB_front.xml",
+    "type": "trailer",
+    "category": "trailersSemi",
+    "displayType": "Tractor",
+    "brand": "LODEKING",
+    "name": "Prestige Super-B Pull trailer"
+  },
+  "data/vehicles/lodeking/renowntriaxlebeavertaillowdrop/renowntriaxlebeavertaillowdrop.xml": {
+    "relPath": "data/vehicles/lodeKing/renownTriAxleBeavertailLowDrop/renownTriAxleBeavertailLowDrop.xml",
+    "type": "trailer",
+    "category": "lowloaders trailersSemi",
+    "displayType": "Tractor",
+    "brand": "LODEKING",
+    "name": "Renown Drop Deck"
+  },
+  "data/vehicles/macdon/fd250/fd250.xml": {
+    "relPath": "data/vehicles/macDon/fd250/fd250.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "MACDON",
+    "name": "FD250 FlexDraper\u00ae"
+  },
+  "data/vehicles/mack/anthem/anthem.xml": {
+    "relPath": "data/vehicles/mack/anthem/anthem.xml",
+    "type": "tractor",
+    "category": "trucks",
+    "displayType": "Truck",
+    "brand": "MACK",
+    "name": "Anthem 6x4"
+  },
+  "data/vehicles/mack/anthem/anthemblack.xml": {
+    "relPath": "data/vehicles/mack/anthem/anthemBlack.xml",
+    "type": "tractor",
+    "category": "trucks",
+    "displayType": "Truck",
+    "brand": "MACK",
+    "name": "Mack Black Anthem"
+  },
+  "data/vehicles/mack/superliner1979/superliner1979.xml": {
+    "relPath": "data/vehicles/mack/superliner1979/superliner1979.xml",
+    "type": "tractor",
+    "category": "trucks",
+    "displayType": "Truck",
+    "brand": "MACK",
+    "name": "Super-Liner 6x4"
+  },
+  "data/vehicles/magsi/telehandlerbalefork/telehandlerbalefork.xml": {
+    "relPath": "data/vehicles/magsi/telehandlerBaleFork/telehandlerBaleFork.xml",
+    "type": "implementDynamicMountAttacher",
+    "category": "teleLoaderTools",
+    "displayType": "Telehandler",
+    "brand": "MAGSI",
+    "name": "$l10n_shopItem_telehandlerBaleFork"
+  },
+  "data/vehicles/magsi/telehandlerbalegrab/telehandlerbalegrab.xml": {
+    "relPath": "data/vehicles/magsi/telehandlerBaleGrab/telehandlerBaleGrab.xml",
+    "type": "baleGrab",
+    "category": "teleLoaderTools",
+    "displayType": "Telehandler",
+    "brand": "MAGSI",
+    "name": "$l10n_shopItem_telehandlerBaleGrab"
+  },
+  "data/vehicles/magsi/telehandlerfork/telehandlerfork.xml": {
+    "relPath": "data/vehicles/magsi/telehandlerFork/telehandlerFork.xml",
+    "type": "implementDynamicMountAttacher",
+    "category": "teleLoaderTools",
+    "displayType": "Telehandler",
+    "brand": "MAGSI",
+    "name": "$l10n_shopItem_telehandlerFork"
+  },
+  "data/vehicles/magsi/telehandlerlogfork/telehandlerlogfork.xml": {
+    "relPath": "data/vehicles/magsi/telehandlerLogFork/telehandlerLogFork.xml",
+    "type": "logGrab",
+    "category": "teleLoaderTools",
+    "displayType": "Telehandler",
+    "brand": "MAGSI",
+    "name": "$l10n_shopItem_telehandlerLogFork"
+  },
+  "data/vehicles/magsi/telehandlermanurefork/telehandlermanurefork.xml": {
+    "relPath": "data/vehicles/magsi/telehandlerManureFork/telehandlerManureFork.xml",
+    "type": "dynamicMountAttacherShovel",
+    "category": "teleLoaderTools",
+    "displayType": "Telehandler",
+    "brand": "MAGSI",
+    "name": "$l10n_shopItem_telehandlerManureFork"
+  },
+  "data/vehicles/magsi/telehandlershovel/telehandlershovel.xml": {
+    "relPath": "data/vehicles/magsi/telehandlerShovel/telehandlerShovel.xml",
+    "type": "shovelLeveler",
+    "category": "teleLoaderTools",
+    "displayType": "Telehandler",
+    "brand": "MAGSI",
+    "name": "$l10n_shopItem_telehandlerShovel"
+  },
+  "data/vehicles/magsi/wheelloaderfork/wheelloaderfork.xml": {
+    "relPath": "data/vehicles/magsi/wheelLoaderFork/wheelLoaderFork.xml",
+    "type": "implementDynamicMountAttacher",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "MAGSI",
+    "name": "$l10n_shopItem_wheelLoaderFork"
+  },
+  "data/vehicles/magsi/wheelloaderlogfork/wheelloaderlogfork.xml": {
+    "relPath": "data/vehicles/magsi/wheelLoaderLogFork/wheelLoaderLogFork.xml",
+    "type": "logGrab",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "MAGSI",
+    "name": "$l10n_shopItem_wheelLoaderLogFork"
+  },
+  "data/vehicles/manitou/m504/m504.xml": {
+    "relPath": "data/vehicles/manitou/m504/m504.xml",
+    "type": "teleHandler",
+    "category": "forklifts",
+    "displayType": "Telehandler",
+    "brand": "MANITOU",
+    "name": "M50-4"
+  },
+  "data/vehicles/manitou/mlt841/mlt841.xml": {
+    "relPath": "data/vehicles/manitou/mlt841/mlt841.xml",
+    "type": "teleHandler",
+    "category": "teleLoaderVehicles",
+    "displayType": "Telehandler",
+    "brand": "MANITOU",
+    "name": "MLT 841-145 PS+"
+  },
+  "data/vehicles/masseyferguson/baler1840/baler1840.xml": {
+    "relPath": "data/vehicles/masseyFerguson/baler1840/baler1840.xml",
+    "type": "baler",
+    "category": "balersSquare",
+    "displayType": "Tractor",
+    "brand": "MASSEYFERGUSON",
+    "name": "MF 1840"
+  },
+  "data/vehicles/masseyferguson/baler2370uhd/baler2370uhd.xml": {
+    "relPath": "data/vehicles/masseyFerguson/baler2370UHD/baler2370UHD.xml",
+    "type": "baler",
+    "category": "balersSquare",
+    "displayType": "Tractor",
+    "brand": "MASSEYFERGUSON",
+    "name": "MF 2370 Ultra HD"
+  },
+  "data/vehicles/masseyferguson/baler4160v/baler4160v.xml": {
+    "relPath": "data/vehicles/masseyFerguson/baler4160V/baler4160V.xml",
+    "type": "balerWrapper",
+    "category": "balersRound",
+    "displayType": "Tractor",
+    "brand": "masseyFerguson",
+    "name": "MF RB 4160V Protec"
+  },
+  "data/vehicles/masseyferguson/beta7360al4/beta7360al4.xml": {
+    "relPath": "data/vehicles/masseyFerguson/beta7360AL4/beta7360AL4.xml",
+    "type": "combineDrivable",
+    "category": "harvesters",
+    "displayType": "Combine Harvester",
+    "brand": "MASSEYFERGUSON",
+    "name": "MF Beta 7360 AL4"
+  },
+  "data/vehicles/masseyferguson/freeflow25ft/freeflow25ft.xml": {
+    "relPath": "data/vehicles/masseyFerguson/freeFlow25FT/freeFlow25FT.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "MASSEYFERGUSON",
+    "name": "MF FreeFlow 25FT"
+  },
+  "data/vehicles/masseyferguson/mf3012/mf3012.xml": {
+    "relPath": "data/vehicles/masseyFerguson/mf3012/mf3012.xml",
+    "type": "shovel",
+    "category": "sugarcaneTransport",
+    "displayType": "Tractor",
+    "brand": "MASSEYFERGUSON",
+    "name": "MF 3012"
+  },
+  "data/vehicles/masseyferguson/mf8570/mf8570.xml": {
+    "relPath": "data/vehicles/masseyFerguson/mf8570/mf8570.xml",
+    "type": "combineDrivable",
+    "category": "harvesters",
+    "displayType": "Combine Harvester",
+    "brand": "MASSEYFERGUSON",
+    "name": "MF 8570"
+  },
+  "data/vehicles/masseyferguson/mf8570header/mf8570header.xml": {
+    "relPath": "data/vehicles/masseyFerguson/mf8570Header/mf8570Header.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Combine Harvester",
+    "brand": "MASSEYFERGUSON",
+    "name": "MF 8570 %s"
+  },
+  "data/vehicles/masseyferguson/mf8570trailer/mf8570trailer.xml": {
+    "relPath": "data/vehicles/masseyFerguson/mf8570Trailer/mf8570Trailer.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "cutterTrailers",
+    "displayType": "Combine Harvester",
+    "brand": "MASSEYFERGUSON",
+    "name": "MF 8570 %s"
+  },
+  "data/vehicles/masseyferguson/series5700s/series5700s.xml": {
+    "relPath": "data/vehicles/masseyFerguson/series5700S/series5700S.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "MASSEYFERGUSON",
+    "name": "MF 5700 S"
+  },
+  "data/vehicles/masseyferguson/series7s/series7s.xml": {
+    "relPath": "data/vehicles/masseyFerguson/series7S/series7S.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "MASSEYFERGUSON",
+    "name": "MF 7S"
+  },
+  "data/vehicles/masseyferguson/series9s/series9s.xml": {
+    "relPath": "data/vehicles/masseyFerguson/series9S/series9S.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "MASSEYFERGUSON",
+    "name": "MF 9S"
+  },
+  "data/vehicles/mccormack/balegrab/balegrab.xml": {
+    "relPath": "data/vehicles/mcCormack/baleGrab/baleGrab.xml",
+    "type": "implementDynamicMountAttacher",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "MCCORMACK",
+    "name": "$l10n_shopItem_telehandlerBaleFork"
+  },
+  "data/vehicles/mccormack/cottontagtrailer/cottontagtrailer.xml": {
+    "relPath": "data/vehicles/mcCormack/cottonTagTrailer/cottonTagTrailer.xml",
+    "type": "baleLoader",
+    "category": "cottonTransport",
+    "displayType": "Truck",
+    "brand": "MCCORMACK",
+    "name": "Cotton Tag Trailer"
+  },
+  "data/vehicles/mccormack/overtippingbucket/overtippingbucket.xml": {
+    "relPath": "data/vehicles/mcCormack/overtippingBucket/overtippingBucket.xml",
+    "type": "shovelLeveler",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "MCCORMACK",
+    "name": "$l10n_shopItem_wheelLoaderHighDumpBucket"
+  },
+  "data/vehicles/mccormack/wheeliegrab/wheeliegrab.xml": {
+    "relPath": "data/vehicles/mcCormack/wheelieGrab/wheelieGrab.xml",
+    "type": "baleGrab",
+    "category": "cottonTransport",
+    "displayType": "Truck",
+    "brand": "MCCORMACK",
+    "name": "Cotton Wheelie Grab"
+  },
+  "data/vehicles/mccormick/x8vtdrive/x8vtdrive.xml": {
+    "relPath": "data/vehicles/mcCormick/x8VTDrive/x8VTDrive.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "MCCORMICK",
+    "name": "X8 VT-Drive"
+  },
+  "data/vehicles/meridian/conveyall1690/conveyall1690.xml": {
+    "relPath": "data/vehicles/meridian/conveyAll1690/conveyAll1690.xml",
+    "type": "conveyorBelt",
+    "category": "belts",
+    "displayType": "Tractor",
+    "brand": "CONVEYALL",
+    "name": "1690"
+  },
+  "data/vehicles/meridian/conveyallcst1550/conveyallcst1550.xml": {
+    "relPath": "data/vehicles/meridian/conveyAllCST1550/conveyAllCST1550.xml",
+    "type": "augerWagon",
+    "category": "augerWagons trailersSemi",
+    "displayType": "Tractor",
+    "brand": "CONVEYALL",
+    "name": "CST 1550"
+  },
+  "data/vehicles/meridian/tl1239/tl1239.xml": {
+    "relPath": "data/vehicles/meridian/tl1239/tl1239.xml",
+    "type": "conveyorBelt",
+    "category": "belts",
+    "displayType": "Tractor",
+    "brand": "MERIDIAN",
+    "name": "TL 12-39"
+  },
+  "data/vehicles/merlo/multifarmer449/multifarmer449.xml": {
+    "relPath": "data/vehicles/merlo/multifarmer449/multifarmer449.xml",
+    "type": "teleHandler",
+    "category": "teleLoaderVehicles",
+    "displayType": "Telehandler",
+    "brand": "MERLO",
+    "name": "MF44.9CS-170-CVTRONIC"
+  },
+  "data/vehicles/mzuri/protil4tx/protil4tx.xml": {
+    "relPath": "data/vehicles/mzuri/proTil4TX/proTil4TX.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "planters",
+    "displayType": "Tractor",
+    "brand": "MZURI",
+    "name": "PRO-TIL 4T Xzact"
+  },
+  "data/vehicles/nardi/n20t/n20t.xml": {
+    "relPath": "data/vehicles/nardi/n20T/n20T.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "cutterTrailers",
+    "displayType": "Tractor",
+    "brand": "NARDI",
+    "name": "N20T"
+  },
+  "data/vehicles/nardi/n40bx/n40bx.xml": {
+    "relPath": "data/vehicles/nardi/n40bx/n40bx.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "cutterTrailers",
+    "displayType": "Tractor",
+    "brand": "NARDI",
+    "name": "N40BX"
+  },
+  "data/vehicles/nardi/n60_35/n60_35.xml": {
+    "relPath": "data/vehicles/nardi/n60_35/n60_35.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "cutterTrailers",
+    "displayType": "Tractor",
+    "brand": "NARDI",
+    "name": "N60-35"
+  },
+  "data/vehicles/nardi/n60_45/n60_45.xml": {
+    "relPath": "data/vehicles/nardi/n60_45/n60_45.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "cutterTrailers",
+    "displayType": "Tractor",
+    "brand": "NARDI",
+    "name": "N60-45"
+  },
+  "data/vehicles/nardi/n70_30/n70_30.xml": {
+    "relPath": "data/vehicles/nardi/n70_30/n70_30.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "cutterTrailers",
+    "displayType": "Tractor",
+    "brand": "NARDI",
+    "name": "N70-30"
+  },
+  "data/vehicles/nardi/n70_40/n70_40.xml": {
+    "relPath": "data/vehicles/nardi/n70_40/n70_40.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "cutterTrailers",
+    "displayType": "Tractor",
+    "brand": "NARDI",
+    "name": "N70-40"
+  },
+  "data/vehicles/newholland/braud9070l/braud9070l.xml": {
+    "relPath": "data/vehicles/newHolland/braud9070L/braud9070L.xml",
+    "type": "vineHarvester",
+    "category": "grapeHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "NEWHOLLAND",
+    "name": "Braud 9070L"
+  },
+  "data/vehicles/newholland/braud9090x/braud9090x.xml": {
+    "relPath": "data/vehicles/newHolland/braud9090X/braud9090X.xml",
+    "type": "vineHarvester",
+    "category": "oliveHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "NEWHOLLAND",
+    "name": "Braud 9090X Olive"
+  },
+  "data/vehicles/newholland/chseries/chseries.xml": {
+    "relPath": "data/vehicles/newHolland/chSeries/chSeries.xml",
+    "type": "combineDrivable",
+    "category": "harvesters",
+    "displayType": "Combine Harvester",
+    "brand": "NEWHOLLAND",
+    "name": "CH7.70"
+  },
+  "data/vehicles/newholland/cr11/cr11.xml": {
+    "relPath": "data/vehicles/newHolland/cr11/cr11.xml",
+    "type": "combineDrivable",
+    "category": "harvesters",
+    "displayType": "Combine Harvester",
+    "brand": "NEWHOLLAND",
+    "name": "CR11"
+  },
+  "data/vehicles/newholland/cr11/cr11goldedition.xml": {
+    "relPath": "data/vehicles/newHolland/cr11/cr11GoldEdition.xml",
+    "type": "combineDrivable",
+    "category": "harvesters",
+    "displayType": "Combine Harvester",
+    "brand": "NEWHOLLAND",
+    "name": "CR11 Gold Edition"
+  },
+  "data/vehicles/newholland/cr980_1830/cr980_1830.xml": {
+    "relPath": "data/vehicles/newHolland/cr980_1830/cr980_1830.xml",
+    "type": "cutter",
+    "category": "cornHeaders",
+    "displayType": "Tractor",
+    "brand": "NEWHOLLAND",
+    "name": "980CR 18-30"
+  },
+  "data/vehicles/newholland/cr980_830/cr980_830.xml": {
+    "relPath": "data/vehicles/newHolland/cr980_830/cr980_830.xml",
+    "type": "cutter",
+    "category": "cornHeaders",
+    "displayType": "Tractor",
+    "brand": "NEWHOLLAND",
+    "name": "980CR 8-30"
+  },
+  "data/vehicles/newholland/fb130/fb130.xml": {
+    "relPath": "data/vehicles/newHolland/fb130/fb130.xml",
+    "type": "cutter",
+    "category": "forageHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "NEWHOLLAND",
+    "name": "130FB"
+  },
+  "data/vehicles/newholland/fd250/fd250.xml": {
+    "relPath": "data/vehicles/newHolland/fd250/fd250.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "NEWHOLLAND",
+    "name": "FD250 FlexDraper\u00ae"
+  },
+  "data/vehicles/newholland/fd250/fd250goldedition.xml": {
+    "relPath": "data/vehicles/newHolland/fd250/fd250GoldEdition.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "NEWHOLLAND",
+    "name": "FD250 FlexDraper\u00ae Gold Edition"
+  },
+  "data/vehicles/newholland/fr780/fr780.xml": {
+    "relPath": "data/vehicles/newHolland/fr780/fr780.xml",
+    "type": "combineDrivable",
+    "category": "forageHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "NEWHOLLAND",
+    "name": "FR 780"
+  },
+  "data/vehicles/newholland/l318/l318.xml": {
+    "relPath": "data/vehicles/newHolland/l318/l318.xml",
+    "type": "teleHandler",
+    "category": "skidSteerVehicles",
+    "displayType": "Telehandler",
+    "brand": "NEWHOLLAND",
+    "name": "L318"
+  },
+  "data/vehicles/newholland/probelt165/probelt165.xml": {
+    "relPath": "data/vehicles/newHolland/proBelt165/proBelt165.xml",
+    "type": "baler",
+    "category": "balersRound",
+    "displayType": "Tractor",
+    "brand": "NEWHOLLAND",
+    "name": "Pro-Belt 165"
+  },
+  "data/vehicles/newholland/superflex25/superflex25.xml": {
+    "relPath": "data/vehicles/newHolland/superFlex25/superFlex25.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "NEWHOLLAND",
+    "name": "SuperFlex 25FT"
+  },
+  "data/vehicles/newholland/t7/t7.xml": {
+    "relPath": "data/vehicles/newHolland/t7/t7.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "NEWHOLLAND",
+    "name": "T7 LWB PLMI"
+  },
+  "data/vehicles/newholland/t8/t8.xml": {
+    "relPath": "data/vehicles/newHolland/t8/t8.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "NEWHOLLAND",
+    "name": "T8 GENESIS Series"
+  },
+  "data/vehicles/newholland/tk4/tk4.xml": {
+    "relPath": "data/vehicles/newHolland/tk4/tk4.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "NEWHOLLAND",
+    "name": "TK4.80 Methane Power"
+  },
+  "data/vehicles/newholland/varifeed28/varifeed28.xml": {
+    "relPath": "data/vehicles/newHolland/varifeed28/varifeed28.xml",
+    "type": "cutter",
+    "category": "cutters",
+    "displayType": "Tractor",
+    "brand": "NEWHOLLAND",
+    "name": "Varifeed 28FT"
+  },
+  "data/vehicles/newholland/weight1000/weight1000.xml": {
+    "relPath": "data/vehicles/newHolland/weight1000/weight1000.xml",
+    "type": "combineDrivable",
+    "category": "weights",
+    "displayType": "Combine Harvester",
+    "brand": "NEWHOLLAND",
+    "name": "1000"
+  },
+  "data/vehicles/novag/tforceplus950/tforceplus950.xml": {
+    "relPath": "data/vehicles/novag/tForcePlus950/tForcePlus950.xml",
+    "type": "fertilizingSowingMachine",
+    "category": "seeders",
+    "displayType": "Tractor",
+    "brand": "NOVAG",
+    "name": "T-ForcePlus 950"
+  },
+  "data/vehicles/oxbo/at5105/at5105.xml": {
+    "relPath": "data/vehicles/oxbo/at5105/at5105.xml",
+    "type": "selfPropelledManureBarrel",
+    "category": "slurryTanks",
+    "displayType": "Tractor",
+    "brand": "OXBO",
+    "name": "AT5105"
+  },
+  "data/vehicles/oxbo/bp2140e/bp2140e.xml": {
+    "relPath": "data/vehicles/oxbo/bp2140e/bp2140e.xml",
+    "type": "combineCutter",
+    "category": "greenBeanHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "OXBO",
+    "name": "BP2140e"
+  },
+  "data/vehicles/oxbo/epd540e/epd540e.xml": {
+    "relPath": "data/vehicles/oxbo/epd540E/epd540E.xml",
+    "type": "combineCutter",
+    "category": "peaHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "OXBO",
+    "name": "EPD540e"
+  },
+  "data/vehicles/oxbo/mkb4tr/mkb4tr.xml": {
+    "relPath": "data/vehicles/oxbo/mkb4TR/mkb4TR.xml",
+    "type": "combineCutter",
+    "category": "spinachHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "OXBO",
+    "name": "MKB-4TR"
+  },
+  "data/vehicles/oxbo/windrower2340/windrower2340.xml": {
+    "relPath": "data/vehicles/oxbo/windrower2340/windrower2340.xml",
+    "type": "windrower",
+    "category": "windrowers",
+    "displayType": "Tractor",
+    "brand": "OXBO",
+    "name": "2340"
+  },
+  "data/vehicles/paladin/balehugger/balehugger.xml": {
+    "relPath": "data/vehicles/paladin/baleHugger/baleHugger.xml",
+    "type": "baleGrab",
+    "category": "skidSteerTools",
+    "displayType": "Skid Steer",
+    "brand": "PALADIN",
+    "name": "$l10n_shopItem_telehandlerBaleGrab"
+  },
+  "data/vehicles/paladin/balespear/balespear.xml": {
+    "relPath": "data/vehicles/paladin/baleSpear/baleSpear.xml",
+    "type": "implementDynamicMountAttacher",
+    "category": "skidSteerTools",
+    "displayType": "Skid Steer",
+    "brand": "PALADIN",
+    "name": "$l10n_shopItem_skidSteerBaleFork"
+  },
+  "data/vehicles/paladin/highdumpbucket/highdumpbucket.xml": {
+    "relPath": "data/vehicles/paladin/highDumpBucket/highDumpBucket.xml",
+    "type": "shovelLeveler",
+    "category": "skidSteerTools",
+    "displayType": "Skid Steer",
+    "brand": "PALADIN",
+    "name": "$l10n_shopItem_skidSteerHighDumpBucket"
+  },
+  "data/vehicles/paladin/manurefork/manurefork.xml": {
+    "relPath": "data/vehicles/paladin/manureFork/manureFork.xml",
+    "type": "dynamicMountAttacherShovel",
+    "category": "skidSteerTools",
+    "displayType": "Skid Steer",
+    "brand": "PALADIN",
+    "name": "$l10n_shopItem_skidSteerManureFork"
+  },
+  "data/vehicles/paladin/palletfork/palletfork.xml": {
+    "relPath": "data/vehicles/paladin/palletFork/palletFork.xml",
+    "type": "implementDynamicMountAttacher",
+    "category": "skidSteerTools",
+    "displayType": "Skid Steer",
+    "brand": "PALADIN",
+    "name": "$l10n_shopItem_frontloaderPalletFork"
+  },
+  "data/vehicles/paladin/sfb750/sfb750.xml": {
+    "relPath": "data/vehicles/paladin/sfb750/sfb750.xml",
+    "type": "hydraulicHammer",
+    "category": "skidSteerTools",
+    "displayType": "Skid Steer",
+    "brand": "PALADIN",
+    "name": "SFB 750"
+  },
+  "data/vehicles/paladin/stumpgrinder/stumpgrinder.xml": {
+    "relPath": "data/vehicles/paladin/stumpGrinder/stumpGrinder.xml",
+    "type": "stumpCutter",
+    "category": "skidSteerTools",
+    "displayType": "Skid Steer",
+    "brand": "PALADIN",
+    "name": "$l10n_shopItem_skidSteerStumpCutter"
+  },
+  "data/vehicles/paladin/utilitygrapple/utilitygrapple.xml": {
+    "relPath": "data/vehicles/paladin/utilityGrapple/utilityGrapple.xml",
+    "type": "logGrab",
+    "category": "skidSteerTools",
+    "displayType": "Skid Steer",
+    "brand": "PALADIN",
+    "name": "$l10n_shopItem_skidSteerLogFork"
+  },
+  "data/vehicles/pfanzelt/dwp186/dwp186.xml": {
+    "relPath": "data/vehicles/pfanzelt/dwp186/dwp186.xml",
+    "type": "implement_attacherJointControl",
+    "category": "forestryWinches",
+    "displayType": "Tractor",
+    "brand": "PFANZELT",
+    "name": "DW P 186"
+  },
+  "data/vehicles/pfanzelt/felix/felix.xml": {
+    "relPath": "data/vehicles/pfanzelt/felix/felix.xml",
+    "type": "forwarder",
+    "category": "forestryForwarders",
+    "displayType": "Tractor",
+    "brand": "PFANZELT",
+    "name": "Felix"
+  },
+  "data/vehicles/pfanzelt/pmtraclll/pmtraclll.xml": {
+    "relPath": "data/vehicles/pfanzelt/pmTraclll/pmTraclll.xml",
+    "type": "tractorForestry",
+    "category": "forestryMisc",
+    "displayType": "Tractor",
+    "brand": "PFANZELT",
+    "name": "Pm Trac III"
+  },
+  "data/vehicles/pfanzelt/rwgp13/rwgp13.xml": {
+    "relPath": "data/vehicles/pfanzelt/rwgP13/rwgP13.xml",
+    "type": "forwarderTrailer",
+    "category": "woodTransport",
+    "displayType": "Tractor",
+    "brand": "PFANZELT",
+    "name": "P13 4272"
+  },
+  "data/vehicles/piaggio/ape50/ape50.xml": {
+    "relPath": "data/vehicles/piaggio/ape50/ape50.xml",
+    "type": "car",
+    "category": "cars",
+    "displayType": "Car / Pickup",
+    "brand": "APE",
+    "name": "50"
+  },
+  "data/vehicles/pittstrailers/lt408l/lt408l.xml": {
+    "relPath": "data/vehicles/pittsTrailers/lt408L/lt408L.xml",
+    "type": "transportTrailer",
+    "category": "woodTransport trailersSemi",
+    "displayType": "Tractor",
+    "brand": "PITTSTRAILERS",
+    "name": "LT40-8L"
+  },
+  "data/vehicles/poettinger/aerosemvt5000dd/aerosemvt5000dd.xml": {
+    "relPath": "data/vehicles/poettinger/aerosemVT5000DD/aerosemVT5000DD.xml",
+    "type": "sowingMachine",
+    "category": "seeders",
+    "displayType": "Tractor",
+    "brand": "POETTINGER",
+    "name": "Aerosem VT 5000 DD"
+  },
+  "data/vehicles/poettinger/alpinhit44/alpinhit44.xml": {
+    "relPath": "data/vehicles/poettinger/alpinHit44/alpinHit44.xml",
+    "type": "tedder",
+    "category": "tedders",
+    "displayType": "Tractor",
+    "brand": "POETTINGER",
+    "name": "ALPINHIT 4.4 H"
+  },
+  "data/vehicles/poettinger/bossalpin251/bossalpin251.xml": {
+    "relPath": "data/vehicles/poettinger/bossAlpin251/bossAlpin251.xml",
+    "type": "forageWagon",
+    "category": "loaderWagons",
+    "displayType": "Tractor",
+    "brand": "POETTINGER",
+    "name": "BOSS ALPIN 251"
+  },
+  "data/vehicles/poettinger/faro4010d/faro4010d.xml": {
+    "relPath": "data/vehicles/poettinger/faro4010D/faro4010D.xml",
+    "type": "forageWagon",
+    "category": "loaderWagons",
+    "displayType": "Tractor",
+    "brand": "POETTINGER",
+    "name": "FARO 4010 D"
+  },
+  "data/vehicles/poettinger/hit1618t/hit1618t.xml": {
+    "relPath": "data/vehicles/poettinger/hit1618T/hit1618T.xml",
+    "type": "tedder",
+    "category": "tedders",
+    "displayType": "Tractor",
+    "brand": "POETTINGER",
+    "name": "HIT 16.18 T"
+  },
+  "data/vehicles/poettinger/jumbo8450db/jumbo8450db.xml": {
+    "relPath": "data/vehicles/poettinger/jumbo8450DB/jumbo8450DB.xml",
+    "type": "forageWagon",
+    "category": "loaderWagons",
+    "displayType": "Tractor",
+    "brand": "POETTINGER",
+    "name": "JUMBO 8450 DB"
+  },
+  "data/vehicles/poettinger/rotocarev12400/rotocarev12400.xml": {
+    "relPath": "data/vehicles/poettinger/rotocareV12400/rotocareV12400.xml",
+    "type": "weeder",
+    "category": "weeders",
+    "displayType": "Tractor",
+    "brand": "POETTINGER",
+    "name": "ROTOCARE V 12400"
+  },
+  "data/vehicles/poettinger/servo25/servo25.xml": {
+    "relPath": "data/vehicles/poettinger/servo25/servo25.xml",
+    "type": "plow",
+    "category": "plows",
+    "displayType": "Tractor",
+    "brand": "POETTINGER",
+    "name": "SERVO 25"
+  },
+  "data/vehicles/poettinger/servot6000plus/servot6000plus.xml": {
+    "relPath": "data/vehicles/poettinger/servoT6000Plus/servoT6000Plus.xml",
+    "type": "plow",
+    "category": "plows",
+    "displayType": "Tractor",
+    "brand": "POETTINGER",
+    "name": "SERVO T 6000 P"
+  },
+  "data/vehicles/poettinger/terradisc10001t/terradisc10001t.xml": {
+    "relPath": "data/vehicles/poettinger/terradisc10001T/terradisc10001T.xml",
+    "type": "cultivator",
+    "category": "discHarrows",
+    "displayType": "Tractor",
+    "brand": "POETTINGER",
+    "name": "Terradisc 10001T"
+  },
+  "data/vehicles/poettinger/terria6040/terria6040.xml": {
+    "relPath": "data/vehicles/poettinger/terria6040/terria6040.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "POETTINGER",
+    "name": "TERRIA 6040"
+  },
+  "data/vehicles/poettinger/top1403/top1403.xml": {
+    "relPath": "data/vehicles/poettinger/top1403/top1403.xml",
+    "type": "windrower",
+    "category": "windrowers",
+    "displayType": "Tractor",
+    "brand": "POETTINGER",
+    "name": "TOP 1403 C"
+  },
+  "data/vehicles/ponsse/bison/bison.xml": {
+    "relPath": "data/vehicles/ponsse/bison/bison.xml",
+    "type": "forwarder",
+    "category": "forestryForwarders",
+    "displayType": "Tractor",
+    "brand": "PONSSE",
+    "name": "Bison Active Frame"
+  },
+  "data/vehicles/prinoth/leitwolf/leitwolf.xml": {
+    "relPath": "data/vehicles/prinoth/leitwolf/leitwolf.xml",
+    "type": "selfPropelledLeveler",
+    "category": "miscDrivables",
+    "displayType": "Tractor",
+    "brand": "PRINOTH",
+    "name": "Leitwolf Agripower"
+  },
+  "data/vehicles/prinoth/sf900/sf900.xml": {
+    "relPath": "data/vehicles/prinoth/sf900/sf900.xml",
+    "type": "stumpCutter",
+    "category": "forestryStumpCutters",
+    "displayType": "Tractor",
+    "brand": "PRINOTH",
+    "name": "SF900"
+  },
+  "data/vehicles/provitis/mp122ocea/mp122ocea.xml": {
+    "relPath": "data/vehicles/provitis/mp122Ocea/mp122Ocea.xml",
+    "type": "vinePrepruner",
+    "category": "grapeTools",
+    "displayType": "Tractor",
+    "brand": "PROVITIS",
+    "name": "MP 122 OCEA"
+  },
+  "data/vehicles/quicke/baglifter/baglifter.xml": {
+    "relPath": "data/vehicles/quicke/bagLifter/bagLifter.xml",
+    "type": "implement",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "QUICKE",
+    "name": "BIG BAG LIFTER - SINGLE"
+  },
+  "data/vehicles/quicke/baglifterdual/baglifterdual.xml": {
+    "relPath": "data/vehicles/quicke/bagLifterDual/bagLifterDual.xml",
+    "type": "implement",
+    "category": "frontLoaderTools",
+    "displayType": "Tractor",
+    "brand": "QUICKE",
+    "name": "BIG BAG LIFTER - DUAL"
+  },
+  "data/vehicles/quicke/q4m/q4m.xml": {
+    "relPath": "data/vehicles/quicke/q4M/q4M.xml",
+    "type": "attachableFrontloader",
+    "category": "frontLoaders",
+    "displayType": "Tractor",
+    "brand": "QUICKE",
+    "name": "Q4M"
+  },
+  "data/vehicles/quicke/q6m/q6m.xml": {
+    "relPath": "data/vehicles/quicke/q6M/q6M.xml",
+    "type": "attachableFrontloader",
+    "category": "frontLoaders",
+    "displayType": "Tractor",
+    "brand": "QUICKE",
+    "name": "Q6M"
+  },
+  "data/vehicles/quicke/q7m/q7m.xml": {
+    "relPath": "data/vehicles/quicke/q7M/q7M.xml",
+    "type": "attachableFrontloader",
+    "category": "frontLoaders",
+    "displayType": "Tractor",
+    "brand": "QUICKE",
+    "name": "Q7M"
+  },
+  "data/vehicles/reiter/r7rd/r7rd.xml": {
+    "relPath": "data/vehicles/reiter/r7Rd/r7Rd.xml",
+    "type": "windrower",
+    "category": "windrowers",
+    "displayType": "Tractor",
+    "brand": "REITER",
+    "name": "RESPIRO R7 rd"
+  },
+  "data/vehicles/riedler/timberframefh16/timberframefh16.xml": {
+    "relPath": "data/vehicles/riedler/timberFrameFH16/timberFrameFH16.xml",
+    "type": "woodTruck",
+    "category": "trucks woodTransport",
+    "displayType": "Truck",
+    "brand": "RIEDLER",
+    "name": "FH16 RUL-HKR"
+  },
+  "data/vehicles/riedler/timbertrailer3a/timbertrailer3a.xml": {
+    "relPath": "data/vehicles/riedler/timberTrailer3A/timberTrailer3A.xml",
+    "type": "trailer",
+    "category": "woodTransport",
+    "displayType": "Tractor",
+    "brand": "RIEDLER",
+    "name": "RUH327"
+  },
+  "data/vehicles/rigitrac/skh60/skh60.xml": {
+    "relPath": "data/vehicles/rigitrac/skh60/skh60.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "RIGITRAC",
+    "name": "SKH 60"
+  },
+  "data/vehicles/risutec/skb240a/skb240a.xml": {
+    "relPath": "data/vehicles/risutec/skb240A/skb240A.xml",
+    "type": "treePlanter",
+    "category": "forestryPlanters forestryExcavatorTools",
+    "displayType": "Tractor",
+    "brand": "RISUTEC",
+    "name": "SKB-240"
+  },
+  "data/vehicles/ropa/keiler2/keiler2.xml": {
+    "relPath": "data/vehicles/ropa/keiler2/keiler2.xml",
+    "type": "attachableCombineCutterFruitPreparer",
+    "category": "potatoHarvesting",
+    "displayType": "Combine Harvester",
+    "brand": "ROPA",
+    "name": "KEILER 2 RK22"
+  },
+  "data/vehicles/ropa/maus5/maus5.xml": {
+    "relPath": "data/vehicles/ropa/maus5/maus5.xml",
+    "type": "loaderVehicle",
+    "category": "beetLoading",
+    "displayType": "Tractor",
+    "brand": "ROPA",
+    "name": "Maus 5"
+  },
+  "data/vehicles/ropa/maus5/nawaromaus.xml": {
+    "relPath": "data/vehicles/ropa/maus5/nawaRoMaus.xml",
+    "type": "loaderVehicle",
+    "category": "miscDrivables",
+    "displayType": "Tractor",
+    "brand": "ROPA",
+    "name": "NawaRo-Maus"
+  },
+  "data/vehicles/ropa/rrxl9/rrxl9.xml": {
+    "relPath": "data/vehicles/ropa/rrXL9/rrXL9.xml",
+    "type": "cutterFruitPreparer",
+    "category": "beetHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "ROPA",
+    "name": "RR-XL 9x45"
+  },
+  "data/vehicles/ropa/rrxltrailer/rrxltrailer.xml": {
+    "relPath": "data/vehicles/ropa/rrXLTrailer/rrXLTrailer.xml",
+    "type": "dynamicMountAttacherTrailer",
+    "category": "beetHarvesterCutters",
+    "displayType": "Combine Harvester",
+    "brand": "ROPA",
+    "name": "RR-XL 9x45 %s"
+  },
+  "data/vehicles/ropa/tiger6s/tiger6s.xml": {
+    "relPath": "data/vehicles/ropa/tiger6S/tiger6S.xml",
+    "type": "combineDrivable",
+    "category": "beetHarvesters",
+    "displayType": "Combine Harvester",
+    "brand": "ROPA",
+    "name": "Tiger 6S"
+  },
+  "data/vehicles/rottne/f20d/f20d.xml": {
+    "relPath": "data/vehicles/rottne/f20D/f20D.xml",
+    "type": "forwarder",
+    "category": "forestryForwarders",
+    "displayType": "Tractor",
+    "brand": "ROTTNE",
+    "name": "F20D"
+  },
+  "data/vehicles/rudolphsohn/dk280rp/dk280rp.xml": {
+    "relPath": "data/vehicles/rudolphSohn/dk280RP/dk280RP.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "RUDOLPH",
+    "name": "DK 280 RP"
+  },
+  "data/vehicles/rudolphsohn/tdk301ra/tdk301ra.xml": {
+    "relPath": "data/vehicles/rudolphSohn/tdk301RA/tdk301RA.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "RUDOLPH",
+    "name": "TDK 301 RA"
+  },
+  "data/vehicles/rudolphsohn/tdk301rp/tdk301rp.xml": {
+    "relPath": "data/vehicles/rudolphSohn/tdk301RP/tdk301RP.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "RUDOLPH",
+    "name": "TDK 301 RP"
+  },
+  "data/vehicles/salek/akp122/akp122.xml": {
+    "relPath": "data/vehicles/salek/akp122/akp122.xml",
+    "type": "cultivator",
+    "category": "subsoilers",
+    "displayType": "Tractor",
+    "brand": "SALEK",
+    "name": "AKP-122"
+  },
+  "data/vehicles/salek/ans1900/ans1900.xml": {
+    "relPath": "data/vehicles/salek/ans1900/ans1900.xml",
+    "type": "trailer",
+    "category": "trailers",
+    "displayType": "Tractor",
+    "brand": "SALEK",
+    "name": "ANS-1900"
+  },
+  "data/vehicles/salek/mul1000/mul1000.xml": {
+    "relPath": "data/vehicles/salek/mul1000/mul1000.xml",
+    "type": "mulcher",
+    "category": "mulchers",
+    "displayType": "Tractor",
+    "brand": "SALEK",
+    "name": "MUL-1000"
+  },
+  "data/vehicles/salek/rzk300h/rzk300h.xml": {
+    "relPath": "data/vehicles/salek/rzk300H/rzk300H.xml",
+    "type": "spreader",
+    "category": "fertilizerSpreaders",
+    "displayType": "Tractor",
+    "brand": "SALEK",
+    "name": "RZK 300H"
+  },
+  "data/vehicles/salek/tb100/tb100.xml": {
+    "relPath": "data/vehicles/salek/tb100/tb100.xml",
+    "type": "cultivator",
+    "category": "discHarrows",
+    "displayType": "Tractor",
+    "brand": "SALEK",
+    "name": "TB-100"
+  },
+  "data/vehicles/samasz/jump320/jump320.xml": {
+    "relPath": "data/vehicles/samasz/jump320/jump320.xml",
+    "type": "leveler",
+    "category": "winterEquipment",
+    "displayType": "Tractor",
+    "brand": "SAMASZ",
+    "name": "JUMP 320"
+  },
+  "data/vehicles/samasz/kdd941sth/kdd941sth.xml": {
+    "relPath": "data/vehicles/samasz/kdd941STH/kdd941STH.xml",
+    "type": "mower",
+    "category": "mowers",
+    "displayType": "Self-Propelled Mower",
+    "brand": "SAMASZ",
+    "name": "KDD 941 STH"
+  },
+  "data/vehicles/samasz/kdf341s/kdf341s.xml": {
+    "relPath": "data/vehicles/samasz/kdf341S/kdf341S.xml",
+    "type": "mower",
+    "category": "mowers",
+    "displayType": "Self-Propelled Mower",
+    "brand": "SAMASZ",
+    "name": "KDF 341 S"
+  },
+  "data/vehicles/samasz/p8890tedder/p8890tedder.xml": {
+    "relPath": "data/vehicles/samasz/p8890Tedder/p8890Tedder.xml",
+    "type": "tedder",
+    "category": "tedders",
+    "displayType": "Tractor",
+    "brand": "SAMASZ",
+    "name": "P8 - 890"
+  },
+  "data/vehicles/samasz/tornado251/tornado251.xml": {
+    "relPath": "data/vehicles/samasz/tornado251/tornado251.xml",
+    "type": "turnOnShovel",
+    "category": "winterEquipment",
+    "displayType": "Tractor",
+    "brand": "SAMASZ",
+    "name": "Tornado 252"
+  },
+  "data/vehicles/samasz/xt390/xt390.xml": {
+    "relPath": "data/vehicles/samasz/xt390/xt390.xml",
+    "type": "mower",
+    "category": "mowers",
+    "displayType": "Self-Propelled Mower",
+    "brand": "SAMASZ",
+    "name": "XT 390"
+  },
+  "data/vehicles/samasz/z2840/z2840.xml": {
+    "relPath": "data/vehicles/samasz/z2840/z2840.xml",
+    "type": "windrower",
+    "category": "windrowers",
+    "displayType": "Tractor",
+    "brand": "SAMASZ",
+    "name": "Z2-840 H"
+  },
+  "data/vehicles/same/virtus135rvshift/virtus135rvshift.xml": {
+    "relPath": "data/vehicles/same/virtus135RVShift/virtus135RVShift.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "SAME",
+    "name": "Virtus 135 RVshift"
+  },
+  "data/vehicles/samsonagro/pgii28genesis/pgii28genesis.xml": {
+    "relPath": "data/vehicles/samsonAgro/pgII28Genesis/pgII28Genesis.xml",
+    "type": "manureBarrel",
+    "category": "slurryTanks",
+    "displayType": "Tractor",
+    "brand": "SAMSONAGRO",
+    "name": "PG II 28 Genesis"
+  },
+  "data/vehicles/samsonagro/sbh4_36/sbh4_36.xml": {
+    "relPath": "data/vehicles/samsonAgro/sbh4_36/sbh4_36.xml",
+    "type": "sprayer",
+    "category": "slurryTools",
+    "displayType": "Self-Propelled Sprayer",
+    "brand": "SAMSONAGRO",
+    "name": "SBH4 36"
+  },
+  "data/vehicles/samsonagro/sd700/sd700.xml": {
+    "relPath": "data/vehicles/samsonAgro/sd700/sd700.xml",
+    "type": "fertilizingCultivator",
+    "category": "slurryTools",
+    "displayType": "Tractor",
+    "brand": "SAMSONAGRO",
+    "name": "SD 700"
+  },
+  "data/vehicles/samsonagro/us235/us235.xml": {
+    "relPath": "data/vehicles/samsonAgro/us235/us235.xml",
+    "type": "manureSpreader",
+    "category": "manureSpreaders",
+    "displayType": "Tractor",
+    "brand": "SAMSONAGRO",
+    "name": "US 235 Dynamic"
+  },
+  "data/vehicles/schaeffer/loader23e/loader23e.xml": {
+    "relPath": "data/vehicles/schaeffer/loader23E/loader23E.xml",
+    "type": "tractor",
+    "category": "frontLoaderVehicles",
+    "displayType": "Tractor",
+    "brand": "SCHAEFFER",
+    "name": "23E"
+  },
+  "data/vehicles/schaeffer/loader9660t/loader9660t.xml": {
+    "relPath": "data/vehicles/schaeffer/loader9660T/loader9660T.xml",
+    "type": "tractor",
+    "category": "teleLoaderVehicles",
+    "displayType": "Telehandler",
+    "brand": "SCHAEFFER",
+    "name": "9660 T-2"
+  },
+  "data/vehicles/schuitemaker/rapide580v/rapide580v.xml": {
+    "relPath": "data/vehicles/schuitemaker/rapide580V/rapide580V.xml",
+    "type": "forageWagon",
+    "category": "loaderWagons",
+    "displayType": "Tractor",
+    "brand": "SCHUITEMAKER",
+    "name": "Rapide 580V"
+  },
+  "data/vehicles/schwarzmueller/lowloader4a/lowloader4a.xml": {
+    "relPath": "data/vehicles/schwarzmueller/lowloader4A/lowloader4A.xml",
+    "type": "trailer",
+    "category": "lowloaders",
+    "displayType": "Tractor",
+    "brand": "SCHWARZMUELLER",
+    "name": "%s 4A"
+  },
+  "data/vehicles/schwarzmueller/timbertrailer/timbertrailer.xml": {
+    "relPath": "data/vehicles/schwarzmueller/timberTrailer/timberTrailer.xml",
+    "type": "trailer",
+    "category": "woodTransport",
+    "displayType": "Tractor",
+    "brand": "SCHWARZMUELLER",
+    "name": "$l10n_shopItem_timberTrailer"
+  },
+  "data/vehicles/sennebogen/g340/g340.xml": {
+    "relPath": "data/vehicles/sennebogen/g340/g340.xml",
+    "type": "teleHandler",
+    "category": "teleLoaderVehicles",
+    "displayType": "Telehandler",
+    "brand": "SENNEBOGEN",
+    "name": "340 G"
+  },
+  "data/vehicles/sennebogen/series835g/series835g.xml": {
+    "relPath": "data/vehicles/sennebogen/series835G/series835G.xml",
+    "type": "forestryExcavatorGrapple",
+    "category": "forestryMisc",
+    "displayType": "Telehandler",
+    "brand": "SENNEBOGEN",
+    "name": "835 G Hybrid"
+  },
+  "data/vehicles/siloking/trailedline4system1000/trailedline4system1000.xml": {
+    "relPath": "data/vehicles/siloking/trailedLine4System1000/trailedLine4System1000.xml",
+    "type": "mixerWagon",
+    "category": "forageMixers",
+    "displayType": "Tractor",
+    "brand": "SILOKING",
+    "name": "TrailedLine 4.0 System 1000+"
+  },
+  "data/vehicles/sip/air300falp/air300falp.xml": {
+    "relPath": "data/vehicles/sip/air300FAlp/air300FAlp.xml",
+    "type": "windrower",
+    "category": "windrowers",
+    "displayType": "Tractor",
+    "brand": "SIP",
+    "name": "Air 300 F Alp"
+  },
+  "data/vehicles/sip/favorit254/favorit254.xml": {
+    "relPath": "data/vehicles/sip/favorit254/favorit254.xml",
+    "type": "windrower",
+    "category": "windrowers",
+    "displayType": "Tractor",
+    "brand": "SIP",
+    "name": "Favorit 254"
+  },
+  "data/vehicles/skoda/enyaq/enyaq.xml": {
+    "relPath": "data/vehicles/skoda/enyaq/enyaq.xml",
+    "type": "car",
+    "category": "cars",
+    "displayType": "Car / Pickup",
+    "brand": "SKODA",
+    "name": "Enyaq Coup\u00e9 RS iV"
+  },
+  "data/vehicles/skoda/kodiaq/kodiaq.xml": {
+    "relPath": "data/vehicles/skoda/kodiaq/kodiaq.xml",
+    "type": "car",
+    "category": "cars",
+    "displayType": "Car / Pickup",
+    "brand": "SKODA",
+    "name": "Kodiaq"
+  },
+  "data/vehicles/stema/trius/trius.xml": {
+    "relPath": "data/vehicles/stema/trius/trius.xml",
+    "type": "trailer",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "STEMA",
+    "name": "TRIUS"
+  },
+  "data/vehicles/steyr/absolut/absolut.xml": {
+    "relPath": "data/vehicles/steyr/absolut/absolut.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "STEYR",
+    "name": "Absolut"
+  },
+  "data/vehicles/steyr/weight1000/weight1000.xml": {
+    "relPath": "data/vehicles/steyr/weight1000/weight1000.xml",
+    "type": "combineDrivable",
+    "category": "weights",
+    "displayType": "Combine Harvester",
+    "brand": "STEYR",
+    "name": "1000"
+  },
+  "data/vehicles/streumaster/fw212tdprofi/fw212tdprofi.xml": {
+    "relPath": "data/vehicles/streumaster/fw212tdProfi/fw212tdProfi.xml",
+    "type": "spreaderCraneTool",
+    "category": "fertilizerSpreaders",
+    "displayType": "Tractor",
+    "brand": "STREUMASTER",
+    "name": "FW 212 TD PROFI"
+  },
+  "data/vehicles/summersmfg/superchisel/superchisel.xml": {
+    "relPath": "data/vehicles/summersMfg/superChisel/superChisel.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "SUMMERSMFG",
+    "name": "Superchisel CP2050"
+  },
+  "data/vehicles/tajfun/egv65ahk_sg/egv65ahk_sg.xml": {
+    "relPath": "data/vehicles/tajfun/egv65AHK_SG/egv65AHK_SG.xml",
+    "type": "implement_attacherJointControl",
+    "category": "forestryWinches",
+    "displayType": "Tractor",
+    "brand": "TAJFUN",
+    "name": "EGV 65 AHK SG"
+  },
+  "data/vehicles/tenwinkel/gusscom1250/gusscom1250.xml": {
+    "relPath": "data/vehicles/tenwinkel/gusscom1250/gusscom1250.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "TENWINKEL",
+    "name": "GUSSCOM 1250"
+  },
+  "data/vehicles/tenwinkel/top450/top450.xml": {
+    "relPath": "data/vehicles/tenwinkel/top450/top450.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "TENWINKEL",
+    "name": "Top 450"
+  },
+  "data/vehicles/tenwinkel/weight1000/weight1000.xml": {
+    "relPath": "data/vehicles/tenwinkel/weight1000/weight1000.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "TENWINKEL",
+    "name": "PAC-1000"
+  },
+  "data/vehicles/tenwinkel/weight1500/weight1500.xml": {
+    "relPath": "data/vehicles/tenwinkel/weight1500/weight1500.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "TENWINKEL",
+    "name": "PAC-1500"
+  },
+  "data/vehicles/tenwinkel/weight2500/weight2500.xml": {
+    "relPath": "data/vehicles/tenwinkel/weight2500/weight2500.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "TENWINKEL",
+    "name": "B2500"
+  },
+  "data/vehicles/tenwinkel/weight600/weight600.xml": {
+    "relPath": "data/vehicles/tenwinkel/weight600/weight600.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "TENWINKEL",
+    "name": "FGB 600"
+  },
+  "data/vehicles/tenwinkel/weight750/weight750.xml": {
+    "relPath": "data/vehicles/tenwinkel/weight750/weight750.xml",
+    "type": "implement",
+    "category": "weights",
+    "displayType": "Tractor",
+    "brand": "TENWINKEL",
+    "name": "PAC-750"
+  },
+  "data/vehicles/thundercreek/fst990/fst990.xml": {
+    "relPath": "data/vehicles/thunderCreek/fst990/fst990.xml",
+    "type": "fuelTrailer",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "THUNDERCREEK",
+    "name": "FST 990"
+  },
+  "data/vehicles/tmccancela/tde220/tde220.xml": {
+    "relPath": "data/vehicles/tmcCancela/tde220/tde220.xml",
+    "type": "mulcher",
+    "category": "mulchers",
+    "displayType": "Tractor",
+    "brand": "TMCCANCELA",
+    "name": "TDE-220"
+  },
+  "data/vehicles/tmccancela/tfr250/tfr250.xml": {
+    "relPath": "data/vehicles/tmcCancela/tfr250/tfr250.xml",
+    "type": "stumpCutterCultivatorPlow",
+    "category": "forestryMulchers",
+    "displayType": "Tractor",
+    "brand": "TMCCANCELA",
+    "name": "TFR 250"
+  },
+  "data/vehicles/tmccancela/thx180/thx180.xml": {
+    "relPath": "data/vehicles/tmcCancela/thx180/thx180.xml",
+    "type": "stumpCutterCultivatorPlow",
+    "category": "forestryMulchers forestryExcavatorTools",
+    "displayType": "Tractor",
+    "brand": "TMCCANCELA",
+    "name": "THX-180"
+  },
+  "data/vehicles/tmccancela/tms2_300d/tms2_300d.xml": {
+    "relPath": "data/vehicles/tmcCancela/tms2_300d/tms2_300d.xml",
+    "type": "mulcher",
+    "category": "mulchers",
+    "displayType": "Tractor",
+    "brand": "TMCCANCELA",
+    "name": "TMS2-300D"
+  },
+  "data/vehicles/tmccancela/tpn140/tpn140.xml": {
+    "relPath": "data/vehicles/tmcCancela/tpn140/tpn140.xml",
+    "type": "mulcher",
+    "category": "mulchers grapeTools",
+    "displayType": "Tractor",
+    "brand": "TMCCANCELA",
+    "name": "TPN 140"
+  },
+  "data/vehicles/train/locomotiveas/locomotiveas.xml": {
+    "relPath": "data/vehicles/train/locomotiveAS/locomotiveAS.xml",
+    "type": "locomotive",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "NONE",
+    "name": "$l10n_storeItem_train"
+  },
+  "data/vehicles/train/locomotiveeu/locomotiveeu.xml": {
+    "relPath": "data/vehicles/train/locomotiveEU/locomotiveEU.xml",
+    "type": "locomotive",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "NONE",
+    "name": "$l10n_storeItem_train"
+  },
+  "data/vehicles/train/locomotiveus/forestrylocomotive.xml": {
+    "relPath": "data/vehicles/train/locomotiveUS/forestryLocomotive.xml",
+    "type": "locomotive",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "NONE",
+    "name": "$l10n_storeItem_train"
+  },
+  "data/vehicles/train/wagonflatbedus/wagonflatbedus.xml": {
+    "relPath": "data/vehicles/train/wagonFlatBedUS/wagonFlatBedUS.xml",
+    "type": "trainTimberTrailer",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "NONE",
+    "name": "Flatbed Wagon"
+  },
+  "data/vehicles/train/wagongraineu/wagongraineu.xml": {
+    "relPath": "data/vehicles/train/wagonGrainEU/wagonGrainEU.xml",
+    "type": "trainTrailer",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "NONE",
+    "name": "Grain Wagon"
+  },
+  "data/vehicles/train/wagonplanksus/wagonplanksus.xml": {
+    "relPath": "data/vehicles/train/wagonPlanksUS/wagonPlanksUS.xml",
+    "type": "trainTimberTrailer",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "NONE",
+    "name": "Planks Wagon"
+  },
+  "data/vehicles/train/wagonsugarbeetseu/wagonsugarbeetseu.xml": {
+    "relPath": "data/vehicles/train/wagonSugarbeetsEU/wagonSugarbeetsEU.xml",
+    "type": "trainTrailer",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "NONE",
+    "name": "Sugarbeet Wagon"
+  },
+  "data/vehicles/train/wagontimbereu/wagontimbereu.xml": {
+    "relPath": "data/vehicles/train/wagonTimberEU/wagonTimberEU.xml",
+    "type": "trainTimberTrailer",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "NONE",
+    "name": "Timber Wagon"
+  },
+  "data/vehicles/train/wagontimberus/wagontimberus.xml": {
+    "relPath": "data/vehicles/train/wagonTimberUS/wagonTimberUS.xml",
+    "type": "trainTimberTrailer",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "NONE",
+    "name": "Timber Wagon"
+  },
+  "data/vehicles/train/wagonvehicleseu/wagonvehicleseu.xml": {
+    "relPath": "data/vehicles/train/wagonVehiclesEU/wagonVehiclesEU.xml",
+    "type": "trainTimberTrailer",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "NONE",
+    "name": "Vehicle Wagon"
+  },
+  "data/vehicles/train/wagonwoodchipseu/wagonwoodchipseu.xml": {
+    "relPath": "data/vehicles/train/wagonWoodChipsEU/wagonWoodChipsEU.xml",
+    "type": "trainTrailer",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "NONE",
+    "name": "Woodchips Wagon"
+  },
+  "data/vehicles/treffler/tga560/tga560.xml": {
+    "relPath": "data/vehicles/treffler/tga560/tga560.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "TREFFLER",
+    "name": "TGA 560"
+  },
+  "data/vehicles/tt/colossus10000/colossus10000.xml": {
+    "relPath": "data/vehicles/tt/colossus10000/colossus10000.xml",
+    "type": "tippingAugerWagon",
+    "category": "sugarcaneTransport",
+    "displayType": "Tractor",
+    "brand": "TT",
+    "name": "Colossus 10.000"
+  },
+  "data/vehicles/unia/aresxl/aresxl.xml": {
+    "relPath": "data/vehicles/unia/aresXL/aresXL.xml",
+    "type": "cultivator",
+    "category": "discHarrows",
+    "displayType": "Tractor",
+    "brand": "UNIA",
+    "name": "ARES XL"
+  },
+  "data/vehicles/unia/fenix3000/fenix3000.xml": {
+    "relPath": "data/vehicles/unia/fenix3000/fenix3000.xml",
+    "type": "sowingMachine",
+    "category": "seeders",
+    "displayType": "Tractor",
+    "brand": "UNIA",
+    "name": "FENIX 3000/3"
+  },
+  "data/vehicles/vaderstad/carrierxl625/carrierxl625.xml": {
+    "relPath": "data/vehicles/vaderstad/carrierXL625/carrierXL625.xml",
+    "type": "cultivator",
+    "category": "discHarrows",
+    "displayType": "Tractor",
+    "brand": "VAEDERSTAD",
+    "name": "Carrier XL 625"
+  },
+  "data/vehicles/vaderstad/nzextreme1425/nzextreme1425.xml": {
+    "relPath": "data/vehicles/vaderstad/nzExtreme1425/nzExtreme1425.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "VAEDERSTAD",
+    "name": "NZ Extreme 1425"
+  },
+  "data/vehicles/vaderstad/rexius1230/rexius1230.xml": {
+    "relPath": "data/vehicles/vaderstad/rexius1230/rexius1230.xml",
+    "type": "roller",
+    "category": "rollers",
+    "displayType": "Tractor",
+    "brand": "VAEDERSTAD",
+    "name": "Rexius 1230"
+  },
+  "data/vehicles/vaderstad/topdown600/topdown600.xml": {
+    "relPath": "data/vehicles/vaderstad/topDown600/topDown600.xml",
+    "type": "cultivator",
+    "category": "cultivators",
+    "displayType": "Tractor",
+    "brand": "VAEDERSTAD",
+    "name": "TopDown 600"
+  },
+  "data/vehicles/valtra/sseries/sseries.xml": {
+    "relPath": "data/vehicles/valtra/sSeries/sSeries.xml",
+    "type": "tractor",
+    "category": "tractorsL",
+    "displayType": "Tractor",
+    "brand": "VALTRA",
+    "name": "$l10n_shopItem_seriesX"
+  },
+  "data/vehicles/valtra/tseries/tseries.xml": {
+    "relPath": "data/vehicles/valtra/tSeries/tSeries.xml",
+    "type": "tractorReverseDriving",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "VALTRA",
+    "name": "T Series"
+  },
+  "data/vehicles/vermeer/tm1410/tm1410.xml": {
+    "relPath": "data/vehicles/vermeer/tm1410/tm1410.xml",
+    "type": "mower",
+    "category": "mowers",
+    "displayType": "Self-Propelled Mower",
+    "brand": "VERMEER",
+    "name": "TM 1410"
+  },
+  "data/vehicles/vermeer/zr5/zr5.xml": {
+    "relPath": "data/vehicles/vermeer/zr5/zr5.xml",
+    "type": "balerDrivable",
+    "category": "balersRound",
+    "displayType": "Tractor",
+    "brand": "VERMEER",
+    "name": "ZR5-1200"
+  },
+  "data/vehicles/volvo/ec250dl/ec250dl.xml": {
+    "relPath": "data/vehicles/volvo/ec250DL/ec250DL.xml",
+    "type": "forestryExcavator",
+    "category": "forestryExcavators",
+    "displayType": "Tractor",
+    "brand": "VOLVO",
+    "name": "EC250DL"
+  },
+  "data/vehicles/volvo/ec380dl/ec380dl.xml": {
+    "relPath": "data/vehicles/volvo/ec380DL/ec380DL.xml",
+    "type": "forestryExcavator",
+    "category": "forestryExcavators",
+    "displayType": "Tractor",
+    "brand": "VOLVO",
+    "name": "EC380DL"
+  },
+  "data/vehicles/volvo/fh16/fh16.xml": {
+    "relPath": "data/vehicles/volvo/fh16/fh16.xml",
+    "type": "tractor",
+    "category": "trucks",
+    "displayType": "Truck",
+    "brand": "VOLVO",
+    "name": "FH16"
+  },
+  "data/vehicles/volvo/fhelectric/fhelectric.xml": {
+    "relPath": "data/vehicles/volvo/fhElectric/fhElectric.xml",
+    "type": "tractor",
+    "category": "trucks",
+    "displayType": "Truck",
+    "brand": "VOLVO",
+    "name": "FH Electric"
+  },
+  "data/vehicles/volvo/l120h/l120h.xml": {
+    "relPath": "data/vehicles/volvo/l120H/l120H.xml",
+    "type": "tractor",
+    "category": "wheelLoaderVehicles",
+    "displayType": "Wheel Loader",
+    "brand": "VOLVO",
+    "name": "L120H"
+  },
+  "data/vehicles/volvo/l120h/l120helectric.xml": {
+    "relPath": "data/vehicles/volvo/l120H/l120HElectric.xml",
+    "type": "tractor",
+    "category": "wheelLoaderVehicles",
+    "displayType": "Wheel Loader",
+    "brand": "VOLVO",
+    "name": "L120H Electric Conversion"
+  },
+  "data/vehicles/volvo/l120hbaglifter/l120hbaglifter.xml": {
+    "relPath": "data/vehicles/volvo/l120HBagLifter/l120HBagLifter.xml",
+    "type": "implement",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "VOLVO",
+    "name": "$l10n_storeItem_bagLifter"
+  },
+  "data/vehicles/volvo/l120hhightipshovel/l120hhightipshovel.xml": {
+    "relPath": "data/vehicles/volvo/l120HHighTipShovel/l120HHighTipShovel.xml",
+    "type": "shovelLeveler",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "VOLVO",
+    "name": "$l10n_storeItem_wheelLoaderHighTipBucket"
+  },
+  "data/vehicles/volvo/l120hpalletfork/l120hpalletfork.xml": {
+    "relPath": "data/vehicles/volvo/l120HPalletFork/l120HPalletFork.xml",
+    "type": "implementDynamicMountAttacher",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "VOLVO",
+    "name": "$l10n_shopItem_wheelLoaderFork"
+  },
+  "data/vehicles/volvo/l120hrockshovel/l120hrockshovel.xml": {
+    "relPath": "data/vehicles/volvo/l120HRockShovel/l120HRockShovel.xml",
+    "type": "shovelLeveler",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "VOLVO",
+    "name": "$l10n_storeItem_wheelLoaderRockBucket"
+  },
+  "data/vehicles/volvo/l120hshovel/l120hshovel.xml": {
+    "relPath": "data/vehicles/volvo/l120HShovel/l120HShovel.xml",
+    "type": "shovelLeveler",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "VOLVO",
+    "name": "$l10n_storeItem_wheelLoaderGeneralPurposeBucket"
+  },
+  "data/vehicles/volvo/l180h/l180h.xml": {
+    "relPath": "data/vehicles/volvo/l180H/l180H.xml",
+    "type": "tractorReverseDriving",
+    "category": "wheelLoaderVehicles",
+    "displayType": "Wheel Loader",
+    "brand": "VOLVO",
+    "name": "L180H"
+  },
+  "data/vehicles/volvo/l180hbaglifter/l180hbaglifter.xml": {
+    "relPath": "data/vehicles/volvo/l180HBagLifter/l180HBagLifter.xml",
+    "type": "implement",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "VOLVO",
+    "name": "%s (%s)"
+  },
+  "data/vehicles/volvo/l180hgrapple/l180hgrapple.xml": {
+    "relPath": "data/vehicles/volvo/l180HGrapple/l180HGrapple.xml",
+    "type": "logGrab",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "VOLVO",
+    "name": "%s (%s)"
+  },
+  "data/vehicles/volvo/l180hhightipshovel/l180hhightipshovel.xml": {
+    "relPath": "data/vehicles/volvo/l180HHighTipShovel/l180HHighTipShovel.xml",
+    "type": "shovelLeveler",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "VOLVO",
+    "name": "%s (%s)"
+  },
+  "data/vehicles/volvo/l180hpalletfork/l180hpalletfork.xml": {
+    "relPath": "data/vehicles/volvo/l180HPalletFork/l180HPalletFork.xml",
+    "type": "implementDynamicMountAttacher",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "VOLVO",
+    "name": "%s (%s)"
+  },
+  "data/vehicles/volvo/l180hrockshovel/l180hrockshovel.xml": {
+    "relPath": "data/vehicles/volvo/l180HRockShovel/l180HRockShovel.xml",
+    "type": "shovelLeveler",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "VOLVO",
+    "name": "%s (%s)"
+  },
+  "data/vehicles/volvo/l180hshovel/l180hshovel.xml": {
+    "relPath": "data/vehicles/volvo/l180HShovel/l180HShovel.xml",
+    "type": "shovelLeveler",
+    "category": "wheelLoaderTools",
+    "displayType": "Wheel Loader",
+    "brand": "VOLVO",
+    "name": "%s (%s)"
+  },
+  "data/vehicles/volvo/l200h/l200h.xml": {
+    "relPath": "data/vehicles/volvo/l200H/l200H.xml",
+    "type": "forwarder",
+    "category": "forestryMisc",
+    "displayType": "Tractor",
+    "brand": "VOLVO",
+    "name": "L200H High Lift"
+  },
+  "data/vehicles/volvo/vnx300/vnx300.xml": {
+    "relPath": "data/vehicles/volvo/vnx300/vnx300.xml",
+    "type": "tractor",
+    "category": "trucks",
+    "displayType": "Truck",
+    "brand": "VOLVO",
+    "name": "VNX 300"
+  },
+  "data/vehicles/walkabout/motherbin4000/motherbin4000.xml": {
+    "relPath": "data/vehicles/walkabout/motherBin4000/motherBin4000.xml",
+    "type": "augerWagon",
+    "category": "augerWagons",
+    "displayType": "Tractor",
+    "brand": "WALKABOUT",
+    "name": "WMB 4000"
+  },
+  "data/vehicles/westtech/c550/c550.xml": {
+    "relPath": "data/vehicles/westtech/c550/c550.xml",
+    "type": "attachableFellerBuncher",
+    "category": "forestryExcavatorTools",
+    "displayType": "Tractor",
+    "brand": "WESTTECH",
+    "name": "WOODCRACKER\u00ae C550"
+  },
+  "data/vehicles/westtech/g1650/g1650.xml": {
+    "relPath": "data/vehicles/westtech/g1650/g1650.xml",
+    "type": "logGrab",
+    "category": "forestryExcavatorTools",
+    "displayType": "Tractor",
+    "brand": "WESTTECH",
+    "name": "WOODCRACKER\u00ae G1650"
+  },
+  "data/vehicles/wifo/hmz3403000/hmz3403000.xml": {
+    "relPath": "data/vehicles/wifo/hmz3403000/hmz3403000.xml",
+    "type": "dynamicMountAttacherFork",
+    "category": "misc",
+    "displayType": "Tractor",
+    "brand": "WIFO",
+    "name": "HMZ 340/3000"
+  },
+  "data/vehicles/wilsontrailer/silverstar/silverstar.xml": {
+    "relPath": "data/vehicles/wilsonTrailer/silverstar/silverstar.xml",
+    "type": "livestockTrailer",
+    "category": "animalTransport",
+    "displayType": "Tractor",
+    "brand": "WILSON",
+    "name": "Silverstar"
+  },
+  "data/vehicles/zetor/crystal/crystal.xml": {
+    "relPath": "data/vehicles/zetor/crystal/crystal.xml",
+    "type": "tractor",
+    "category": "tractorsM",
+    "displayType": "Tractor",
+    "brand": "ZETOR",
+    "name": "CRYSTAL HD"
+  },
+  "data/vehicles/zetor/crystal16045/crystal16045.xml": {
+    "relPath": "data/vehicles/zetor/crystal16045/crystal16045.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "ZETOR",
+    "name": "Crystal 16045"
+  },
+  "data/vehicles/zetor/forterrahsx140/forterrahsx140.xml": {
+    "relPath": "data/vehicles/zetor/forterraHSX140/forterraHSX140.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "ZETOR",
+    "name": "FORTERRA HSX"
+  },
+  "data/vehicles/zetor/proximahs120/proximahs120.xml": {
+    "relPath": "data/vehicles/zetor/proximaHS120/proximaHS120.xml",
+    "type": "tractor",
+    "category": "tractorsS",
+    "displayType": "Tractor",
+    "brand": "ZETOR",
+    "name": "PROXIMA HS"
+  },
+  "data/vehicles/zunhammer/ult18/ult18.xml": {
+    "relPath": "data/vehicles/zunhammer/ult18/ult18.xml",
+    "type": "manureTrailer",
+    "category": "slurryTransport",
+    "displayType": "Tractor",
+    "brand": "ZUNHAMMER",
+    "name": "ULT 18"
+  },
+  "data/vehicles/zunhammer/ult24/ult24.xml": {
+    "relPath": "data/vehicles/zunhammer/ult24/ult24.xml",
+    "type": "manureTrailer",
+    "category": "slurryTransport",
+    "displayType": "Tractor",
+    "brand": "ZUNHAMMER",
+    "name": "ULT 24"
+  },
+  "data/vehicles/zunhammer/vibro/vibro.xml": {
+    "relPath": "data/vehicles/zunhammer/vibro/vibro.xml",
+    "type": "fertilizingCultivator",
+    "category": "slurryTools",
+    "displayType": "Tractor",
+    "brand": "ZUNHAMMER",
+    "name": "Vibro"
+  }
+}
