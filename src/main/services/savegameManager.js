@@ -1697,24 +1697,56 @@ async function getFleetPositions(savePath, mapModName) {
                 
                 const fnLower = filename.toLowerCase();
                 
-                // 1. PRIMARY RULE: Check vehicle type & runtime XML structure (enterable, motor, drivable, motor configs)
+                // Embedded base game vehicle database lookup & category derivation
+                let baseType = null;
+                let baseCategory = null;
+                let staticDisplayType = null;
+                try {
+                    const baseGameDb = require('../resources/data/baseGameVehicles.json');
+                    const fnKey = (filename || '').toLowerCase().replace(/\\/g, '/');
+                    const dbMatch = baseGameDb[fnKey] || baseGameDb[fnKey.replace(/^\$data\//, 'data/')];
+                    if (dbMatch) {
+                        staticDisplayType = dbMatch.displayType;
+                        baseType = dbMatch.type;
+                        baseCategory = dbMatch.category;
+                    }
+                } catch(err) {}
+
+                const deriveVehicleType = (fn, rawType, bType, bCat, sDisplay) => {
+                    if (sDisplay) return sDisplay;
+                    const fnL = (fn || '').toLowerCase();
+                    const tL = (rawType || '').toLowerCase();
+                    const bTL = (bType || '').toLowerCase();
+                    const bCL = (bCat || '').toLowerCase();
+                    
+                    if (bTL.includes('telehandler') || bCL.includes('teleloader') || tL.includes('telehandler') || fnL.includes('telehandler') || fnL.includes('mlt') || fnL.includes('farmlift') || fnL.includes('scorpion') || fnL.includes('multifarmer') || fnL.includes('sennebogen') || fnL.includes('telescopic')) return 'Telehandler';
+                    if (bTL.includes('wheelloader') || bCL.includes('wheelloader') || tL.includes('wheelloader') || fnL.includes('wheelloader') || fnL.includes('torion') || fnL.includes('r640')) return 'Wheel Loader';
+                    if (bTL.includes('skidsteer') || bCL.includes('skidsteer') || tL.includes('skidsteer') || fnL.includes('skidsteer')) return 'Skid Steer';
+                    if (bTL.includes('combine') || bCL.includes('combine') || bCL.includes('harvester') || tL.includes('combine') || fnL.includes('combine') || fnL.includes('harvester') || fnL.includes('evion') || fnL.includes('lexion') || fnL.includes('trion') || fnL.includes('dominator') || fnL.includes('ideal') || fnL.includes('8570') || fnL.includes('axial') || fnL.includes('cr10') || fnL.includes('cr9') || fnL.includes('x9') || fnL.includes('ch770') || fnL.includes('braud')) return 'Combine Harvester';
+                    if (bTL.includes('truck') || bCL.includes('truck') || tL.includes('truck') || fnL.includes('truck') || fnL.includes('lorry') || fnL.includes('tgx') || fnL.includes('mack') || fnL.includes('superliner') || fnL.includes('man/')) return 'Truck';
+                    if (bTL.includes('car') || bCL.includes('car') || tL.includes('car') || tL.includes('pickup') || fnL.includes('pickup') || fnL.includes('car') || fnL.includes('van') || fnL.includes('suv') || fnL.includes('mahindra')) return 'Car / Pickup';
+                    if (tL.includes('mower') || fnL.includes('mower')) return 'Self-Propelled Mower';
+                    if (tL.includes('sprayer') || fnL.includes('sprayer')) return 'Self-Propelled Sprayer';
+                    return 'Tractor';
+                };
+
+                const displayType = deriveVehicleType(filename, v['@_type'], baseType, baseCategory, staticDisplayType);
+
+                // 1. PRIMARY RULE: Check vehicle type & runtime XML structure (drivable/motor state & motorized categories)
                 const vType = (v['@_type'] || '').toLowerCase();
-                const nonDrivableTypes = ['shovel', 'shovelleveler', 'implement', 'weight', 'attachable', 'handtool', 'pallet', 'bigbag', 'bale', 'cutter', 'header', 'washer', 'pressurewasher', 'kaercher'];
+                const nonDrivableTypes = ['shovel', 'shovelleveler', 'implement', 'weight', 'attachable', 'handtool', 'pallet', 'bigbag', 'bale', 'cutter', 'header', 'washer', 'pressurewasher', 'kaercher', 'trailer', 'wagon'];
                 if (vType && nonDrivableTypes.some(t => vType.includes(t))) continue;
 
-                const hasEnterableState = v.enterable !== undefined || v.motor !== undefined || v.drivable !== undefined;
+                const hasMotorOrDrivable = v.motor !== undefined || v.drivable !== undefined;
                 let hasMotorConfig = false;
                 if (v.configuration) {
                     const configs = Array.isArray(v.configuration) ? v.configuration : [v.configuration];
                     hasMotorConfig = configs.some(c => c['@_name'] === 'motor');
                 }
 
-                const isStructurallyDrivable = hasEnterableState || hasMotorConfig;
-
-                // 2. FALLBACK HEURISTICS (Only for default map templates where runtime tags haven't instantiated)
+                const isStructurallyDrivable = hasMotorOrDrivable || hasMotorConfig || (v.enterable !== undefined && (vType.includes('drivable') || vType.includes('tractor') || vType.includes('combine')));
                 const isDrivableHeuristics = fnLower.includes('tractor') || fnLower.includes('truck') || fnLower.includes('lorry') || fnLower.includes('car') || fnLower.includes('pickup') || fnLower.includes('van') || fnLower.includes('suv') || fnLower.includes('jeep') || fnLower.includes('xuv') || fnLower.includes('harvester') || fnLower.includes('combine') || fnLower.includes('telehandler') || fnLower.includes('wheelloader') || fnLower.includes('skidsteer');
 
-                // Determine if drivable: primary XML structure first, fallback heuristics second
                 const isDrivable = isDefault ? (isStructurallyDrivable || isDrivableHeuristics) : isStructurallyDrivable;
                 if (!isDrivable) continue;
 
@@ -1751,41 +1783,6 @@ async function getFleetPositions(savePath, mapModName) {
                 // Remove word "Tractor" (case-insensitive) from brand and name
                 brand = brand.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim() || 'Unknown';
                 name = name.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim();
-                
-                // Embedded base game vehicle database lookup
-                let baseType = null;
-                let baseCategory = null;
-                let staticDisplayType = null;
-                try {
-                    const baseGameDb = require('../resources/data/baseGameVehicles.json');
-                    const fnKey = (filename || '').toLowerCase().replace(/\\/g, '/');
-                    const dbMatch = baseGameDb[fnKey] || baseGameDb[fnKey.replace(/^\$data\//, 'data/')];
-                    if (dbMatch) {
-                        staticDisplayType = dbMatch.displayType;
-                        baseType = dbMatch.type;
-                        baseCategory = dbMatch.category;
-                    }
-                } catch(err) {}
-
-                const deriveVehicleType = (fn, rawType, bType, bCat, sDisplay) => {
-                    if (sDisplay) return sDisplay;
-                    const fnL = (fn || '').toLowerCase();
-                    const tL = (rawType || '').toLowerCase();
-                    const bTL = (bType || '').toLowerCase();
-                    const bCL = (bCat || '').toLowerCase();
-                    
-                    if (bTL.includes('telehandler') || bCL.includes('teleloader') || tL.includes('telehandler') || fnL.includes('telehandler') || fnL.includes('mlt') || fnL.includes('farmlift') || fnL.includes('scorpion') || fnL.includes('multifarmer') || fnL.includes('sennebogen') || fnL.includes('telescopic')) return 'Telehandler';
-                    if (bTL.includes('wheelloader') || bCL.includes('wheelloader') || tL.includes('wheelloader') || fnL.includes('wheelloader') || fnL.includes('torion') || fnL.includes('r640')) return 'Wheel Loader';
-                    if (bTL.includes('skidsteer') || bCL.includes('skidsteer') || tL.includes('skidsteer') || fnL.includes('skidsteer')) return 'Skid Steer';
-                    if (bTL.includes('combine') || bCL.includes('combine') || bCL.includes('harvester') || tL.includes('combine') || fnL.includes('combine') || fnL.includes('harvester') || fnL.includes('evion') || fnL.includes('lexion') || fnL.includes('trion') || fnL.includes('dominator') || fnL.includes('ideal') || fnL.includes('8570') || fnL.includes('axial') || fnL.includes('cr10') || fnL.includes('cr9') || fnL.includes('x9') || fnL.includes('ch770') || fnL.includes('braud')) return 'Combine Harvester';
-                    if (bTL.includes('truck') || bCL.includes('truck') || tL.includes('truck') || fnL.includes('truck') || fnL.includes('lorry') || fnL.includes('tgx') || fnL.includes('mack') || fnL.includes('superliner') || fnL.includes('man/')) return 'Truck';
-                    if (bTL.includes('car') || bCL.includes('car') || tL.includes('car') || tL.includes('pickup') || fnL.includes('pickup') || fnL.includes('car') || fnL.includes('van') || fnL.includes('suv') || fnL.includes('mahindra')) return 'Car / Pickup';
-                    if (tL.includes('mower') || fnL.includes('mower')) return 'Self-Propelled Mower';
-                    if (tL.includes('sprayer') || fnL.includes('sprayer')) return 'Self-Propelled Sprayer';
-                    return 'Tractor';
-                };
-
-                const displayType = deriveVehicleType(filename, v['@_type'], baseType, baseCategory, staticDisplayType);
                 
                 fleet.push({ 
                     id: gameAssignedId, 
