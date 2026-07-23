@@ -233,7 +233,21 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
   // Spawn & Persistence State
   const [isPersistenceActive, setIsPersistenceActive] = useState(false);
   const [playerPos, setPlayerPos] = useState(null);
-  const [teleportMode, setTeleportMode] = useState(null); // 'custom', 'shop', 'vehicle'
+  const [selectedSpawnMode, setSelectedSpawnMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`selected_spawn_${save.path}`);
+      if (saved) return JSON.parse(saved).mode || null;
+    } catch(e) {}
+    return null;
+  });
+  const [selectedVehicleId, setSelectedVehicleId] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`selected_spawn_${save.path}`);
+      if (saved) return JSON.parse(saved).vehicleUniqueId || null;
+    } catch(e) {}
+    return null;
+  });
+  const [isVehicleListOpen, setIsVehicleListOpen] = useState(false);
   const [searchFleetQuery, setSearchFleetQuery] = useState('');
   const [fleet, setFleet] = useState([]);
   const [hasStoreDeliveries, setHasStoreDeliveries] = useState(null); // null = optimistically true to prevent flashing
@@ -259,7 +273,16 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
 
     // Fetch Player Position, Fleet & Mod Status if on spawn tab
     if (activeTab === 'spawn') {
-      window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
+      window.api.savegames.getPlayerPosition(save.path).then(pos => {
+        setPlayerPos(pos);
+        if (pos) {
+          const savedRaw = localStorage.getItem(`selected_spawn_${save.path}`);
+          if (!savedRaw && pos.vehicleUniqueId) {
+            setSelectedSpawnMode('vehicle');
+            setSelectedVehicleId(pos.vehicleUniqueId);
+          }
+        }
+      });
       const getMapModName = (mapId) => {
         if (mapId && mapId.includes('.')) {
           return mapId.split('.')[0];
@@ -267,7 +290,18 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
         return null;
       };
       const mapModName = getMapModName(save.mapId);
-      window.api.savegames.getFleetPositions(save.path, mapModName).then(res => setFleet(Array.isArray(res) ? res : (res?.items || [])));
+      window.api.savegames.getFleetPositions(save.path, mapModName).then(res => {
+        const fleetList = Array.isArray(res) ? res : (res?.items || []);
+        setFleet(fleetList);
+        const savedRaw = localStorage.getItem(`selected_spawn_${save.path}`);
+        if (savedRaw) {
+          try {
+            const parsed = JSON.parse(savedRaw);
+            if (parsed.mode) setSelectedSpawnMode(parsed.mode);
+            if (parsed.vehicleUniqueId) setSelectedVehicleId(parsed.vehicleUniqueId);
+          } catch(e) {}
+        }
+      });
       if (window.api.savegames.checkStoreDeliveries) {
         window.api.savegames.checkStoreDeliveries().then(setHasStoreDeliveries);
       }
@@ -822,48 +856,55 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
               </div>
 
               {/* Quick Teleport Presets */}
-              <div className="settings-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', flex: teleportMode === 'vehicle' ? 1 : 'none', minHeight: 0 }}>
+              <div className="settings-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', flex: (isVehicleListOpen || selectedSpawnMode === 'vehicle') ? 1 : 'none', minHeight: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <MapIcon size={16} className="text-accent" />
                   <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--text-primary)' }}>QUICK TELEPORT PRESETS</div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: teleportMode === 'vehicle' ? 16 : 0 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: (isVehicleListOpen || selectedSpawnMode === 'vehicle') ? 16 : 0 }}>
+                  
+                  {/* Preset 1: Custom Spawn Point */}
                   <div 
                     onClick={async () => {
-                      if (hasStoreDeliveries === false) return; // Prevent clicking if downloading/disabled
-                      if (teleportMode === 'custom') {
-                        setTeleportMode(null);
-                        return;
-                      }
-                      setTeleportMode('custom');
+                      if (hasStoreDeliveries === false) return;
+                      setSelectedSpawnMode('custom');
+                      setSelectedVehicleId(null);
+                      localStorage.setItem(`selected_spawn_${save.path}`, JSON.stringify({ mode: 'custom' }));
                       const res = await window.api?.savegames?.getStoreDeliveryCoordinates(save.path);
                       if (res) {
                           const setRes = await window.api.savegames.setPlayerPosition({ savePath: save.path, x: res.x, y: res.y, z: res.z });
                           if (setRes && setRes.success) {
-                              useToastStore.getState().success("Teleported to Custom Spawn Point");
+                              useToastStore.getState().success("Selected Custom Spawn Point!");
                               window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
                           } else {
-                              useToastStore.getState().error("Failed to teleport: " + (setRes?.error || "Unknown error"));
+                              useToastStore.getState().error("Failed to set spawn: " + (setRes?.error || "Unknown error"));
                           }
                       } else {
                           useToastStore.getState().error("Could not find Custom Spawn coordinates for this map.");
-                          setTeleportMode(null);
                       }
                     }}
                     style={{ 
                       padding: '16px', 
-                      background: teleportMode === 'custom' ? 'rgba(var(--accent-rgb), 0.1)' : 'var(--bg-base)', 
-                      border: `1px solid ${teleportMode === 'custom' ? 'var(--accent)' : 'var(--border)'}`, 
+                      background: selectedSpawnMode === 'custom' ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg-base)', 
+                      border: selectedSpawnMode === 'custom' ? '2px solid var(--accent)' : '1px solid var(--border)', 
                       borderRadius: 8, 
                       cursor: hasStoreDeliveries !== false ? 'pointer' : 'default', 
                       display: 'flex', 
                       flexDirection: 'column', 
                       transition: 'all 0.2s', 
-                      opacity: hasStoreDeliveries !== false ? 1 : 0.5
+                      opacity: hasStoreDeliveries !== false ? 1 : 0.5,
+                      boxShadow: selectedSpawnMode === 'custom' ? '0 0 12px rgba(var(--accent-rgb), 0.2)' : 'none'
                     }}
                   >
-                    <Pin size={16} style={{ color: teleportMode === 'custom' ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 8 }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <Pin size={16} style={{ color: selectedSpawnMode === 'custom' ? 'var(--accent)' : 'var(--text-tertiary)' }} />
+                      {selectedSpawnMode === 'custom' && (
+                        <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(var(--accent-rgb), 0.15)', padding: '2px 8px', borderRadius: 100 }}>
+                          <Check size={12} /> ACTIVE
+                        </div>
+                      )}
+                    </div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
                       Custom Spawn Point ({customSpawnInfo.type === 'Custom' ? 'Custom' : 'Home'})
                     </div>
@@ -902,61 +943,86 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                     </div>
                   </div>
 
+                  {/* Preset 2: Vehicle Shop */}
                   <div 
                     onClick={async () => {
-                      if (teleportMode === 'shop') {
-                        setTeleportMode(null);
-                        return;
-                      }
-                      setTeleportMode('shop');
+                      setSelectedSpawnMode('shop');
+                      setSelectedVehicleId(null);
+                      localStorage.setItem(`selected_spawn_${save.path}`, JSON.stringify({ mode: 'shop' }));
                       const res = await window.api?.savegames?.getMapShopCoordinates(save.path);
                       if (res) {
                           const setRes = await window.api.savegames.setPlayerPosition({ savePath: save.path, x: res.x, y: res.y, z: res.z });
                           if (setRes && setRes.success) {
-                              useToastStore.getState().success("Teleported to Vehicle Shop");
+                              useToastStore.getState().success("Selected Vehicle Shop Spawn Point!");
                               window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
                           } else {
-                              useToastStore.getState().error("Failed to teleport: " + (setRes?.error || "Unknown error"));
+                              useToastStore.getState().error("Failed to set spawn: " + (setRes?.error || "Unknown error"));
                           }
                       } else {
                           useToastStore.getState().error("Could not find Vehicle Shop coordinates for this map.");
-                          setTeleportMode(null);
                       }
                     }}
                     style={{ 
-                      padding: '16px', background: teleportMode === 'shop' ? 'rgba(var(--accent-rgb), 0.1)' : 'var(--bg-base)', 
-                      border: `1px solid ${teleportMode === 'shop' ? 'var(--accent)' : 'var(--border)'}`, 
-                      borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', transition: 'all 0.2s'
+                      padding: '16px', background: selectedSpawnMode === 'shop' ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg-base)', 
+                      border: selectedSpawnMode === 'shop' ? '2px solid var(--accent)' : '1px solid var(--border)', 
+                      borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', transition: 'all 0.2s',
+                      boxShadow: selectedSpawnMode === 'shop' ? '0 0 12px rgba(var(--accent-rgb), 0.2)' : 'none'
                     }}
                   >
-                    <MapPin size={16} style={{ color: teleportMode === 'shop' ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 8 }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <MapPin size={16} style={{ color: selectedSpawnMode === 'shop' ? 'var(--accent)' : 'var(--text-tertiary)' }} />
+                      {selectedSpawnMode === 'shop' && (
+                        <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(var(--accent-rgb), 0.15)', padding: '2px 8px', borderRadius: 100 }}>
+                          <Check size={12} /> ACTIVE
+                        </div>
+                      )}
+                    </div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Vehicle Shop</div>
                     <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Ready to buy equipment</div>
                   </div>
 
-                  <div 
-                    onClick={() => setTeleportMode(teleportMode === 'vehicle' ? null : 'vehicle')}
-                    style={{ 
-                      padding: '16px', background: teleportMode === 'vehicle' ? 'rgba(var(--accent-rgb), 0.1)' : 'var(--bg-base)', 
-                      border: `1px solid ${teleportMode === 'vehicle' ? 'var(--accent)' : 'var(--border)'}`, 
-                      borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', transition: 'all 0.2s'
-                    }}
-                  >
-                    <Tractor size={16} style={{ color: teleportMode === 'vehicle' ? 'var(--accent)' : 'var(--text-tertiary)', marginBottom: 8 }} />
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Vehicle of Choice</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Select From Available Vehicles</div>
-                  </div>
+                  {/* Preset 3: Vehicle of Choice */}
+                  {(() => {
+                    const selVehicle = fleet.find(v => (v.uniqueId || v.id) === selectedVehicleId || String(v.uniqueId) === String(selectedVehicleId) || String(v.id) === String(selectedVehicleId));
+                    return (
+                      <div 
+                        onClick={() => {
+                          setSelectedSpawnMode('vehicle');
+                          setIsVehicleListOpen(prev => !prev);
+                        }}
+                        style={{ 
+                          padding: '16px', background: selectedSpawnMode === 'vehicle' ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg-base)', 
+                          border: selectedSpawnMode === 'vehicle' ? '2px solid var(--accent)' : '1px solid var(--border)', 
+                          borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', transition: 'all 0.2s',
+                          boxShadow: selectedSpawnMode === 'vehicle' ? '0 0 12px rgba(var(--accent-rgb), 0.2)' : 'none'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <Tractor size={16} style={{ color: selectedSpawnMode === 'vehicle' ? 'var(--accent)' : 'var(--text-tertiary)' }} />
+                          {selectedSpawnMode === 'vehicle' && (
+                            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(var(--accent-rgb), 0.15)', padding: '2px 8px', borderRadius: 100 }}>
+                              <Check size={12} /> ACTIVE
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Vehicle of Choice</div>
+                        <div style={{ fontSize: 11, color: selectedSpawnMode === 'vehicle' && selVehicle ? 'var(--accent)' : 'var(--text-tertiary)', fontWeight: selectedSpawnMode === 'vehicle' && selVehicle ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {selectedSpawnMode === 'vehicle' && selVehicle ? `${selVehicle.brand} ${selVehicle.name}` : 'Select From Available Vehicles'}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
-                {/* Vehicle List (Only shows when Vehicle of Choice is active) */}
-                {teleportMode === 'vehicle' && (
+                {/* Vehicle List (Only shows when Vehicle of Choice is active or toggled open) */}
+                {(isVehicleListOpen || selectedSpawnMode === 'vehicle') && (
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 300, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-base)', overflow: 'hidden' }}>
                     
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>
                         <Tractor size={14} /> VEHICLE LIST
                       </div>
-                      <button className="btn btn--ghost btn--sm" style={{ width: 24, height: 24, padding: 0 }} onClick={() => setTeleportMode(null)}><X size={14} /></button>
+                      <button className="btn btn--ghost btn--sm" style={{ width: 24, height: 24, padding: 0 }} onClick={() => setIsVehicleListOpen(false)}><X size={14} /></button>
                     </div>
 
                     <div style={{ padding: '12px 16px', display: 'flex', gap: 8, borderBottom: '1px solid var(--border)' }}>
@@ -988,39 +1054,67 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                     </div>
 
                     <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, alignContent: 'start' }}>
-                      {fleet.filter(v => !searchFleetQuery || `${v.brand} ${v.name} ${v.displayType || v.type}`.toLowerCase().includes(searchFleetQuery.toLowerCase())).map((v, i) => (
-                        <div 
-                          key={i} 
-                          onClick={async () => {
-                            if (!window.api?.savegames) return;
-                            const res = await window.api.savegames.setPlayerPosition({ savePath: save.path, x: v.x, y: v.y, z: v.z, vehicleUniqueId: v.uniqueId });
-                            if (res.success) {
-                              useToastStore.getState().success(`Teleported to ${v.name}`);
-                              window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
-                            } else {
-                              useToastStore.getState().error("Failed to teleport: " + res.error);
-                            }
-                          }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 8, border: '1px solid transparent', cursor: 'pointer', transition: 'border-color 0.2s' }}
-                          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
-                          onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}
-                        >
-                          <div style={{ width: 42, height: 42, borderRadius: 8, background: 'rgba(var(--accent-rgb), 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--accent)' }}>
-                            {(() => {
-                              const t = (v.displayType || v.type || '').toLowerCase();
-                              if (t.includes('tractor')) return <Tractor size={24} />;
-                              if (t.includes('combine') || t.includes('harvester')) return <CombineHarvesterIcon size={24} />;
-                              if (t.includes('truck')) return <Truck size={24} />;
-                              if (t.includes('car') || t.includes('pickup')) return <Car size={24} />;
-                              return <Truck size={24} />;
-                            })()}
+                      {fleet.filter(v => !searchFleetQuery || `${v.brand} ${v.name} ${v.displayType || v.type}`.toLowerCase().includes(searchFleetQuery.toLowerCase())).map((v, i) => {
+                        const vId = v.uniqueId || v.id;
+                        const isSelectedVehicle = selectedSpawnMode === 'vehicle' && selectedVehicleId && (String(selectedVehicleId) === String(v.uniqueId) || String(selectedVehicleId) === String(v.id) || selectedVehicleId === vId);
+                        return (
+                          <div 
+                            key={i} 
+                            onClick={async () => {
+                              if (!window.api?.savegames) return;
+                              setSelectedSpawnMode('vehicle');
+                              setSelectedVehicleId(vId);
+                              localStorage.setItem(`selected_spawn_${save.path}`, JSON.stringify({ mode: 'vehicle', vehicleUniqueId: vId }));
+                              const res = await window.api.savegames.setPlayerPosition({ savePath: save.path, x: v.x, y: v.y, z: v.z, vehicleUniqueId: v.uniqueId });
+                              if (res.success) {
+                                useToastStore.getState().success(`Selected spawn vehicle: ${v.brand} ${v.name}`);
+                                window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
+                              } else {
+                                useToastStore.getState().error("Failed to set spawn position: " + res.error);
+                              }
+                            }}
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: 12, 
+                              padding: '12px', 
+                              background: isSelectedVehicle ? 'rgba(var(--accent-rgb), 0.15)' : 'var(--bg-tertiary)', 
+                              borderRadius: 8, 
+                              border: isSelectedVehicle ? '2px solid var(--accent)' : '1px solid transparent', 
+                              cursor: 'pointer', 
+                              transition: 'all 0.2s',
+                              position: 'relative',
+                              boxShadow: isSelectedVehicle ? '0 0 12px rgba(var(--accent-rgb), 0.25)' : 'none'
+                            }}
+                            onMouseEnter={e => { if (!isSelectedVehicle) e.currentTarget.style.borderColor = 'var(--accent)'; }}
+                            onMouseLeave={e => { if (!isSelectedVehicle) e.currentTarget.style.borderColor = 'transparent'; }}
+                          >
+                            <div style={{ width: 42, height: 42, borderRadius: 8, background: 'rgba(var(--accent-rgb), 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--accent)' }}>
+                              {(() => {
+                                const t = (v.displayType || v.type || '').toLowerCase();
+                                if (t.includes('tractor')) return <Tractor size={24} />;
+                                if (t.includes('combine') || t.includes('harvester')) return <CombineHarvesterIcon size={24} />;
+                                if (t.includes('truck')) return <Truck size={24} />;
+                                if (t.includes('car') || t.includes('pickup')) return <Car size={24} />;
+                                return <Truck size={24} />;
+                              })()}
+                            </div>
+                            <div style={{ overflow: 'hidden', flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.brand} {v.name}</div>
+                              </div>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: isSelectedVehicle ? 'var(--accent)' : 'var(--text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4, textTransform: 'capitalize' }}>
+                                <span>{v.displayType || v.type || 'Vehicle'}</span>
+                                {isSelectedVehicle && (
+                                  <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent)', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Check size={12} /> ACTIVE
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <div style={{ overflow: 'hidden', flex: 1 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{v.brand} {v.name}</div>
-                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', marginTop: 2, textTransform: 'capitalize' }}>{v.displayType || v.type || 'Vehicle'}</div>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                       {fleet.length === 0 && (
                         <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '32px', color: 'var(--text-tertiary)', fontSize: 13 }}>
                           No drivable vehicles found in savegame.
