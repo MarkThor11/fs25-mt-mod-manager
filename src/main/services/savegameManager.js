@@ -1759,7 +1759,7 @@ async function getFleetPositions(savePath, mapModName) {
                     if (tL.includes('combine') || fnL.includes('combine') || fnL.includes('harvester') || fnL.includes('evion') || fnL.includes('lexion') || fnL.includes('trion') || fnL.includes('dominator') || fnL.includes('ideal') || fnL.includes('8570') || fnL.includes('axial') || fnL.includes('cr10') || fnL.includes('cr9') || fnL.includes('x9') || fnL.includes('ch770') || fnL.includes('braud')) return 'Combine Harvester';
                     if (tL.includes('truck') || fnL.includes('truck') || fnL.includes('lorry') || fnL.includes('tgx') || fnL.includes('mack') || fnL.includes('superliner') || fnL.includes('man/')) return 'Truck';
                     if (tL.includes('car') || tL.includes('pickup') || fnL.includes('pickup') || fnL.includes('car') || fnL.includes('van') || fnL.includes('suv') || fnL.includes('mahindra')) return 'Car / Pickup';
-                    if (tL.includes('telehandler') || fnL.includes('telehandler')) return 'Telehandler';
+                    if (tL.includes('telehandler') || fnL.includes('telehandler') || fnL.includes('mlt') || fnL.includes('farmlift') || fnL.includes('scorpion') || fnL.includes('multifarmer') || fnL.includes('sennebogen') || fnL.includes('telescopic')) return 'Telehandler';
                     if (tL.includes('wheelloader') || fnL.includes('wheelloader') || fnL.includes('torion') || fnL.includes('r640')) return 'Wheel Loader';
                     if (tL.includes('skidsteer') || fnL.includes('skidsteer')) return 'Skid Steer';
                     if (tL.includes('mower') || fnL.includes('mower')) return 'Self-Propelled Mower';
