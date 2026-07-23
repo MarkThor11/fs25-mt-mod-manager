@@ -1752,22 +1752,46 @@ async function getFleetPositions(savePath, mapModName) {
                 brand = brand.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim() || 'Unknown';
                 name = name.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim();
                 
-                const deriveVehicleType = (fn, rawType) => {
+                // Direct inspection of GIANTS base game XML or mod file if available
+                let baseType = null;
+                let baseCategory = null;
+                try {
+                    const pathProvider = require('./pathProvider');
+                    const gameDataRoot = pathProvider.getFS25DataRoot();
+                    let targetXmlPath = null;
+                    if (/^(\$data\/|data\/)/i.test(filename)) {
+                        targetXmlPath = path.join(gameDataRoot, filename.replace(/^(\$data\/|data\/)/i, ''));
+                    }
+                    if (targetXmlPath && fs.existsSync(targetXmlPath)) {
+                        const baseContent = fs.readFileSync(targetXmlPath, 'utf8');
+                        const baseData = parser.parse(baseContent);
+                        if (baseData && baseData.vehicle) {
+                            baseType = baseData.vehicle['@_type'] || null;
+                            if (baseData.vehicle.storeData && baseData.vehicle.storeData.category) {
+                                baseCategory = String(baseData.vehicle.storeData.category);
+                            }
+                        }
+                    }
+                } catch(err) {}
+
+                const deriveVehicleType = (fn, rawType, bType, bCat) => {
                     const fnL = (fn || '').toLowerCase();
                     const tL = (rawType || '').toLowerCase();
+                    const bTL = (bType || '').toLowerCase();
+                    const bCL = (bCat || '').toLowerCase();
                     
-                    if (tL.includes('combine') || fnL.includes('combine') || fnL.includes('harvester') || fnL.includes('evion') || fnL.includes('lexion') || fnL.includes('trion') || fnL.includes('dominator') || fnL.includes('ideal') || fnL.includes('8570') || fnL.includes('axial') || fnL.includes('cr10') || fnL.includes('cr9') || fnL.includes('x9') || fnL.includes('ch770') || fnL.includes('braud')) return 'Combine Harvester';
-                    if (tL.includes('truck') || fnL.includes('truck') || fnL.includes('lorry') || fnL.includes('tgx') || fnL.includes('mack') || fnL.includes('superliner') || fnL.includes('man/')) return 'Truck';
-                    if (tL.includes('car') || tL.includes('pickup') || fnL.includes('pickup') || fnL.includes('car') || fnL.includes('van') || fnL.includes('suv') || fnL.includes('mahindra')) return 'Car / Pickup';
-                    if (tL.includes('telehandler') || fnL.includes('telehandler') || fnL.includes('mlt') || fnL.includes('farmlift') || fnL.includes('scorpion') || fnL.includes('multifarmer') || fnL.includes('sennebogen') || fnL.includes('telescopic')) return 'Telehandler';
-                    if (tL.includes('wheelloader') || fnL.includes('wheelloader') || fnL.includes('torion') || fnL.includes('r640')) return 'Wheel Loader';
-                    if (tL.includes('skidsteer') || fnL.includes('skidsteer')) return 'Skid Steer';
+                    if (bTL.includes('telehandler') || bCL.includes('teleloader') || tL.includes('telehandler') || fnL.includes('telehandler') || fnL.includes('mlt') || fnL.includes('farmlift') || fnL.includes('scorpion') || fnL.includes('multifarmer') || fnL.includes('sennebogen') || fnL.includes('telescopic')) return 'Telehandler';
+                    if (bTL.includes('wheelloader') || bCL.includes('wheelloader') || tL.includes('wheelloader') || fnL.includes('wheelloader') || fnL.includes('torion') || fnL.includes('r640')) return 'Wheel Loader';
+                    if (bTL.includes('skidsteer') || bCL.includes('skidsteer') || tL.includes('skidsteer') || fnL.includes('skidsteer')) return 'Skid Steer';
+                    if (bTL.includes('combine') || bCL.includes('combine') || bCL.includes('harvester') || tL.includes('combine') || fnL.includes('combine') || fnL.includes('harvester') || fnL.includes('evion') || fnL.includes('lexion') || fnL.includes('trion') || fnL.includes('dominator') || fnL.includes('ideal') || fnL.includes('8570') || fnL.includes('axial') || fnL.includes('cr10') || fnL.includes('cr9') || fnL.includes('x9') || fnL.includes('ch770') || fnL.includes('braud')) return 'Combine Harvester';
+                    if (bTL.includes('truck') || bCL.includes('truck') || tL.includes('truck') || fnL.includes('truck') || fnL.includes('lorry') || fnL.includes('tgx') || fnL.includes('mack') || fnL.includes('superliner') || fnL.includes('man/')) return 'Truck';
+                    if (bTL.includes('car') || bCL.includes('car') || tL.includes('car') || tL.includes('pickup') || fnL.includes('pickup') || fnL.includes('car') || fnL.includes('van') || fnL.includes('suv') || fnL.includes('mahindra')) return 'Car / Pickup';
                     if (tL.includes('mower') || fnL.includes('mower')) return 'Self-Propelled Mower';
                     if (tL.includes('sprayer') || fnL.includes('sprayer')) return 'Self-Propelled Sprayer';
                     return 'Tractor';
                 };
 
-                const displayType = deriveVehicleType(filename, v['@_type']);
+                const displayType = deriveVehicleType(filename, v['@_type'], baseType, baseCategory);
                 
                 fleet.push({ 
                     id: gameAssignedId, 
