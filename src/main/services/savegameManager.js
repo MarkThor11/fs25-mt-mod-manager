@@ -2353,10 +2353,15 @@ async function getPlayerPosition(savePath) {
                 const player = Array.isArray(data.players.player) ? data.players.player[0] : data.players.player;
                 if (player.spawn && player.spawn['@_position']) {
                     const coords = player.spawn['@_position'].split(' ');
-                    pos = { x: parseFloat(coords[0]), y: parseFloat(coords[1]), z: parseFloat(coords[2]) };
+                    pos = { 
+                        x: parseFloat(coords[0]), 
+                        y: parseFloat(coords[1]), 
+                        z: parseFloat(coords[2]),
+                        vehicleUniqueId: player.spawn['@_vehicleUniqueId'] || null
+                    };
                 } else if (player['@_lastPosition']) {
                     const coords = player['@_lastPosition'].split(' ');
-                    pos = { x: parseFloat(coords[0]), y: parseFloat(coords[1]), z: parseFloat(coords[2]) };
+                    pos = { x: parseFloat(coords[0]), y: parseFloat(coords[1]), z: parseFloat(coords[2]), vehicleUniqueId: null };
                 }
             }
         }
@@ -2373,7 +2378,8 @@ async function getPlayerPosition(savePath) {
                         pos = {
                             x: parseFloat(player['@_spawnPositionX']),
                             y: parseFloat(player['@_spawnPositionY']),
-                            z: parseFloat(player['@_spawnPositionZ'])
+                            z: parseFloat(player['@_spawnPositionZ']),
+                            vehicleUniqueId: player['@_vehicleId'] || null
                         };
                     }
                 }
