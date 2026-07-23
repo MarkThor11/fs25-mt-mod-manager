@@ -650,6 +650,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     const match = xml.match(/uniqueUserId="([^"]+)"/);
                     if (match && match[1] && match[1] !== 'player') {
                         realUserId = match[1];
+                        if (!realUserId.endsWith('=')) realUserId += '=';
                         console.log(`[CREATE] Extracted real uniqueUserId: ${realUserId} from savegame${i}`);
                         break;
                     }
