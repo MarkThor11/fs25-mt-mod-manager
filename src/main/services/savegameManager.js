@@ -2459,6 +2459,25 @@ async function setPlayerPosition(options) {
             }
         }
         
+        // Find vehicle filename if vehicleUniqueId is provided
+        let targetVehicleFilename = null;
+        if (vehicleUniqueId) {
+            const vehiclesXmlPath = path.join(savePath, 'vehicles.xml');
+            if (fs.existsSync(vehiclesXmlPath)) {
+                try {
+                    const vXml = fs.readFileSync(vehiclesXmlPath, 'utf8');
+                    const vObj = parser.parse(vXml);
+                    if (vObj && vObj.vehicles && vObj.vehicles.vehicle) {
+                        const vList = Array.isArray(vObj.vehicles.vehicle) ? vObj.vehicles.vehicle : [vObj.vehicles.vehicle];
+                        const matchedV = vList.find(v => v['@_uniqueId'] === vehicleUniqueId || v['@_id'] === vehicleUniqueId || String(v['@_uniqueId']) === String(vehicleUniqueId) || String(v['@_id']) === String(vehicleUniqueId));
+                        if (matchedV && matchedV['@_filename']) {
+                            targetVehicleFilename = matchedV['@_filename'];
+                        }
+                    }
+                } catch(e) {}
+            }
+        }
+
         // 2. Update careerSavegame.xml
         const careerPath = path.join(savePath, 'careerSavegame.xml');
         if (fs.existsSync(careerPath)) {
@@ -2476,8 +2495,12 @@ async function setPlayerPosition(options) {
                 }
                 if (vehicleUniqueId) {
                     player['@_vehicleId'] = vehicleUniqueId;
+                    if (targetVehicleFilename) {
+                        player['@_vehicleFilename'] = targetVehicleFilename;
+                    }
                 } else {
                     delete player['@_vehicleId'];
+                    delete player['@_vehicleFilename'];
                 }
                 delete careerObj['?xml'];
                 const careerBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
