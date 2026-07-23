@@ -2448,6 +2448,7 @@ async function setPlayerPosition(options) {
                     } else {
                         delete p.spawn['@_vehicleUniqueId'];
                     }
+                    delete p.spawn['@_yaw'];
                     if (p['@_uniqueUserId'] && !p['@_uniqueUserId'].endsWith('=')) {
                         p['@_uniqueUserId'] = p['@_uniqueUserId'] + '=';
                     }
@@ -2456,25 +2457,6 @@ async function setPlayerPosition(options) {
                 const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
                 const newXml = builder.build(obj);
                 fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
-            }
-        }
-        
-        // Find vehicle filename if vehicleUniqueId is provided
-        let targetVehicleFilename = null;
-        if (vehicleUniqueId) {
-            const vehiclesXmlPath = path.join(savePath, 'vehicles.xml');
-            if (fs.existsSync(vehiclesXmlPath)) {
-                try {
-                    const vXml = fs.readFileSync(vehiclesXmlPath, 'utf8');
-                    const vObj = parser.parse(vXml);
-                    if (vObj && vObj.vehicles && vObj.vehicles.vehicle) {
-                        const vList = Array.isArray(vObj.vehicles.vehicle) ? vObj.vehicles.vehicle : [vObj.vehicles.vehicle];
-                        const matchedV = vList.find(v => v['@_uniqueId'] === vehicleUniqueId || v['@_id'] === vehicleUniqueId || String(v['@_uniqueId']) === String(vehicleUniqueId) || String(v['@_id']) === String(vehicleUniqueId));
-                        if (matchedV && matchedV['@_filename']) {
-                            targetVehicleFilename = matchedV['@_filename'];
-                        }
-                    }
-                } catch(e) {}
             }
         }
 
@@ -2495,13 +2477,12 @@ async function setPlayerPosition(options) {
                 }
                 if (vehicleUniqueId) {
                     player['@_vehicleId'] = vehicleUniqueId;
-                    if (targetVehicleFilename) {
-                        player['@_vehicleFilename'] = targetVehicleFilename;
-                    }
                 } else {
                     delete player['@_vehicleId'];
-                    delete player['@_vehicleFilename'];
                 }
+                delete player['@_vehicleFilename'];
+                delete player['@_spawnYaw'];
+                
                 delete careerObj['?xml'];
                 const careerBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
                 const newCareerXml = careerBuilder.build(careerObj);
