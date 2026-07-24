@@ -415,12 +415,20 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                 // Remove existing if it somehow persisted
                 if (fs.existsSync(destPath)) await fs.remove(destPath);
                 
-                const type = isZip ? 'file' : 'junction';
-                await fs.symlink(m.filePath, destPath, type);
+                if (isZip) {
+                    // Try Hardlink first (requires no admin privileges on Windows!)
+                    try {
+                        await fs.link(m.filePath, destPath);
+                    } catch (hErr) {
+                        await fs.symlink(m.filePath, destPath, 'file');
+                    }
+                } else {
+                    await fs.symlink(m.filePath, destPath, 'junction');
+                }
                 linkedCount++;
                 seenFiles.add(m.modName.toLowerCase());
             } catch (e) {
-                debugLog(`[VIRTUAL] Symlink failed for ${m.modName}: ${e.message}`);
+                debugLog(`[VIRTUAL] Link failed for ${m.modName}: ${e.message}`);
             }
         }
 
@@ -980,8 +988,9 @@ async function scanLocalMods(manualPaths = null, force = false) {
 async function performScan(manualPaths = null) {
 	debugLog('[SCAN] Starting scan...');
 	
-	// Safe execution of backup pruning
+	// Safe execution of backup pruning & subfolder mod deduplication
 	pruneBackups().catch(e => console.error('[CLEANUP] Top-level pruning error:', e));
+	deduplicateSubfolderMods().catch(e => console.error('[DEDUPE] Background deduplication error:', e));
 
 	const modsPaths = (Array.isArray(manualPaths) && manualPaths.length > 0) ? manualPaths : getModsPaths();
 	debugLog(`[SCAN] Starting scan of ${modsPaths.length} locations: ${modsPaths.join(', ')}`);
@@ -2368,17 +2377,21 @@ async function syncMirrorLinks(primaryPath) {
 				try {
 					const targetStats = await fs.lstat(targetPath);
 					const isDir = targetStats.isDirectory();
-					await fs.symlink(targetPath, mirrorPath, isDir ? 'junction' : 'file');
-					console.log(`[MIRROR] Created link: ${modName} -> ${targetPath} (${isDir ? 'folder' : 'zip'})`);
-				} catch (e) {
-					console.error(`[MIRROR] Failed to create symlink for ${modName}: ${e.message}`);
-					// Fallback: Hardlink
-					try {
-						await fs.link(targetPath, mirrorPath);
-						console.log(`[MIRROR] Created HARDLINK fallback: ${modName}`);
-					} catch (hErr) {
-						console.error(`[MIRROR] Hardlink fallback failed: ${hErr.message}`);
+					if (!isDir) {
+						// Try hardlink first for files (0 bytes extra disk space, no admin rights required!)
+						try {
+							await fs.link(targetPath, mirrorPath);
+							console.log(`[MIRROR] Created HARDLINK: ${modName} -> ${targetPath}`);
+						} catch (hErr) {
+							await fs.symlink(targetPath, mirrorPath, 'file');
+							console.log(`[MIRROR] Created SYMLINK: ${modName} -> ${targetPath}`);
+						}
+					} else {
+						await fs.symlink(targetPath, mirrorPath, 'junction');
+						console.log(`[MIRROR] Created JUNCTION: ${modName} -> ${targetPath}`);
 					}
+				} catch (e) {
+					console.error(`[MIRROR] Failed to create link for ${modName}: ${e.message}`);
 				}
 			}
 			existingMirrors.add(modName);
@@ -4229,6 +4242,63 @@ async function resumePendingDownloads(onProgress) {
 	return { success: true, count: results.length, items: pending };
 }
 
+async function deduplicateSubfolderMods(modsPath) {
+	try {
+		const targetDir = modsPath || getModsPath();
+		if (!targetDir || !fs.existsSync(targetDir)) return { success: false, reclaimedBytes: 0, count: 0 };
+		
+		const rootEntries = await fs.readdir(targetDir, { withFileTypes: true });
+		const rootZips = new Map();
+		for (const entry of rootEntries) {
+			if (entry.isFile() && entry.name.toLowerCase().endsWith('.zip')) {
+				const fullPath = path.join(targetDir, entry.name);
+				const stats = await fs.stat(fullPath);
+				rootZips.set(entry.name.toLowerCase(), { path: fullPath, size: stats.size });
+			}
+		}
+
+		let reclaimedBytes = 0;
+		let convertedCount = 0;
+
+		const scanDir = async (dir) => {
+			const items = await fs.readdir(dir, { withFileTypes: true });
+			for (const item of items) {
+				const fullPath = path.join(dir, item.name);
+				if (item.isDirectory()) {
+					await scanDir(fullPath);
+				} else if (item.isFile() && item.name.toLowerCase().endsWith('.zip')) {
+					const lstats = await fs.lstat(fullPath);
+					if (lstats.isSymbolicLink()) continue;
+					
+					const rootItem = rootZips.get(item.name.toLowerCase());
+					if (rootItem && lstats.size === rootItem.size) {
+						try {
+							await fs.remove(fullPath);
+							await fs.link(rootItem.path, fullPath);
+							reclaimedBytes += rootItem.size;
+							convertedCount++;
+							debugLog(`[DEDUPE] Replaced physical duplicate ${item.name} in ${path.basename(dir)} with zero-byte NTFS hard link`);
+						} catch (err) {
+							console.error(`[DEDUPE] Failed hardlink conversion for ${item.name}: ${err.message}`);
+						}
+					}
+				}
+			}
+		};
+
+		for (const entry of rootEntries) {
+			if (entry.isDirectory()) {
+				await scanDir(path.join(targetDir, entry.name));
+			}
+		}
+
+		return { success: true, reclaimedBytes, count: convertedCount };
+	} catch (err) {
+		console.error('[DEDUPE] Deduplication scanner error:', err.message);
+		return { success: false, error: err.message };
+	}
+}
+
 module.exports = {
 	getModsPaths,
 	getModsPath,
@@ -4264,4 +4334,5 @@ module.exports = {
     getFolderSize,
 	resumePendingDownloads,
 	prepareVirtualModsFolder,
+	deduplicateSubfolderMods,
 };
