@@ -702,16 +702,31 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 if (stats.isFile()) {
                     const zip = new AdmZip(modZipPath);
                     
-                    // Extract infoLayer grle files
+                    // Extract infoLayer grle files, heightmaps, and terrain occluders cache
                     for (const entry of zip.getEntries()) {
                         const baseName = path.basename(entry.entryName);
-                        if (baseName.toLowerCase().startsWith('infolayer_') && baseName.toLowerCase().endsWith('.grle')) {
+                        const lowerBase = baseName.toLowerCase();
+                        if (lowerBase.startsWith('infolayer_') && lowerBase.endsWith('.grle')) {
                             const targetPath = path.join(slotPath, baseName);
                             await fs.writeFile(targetPath, entry.getData());
                             extractedGrles++;
                         }
+                        if (lowerBase === 'dem.png' || lowerBase === 'terrain.heightmap.png') {
+                            const targetPath = path.join(slotPath, 'terrain.heightmap.png');
+                            if (!fs.existsSync(targetPath)) {
+                                await fs.writeFile(targetPath, entry.getData());
+                                console.log(`[CREATE] Extracted heightmap ${baseName} -> terrain.heightmap.png`);
+                            }
+                        }
+                        if (lowerBase.endsWith('.terrain.occluders.cache') || lowerBase === 'terrain.occluders.cache') {
+                            const targetPath = path.join(slotPath, 'terrain.occluders.cache');
+                            if (!fs.existsSync(targetPath)) {
+                                await fs.writeFile(targetPath, entry.getData());
+                                console.log(`[CREATE] Extracted ${baseName} -> terrain.occluders.cache`);
+                            }
+                        }
                     }
-                    console.log(`[CREATE] Extracted ${extractedGrles} infoLayer GRLE files from map zip.`);
+                    console.log(`[CREATE] Extracted ${extractedGrles} infoLayer GRLE files and terrain assets from map zip.`);
                 }
             }
         } catch (err) {
