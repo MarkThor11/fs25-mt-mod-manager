@@ -75,6 +75,40 @@ function getFs25Path() {
 function getTemplatesPath() {
     const p = path.join(getFs25Path(), 'modManagerTemplates');
     if (!fs.existsSync(p)) fs.ensureDirSync(p);
+
+    // Sync master templates from app resources bundle if missing
+    try {
+        const bundledTemplates = [
+            path.join(__dirname, '../resources/templates'),
+            path.join(__dirname, '../../src/main/resources/templates')
+        ].find(dir => fs.existsSync(dir));
+
+        if (bundledTemplates) {
+            const masterFolders = ['MapAS', 'MapEU', 'MapUS', 'pdlc_highlandsFishingPack_HighlandsFishingMap'];
+            for (const mf of masterFolders) {
+                const srcMf = path.join(bundledTemplates, mf);
+                const dstMf = path.join(p, mf);
+                if (fs.existsSync(srcMf)) {
+                    if (!fs.existsSync(dstMf)) {
+                        fs.copySync(srcMf, dstMf);
+                    } else {
+                        // Ensure vehicles.xml, careerSavegame.xml, and heightmap exist in target master folder
+                        for (const file of ['vehicles.xml', 'careerSavegame.xml', 'terrain.heightmap.png']) {
+                            const sf = path.join(srcMf, file);
+                            const df = path.join(dstMf, file);
+                            if (fs.existsSync(sf) && (!fs.existsSync(df) || fs.statSync(df).size < 100)) {
+                                fs.copySync(sf, df);
+                                console.log(`[TEMPLATES] Synced missing master template file ${mf}/${file}`);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[TEMPLATES] Failed to sync master templates:', e);
+    }
+
     return p;
 }
 
