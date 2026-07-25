@@ -8,7 +8,7 @@ import { useLocalModsStore } from '../store/useLocalModsStore';
 import { useToastStore } from '../store/useToastStore';
 
 export default function ThirdPartyPage() {
-  const { externalMods, addExternalMod, removeExternalMod, updateExternalMod, checkAllUpdates, isChecking } = useThirdPartyStore();
+  const { externalMods, addExternalMod, removeExternalMod, updateExternalMod, checkAllUpdates, syncWithLocalMods, isChecking } = useThirdPartyStore();
   const { mods: localMods } = useLocalModsStore();
   
   const [newTitle, setNewTitle] = useState('');
@@ -22,12 +22,13 @@ export default function ThirdPartyPage() {
   const [editLocalFileName, setEditLocalFileName] = useState('');
   
   useEffect(() => {
+    syncWithLocalMods(localMods);
     // Automatically trigger a check for all mods if any are in an "Unknown" state
     const needsCheck = externalMods.some(m => !m.lastChecked || !m.remoteVersion);
     if (needsCheck && externalMods.length > 0 && !isChecking) {
       checkAllUpdates();
     }
-  }, []);
+  }, [localMods]);
 
   // Filter local mods to only show those NOT already linked, NOT from ModHub, and NOT DLCs
   const availableLocalMods = useMemo(() => {

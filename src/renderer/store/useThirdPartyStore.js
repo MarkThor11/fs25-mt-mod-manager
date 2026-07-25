@@ -42,6 +42,24 @@ export const useThirdPartyStore = create((set, get) => ({
     localStorage.setItem('third_party_mods', JSON.stringify(updated));
   },
 
+  syncWithLocalMods: (localMods) => {
+    if (!Array.isArray(localMods)) return;
+    const { externalMods } = get();
+    const activeFileNames = new Set(localMods.map(m => m.fileName));
+    let changed = false;
+    const updated = externalMods.map(m => {
+      if (m.localFileName && !activeFileNames.has(m.localFileName)) {
+        changed = true;
+        return { ...m, localFileName: null, currentVersion: null };
+      }
+      return m;
+    });
+    if (changed) {
+      set({ externalMods: updated });
+      localStorage.setItem('third_party_mods', JSON.stringify(updated));
+    }
+  },
+
   checkAllUpdates: async () => {
     if (!window.api?.thirdParty) return;
     const { externalMods, updateExternalMod } = get();

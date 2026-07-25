@@ -1549,6 +1549,22 @@ async function performScan(manualPaths = null) {
 		});
 	}
 
+	// ── PURGE STALE CACHE FOR DELETED DISK FILES ──
+	try {
+		const cachedEntries = cache.getAllLocalModCache();
+		if (Array.isArray(cachedEntries)) {
+			const scannedPaths = new Set(finalMods.map(m => m.filePath));
+			for (const entry of cachedEntries) {
+				if (entry.file_path && !scannedPaths.has(entry.file_path) && !fs.existsSync(entry.file_path)) {
+					cache.removeLocalModCache(entry.file_path);
+					debugLog(`[SCAN] Purged deleted file from SQLite cache: ${entry.file_path}`);
+				}
+			}
+		}
+	} catch (e) {
+		console.error('[SCAN] Error purging stale cache entries:', e.message);
+	}
+
 	debugLog(`[SCAN] Finished. Total unique mods: ${finalMods.length} (from ${mods.length} physical files)`);
 	return resultData;
 }
