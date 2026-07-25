@@ -146,7 +146,7 @@ export default function HomePage() {
               <Package size={22} />
             </div>
             <div>
-              <div className="stat-card__value">{localMods.length}</div>
+              <div className="stat-card__value">{localMods.filter(m => !m.isDLC && m.folder !== 'DLC' && !m.fileName?.toLowerCase().startsWith('pdlc_')).length}</div>
               <div className="stat-card__label">Installed Mods</div>
             </div>
           </div>

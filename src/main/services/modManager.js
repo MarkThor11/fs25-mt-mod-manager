@@ -1233,6 +1233,7 @@ async function performScan(manualPaths = null) {
 				fileName: subFolder ? `${subFolder}/${entryName}` : entryName,
 				filePath: fullPath,
 				folder: subFolder, 
+				isDLC: isDlc || subFolder === 'DLC' || entryName.toLowerCase().startsWith('pdlc_'),
 				isMap: modDesc?.isMap || false,
 				mapId: modDesc?.mapId || null,
 				mapTitle: modDesc?.mapTitle || null,
@@ -1537,7 +1538,8 @@ async function performScan(manualPaths = null) {
 		}
 	}
 
-	const resultData = { mods: finalMods, allFolders: Array.from(new Set(allFolders)).sort(), conflicts, missingDependencies };
+	const cleanFolders = Array.from(new Set(allFolders)).filter(f => f && f.toUpperCase() !== 'DLC').sort();
+	const resultData = { mods: finalMods, allFolders: cleanFolders, conflicts, missingDependencies };
 	
 	// ── BACKGROUND AUTO-RESOLVE ──
 	const autoResolve = cache.getSetting('autoResolveDependencies') === 'true';

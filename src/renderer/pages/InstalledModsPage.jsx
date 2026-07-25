@@ -900,6 +900,7 @@ export default function InstalledModsPage() {
   }, [isInternalDragging]);
 
   const filteredMods = mods.filter((m) => {
+    if (m.isDLC || m.folder === 'DLC' || m.fileName?.toLowerCase().startsWith('pdlc_')) return false;
     const matchesSearch = (m.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (m.author || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (m.tags || []).some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -967,8 +968,8 @@ export default function InstalledModsPage() {
     });
 
 
-    // 4. Include empty folders from allFolders
-    allFolders.forEach(f => {
+    // 4. Include empty folders from allFolders (excluding DLC)
+    allFolders.filter(f => f !== 'DLC').forEach(f => {
         if (!groups[f]) groups[f] = [];
     });
 
@@ -981,8 +982,6 @@ export default function InstalledModsPage() {
 
     // 6. Root folder first, then others alphabetically
     const sortedKeys = finalKeys.sort((a,b) => {
-        if (a === 'DLC') return -1;
-        if (b === 'DLC') return 1;
         const indexA = folderOrder.indexOf(a);
         const indexB = folderOrder.indexOf(b);
         if (indexA !== -1 && indexB !== -1) return indexA - indexB;
