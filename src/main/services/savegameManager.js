@@ -1932,8 +1932,11 @@ async function getFleetPositions(savePath, mapModName) {
                 let name = base.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').replace(/([a-zA-Z])([0-9])/g, '$1 $2').replace(/([0-9])([a-zA-Z])/g, '$1 $2').trim().toUpperCase();
                 let brand = 'Unknown';
                 const parts = filename.split('/');
-                if (parts.length > 2 && parts[0] === 'data') brand = parts[2].replace(/([a-z])([A-Z])/g, '$1 $2').trim().toUpperCase();
-                else if (v['@_modName']) brand = v['@_modName'].replace(/^FS\d+_/i, '').toUpperCase();
+                if (parts.length > 2 && (parts[0] === 'data' || parts[0].includes('$pdlcdir$'))) {
+                    brand = parts[2].replace(/([a-z])([A-Z])/g, '$1 $2').trim().toUpperCase();
+                } else if (v['@_modName'] && !v['@_modName'].toLowerCase().startsWith('pdlc_')) {
+                    brand = v['@_modName'].replace(/^FS\d+_/i, '').toUpperCase();
+                }
                 
                 // Remove word "Tractor" (case-insensitive) from brand and name
                 brand = brand.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim() || 'Unknown';

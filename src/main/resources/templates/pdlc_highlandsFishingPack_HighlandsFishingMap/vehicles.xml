@@ -60,7 +60,7 @@
         <attachable isDetachingBlocked="false"/>
         <attacherJoints comboDirection="-1"/>
     </vehicle>
-    <vehicle modName="pdlc_highlandsFishingPack" filename="$pdlcdir$highlandsFishingPack/vehicles/jcb/fastrac2000/fastrac2000.xml" uniqueId="vehicle3f6f736285341321b41335c9917f11f5" age="0.000000" price="51500.000000" farmId="1" propertyState="OWNED" operatingTime="169.809021" selectedObjectIndex="1" subSelectedObjectIndex="1">
+    <vehicle  filename="$pdlcdir$highlandsFishingPack/vehicles/jcb/fastrac2000/fastrac2000.xml" uniqueId="vehicle3f6f736285341321b41335c9917f11f5" age="0.000000" price="51500.000000" farmId="1" propertyState="OWNED" operatingTime="169.809021" selectedObjectIndex="1" subSelectedObjectIndex="1">
         <component index="1" position="-895.021 134.488 173.996" rotation="1.70 -75.74 -0.08"/>
         <component index="2" position="-896.429 135.284 174.354" rotation="1.55 -75.74 0.08"/>
         <configuration name="fillUnit" id="1" isActive="true"/>
@@ -104,7 +104,7 @@
             <attachedImplement jointIndex="2" moveDown="false" attachedVehicleUniqueId="vehicle5037221ecced0cdc20b9b34cd767a527" inputJointIndex="1"/>
         </attacherJoints>
     </vehicle>
-    <vehicle modName="pdlc_highlandsFishingPack" filename="$pdlcdir$highlandsFishingPack/vehicles/newHolland/seriesT8000/seriesT8000.xml" uniqueId="vehiclee952efbd6d8bbc153faf65ebbea734c9" age="0.000000" price="111800.000000" farmId="1" propertyState="OWNED" operatingTime="178.374222" selectedObjectIndex="1" subSelectedObjectIndex="1">
+    <vehicle  filename="$pdlcdir$highlandsFishingPack/vehicles/newHolland/seriesT8000/seriesT8000.xml" uniqueId="vehiclee952efbd6d8bbc153faf65ebbea734c9" age="0.000000" price="111800.000000" farmId="1" propertyState="OWNED" operatingTime="178.374222" selectedObjectIndex="1" subSelectedObjectIndex="1">
         <component index="1" position="-910.218 134.551 228.964" rotation="1.03 -74.66 0.04"/>
         <component index="2" position="-911.465 135.332 229.306" rotation="0.97 -74.66 0.09"/>
         <configuration name="fillUnit" id="1" isActive="true"/>
@@ -144,7 +144,7 @@
             <attachedImplement jointIndex="2" moveDown="false" attachedVehicleUniqueId="vehicle3c6aee68c3dfda1be4bd59580ee02bbd" inputJointIndex="1"/>
         </attacherJoints>
     </vehicle>
-    <vehicle modName="pdlc_highlandsFishingPack" filename="$pdlcdir$highlandsFishingPack/vehicles/skoda/octavia/octavia.xml" uniqueId="vehicled41c9d26ebd7b71f545b4fb56dfd0e3a" age="0.000000" price="63000.000000" farmId="1" propertyState="OWNED" operatingTime="46.832787" selectedObjectIndex="1" subSelectedObjectIndex="1">
+    <vehicle  filename="$pdlcdir$highlandsFishingPack/vehicles/skoda/octavia/octavia.xml" uniqueId="vehicled41c9d26ebd7b71f545b4fb56dfd0e3a" age="0.000000" price="63000.000000" farmId="1" propertyState="OWNED" operatingTime="46.832787" selectedObjectIndex="1" subSelectedObjectIndex="1">
         <component index="1" position="-936.045 134.682 218.615" rotation="0.11 36.86 -0.00"/>
         <configuration name="fillUnit" id="1" isActive="true"/>
         <configuration name="design" id="1" isActive="true"/>
@@ -186,7 +186,7 @@
         <aiModeSelection currentMode="WORKER"/>
         <attacherJoints comboDirection="-1"/>
     </vehicle>
-    <vehicle modName="pdlc_highlandsFishingPack" filename="$pdlcdir$highlandsFishingPack/vehicles/gtBunning/trailer140/trailer140.xml" uniqueId="vehicle266593b1ea80012b0083cbf7f7b64f7f" age="0.000000" price="31500.000000" farmId="1" propertyState="OWNED" operatingTime="0.000000" selectedObjectIndex="1" subSelectedObjectIndex="1">
+    <vehicle  filename="$pdlcdir$highlandsFishingPack/vehicles/gtBunning/trailer140/trailer140.xml" uniqueId="vehicle266593b1ea80012b0083cbf7f7b64f7f" age="0.000000" price="31500.000000" farmId="1" propertyState="OWNED" operatingTime="0.000000" selectedObjectIndex="1" subSelectedObjectIndex="1">
         <component index="1" position="-895.530 133.844 277.642" rotation="179.84 -66.77 -179.96"/>
         <configuration name="fillUnit" id="1" isActive="true"/>
         <configuration name="fillVolume" id="1" isActive="true"/>
@@ -451,7 +451,7 @@
         <aiModeSelection currentMode="WORKER"/>
         <attacherJoints comboDirection="-1"/>
     </vehicle>
-    <vehicle modName="pdlc_highlandsFishingPack" filename="$pdlcdir$highlandsFishingPack/vehicles/train/locomotive/locomotive.xml" uniqueId="vehicle9d8a3042326e0f9a6f376fdfe83173fb" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="8.933969" selectedObjectIndex="6" subSelectedObjectIndex="1">
+    <vehicle  filename="$pdlcdir$highlandsFishingPack/vehicles/train/locomotive/locomotive.xml" uniqueId="vehicle9d8a3042326e0f9a6f376fdfe83173fb" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="8.933969" selectedObjectIndex="6" subSelectedObjectIndex="1">
         <component index="1" position="-1031.429 83.993 -805.954" rotation="-0.00 86.49 0.00"/>
         <configuration name="motor" id="1" isActive="true"/>
         <configuration name="wheel" id="1" isActive="true"/>
@@ -465,7 +465,7 @@
             <attachedImplement jointIndex="1" moveDown="false" attachedVehicleUniqueId="vehicle7a1d1ac07e82f9163cae795f5d56adb9" inputJointIndex="1"/>
         </attacherJoints>
     </vehicle>
-    <vehicle modName="pdlc_highlandsFishingPack" filename="$pdlcdir$highlandsFishingPack/vehicles/train/locomotive/tenderWagon.xml" uniqueId="vehicle7a1d1ac07e82f9163cae795f5d56adb9" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="8.933969">
+    <vehicle  filename="$pdlcdir$highlandsFishingPack/vehicles/train/locomotive/tenderWagon.xml" uniqueId="vehicle7a1d1ac07e82f9163cae795f5d56adb9" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="8.933969">
         <component index="1" position="-1042.028 83.993 -806.452" rotation="180.00 86.51 -180.00"/>
         <configuration name="wheel" id="1" isActive="true"/>
         <wheels lastConfigId="1"/>
@@ -476,7 +476,7 @@
         <dischargeable isAllowed="true"/>
         <trailer tipState="0"/>
     </vehicle>
-    <vehicle modName="pdlc_highlandsFishingPack" filename="$pdlcdir$highlandsFishingPack/vehicles/train/wagonGrain/wagonGrain.xml" uniqueId="vehiclebb3a3522b9c9be0052298a5eb8a45142" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="8.933969">
+    <vehicle  filename="$pdlcdir$highlandsFishingPack/vehicles/train/wagonGrain/wagonGrain.xml" uniqueId="vehiclebb3a3522b9c9be0052298a5eb8a45142" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="8.933969">
         <component index="1" position="-1051.417 83.993 -805.235" rotation="-180.00 54.55 -180.00"/>
         <configuration name="fillUnit" id="1" isActive="true"/>
         <configuration name="fillVolume" id="1" isActive="true"/>
@@ -495,7 +495,7 @@
         <trailer doorState="false" tipAnimationTime="0.000000" tipState="0"/>
         <cover state="0"/>
     </vehicle>
-    <vehicle modName="pdlc_highlandsFishingPack" filename="$pdlcdir$highlandsFishingPack/vehicles/train/wagonSugarbeets/wagonSugarbeets.xml" uniqueId="vehicle37ad8468133afc5dacaa0df11cf68153" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="8.933969">
+    <vehicle  filename="$pdlcdir$highlandsFishingPack/vehicles/train/wagonSugarbeets/wagonSugarbeets.xml" uniqueId="vehicle37ad8468133afc5dacaa0df11cf68153" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="8.933969">
         <component index="1" position="-1060.782 83.993 -795.943" rotation="-180.00 11.33 -180.00"/>
         <configuration name="fillUnit" id="1" isActive="true"/>
         <configuration name="trailer" id="1" isActive="true"/>
@@ -512,7 +512,7 @@
         <dischargeable isAllowed="true"/>
         <trailer doorState="false" tipAnimationTime="0.000000" tipState="0"/>
     </vehicle>
-    <vehicle modName="pdlc_highlandsFishingPack" filename="$pdlcdir$highlandsFishingPack/vehicles/train/wagonWoodchip/wagonWoodchips.xml" uniqueId="vehicle5a47f8c2202ecf00cb2a6500d1408fc3" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="8.933969">
+    <vehicle  filename="$pdlcdir$highlandsFishingPack/vehicles/train/wagonWoodchip/wagonWoodchips.xml" uniqueId="vehicle5a47f8c2202ecf00cb2a6500d1408fc3" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="8.933969">
         <component index="1" position="-1062.502 83.993 -783.370" rotation="-180.00 -1.54 -180.00"/>
         <configuration name="fillUnit" id="1" isActive="true"/>
         <configuration name="trailer" id="1" isActive="true"/>
@@ -529,7 +529,7 @@
         <dischargeable isAllowed="true"/>
         <trailer doorState="false" tipAnimationTime="0.000000" tipState="0"/>
     </vehicle>
-    <vehicle modName="pdlc_highlandsFishingPack" filename="$pdlcdir$highlandsFishingPack/vehicles/train/wagonTimber/wagonTimber.xml" uniqueId="vehicle38fb1695b04d0e0fad0a0dae9630809a" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="8.933969">
+    <vehicle  filename="$pdlcdir$highlandsFishingPack/vehicles/train/wagonTimber/wagonTimber.xml" uniqueId="vehicle38fb1695b04d0e0fad0a0dae9630809a" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="8.933969">
         <component index="1" position="-1061.981 83.993 -770.404" rotation="-180.00 -3.83 -180.00"/>
         <configuration name="tensionBelts" id="1" isActive="true"/>
         <configuration name="wheel" id="1" isActive="true"/>
@@ -549,7 +549,7 @@
             <belt isActive="false"/>
         </tensionBelts>
     </vehicle>
-    <vehicle modName="pdlc_highlandsFishingPack" filename="$pdlcdir$highlandsFishingPack/vehicles/train/wagonVehicles/wagonVehicles.xml" uniqueId="vehicle60cc188336abb924400ed941201e45aa" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="8.933969">
+    <vehicle  filename="$pdlcdir$highlandsFishingPack/vehicles/train/wagonVehicles/wagonVehicles.xml" uniqueId="vehicle60cc188336abb924400ed941201e45aa" age="0.000000" price="1.000000" farmId="0" propertyState="NONE" operatingTime="8.933969">
         <component index="1" position="-1060.969 83.993 -753.447" rotation="-180.00 0.32 -180.00"/>
         <configuration name="folding" id="1" isActive="true"/>
         <configuration name="tensionBelts" id="1" isActive="true"/>
