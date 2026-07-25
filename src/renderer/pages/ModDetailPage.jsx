@@ -971,7 +971,51 @@ export default function ModDetailPage() {
                   </p>
                 </div>
               )}
-            {showAsInstalled ? (
+            {(isCurrentlyInstalling || batchProgress[modId]) ? (
+              <div className="btn btn--primary btn--lg btn--full" style={{ cursor: 'default' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', position: 'relative' }}>
+                  {(downloadProgress > 0 || batchProgress[modId]) && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: -12,
+                      left: -16,
+                      right: -16,
+                      height: 4,
+                      width: (batchProgress[modId] ? `${Math.round((batchProgress[modId].completed / batchProgress[modId].total) * 100)}%` : `${downloadProgress}%`),
+                      background: 'var(--accent)',
+                      transition: 'width 0.3s ease-out',
+                      borderRadius: '0 0 var(--radius-md) var(--radius-md)'
+                    }} />
+                  )}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {batchProgress[modId] ? 'Requirements...' : 
+                     activeDownloads[modId]?.status === 'waiting' ? 'Queued...' : 
+                     (activeDownloads[modId]?.status === 'downloading' && downloadProgress === 0) ? 'Starting...' :
+                     downloadProgress > 0 ? `${Math.round(downloadProgress)}%` : 'Connecting...'}
+                  </span>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      cancelDownload(mod.modId);
+                    }}
+                    style={{ 
+                      background: 'rgba(255,255,255,0.1)', 
+                      border: 'none', 
+                      color: 'white', 
+                      borderRadius: '4px', 
+                      padding: '4px 8px', 
+                      fontSize: '11px', 
+                      fontWeight: 700, 
+                      cursor: 'pointer',
+                      marginLeft: 'auto',
+                      pointerEvents: 'auto'
+                    }}
+                  >
+                    CANCEL
+                  </button>
+                </div>
+              </div>
+            ) : showAsInstalled ? (
               hasUpdate ? (
                 <button
                   className="btn btn--primary btn--lg btn--full"
@@ -1000,66 +1044,17 @@ export default function ModDetailPage() {
                   <Check size={18} style={{ marginRight: 8 }} /> Installed (Latest)
                 </button>
               )
-            ) : (isCurrentlyInstalling || batchProgress[modId]) ? (
-                  <div className="btn btn--primary btn--lg btn--full" style={{ cursor: 'default' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', position: 'relative' }}>
-                      {(downloadProgress > 0 || batchProgress[modId]) && (
-                        <div style={{
-                          position: 'absolute',
-                          bottom: -12,
-                          left: -16,
-                          right: -16,
-                          height: 4,
-                          width: (batchProgress[modId] ? `${Math.round((batchProgress[modId].completed / batchProgress[modId].total) * 100)}%` : `${downloadProgress}%`),
-                          background: 'var(--accent)',
-                          transition: 'width 0.3s ease-out',
-                          opacity: 0.5
-                        }} />
-                      )}
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {(activeDownloads[modId]?.status === 'waiting' || (!activeDownloads[modId] && batchProgress[modId])) ? (
-                          <Package size={16} style={{ opacity: 0.6 }} />
-                        ) : (
-                          <RefreshCw size={16} className="animate-spin" />
-                        )}
-                        {batchProgress[modId] ? 'Requirements...' : 
-                         activeDownloads[modId]?.status === 'waiting' ? 'Queued...' : 
-                         (activeDownloads[modId]?.status === 'downloading' && downloadProgress === 0) ? 'Starting...' :
-                         downloadProgress > 0 ? `${Math.round(downloadProgress)}%` : 'Connecting...'}
-                      </span>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          cancelDownload(mod.modId);
-                        }}
-                        style={{ 
-                          background: 'rgba(255,255,255,0.1)', 
-                          border: 'none', 
-                          color: 'white', 
-                          borderRadius: '4px', 
-                          padding: '4px 8px', 
-                          fontSize: '11px', 
-                          fontWeight: 700, 
-                          cursor: 'pointer',
-                          marginLeft: 'auto',
-                          pointerEvents: 'auto'
-                        }}
-                      >
-                        CANCEL
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    className="btn btn--primary btn--lg btn--full"
-                    onClick={handleInstall}
-                    disabled={!isOnline}
-                    id="install-mod-btn"
-                    title={!isOnline ? "Internet connection required" : ""}
-                  >
-                    <Download size={18} style={{ marginRight: 8 }} /> {!isOnline ? 'Internet Required' : 'Download & Install'}
-                  </button>
-                )}
+            ) : (
+              <button
+                className="btn btn--primary btn--lg btn--full"
+                onClick={handleInstall}
+                disabled={!isOnline}
+                id="install-mod-btn"
+                title={!isOnline ? "Internet connection required" : ""}
+              >
+                <Download size={18} style={{ marginRight: 8 }} /> {!isOnline ? 'Internet Required' : 'Download & Install'}
+              </button>
+            )}
 
             {/* Rollback Support */}
             {localMod && hasBak && (

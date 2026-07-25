@@ -1126,49 +1126,55 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
 
       {showActions && !isIconOnly && (
         <div className="mod-card__actions">
-          <button
-            className={`btn ${isInstalled ? 'btn--ghost' : 'btn--primary'} btn--sm btn--full`}
-            onClick={mod.onShowDependencies ? handleDownloadWithDependencies : handleInstall}
-            disabled={installing || isInstalled}
-            style={isInstalled ? { 
-                opacity: 0.8, 
-                borderColor: 'var(--accent)', 
-                color: 'var(--accent)', 
-                cursor: 'default',
-                background: 'rgba(var(--accent-rgb), 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px',
-                fontSize: '12px',
-                padding: '0 8px'
-            } : {
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px',
-                fontSize: '12px',
-                padding: '0 8px'
-            }}
-          >
-            { (isInstalled || (progress && progress.status === 'success')) ? (
-                <>
-                  <Check size={14} /> Installed
-                </>
-            ) : (installing || batch || (progress && progress.status !== 'success')) ? (
-                batch ? 'Requirements...' :
-                progress ? (
-                  progress.status === 'waiting' ? 'Queued...' :
-                  progress.status === 'success' ? 'Installed' :
-                  (progress.status === 'downloading' && progress.progress === 0) ? 'Starting...' :
-                  (progress.progress === 100 ? 'Finishing...' : `${Math.round(progress.progress)}%`)
-                ) : 'Queued...'
-            ) : (
-                <>
-                  <Download size={14} /> Install
-                </>
-            )}
-          </button>
+          {(() => {
+            const isDownloading = installing || batch || (progress && progress.status !== 'success');
+            const showInstalled = !isDownloading && (isInstalled || (progress && progress.status === 'success'));
+
+            return (
+              <button
+                className={`btn ${showInstalled ? 'btn--ghost' : isDownloading ? 'btn--secondary' : 'btn--primary'} btn--sm btn--full`}
+                onClick={mod.onShowDependencies ? handleDownloadWithDependencies : handleInstall}
+                disabled={isDownloading || isInstalled}
+                style={showInstalled ? { 
+                    opacity: 0.8, 
+                    borderColor: 'var(--accent)', 
+                    color: 'var(--accent)', 
+                    cursor: 'default',
+                    background: 'rgba(var(--accent-rgb), 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    fontSize: '12px',
+                    padding: '0 8px'
+                } : {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    fontSize: '12px',
+                    padding: '0 8px'
+                }}
+              >
+                { isDownloading ? (
+                    batch ? 'Requirements...' :
+                    progress ? (
+                      progress.status === 'waiting' ? 'Queued...' :
+                      (progress.status === 'downloading' && progress.progress === 0) ? 'Starting...' :
+                      (progress.progress === 100 ? 'Finishing...' : `${Math.round(progress.progress)}%`)
+                    ) : 'Queued...'
+                ) : showInstalled ? (
+                    <>
+                      <Check size={14} /> Installed
+                    </>
+                ) : (
+                    <>
+                      <Download size={14} /> Install
+                    </>
+                )}
+              </button>
+            );
+          })()}
           <button 
             className="btn btn--secondary btn--sm btn--full"
             onClick={() => window.api.modhub.openInBrowser(mod.modId)}
