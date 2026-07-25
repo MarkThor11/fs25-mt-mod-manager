@@ -1101,21 +1101,6 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                           style={{ width: '100%', paddingLeft: 32, background: 'var(--bg-tertiary)', border: 'none' }} 
                         />
                       </div>
-                      <button className="btn btn--ghost btn--sm" style={{ width: 32, height: 32, padding: 0 }} onClick={async () => {
-                        if (window.api?.savegames) {
-                          const getMapModName = (mapId) => {
-                            if (mapId && mapId.includes('.')) {
-                              return mapId.split('.')[0];
-                            }
-                            return null;
-                          };
-                          const mapModName2 = getMapModName(save.mapId);
-                          const res = await window.api.savegames.getFleetPositions(save.path, mapModName2);
-                          setFleet(Array.isArray(res) ? res : (res?.items || []));
-                        }
-                      }}>
-                        <RefreshCw size={14} />
-                      </button>
                     </div>
 
                     <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, alignContent: 'start' }}>
