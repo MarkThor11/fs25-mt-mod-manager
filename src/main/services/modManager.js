@@ -988,9 +988,8 @@ async function scanLocalMods(manualPaths = null, force = false) {
 async function performScan(manualPaths = null) {
 	debugLog('[SCAN] Starting scan...');
 	
-	// Safe execution of backup pruning & subfolder mod deduplication
+	// Safe execution of backup pruning
 	pruneBackups().catch(e => console.error('[CLEANUP] Top-level pruning error:', e));
-	deduplicateSubfolderMods().catch(e => console.error('[DEDUPE] Background deduplication error:', e));
 
 	const modsPaths = (Array.isArray(manualPaths) && manualPaths.length > 0) ? manualPaths : getModsPaths();
 	debugLog(`[SCAN] Starting scan of ${modsPaths.length} locations: ${modsPaths.join(', ')}`);
@@ -1051,7 +1050,7 @@ async function performScan(manualPaths = null) {
 		
 		try {
 			// Use asynchronous stat to prevent blocking, especially on NAS
-			const stats = await fs.lstat(fullPath).catch(() => null);
+			let stats = await fs.lstat(fullPath).catch(() => null);
 			if (!stats) return;
 
 			// CRITICAL: Skip symbolic links in the root folder. 
@@ -1061,14 +1060,38 @@ async function performScan(manualPaths = null) {
 				return;
 			}
 
+			let targetPath = fullPath;
+			if (stats.isSymbolicLink() && subFolder) {
+				try {
+					targetPath = await fs.realpath(fullPath);
+					const realStats = await fs.stat(targetPath).catch(() => null);
+					if (realStats && realStats.size > 1000) {
+						stats = realStats;
+					} else {
+						// Link target might be broken or 0 bytes, check if root zip exists
+						const rootZipPath = path.join(modRootPath, entryName);
+						if (fs.existsSync(rootZipPath) && !fs.lstatSync(rootZipPath).isSymbolicLink()) {
+							targetPath = rootZipPath;
+							stats = await fs.stat(targetPath).catch(() => stats);
+						}
+					}
+				} catch (e) {
+					const rootZipPath = path.join(modRootPath, entryName);
+					if (fs.existsSync(rootZipPath) && !fs.lstatSync(rootZipPath).isSymbolicLink()) {
+						targetPath = rootZipPath;
+						stats = await fs.stat(targetPath).catch(() => stats);
+					}
+				}
+			}
+
 			const mtime = stats.mtimeMs;
 			let size = stats.size;
 			
 			if (stats.isDirectory()) {
-				isModDir = await fs.pathExists(path.join(fullPath, 'modDesc.xml'));
+				isModDir = await fs.pathExists(path.join(targetPath, 'modDesc.xml'));
 				if (isModDir) {
 					// Fallback to simple size for directories - using readdir for count
-					const dirFiles = await fs.readdir(fullPath).catch(() => []);
+					const dirFiles = await fs.readdir(targetPath).catch(() => []);
 					size = dirFiles.length * 1024; 
 				}
 			}
@@ -1101,11 +1124,11 @@ async function performScan(manualPaths = null) {
 			if (!modDesc || !iconBase64 || isPlaceholder) {
 				try {
 					let zipInstance = null;
-					if (fullPath.toLowerCase().endsWith('.zip')) {
-						try { zipInstance = new AdmZip(fullPath); } catch (e) { console.error(`[SCAN] Corrupt Zip: ${entryName}`); }
+					if (targetPath.toLowerCase().endsWith('.zip')) {
+						try { zipInstance = new AdmZip(targetPath); } catch (e) { console.error(`[SCAN] Corrupt Zip: ${entryName}`); }
 					}
 
-					const modDescResult = parseModDesc(fullPath, zipInstance);
+					const modDescResult = parseModDesc(targetPath, zipInstance);
 					if (modDescResult) {
 						modDesc = modDescResult;
 						
@@ -1116,7 +1139,7 @@ async function performScan(manualPaths = null) {
 
 						// Extract images for new/changed mods
 						try {
-							const newIcon = await getModIcon(fullPath, modDesc.iconFile, modDesc, zipInstance, false);
+							const newIcon = await getModIcon(targetPath, modDesc.iconFile, modDesc, zipInstance, false);
 							if (newIcon && newIcon !== 'CATEGORY:generic' && newIcon !== 'CATEGORY:map') {
 								iconBase64 = newIcon;
 							} else if (!iconBase64) {
