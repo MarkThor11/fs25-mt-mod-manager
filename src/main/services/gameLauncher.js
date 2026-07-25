@@ -249,16 +249,15 @@ async function launch(options = {}) {
       const fs25Path = pathProvider.getFS25DataRoot();
       const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
       const farmsFile = path.join(savePath, 'farms.xml');
-      const initFile = path.join(savePath, 'terrain.heightmap.png');
+      const careerFile = path.join(savePath, 'careerSavegame.xml');
       
-      // The game engine will crash if autoStart is used on an existing save that is missing its terrain.heightmap.png or placeables.xml
-      let isFullyInitialized = fs.existsSync(farmsFile) && fs.existsSync(initFile) && fs.existsSync(path.join(savePath, 'placeables.xml'));
+      let isValidSavegame = fs.existsSync(farmsFile) && fs.existsSync(careerFile);
       
-      if (!isFullyInitialized) {
-        console.log(`[LAUNCH] Savegame ${options.savegameIndex} is not fully initialized yet. Bypassing autoStart so engine can generate initial heightmap.`);
+      if (!isValidSavegame) {
+        console.log(`[LAUNCH] Savegame ${options.savegameIndex} does not have valid savegame XML files. Bypassing autoStart.`);
         needsManualInit = true;
       } else {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is fully initialized. Enabling Auto-Start.`);
+        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is valid. Enabling Auto-Start into map.`);
         args.push('-autoStartSavegameId', String(options.savegameIndex));
         args.push('-autoStart');
       }
