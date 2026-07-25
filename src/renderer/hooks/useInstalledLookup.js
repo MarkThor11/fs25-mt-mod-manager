@@ -21,8 +21,10 @@ export function useInstalledLookup() {
   return useMemo(() => {
     // Build multiple indexes for fast O(1) lookups
     const byModId = new Map();          // modId -> version
-    const byNormalizedTitle = new Map(); // normalized title -> version
-    const byNormalizedName = new Map();  // normalized modName -> version
+    const byExactTitle = new Map();     // exact title (lowercased & trimmed) -> version
+    const byExactName = new Map();      // exact modName (lowercased & trimmed) -> version
+
+    const cleanStr = (s) => s ? String(s).trim().toLowerCase() : '';
 
     // 1. Add finished downloads first (Optimistic UI)
     for (const d of finishedDownloads) {
@@ -31,8 +33,8 @@ export function useInstalledLookup() {
         byModId.set(cleanId, 'Installed');
       }
       if (d.title) {
-        const norm = d.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (norm) byNormalizedTitle.set(norm, 'Installed');
+        const norm = cleanStr(d.title);
+        if (norm) byExactTitle.set(norm, 'Installed');
       }
     }
 
@@ -42,7 +44,10 @@ export function useInstalledLookup() {
         const cleanId = String(modId).replace(/^0+/, '');
         byModId.set(cleanId, 'Installed');
       }
-      if (normTitle) byNormalizedTitle.set(normTitle, 'Installed');
+      if (normTitle) {
+        const norm = cleanStr(normTitle);
+        if (norm) byExactTitle.set(norm, 'Installed');
+      }
     });
 
     // 2. Add actual local mods (takes precedence for version info)
@@ -53,12 +58,12 @@ export function useInstalledLookup() {
         byModId.set(cleanId, lm.version);
       }
       if (lm.title) {
-        const norm = lm.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (norm) byNormalizedTitle.set(norm, lm.version);
+        const norm = cleanStr(lm.title);
+        if (norm) byExactTitle.set(norm, lm.version);
       }
       if (lm.modName) {
-        const norm = lm.modName.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (norm) byNormalizedName.set(norm, lm.version);
+        const norm = cleanStr(lm.modName);
+        if (norm) byExactName.set(norm, lm.version);
       }
     }
 
@@ -76,12 +81,20 @@ export function useInstalledLookup() {
         }
       }
 
-      // 2. Title/Name match (Exact Normalized)
+      // 2. Title/Name match (Exact string match preserving hyphens/punctuation)
       if (mod.title) {
-        const normTitle = mod.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const normTitle = cleanStr(mod.title);
         if (normTitle) {
-          if (byNormalizedTitle.has(normTitle)) return byNormalizedTitle.get(normTitle) || "0.0.0.0";
-          if (byNormalizedName.has(normTitle)) return byNormalizedName.get(normTitle) || "0.0.0.0";
+          if (byExactTitle.has(normTitle)) return byExactTitle.get(normTitle) || "0.0.0.0";
+          if (byExactName.has(normTitle)) return byExactName.get(normTitle) || "0.0.0.0";
+        }
+      }
+
+      if (mod.modName) {
+        const normName = cleanStr(mod.modName);
+        if (normName) {
+          if (byExactName.has(normName)) return byExactName.get(normName) || "0.0.0.0";
+          if (byExactTitle.has(normName)) return byExactTitle.get(normName) || "0.0.0.0";
         }
       }
 
@@ -89,5 +102,5 @@ export function useInstalledLookup() {
     }
 
     return getInstalledVersion;
-  }, [localMods, activeDownloads, sessionInstalled]);
+  }, [localMods, finishedDownloads, sessionInstalled]);
 }

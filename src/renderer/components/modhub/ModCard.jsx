@@ -123,12 +123,11 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     if (!localMods) return null;
     const match = localMods.find(lm => {
       if (mod.modId && lm.modId && String(lm.modId).replace(/^0+/, '') === String(mod.modId).replace(/^0+/, '')) return true;
-      if (!lm.title || !mod.title) return false;
-      const remoteTitle = mod.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const localTitle = lm.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const localName = (lm.modName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const remoteTitle = (mod.title || '').trim().toLowerCase();
+      const localTitle = (lm.title || '').trim().toLowerCase();
+      const localName = (lm.modName || '').trim().toLowerCase();
       
-      return remoteTitle === localTitle || remoteTitle === localName;
+      return (remoteTitle && (remoteTitle === localTitle || remoteTitle === localName));
     });
     return match?.version || null;
   }, [mod, getInstalledVersion, localMods, isSessionInstalled]);

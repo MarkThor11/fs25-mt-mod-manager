@@ -2228,9 +2228,11 @@ async function checkForUpdates() {
 		for (const localMod of localMods) {
 			// Try to find a matching mod in the latest list by fuzzy name match
 			const match = latestMods.find(remote => {
-				const localName = localMod.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-				const remoteName = remote.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-				return localName === remoteName || remoteName.includes(localName) || localName.includes(remoteName);
+				if (remote.modId && localMod.modId && String(remote.modId).replace(/^0+/, '') === String(localMod.modId).replace(/^0+/, '')) return true;
+				const localTitle = (localMod.title || '').trim().toLowerCase();
+				const remoteTitle = (remote.title || '').trim().toLowerCase();
+				const localModName = (localMod.modName || '').trim().toLowerCase();
+				return (localTitle && (localTitle === remoteTitle || localModName === remoteTitle));
 			});
 			
 			if (match) {
