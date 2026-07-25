@@ -610,7 +610,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     // FS25 engine requires mod maps to have their mapId prefixed with the mod name (e.g. FS25_MapMod.MapId)
     // If we don't do this, the engine can't find the map, marking the save as corrupted and greying out the Continue button.
     let engineMapId = mapId;
-    if (mapModName && !engineMapId.startsWith(mapModName + '.') && !['MapUS', 'MapEU', 'MapAS', 'HighlandsFishingMap'].includes(engineMapId)) {
+    if (engineMapId.toLowerCase().includes('highlandsfishing') || mapModName === 'pdlc_highlandsFishingPack') {
+        engineMapId = 'pdlc_highlandsFishingPack.HighlandsFishingMap';
+    } else if (mapModName && !engineMapId.startsWith(mapModName + '.') && !['MapUS', 'MapEU', 'MapAS'].includes(engineMapId)) {
         engineMapId = `${mapModName}.${engineMapId}`;
     }
 
