@@ -604,6 +604,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.saveDate = today;
             savegameData.careerSavegame.settings.initialMoney = String(money);
             savegameData.careerSavegame.settings.isCrossPlatformSavegame = 'false';
+            savegameData.careerSavegame.settings.hasInitiallyOwnedFarmlands = 'true';
+            savegameData.careerSavegame.settings.loadDefaultFarm = 'true';
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
             
             if (!savegameData.careerSavegame.statistics) savegameData.careerSavegame.statistics = {};

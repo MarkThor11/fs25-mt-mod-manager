@@ -10,8 +10,8 @@
         <initialMoney>1000000</initialMoney>
         <initialLoan>0</initialLoan>
         <economicDifficulty>NORMAL</economicDifficulty>
-        <hasInitiallyOwnedFarmlands>false</hasInitiallyOwnedFarmlands>
-        <loadDefaultFarm>false</loadDefaultFarm>
+        <hasInitiallyOwnedFarmlands>true</hasInitiallyOwnedFarmlands>
+        <loadDefaultFarm>true</loadDefaultFarm>
         <startWithGuidedTour>false</startWithGuidedTour>
         <trafficEnabled>true</trafficEnabled>
         <stopAndGoBraking>true</stopAndGoBraking>
