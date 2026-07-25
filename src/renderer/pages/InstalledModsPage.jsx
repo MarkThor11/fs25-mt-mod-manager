@@ -1899,14 +1899,18 @@ export default function InstalledModsPage() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)', fontWeight: 500 }}>
                               {(() => {
-                                const hasMap = folderMods.some(m => m.isMap);
-                                if (hasMap) {
-                                  const depCount = folderMods.length - 1;
-                                  if (depCount === 0) return '(Map only)';
-                                  return `(Map + ${depCount} mod${depCount === 1 ? '' : 's'})`;
-                                }
-                                return `(${folderMods.length} mods)`;
-                              })()}
+                                 const maps = folderMods.filter(m => m.isMap);
+                                 if (maps.length > 0) {
+                                   const depCount = folderMods.length - maps.length;
+                                   if (maps.length === 1) {
+                                     if (depCount === 0) return '(Map only)';
+                                     return `(Map + ${depCount} mod${depCount === 1 ? '' : 's'})`;
+                                   }
+                                   if (depCount === 0) return `(${maps.length} Maps)`;
+                                   return `(${maps.length} Maps + ${depCount} mod${depCount === 1 ? '' : 's'})`;
+                                 }
+                                 return `(${folderMods.length} mods)`;
+                               })()}
                             </span>
                             
                             {/* Requirements Badge for Maps */}
