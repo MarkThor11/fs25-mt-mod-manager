@@ -425,8 +425,10 @@ async function getPersistentUniqueUserId(fs25Path) {
                 const xml = await fs.readFile(otherFarmsPath, 'utf8');
                 const match = xml.match(/uniqueUserId="([^"]+)"/);
                 if (match && match[1] && match[1] !== 'player') {
-                    realUserId = match[1];
-                    break;
+                    let id = match[1];
+                    if (id.length === 43 && !id.endsWith('=')) id += '=';
+                    realUserId = id;
+                    if (id.endsWith('=')) break; // Found complete padded ID
                 }
             } catch (err) {}
         }
