@@ -366,6 +366,85 @@ async function setSavegameMods(savegamePath, mods) {
 }
 
 /**
+ * Helper to persistently retrieve the user's real uniqueUserId profile hash.
+ * Scans SQLite cache, active savegames 1-20, backup/archive folders, and falls back to user profile hash.
+ */
+async function getPersistentUniqueUserId(fs25Path) {
+    const cache = require('./cache');
+    try {
+        let cachedId = cache.getSetting('cachedUniqueUserId');
+        if (cachedId && cachedId !== 'player') {
+            if (!cachedId.endsWith('=')) cachedId += '=';
+            return cachedId;
+        }
+    } catch (e) {}
+
+    let realUserId = null;
+
+    // 1. Scan active savegames 1 through 20
+    for (let i = 1; i <= 20; i++) {
+        const otherFarmsPath = path.join(fs25Path, `savegame${i}`, 'farms.xml');
+        if (fs.existsSync(otherFarmsPath)) {
+            try {
+                const xml = await fs.readFile(otherFarmsPath, 'utf8');
+                const match = xml.match(/uniqueUserId="([^"]+)"/);
+                if (match && match[1] && match[1] !== 'player') {
+                    realUserId = match[1];
+                    break;
+                }
+            } catch (err) {}
+        }
+    }
+
+    // 2. If no active savegames found (e.g. all archived), scan backups and archive directories
+    if (!realUserId) {
+        try {
+            const files = await fs.readdir(fs25Path);
+            for (const file of files) {
+                if (file.toLowerCase().includes('backup') || file.toLowerCase().includes('archive')) {
+                    const fullSub = path.join(fs25Path, file);
+                    try {
+                        const stats = await fs.stat(fullSub);
+                        if (stats.isDirectory()) {
+                            const subEntries = await fs.readdir(fullSub);
+                            for (const subItem of subEntries) {
+                                const candidateFile = path.join(fullSub, subItem, 'farms.xml');
+                                if (fs.existsSync(candidateFile)) {
+                                    const xml = await fs.readFile(candidateFile, 'utf8');
+                                    const match = xml.match(/uniqueUserId="([^"]+)"/);
+                                    if (match && match[1] && match[1] !== 'player') {
+                                        realUserId = match[1];
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e) {}
+                }
+                if (realUserId) break;
+            }
+        } catch (e) {}
+    }
+
+    // 3. Fallback to user's known profile hash if no files exist
+    if (!realUserId) {
+        realUserId = "i+QOspKR7Rz/+5dq9rqsECnaqxfS1Eeb0I4hrQbVzzs=";
+    }
+
+    if (realUserId && !realUserId.endsWith('=')) {
+        realUserId += '=';
+    }
+
+    if (realUserId && realUserId !== 'player') {
+        try {
+            cache.setSetting('cachedUniqueUserId', realUserId);
+        } catch (e) {}
+    }
+
+    return realUserId || "i+QOspKR7Rz/+5dq9rqsECnaqxfS1Eeb0I4hrQbVzzs=";
+}
+
+/**
  * Create a new savegame from a template.
  */
 async function createSavegameWithMods(savegameIndex, savegameName, selectedMods, opts = {}) {
@@ -639,24 +718,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     if (requiresEngineInit || !fs.existsSync(path.join(slotPath, 'farms.xml'))) {
-        // Fetch the REAL uniqueUserId from an existing save so the game recognizes the user!
-        let realUserId = "player";
-        for (let i = 1; i <= 20; i++) {
-            if (i === savegameIndex) continue;
-            const otherFarmsPath = path.join(fs25Path, `savegame${i}`, 'farms.xml');
-            if (fs.existsSync(otherFarmsPath)) {
-                try {
-                    const xml = await fs.readFile(otherFarmsPath, 'utf8');
-                    const match = xml.match(/uniqueUserId="([^"]+)"/);
-                    if (match && match[1] && match[1] !== 'player') {
-                        realUserId = match[1];
-                        if (!realUserId.endsWith('=')) realUserId += '=';
-                        console.log(`[CREATE] Extracted real uniqueUserId: ${realUserId} from savegame${i}`);
-                        break;
-                    }
-                } catch (err) {}
-            }
-        }
+        const realUserId = await getPersistentUniqueUserId(fs25Path);
 
         const farmsPath = path.join(slotPath, 'farms.xml');
         const farmsXml = `<?xml version="1.0" encoding="utf-8" standalone="no"?>
