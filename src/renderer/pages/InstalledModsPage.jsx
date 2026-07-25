@@ -1019,20 +1019,16 @@ export default function InstalledModsPage() {
         if (maps.length > 0) {
             const missingMods = new Set();
             for (const map of maps) {
-                if (!map.dependencies || map.dependencies.length === 0) continue;
-                
-                const { missing } = resolveRecursiveDependencies(map.modName || map.fileName, mods, sessionInstalled);
-                missing.forEach(m => missingMods.add(m));
-
-                if (missingMods.size > 0 && map.modName === 'FS25_The_Peasant_Valley') {
-                    console.log(`[DEBUG-MISSING] The Peasant Valley is missing:`, Array.from(missingMods));
+                if (map.dependencies && map.dependencies.length > 0) {
+                    const { missing } = resolveRecursiveDependencies(map.modName || map.fileName, mods, sessionInstalled);
+                    missing.forEach(m => missingMods.add(m));
                 }
-
-                requirementStatus = { 
-                    status: missingMods.size === 0 ? 'satisfied' : 'missing', 
-                    missing: Array.from(missingMods) 
-                };
             }
+
+            requirementStatus = { 
+                status: missingMods.size === 0 ? 'satisfied' : 'missing', 
+                missing: Array.from(missingMods) 
+            };
         }
 
         acc[name] = {
