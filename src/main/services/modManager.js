@@ -1537,7 +1537,8 @@ async function performScan(manualPaths = null) {
 		}
 	}
 
-	const resultData = { mods: finalMods, allFolders: Array.from(new Set(allFolders)).sort(), conflicts, missingDependencies };
+	const occupiedFolders = Array.from(new Set(allFolders)).filter(f => finalMods.some(m => m.folder === f)).sort();
+	const resultData = { mods: finalMods, allFolders: occupiedFolders, conflicts, missingDependencies };
 	
 	// ── BACKGROUND AUTO-RESOLVE ──
 	const autoResolve = cache.getSetting('autoResolveDependencies') === 'true';
@@ -2556,20 +2557,47 @@ async function autoOrganizeMaps() {
 	let movedCount = 0;
 	for (const map of rootMaps) {
 		try {
-			// Create a folder name from the clean title
-			const newFolderName = (map.title || map.mapId || map.mapTitle || 'UnknownMap')
-				.replace(/[^a-zA-Z0-9]/g, '_')
-				.replace(/_{2,}/g, '_')
-				.replace(/^_|_$/g, '');
+			// Clean folder name keeping human readable spaces
+			const rawTitle = map.title || map.mapTitle || map.mapId || 'Unknown Map';
+			const newFolderName = rawTitle.replace(/[\\/:*?"<>|]/g, '').trim();
 			
 			if (newFolderName) {
-				await moveModsToFolder([map.fileName], newFolderName);
+				const modsToMove = [map.fileName];
+				// Also include any required dependencies
+				if (map.dependencies && Array.isArray(map.dependencies)) {
+					for (const dep of map.dependencies) {
+						const depName = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || '');
+						if (depName) {
+							const depMod = mods.find(m => (!m.folder || m.folder === '') && (m.modName.toLowerCase() === depName.toLowerCase() || m.fileName.toLowerCase().includes(depName.toLowerCase())));
+							if (depMod && !modsToMove.includes(depMod.fileName)) {
+								modsToMove.push(depMod.fileName);
+							}
+						}
+					}
+				}
+				await moveModsToFolder(modsToMove, newFolderName);
 				movedCount++;
 			}
 		} catch (err) {
 			console.error(`[ORGANIZE] Failed to move map ${map.fileName}:`, err.message);
 		}
 	}
+
+	// Clean up empty directories from mods/ folder
+	try {
+		const modsPath = getModsPath();
+		const entries = await fs.readdir(modsPath, { withFileTypes: true });
+		for (const entry of entries) {
+			if (entry.isDirectory() && entry.name.toLowerCase() !== 'backups') {
+				const dirPath = path.join(modsPath, entry.name);
+				const files = await fs.readdir(dirPath);
+				if (files.length === 0) {
+					await fs.remove(dirPath);
+					console.log(`[ORGANIZE] Removed empty folder: ${entry.name}`);
+				}
+			}
+		}
+	} catch (e) {}
 	
 	return { success: true, moved: movedCount };
 }
