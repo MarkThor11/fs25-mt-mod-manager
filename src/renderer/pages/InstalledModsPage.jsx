@@ -1096,32 +1096,6 @@ export default function InstalledModsPage() {
     }
   };
 
-  const handleAutoSortMaps = async () => {
-    const mainFolderMods = folders['']?.mods || [];
-    if (activeTab === 'MAPS') {
-        // When on MAPS tab, show all maps regardless of current folder
-        return mods.filter(m => m.isMap || m.category === 'CATEGORY:map');
-    }
-    const maps = mainFolderMods.filter(m => m.isMap);
-    if (maps.length === 0) {
-        useToastStore.getState().info("No maps found in MAIN folder.");
-        return;
-    }
-    
-    let count = 0;
-    for (const map of maps) {
-        const titleSafe = (map.title || map.fileName.replace('.zip', '')).replace(/[<>:"\/\\|?*]+/g, '').trim();
-        const destFolder = `Map - ${titleSafe}`;
-        
-        if (!allFolders.includes(destFolder)) {
-            await createFolder(destFolder);
-        }
-        await moveModsToFolder([map.fileName], destFolder);
-        count++;
-    }
-    useToastStore.getState().success(`Auto-sorted ${count} maps from MAIN into categorized folders.`);
-  };
-
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
     await createFolder(newFolderName.trim());
@@ -2070,16 +2044,7 @@ export default function InstalledModsPage() {
                         </button>
                     )}
 
-                    {folderName === '' && !isHidden && (
-                        <button 
-                            className="btn btn--sm btn--primary" 
-                            style={{ background: 'var(--accent)', color: 'white', fontWeight: 800, height: 32, padding: '0 12px', border: 'none' }}
-                            onClick={(e) => { e.stopPropagation(); handleAutoSortMaps(); }}
-                            title="Automatically move maps from MAIN to their own folders"
-                        >
-                            Auto-Sort Maps
-                        </button>
-                    )}
+
 
 
 
