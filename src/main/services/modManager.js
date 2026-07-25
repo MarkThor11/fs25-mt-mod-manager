@@ -1420,6 +1420,103 @@ async function performScan(manualPaths = null) {
 	const internalMods = ['fs25_rememberpositions', 'fs25_managerpersistencebridge'];
 	finalMods = finalMods.filter(m => !internalMods.includes((m.modName || '').toLowerCase()));
 
+	// ── TEMPLATE-BASED MAP FOLDER METADATA ENRICHMENT ──
+	// Ensure that every map subfolder matching a master template is recognized as a Map folder with full title, author, and dependencies!
+	try {
+		const tmplDir = getTemplatesPath();
+		if (fs.existsSync(tmplDir)) {
+			const templateFolders = fs.readdirSync(tmplDir);
+			const templateDb = new Map();
+			for (const tf of templateFolders) {
+				const tfPath = path.join(tmplDir, tf);
+				if (!fs.statSync(tfPath).isDirectory()) continue;
+				const careerXml = path.join(tfPath, 'careerSavegame.xml');
+				if (fs.existsSync(careerXml)) {
+					let title = '';
+					let mapId = '';
+					let modName = '';
+					const reqMods = [];
+					try {
+						const c = fs.readFileSync(careerXml, 'utf8');
+						const titleMatch = c.match(/<mapTitle>([^<]+)<\/mapTitle>/);
+						if (titleMatch) title = titleMatch[1].trim();
+						const idMatch = c.match(/<mapId>([^<]+)<\/mapId>/);
+						if (idMatch) {
+							mapId = idMatch[1].trim();
+							if (mapId.includes('.')) modName = mapId.split('.')[0].trim();
+						}
+						const modMatches = c.matchAll(/<mod\s+[^>]*modName="([^"]+)"/g);
+						for (const m of modMatches) {
+							if (!m[1].startsWith('pdlc_')) reqMods.push(m[1]);
+						}
+					} catch (e) {}
+					if (!modName) modName = tf.split('_')[0];
+					const meta = { title: title || tf, mapId, modName, folder: tf, reqMods };
+					templateDb.set(tf.toLowerCase(), meta);
+					if (title) templateDb.set(title.toLowerCase(), meta);
+					if (modName) templateDb.set(modName.toLowerCase(), meta);
+				}
+			}
+
+			// Group mods by folder
+			const folderGroupMap = new Map();
+			for (const m of finalMods) {
+				if (m.folder) {
+					if (!folderGroupMap.has(m.folder)) folderGroupMap.set(m.folder, []);
+					folderGroupMap.get(m.folder).push(m);
+				}
+			}
+
+			for (const [folderName, folderModsList] of folderGroupMap.entries()) {
+				const hasMap = folderModsList.some(m => m.isMap);
+				if (!hasMap) {
+					const fLower = folderName.toLowerCase();
+					let matchedMeta = templateDb.get(fLower);
+					if (!matchedMeta) {
+						for (const [k, v] of templateDb.entries()) {
+							if (k.length >= 4 && (fLower.includes(k) || k.includes(fLower))) {
+								matchedMeta = v;
+								break;
+							}
+						}
+					}
+
+					if (matchedMeta) {
+						// Pick or elevate the primary map mod in this folder
+						let primaryMod = folderModsList.find(m => 
+							m.modName.toLowerCase() === matchedMeta.modName.toLowerCase() ||
+							m.fileName.toLowerCase().includes(matchedMeta.modName.toLowerCase()) ||
+							m.title.toLowerCase().includes(matchedMeta.title.toLowerCase())
+						);
+						if (!primaryMod && folderModsList.length > 0) {
+							primaryMod = folderModsList[0];
+						}
+
+						if (primaryMod) {
+							primaryMod.isMap = true;
+							if (matchedMeta.title) {
+								primaryMod.title = matchedMeta.title;
+								primaryMod.mapTitle = matchedMeta.title;
+							}
+							if (matchedMeta.mapId) primaryMod.mapId = matchedMeta.mapId;
+							if (matchedMeta.modName) primaryMod.modName = matchedMeta.modName;
+							if (!primaryMod.author || primaryMod.author === 'Unknown') primaryMod.author = 'Map Mod';
+							if (!primaryMod.iconData) primaryMod.iconData = 'CATEGORY:map';
+							
+							// Attach template required dependency mods if missing
+							if (matchedMeta.reqMods.length > 0 && (!primaryMod.dependencies || primaryMod.dependencies.length === 0)) {
+								primaryMod.dependencies = matchedMeta.reqMods.filter(r => r.toLowerCase() !== primaryMod.modName.toLowerCase());
+							}
+							console.log(`[SCAN] Elevated subfolder '${folderName}' to Map folder via master template matching: "${primaryMod.title}"`);
+						}
+					}
+				}
+			}
+		}
+	} catch (err) {
+		console.error('[SCAN] Error in template-based map folder enrichment:', err);
+	}
+
 	finalMods.sort((a, b) => a.title.localeCompare(b.title));
 	const conflicts = detectConflicts(finalMods);
 	
