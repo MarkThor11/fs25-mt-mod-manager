@@ -76,22 +76,12 @@ export function useInstalledLookup() {
         }
       }
 
-      // 2. Title/Name match (Strict)
+      // 2. Title/Name match (Exact Normalized)
       if (mod.title) {
         const normTitle = mod.title.toLowerCase().replace(/[^a-z0-9]/g, '');
         if (normTitle) {
           if (byNormalizedTitle.has(normTitle)) return byNormalizedTitle.get(normTitle) || "0.0.0.0";
           if (byNormalizedName.has(normTitle)) return byNormalizedName.get(normTitle) || "0.0.0.0";
-        }
-      }
-
-      // 3. Fuzzy Match (Fallback for variations in ModHub titles)
-      if (mod.title && mod.title.length > 5) {
-        const normTitle = mod.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-        for (const [localTitle, version] of byNormalizedTitle.entries()) {
-           if (localTitle.length > 5 && (normTitle.includes(localTitle) || localTitle.includes(normTitle))) {
-             return version || "0.0.0.0";
-           }
         }
       }
 

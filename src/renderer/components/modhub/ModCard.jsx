@@ -128,12 +128,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
       const localTitle = lm.title.toLowerCase().replace(/[^a-z0-9]/g, '');
       const localName = (lm.modName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
       
-      // Fuzzy match: allow one to contain the other if they are long enough
-      if (remoteTitle === localTitle || remoteTitle === localName) return true;
-      if (remoteTitle.length > 5 && localTitle.length > 5) {
-          return remoteTitle.includes(localTitle) || localTitle.includes(remoteTitle);
-      }
-      return false;
+      return remoteTitle === localTitle || remoteTitle === localName;
     });
     return match?.version || null;
   }, [mod, getInstalledVersion, localMods, isSessionInstalled]);
