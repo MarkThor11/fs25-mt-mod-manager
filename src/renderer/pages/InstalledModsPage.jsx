@@ -807,13 +807,15 @@ export default function InstalledModsPage() {
     };
   }, []);
   
-  // Compute all unique tags across all mods
+  // Compute all unique tags across all mods (excluding DLC system tag)
   const allUniqueTags = useMemo(() => {
     const tagCounts = {};
     mods.forEach(mod => {
-      if (mod.tags) {
+      if (mod.tags && !mod.isDLC && mod.folder !== 'DLC') {
         mod.tags.forEach(tag => {
-          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+          if (tag !== 'DLC') {
+            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+          }
         });
       }
     });
@@ -836,8 +838,6 @@ export default function InstalledModsPage() {
   
   // -- Dependency Fix State --
   const [depFixState, setDepFixState] = useState({ active: false, mapMod: null, missing: [], subFolder: '' });
-
-
 
   
   // DRAG & DROP AUTO-SCROLL
@@ -900,7 +900,6 @@ export default function InstalledModsPage() {
   }, [isInternalDragging]);
 
   const filteredMods = mods.filter((m) => {
-    if (m.isDLC || m.folder === 'DLC' || m.fileName?.toLowerCase().startsWith('pdlc_')) return false;
     const matchesSearch = (m.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (m.author || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (m.tags || []).some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -968,8 +967,8 @@ export default function InstalledModsPage() {
     });
 
 
-    // 4. Include empty folders from allFolders (excluding DLC)
-    allFolders.filter(f => f !== 'DLC').forEach(f => {
+    // 4. Include empty folders from allFolders
+    allFolders.forEach(f => {
         if (!groups[f]) groups[f] = [];
     });
 
@@ -980,8 +979,10 @@ export default function InstalledModsPage() {
         finalKeys = finalKeys.filter(name => groups[name].some(m => m.isMap));
     }
 
-    // 6. Root folder first, then others alphabetically
+    // 6. DLC folder first, then Root folder, then others alphabetically
     const sortedKeys = finalKeys.sort((a,b) => {
+        if (a === 'DLC') return -1;
+        if (b === 'DLC') return 1;
         const indexA = folderOrder.indexOf(a);
         const indexB = folderOrder.indexOf(b);
         if (indexA !== -1 && indexB !== -1) return indexA - indexB;
@@ -1416,7 +1417,7 @@ export default function InstalledModsPage() {
           </h1>
           <p className="page__subtitle" style={{ fontSize: 'var(--fs-sm)', display: 'flex', alignItems: 'center', gap: 12 }}>
             <span>
-                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{mods.filter(m => !hiddenFolders.includes(m.folder || '')).length}</span> mods • <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{Object.keys(folders).length}</span> folders visible
+                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{mods.filter(m => !m.isDLC && m.folder !== 'DLC' && !m.fileName?.toLowerCase().startsWith('pdlc_') && !hiddenFolders.includes(m.folder || '')).length}</span> mods • <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{Object.keys(folders).filter(f => f !== 'DLC').length}</span> folders visible
             </span>
             {hiddenFolders.length > 0 && (
                 <button 
@@ -1872,6 +1873,9 @@ export default function InstalledModsPage() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)', fontWeight: 500 }}>
                               {(() => {
+                                if (folderName === 'DLC') {
+                                  return `(${folderMods.length} DLC${folderMods.length === 1 ? '' : 's'})`;
+                                }
                                 const hasMap = folderMods.some(m => m.isMap);
                                 if (hasMap) {
                                   const depCount = folderMods.length - 1;
