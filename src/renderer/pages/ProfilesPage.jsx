@@ -143,6 +143,8 @@ export default function ProfilesPage() {
         startMonth: selectedProfile.options?.startMonth || 3,
         initialLoan: selectedProfile.options?.initialLoan || 0,
         startMode: selectedProfile.options?.startMode || 'NEW_FARMER',
+        includeStartFarm: selectedProfile.options?.includeStartFarm ?? selectedProfile.options?.loadDefaultFarm ?? true,
+        loadDefaultFarm: selectedProfile.options?.loadDefaultFarm ?? selectedProfile.options?.includeStartFarm ?? true,
         trafficEnabled: selectedProfile.options?.trafficEnabled ?? true,
         automaticMotorStartEnabled: selectedProfile.options?.automaticMotorStartEnabled ?? true,
         fruitDestruction: selectedProfile.options?.fruitDestruction ?? true,
@@ -168,6 +170,8 @@ export default function ProfilesPage() {
         timeScale: 5.0,
         startMonth: 3,
         startMode: 'NEW_FARMER',
+        includeStartFarm: true,
+        loadDefaultFarm: true,
         trafficEnabled: true,
         automaticMotorStartEnabled: true,
         fruitDestruction: true,
@@ -727,8 +731,8 @@ export default function ProfilesPage() {
                         </div>
                         <div className="setting">
                           <label className="checkbox-setting">
-                            <input type="checkbox" checked={options.loadDefaultFarm} onChange={e => setOptions(prev => ({ ...prev, loadDefaultFarm: e.target.checked }))} />
-                            <span>Start Farm</span>
+                            <input type="checkbox" checked={options.includeStartFarm ?? options.loadDefaultFarm ?? true} onChange={e => setOptions(prev => ({ ...prev, includeStartFarm: e.target.checked, loadDefaultFarm: e.target.checked }))} />
+                            <span>Include Starting Farm & Vehicles</span>
                           </label>
                         </div>
                       </div>

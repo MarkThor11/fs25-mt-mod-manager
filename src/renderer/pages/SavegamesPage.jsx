@@ -1579,6 +1579,7 @@ export default function SavegamesPage() {
   const [createStartMonth, setCreateStartMonth] = useState(1);
   const [autoLaunchOnCreate, setAutoLaunchOnCreate] = useState(false);
   const [createMode, setCreateMode] = useState('NEW_FARMER');
+  const [includeStartFarm, setIncludeStartFarm] = useState(true);
   const [mapHasTemplate, setMapHasTemplate] = useState(true);
   const [selectedSaves, setSelectedSaves] = useState(new Set());
   const [includeMustHaves, setIncludeMustHaves] = useState(true);
@@ -1598,16 +1599,19 @@ export default function SavegamesPage() {
       setCreateLoan(0);
       setCreateEconomy('EASY');
       setCreateDifficulty(1);
+      setIncludeStartFarm(true);
     } else if (mode === 'FARM_MANAGER') {
       setCreateMoney(1500000);
       setCreateLoan(0);
       setCreateEconomy('NORMAL');
       setCreateDifficulty(2);
+      setIncludeStartFarm(false);
     } else if (mode === 'START_FROM_SCRATCH') {
       setCreateMoney(500000);
       setCreateLoan(0);
       setCreateEconomy('HARD');
       setCreateDifficulty(3);
+      setIncludeStartFarm(false);
     }
   };
 
@@ -1891,7 +1895,8 @@ export default function SavegamesPage() {
         initialLoan: createLoan,
         fixedSeasonLength: createSeasonLength,
         timeScale: createTimeScale,
-        startMonth: createStartMonth
+        startMonth: createStartMonth,
+        includeStartFarm: includeStartFarm
       });
 
       if (result.success) {
@@ -2519,6 +2524,22 @@ export default function SavegamesPage() {
                                     </div>
                                 </div>
                             )}
+
+                            <div style={{ padding: '24px', background: 'var(--bg-tertiary)', borderRadius: 16, border: includeStartFarm ? '1px solid var(--accent)' : '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 20 }}>
+                                <div style={{ width: 44, height: 44, borderRadius: 12, background: includeStartFarm ? 'var(--accent-dim)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: includeStartFarm ? 'var(--accent)' : 'var(--text-tertiary)' }}>
+                                    <Tractor size={24} />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 800, fontSize: 16 }}>Include Starting Farm & Vehicles</div>
+                                    <div style={{ fontSize: 13, opacity: 0.6, marginTop: 2 }}>Spawns default starting tractors, harvesters, equipment, and farm land automatically.</div>
+                                </div>
+                                <input 
+                                    type="checkbox" 
+                                    checked={includeStartFarm} 
+                                    onChange={e => setIncludeStartFarm(e.target.checked)}
+                                    style={{ width: 28, height: 28, cursor: 'pointer', accentColor: 'var(--accent)' }}
+                                />
+                            </div>
 
                             <div style={{ padding: '24px', background: 'var(--bg-tertiary)', borderRadius: 16, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 20 }}>
                                 <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>

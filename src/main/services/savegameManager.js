@@ -456,6 +456,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     let requiresEngineInit = false;
     
     const { mapId, mapTitle, mapModName, money = 1000000, difficulty = 1, mode = 'NEW_FARMER' } = opts;
+    const includeStartFarm = opts.includeStartFarm !== false && opts.includeStartFarm !== 'false';
+    const startFarmFlag = includeStartFarm ? 'true' : 'false';
 
     // 1. Prepare Slot
     if (fs.existsSync(slotPath)) {
@@ -604,8 +606,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.saveDate = today;
             savegameData.careerSavegame.settings.initialMoney = String(money);
             savegameData.careerSavegame.settings.isCrossPlatformSavegame = 'false';
-            savegameData.careerSavegame.settings.hasInitiallyOwnedFarmlands = 'true';
-            savegameData.careerSavegame.settings.loadDefaultFarm = 'true';
+            savegameData.careerSavegame.settings.hasInitiallyOwnedFarmlands = startFarmFlag;
+            savegameData.careerSavegame.settings.loadDefaultFarm = startFarmFlag;
+            savegameData.careerSavegame.settings.loadDefaultVehicles = startFarmFlag;
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
             
             if (!savegameData.careerSavegame.statistics) savegameData.careerSavegame.statistics = {};
@@ -613,6 +616,21 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             
             // Overwrite mods with the new selection
             savegameData.careerSavegame.mod = modData;
+
+            // If start farm is disabled by user, strip starting farm vehicles from vehicles.xml
+            if (!includeStartFarm) {
+                const vehiclesPath = path.join(slotPath, 'vehicles.xml');
+                if (fs.existsSync(vehiclesPath)) {
+                    try {
+                        let vXml = await fs.readFile(vehiclesPath, 'utf8');
+                        // Remove vehicles owned by farm 1
+                        vXml = vXml.replace(/<vehicle\s+[^>]*farmId="1"[^>]*>[\s\S]*?<\/vehicle>/gi, '');
+                        vXml = vXml.replace(/<vehicle\s+[^>]*farmId="1"[^>]*\/>/gi, '');
+                        await fs.writeFile(vehiclesPath, vXml);
+                        console.log('[CREATE] Stripped starting farm vehicles because includeStartFarm is false.');
+                    } catch (e) {}
+                }
+            }
 
             // Since it's an initialized save, we must also update farms.xml to give the player the money
             const farmsPath = path.join(slotPath, 'farms.xml');
@@ -654,8 +672,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     initialMoney: String(money),
                     difficulty: String(difficulty),
                     economicDifficulty: 'NORMAL',
-                    loadDefaultFarm: 'true',
-                    loadDefaultVehicles: 'true',
+                    hasInitiallyOwnedFarmlands: startFarmFlag,
+                    loadDefaultFarm: startFarmFlag,
+                    loadDefaultVehicles: startFarmFlag,
                     isCrossPlatformSavegame: 'false',
                     densityMapRevision: '4',
                     terrainTextureRevision: '1',
