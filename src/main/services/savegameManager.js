@@ -1879,7 +1879,7 @@ async function getFleetPositions(savePath, mapModName) {
                     if (bTL.includes('skidsteer') || bCL.includes('skidsteer') || tL.includes('skidsteer') || fnL.includes('skidsteer')) return 'Skid Steer';
                     if (bTL.includes('combine') || bCL.includes('combine') || bCL.includes('harvester') || tL.includes('combine') || fnL.includes('combine') || fnL.includes('harvester') || fnL.includes('evion') || fnL.includes('lexion') || fnL.includes('trion') || fnL.includes('dominator') || fnL.includes('ideal') || fnL.includes('8570') || fnL.includes('axial') || fnL.includes('cr10') || fnL.includes('cr9') || fnL.includes('x9') || fnL.includes('ch770') || fnL.includes('braud')) return 'Combine Harvester';
                     if (bTL.includes('truck') || bCL.includes('truck') || tL.includes('truck') || fnL.includes('truck') || fnL.includes('lorry') || fnL.includes('tgx') || fnL.includes('mack') || fnL.includes('superliner') || fnL.includes('man/')) return 'Truck';
-                    if (bTL.includes('car') || bCL.includes('car') || tL.includes('car') || tL.includes('pickup') || fnL.includes('pickup') || fnL.includes('car') || fnL.includes('van') || fnL.includes('suv') || fnL.includes('mahindra')) return 'Car / Pickup';
+                    if (bTL.includes('car') || bCL.includes('car') || tL.includes('car') || tL.includes('pickup') || fnL.includes('pickup') || fnL.includes('car') || fnL.includes('van') || fnL.includes('suv') || fnL.includes('mahindra') || fnL.includes('octavia') || fnL.includes('skoda')) return 'Car / Pickup';
                     if (tL.includes('mower') || fnL.includes('mower')) return 'Self-Propelled Mower';
                     if (tL.includes('sprayer') || fnL.includes('sprayer')) return 'Self-Propelled Sprayer';
                     return 'Tractor';
@@ -1900,7 +1900,7 @@ async function getFleetPositions(savePath, mapModName) {
                 }
 
                 const isStructurallyDrivable = hasMotorOrDrivable || hasMotorConfig || (v.enterable !== undefined && (vType.includes('drivable') || vType.includes('tractor') || vType.includes('combine')));
-                const isDrivableHeuristics = fnLower.includes('tractor') || fnLower.includes('truck') || fnLower.includes('lorry') || fnLower.includes('car') || fnLower.includes('pickup') || fnLower.includes('van') || fnLower.includes('suv') || fnLower.includes('jeep') || fnLower.includes('xuv') || fnLower.includes('harvester') || fnLower.includes('combine') || fnLower.includes('telehandler') || fnLower.includes('wheelloader') || fnLower.includes('skidsteer');
+                const isDrivableHeuristics = fnLower.includes('tractor') || fnLower.includes('truck') || fnLower.includes('lorry') || fnLower.includes('car') || fnLower.includes('pickup') || fnLower.includes('van') || fnLower.includes('suv') || fnLower.includes('jeep') || fnLower.includes('xuv') || fnLower.includes('harvester') || fnLower.includes('combine') || fnLower.includes('telehandler') || fnLower.includes('wheelloader') || fnLower.includes('skidsteer') || fnLower.includes('octavia') || fnLower.includes('skoda');
 
                 const isDrivable = isDefault ? (isStructurallyDrivable || isDrivableHeuristics) : isStructurallyDrivable;
                 if (!isDrivable) continue;
