@@ -675,13 +675,19 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     const farmsXml = await fs.readFile(farmsPath, 'utf8');
                     const farmsData = parser.parse(farmsXml);
                     if (farmsData.farms && farmsData.farms.farm) {
-                        if (Array.isArray(farmsData.farms.farm)) {
-                            farmsData.farms.farm[0]['@_money'] = String(money);
-                        } else {
-                            farmsData.farms.farm['@_money'] = String(money);
+                        const targetFarm = Array.isArray(farmsData.farms.farm) ? farmsData.farms.farm[0] : farmsData.farms.farm;
+                        if (targetFarm) {
+                            targetFarm['@_money'] = String(money);
+                            const userId = await getUserUniqueId();
+                            if (targetFarm.players && targetFarm.players.player) {
+                                const playerObj = Array.isArray(targetFarm.players.player) ? targetFarm.players.player[0] : targetFarm.players.player;
+                                if (playerObj) {
+                                    playerObj['@_uniqueUserId'] = userId;
+                                }
+                            }
                         }
                         await fs.writeFile(farmsPath, builder.build(farmsData));
-                        console.log('[CREATE] Updated farms.xml with starting money.');
+                        console.log('[CREATE] Updated farms.xml with starting money and valid player uniqueUserId.');
                     }
                 } catch (err) {
                     console.error('[CREATE] Failed to update farms.xml:', err);
