@@ -21,10 +21,19 @@ export function useInstalledLookup() {
   return useMemo(() => {
     // Build multiple indexes for fast O(1) lookups
     const byModId = new Map();          // modId -> version
-    const byExactTitle = new Map();     // exact title (lowercased & trimmed) -> version
-    const byExactName = new Map();      // exact modName (lowercased & trimmed) -> version
+    const byExactTitle = new Map();     // exact title (lowercased & normalized) -> version
+    const byExactName = new Map();      // exact modName (lowercased & normalized) -> version
 
     const cleanStr = (s) => s ? String(s).trim().toLowerCase() : '';
+    const normStr = (s) => s ? String(s).trim().toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+
+    // Helper to register a key into map
+    const register = (map, key, val) => {
+      if (!key) return;
+      map.set(key, val);
+      const nKey = normStr(key);
+      if (nKey) map.set(nKey, val);
+    };
 
     // 1. Add finished downloads first (Optimistic UI)
     for (const d of finishedDownloads) {
@@ -33,37 +42,44 @@ export function useInstalledLookup() {
         byModId.set(cleanId, 'Installed');
       }
       if (d.title) {
-        const norm = cleanStr(d.title);
-        if (norm) byExactTitle.set(norm, 'Installed');
+        register(byExactTitle, cleanStr(d.title), 'Installed');
       }
     }
 
-    // 1b. Add session-installed mods (prevents flicker after download removed but before scan done)
+    // 1b. Add session-installed mods
     Object.entries(sessionInstalled || {}).forEach(([modId, normTitle]) => {
       if (modId) {
         const cleanId = String(modId).replace(/^0+/, '');
         byModId.set(cleanId, 'Installed');
       }
       if (normTitle) {
-        const norm = cleanStr(normTitle);
-        if (norm) byExactTitle.set(norm, 'Installed');
+        register(byExactTitle, cleanStr(normTitle), 'Installed');
       }
     });
 
     // 2. Add actual local mods (takes precedence for version info)
     for (const lm of localMods) {
       if (!lm) continue;
+      const ver = lm.version || 'Installed';
       if (lm.modId) {
         const cleanId = String(lm.modId).replace(/^0+/, '');
-        byModId.set(cleanId, lm.version);
+        byModId.set(cleanId, ver);
       }
       if (lm.title) {
-        const norm = cleanStr(lm.title);
-        if (norm) byExactTitle.set(norm, lm.version);
+        register(byExactTitle, cleanStr(lm.title), ver);
+      }
+      if (lm.mapTitle) {
+        register(byExactTitle, cleanStr(lm.mapTitle), ver);
       }
       if (lm.modName) {
-        const norm = cleanStr(lm.modName);
-        if (norm) byExactName.set(norm, lm.version);
+        register(byExactName, cleanStr(lm.modName), ver);
+      }
+      if (lm.technicalName) {
+        register(byExactName, cleanStr(lm.technicalName), ver);
+      }
+      if (lm.fileName) {
+        const baseName = String(lm.fileName).split(/[\/\\]/).pop().replace(/\.zip$/i, '');
+        register(byExactName, cleanStr(baseName), ver);
       }
     }
 
@@ -77,25 +93,27 @@ export function useInstalledLookup() {
       if (mod.modId) {
         const cleanId = String(mod.modId).replace(/^0+/, '');
         if (byModId.has(cleanId)) {
-          return byModId.get(cleanId) || "0.0.0.0";
+          return byModId.get(cleanId) || "Installed";
         }
       }
 
-      // 2. Title/Name match (Exact string match preserving hyphens/punctuation)
-      if (mod.title) {
-        const normTitle = cleanStr(mod.title);
-        if (normTitle) {
-          if (byExactTitle.has(normTitle)) return byExactTitle.get(normTitle) || "0.0.0.0";
-          if (byExactName.has(normTitle)) return byExactName.get(normTitle) || "0.0.0.0";
-        }
+      // 2. Title/Name match (with alphanumeric normalization)
+      const titleClean = cleanStr(mod.title);
+      const titleNorm = normStr(mod.title);
+      if (titleClean) {
+        if (byExactTitle.has(titleClean)) return byExactTitle.get(titleClean) || "Installed";
+        if (byExactTitle.has(titleNorm)) return byExactTitle.get(titleNorm) || "Installed";
+        if (byExactName.has(titleClean)) return byExactName.get(titleClean) || "Installed";
+        if (byExactName.has(titleNorm)) return byExactName.get(titleNorm) || "Installed";
       }
 
-      if (mod.modName) {
-        const normName = cleanStr(mod.modName);
-        if (normName) {
-          if (byExactName.has(normName)) return byExactName.get(normName) || "0.0.0.0";
-          if (byExactTitle.has(normName)) return byExactTitle.get(normName) || "0.0.0.0";
-        }
+      const nameClean = cleanStr(mod.modName);
+      const nameNorm = normStr(mod.modName);
+      if (nameClean) {
+        if (byExactName.has(nameClean)) return byExactName.get(nameClean) || "Installed";
+        if (byExactName.has(nameNorm)) return byExactName.get(nameNorm) || "Installed";
+        if (byExactTitle.has(nameClean)) return byExactTitle.get(nameClean) || "Installed";
+        if (byExactTitle.has(nameNorm)) return byExactTitle.get(nameNorm) || "Installed";
       }
 
       return null;
