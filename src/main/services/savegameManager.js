@@ -702,16 +702,24 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 if (stats.isFile()) {
                     const zip = new AdmZip(modZipPath);
                     
-                    // Extract infoLayer grle files, heightmaps, and terrain occluders cache
+                    // Extract infoLayer grle files, heightmaps, density maps, and terrain cache files
                     for (const entry of zip.getEntries()) {
                         const baseName = path.basename(entry.entryName);
                         const lowerBase = baseName.toLowerCase();
                         if (lowerBase.startsWith('infolayer_') && lowerBase.endsWith('.grle')) {
                             const targetPath = path.join(slotPath, baseName);
-                            await fs.writeFile(targetPath, entry.getData());
-                            extractedGrles++;
+                            if (!fs.existsSync(targetPath)) {
+                                await fs.writeFile(targetPath, entry.getData());
+                                extractedGrles++;
+                            }
                         }
-                        if (lowerBase === 'dem.png' || lowerBase === 'terrain.heightmap.png') {
+                        if (lowerBase.startsWith('densitymap_') && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.xml'))) {
+                            const targetPath = path.join(slotPath, baseName);
+                            if (!fs.existsSync(targetPath)) {
+                                await fs.writeFile(targetPath, entry.getData());
+                            }
+                        }
+                        if (lowerBase === 'dem.png' || lowerBase === 'terrain.heightmap.png' || lowerBase.endsWith('_dem.png')) {
                             const targetPath = path.join(slotPath, 'terrain.heightmap.png');
                             if (!fs.existsSync(targetPath)) {
                                 await fs.writeFile(targetPath, entry.getData());
@@ -723,6 +731,18 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             if (!fs.existsSync(targetPath)) {
                                 await fs.writeFile(targetPath, entry.getData());
                                 console.log(`[CREATE] Extracted ${baseName} -> terrain.occluders.cache`);
+                            }
+                        }
+                        if (lowerBase.endsWith('.terrain.nmap.cache') || lowerBase === 'terrain.nmap.cache') {
+                            const targetPath = path.join(slotPath, 'terrain.nmap.cache');
+                            if (!fs.existsSync(targetPath)) {
+                                await fs.writeFile(targetPath, entry.getData());
+                            }
+                        }
+                        if (lowerBase.endsWith('.terrain.lod.type.cache') || lowerBase === 'terrain.lod.type.cache') {
+                            const targetPath = path.join(slotPath, 'terrain.lod.type.cache');
+                            if (!fs.existsSync(targetPath)) {
+                                await fs.writeFile(targetPath, entry.getData());
                             }
                         }
                     }
