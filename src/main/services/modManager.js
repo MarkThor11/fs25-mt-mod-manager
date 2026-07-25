@@ -462,11 +462,13 @@ function scanDLCs(pdlcPath) {
         const dlcFiles = files.filter(f => f.toLowerCase().endsWith('.dlc'));
         
         return dlcFiles.map(file => {
-            const mapping = DLC_MAPPING[file];
+            const fileLower = file.toLowerCase();
+            const mappingKey = Object.keys(DLC_MAPPING).find(k => k.toLowerCase() === fileLower) || file;
+            const mapping = DLC_MAPPING[mappingKey];
             const stats = nodeFs.statSync(path.join(pdlcPath, file));
             
             // Generate a readable title from filename if not in mapping
-            let cleanTitle = file.replace(/\.dlc$/i, '');
+            let cleanTitle = file.replace(/\.dlc$/i, '').replace(/^pdlc_/i, '');
             if (!mapping) {
                 // simpleCamelCase -> Simple Camel Case
                 cleanTitle = cleanTitle.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
