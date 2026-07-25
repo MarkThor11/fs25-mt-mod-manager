@@ -423,15 +423,12 @@ export default function ProfilesPage() {
         <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
           Create game blueprints with preset mods.
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--sp-2)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--sp-2)' }}>
           <button className="btn btn--primary" onClick={handleCreateNew}>
             <Plus size={16} /> New
           </button>
           <button className="btn btn--secondary" onClick={handleImport}>
             <Download size={16} /> Import
-          </button>
-          <button className="btn btn--secondary" onClick={() => scanMods()}>
-            <RefreshCw size={16} className={isScanningMods ? 'animate-spin' : ''} /> Refresh
           </button>
         </div>
 

@@ -1489,23 +1489,6 @@ export default function InstalledModsPage() {
         <div style={{ display: 'flex', gap: 8 }}>
             <button 
               className="btn btn--secondary btn--sm" 
-              onClick={async () => {
-                if (confirm("Reset the mod metadata cache? This will force a deep re-scan of all mod icons and details.")) {
-                   await window.api.mods.clearCache();
-                   scanMods();
-                }
-              }} 
-              disabled={isLoading} 
-              title="Deep Re-Scan"
-              style={{ color: 'var(--warning)' }}
-            >
-              <RefreshCcw size={16} className={isLoading ? 'animate-spin' : ''} />
-            </button>
-            <button className="btn btn--secondary btn--sm" onClick={scanMods} disabled={isLoading} title="Refresh Library">
-              <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-            </button>
-            <button 
-              className="btn btn--secondary btn--sm" 
               onClick={checkUpdates} 
               disabled={isLoading || !isOnline}
               title={!isOnline ? "Internet connection required" : "Check for Updates"}

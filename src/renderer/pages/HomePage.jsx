@@ -139,17 +139,6 @@ export default function HomePage() {
         <div className="home-stats-container" style={{ position: 'relative', marginBottom: 'var(--sp-8)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-4)' }}>
              <h2 style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>Dashboard Overview</h2>
-                 <button 
-                className="btn btn--ghost btn--xs" 
-                onClick={() => {
-                   fetchStats();
-                   checkUpdates(true);
-                   useToastStore.getState().success('Refreshing dashboard statistics...');
-                }}
-                style={{ height: 24, gap: 6 }}
-              >
-                <RefreshCw size={12} className={isCheckingUpdates ? 'animate-spin' : ''} /> Refresh Data
-              </button>
           </div>
           <div className="home-stats">
           <div className="stat-card">

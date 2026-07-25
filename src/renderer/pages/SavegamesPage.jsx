@@ -2164,9 +2164,6 @@ export default function SavegamesPage() {
           <button className={`btn btn--${isArchivePanelOpen ? 'accent' : 'secondary'} btn--sm`} onClick={() => setIsArchivePanelOpen(true)}>
             <Archive size={14} /> Archive {archives.length > 0 && `(${archives.length})`}
           </button>
-          <button className="btn btn--secondary btn--sm" onClick={() => { fetchSavegames(); fetchArchives(); }}>
-            <RefreshCw size={14} className={isSavesLoading ? 'animate-spin' : ''} /> Refresh
-          </button>
         </div>
       </div>
 
