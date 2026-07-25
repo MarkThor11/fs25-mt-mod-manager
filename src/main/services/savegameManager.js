@@ -222,7 +222,7 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
 
     const folders = await fs.readdir(templatesDir);
 
-    // 1. Direct folder check (matches folder name containing mod name, title, or mapId)
+    // 1. Direct folder check (requires exact normalized match for mod name, mapId, or title)
     for (const folder of folders) {
         const folderPath = path.join(templatesDir, folder);
         const stat = await fs.stat(folderPath).catch(() => null);
@@ -231,12 +231,12 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         if (!fs.existsSync(path.join(folderPath, 'terrain.heightmap.png'))) continue;
 
         const fNorm = ultraNorm(folder);
-        if (targetModNorm && fNorm.includes(targetModNorm)) return folder;
-        if (targetTitleNorm && fNorm.includes(targetTitleNorm)) return folder;
-        if (targetMapIdNorm && fNorm.includes(targetMapIdNorm)) return folder;
+        if (targetModNorm && fNorm === targetModNorm) return folder;
+        if (targetMapIdNorm && fNorm === targetMapIdNorm) return folder;
+        if (targetTitleNorm && fNorm === targetTitleNorm) return folder;
     }
 
-    // 2. XML Deep Scan check inside templates
+    // 2. XML Deep Scan check inside templates (exact match only)
     for (const folder of folders) {
         const folderPath = path.join(templatesDir, folder);
         const careerPath = path.join(folderPath, 'careerSavegame.xml');
@@ -245,8 +245,10 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
                 const xml = await fs.readFile(careerPath, 'utf8');
                 const internalId = getElementText(xml, 'mapId');
                 const internalTitle = getElementText(xml, 'mapTitle');
-                if ((internalId && ultraNorm(internalId) === targetMapIdNorm) || 
-                    (internalTitle && targetTitleNorm && ultraNorm(internalTitle) === targetTitleNorm)) {
+                if (internalId && ultraNorm(internalId) === targetMapIdNorm) {
+                    return folder;
+                }
+                if (internalTitle && targetTitleNorm && ultraNorm(internalTitle) === targetTitleNorm) {
                     return folder;
                 }
             } catch (e) {}
