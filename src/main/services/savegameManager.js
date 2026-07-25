@@ -491,7 +491,19 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     const templatesDir = getTemplatesPath();
     let requiresEngineInit = false;
     
-    const { mapId, mapTitle, mapModName, money = 1000000, difficulty = 1, mode = 'NEW_FARMER' } = opts;
+    const { 
+        mapId, 
+        mapTitle, 
+        mapModName, 
+        money = 1000000, 
+        difficulty = 1, 
+        economicDifficulty = 'NORMAL',
+        initialLoan = 0,
+        fixedSeasonLength = 1,
+        timeScale = 5.0,
+        startMonth = 1,
+        mode = 'NEW_FARMER' 
+    } = opts;
     const includeStartFarm = opts.includeStartFarm !== false && opts.includeStartFarm !== 'false';
     const startFarmFlag = includeStartFarm ? 'true' : 'false';
 
@@ -643,6 +655,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.saveDateFormatted = today;
             savegameData.careerSavegame.settings.saveDate = today;
             savegameData.careerSavegame.settings.initialMoney = String(money);
+            savegameData.careerSavegame.settings.initialLoan = String(initialLoan);
+            savegameData.careerSavegame.settings.economicDifficulty = String(economicDifficulty || 'NORMAL').toUpperCase();
+            savegameData.careerSavegame.settings.plannedDaysPerPeriod = String(fixedSeasonLength || 1);
+            savegameData.careerSavegame.settings.timeScale = String(timeScale || 5.0);
             savegameData.careerSavegame.settings.isCrossPlatformSavegame = 'false';
             savegameData.careerSavegame.settings.hasInitiallyOwnedFarmlands = startFarmFlag;
             savegameData.careerSavegame.settings.loadDefaultFarm = startFarmFlag;
@@ -714,8 +730,11 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     saveDateFormatted: today,
                     saveDate: today,
                     initialMoney: String(money),
+                    initialLoan: String(initialLoan),
                     difficulty: String(difficulty),
-                    economicDifficulty: 'NORMAL',
+                    economicDifficulty: String(economicDifficulty || 'NORMAL').toUpperCase(),
+                    plannedDaysPerPeriod: String(fixedSeasonLength || 1),
+                    timeScale: String(timeScale || 5.0),
                     hasInitiallyOwnedFarmlands: startFarmFlag,
                     loadDefaultFarm: startFarmFlag,
                     loadDefaultVehicles: startFarmFlag,
