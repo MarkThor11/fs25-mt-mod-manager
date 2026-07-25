@@ -1468,44 +1468,46 @@ async function performScan(manualPaths = null) {
 			}
 
 			for (const [folderName, folderModsList] of folderGroupMap.entries()) {
-				const fLower = folderName.toLowerCase();
-				let matchedMeta = templateDb.get(fLower);
-				if (!matchedMeta) {
-					for (const [k, v] of templateDb.entries()) {
-						if (k.length >= 4 && (fLower.includes(k) || k.includes(fLower))) {
-							matchedMeta = v;
-							break;
+				const hasMap = folderModsList.some(m => m.isMap);
+				if (!hasMap) {
+					const fLower = folderName.toLowerCase();
+					let matchedMeta = templateDb.get(fLower);
+					if (!matchedMeta) {
+						for (const [k, v] of templateDb.entries()) {
+							if (k.length >= 4 && (fLower.includes(k) || k.includes(fLower))) {
+								matchedMeta = v;
+								break;
+							}
 						}
 					}
-				}
 
-				if (matchedMeta) {
-					// Pick or elevate the primary map mod in this folder
-					let primaryMod = folderModsList.find(m => 
-						m.isMap ||
-						m.modName.toLowerCase() === matchedMeta.modName.toLowerCase() ||
-						m.fileName.toLowerCase().includes(matchedMeta.modName.toLowerCase()) ||
-						m.title.toLowerCase().includes(matchedMeta.title.toLowerCase())
-					);
-					if (!primaryMod && folderModsList.length > 0) {
-						primaryMod = folderModsList[0];
-					}
-
-					if (primaryMod) {
-						primaryMod.isMap = true;
-						if (matchedMeta.title) {
-							primaryMod.title = matchedMeta.title;
-							primaryMod.mapTitle = matchedMeta.title;
+					if (matchedMeta) {
+						// Pick or elevate the primary map mod in this folder
+						let primaryMod = folderModsList.find(m => 
+							m.modName.toLowerCase() === matchedMeta.modName.toLowerCase() ||
+							m.fileName.toLowerCase().includes(matchedMeta.modName.toLowerCase()) ||
+							m.title.toLowerCase().includes(matchedMeta.title.toLowerCase())
+						);
+						if (!primaryMod && folderModsList.length > 0) {
+							primaryMod = folderModsList[0];
 						}
-						if (matchedMeta.mapId) primaryMod.mapId = matchedMeta.mapId;
-						if (matchedMeta.modName) primaryMod.modName = matchedMeta.modName;
-						if (!primaryMod.author || primaryMod.author === 'Unknown') primaryMod.author = 'Map Mod';
-						if (!primaryMod.iconData) primaryMod.iconData = 'CATEGORY:map';
-						
-						// ALWAYS attach template required dependency mods if missing or empty
-						if (matchedMeta.reqMods.length > 0 && (!primaryMod.dependencies || primaryMod.dependencies.length === 0)) {
-							primaryMod.dependencies = matchedMeta.reqMods.filter(r => r.toLowerCase() !== primaryMod.modName.toLowerCase());
-							console.log(`[SCAN] Attached ${primaryMod.dependencies.length} template required mods to '${primaryMod.title}'`);
+
+						if (primaryMod) {
+							primaryMod.isMap = true;
+							if (matchedMeta.title) {
+								primaryMod.title = matchedMeta.title;
+								primaryMod.mapTitle = matchedMeta.title;
+							}
+							if (matchedMeta.mapId) primaryMod.mapId = matchedMeta.mapId;
+							if (matchedMeta.modName) primaryMod.modName = matchedMeta.modName;
+							if (!primaryMod.author || primaryMod.author === 'Unknown') primaryMod.author = 'Map Mod';
+							if (!primaryMod.iconData) primaryMod.iconData = 'CATEGORY:map';
+							
+							// Attach template required dependency mods if missing
+							if (matchedMeta.reqMods.length > 0 && (!primaryMod.dependencies || primaryMod.dependencies.length === 0)) {
+								primaryMod.dependencies = matchedMeta.reqMods.filter(r => r.toLowerCase() !== primaryMod.modName.toLowerCase());
+							}
+							console.log(`[SCAN] Elevated subfolder '${folderName}' to Map folder via master template matching: "${primaryMod.title}"`);
 						}
 					}
 				}
@@ -1535,8 +1537,7 @@ async function performScan(manualPaths = null) {
 		}
 	}
 
-	const occupiedFolders = Array.from(new Set(allFolders)).filter(f => finalMods.some(m => m.folder === f)).sort();
-	const resultData = { mods: finalMods, allFolders: occupiedFolders, conflicts, missingDependencies };
+	const resultData = { mods: finalMods, allFolders: Array.from(new Set(allFolders)).sort(), conflicts, missingDependencies };
 	
 	// ── BACKGROUND AUTO-RESOLVE ──
 	const autoResolve = cache.getSetting('autoResolveDependencies') === 'true';
@@ -2555,47 +2556,20 @@ async function autoOrganizeMaps() {
 	let movedCount = 0;
 	for (const map of rootMaps) {
 		try {
-			// Clean folder name keeping human readable spaces
-			const rawTitle = map.title || map.mapTitle || map.mapId || 'Unknown Map';
-			const newFolderName = rawTitle.replace(/[\\/:*?"<>|]/g, '').trim();
+			// Create a folder name from the clean title
+			const newFolderName = (map.title || map.mapId || map.mapTitle || 'UnknownMap')
+				.replace(/[^a-zA-Z0-9]/g, '_')
+				.replace(/_{2,}/g, '_')
+				.replace(/^_|_$/g, '');
 			
 			if (newFolderName) {
-				const modsToMove = [map.fileName];
-				// Also include any required dependencies
-				if (map.dependencies && Array.isArray(map.dependencies)) {
-					for (const dep of map.dependencies) {
-						const depName = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || '');
-						if (depName) {
-							const depMod = mods.find(m => (!m.folder || m.folder === '') && (m.modName.toLowerCase() === depName.toLowerCase() || m.fileName.toLowerCase().includes(depName.toLowerCase())));
-							if (depMod && !modsToMove.includes(depMod.fileName)) {
-								modsToMove.push(depMod.fileName);
-							}
-						}
-					}
-				}
-				await moveModsToFolder(modsToMove, newFolderName);
+				await moveModsToFolder([map.fileName], newFolderName);
 				movedCount++;
 			}
 		} catch (err) {
 			console.error(`[ORGANIZE] Failed to move map ${map.fileName}:`, err.message);
 		}
 	}
-
-	// Clean up empty directories from mods/ folder
-	try {
-		const modsPath = getModsPath();
-		const entries = await fs.readdir(modsPath, { withFileTypes: true });
-		for (const entry of entries) {
-			if (entry.isDirectory() && entry.name.toLowerCase() !== 'backups') {
-				const dirPath = path.join(modsPath, entry.name);
-				const files = await fs.readdir(dirPath);
-				if (files.length === 0) {
-					await fs.remove(dirPath);
-					console.log(`[ORGANIZE] Removed empty folder: ${entry.name}`);
-				}
-			}
-		}
-	} catch (e) {}
 	
 	return { success: true, moved: movedCount };
 }
