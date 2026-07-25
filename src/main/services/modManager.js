@@ -1031,10 +1031,8 @@ async function performScan(manualPaths = null) {
         }
     }
 
-	mods.push(...allDlcs);
-	if (allDlcs.length > 0) {
-		allFolders.push('DLC');
-	}
+	// Keep official DLCs separate so they do not count towards user installed mods or create a DLC folder
+	const detectedDlcs = [...allDlcs];
 
 	const processEntry = async (modRootPath, entryName, subFolder = '') => {
 		const fullPath = subFolder ? path.join(modRootPath, subFolder, entryName) : path.join(modRootPath, entryName);
@@ -1538,8 +1536,9 @@ async function performScan(manualPaths = null) {
 		}
 	}
 
+	const userMods = finalMods.filter(m => !m.isDLC && !m.fileName?.toLowerCase().startsWith('pdlc_') && m.folder !== 'DLC');
 	const cleanFolders = Array.from(new Set(allFolders)).filter(f => f && f.toUpperCase() !== 'DLC').sort();
-	const resultData = { mods: finalMods, allFolders: cleanFolders, conflicts, missingDependencies };
+	const resultData = { mods: userMods, dlcs: detectedDlcs, allFolders: cleanFolders, conflicts, missingDependencies };
 	
 	// ── BACKGROUND AUTO-RESOLVE ──
 	const autoResolve = cache.getSetting('autoResolveDependencies') === 'true';
