@@ -126,7 +126,7 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
   return (
     <div 
         className={`mod-card-library ${isSelected ? 'mod-card-library--selected' : ''}`}
-        onClick={() => onNavigate(mod.fileName)}
+        onClick={() => onNavigate(mod.fileName, mod.isDLC || mod.folder === 'DLC')}
         draggable={true}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
@@ -606,7 +606,7 @@ const LazyModList = ({
               </div>
 
               <div 
-                onClick={() => navigate(`/installed/mod/${encodeURIComponent(mod.fileName)}`)}
+                onClick={() => onNavigate(mod.fileName, mod.isDLC || mod.folder === 'DLC')}
                 style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, cursor: 'pointer' }}
               >
                 {(() => {

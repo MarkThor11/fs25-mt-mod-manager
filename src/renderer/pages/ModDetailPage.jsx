@@ -292,6 +292,11 @@ export default function ModDetailPage() {
   const loadModDetail = async () => {
     setLoading(true);
     try {
+      if (fileName && fileName.toLowerCase().endsWith('.dlc')) {
+          useToastStore.getState().info("Official DLC content is system-managed.");
+          navigate('/installed', { replace: true });
+          return;
+      }
       let modData = null;
       let effectiveModId = modId;
       
