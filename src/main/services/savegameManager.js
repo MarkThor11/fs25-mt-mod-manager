@@ -2034,29 +2034,56 @@ async function activatePlayerPersistence(savePath, mapId, includeBridge, include
 async function deactivatePlayerPersistence(savePath, mapId) { return { success: true }; }
 
 async function checkStoreDeliveries() {
-    const modManager = require('./modManager');
-    const modsDir = modManager.getModsPath();
-    const destZip = require('path').join(modsDir, 'FS25_storeDeliveries.zip');
-    return require('fs').existsSync(destZip);
+    try {
+        const modManager = require('./modManager');
+        const modsDir = modManager.getModsPath();
+        if (!modsDir) return false;
+        const fs = require('fs');
+        const path = require('path');
+        return fs.existsSync(path.join(modsDir, 'FS25_storeDeliveries.zip')) ||
+               fs.existsSync(path.join(modsDir, 'fs25_storedeliveries.zip')) ||
+               fs.existsSync(path.join(modsDir, 'FS25_storeDeliveries')) ||
+               fs.existsSync(path.join(modsDir, 'fs25_storedeliveries'));
+    } catch (e) {
+        return false;
+    }
 }
 
 async function ensureStoreDeliveries() {
     try {
         const modManager = require('./modManager');
         const modsDir = modManager.getModsPath();
-        const destZip = require('path').join(modsDir, 'FS25_storeDeliveries.zip');
-        if (require('fs').existsSync(destZip)) return { success: true };
+        if (!modsDir) return { success: false, error: 'Mods directory not found' };
+        
+        const fs = require('fs');
+        const path = require('path');
+        const destZip = path.join(modsDir, 'FS25_storeDeliveries.zip');
+        
+        if (await checkStoreDeliveries()) return { success: true };
         
         const appPath = require('electron').app ? require('electron').app.getAppPath() : process.cwd();
-        const sourceDir = require('path').join(appPath, 'scratch', 'storeDeliveries_unzipped');
-        if (!require('fs').existsSync(sourceDir)) return { success: false, error: 'Source files not found at ' + sourceDir };
         
-        const AdmZip = require('adm-zip');
-        const zip = new AdmZip();
-        zip.addLocalFolder(sourceDir);
-        await require('fs').promises.writeFile(destZip, zip.toBuffer());
-        return { success: true };
-    } catch (err) { return { success: false, error: err.message }; }
+        // 1. Try packaged asset
+        const assetZip = path.join(appPath, 'src', 'main', 'assets', 'FS25_storeDeliveries.zip');
+        if (fs.existsSync(assetZip)) {
+            await fs.promises.copyFile(assetZip, destZip);
+            return { success: true };
+        }
+        
+        // 2. Try unzipped scratch directory
+        const sourceDir = path.join(appPath, 'scratch', 'storeDeliveries_unzipped');
+        if (fs.existsSync(sourceDir)) {
+            const AdmZip = require('adm-zip');
+            const zip = new AdmZip();
+            zip.addLocalFolder(sourceDir);
+            await fs.promises.writeFile(destZip, zip.toBuffer());
+            return { success: true };
+        }
+        
+        return { success: false, error: 'Store Deliveries package asset not found.' };
+    } catch (err) { 
+        return { success: false, error: err.message }; 
+    }
 }
 
 async function ensureBridgeMod() {

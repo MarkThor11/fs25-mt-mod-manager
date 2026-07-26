@@ -932,7 +932,20 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                   {/* Preset 1: Custom Spawn Point */}
                   <div 
                     onClick={async () => {
-                      if (hasStoreDeliveries === false) return;
+                      if (hasStoreDeliveries === false) {
+                        if (window.api?.savegames?.ensureStoreDeliveries) {
+                          useToastStore.getState().info("Installing Store Deliveries mod...");
+                          const res = await window.api.savegames.ensureStoreDeliveries();
+                          if (res.success) {
+                            useToastStore.getState().success("Store Deliveries mod installed!");
+                            const hasDeliv = await window.api.savegames.checkStoreDeliveries();
+                            setHasStoreDeliveries(hasDeliv);
+                          } else {
+                            useToastStore.getState().error("Failed to install mod: " + res.error);
+                            return;
+                          }
+                        }
+                      }
                       setSelectedSpawnMode('custom');
                       setSelectedVehicleId(null);
                       localStorage.setItem(`selected_spawn_${save.path}`, JSON.stringify({ mode: 'custom' }));
@@ -954,11 +967,11 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                       background: selectedSpawnMode === 'custom' ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg-base)', 
                       border: selectedSpawnMode === 'custom' ? '2px solid var(--accent)' : '1px solid var(--border)', 
                       borderRadius: 8, 
-                      cursor: hasStoreDeliveries !== false ? 'pointer' : 'default', 
+                      cursor: 'pointer', 
                       display: 'flex', 
                       flexDirection: 'column', 
                       transition: 'all 0.2s', 
-                      opacity: hasStoreDeliveries !== false ? 1 : 0.5,
+                      opacity: hasStoreDeliveries !== false ? 1 : 0.9,
                       boxShadow: selectedSpawnMode === 'custom' ? '0 0 12px rgba(var(--accent-rgb), 0.2)' : 'none'
                     }}
                   >
@@ -977,33 +990,34 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                       {hasStoreDeliveries !== false ? (
                         customSpawnInfo.type === 'Custom' ? "Custom spawn point active" : "Set spawn point with Store Deliveries mod"
                       ) : (
-                        <span style={{ pointerEvents: 'auto' }}>
-                          <span 
-                            style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent)', fontWeight: 600 }} 
-                            onClick={(e) => {
+                        <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: 11 }}>
+                            ⚠️ Store Deliveries mod required
+                          </span>
+                          <button 
+                            className="btn btn--accent btn--xs"
+                            style={{ padding: '4px 10px', fontSize: 10, fontWeight: 800, width: 'fit-content' }}
+                            onClick={async (e) => {
                               e.stopPropagation();
                               if (window.api?.savegames?.ensureStoreDeliveries) {
-                                useToastStore.getState().info("Downloading store deliveries mod...");
-                                window.api.savegames.ensureStoreDeliveries().then(res => {
-                                  if (res.success) {
-                                    useToastStore.getState().success("Store Deliveries mod downloaded!");
-                                    if (window.api.savegames.checkStoreDeliveries) {
-                                      window.api.savegames.checkStoreDeliveries().then(setHasStoreDeliveries);
-                                    }
-                                    if (window.api.savegames.getStoreDeliveryCoordinates) {
-                                      window.api.savegames.getStoreDeliveryCoordinates(save.path).then(setCustomSpawnInfo);
-                                    }
-                                  } else {
-                                    useToastStore.getState().error("Failed to download mod: " + res.error);
+                                useToastStore.getState().info("Installing Store Deliveries mod...");
+                                const res = await window.api.savegames.ensureStoreDeliveries();
+                                if (res.success) {
+                                  useToastStore.getState().success("Store Deliveries mod installed!");
+                                  const hasDeliv = await window.api.savegames.checkStoreDeliveries();
+                                  setHasStoreDeliveries(hasDeliv);
+                                  if (window.api.savegames.getStoreDeliveryCoordinates) {
+                                    window.api.savegames.getStoreDeliveryCoordinates(save.path).then(setCustomSpawnInfo);
                                   }
-                                });
+                                } else {
+                                  useToastStore.getState().error("Failed to install mod: " + res.error);
+                                }
                               }
                             }}
                           >
-                            Download the Store Deliveries mod
-                          </span>
-                          {" to enable this feature"}
-                        </span>
+                            Download Store Deliveries Mod
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
