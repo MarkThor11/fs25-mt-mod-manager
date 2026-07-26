@@ -50,6 +50,24 @@ const LocalModIcon = React.memo(({ mod }) => {
   const fallbackCategory = mod.iconData || mod.storeData || 'CATEGORY:generic';
   const categoryType = fallbackCategory.startsWith('CATEGORY:') ? fallbackCategory.split(':')[1] : 'generic';
 
+  const imageUrl = (mod.iconData && (mod.iconData.startsWith('http') || mod.iconData.startsWith('data:'))) 
+    ? mod.iconData 
+    : ((mod.storeData && (mod.storeData.startsWith('http') || mod.storeData.startsWith('data:'))) ? mod.storeData : null);
+
+  if (imageUrl && !error) {
+    return (
+      <div style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+        <img 
+          src={imageUrl} 
+          style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid var(--border)' }} 
+          alt={mod.title || ""} 
+          loading="lazy" 
+          onError={() => setError(true)}
+        />
+      </div>
+    );
+  }
+
   if (error || (mod.iconData && mod.iconData.startsWith('CATEGORY:'))) {
     const CatIcon = (() => {
       switch (categoryType) {
@@ -69,8 +87,6 @@ const LocalModIcon = React.memo(({ mod }) => {
     );
   }
 
-  // Uses native browser lazy loading and the custom mod-icon protocol!
-  // Bypasses React state, IPC payloads, and snapshot caching entirely.
   return (
     <div style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
       <img 
