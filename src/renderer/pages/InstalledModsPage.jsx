@@ -937,30 +937,35 @@ export default function InstalledModsPage() {
   }, [isInternalDragging]);
 
   const filteredMods = mods.filter((m) => {
+    const isDLCItem = m.isDLC || m.folder === 'DLC';
+
     const matchesSearch = (m.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (m.author || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (m.tags || []).some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
     if (!matchesSearch) return false;
-    
-    if (showOnlyFavorites) {
-        const isModFav = favoriteMods.some(fv => (fv.modId && m.modId && String(fv.modId) === String(m.modId)) || (fv.fileName === m.fileName));
-        const isAuthorFav = favoriteAuthors.some(fa => fa.name === m.author);
-        if (!isModFav && !isAuthorFav) return false;
-    }
 
-    if (selectedTags.length > 0) {
-        const hasMatch = selectedTags.some(tag => {
-          const tLower = tag.toLowerCase();
-          return (m.tags || []).some(t => t.toLowerCase() === tLower) ||
-                 (m.category && m.category.toLowerCase() === tLower) ||
-                 (m.isMap && tLower === 'maps');
-        });
-        if (!hasMatch) return false;
-    }
+    // Favoriting, tag filtering, and update filtering apply to regular user mods
+    if (!isDLCItem) {
+      if (showOnlyFavorites) {
+          const isModFav = favoriteMods.some(fv => (fv.modId && m.modId && String(fv.modId) === String(m.modId)) || (fv.fileName === m.fileName));
+          const isAuthorFav = favoriteAuthors.some(fa => fa.name === m.author);
+          if (!isModFav && !isAuthorFav) return false;
+      }
 
-    if (showOnlyUpdates) {
-        const hasUpdate = updates.some(u => u.fileName === m.fileName);
-        if (!hasUpdate) return false;
+      if (selectedTags.length > 0) {
+          const hasMatch = selectedTags.some(tag => {
+            const tLower = tag.toLowerCase();
+            return (m.tags || []).some(t => t.toLowerCase() === tLower) ||
+                   (m.category && m.category.toLowerCase() === tLower) ||
+                   (m.isMap && tLower === 'maps');
+          });
+          if (!hasMatch) return false;
+      }
+
+      if (showOnlyUpdates) {
+          const hasUpdate = updates.some(u => u.fileName === m.fileName);
+          if (!hasUpdate) return false;
+      }
     }
 
     return true;
