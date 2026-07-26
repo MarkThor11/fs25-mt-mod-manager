@@ -13,6 +13,7 @@ import { useArchiveStore } from '../store/useArchiveStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useLocalModsStore } from '../store/useLocalModsStore';
 import { useModHubStore } from '../store/useModHubStore';
+import { useDownloadStore } from '../store/useDownloadStore';
 import MapImage, { MAP_PREVIEWS } from '../components/common/MapImage';
 import { resolveRecursiveDependencies } from '../utils/modUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
