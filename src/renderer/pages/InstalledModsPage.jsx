@@ -846,16 +846,14 @@ export default function InstalledModsPage() {
     const tagCounts = {};
     mods.forEach(mod => {
       if (!mod.isDLC && mod.folder !== 'DLC') {
-        if (mod.tags && Array.isArray(mod.tags)) {
-          mod.tags.forEach(tag => {
-            if (tag && tag !== 'DLC') {
-              tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-            }
-          });
-        }
-        if (mod.category && mod.category !== 'DLC' && mod.category !== 'generic') {
-          tagCounts[mod.category] = (tagCounts[mod.category] || 0) + 1;
-        }
+        const modTags = new Set([
+          ...(mod.tags || []),
+          ...(mod.category && mod.category !== 'generic' ? [mod.category] : [])
+        ].filter(t => t && t !== 'DLC'));
+
+        modTags.forEach(tag => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        });
       }
     });
     return Object.entries(tagCounts)
