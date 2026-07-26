@@ -952,20 +952,22 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                         }
                         return;
                       }
+                      // Select the preset — always allowed if Store Deliveries is installed
                       setSelectedSpawnMode('custom');
                       setSelectedVehicleId(null);
                       localStorage.setItem(`selected_spawn_${save.path}`, JSON.stringify({ mode: 'custom' }));
                       const res = await window.api?.savegames?.getStoreDeliveryCoordinates(save.path);
                       if (res) {
-                          const setRes = await window.api.savegames.setPlayerPosition({ savePath: save.path, x: res.x, y: res.y, z: res.z });
-                          if (setRes && setRes.success) {
-                              useToastStore.getState().success("Selected Custom Spawn Point!");
-                              window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
-                          } else {
-                              useToastStore.getState().error("Failed to set spawn: " + (setRes?.error || "Unknown error"));
-                          }
+                        const setRes = await window.api.savegames.setPlayerPosition({ savePath: save.path, x: res.x, y: res.y, z: res.z });
+                        if (setRes && setRes.success) {
+                          useToastStore.getState().success(res.type === 'Custom' ? 'Custom spawn point applied!' : 'Spawning at home location. Set a delivery point in-game to customise.');
+                          window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
+                        } else {
+                          useToastStore.getState().error('Failed to set spawn: ' + (setRes?.error || 'Unknown error'));
+                        }
                       } else {
-                          useToastStore.getState().error("Could not find Custom Spawn coordinates for this map.");
+                        // No coordinates yet — preset is still selected, just can't apply yet
+                        useToastStore.getState().info('Custom spawn selected. Set your delivery point in-game using Store Deliveries, then come back to apply it.');
                       }
                     }}
                     style={{ 
