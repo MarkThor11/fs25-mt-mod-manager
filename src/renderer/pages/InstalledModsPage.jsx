@@ -822,6 +822,7 @@ export default function InstalledModsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [selectedTags, setSelectedTags] = useState([]);
+  const [showTagBar, setShowTagBar] = useState(false);
   const [updatingMod, setUpdatingMod] = useState(null);
   const [autoResolveMode, setAutoResolveMode] = useState(false);
 
@@ -1629,36 +1630,33 @@ export default function InstalledModsPage() {
             </span>
           )}
         </button>
-        <div style={{ position: 'relative' }}>
-          <select
-            value={selectedTags.length === 1 ? selectedTags[0] : ''}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (!val) setSelectedTags([]);
-              else setSelectedTags([val]);
-            }}
-            style={{
-              height: 36,
-              padding: '0 12px',
-              borderRadius: 6,
-              background: selectedTags.length > 0 ? 'var(--accent)' : 'var(--bg-secondary)',
-              color: selectedTags.length > 0 ? 'var(--bg-primary)' : 'var(--text-primary)',
-              border: selectedTags.length > 0 ? 'none' : '1px solid var(--border)',
-              fontWeight: 700,
-              fontSize: 12,
-              cursor: 'pointer'
-            }}
-          >
-            <option value="" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
-              {selectedTags.length > 0 ? `Tag: ${selectedTags.join(', ')}` : '🏷️ Filter by Tag...'}
-            </option>
-            {allUniqueTags.map(t => (
-              <option key={t.name} value={t.name} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
-                {t.name} ({t.count})
-              </option>
-            ))}
-          </select>
-        </div>
+        <button 
+          className={`btn ${showTagBar || selectedTags.length > 0 ? 'btn--primary' : 'btn--secondary'} btn--sm`}
+          onClick={() => {
+            if (showTagBar) {
+              setSelectedTags([]);
+            }
+            setShowTagBar(!showTagBar);
+          }}
+          style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
+          title="Toggle Tag Filter Bar"
+        >
+          <Tag size={14} /> Tags
+          {selectedTags.length > 0 && (
+            <span style={{ 
+                background: showTagBar ? 'white' : 'var(--accent)', 
+                color: showTagBar ? 'var(--accent)' : 'white', 
+                borderRadius: 10, 
+                padding: '1px 6px', 
+                fontSize: 10,
+                fontWeight: 900,
+                minWidth: 18,
+                textAlign: 'center'
+            }}>
+                {selectedTags.length}
+            </span>
+          )}
+        </button>
 
 
 
@@ -1745,7 +1743,7 @@ export default function InstalledModsPage() {
         )}
       </div>
 
-      {allUniqueTags.length > 0 && (
+      {showTagBar && allUniqueTags.length > 0 && (
         <div className="tag-ribbon" style={{ 
           display: 'flex', 
           gap: 8, 
