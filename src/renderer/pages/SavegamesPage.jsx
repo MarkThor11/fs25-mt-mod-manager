@@ -933,10 +933,26 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                   <div 
                     onClick={async () => {
                       if (hasStoreDeliveries === false) {
-                        if (window.api?.shell?.openExternal) {
-                          window.api.shell.openExternal('https://www.farming-simulator.com/mod.php?mod_id=303764');
+                        useToastStore.getState().info("Downloading Store Deliveries mod...");
+                        useDownloadStore.getState().addDownload('303764', 'Store Deliveries');
+                        if (window.api?.localMods?.autoInstallDependencies) {
+                          const res = await window.api.localMods.autoInstallDependencies({
+                            mods: [{ modId: '303764', title: 'Store Deliveries', modName: 'FS25_storeDeliveries' }]
+                          });
+                          if (res && res.success) {
+                            useToastStore.getState().success("Store Deliveries mod downloaded!");
+                            if (window.api.savegames.checkStoreDeliveries) {
+                              const hasDeliv = await window.api.savegames.checkStoreDeliveries();
+                              setHasStoreDeliveries(hasDeliv);
+                            }
+                            if (window.api.savegames.getStoreDeliveryCoordinates) {
+                              window.api.savegames.getStoreDeliveryCoordinates(save.path).then(setCustomSpawnInfo);
+                            }
+                          } else {
+                            useToastStore.getState().error("Download failed: " + (res?.error || "Unknown error"));
+                            useDownloadStore.getState().removeDownload('303764');
+                          }
                         }
-                        useToastStore.getState().info("Opening ModHub page to download Store Deliveries mod...");
                         return;
                       }
                       setSelectedSpawnMode('custom');
@@ -964,7 +980,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                       display: 'flex', 
                       flexDirection: 'column', 
                       transition: 'all 0.2s', 
-                      opacity: hasStoreDeliveries !== false ? 1 : 0.9,
+                      opacity: hasStoreDeliveries !== false ? 1 : 0.85,
                       boxShadow: selectedSpawnMode === 'custom' ? '0 0 12px rgba(var(--accent-rgb), 0.2)' : 'none'
                     }}
                   >
@@ -983,24 +999,37 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                       {hasStoreDeliveries !== false ? (
                         customSpawnInfo.type === 'Custom' ? "Custom spawn point active" : "Set spawn point with Store Deliveries mod"
                       ) : (
-                        <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: 11 }}>
-                            ⚠️ Store Deliveries mod required
-                          </span>
-                          <button 
-                            className="btn btn--accent btn--xs"
-                            style={{ padding: '4px 10px', fontSize: 10, fontWeight: 800, width: 'fit-content', display: 'flex', alignItems: 'center', gap: 4 }}
-                            onClick={(e) => {
+                        <span>
+                          <span 
+                            style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent)', fontWeight: 700 }} 
+                            onClick={async (e) => {
                               e.stopPropagation();
-                              if (window.api?.shell?.openExternal) {
-                                window.api.shell.openExternal('https://www.farming-simulator.com/mod.php?mod_id=303764');
+                              useToastStore.getState().info("Downloading Store Deliveries mod...");
+                              useDownloadStore.getState().addDownload('303764', 'Store Deliveries');
+                              if (window.api?.localMods?.autoInstallDependencies) {
+                                const res = await window.api.localMods.autoInstallDependencies({
+                                  mods: [{ modId: '303764', title: 'Store Deliveries', modName: 'FS25_storeDeliveries' }]
+                                });
+                                if (res && res.success) {
+                                  useToastStore.getState().success("Store Deliveries mod downloaded!");
+                                  if (window.api.savegames.checkStoreDeliveries) {
+                                    const hasDeliv = await window.api.savegames.checkStoreDeliveries();
+                                    setHasStoreDeliveries(hasDeliv);
+                                  }
+                                  if (window.api.savegames.getStoreDeliveryCoordinates) {
+                                    window.api.savegames.getStoreDeliveryCoordinates(save.path).then(setCustomSpawnInfo);
+                                  }
+                                } else {
+                                  useToastStore.getState().error("Download failed: " + (res?.error || "Unknown error"));
+                                  useDownloadStore.getState().removeDownload('303764');
+                                }
                               }
-                              useToastStore.getState().info("Opening ModHub page to download Store Deliveries mod...");
                             }}
                           >
-                            <Globe size={12} /> Download Store Deliveries from ModHub
-                          </button>
-                        </div>
+                            Download the Store Deliveries mod
+                          </span>
+                          {" to enable this feature"}
+                        </span>
                       )}
                     </div>
                   </div>
