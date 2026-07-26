@@ -1753,9 +1753,9 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 		return { success: false, error: 'Already in progress or queued' };
 	}
 
-	// ── OPTIMIZATION: Always scrape for techData if missing ──
+	// ── OPTIMIZATION: Scrape for techData/downloadUrl only if missing ──
 	let techData = null;
-	if (!techData || !downloadUrl) {
+	if (!downloadUrl) {
 		try {
 			debugLog(`[QUEUE] Fetching/Completing metadata for ${modId}...`);
 			const detail = await scraper.fetchModDetail(modId);
@@ -1765,6 +1765,9 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 		} catch (e) {
 			debugLog(`[QUEUE] Scraper failed for ${modId}: ${e.message}`);
 		}
+	} else {
+		// downloadUrl provided — try to get techData quietly in background but don't block
+		scraper.fetchModDetail(modId).then(detail => { techData = detail?.techData || null; }).catch(() => {});
 	}
 
 	downloadQueue.push({ modId, modTitle, downloadUrl, onProgress, category, subFolder, techData, oldPath, recoveryPath });
