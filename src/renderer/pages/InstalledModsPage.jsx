@@ -845,12 +845,17 @@ export default function InstalledModsPage() {
   const allUniqueTags = useMemo(() => {
     const tagCounts = {};
     mods.forEach(mod => {
-      if (mod.tags && !mod.isDLC && mod.folder !== 'DLC') {
-        mod.tags.forEach(tag => {
-          if (tag !== 'DLC') {
-            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-          }
-        });
+      if (!mod.isDLC && mod.folder !== 'DLC') {
+        if (mod.tags && Array.isArray(mod.tags)) {
+          mod.tags.forEach(tag => {
+            if (tag && tag !== 'DLC') {
+              tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+            }
+          });
+        }
+        if (mod.category && mod.category !== 'DLC' && mod.category !== 'generic') {
+          tagCounts[mod.category] = (tagCounts[mod.category] || 0) + 1;
+        }
       }
     });
     return Object.entries(tagCounts)
@@ -1608,34 +1613,36 @@ export default function InstalledModsPage() {
             </span>
           )}
         </button>
-        {allUniqueTags.length > 0 && (
-          <div style={{ position: 'relative' }}>
-            <select
-              value={selectedTags.length === 1 ? selectedTags[0] : ''}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (!val) setSelectedTags([]);
-                else setSelectedTags([val]);
-              }}
-              style={{
-                height: 36,
-                padding: '0 12px',
-                borderRadius: 6,
-                background: selectedTags.length > 0 ? 'var(--accent)' : 'var(--bg-secondary)',
-                color: selectedTags.length > 0 ? 'var(--bg-primary)' : 'var(--text-primary)',
-                border: '1px solid var(--border)',
-                fontWeight: 700,
-                fontSize: 12,
-                cursor: 'pointer'
-              }}
-            >
-              <option value="">{selectedTags.length > 0 ? `Tags (${selectedTags.length} active)` : 'Filter by Tag...'}</option>
-              {allUniqueTags.map(t => (
-                <option key={t.name} value={t.name} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>{t.name} ({t.count})</option>
-              ))}
-            </select>
-          </div>
-        )}
+        <div style={{ position: 'relative' }}>
+          <select
+            value={selectedTags.length === 1 ? selectedTags[0] : ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (!val) setSelectedTags([]);
+              else setSelectedTags([val]);
+            }}
+            style={{
+              height: 36,
+              padding: '0 12px',
+              borderRadius: 6,
+              background: selectedTags.length > 0 ? 'var(--accent)' : 'var(--bg-secondary)',
+              color: selectedTags.length > 0 ? 'var(--bg-primary)' : 'var(--text-primary)',
+              border: selectedTags.length > 0 ? 'none' : '1px solid var(--border)',
+              fontWeight: 700,
+              fontSize: 12,
+              cursor: 'pointer'
+            }}
+          >
+            <option value="" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+              {selectedTags.length > 0 ? `Tag: ${selectedTags.join(', ')}` : '🏷️ Filter by Tag...'}
+            </option>
+            {allUniqueTags.map(t => (
+              <option key={t.name} value={t.name} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                {t.name} ({t.count})
+              </option>
+            ))}
+          </select>
+        </div>
 
 
 
