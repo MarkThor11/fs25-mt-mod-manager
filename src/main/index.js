@@ -650,28 +650,18 @@ ipcMain.handle('localMods:autoInstallDependencies', async (event, { mods, subFol
   }, subFolder, parentId);
 });
 
-// Dedicated handler: search ModHub for Store Deliveries, get real download URL, install to root mods folder
+// Dedicated handler: install Store Deliveries mod directly from known CDN URL
 ipcMain.handle('savegames:downloadStoreDeliveries', async (event) => {
   try {
-    console.log('[STORE-DELIVERIES] Searching ModHub for Store Deliveries mod...');
-    const search = await scraper.searchMods('Store Deliveries', 0, 'fs2025');
-    const mod = (search.mods || []).find(m => {
-      const t = (m.title || '').toLowerCase();
-      return t.includes('store deliveries') || t === 'store deliveries';
-    });
-    if (!mod) return { success: false, error: 'Store Deliveries mod not found on ModHub. Try installing manually.' };
-
-    console.log(`[STORE-DELIVERIES] Found mod: "${mod.title}" (ID: ${mod.modId})`);
-    const detail = await scraper.fetchModDetail(mod.modId);
-    if (!detail?.downloadUrl) return { success: false, error: 'Could not retrieve download URL from ModHub.' };
-
-    console.log(`[STORE-DELIVERIES] Installing from: ${detail.downloadUrl}`);
+    const STORE_DELIVERIES_URL = 'https://cdn26.giants-software.com/modHub/storage/00307472/FS25_storeDeliveries.zip';
+    const STORE_DELIVERIES_ID = '307472';
+    console.log(`[STORE-DELIVERIES] Installing from hardcoded CDN URL: ${STORE_DELIVERIES_URL}`);
     const result = await modManager.installMod(
-      mod.modId,
-      mod.title || 'Store Deliveries',
-      detail.downloadUrl,
-      (progress) => { event.sender.send('download:progress', { modId: mod.modId, progress }); },
-      detail.category || '',
+      STORE_DELIVERIES_ID,
+      'Store Deliveries',
+      STORE_DELIVERIES_URL,
+      (progress) => { event.sender.send('download:progress', { modId: STORE_DELIVERIES_ID, progress }); },
+      '',
       null // root mods folder, no subfolder
     );
     return result;
