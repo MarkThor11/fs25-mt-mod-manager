@@ -933,6 +933,16 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                   {/* Preset 1: Custom Spawn Point */}
                   <div 
                     onClick={async () => {
+                      // Toggle off if already selected
+                      if (selectedSpawnMode === 'custom') {
+                        setSelectedSpawnMode(null);
+                        setSelectedVehicleId(null);
+                        localStorage.removeItem(`selected_spawn_${save.path}`);
+                        await window.api.savegames.resetPlayerSpawn(save.path);
+                        useToastStore.getState().info('Spawn preset cleared — game will use default spawn.');
+                        window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
+                        return;
+                      }
                       setSelectedSpawnMode('custom');
                       setSelectedVehicleId(null);
                       localStorage.setItem(`selected_spawn_${save.path}`, JSON.stringify({ mode: 'custom' }));
@@ -1016,6 +1026,16 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                   {/* Preset 2: Vehicle Shop */}
                   <div 
                     onClick={async () => {
+                      // Toggle off if already selected
+                      if (selectedSpawnMode === 'shop') {
+                        setSelectedSpawnMode(null);
+                        setSelectedVehicleId(null);
+                        localStorage.removeItem(`selected_spawn_${save.path}`);
+                        await window.api.savegames.resetPlayerSpawn(save.path);
+                        useToastStore.getState().info('Spawn preset cleared — game will use default spawn.');
+                        window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
+                        return;
+                      }
                       setSelectedSpawnMode('shop');
                       setSelectedVehicleId(null);
                       localStorage.setItem(`selected_spawn_${save.path}`, JSON.stringify({ mode: 'shop' }));
@@ -1056,7 +1076,18 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                     const selVehicle = fleet.find(v => (v.uniqueId || v.id) === selectedVehicleId || String(v.uniqueId) === String(selectedVehicleId) || String(v.id) === String(selectedVehicleId));
                     return (
                       <div 
-                        onClick={() => {
+                        onClick={async () => {
+                          // Toggle off if already selected
+                          if (selectedSpawnMode === 'vehicle') {
+                            setSelectedSpawnMode(null);
+                            setSelectedVehicleId(null);
+                            setIsVehicleListOpen(false);
+                            localStorage.removeItem(`selected_spawn_${save.path}`);
+                            await window.api.savegames.resetPlayerSpawn(save.path);
+                            useToastStore.getState().info('Spawn preset cleared — game will use default spawn.');
+                            window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
+                            return;
+                          }
                           setSelectedSpawnMode('vehicle');
                           setIsVehicleListOpen(prev => !prev);
                         }}
