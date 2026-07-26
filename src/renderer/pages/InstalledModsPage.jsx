@@ -696,7 +696,25 @@ const LazyModList = ({
 
               <div style={{ flex: 1, minWidth: 120, display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-start', padding: '0 16px' }}>
                   {mod.tags && mod.tags.slice(0, 3).map((tag, i) => (
-                      <span key={i} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>
+                      <span 
+                        key={i} 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+                        }}
+                        style={{ 
+                          fontSize: 10, 
+                          padding: '2px 8px', 
+                          borderRadius: 6, 
+                          background: selectedTags.includes(tag) ? 'var(--accent)' : 'var(--bg-tertiary)', 
+                          color: selectedTags.includes(tag) ? 'var(--bg-primary)' : 'var(--text-secondary)', 
+                          border: '1px solid var(--border)', 
+                          fontWeight: 700, 
+                          textTransform: 'uppercase',
+                          cursor: 'pointer'
+                        }}
+                        title={`Click to filter by ${tag}`}
+                      >
                           {tag}
                       </span>
                   ))}
@@ -1590,6 +1608,34 @@ export default function InstalledModsPage() {
             </span>
           )}
         </button>
+        {allUniqueTags.length > 0 && (
+          <div style={{ position: 'relative' }}>
+            <select
+              value={selectedTags.length === 1 ? selectedTags[0] : ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val) setSelectedTags([]);
+                else setSelectedTags([val]);
+              }}
+              style={{
+                height: 36,
+                padding: '0 12px',
+                borderRadius: 6,
+                background: selectedTags.length > 0 ? 'var(--accent)' : 'var(--bg-secondary)',
+                color: selectedTags.length > 0 ? 'var(--bg-primary)' : 'var(--text-primary)',
+                border: '1px solid var(--border)',
+                fontWeight: 700,
+                fontSize: 12,
+                cursor: 'pointer'
+              }}
+            >
+              <option value="">{selectedTags.length > 0 ? `Tags (${selectedTags.length} active)` : 'Filter by Tag...'}</option>
+              {allUniqueTags.map(t => (
+                <option key={t.name} value={t.name} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>{t.name} ({t.count})</option>
+              ))}
+            </select>
+          </div>
+        )}
 
 
 

@@ -291,7 +291,9 @@ export const useLocalModsStore = create((set, get) => ({
       // Update local state immediately
       set((state) => ({
         mods: state.mods.map((m) => {
-          if (m.fileName === identifier || m.modId === identifier) {
+          const mBasename = m.fileName ? m.fileName.split(/[/\\]/).pop().toLowerCase() : '';
+          const idBasename = String(identifier).split(/[/\\]/).pop().toLowerCase();
+          if (m.fileName === identifier || (mBasename && mBasename === idBasename) || (m.modId && String(m.modId) === String(identifier))) {
             return { ...m, tags };
           }
           return m;
