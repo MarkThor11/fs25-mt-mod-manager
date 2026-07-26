@@ -3723,8 +3723,8 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 		const modUrl = modObj.url;
 		
 		try {
-			let modId = null;
-			let downloadUrl = null;
+			let modId = modObj.modId || modObj.id || null;
+			let downloadUrl = modObj.downloadUrl || modObj.url || null;
 			let targetFileName = null;
 			let modTitle = modName;
 

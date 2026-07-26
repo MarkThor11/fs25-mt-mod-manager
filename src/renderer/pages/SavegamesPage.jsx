@@ -933,13 +933,14 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                   <div 
                     onClick={async () => {
                       if (hasStoreDeliveries === false) {
-                        useToastStore.getState().info("Downloading Store Deliveries mod...");
-                        useDownloadStore.getState().addDownload('303764', 'Store Deliveries');
+                        useToastStore.getState().info("Searching & Downloading Store Deliveries mod...");
+                        const downloadKey = 'Store Deliveries';
+                        useDownloadStore.getState().addDownload(downloadKey, 'Store Deliveries');
                         if (window.api?.localMods?.autoInstallDependencies) {
                           const res = await window.api.localMods.autoInstallDependencies({
-                            mods: [{ modId: '303764', title: 'Store Deliveries', modName: 'FS25_storeDeliveries' }]
+                            mods: [{ title: 'Store Deliveries', modName: 'FS25_storeDeliveries' }]
                           });
-                          if (res && res.success) {
+                          if (res && res.success && res.installed > 0) {
                             useToastStore.getState().success("Store Deliveries mod downloaded!");
                             if (window.api.savegames.checkStoreDeliveries) {
                               const hasDeliv = await window.api.savegames.checkStoreDeliveries();
@@ -949,8 +950,8 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                               window.api.savegames.getStoreDeliveryCoordinates(save.path).then(setCustomSpawnInfo);
                             }
                           } else {
-                            useToastStore.getState().error("Download failed: " + (res?.error || "Unknown error"));
-                            useDownloadStore.getState().removeDownload('303764');
+                            useToastStore.getState().error("Download failed: " + ((res?.failed && res.failed[0]?.reason) || "Mod not found on ModHub"));
+                            useDownloadStore.getState().removeDownload(downloadKey);
                           }
                         }
                         return;
@@ -1004,13 +1005,14 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                             style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent)', fontWeight: 700 }} 
                             onClick={async (e) => {
                               e.stopPropagation();
-                              useToastStore.getState().info("Downloading Store Deliveries mod...");
-                              useDownloadStore.getState().addDownload('303764', 'Store Deliveries');
+                              useToastStore.getState().info("Searching & Downloading Store Deliveries mod...");
+                              const downloadKey = 'Store Deliveries';
+                              useDownloadStore.getState().addDownload(downloadKey, 'Store Deliveries');
                               if (window.api?.localMods?.autoInstallDependencies) {
                                 const res = await window.api.localMods.autoInstallDependencies({
-                                  mods: [{ modId: '303764', title: 'Store Deliveries', modName: 'FS25_storeDeliveries' }]
+                                  mods: [{ title: 'Store Deliveries', modName: 'FS25_storeDeliveries' }]
                                 });
-                                if (res && res.success) {
+                                if (res && res.success && res.installed > 0) {
                                   useToastStore.getState().success("Store Deliveries mod downloaded!");
                                   if (window.api.savegames.checkStoreDeliveries) {
                                     const hasDeliv = await window.api.savegames.checkStoreDeliveries();
@@ -1020,8 +1022,8 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                                     window.api.savegames.getStoreDeliveryCoordinates(save.path).then(setCustomSpawnInfo);
                                   }
                                 } else {
-                                  useToastStore.getState().error("Download failed: " + (res?.error || "Unknown error"));
-                                  useDownloadStore.getState().removeDownload('303764');
+                                  useToastStore.getState().error("Download failed: " + ((res?.failed && res.failed[0]?.reason) || "Mod not found on ModHub"));
+                                  useDownloadStore.getState().removeDownload(downloadKey);
                                 }
                               }
                             }}
