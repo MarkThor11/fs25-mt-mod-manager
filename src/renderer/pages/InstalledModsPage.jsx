@@ -203,21 +203,23 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
                 </div>
             )}
 
-            <div 
-                style={{ position: 'absolute', bottom: 8, right: 8, display: 'flex', gap: 6, zIndex: 20 }}
-                onClick={e => e.stopPropagation()}
-            >
-                <input 
-                    type="checkbox" 
-                    checked={isSelected}
-                    onChange={(e) => { 
-                        e.stopPropagation(); 
-                        onToggleSelect(mod.fileName, e.nativeEvent); 
-                    }}
-                    onMouseDown={e => e.stopPropagation()}
-                    style={{ width: 18, height: 18, accentColor: 'var(--accent)', cursor: 'pointer', filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))' }}
-                />
-            </div>
+            {!mod.isDLC && mod.folder !== 'DLC' && (
+              <div 
+                  style={{ position: 'absolute', bottom: 8, right: 8, display: 'flex', gap: 6, zIndex: 20 }}
+                  onClick={e => e.stopPropagation()}
+              >
+                  <input 
+                      type="checkbox" 
+                      checked={isSelected}
+                      onChange={(e) => { 
+                          e.stopPropagation(); 
+                          onToggleSelect(mod.fileName, e.nativeEvent); 
+                      }}
+                      onMouseDown={e => e.stopPropagation()}
+                      style={{ width: 18, height: 18, accentColor: 'var(--accent)', cursor: 'pointer', filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))' }}
+                  />
+              </div>
+            )}
 
             {status === 'update' && (
                 <div style={{ 
@@ -589,21 +591,25 @@ const LazyModList = ({
                     containIntrinsicSize: 'auto 110px'
                 }}
             >
-              <div 
-                style={{ width: 32, cursor: 'pointer' }}
-                onMouseDown={e => e.stopPropagation()}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSelect(mod.fileName);
-                }}
-              >
-                  <input 
-                    type="checkbox" 
-                    checked={isSelected}
-                    readOnly
-                    style={{ width: 18, height: 18, accentColor: 'var(--accent)', cursor: 'pointer' }}
-                  />
-              </div>
+              {!mod.isDLC && mod.folder !== 'DLC' ? (
+                <div 
+                  style={{ width: 32, cursor: 'pointer' }}
+                  onMouseDown={e => e.stopPropagation()}
+                  onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSelect(mod.fileName);
+                  }}
+                >
+                    <input 
+                      type="checkbox" 
+                      checked={isSelected}
+                      readOnly
+                      style={{ width: 18, height: 18, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                    />
+                </div>
+              ) : (
+                <div style={{ width: 32 }} />
+              )}
 
               <div 
                 onClick={() => onNavigate(mod.fileName, mod.isDLC || mod.folder === 'DLC')}
@@ -1102,6 +1108,8 @@ export default function InstalledModsPage() {
 
 
   const toggleSelect = React.useCallback((fileName, e) => {
+    const targetMod = mods.find(m => m.fileName === fileName);
+    if (targetMod && (targetMod.isDLC || targetMod.folder === 'DLC')) return;
     if (e?.shiftKey && lastSelectedIndex !== null) {
       const currentIndex = flatViewList.findIndex(m => m.fileName === fileName);
       if (currentIndex !== -1) {
@@ -2014,7 +2022,7 @@ export default function InstalledModsPage() {
                   </div>
 
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} onDragStart={e => e.stopPropagation()}>
-                    {!isHidden && folderMods.length > 1 && (
+                    {!isHidden && folderName !== 'DLC' && folderMods.length > 1 && (
                       <div 
                         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 10px', borderRadius: 4, background: 'rgba(0,0,0,0.05)' }}
                         onClick={() => toggleAllInFolder(folderName, folderMods)}
