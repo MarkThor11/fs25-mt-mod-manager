@@ -932,30 +932,13 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                   {/* Preset 1: Custom Spawn Point */}
                   <div 
                     onClick={async () => {
-                      if (hasStoreDeliveries === false) {
-                        useDownloadStore.getState().addDownload('store-deliveries', 'Store Deliveries');
-                        useToastStore.getState().info('Downloading Store Deliveries mod...');
-                        try {
-                          const result = await window.api.savegames.downloadStoreDeliveries();
-                          if (result?.success) {
-                            useToastStore.getState().success('Store Deliveries mod downloaded!');
-                            const hasDeliv = await window.api.savegames.checkStoreDeliveries();
-                            setHasStoreDeliveries(hasDeliv);
-                            window.api.savegames.getStoreDeliveryCoordinates?.(save.path).then(setCustomSpawnInfo);
-                          } else {
-                            throw new Error(result?.error || 'Install failed');
-                          }
-                        } catch (err) {
-                          useToastStore.getState().error('Download failed: ' + err.message);
-                        } finally {
-                          useDownloadStore.getState().removeDownload('store-deliveries');
-                        }
-                        return;
-                      }
-                      // Select the preset — always allowed if Store Deliveries is installed
                       setSelectedSpawnMode('custom');
                       setSelectedVehicleId(null);
                       localStorage.setItem(`selected_spawn_${save.path}`, JSON.stringify({ mode: 'custom' }));
+                      if (hasStoreDeliveries === false) {
+                        useToastStore.getState().info('Install the Store Deliveries mod to use this spawn point.');
+                        return;
+                      }
                       const res = await window.api?.savegames?.getStoreDeliveryCoordinates(save.path);
                       if (res) {
                         const setRes = await window.api.savegames.setPlayerPosition({ savePath: save.path, x: res.x, y: res.y, z: res.z });
@@ -966,7 +949,6 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                           useToastStore.getState().error('Failed to set spawn: ' + (setRes?.error || 'Unknown error'));
                         }
                       } else {
-                        // No coordinates yet — preset is still selected, just can't apply yet
                         useToastStore.getState().info('Custom spawn selected. Set your delivery point in-game using Store Deliveries, then come back to apply it.');
                       }
                     }}
