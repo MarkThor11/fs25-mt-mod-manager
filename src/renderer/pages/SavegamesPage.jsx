@@ -933,18 +933,11 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                   <div 
                     onClick={async () => {
                       if (hasStoreDeliveries === false) {
-                        if (window.api?.savegames?.ensureStoreDeliveries) {
-                          useToastStore.getState().info("Installing Store Deliveries mod...");
-                          const res = await window.api.savegames.ensureStoreDeliveries();
-                          if (res.success) {
-                            useToastStore.getState().success("Store Deliveries mod installed!");
-                            const hasDeliv = await window.api.savegames.checkStoreDeliveries();
-                            setHasStoreDeliveries(hasDeliv);
-                          } else {
-                            useToastStore.getState().error("Failed to install mod: " + res.error);
-                            return;
-                          }
+                        if (window.api?.shell?.openExternal) {
+                          window.api.shell.openExternal('https://www.farming-simulator.com/mod.php?mod_id=303764');
                         }
+                        useToastStore.getState().info("Opening ModHub page to download Store Deliveries mod...");
+                        return;
                       }
                       setSelectedSpawnMode('custom');
                       setSelectedVehicleId(null);
@@ -996,26 +989,16 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                           </span>
                           <button 
                             className="btn btn--accent btn--xs"
-                            style={{ padding: '4px 10px', fontSize: 10, fontWeight: 800, width: 'fit-content' }}
-                            onClick={async (e) => {
+                            style={{ padding: '4px 10px', fontSize: 10, fontWeight: 800, width: 'fit-content', display: 'flex', alignItems: 'center', gap: 4 }}
+                            onClick={(e) => {
                               e.stopPropagation();
-                              if (window.api?.savegames?.ensureStoreDeliveries) {
-                                useToastStore.getState().info("Installing Store Deliveries mod...");
-                                const res = await window.api.savegames.ensureStoreDeliveries();
-                                if (res.success) {
-                                  useToastStore.getState().success("Store Deliveries mod installed!");
-                                  const hasDeliv = await window.api.savegames.checkStoreDeliveries();
-                                  setHasStoreDeliveries(hasDeliv);
-                                  if (window.api.savegames.getStoreDeliveryCoordinates) {
-                                    window.api.savegames.getStoreDeliveryCoordinates(save.path).then(setCustomSpawnInfo);
-                                  }
-                                } else {
-                                  useToastStore.getState().error("Failed to install mod: " + res.error);
-                                }
+                              if (window.api?.shell?.openExternal) {
+                                window.api.shell.openExternal('https://www.farming-simulator.com/mod.php?mod_id=303764');
                               }
+                              useToastStore.getState().info("Opening ModHub page to download Store Deliveries mod...");
                             }}
                           >
-                            Download Store Deliveries Mod
+                            <Globe size={12} /> Download Store Deliveries from ModHub
                           </button>
                         </div>
                       )}

@@ -2050,56 +2050,8 @@ async function checkStoreDeliveries() {
 }
 
 async function ensureStoreDeliveries() {
-    try {
-        const modManager = require('./modManager');
-        const modsDir = modManager.getModsPath();
-        if (!modsDir) return { success: false, error: 'Mods directory not found' };
-        
-        const fs = require('fs');
-        const path = require('path');
-        const destZip = path.join(modsDir, 'FS25_storeDeliveries.zip');
-        
-        if (await checkStoreDeliveries()) return { success: true };
-        
-        const appPath = require('electron').app ? require('electron').app.getAppPath() : process.cwd();
-        
-        // 1. Try packaged asset
-        const assetZip = path.join(appPath, 'src', 'main', 'assets', 'FS25_storeDeliveries.zip');
-        if (fs.existsSync(assetZip)) {
-            await fs.promises.copyFile(assetZip, destZip);
-            return { success: true };
-        }
-        
-        // 2. Try unzipped scratch directory
-        const sourceDir = path.join(appPath, 'scratch', 'storeDeliveries_unzipped');
-        if (fs.existsSync(sourceDir)) {
-            const AdmZip = require('adm-zip');
-            const zip = new AdmZip();
-            zip.addLocalFolder(sourceDir);
-            await fs.promises.writeFile(destZip, zip.toBuffer());
-            return { success: true };
-        }
-        
-        return { success: false, error: 'Store Deliveries package asset not found.' };
-    } catch (err) { 
-        return { success: false, error: err.message }; 
-    }
-}
-
-async function ensureBridgeMod() {
-    try {
-        const modManager = require('./modManager');
-        const modsDir = modManager.getModsPath();
-        const destZip = require('path').join(modsDir, 'FS25_rememberPositions.zip');
-        if (require('fs').existsSync(destZip)) return { success: true };
-        
-        const appPath = require('electron').app ? require('electron').app.getAppPath() : process.cwd();
-        const sourceZip = require('path').join(appPath, 'src', 'main', 'assets', 'FS25_rememberPositions.zip');
-        if (!require('fs').existsSync(sourceZip)) return { success: false, error: 'Source file not found at ' + sourceZip };
-        
-        await require('fs').promises.copyFile(sourceZip, destZip);
-        return { success: true };
-    } catch (err) { return { success: false, error: err.message }; }
+    if (await checkStoreDeliveries()) return { success: true };
+    return { success: false, error: 'Store Deliveries mod is not installed. Please download it from ModHub.' };
 }
 
 async function updateNativeEnhancement(savePath, includeBridge, includeDeliveries) {
