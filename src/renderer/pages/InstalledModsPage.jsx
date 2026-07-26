@@ -1881,6 +1881,9 @@ export default function InstalledModsPage() {
                            title={folderName === 'DLC' ? "" : "Click to rename folder"}
                          >
                            {folderName === '' ? 'MAIN' : folderName.toUpperCase()}
+                           {folderName === 'DLC' && (
+                             <Lock size={12} style={{ marginLeft: 6, opacity: 0.7, color: '#3b82f6' }} title="System-Managed Official DLC Folder (Locked)" />
+                           )}
                            {folderName !== 'DLC' && (
                              <Pencil size={12} className="editable-label__icon" style={{ marginLeft: 8 }} />
                            )}
