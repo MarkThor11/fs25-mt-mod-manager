@@ -951,7 +951,12 @@ export default function InstalledModsPage() {
     }
 
     if (selectedTags.length > 0) {
-        const hasMatch = selectedTags.some(tag => (m.tags || []).includes(tag));
+        const hasMatch = selectedTags.some(tag => {
+          const tLower = tag.toLowerCase();
+          return (m.tags || []).some(t => t.toLowerCase() === tLower) ||
+                 (m.category && m.category.toLowerCase() === tLower) ||
+                 (m.isMap && tLower === 'maps');
+        });
         if (!hasMatch) return false;
     }
 

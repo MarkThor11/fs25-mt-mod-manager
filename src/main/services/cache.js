@@ -283,6 +283,22 @@ function getAllSettings() {
 }
 
 // ── Mod tracking ──
+function getAllModTrackingMap() {
+  if (!db) return new Map();
+  const rows = db.prepare('SELECT * FROM mod_tracking').all();
+  const map = new Map();
+  for (const r of rows) {
+    if (r.mod_id) map.set(`ID_${r.mod_id}`, r);
+    if (r.local_file_name) {
+      const clean = r.local_file_name.replace(/\\/g, '/');
+      const base = clean.split('/').pop().toLowerCase();
+      map.set(`FILE_${clean.toLowerCase()}`, r);
+      map.set(`FILE_${base}`, r);
+    }
+  }
+  return map;
+}
+
 function getModTracking(modId) {
   if (!db) return null;
   return db.prepare('SELECT * FROM mod_tracking WHERE mod_id = ?').get(modId);
@@ -358,22 +374,36 @@ function setCustomCategory(identifier, customCategory) {
 function setModTags(identifier, tags) {
   if (!db) return;
   const tagsJson = JSON.stringify(tags || []);
+  const cleanId = String(identifier).replace(/\\/g, '/');
+  const baseName = cleanId.split('/').pop().toLowerCase();
   
-  // Update tracking
-  const row = db.prepare(`
-    SELECT * FROM mod_tracking WHERE mod_id = ? OR LOWER(local_file_name) = LOWER(?)
-  `).get(identifier, String(identifier));
+  // 1. Update tracking
+  const rows = db.prepare('SELECT rowid, * FROM mod_tracking').all();
+  const trackingRow = rows.find(r => {
+    if (r.mod_id && String(r.mod_id) === String(identifier)) return true;
+    if (r.local_file_name) {
+      const rClean = r.local_file_name.replace(/\\/g, '/').toLowerCase();
+      const rBase = rClean.split('/').pop();
+      if (rClean === cleanId.toLowerCase() || rBase === baseName) return true;
+    }
+    return false;
+  });
 
-  if (row) {
-    db.prepare(`
-      UPDATE mod_tracking SET tags = ? WHERE mod_id = ? OR LOWER(local_file_name) = LOWER(?)
-    `).run(tagsJson, identifier, String(identifier));
+  if (trackingRow) {
+    db.prepare('UPDATE mod_tracking SET tags = ? WHERE rowid = ?').run(tagsJson, trackingRow.rowid);
+  } else {
+    db.prepare('INSERT INTO mod_tracking (local_file_name, tags) VALUES (?, ?)').run(identifier, tagsJson);
   }
 
-  // Also update cache if it exists
-  db.prepare(`
-    UPDATE local_mod_cache SET tags = ? WHERE file_path LIKE ?
-  `).run(tagsJson, `%${identifier}%`);
+  // 2. Update local_mod_cache
+  const cacheRows = db.prepare('SELECT file_path FROM local_mod_cache').all();
+  for (const cRow of cacheRows) {
+    const cClean = cRow.file_path.replace(/\\/g, '/').toLowerCase();
+    const cBase = cClean.split('/').pop();
+    if (cClean.includes(cleanId.toLowerCase()) || cBase === baseName) {
+      db.prepare('UPDATE local_mod_cache SET tags = ? WHERE file_path = ?').run(tagsJson, cRow.file_path);
+    }
+  }
 }
 
 // ── Local Mod Metadata Cache (Performance) ──
@@ -486,7 +516,7 @@ function close() {
 module.exports = {
   init, get, set, clearAll,
   getSetting, setSetting, getAllSettings,
-  getModTracking, setModTracking, removeModTracking, removeModTrackingByFile, getAllModTracking, getModTrackingByFile, getModTrackingByBaseName,
+  getModTracking, setModTracking, removeModTracking, removeModTrackingByFile, getAllModTracking, getModTrackingByFile, getModTrackingByBaseName, getAllModTrackingMap,
   setModTags, setModLocation,
   getLocalModCache, getAllLocalModCache, setLocalModCache, removeLocalModCache, clearLocalModCache, updateLocalModIcon,
   updateLocalModCachePath, updateModTrackingFileInfo,

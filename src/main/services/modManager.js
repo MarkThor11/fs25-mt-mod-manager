@@ -680,6 +680,7 @@ function parseModDesc(modPath, zipInstance = null) {
 		const version = getTag(xmlContent, 'version') || '1.0.0';
 		const author = getTag(xmlContent, 'author') || 'Unknown';
 		const modId = getTag(xmlContent, 'modId') || null;
+		const categoryXml = getTag(xmlContent, 'category') || getTag(xmlContent, 'extraContent') || '';
 		
 		// Robust icon detection: <iconFilename>...</iconFilename> OR <icon filename="..."/>
 		const iconFile = getTag(xmlContent, 'iconFilename') || getAttr(xmlContent, 'icon', 'filename') || '';
@@ -849,6 +850,7 @@ function parseModDesc(modPath, zipInstance = null) {
 			isMap,
 			modId,
 			techName,
+			category: categoryXml,
 			mapId,
 			dependencies,
 			scripts,
@@ -1231,6 +1233,7 @@ async function performScan(manualPaths = null) {
 				title,
 				author,
 				version,
+				category: modDesc?.category || null,
 				size: size,
 				fileName: subFolder ? `${subFolder}/${entryName}` : entryName,
 				filePath: fullPath,
@@ -1518,6 +1521,35 @@ async function performScan(manualPaths = null) {
 		}
 	} catch (err) {
 		console.error('[SCAN] Error in template-based map folder enrichment:', err);
+	}
+
+	// ── ENRICH WITH SQLITE MOD TRACKING & CATEGORIES ──
+	const trackingMap = cache.getAllModTrackingMap();
+	for (const m of finalMods) {
+		const baseName = path.basename(m.fileName).toLowerCase();
+		const fullName = m.fileName.replace(/\\/g, '/').toLowerCase();
+		const trackingRecord = (m.modId ? trackingMap.get(`ID_${m.modId}`) : null) || 
+                               trackingMap.get(`FILE_${fullName}`) || 
+                               trackingMap.get(`FILE_${baseName}`);
+		
+		if (trackingRecord) {
+			if (trackingRecord.category || trackingRecord.custom_category) {
+				m.category = trackingRecord.custom_category || trackingRecord.category;
+			}
+			let trackingTags = [];
+			if (trackingRecord.tags) {
+				try { trackingTags = JSON.parse(trackingRecord.tags); } catch(e) {}
+			}
+			m.tags = Array.from(new Set([...(m.tags || []), ...trackingTags]));
+		}
+
+		if (m.isMap && !(m.tags || []).includes('Maps')) {
+			m.tags = [...(m.tags || []), 'Maps'];
+		}
+		if (m.category && m.category !== 'generic' && !(m.tags || []).includes(m.category)) {
+			m.tags = [...(m.tags || []), m.category];
+		}
+		m.tags = Array.from(new Set((m.tags || []).filter(Boolean)));
 	}
 
 	finalMods.sort((a, b) => a.title.localeCompare(b.title));
