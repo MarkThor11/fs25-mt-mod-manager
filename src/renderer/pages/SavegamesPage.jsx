@@ -285,7 +285,7 @@ function ModAuditModal({ save, allInstalledMods, onClose, onRefresh }) {
 /**
  * Savegame Editor Modal Component
  */
-function SavegameEditorModal({ save, onClose, onRefresh }) {
+function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const [modSearchQuery, setModSearchQuery] = useState('');
@@ -1305,10 +1305,7 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
             <button className="btn btn--primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={async () => {
               onRefresh();
               onClose();
-              useToastStore.getState().info("Launching game with savegame " + save.index + "...");
-              if (window.api?.game?.launch) {
-                await window.api.game.launch({ savegameIndex: save.index });
-              }
+              await onLaunch(save.index);
             }}>
               <Gamepad2 size={16} /> Launch
             </button>
@@ -1692,6 +1689,30 @@ export default function SavegamesPage() {
   };
 
   const handleLaunch = async (slotIndex, extraOptions = {}) => {
+    // Re-apply spawn position right before launch so game always reads the latest choice
+    try {
+      const fs25Root = await window.api.savegames.getAll().then(saves => saves).catch(() => null);
+      const savePath = (() => {
+        const allSaves = useSavegameStore.getState().savegames;
+        const s = allSaves.find(sg => sg.index === slotIndex);
+        return s?.path;
+      })();
+      if (savePath) {
+        const spawnPref = (() => { try { return JSON.parse(localStorage.getItem(`selected_spawn_${savePath}`) || '{}'); } catch { return {}; } })();
+        if (spawnPref.mode === 'custom') {
+          const coords = await window.api.savegames.getStoreDeliveryCoordinates(savePath);
+          if (coords) await window.api.savegames.setPlayerPosition({ savePath, x: coords.x, y: coords.y, z: coords.z });
+        } else if (spawnPref.mode === 'shop') {
+          const coords = await window.api.savegames.getMapShopCoordinates(savePath);
+          if (coords) await window.api.savegames.setPlayerPosition({ savePath, x: coords.x, y: coords.y, z: coords.z });
+        } else if (spawnPref.mode === 'vehicle' && spawnPref.vehicleId) {
+          await window.api.savegames.setPlayerPosition({ savePath, vehicleUniqueId: spawnPref.vehicleId });
+        }
+      }
+    } catch (e) {
+      console.warn('[LAUNCH] Could not re-apply spawn position:', e);
+    }
+
     const result = await window.api.game.launch({ 
         savegameIndex: slotIndex,
         skipIntro: skipIntro !== false,
@@ -2747,7 +2768,8 @@ export default function SavegamesPage() {
           <SavegameEditorModal 
             save={showEditor} 
             onClose={() => setShowEditor(null)} 
-            onRefresh={fetchSavegames} 
+            onRefresh={fetchSavegames}
+            onLaunch={handleLaunch}
           />
       )}
 
