@@ -933,32 +933,22 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                   <div 
                     onClick={async () => {
                       if (hasStoreDeliveries === false) {
-                        const STORE_DELIVERIES_MOD_ID = '303764';
-                        useDownloadStore.getState().addDownload(STORE_DELIVERIES_MOD_ID, 'Store Deliveries');
-                        useToastStore.getState().info("Fetching Store Deliveries mod...");
+                        useDownloadStore.getState().addDownload('store-deliveries', 'Store Deliveries');
+                        useToastStore.getState().info('Downloading Store Deliveries mod...');
                         try {
-                          const detail = await window.api.modhub.fetchModDetail({ modId: STORE_DELIVERIES_MOD_ID });
-                          if (!detail?.downloadUrl) throw new Error('Could not find download link.');
-                          const result = await window.api.mods.install({
-                            modId: STORE_DELIVERIES_MOD_ID,
-                            modTitle: 'Store Deliveries',
-                            downloadUrl: detail.downloadUrl,
-                            category: detail.category || '',
-                            subFolder: null
-                          });
+                          const result = await window.api.savegames.downloadStoreDeliveries();
                           if (result?.success) {
-                            useToastStore.getState().success("Store Deliveries mod downloaded!");
+                            useToastStore.getState().success('Store Deliveries mod downloaded!');
                             const hasDeliv = await window.api.savegames.checkStoreDeliveries();
                             setHasStoreDeliveries(hasDeliv);
-                            if (window.api.savegames.getStoreDeliveryCoordinates) {
-                              window.api.savegames.getStoreDeliveryCoordinates(save.path).then(setCustomSpawnInfo);
-                            }
+                            window.api.savegames.getStoreDeliveryCoordinates?.(save.path).then(setCustomSpawnInfo);
                           } else {
                             throw new Error(result?.error || 'Install failed');
                           }
                         } catch (err) {
-                          useToastStore.getState().error("Download failed: " + err.message);
-                          useDownloadStore.getState().removeDownload(STORE_DELIVERIES_MOD_ID);
+                          useToastStore.getState().error('Download failed: ' + err.message);
+                        } finally {
+                          useDownloadStore.getState().removeDownload('store-deliveries');
                         }
                         return;
                       }
@@ -1011,32 +1001,22 @@ function SavegameEditorModal({ save, onClose, onRefresh }) {
                             style={{ cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent)', fontWeight: 700 }} 
                             onClick={async (e) => {
                               e.stopPropagation();
-                              const STORE_DELIVERIES_MOD_ID = '303764';
-                              useDownloadStore.getState().addDownload(STORE_DELIVERIES_MOD_ID, 'Store Deliveries');
-                              useToastStore.getState().info("Fetching Store Deliveries mod...");
+                              useDownloadStore.getState().addDownload('store-deliveries', 'Store Deliveries');
+                              useToastStore.getState().info('Downloading Store Deliveries mod...');
                               try {
-                                const detail = await window.api.modhub.fetchModDetail({ modId: STORE_DELIVERIES_MOD_ID });
-                                if (!detail?.downloadUrl) throw new Error('Could not find download link.');
-                                const result = await window.api.mods.install({
-                                  modId: STORE_DELIVERIES_MOD_ID,
-                                  modTitle: 'Store Deliveries',
-                                  downloadUrl: detail.downloadUrl,
-                                  category: detail.category || '',
-                                  subFolder: null
-                                });
+                                const result = await window.api.savegames.downloadStoreDeliveries();
                                 if (result?.success) {
-                                  useToastStore.getState().success("Store Deliveries mod downloaded!");
+                                  useToastStore.getState().success('Store Deliveries mod downloaded!');
                                   const hasDeliv = await window.api.savegames.checkStoreDeliveries();
                                   setHasStoreDeliveries(hasDeliv);
-                                  if (window.api.savegames.getStoreDeliveryCoordinates) {
-                                    window.api.savegames.getStoreDeliveryCoordinates(save.path).then(setCustomSpawnInfo);
-                                  }
+                                  window.api.savegames.getStoreDeliveryCoordinates?.(save.path).then(setCustomSpawnInfo);
                                 } else {
                                   throw new Error(result?.error || 'Install failed');
                                 }
                               } catch (err) {
-                                useToastStore.getState().error("Download failed: " + err.message);
-                                useDownloadStore.getState().removeDownload(STORE_DELIVERIES_MOD_ID);
+                                useToastStore.getState().error('Download failed: ' + err.message);
+                              } finally {
+                                useDownloadStore.getState().removeDownload('store-deliveries');
                               }
                             }}
                           >

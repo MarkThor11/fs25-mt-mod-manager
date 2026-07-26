@@ -113,6 +113,7 @@ contextBridge.exposeInMainWorld('api', {
     executeTransfer: (params) => ipcRenderer.invoke('savegames:executeTransfer', params),
     syncToCloud: (params) => ipcRenderer.invoke('savegames:syncToCloud', params),
     import: (params) => ipcRenderer.invoke('savegames:import', params),
+    downloadStoreDeliveries: () => ipcRenderer.invoke('savegames:downloadStoreDeliveries'),
   },
 
   // Profiles

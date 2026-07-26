@@ -650,6 +650,37 @@ ipcMain.handle('localMods:autoInstallDependencies', async (event, { mods, subFol
   }, subFolder, parentId);
 });
 
+// Dedicated handler: search ModHub for Store Deliveries, get real download URL, install to root mods folder
+ipcMain.handle('savegames:downloadStoreDeliveries', async (event) => {
+  try {
+    console.log('[STORE-DELIVERIES] Searching ModHub for Store Deliveries mod...');
+    const search = await scraper.searchMods('Store Deliveries', 0, 'fs2025');
+    const mod = (search.mods || []).find(m => {
+      const t = (m.title || '').toLowerCase();
+      return t.includes('store deliveries') || t === 'store deliveries';
+    });
+    if (!mod) return { success: false, error: 'Store Deliveries mod not found on ModHub. Try installing manually.' };
+
+    console.log(`[STORE-DELIVERIES] Found mod: "${mod.title}" (ID: ${mod.modId})`);
+    const detail = await scraper.fetchModDetail(mod.modId);
+    if (!detail?.downloadUrl) return { success: false, error: 'Could not retrieve download URL from ModHub.' };
+
+    console.log(`[STORE-DELIVERIES] Installing from: ${detail.downloadUrl}`);
+    const result = await modManager.installMod(
+      mod.modId,
+      mod.title || 'Store Deliveries',
+      detail.downloadUrl,
+      (progress) => { event.sender.send('download:progress', { modId: mod.modId, progress }); },
+      detail.category || '',
+      null // root mods folder, no subfolder
+    );
+    return result;
+  } catch (err) {
+    console.error('[STORE-DELIVERIES] Error:', err);
+    return { success: false, error: err.message };
+  }
+});
+
 ipcMain.handle('localMods:autoOrganizeMaps', async () => {
   return await modManager.autoOrganizeMaps();
 });
