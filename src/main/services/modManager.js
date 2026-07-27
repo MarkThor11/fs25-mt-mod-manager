@@ -1124,8 +1124,10 @@ async function performScan(manualPaths = null) {
 			let isThirdParty = !isDlc && !isModHub;
 			
 			// If missing icon, or if it's a placeholder, force a re-extraction
+			// Also force re-parse for cached maps with no dependencies (stale cache from before dep-parsing was added)
 			const isPlaceholder = iconBase64 === 'CATEGORY:map' || iconBase64 === 'CATEGORY:generic';
-			if (!modDesc || !iconBase64 || isPlaceholder) {
+			const hasStaleDeps = modDesc?.isMap && (!modDesc.dependencies || modDesc.dependencies.length === 0);
+			if (!modDesc || !iconBase64 || isPlaceholder || hasStaleDeps) {
 				try {
 					let zipInstance = null;
 					if (targetPath.toLowerCase().endsWith('.zip')) {
