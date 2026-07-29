@@ -2486,6 +2486,9 @@ async function syncMirrorLinks(primaryPath) {
 	if (!primaryPath || !fs.existsSync(primaryPath)) return;
 
 	try {
+		// Run deduplication first to convert any physical duplicate files in subfolders into hard links
+		await deduplicateSubfolderMods(primaryPath);
+
 		const allPaths = getModsPaths();
 		const subFolderMods = new Map(); // fileName -> absPath
 		const existingMirrors = new Set(); // fileName
@@ -2548,7 +2551,15 @@ async function syncMirrorLinks(primaryPath) {
 						shouldCreate = true;
 					}
 				} else {
-					console.warn(`[MIRROR] Name conflict: Root file ${modName} exists and is NOT a link. Skipping mirror.`);
+					// Root file exists and is NOT a link. If targetPath in subfolder is also a physical file, convert root file to link!
+					const targetStats = await fs.lstat(targetPath).catch(() => null);
+					if (targetStats && !targetStats.isSymbolicLink()) {
+						console.log(`[MIRROR] Converting physical duplicate root file ${modName} to link pointing to ${targetPath}`);
+						await fs.remove(mirrorPath);
+						shouldCreate = true;
+					} else {
+						console.warn(`[MIRROR] Name conflict: Root file ${modName} exists and is NOT a link. Skipping mirror.`);
+					}
 				}
 			}
 
@@ -4514,4 +4525,5 @@ module.exports = {
 	resumePendingDownloads,
 	prepareVirtualModsFolder,
 	deduplicateSubfolderMods,
+	syncMirrorLinks,
 };
