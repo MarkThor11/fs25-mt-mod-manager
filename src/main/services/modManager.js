@@ -3615,6 +3615,7 @@ async function installLocalMods(filePaths) {
 		}
 	}
 	
+	syncMirrorLinks(modsPath).catch(err => console.error('[MIRROR] Auto-sync failed after local install:', err));
 	return results;
 }
 
