@@ -2340,14 +2340,24 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
             return { x: -263.0, y: 60.0, z: 44.0 };
         } else if (mapId === 'MapAS' || mapIdLower.includes('mapas')) {
             return { x: -528.8, y: 19.8, z: -61.1 };
-        } else if (mapIdLower.includes('highland') || mapTitleLower.includes('highland')) {
-            return { x: -584.6, y: 84.5, z: -860.9 };
+        } else if (mapIdLower.includes('highland') || mapTitleLower.includes('highland') || mapTitleLower.includes('kinlaig')) {
+            return { x: -204.544, y: 82.996, z: -300.276 };
         }
         
         const templateFolder = await resolveTemplateFolder(mapId, mapModName, mapTitle);
         const templatesDir = getTemplatesPath();
         
         if (templateFolder) {
+            const sJsonPath = path.join(templatesDir, templateFolder, 'shopPos.json');
+            if (fs.existsSync(sJsonPath)) {
+                try {
+                    const shopData = fs.readJsonSync(sJsonPath);
+                    if (shopData && shopData.x !== undefined && shopData.y !== undefined && shopData.z !== undefined) {
+                        return { x: parseFloat(shopData.x), y: parseFloat(shopData.y), z: parseFloat(shopData.z) };
+                    }
+                } catch (e) {}
+            }
+
             const tPlaceablesPath = path.join(templatesDir, templateFolder, 'placeables.xml');
             if (fs.existsSync(tPlaceablesPath)) {
                 const tPlaceablesXml = fs.readFileSync(tPlaceablesPath, 'utf8');
