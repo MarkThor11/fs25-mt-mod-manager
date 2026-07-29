@@ -2294,12 +2294,18 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
             mapModName = mapId.split('.')[0];
         }
         
-        if (mapId === 'MapUS') {
-            return { x: 1390.0, y: 42.0, z: -50.0 };
-        } else if (mapId === 'MapEU') {
-            return { x: -283.0, y: 60.0, z: 68.5 };
-        } else if (mapId === 'MapAS') {
-            return { x: -562.0, y: 43.8, z: 566.0 };
+        const mapIdLower = String(mapId || '').toLowerCase();
+        const mapTitleLower = String(mapTitle || '').toLowerCase();
+        
+        // 1. Official FS25 maps exact shop hotspot spawn positions
+        if (mapId === 'MapUS' || mapIdLower.includes('mapus')) {
+            return { x: -128.0, y: 49.2, z: -162.0 };
+        } else if (mapId === 'MapEU' || mapIdLower.includes('mapeu')) {
+            return { x: -263.0, y: 60.0, z: 44.0 };
+        } else if (mapId === 'MapAS' || mapIdLower.includes('mapas')) {
+            return { x: -528.8, y: 19.8, z: -61.1 };
+        } else if (mapIdLower.includes('highland') || mapTitleLower.includes('highland')) {
+            return { x: -584.6, y: 84.5, z: -860.9 };
         }
         
         const templateFolder = await resolveTemplateFolder(mapId, mapModName, mapTitle);
@@ -2309,6 +2315,17 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
             const tPlaceablesPath = path.join(templatesDir, templateFolder, 'placeables.xml');
             if (fs.existsSync(tPlaceablesPath)) {
                 const tPlaceablesXml = fs.readFileSync(tPlaceablesPath, 'utf8');
+
+                // Check for inline hotspot teleport position in placeables.xml
+                const hotspotMatch = tPlaceablesXml.match(/teleportWorldPosition="([^"]+)"/i) ||
+                                     tPlaceablesXml.match(/teleportPosition="([^"]+)"/i);
+                if (hotspotMatch && hotspotMatch[1]) {
+                    const coords = hotspotMatch[1].trim().split(/\s+/).map(parseFloat);
+                    if (coords.length >= 3 && !isNaN(coords[0])) {
+                        return { x: coords[0], y: coords[1], z: coords[2] };
+                    }
+                }
+
                 const pObj = parser.parse(tPlaceablesXml);
                 if (pObj && pObj.placeables && pObj.placeables.placeable) {
                     const placeables = Array.isArray(pObj.placeables.placeable) ? pObj.placeables.placeable : [pObj.placeables.placeable];
@@ -2327,7 +2344,7 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
                         );
                     });
                     
-                    if (shopPlaceable) {
+                    if (shopPlaceable && shopPlaceable['@_position']) {
                         const coords = shopPlaceable['@_position'].split(' ').map(parseFloat);
                         if (coords.length >= 3 && !isNaN(coords[0])) {
                             return { x: coords[0], y: coords[1], z: coords[2] };
@@ -2337,7 +2354,7 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
             }
         }
 
-        // Fallback: parse map mod zip placeables!
+        // Fallback: parse map mod zip placeables / shop XML / map.xml / map.i3d!
         if (mapModName) {
             const modManager = require('./modManager');
             const modsDir = modManager.getModsPath();
@@ -2345,11 +2362,40 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
             const modZip = path.join(modsDir, `${mapModName}.zip`);
             if (fs.existsSync(modZip)) {
                 const zip = new AdmZip(modZip);
-                let placeablesFilename = 'maps/placeables.xml'; // default guess
+
+                // Check zip entries for explicit shop XML files (e.g. sellingStationVehicles.xml)
+                let shopXmlEntry = zip.getEntries().find(e => {
+                    const n = e.entryName.toLowerCase();
+                    return n.endsWith('.xml') && (n.includes('sellingstationvehicles') || n.includes('vehicletrader') || n.includes('sellingstationstore'));
+                });
                 
+                if (shopXmlEntry) {
+                    const xmlText = shopXmlEntry.getData().toString('utf8');
+                    const hotspotMatch = xmlText.match(/teleportWorldPosition="([^"]+)"/i) ||
+                                         xmlText.match(/teleportPosition="([^"]+)"/i);
+                    if (hotspotMatch && hotspotMatch[1]) {
+                        const coords = hotspotMatch[1].trim().split(/\s+/).map(parseFloat);
+                        if (coords.length >= 3 && !isNaN(coords[0])) {
+                            return { x: coords[0], y: coords[1], z: coords[2] };
+                        }
+                    }
+                }
+
+                let placeablesFilename = 'maps/placeables.xml'; // default guess
                 let mapXmlEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('map.xml'));
                 if (mapXmlEntry) {
                     const mapXml = mapXmlEntry.getData().toString('utf8');
+
+                    // Check if map.xml specifies a shop hotspot teleport position
+                    const mapHotspotMatch = mapXml.match(/<hotspot[^>]*type="SHOP"[^>]*teleportWorldPosition="([^"]+)"/i) ||
+                                            mapXml.match(/teleportWorldPosition="([^"]+)"/i);
+                    if (mapHotspotMatch && mapHotspotMatch[1]) {
+                        const coords = mapHotspotMatch[1].trim().split(/\s+/).map(parseFloat);
+                        if (coords.length >= 3 && !isNaN(coords[0])) {
+                            return { x: coords[0], y: coords[1], z: coords[2] };
+                        }
+                    }
+
                     const mapObj = parser.parse(mapXml);
                     if (mapObj && mapObj.map && mapObj.map.placeables && mapObj.map.placeables['@_filename']) {
                         placeablesFilename = mapObj.map.placeables['@_filename'];
@@ -2364,6 +2410,15 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
                 let foundPos = null;
                 if (placeablesEntry) {
                     const xml = placeablesEntry.getData().toString('utf8');
+                    
+                    const pHotspotMatch = xml.match(/teleportWorldPosition="([^"]+)"/i) || xml.match(/teleportPosition="([^"]+)"/i);
+                    if (pHotspotMatch && pHotspotMatch[1]) {
+                        const coords = pHotspotMatch[1].trim().split(/\s+/).map(parseFloat);
+                        if (coords.length >= 3 && !isNaN(coords[0])) {
+                            return { x: coords[0], y: coords[1], z: coords[2] };
+                        }
+                    }
+
                     const pObj = parser.parse(xml);
                     if (pObj && pObj.placeables && pObj.placeables.placeable) {
                         const placeables = Array.isArray(pObj.placeables.placeable) ? pObj.placeables.placeable : [pObj.placeables.placeable];
