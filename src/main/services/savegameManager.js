@@ -2271,6 +2271,42 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true) {
     return null;
 }
 
+function parseShopFromI3d(i3dText) {
+    function degToRad(deg) { return deg * Math.PI / 180; }
+    function applyTransform(pos, rotYDeg, localPos) {
+        const rad = degToRad(rotYDeg);
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        const x = localPos[0]*cos + localPos[2]*sin + pos[0];
+        const y = localPos[1] + pos[1];
+        const z = -localPos[0]*sin + localPos[2]*cos + pos[2];
+        return { x: parseFloat(x.toFixed(3)), y: parseFloat(y.toFixed(3)), z: parseFloat(z.toFixed(3)) };
+    }
+
+    // 1. Check for vehicleShopTrigger / vehicleShop parent containing vehicleShopPlayerSpawn
+    const triggerMatch = i3dText.match(/<Shape\s+[^>]*name="[^"]*vehicleShopTrigger[^"]*"[^>]*translation="([^"]+)"[^>]*rotation="([^"]+)"[\s\S]*?<TransformGroup\s+[^>]*name="[^"]*vehicleShopPlayerSpawn[^"]*"[^>]*translation="([^"]+)"/i) ||
+                         i3dText.match(/<TransformGroup\s+[^>]*name="[^"]*vehicleShop[^"]*"[^>]*translation="([^"]+)"[^>]*rotation="([^"]+)"[\s\S]*?<TransformGroup\s+[^>]*name="[^"]*vehicleShopPlayerSpawn[^"]*"[^>]*translation="([^"]+)"/i);
+    if (triggerMatch) {
+        const tPos = triggerMatch[1].split(' ').map(parseFloat);
+        const tRot = triggerMatch[2].split(' ').map(parseFloat);
+        const sPos = triggerMatch[3].split(' ').map(parseFloat);
+        const rotY = tRot.length >= 2 ? tRot[1] : 0;
+        return applyTransform(tPos, rotY, sPos);
+    }
+
+    // 2. Direct transform group match
+    const match = i3dText.match(/<TransformGroup\s+[^>]*name="[^"]*(?:vehicleShopPlayerSpawn|shopPlayerSpawn|playerShopTeleport)[^"]*"[^>]*translation="([^"]+)"/i) ||
+                  i3dText.match(/name="[^"]*(?:vehicleShopPlayerSpawn|shopPlayerSpawn|playerShopTeleport)[^"]*"[^>]*translation="([^"]+)"/i) ||
+                  i3dText.match(/translation="([^"]+)"[^>]*name="[^"]*(?:vehicleShopPlayerSpawn|shopPlayerSpawn|playerShopTeleport)[^"]*"/i);
+    if (match && match[1]) {
+        const coords = match[1].split(' ').map(parseFloat);
+        if (coords.length >= 3 && !isNaN(coords[0])) {
+            return { x: coords[0], y: coords[1], z: coords[2] };
+        }
+    }
+    return null;
+}
+
 async function getMapShopCoordinates(savePath, allowFallback = true) {
     try {
         const fs = require('fs-extra');
@@ -2332,15 +2368,14 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
                     const shopPlaceable = placeables.find(p => {
                         const filename = String(p['@_filename'] || '').toLowerCase();
                         const uniqueId = String(p['@_uniqueId'] || '').toLowerCase();
-                        const nameL10nKey = String(p['@_nameL10nKey'] || '').toLowerCase();
-                        const hasPos = p['@_position'] !== undefined;
-                        return hasPos && (
+                        return (
                             filename.includes('sellingstationvehicles') || 
                             filename.includes('vehicletrader') || 
+                            filename.includes('vehicleshop') || 
                             filename.includes('sellingstationstore') ||
                             uniqueId.includes('sellingstationvehicles') || 
                             uniqueId.includes('vehicletrader') ||
-                            nameL10nKey.includes('shopitem_')
+                            uniqueId.includes('vehicleshop')
                         );
                     });
                     
@@ -2366,7 +2401,7 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
                 // Check zip entries for explicit shop XML files (e.g. sellingStationVehicles.xml)
                 let shopXmlEntry = zip.getEntries().find(e => {
                     const n = e.entryName.toLowerCase();
-                    return n.endsWith('.xml') && (n.includes('sellingstationvehicles') || n.includes('vehicletrader') || n.includes('sellingstationstore'));
+                    return n.endsWith('.xml') && (n.includes('sellingstationvehicles') || n.includes('vehicletrader') || n.includes('vehicleshop') || n.includes('sellingstationstore'));
                 });
                 
                 if (shopXmlEntry) {
@@ -2425,15 +2460,14 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
                         const shopPlaceable = placeables.find(p => {
                             const filename = String(p['@_filename'] || '').toLowerCase();
                             const uniqueId = String(p['@_uniqueId'] || '').toLowerCase();
-                            const nameL10nKey = String(p['@_nameL10nKey'] || '').toLowerCase();
-                            const hasPos = p['@_position'] !== undefined;
-                            return hasPos && (
+                            return (
                                 filename.includes('sellingstationvehicles') || 
                                 filename.includes('vehicletrader') || 
+                                filename.includes('vehicleshop') || 
                                 filename.includes('sellingstationstore') ||
                                 uniqueId.includes('sellingstationvehicles') || 
                                 uniqueId.includes('vehicletrader') ||
-                                nameL10nKey.includes('shopitem_')
+                                uniqueId.includes('vehicleshop')
                             );
                         });
                         
@@ -2452,15 +2486,8 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
                 const i3dEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('map.i3d'));
                 if (i3dEntry) {
                     const i3dText = i3dEntry.getData().toString('utf8');
-                    const match = i3dText.match(/<TransformGroup\s+[^>]*name="[^"]*(?:vehicleShopPlayerSpawn|shopPlayerSpawn|playerShopTeleport|sellingStationVehicles)[^"]*"[^>]*translation="([^"]+)"/i) ||
-                                  i3dText.match(/name="[^"]*(?:vehicleShopPlayerSpawn|shopPlayerSpawn|playerShopTeleport|sellingStationVehicles)[^"]*"[^>]*translation="([^"]+)"/i) ||
-                                  i3dText.match(/translation="([^"]+)"[^>]*name="[^"]*(?:vehicleShopPlayerSpawn|shopPlayerSpawn|playerShopTeleport|sellingStationVehicles)[^"]*"/i);
-                    if (match && match[1]) {
-                        const coords = match[1].split(' ').map(parseFloat);
-                        if (coords.length >= 3 && !isNaN(coords[0])) {
-                            return { x: coords[0], y: coords[1], z: coords[2] };
-                        }
-                    }
+                    const i3dPos = parseShopFromI3d(i3dText);
+                    if (i3dPos) return i3dPos;
                 }
             }
         }
