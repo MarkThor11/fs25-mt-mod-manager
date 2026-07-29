@@ -365,15 +365,6 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
             const parsed = JSON.parse(savedRaw);
             if (parsed.mode) setSelectedSpawnMode(parsed.mode);
             if (parsed.vehicleUniqueId) setSelectedVehicleId(parsed.vehicleUniqueId);
-            if (parsed.mode === 'shop') {
-              window.api.savegames.getMapShopCoordinates(save.path).then(res => {
-                if (res) {
-                  window.api.savegames.setPlayerPosition({ savePath: save.path, x: res.x, y: res.y, z: res.z }).then(() => {
-                    window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
-                  });
-                }
-              });
-            }
           } catch(e) {}
         }
       });
@@ -1035,6 +1026,16 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                   {/* Preset 2: Vehicle Shop */}
                   <div 
                     onClick={async () => {
+                      // Toggle off if already selected
+                      if (selectedSpawnMode === 'shop') {
+                        setSelectedSpawnMode(null);
+                        setSelectedVehicleId(null);
+                        localStorage.removeItem(`selected_spawn_${save.path}`);
+                        await window.api.savegames.resetPlayerSpawn(save.path);
+                        useToastStore.getState().info('Spawn preset cleared — game will use default spawn.');
+                        window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
+                        return;
+                      }
                       setSelectedSpawnMode('shop');
                       setSelectedVehicleId(null);
                       localStorage.setItem(`selected_spawn_${save.path}`, JSON.stringify({ mode: 'shop' }));
