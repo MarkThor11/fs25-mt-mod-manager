@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Radio as RadioIcon, ExternalLink, Music, Globe, Heart, Check, Play, Pause, Volume2, Info, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, Plus, Trash2, Radio as RadioIcon, ExternalLink, Music, Globe, Heart, Check, Play, Pause, Volume2, Info, AlertCircle, RefreshCw, Disc, Link as LinkIcon, Sparkles } from 'lucide-react';
 import { useRadioStore } from '../store/useRadioStore';
 import { useToastStore } from '../store/useToastStore';
 
@@ -17,11 +17,62 @@ const OFFICIAL_PRESETS = [
     { name: 'Farming Simulator Radio', url: 'http://217.151.151.144:8001/stream', tags: 'Official, Country, Folk', language: 'English', country: 'Germany' },
 ];
 
+const SPOTIFY_PRESETS = [
+    {
+        name: 'Country Farming Hits',
+        desc: 'Upbeat country classics and modern hits for working the fields',
+        embedUrl: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX1lVhivE98y9',
+        openUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX1lVhivE98y9',
+        category: 'Country'
+    },
+    {
+        name: 'Farming Chill & Acoustic',
+        desc: 'Relaxing acoustic tunes for harvesting and livestock care',
+        embedUrl: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0SM0LYsmbMT',
+        openUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX0SM0LYsmbMT',
+        category: 'Acoustic'
+    },
+    {
+        name: 'Classic Trucker Rock',
+        desc: 'High energy classic rock for long hauls and heavy transport',
+        embedUrl: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWWEc0B1Y7seG',
+        openUrl: 'https://open.spotify.com/playlist/37i9dQZF1DWWEc0B1Y7seG',
+        category: 'Rock'
+    },
+    {
+        name: 'Lofi Beats for Farming',
+        desc: 'Cozy, chill instrumental lofi beats for night shifts',
+        embedUrl: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM',
+        openUrl: 'https://open.spotify.com/playlist/37i9dQZF1DXdLEN7aqioXM',
+        category: 'Lofi'
+    }
+];
+
+const parseSpotifyEmbedUrl = (input) => {
+    if (!input) return null;
+    let str = input.trim();
+    if (str.startsWith('spotify:')) {
+        const parts = str.split(':');
+        if (parts.length >= 3) {
+            return `https://open.spotify.com/embed/${parts[1]}/${parts[2]}`;
+        }
+    }
+    if (str.includes('open.spotify.com/')) {
+        // Strip out query parameters like ?si=... before inserting /embed/
+        const urlWithoutQuery = str.split('?')[0];
+        if (urlWithoutQuery.includes('/embed/')) return urlWithoutQuery;
+        return urlWithoutQuery.replace('open.spotify.com/', 'open.spotify.com/embed/');
+    }
+    return null;
+};
+
 const RadioPage = () => {
     const { 
         stations, searchResults, isSearching, isLoading, 
         fetchRadios, searchStations, addStation, removeStation,
-        playingStationUrl, setPlayingStation
+        playingStationUrl, setPlayingStation,
+        activeSpotifyEmbed, setActiveSpotifyEmbed,
+        spotifyFavorites, addSpotifyFavorite, removeSpotifyFavorite
     } = useRadioStore();
     const { toast } = useToastStore();
     
@@ -33,6 +84,8 @@ const RadioPage = () => {
     const [playbackError, setPlaybackError] = useState(null);
     const [isBuffering, setIsBuffering] = useState(false);
     const [volume, setVolume] = useState(0.8);
+    const [customSpotifyInput, setCustomSpotifyInput] = useState('');
+    const [customSpotifyTitle, setCustomSpotifyTitle] = useState('');
 
     const audioRef = React.useRef(null);
 
@@ -68,8 +121,6 @@ const RadioPage = () => {
             const attemptPlay = (url) => {
                 if (!audioRef.current) return;
                 
-                // Use radio-proxy protocol to bypass CORS/Mixed Content
-                // Format: radio-proxy://https/domain.com/path
                 let proxyUrl = url;
                 if (url.startsWith('https://')) {
                     proxyUrl = 'radio-proxy://https/' + url.replace('https://', '');
@@ -148,10 +199,38 @@ const RadioPage = () => {
 
     const handleClearAll = async () => {
         if (!confirm('This will remove ALL custom stations. The game will revert to its internal defaults unless you add new ones. Proceed?')) return;
-        // In radioManager.js, saveRadios([]) will clear the file
-        const result = await window.api.radio.remove('__ALL__'); // We'll handle this in backend
+        const result = await window.api.radio.remove('__ALL__');
         fetchRadios();
         toast.success('All custom stations cleared');
+    };
+
+    const handleLoadCustomSpotify = () => {
+        const embedUrl = parseSpotifyEmbedUrl(customSpotifyInput);
+        if (!embedUrl) {
+            toast.error('Invalid Spotify link. Please paste a valid Spotify playlist, track, or album URL.');
+            return;
+        }
+        setActiveSpotifyEmbed(embedUrl);
+        toast.success('Loaded Spotify player!');
+    };
+
+    const handleSaveCustomSpotify = () => {
+        const embedUrl = parseSpotifyEmbedUrl(customSpotifyInput);
+        if (!embedUrl) {
+            toast.error('Invalid Spotify link.');
+            return;
+        }
+        const name = customSpotifyTitle.trim() || 'Custom Spotify Playlist';
+        addSpotifyFavorite({
+            name,
+            desc: 'Custom saved Spotify music',
+            embedUrl,
+            openUrl: customSpotifyInput.split('?')[0],
+            category: 'Custom'
+        });
+        setCustomSpotifyInput('');
+        setCustomSpotifyTitle('');
+        toast.success(`Saved "${name}" to Spotify favorites!`);
     };
 
     return (
@@ -159,13 +238,13 @@ const RadioPage = () => {
             {/* Header Area */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ padding: '10px', background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: '12px' }}>
+                    <div style={{ padding: '10px', background: activeTab === 'spotify' ? 'rgba(29, 185, 84, 0.15)' : 'var(--accent-dim)', color: activeTab === 'spotify' ? '#1DB954' : 'var(--accent)', borderRadius: '12px', transition: 'all 0.3s' }}>
                         <RadioIcon size={24} />
                     </div>
-                    <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Radio Manager</h1>
+                    <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Radio & Music Manager</h1>
                 </div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '600px' }}>
-                    Farming Simulator 25 allows you to listen to real internet radio stations while driving. Search for your favorite stations here and add them directly to your game.
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '650px' }}>
+                    Farming Simulator 25 allows you to listen to real internet radio stations while driving, or play Spotify music & podcasts directly in MT Mod Manager while you farm.
                 </p>
             </div>
 
@@ -187,6 +266,7 @@ const RadioPage = () => {
                 >
                     Discover Stations
                 </button>
+
                 <button 
                     onClick={() => setActiveTab('mine')}
                     className={`tab-button ${activeTab === 'mine' ? 'active' : ''}`}
@@ -202,6 +282,26 @@ const RadioPage = () => {
                     }}
                 >
                     In-Game Stations ({stations.length})
+                </button>
+
+                <button 
+                    onClick={() => setActiveTab('spotify')}
+                    className={`tab-button ${activeTab === 'spotify' ? 'active' : ''}`}
+                    style={{ 
+                        padding: '8px 16px', 
+                        borderRadius: '8px', 
+                        border: activeTab === 'spotify' ? '1px solid #1DB954' : '1px solid transparent', 
+                        background: activeTab === 'spotify' ? '#1DB954' : 'rgba(29, 185, 84, 0.1)',
+                        color: activeTab === 'spotify' ? 'white' : '#1DB954',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    <Disc size={16} /> Spotify Radio
                 </button>
 
                 <div style={{ flex: 1 }} />
@@ -377,7 +477,7 @@ const RadioPage = () => {
                             </div>
                         )}
                     </div>
-                ) : (
+                ) : activeTab === 'mine' ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {stations.length > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
@@ -432,6 +532,297 @@ const RadioPage = () => {
                                 <AlertCircle size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
                                 <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>No Custom Stations Yet</h3>
                                 <p style={{ margin: 0 }}>Use the "Discover" tab to add some music to your farm!</p>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    /* Spotify Radio Tab */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {/* Info Note Banner */}
+                        <div style={{ 
+                            padding: '14px 18px', 
+                            borderRadius: '12px', 
+                            background: 'rgba(29, 185, 84, 0.08)', 
+                            border: '1px solid rgba(29, 185, 84, 0.25)', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '12px' 
+                        }}>
+                            <Disc size={22} style={{ color: '#1DB954', flexShrink: 0 }} />
+                            <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: '1.4' }}>
+                                <strong>Spotify Background Player:</strong> Listen to Spotify playlists, albums, and tracks while managing your mods or playing FS25.
+                                <span style={{ color: 'var(--text-secondary)', marginLeft: '6px' }}>
+                                    (Spotify DRM audio plays directly inside MT Mod Manager's embedded player).
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Custom Spotify Link Box */}
+                        <div style={{ 
+                            background: 'var(--bg-card)', 
+                            borderRadius: '16px', 
+                            padding: '18px', 
+                            border: '1px solid var(--border)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '12px'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                <LinkIcon size={16} style={{ color: '#1DB954' }} /> Load Any Spotify Playlist, Album, or Track
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                <input 
+                                    type="text" 
+                                    placeholder="Paste Spotify Link or URI (e.g. https://open.spotify.com/playlist/...)"
+                                    value={customSpotifyInput}
+                                    onChange={(e) => setCustomSpotifyInput(e.target.value)}
+                                    style={{
+                                        flex: 2,
+                                        minWidth: '260px',
+                                        padding: '10px 14px',
+                                        background: 'var(--bg-tertiary)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '8px',
+                                        color: 'var(--text-primary)',
+                                        fontSize: '13px',
+                                        outline: 'none'
+                                    }}
+                                />
+                                <input 
+                                    type="text" 
+                                    placeholder="Title (Optional)"
+                                    value={customSpotifyTitle}
+                                    onChange={(e) => setCustomSpotifyTitle(e.target.value)}
+                                    style={{
+                                        flex: 1,
+                                        minWidth: '140px',
+                                        padding: '10px 14px',
+                                        background: 'var(--bg-tertiary)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '8px',
+                                        color: 'var(--text-primary)',
+                                        fontSize: '13px',
+                                        outline: 'none'
+                                    }}
+                                />
+                                <button 
+                                    onClick={handleLoadCustomSpotify}
+                                    style={{ 
+                                        padding: '10px 18px', 
+                                        background: '#1DB954', 
+                                        color: 'white', 
+                                        border: 'none', 
+                                        borderRadius: '8px', 
+                                        fontWeight: '700', 
+                                        fontSize: '13px', 
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px'
+                                    }}
+                                >
+                                    <Play size={14} /> Play Now
+                                </button>
+                                <button 
+                                    onClick={handleSaveCustomSpotify}
+                                    style={{ 
+                                        padding: '10px 18px', 
+                                        background: 'var(--bg-tertiary)', 
+                                        color: 'var(--text-primary)', 
+                                        border: '1px solid var(--border)', 
+                                        borderRadius: '8px', 
+                                        fontWeight: '600', 
+                                        fontSize: '13px', 
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px'
+                                    }}
+                                >
+                                    <Heart size={14} style={{ color: '#1DB954' }} /> Save Favorite
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Active Embedded Player */}
+                        {activeSpotifyEmbed && (
+                            <div style={{ 
+                                background: 'var(--bg-card)', 
+                                borderRadius: '16px', 
+                                padding: '16px', 
+                                border: '1px solid rgba(29, 185, 84, 0.3)',
+                                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '12px'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', color: '#1DB954' }}>
+                                        <Sparkles size={16} /> Currently Active Spotify Player
+                                    </div>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Sign in on Spotify iframe for full playback</span>
+                                </div>
+                                <iframe 
+                                    src={activeSpotifyEmbed} 
+                                    width="100%" 
+                                    height="352" 
+                                    frameBorder="0" 
+                                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                                    loading="lazy" 
+                                    style={{ borderRadius: '12px', border: 'none' }}
+                                />
+                            </div>
+                        )}
+
+                        {/* Curated Spotify Presets */}
+                        <div>
+                            <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '0 0 12px 0', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Sparkles size={18} style={{ color: '#1DB954' }} /> Curated Farming Radio Presets
+                            </h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
+                                {SPOTIFY_PRESETS.map((preset, idx) => {
+                                    const isActive = activeSpotifyEmbed === preset.embedUrl;
+                                    return (
+                                        <div key={idx} style={{ 
+                                            background: 'var(--bg-card)', 
+                                            borderRadius: '14px', 
+                                            padding: '16px', 
+                                            border: isActive ? '1px solid #1DB954' : '1px solid var(--border)',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'space-between',
+                                            gap: '12px',
+                                            boxShadow: isActive ? '0 0 16px rgba(29, 185, 84, 0.2)' : '0 2px 8px rgba(0,0,0,0.1)'
+                                        }}>
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                    <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', color: '#1DB954', letterSpacing: '0.5px' }}>{preset.category}</span>
+                                                    {isActive && <span style={{ fontSize: '11px', fontWeight: '700', color: '#1DB954', display: 'flex', alignItems: 'center', gap: '4px' }}><Check size={12} /> Playing</span>}
+                                                </div>
+                                                <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>{preset.name}</h4>
+                                                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{preset.desc}</p>
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                                                <button 
+                                                    onClick={() => {
+                                                        setActiveSpotifyEmbed(preset.embedUrl);
+                                                        toast.success(`Playing ${preset.name}`);
+                                                    }}
+                                                    style={{ 
+                                                        flex: 1, 
+                                                        padding: '8px 12px', 
+                                                        borderRadius: '8px', 
+                                                        border: 'none', 
+                                                        background: isActive ? '#1DB954' : 'var(--accent-dim)', 
+                                                        color: isActive ? 'white' : 'var(--accent)', 
+                                                        fontWeight: '700', 
+                                                        fontSize: '12px', 
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '6px'
+                                                    }}
+                                                >
+                                                    <Play size={14} /> {isActive ? 'Active' : 'Play'}
+                                                </button>
+                                                <a 
+                                                    href={preset.openUrl} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    style={{ 
+                                                        padding: '8px', 
+                                                        borderRadius: '8px', 
+                                                        background: 'var(--bg-tertiary)', 
+                                                        color: 'var(--text-secondary)', 
+                                                        display: 'flex', 
+                                                        alignItems: 'center', 
+                                                        justifyContent: 'center' 
+                                                    }}
+                                                    title="Open in Spotify"
+                                                >
+                                                    <ExternalLink size={16} />
+                                                </a>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Saved Favorites Grid */}
+                        {spotifyFavorites.length > 0 && (
+                            <div>
+                                <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '12px 0 12px 0', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Heart size={18} style={{ color: '#1DB954' }} /> Saved Spotify Favorites
+                                </h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
+                                    {spotifyFavorites.map((fav, idx) => {
+                                        const isActive = activeSpotifyEmbed === fav.embedUrl;
+                                        return (
+                                            <div key={idx} style={{ 
+                                                background: 'var(--bg-card)', 
+                                                borderRadius: '14px', 
+                                                padding: '16px', 
+                                                border: isActive ? '1px solid #1DB954' : '1px solid var(--border)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '10px'
+                                            }}>
+                                                <div>
+                                                    <h4 style={{ margin: '0 0 2px 0', fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>{fav.name}</h4>
+                                                    <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)' }}>{fav.desc || 'Custom saved playlist'}</p>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                                                    <button 
+                                                        onClick={() => {
+                                                            setActiveSpotifyEmbed(fav.embedUrl);
+                                                            toast.success(`Playing ${fav.name}`);
+                                                        }}
+                                                        style={{ 
+                                                            flex: 1, 
+                                                            padding: '8px 12px', 
+                                                            borderRadius: '8px', 
+                                                            border: 'none', 
+                                                            background: '#1DB954', 
+                                                            color: 'white', 
+                                                            fontWeight: '700', 
+                                                            fontSize: '12px', 
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '6px'
+                                                        }}
+                                                    >
+                                                        <Play size={14} /> Play
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => {
+                                                            removeSpotifyFavorite(fav.embedUrl);
+                                                            toast.success('Favorite removed');
+                                                        }}
+                                                        style={{ 
+                                                            padding: '8px', 
+                                                            borderRadius: '8px', 
+                                                            background: 'rgba(239, 68, 68, 0.1)', 
+                                                            color: '#ef4444', 
+                                                            border: 'none', 
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}
+                                                        title="Remove Favorite"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         )}
                     </div>

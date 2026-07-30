@@ -1,5 +1,16 @@
 import { create } from 'zustand';
 
+const STORAGE_KEY = 'fs25_spotify_favorites';
+
+const getInitialSpotifyFavorites = () => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
 export const useRadioStore = create((set, get) => ({
   stations: [],
   searchResults: [],
@@ -7,6 +18,10 @@ export const useRadioStore = create((set, get) => ({
   isLoading: false,
 
   playingStationUrl: null,
+
+  // Spotify integration state
+  activeSpotifyEmbed: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX1lVhivE98y9', // Default: Country Farming Hits
+  spotifyFavorites: getInitialSpotifyFavorites(),
 
   fetchRadios: async () => {
     if (!window.api?.radio) return;
@@ -42,6 +57,27 @@ export const useRadioStore = create((set, get) => ({
   },
 
   setPlayingStation: (url) => set({ playingStationUrl: url }),
+
+  setActiveSpotifyEmbed: (embedUrl) => set({ activeSpotifyEmbed: embedUrl }),
+
+  addSpotifyFavorite: (item) => {
+    const current = get().spotifyFavorites;
+    if (current.some(f => f.embedUrl === item.embedUrl)) return;
+    const updated = [...current, item];
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    } catch (e) {}
+    set({ spotifyFavorites: updated });
+  },
+
+  removeSpotifyFavorite: (embedUrl) => {
+    const current = get().spotifyFavorites;
+    const updated = current.filter(f => f.embedUrl !== embedUrl);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    } catch (e) {}
+    set({ spotifyFavorites: updated });
+  },
 
   addStation: async (href) => {
     if (!window.api?.radio) return { success: false };
