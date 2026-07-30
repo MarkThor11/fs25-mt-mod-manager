@@ -24,7 +24,7 @@ const NAV_ITEMS = [
   { to: '/save-transfer', label: 'Save Transfer', icon: ArrowRightLeft },
   { to: '/profiles', label: 'Profiles', icon: Database },
   { to: '/maps', label: 'Map Library', icon: Map },
-  { to: '/radio', label: 'Radio & Spotify', icon: Radio },
+  { to: '/radio', label: 'Radio Stations', icon: Radio },
   { to: '/downloads', label: 'Downloads', icon: Download },
   { to: '/diagnostics', label: 'Reporting & Diagnostics', icon: ShieldAlert },
   { to: '/settings', label: 'Settings', icon: Settings },
