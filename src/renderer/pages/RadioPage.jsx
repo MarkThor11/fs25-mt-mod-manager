@@ -233,19 +233,86 @@ const RadioPage = () => {
         toast.success(`Saved "${name}" to Spotify favorites!`);
     };
 
+    const handleOpenSpotifyApp = () => {
+        try {
+            if (window.api?.shell?.openExternal) {
+                window.api.shell.openExternal('spotify://');
+                toast.success('Launching Spotify Desktop App...');
+            } else {
+                window.open('https://open.spotify.com', '_blank');
+            }
+        } catch (e) {
+            window.open('https://open.spotify.com', '_blank');
+        }
+    };
+
+    const handleOpenSpotifyWeb = () => {
+        try {
+            if (window.api?.shell?.openExternal) {
+                window.api.shell.openExternal('https://open.spotify.com');
+            } else {
+                window.open('https://open.spotify.com', '_blank');
+            }
+        } catch (e) {}
+    };
+
     return (
         <div className="page animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px', height: '100%' }}>
             {/* Header Area */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ padding: '10px', background: activeTab === 'spotify' ? 'rgba(29, 185, 84, 0.15)' : 'var(--accent-dim)', color: activeTab === 'spotify' ? '#1DB954' : 'var(--accent)', borderRadius: '12px', transition: 'all 0.3s' }}>
-                        <RadioIcon size={24} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ padding: '10px', background: activeTab === 'spotify' ? 'rgba(29, 185, 84, 0.15)' : 'var(--accent-dim)', color: activeTab === 'spotify' ? '#1DB954' : 'var(--accent)', borderRadius: '12px', transition: 'all 0.3s' }}>
+                            <RadioIcon size={24} />
+                        </div>
+                        <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Radio & Spotify</h1>
                     </div>
-                    <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Radio & Music Manager</h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '650px', margin: 0 }}>
+                        Listen to real in-game radio stations, or play Spotify music & podcasts directly in MT Mod Manager while you farm.
+                    </p>
                 </div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '650px' }}>
-                    Farming Simulator 25 allows you to listen to real internet radio stations while driving, or play Spotify music & podcasts directly in MT Mod Manager while you farm.
-                </p>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button 
+                        onClick={handleOpenSpotifyApp}
+                        style={{ 
+                            padding: '10px 16px', 
+                            background: '#1DB954', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '10px', 
+                            fontWeight: '700', 
+                            fontSize: '13px', 
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            boxShadow: '0 4px 12px rgba(29, 185, 84, 0.3)'
+                        }}
+                        title="Launch Spotify Desktop App"
+                    >
+                        <Disc size={18} /> Launch Spotify App
+                    </button>
+                    <button 
+                        onClick={handleOpenSpotifyWeb}
+                        style={{ 
+                            padding: '10px 14px', 
+                            background: 'var(--bg-tertiary)', 
+                            color: 'var(--text-primary)', 
+                            border: '1px solid var(--border)', 
+                            borderRadius: '10px', 
+                            fontWeight: '600', 
+                            fontSize: '13px', 
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}
+                        title="Open Spotify Web Player in Browser"
+                    >
+                        <ExternalLink size={16} /> Open Web Player
+                    </button>
+                </div>
             </div>
 
             {/* Tabs & Search */}
