@@ -212,7 +212,8 @@ export const useModHubStore = create((set, get) => ({
 
   setFilters: (filters) => {
     set((state) => ({ 
-      activeFilters: { ...state.activeFilters, ...filters } 
+      activeFilters: { ...state.activeFilters, ...filters },
+      currentPage: 0
     }));
   },
 

@@ -5,10 +5,25 @@ import CategoryTree from '../components/modhub/CategoryTree';
 import ModCard from '../components/modhub/ModCard';
 import CompareOverlay from '../components/modhub/CompareOverlay';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
+import MassDownloaderModal from '../components/modhub/MassDownloaderModal';
 import { useModHubStore } from '../store/useModHubStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useScrollPersistence } from '../hooks/useScrollPersistence';
 import { useInstalledLookup } from '../hooks/useInstalledLookup';
+
+const matchesBrand = (mod, targetBrands) => {
+  if (!targetBrands || targetBrands.length === 0) return true;
+  
+  const modBrand = (mod.brand || '').toLowerCase();
+  const metadata = mod.metadata || {};
+  const metaBrand = (metadata['Manufacturer'] || metadata['Brand'] || metadata['manufacturer'] || metadata['brand'] || '').toLowerCase();
+  const title = (mod.title || '').toLowerCase();
+
+  return targetBrands.some(b => {
+    const bLower = b.toLowerCase();
+    return modBrand === bLower || metaBrand === bLower || title.includes(bLower);
+  });
+};
 
 export default function ModHubPage() {
   const navigate = useNavigate();
@@ -31,6 +46,7 @@ export default function ModHubPage() {
   const isOnline = useSettingsStore(s => s.isOnline);
   const { modHubZoom, setModHubZoom, modHubIconOnly, setModHubIconOnly } = useSettingsStore();
   const getInstalledVersion = useInstalledLookup();
+  const [isMassDownloaderOpen, setIsMassDownloaderOpen] = useState(false);
 
   const toggleCategories = () => {
     const newVal = !isCategoriesCollapsed;
@@ -115,7 +131,7 @@ export default function ModHubPage() {
 
       // Brand filter (multi-select)
       if (activeFilters.brands.length > 0) {
-        if (!mod.brand || !activeFilters.brands.includes(mod.brand)) return false;
+        if (!matchesBrand(mod, activeFilters.brands)) return false;
       }
 
       // Author filter (from Favourites Library)
@@ -548,6 +564,18 @@ export default function ModHubPage() {
               >
                 <Download size={14} />
                 Hide Installed
+              </button>
+            </div>
+
+            {/* Mass Downloader Button */}
+            <div className="btn-group">
+              <button
+                className="btn btn--secondary btn--sm"
+                onClick={() => setIsMassDownloaderOpen(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(29, 185, 84, 0.15)', color: '#1DB954', border: '1px solid rgba(29, 185, 84, 0.3)', fontWeight: '700' }}
+                title="Automate mass mod downloading for heavy stress testing"
+              >
+                <Download size={14} /> Mass Downloader
               </button>
             </div>
 
@@ -1068,6 +1096,11 @@ export default function ModHubPage() {
       <CompareOverlay 
         isOpen={isCompareOpen} 
         onClose={() => setIsCompareOpen(false)} 
+      />
+
+      <MassDownloaderModal
+        isOpen={isMassDownloaderOpen}
+        onClose={() => setIsMassDownloaderOpen(false)}
       />
     </div>
   );
