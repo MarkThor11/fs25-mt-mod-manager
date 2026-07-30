@@ -58,7 +58,6 @@ const parseSpotifyEmbedUrl = (input) => {
         }
     }
     if (str.includes('open.spotify.com/')) {
-        // Strip out query parameters like ?si=... before inserting /embed/
         const urlWithoutQuery = str.split('?')[0];
         if (urlWithoutQuery.includes('/embed/')) return urlWithoutQuery;
         return urlWithoutQuery.replace('open.spotify.com/', 'open.spotify.com/embed/');
@@ -68,30 +67,22 @@ const parseSpotifyEmbedUrl = (input) => {
 
 const RadioPage = () => {
     const { 
-        stations, searchResults, isSearching, isLoading, 
+        stations, searchResults, isSearching, 
         fetchRadios, searchStations, addStation, removeStation,
         playingStationUrl, setPlayingStation,
-        activeSpotifyEmbed, setActiveSpotifyEmbed,
-        spotifyFavorites, addSpotifyFavorite, removeSpotifyFavorite
+        activeSpotifyEmbed, setActiveSpotifyEmbed
     } = useRadioStore();
     const { toast } = useToastStore();
     
     const [query, setQuery] = useState('');
-    const [country, setCountry] = useState('');
-    const [language, setLanguage] = useState('');
-    const [tag, setTag] = useState('');
-    const [activeTab, setActiveTab] = useState('search'); 
-    const [playbackError, setPlaybackError] = useState(null);
+    const [viewMode, setViewMode] = useState('search'); 
     const [isBuffering, setIsBuffering] = useState(false);
     const [volume, setVolume] = useState(0.8);
-    const [customSpotifyInput, setCustomSpotifyInput] = useState('');
-    const [customSpotifyTitle, setCustomSpotifyTitle] = useState('');
 
     const audioRef = React.useRef(null);
 
     useEffect(() => {
         fetchRadios();
-        // Initial search to populate the page
         searchStations({ order: 'votes', limit: 30 });
         
         return () => {
@@ -101,51 +92,18 @@ const RadioPage = () => {
         };
     }, []);
 
-    const toggleTag = (t) => {
-        const newTag = tag === t.toLowerCase() ? '' : t.toLowerCase();
-        setTag(newTag);
-        searchStations({ query, country, language, tag: newTag });
-    };
-
-    const toggleCountry = (c) => {
-        const newCountry = country === c ? '' : c;
-        setCountry(newCountry);
-        searchStations({ query, country: newCountry, language, tag });
-    };
-
     useEffect(() => {
         if (playingStationUrl && audioRef.current) {
-            setPlaybackError(null);
             setIsBuffering(true);
-            
             const attemptPlay = (url) => {
                 if (!audioRef.current) return;
-                
                 let proxyUrl = url;
-                if (url.startsWith('https://')) {
-                    proxyUrl = 'radio-proxy://https/' + url.replace('https://', '');
-                } else if (url.startsWith('http://')) {
-                    proxyUrl = 'radio-proxy://http/' + url.replace('http://', '');
-                }
-
-                console.log('[RADIO] Playing through proxy:', proxyUrl);
+                if (url.startsWith('https://')) proxyUrl = 'radio-proxy://https/' + url.replace('https://', '');
+                else if (url.startsWith('http://')) proxyUrl = 'radio-proxy://http/' + url.replace('http://', '');
                 audioRef.current.src = proxyUrl;
                 audioRef.current.load();
-                
-                const playPromise = audioRef.current.play();
-                
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        setIsBuffering(false);
-                    }).catch(err => {
-                        console.error('Proxy playback failed:', err);
-                        setIsBuffering(false);
-                        setPlayingStation(null);
-                        toast.error(`Station unavailable: ${err.message || 'Stream error'}`);
-                    });
-                }
+                audioRef.current.play().then(() => setIsBuffering(false)).catch(() => setIsBuffering(false));
             };
-
             attemptPlay(playingStationUrl);
         } else if (audioRef.current) {
             audioRef.current.pause();
@@ -155,741 +113,169 @@ const RadioPage = () => {
     }, [playingStationUrl]);
 
     useEffect(() => {
-        if (audioRef.current) {
-            audioRef.current.volume = volume;
-        }
+        if (audioRef.current) audioRef.current.volume = volume;
     }, [volume]);
-
-    const getAudioErrorMessage = (e) => {
-        const error = e?.target?.error;
-        if (!error) return "Unknown playback error";
-        
-        console.error('[AUDIO-ERROR] Code:', error.code, 'Message:', error.message);
-        
-        switch (error.code) {
-            case 1: return "Playback aborted by the browser.";
-            case 2: return "Network error: The stream was interrupted or the server is down.";
-            case 3: return "Decoding error: This audio format/codec is not supported by the app.";
-            case 4: return "Format not supported: The stream URL might be invalid or restricted.";
-            default: return `Playback error (Code ${error.code})`;
-        }
-    };
 
     const handleSearch = (e) => {
         if (e) e.preventDefault();
-        searchStations({ query, country, language, tag });
+        searchStations({ query });
     };
 
     const handleAdd = async (station) => {
         const result = await addStation(station.url_resolved || station.url);
-        if (result.success) {
-            toast.success(`Added ${station.name} to game!`);
-        } else {
-            toast.error(result.error || 'Failed to add station');
-        }
+        if (result.success) toast.success(`Added ${station.name} to game!`);
+        else toast.error(result.error || 'Failed to add station');
     };
 
     const handleRemove = async (href) => {
         if (!confirm('Remove this station from your game?')) return;
         const result = await removeStation(href);
-        if (result.success) {
-            toast.success('Station removed');
-        }
+        if (result.success) toast.success('Station removed');
     };
 
     const handleClearAll = async () => {
-        if (!confirm('This will remove ALL custom stations. The game will revert to its internal defaults unless you add new ones. Proceed?')) return;
-        const result = await window.api.radio.remove('__ALL__');
+        if (!confirm('Remove ALL custom stations?')) return;
+        await window.api.radio.remove('__ALL__');
         fetchRadios();
         toast.success('All custom stations cleared');
-    };
-
-    const handleLoadCustomSpotify = () => {
-        const embedUrl = parseSpotifyEmbedUrl(customSpotifyInput);
-        if (!embedUrl) {
-            toast.error('Invalid Spotify link. Please paste a valid Spotify playlist, track, or album URL.');
-            return;
-        }
-        setActiveSpotifyEmbed(embedUrl);
-        toast.success('Loaded Spotify player!');
-    };
-
-    const handleSaveCustomSpotify = () => {
-        const embedUrl = parseSpotifyEmbedUrl(customSpotifyInput);
-        if (!embedUrl) {
-            toast.error('Invalid Spotify link.');
-            return;
-        }
-        const name = customSpotifyTitle.trim() || 'Custom Spotify Playlist';
-        addSpotifyFavorite({
-            name,
-            desc: 'Custom saved Spotify music',
-            embedUrl,
-            openUrl: customSpotifyInput.split('?')[0],
-            category: 'Custom'
-        });
-        setCustomSpotifyInput('');
-        setCustomSpotifyTitle('');
-        toast.success(`Saved "${name}" to Spotify favorites!`);
     };
 
     const handleOpenSpotifyApp = () => {
         try {
             if (window.api?.shell?.openExternal) {
                 window.api.shell.openExternal('spotify://');
-                toast.success('Launching Spotify Desktop App...');
-            } else {
-                window.open('https://open.spotify.com', '_blank');
-            }
-        } catch (e) {
-            window.open('https://open.spotify.com', '_blank');
-        }
+                toast.success('Opening Spotify App...');
+            } else window.open('https://open.spotify.com', '_blank');
+        } catch (e) { window.open('https://open.spotify.com', '_blank'); }
     };
 
     const handleOpenSpotifyWeb = () => {
         try {
-            if (window.api?.shell?.openExternal) {
-                window.api.shell.openExternal('https://open.spotify.com');
-            } else {
-                window.open('https://open.spotify.com', '_blank');
-            }
+            if (window.api?.shell?.openExternal) window.api.shell.openExternal('https://open.spotify.com');
+            else window.open('https://open.spotify.com', '_blank');
         } catch (e) {}
     };
 
     return (
-        <div className="page animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px', height: '100%' }}>
+        <div className="page animate-fade-in custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', overflowY: 'auto' }}>
             {/* Header Area */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ padding: '10px', background: activeTab === 'spotify' ? 'rgba(29, 185, 84, 0.15)' : 'var(--accent-dim)', color: activeTab === 'spotify' ? '#1DB954' : 'var(--accent)', borderRadius: '12px', transition: 'all 0.3s' }}>
-                            <RadioIcon size={24} />
+                        <div style={{ padding: '10px', background: 'rgba(29, 185, 84, 0.15)', color: '#1DB954', borderRadius: '12px' }}>
+                            <Disc size={24} />
                         </div>
-                        <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Radio & Spotify</h1>
+                        <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Spotify & Radio</h1>
                     </div>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '650px', margin: 0 }}>
-                        Listen to real in-game radio stations, or play Spotify music & podcasts directly in MT Mod Manager while you farm.
+                        Stream Spotify music while you farm, or add internet radio stations directly to Farming Simulator 25.
                     </p>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <button 
-                        onClick={handleOpenSpotifyApp}
-                        style={{ 
-                            padding: '10px 16px', 
-                            background: '#1DB954', 
-                            color: 'white', 
-                            border: 'none', 
-                            borderRadius: '10px', 
-                            fontWeight: '700', 
-                            fontSize: '13px', 
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            boxShadow: '0 4px 12px rgba(29, 185, 84, 0.3)'
-                        }}
-                        title="Launch Spotify Desktop App"
-                    >
-                        <Disc size={18} /> Launch Spotify App
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <button onClick={handleOpenSpotifyWeb} style={{ padding: '10px 16px', background: '#1DB954', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(29, 185, 84, 0.3)' }}>
+                        <LogIn size={16} /> Sign In / Open Spotify Web
                     </button>
-                    <button 
-                        onClick={handleOpenSpotifyWeb}
-                        style={{ 
-                            padding: '10px 14px', 
-                            background: 'var(--bg-tertiary)', 
-                            color: 'var(--text-primary)', 
-                            border: '1px solid var(--border)', 
-                            borderRadius: '10px', 
-                            fontWeight: '600', 
-                            fontSize: '13px', 
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                        }}
-                        title="Open Spotify Web Player in Browser"
-                    >
-                        <ExternalLink size={16} /> Open Web Player
+                    <button onClick={handleOpenSpotifyApp} style={{ padding: '10px 14px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: '10px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }} title="Launch installed Spotify Desktop App">
+                        <ExternalLink size={16} /> Launch Spotify App
                     </button>
                 </div>
             </div>
 
-            {/* Tabs & Search */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
-                <button 
-                    onClick={() => setActiveTab('search')}
-                    className={`tab-button ${activeTab === 'search' ? 'active' : ''}`}
-                    style={{ 
-                        padding: '8px 16px', 
-                        borderRadius: '8px', 
-                        border: 'none', 
-                        background: activeTab === 'search' ? 'var(--accent)' : 'transparent',
-                        color: activeTab === 'search' ? 'white' : 'var(--text-secondary)',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    Discover Stations
-                </button>
+            {/* Spotify Embedded Player Section */}
+            <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(29, 185, 84, 0.3)', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Disc size={20} style={{ color: '#1DB954' }} />
+                        <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>Spotify Player & Account</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {SPOTIFY_PRESETS.map((preset, idx) => (
+                            <button key={idx} onClick={() => { setActiveSpotifyEmbed(preset.embedUrl); toast.success(`Playing ${preset.name}`); }} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', background: activeSpotifyEmbed === preset.embedUrl ? '#1DB954' : 'var(--bg-tertiary)', color: activeSpotifyEmbed === preset.embedUrl ? 'white' : 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer' }}>
+                                {preset.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <iframe src={activeSpotifyEmbed || 'https://open.spotify.com/embed/playlist/37i9dQZF1DX1lVhivE98y9'} width="100%" height="152" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style={{ borderRadius: '12px', border: 'none' }} />
+            </div>
 
-                <button 
-                    onClick={() => setActiveTab('mine')}
-                    className={`tab-button ${activeTab === 'mine' ? 'active' : ''}`}
-                    style={{ 
-                        padding: '8px 16px', 
-                        borderRadius: '8px', 
-                        border: 'none', 
-                        background: activeTab === 'mine' ? 'var(--accent)' : 'transparent',
-                        color: activeTab === 'mine' ? 'white' : 'var(--text-secondary)',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    In-Game Stations ({stations.length})
-                </button>
+            {/* In-Game Radio Section */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <RadioIcon size={20} style={{ color: 'var(--accent)' }} />
+                        <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>In-Game Internet Radio</h2>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => setViewMode('search')} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: viewMode === 'search' ? 'var(--accent)' : 'var(--bg-tertiary)', color: viewMode === 'search' ? 'white' : 'var(--text-secondary)', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Find Stations</button>
+                        <button onClick={() => setViewMode('mine')} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: viewMode === 'mine' ? 'var(--accent)' : 'var(--bg-tertiary)', color: viewMode === 'mine' ? 'white' : 'var(--text-secondary)', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Added to FS25 ({stations.length})</button>
+                    </div>
+                </div>
 
-                <button 
-                    onClick={() => setActiveTab('spotify')}
-                    className={`tab-button ${activeTab === 'spotify' ? 'active' : ''}`}
-                    style={{ 
-                        padding: '8px 16px', 
-                        borderRadius: '8px', 
-                        border: activeTab === 'spotify' ? '1px solid #1DB954' : '1px solid transparent', 
-                        background: activeTab === 'spotify' ? '#1DB954' : 'rgba(29, 185, 84, 0.1)',
-                        color: activeTab === 'spotify' ? 'white' : '#1DB954',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    <Disc size={16} /> Spotify Radio
-                </button>
-
-                <div style={{ flex: 1 }} />
-
-                {activeTab === 'search' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                            <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+                {viewMode === 'search' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
                                 <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} size={16} />
-                                <input 
-                                    type="text"
-                                    placeholder="Search stations by name..."
-                                    value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                    style={{
-                                        width: '100%',
-                                        padding: '10px 12px 10px 36px',
-                                        background: 'var(--bg-tertiary)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '10px',
-                                        color: 'var(--text-primary)',
-                                        outline: 'none',
-                                        fontSize: '13px'
-                                    }}
-                                />
+                                <input type="text" placeholder="Search stations by name..." value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} style={{ width: '100%', padding: '10px 12px 10px 36px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px' }} />
                             </div>
-                            
-                            <button 
-                                onClick={handleSearch}
-                                style={{ padding: '10px 24px', background: 'var(--accent)', color: 'white', borderRadius: '10px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}
-                            >
-                                Search
-                            </button>
-
-                            <button 
-                                onClick={() => {
-                                    setQuery(''); setTag(''); setCountry(''); setLanguage('');
-                                    searchStations({ order: 'votes' });
-                                }}
-                                style={{ padding: '10px 16px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', borderRadius: '10px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', border: '1px solid var(--border)' }}
-                            >
-                                Reset Filters
-                            </button>
-
+                            <button onClick={handleSearch} style={{ padding: '10px 20px', background: 'var(--accent)', color: 'white', borderRadius: '10px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', border: 'none' }}>Search</button>
                             {playingStationUrl && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--accent-dim)', padding: '6px 16px', borderRadius: '10px', marginLeft: 'auto' }}>
                                     <Volume2 size={16} style={{ color: 'var(--accent)' }} />
-                                    <input 
-                                        type="range" 
-                                        min="0" 
-                                        max="1" 
-                                        step="0.05" 
-                                        value={volume} 
-                                        onChange={(e) => setVolume(parseFloat(e.target.value))}
-                                        style={{ width: '80px', accentColor: 'var(--accent)', cursor: 'pointer' }}
-                                    />
+                                    <input type="range" min="0" max="1" step="0.05" value={volume} onChange={(e) => setVolume(parseFloat(e.target.value))} style={{ width: '80px', accentColor: 'var(--accent)', cursor: 'pointer' }} />
                                     <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--accent)', minWidth: '35px' }}>{Math.round(volume * 100)}%</span>
                                 </div>
                             )}
                         </div>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', color: 'var(--accent)', marginRight: '8px', fontWeight: '700' }}>Official Game Presets:</span>
-                            {OFFICIAL_PRESETS.map(p => {
-                                const isAdded = stations.some(s => s.href === p.url);
-                                return (
-                                    <button 
-                                        key={p.name}
-                                        onClick={() => handleAdd(p)}
-                                        disabled={isAdded}
-                                        style={{ 
-                                            padding: '6px 12px', 
-                                            borderRadius: '20px', 
-                                            fontSize: '11px', 
-                                            fontWeight: '700',
-                                            background: isAdded ? 'var(--bg-tertiary)' : 'var(--accent-dim)',
-                                            color: isAdded ? 'var(--text-tertiary)' : 'var(--accent)',
-                                            border: '1px solid var(--accent-dim)',
-                                            cursor: isAdded ? 'default' : 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '6px'
-                                        }}
-                                    >
-                                        {isAdded ? <Check size={12} /> : <Plus size={12} />} {p.name}
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginRight: '8px', fontWeight: '600' }}>Genres:</span>
-                            {PRESET_TAGS.map(t => (
-                                <button 
-                                    key={t}
-                                    onClick={() => toggleTag(t)}
-                                    style={{ 
-                                        padding: '6px 12px', 
-                                        borderRadius: '20px', 
-                                        fontSize: '12px', 
-                                        fontWeight: '600',
-                                        background: tag === t.toLowerCase() ? 'var(--accent)' : 'var(--bg-tertiary)',
-                                        color: tag === t.toLowerCase() ? 'white' : 'var(--text-secondary)',
-                                        border: tag === t.toLowerCase() ? '1px solid var(--accent)' : '1px solid var(--border)',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {t}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginRight: '8px', fontWeight: '600' }}>Countries:</span>
-                            {PRESET_COUNTRIES.map(c => (
-                                <button 
-                                    key={c.code}
-                                    onClick={() => toggleCountry(c.code)}
-                                    style={{ 
-                                        padding: '6px 12px', 
-                                        borderRadius: '20px', 
-                                        fontSize: '12px', 
-                                        fontWeight: '600',
-                                        background: country === c.code ? 'var(--accent)' : 'var(--bg-tertiary)',
-                                        color: country === c.code ? 'white' : 'var(--text-secondary)',
-                                        border: country === c.code ? '1px solid var(--accent)' : '1px solid var(--border)',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {c.name}
-                                </button>
-                            ))}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                            {isSearching ? (
+                                <div style={{ gridColumn: '1/-1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+                                    <RefreshCw className="animate-spin" size={28} style={{ marginBottom: '12px' }} />
+                                    <span>Searching radio stations...</span>
+                                </div>
+                            ) : searchResults.length > 0 ? (
+                                searchResults.map((station) => {
+                                    const resolvedUrl = station.url_resolved || station.url;
+                                    const normalizedUrl = resolvedUrl.replace('https://', 'http://');
+                                    const isAdded = stations.some(s => s.href.replace('https://', 'http://') === normalizedUrl);
+                                    return (
+                                        <StationCard key={station.stationuuid} station={station} isAdded={isAdded} isPlaying={playingStationUrl === resolvedUrl} isBuffering={isBuffering && playingStationUrl === resolvedUrl} onPreview={() => setPlayingStation(playingStationUrl === resolvedUrl ? null : resolvedUrl)} onAdd={() => handleAdd(station)} />
+                                    );
+                                })
+                            ) : (
+                                <div style={{ gridColumn: '1/-1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', color: 'var(--text-secondary)', background: 'var(--bg-card)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
+                                    <Globe size={40} style={{ marginBottom: '12px', opacity: 0.3 }} />
+                                    <h3 style={{ margin: '0 0 4px 0', color: 'var(--text-primary)' }}>Find Radio Stations</h3>
+                                    <p style={{ margin: 0, textAlign: 'center' }}>Type a station name or genre to search.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
-                )}
-            </div>
-
-            {/* Content Area */}
-            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }} className="custom-scrollbar">
-                {activeTab === 'search' ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-                        {isSearching ? (
-                            <div style={{ gridColumn: '1/-1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
-                                <RefreshCw className="animate-spin" size={32} style={{ marginBottom: '16px' }} />
-                                <span>Scanning the airwaves...</span>
-                            </div>
-                        ) : searchResults.length > 0 ? (
-                            searchResults.map((station) => {
-                                const resolvedUrl = station.url_resolved || station.url;
-                                const normalizedUrl = resolvedUrl.replace('https://', 'http://');
-                                const isAdded = stations.some(s => s.href.replace('https://', 'http://') === normalizedUrl);
-
-                                return (
-                                    <StationCard 
-                                        key={station.stationuuid} 
-                                        station={station} 
-                                        isAdded={isAdded}
-                                        isPlaying={playingStationUrl === resolvedUrl}
-                                        isBuffering={isBuffering && playingStationUrl === resolvedUrl}
-                                        onPreview={() => setPlayingStation(playingStationUrl === resolvedUrl ? null : resolvedUrl)}
-                                        onAdd={() => handleAdd(station)} 
-                                    />
-                                );
-                            })
-                        ) : (
-                            <div style={{ gridColumn: '1/-1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px', color: 'var(--text-secondary)', background: 'var(--bg-card)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
-                                <Globe size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
-                                <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Find New Radio Stations</h3>
-                                <p style={{ margin: 0, textAlign: 'center', maxWidth: '300px' }}>Type a station name or genre (like "Rock", "Country", or "BBC") to get started.</p>
-                            </div>
-                        )}
-                    </div>
-                ) : activeTab === 'mine' ? (
+                ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {stations.length > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
-                                <button 
-                                    onClick={handleClearAll}
-                                    className="btn btn--danger btn--sm"
-                                    style={{ padding: '6px 12px', fontSize: '12px' }}
-                                >
-                                    <Trash2 size={14} /> Clear All Custom Stations
-                                </button>
+                                <button onClick={handleClearAll} className="btn btn--danger btn--sm" style={{ padding: '6px 12px', fontSize: '12px' }}><Trash2 size={14} /> Clear All</button>
                             </div>
                         )}
                         {stations.length > 0 ? (
                             stations.map((station, idx) => (
-                                <div key={idx} style={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '16px', 
-                                    padding: '16px', 
-                                    background: 'var(--bg-card)', 
-                                    borderRadius: '12px', 
-                                    border: '1px solid var(--border)',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                                }}>
-                                    <div style={{ width: '40px', height: '40px', background: 'var(--accent-dim)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
-                                        <Music size={20} />
-                                    </div>
+                                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                    <div style={{ width: '40px', height: '40px', background: 'var(--accent-dim)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}><Music size={20} /></div>
                                     <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '2px', wordBreak: 'break-all' }}>
-                                            {station.href}
-                                        </div>
+                                        <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', wordBreak: 'break-all' }}>{station.href}</div>
                                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Internet Stream</div>
                                     </div>
-                                    <button 
-                                        onClick={() => handleRemove(station.href)}
-                                        style={{ 
-                                            padding: '8px', 
-                                            background: 'rgba(239, 68, 68, 0.1)', 
-                                            color: '#ef4444', 
-                                            border: 'none', 
-                                            borderRadius: '8px', 
-                                            cursor: 'pointer' 
-                                        }}
-                                        title="Remove from Game"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
+                                    <button onClick={() => handleRemove(station.href)} style={{ padding: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><Trash2 size={18} /></button>
                                 </div>
                             ))
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px', color: 'var(--text-secondary)', background: 'var(--bg-card)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
-                                <AlertCircle size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
-                                <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>No Custom Stations Yet</h3>
-                                <p style={{ margin: 0 }}>Use the "Discover" tab to add some music to your farm!</p>
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    /* Spotify Radio Tab */
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        {/* Info Note Banner */}
-                        <div style={{ 
-                            padding: '14px 18px', 
-                            borderRadius: '12px', 
-                            background: 'rgba(29, 185, 84, 0.08)', 
-                            border: '1px solid rgba(29, 185, 84, 0.25)', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '12px' 
-                        }}>
-                            <Disc size={22} style={{ color: '#1DB954', flexShrink: 0 }} />
-                            <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: '1.4' }}>
-                                <strong>Spotify Background Player:</strong> Listen to Spotify playlists, albums, and tracks while managing your mods or playing FS25.
-                                <span style={{ color: 'var(--text-secondary)', marginLeft: '6px' }}>
-                                    (Spotify DRM audio plays directly inside MT Mod Manager's embedded player).
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Custom Spotify Link Box */}
-                        <div style={{ 
-                            background: 'var(--bg-card)', 
-                            borderRadius: '16px', 
-                            padding: '18px', 
-                            border: '1px solid var(--border)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '12px'
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                <LinkIcon size={16} style={{ color: '#1DB954' }} /> Load Any Spotify Playlist, Album, or Track
-                            </div>
-                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                <input 
-                                    type="text" 
-                                    placeholder="Paste Spotify Link or URI (e.g. https://open.spotify.com/playlist/...)"
-                                    value={customSpotifyInput}
-                                    onChange={(e) => setCustomSpotifyInput(e.target.value)}
-                                    style={{
-                                        flex: 2,
-                                        minWidth: '260px',
-                                        padding: '10px 14px',
-                                        background: 'var(--bg-tertiary)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '8px',
-                                        color: 'var(--text-primary)',
-                                        fontSize: '13px',
-                                        outline: 'none'
-                                    }}
-                                />
-                                <input 
-                                    type="text" 
-                                    placeholder="Title (Optional)"
-                                    value={customSpotifyTitle}
-                                    onChange={(e) => setCustomSpotifyTitle(e.target.value)}
-                                    style={{
-                                        flex: 1,
-                                        minWidth: '140px',
-                                        padding: '10px 14px',
-                                        background: 'var(--bg-tertiary)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '8px',
-                                        color: 'var(--text-primary)',
-                                        fontSize: '13px',
-                                        outline: 'none'
-                                    }}
-                                />
-                                <button 
-                                    onClick={handleLoadCustomSpotify}
-                                    style={{ 
-                                        padding: '10px 18px', 
-                                        background: '#1DB954', 
-                                        color: 'white', 
-                                        border: 'none', 
-                                        borderRadius: '8px', 
-                                        fontWeight: '700', 
-                                        fontSize: '13px', 
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px'
-                                    }}
-                                >
-                                    <Play size={14} /> Play Now
-                                </button>
-                                <button 
-                                    onClick={handleSaveCustomSpotify}
-                                    style={{ 
-                                        padding: '10px 18px', 
-                                        background: 'var(--bg-tertiary)', 
-                                        color: 'var(--text-primary)', 
-                                        border: '1px solid var(--border)', 
-                                        borderRadius: '8px', 
-                                        fontWeight: '600', 
-                                        fontSize: '13px', 
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px'
-                                    }}
-                                >
-                                    <Heart size={14} style={{ color: '#1DB954' }} /> Save Favorite
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Active Embedded Player */}
-                        {activeSpotifyEmbed && (
-                            <div style={{ 
-                                background: 'var(--bg-card)', 
-                                borderRadius: '16px', 
-                                padding: '16px', 
-                                border: '1px solid rgba(29, 185, 84, 0.3)',
-                                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '12px'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '700', color: '#1DB954' }}>
-                                        <Sparkles size={16} /> Currently Active Spotify Player
-                                    </div>
-                                    <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Sign in on Spotify iframe for full playback</span>
-                                </div>
-                                <iframe 
-                                    src={activeSpotifyEmbed} 
-                                    width="100%" 
-                                    height="352" 
-                                    frameBorder="0" 
-                                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-                                    loading="lazy" 
-                                    style={{ borderRadius: '12px', border: 'none' }}
-                                />
-                            </div>
-                        )}
-
-                        {/* Curated Spotify Presets */}
-                        <div>
-                            <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '0 0 12px 0', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Sparkles size={18} style={{ color: '#1DB954' }} /> Curated Farming Radio Presets
-                            </h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
-                                {SPOTIFY_PRESETS.map((preset, idx) => {
-                                    const isActive = activeSpotifyEmbed === preset.embedUrl;
-                                    return (
-                                        <div key={idx} style={{ 
-                                            background: 'var(--bg-card)', 
-                                            borderRadius: '14px', 
-                                            padding: '16px', 
-                                            border: isActive ? '1px solid #1DB954' : '1px solid var(--border)',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'space-between',
-                                            gap: '12px',
-                                            boxShadow: isActive ? '0 0 16px rgba(29, 185, 84, 0.2)' : '0 2px 8px rgba(0,0,0,0.1)'
-                                        }}>
-                                            <div>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                    <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', color: '#1DB954', letterSpacing: '0.5px' }}>{preset.category}</span>
-                                                    {isActive && <span style={{ fontSize: '11px', fontWeight: '700', color: '#1DB954', display: 'flex', alignItems: 'center', gap: '4px' }}><Check size={12} /> Playing</span>}
-                                                </div>
-                                                <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>{preset.name}</h4>
-                                                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{preset.desc}</p>
-                                            </div>
-
-                                            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
-                                                <button 
-                                                    onClick={() => {
-                                                        setActiveSpotifyEmbed(preset.embedUrl);
-                                                        toast.success(`Playing ${preset.name}`);
-                                                    }}
-                                                    style={{ 
-                                                        flex: 1, 
-                                                        padding: '8px 12px', 
-                                                        borderRadius: '8px', 
-                                                        border: 'none', 
-                                                        background: isActive ? '#1DB954' : 'var(--accent-dim)', 
-                                                        color: isActive ? 'white' : 'var(--accent)', 
-                                                        fontWeight: '700', 
-                                                        fontSize: '12px', 
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        gap: '6px'
-                                                    }}
-                                                >
-                                                    <Play size={14} /> {isActive ? 'Active' : 'Play'}
-                                                </button>
-                                                <a 
-                                                    href={preset.openUrl} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer"
-                                                    style={{ 
-                                                        padding: '8px', 
-                                                        borderRadius: '8px', 
-                                                        background: 'var(--bg-tertiary)', 
-                                                        color: 'var(--text-secondary)', 
-                                                        display: 'flex', 
-                                                        alignItems: 'center', 
-                                                        justifyContent: 'center' 
-                                                    }}
-                                                    title="Open in Spotify"
-                                                >
-                                                    <ExternalLink size={16} />
-                                                </a>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Saved Favorites Grid */}
-                        {spotifyFavorites.length > 0 && (
-                            <div>
-                                <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '12px 0 12px 0', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Heart size={18} style={{ color: '#1DB954' }} /> Saved Spotify Favorites
-                                </h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
-                                    {spotifyFavorites.map((fav, idx) => {
-                                        const isActive = activeSpotifyEmbed === fav.embedUrl;
-                                        return (
-                                            <div key={idx} style={{ 
-                                                background: 'var(--bg-card)', 
-                                                borderRadius: '14px', 
-                                                padding: '16px', 
-                                                border: isActive ? '1px solid #1DB954' : '1px solid var(--border)',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                gap: '10px'
-                                            }}>
-                                                <div>
-                                                    <h4 style={{ margin: '0 0 2px 0', fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>{fav.name}</h4>
-                                                    <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)' }}>{fav.desc || 'Custom saved playlist'}</p>
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
-                                                    <button 
-                                                        onClick={() => {
-                                                            setActiveSpotifyEmbed(fav.embedUrl);
-                                                            toast.success(`Playing ${fav.name}`);
-                                                        }}
-                                                        style={{ 
-                                                            flex: 1, 
-                                                            padding: '8px 12px', 
-                                                            borderRadius: '8px', 
-                                                            border: 'none', 
-                                                            background: '#1DB954', 
-                                                            color: 'white', 
-                                                            fontWeight: '700', 
-                                                            fontSize: '12px', 
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            gap: '6px'
-                                                        }}
-                                                    >
-                                                        <Play size={14} /> Play
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => {
-                                                            removeSpotifyFavorite(fav.embedUrl);
-                                                            toast.success('Favorite removed');
-                                                        }}
-                                                        style={{ 
-                                                            padding: '8px', 
-                                                            borderRadius: '8px', 
-                                                            background: 'rgba(239, 68, 68, 0.1)', 
-                                                            color: '#ef4444', 
-                                                            border: 'none', 
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center'
-                                                        }}
-                                                        title="Remove Favorite"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', color: 'var(--text-secondary)', background: 'var(--bg-card)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
+                                <AlertCircle size={40} style={{ marginBottom: '12px', opacity: 0.3 }} />
+                                <h3 style={{ margin: '0 0 4px 0', color: 'var(--text-primary)' }}>No Custom Stations Yet</h3>
+                                <p style={{ margin: 0 }}>Search for stations to add them to your game.</p>
                             </div>
                         )}
                     </div>
