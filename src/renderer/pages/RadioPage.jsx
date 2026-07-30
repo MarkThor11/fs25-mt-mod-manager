@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Radio as RadioIcon, ExternalLink, Music, Globe, Heart, Check, Play, Pause, Volume2, Info, AlertCircle, RefreshCw, Disc, Link as LinkIcon, Sparkles } from 'lucide-react';
+import { Search, Plus, Trash2, Radio as RadioIcon, ExternalLink, Music, Globe, Check, Volume2, AlertCircle, RefreshCw, Disc, LogIn, Play, Pause } from 'lucide-react';
 import { useRadioStore } from '../store/useRadioStore';
 import { useToastStore } from '../store/useToastStore';
 
@@ -17,65 +17,20 @@ const OFFICIAL_PRESETS = [
     { name: 'Farming Simulator Radio', url: 'http://217.151.151.144:8001/stream', tags: 'Official, Country, Folk', language: 'English', country: 'Germany' },
 ];
 
-const SPOTIFY_PRESETS = [
-    {
-        name: 'Country Farming Hits',
-        desc: 'Upbeat country classics and modern hits for working the fields',
-        embedUrl: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX1lVhivE98y9',
-        openUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX1lVhivE98y9',
-        category: 'Country'
-    },
-    {
-        name: 'Farming Chill & Acoustic',
-        desc: 'Relaxing acoustic tunes for harvesting and livestock care',
-        embedUrl: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0SM0LYsmbMT',
-        openUrl: 'https://open.spotify.com/playlist/37i9dQZF1DX0SM0LYsmbMT',
-        category: 'Acoustic'
-    },
-    {
-        name: 'Classic Trucker Rock',
-        desc: 'High energy classic rock for long hauls and heavy transport',
-        embedUrl: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWWEc0B1Y7seG',
-        openUrl: 'https://open.spotify.com/playlist/37i9dQZF1DWWEc0B1Y7seG',
-        category: 'Rock'
-    },
-    {
-        name: 'Lofi Beats for Farming',
-        desc: 'Cozy, chill instrumental lofi beats for night shifts',
-        embedUrl: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM',
-        openUrl: 'https://open.spotify.com/playlist/37i9dQZF1DXdLEN7aqioXM',
-        category: 'Lofi'
-    }
-];
-
-const parseSpotifyEmbedUrl = (input) => {
-    if (!input) return null;
-    let str = input.trim();
-    if (str.startsWith('spotify:')) {
-        const parts = str.split(':');
-        if (parts.length >= 3) {
-            return `https://open.spotify.com/embed/${parts[1]}/${parts[2]}`;
-        }
-    }
-    if (str.includes('open.spotify.com/')) {
-        const urlWithoutQuery = str.split('?')[0];
-        if (urlWithoutQuery.includes('/embed/')) return urlWithoutQuery;
-        return urlWithoutQuery.replace('open.spotify.com/', 'open.spotify.com/embed/');
-    }
-    return null;
-};
+const SPOTIFY_STATION_URL = 'http://localhost:8000/spotify_stream';
 
 const RadioPage = () => {
     const { 
         stations, searchResults, isSearching, 
         fetchRadios, searchStations, addStation, removeStation,
-        playingStationUrl, setPlayingStation,
-        activeSpotifyEmbed, setActiveSpotifyEmbed
+        playingStationUrl, setPlayingStation
     } = useRadioStore();
     const { toast } = useToastStore();
     
     const [query, setQuery] = useState('');
-    const [viewMode, setViewMode] = useState('search'); 
+    const [country, setCountry] = useState('');
+    const [tag, setTag] = useState('');
+    const [viewMode, setViewMode] = useState('search'); // 'search' or 'mine'
     const [isBuffering, setIsBuffering] = useState(false);
     const [volume, setVolume] = useState(0.8);
 
@@ -91,6 +46,20 @@ const RadioPage = () => {
             }
         };
     }, []);
+
+    const isSpotifyAdded = stations.some(s => s.href === SPOTIFY_STATION_URL || s.href.toLowerCase().includes('spotify'));
+
+    const toggleTag = (t) => {
+        const newTag = tag === t.toLowerCase() ? '' : t.toLowerCase();
+        setTag(newTag);
+        searchStations({ query, country, tag: newTag });
+    };
+
+    const toggleCountry = (c) => {
+        const newCountry = country === c ? '' : c;
+        setCountry(newCountry);
+        searchStations({ query, country: newCountry, tag });
+    };
 
     useEffect(() => {
         if (playingStationUrl && audioRef.current) {
@@ -118,23 +87,36 @@ const RadioPage = () => {
 
     const handleSearch = (e) => {
         if (e) e.preventDefault();
-        searchStations({ query });
+        searchStations({ query, country, tag });
     };
 
     const handleAdd = async (station) => {
-        const result = await addStation(station.url_resolved || station.url);
-        if (result.success) toast.success(`Added ${station.name} to game!`);
+        const result = await addStation(station.url_resolved || station.url || station.href);
+        if (result.success) toast.success(`Added ${station.name || 'Station'} to game!`);
         else toast.error(result.error || 'Failed to add station');
+    };
+
+    const handleAddSpotifyStation = async () => {
+        const result = await addStation(SPOTIFY_STATION_URL);
+        if (result.success) {
+            toast.success('Spotify Radio channel added to FS25 in-game radios!');
+            fetchRadios();
+        } else {
+            toast.error(result.error || 'Failed to add Spotify station');
+        }
     };
 
     const handleRemove = async (href) => {
         if (!confirm('Remove this station from your game?')) return;
         const result = await removeStation(href);
-        if (result.success) toast.success('Station removed');
+        if (result.success) {
+            fetchRadios();
+            toast.success('Station removed');
+        }
     };
 
     const handleClearAll = async () => {
-        if (!confirm('Remove ALL custom stations?')) return;
+        if (!confirm('Remove ALL custom stations from FS25?')) return;
         await window.api.radio.remove('__ALL__');
         fetchRadios();
         toast.success('All custom stations cleared');
@@ -162,42 +144,130 @@ const RadioPage = () => {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ padding: '10px', background: 'rgba(29, 185, 84, 0.15)', color: '#1DB954', borderRadius: '12px' }}>
-                            <Disc size={24} />
+                        <div style={{ padding: '10px', background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: '12px' }}>
+                            <RadioIcon size={24} />
                         </div>
-                        <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Spotify & Radio</h1>
+                        <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Radio Stations & Spotify</h1>
                     </div>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '650px', margin: 0 }}>
-                        Stream Spotify music while you farm, or add internet radio stations directly to Farming Simulator 25.
+                        Manage in-game radio channels for Farming Simulator 25 and link your external Spotify app.
                     </p>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    <button onClick={handleOpenSpotifyWeb} style={{ padding: '10px 16px', background: '#1DB954', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(29, 185, 84, 0.3)' }}>
-                        <LogIn size={16} /> Sign In / Open Spotify Web
+                    <button 
+                        onClick={handleOpenSpotifyApp} 
+                        style={{ 
+                            padding: '10px 18px', 
+                            background: '#1DB954', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '10px', 
+                            fontWeight: '700', 
+                            fontSize: '13px', 
+                            cursor: 'pointer', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px', 
+                            boxShadow: '0 4px 14px rgba(29, 185, 84, 0.3)' 
+                        }} 
+                        title="Open external Spotify Desktop App"
+                    >
+                        <Disc size={18} /> Launch Spotify App
                     </button>
-                    <button onClick={handleOpenSpotifyApp} style={{ padding: '10px 14px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: '10px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }} title="Launch installed Spotify Desktop App">
-                        <ExternalLink size={16} /> Launch Spotify App
+                    <button 
+                        onClick={handleOpenSpotifyWeb} 
+                        style={{ 
+                            padding: '10px 14px', 
+                            background: 'var(--bg-tertiary)', 
+                            color: 'var(--text-primary)', 
+                            border: '1px solid var(--border)', 
+                            borderRadius: '10px', 
+                            fontWeight: '600', 
+                            fontSize: '13px', 
+                            cursor: 'pointer', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '6px' 
+                        }} 
+                        title="Open Spotify Web in Browser"
+                    >
+                        <LogIn size={16} /> Open Spotify Web
                     </button>
                 </div>
             </div>
 
-            {/* Spotify Embedded Player Section */}
-            <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(29, 185, 84, 0.3)', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Disc size={20} style={{ color: '#1DB954' }} />
-                        <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>Spotify Player & Account</span>
+            {/* Spotify In-Game Channel Card */}
+            <div style={{ 
+                background: 'var(--bg-card)', 
+                borderRadius: '16px', 
+                padding: '20px', 
+                border: '1px solid rgba(29, 185, 84, 0.35)', 
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '16px'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(29, 185, 84, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1DB954', flexShrink: 0 }}>
+                        <Disc size={28} />
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        {SPOTIFY_PRESETS.map((preset, idx) => (
-                            <button key={idx} onClick={() => { setActiveSpotifyEmbed(preset.embedUrl); toast.success(`Playing ${preset.name}`); }} style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', background: activeSpotifyEmbed === preset.embedUrl ? '#1DB954' : 'var(--bg-tertiary)', color: activeSpotifyEmbed === preset.embedUrl ? 'white' : 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer' }}>
-                                {preset.name}
-                            </button>
-                        ))}
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Spotify In-Game Radio Channel</h3>
+                            <span style={{ padding: '2px 8px', borderRadius: '10px', background: 'rgba(29, 185, 84, 0.2)', color: '#1DB954', fontSize: '11px', fontWeight: '700' }}>FS25 Integration</span>
+                        </div>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                            Adds a dedicated Spotify station channel to your in-game FS25 radio list so you can operate Spotify externally.
+                        </p>
                     </div>
                 </div>
-                <iframe src={activeSpotifyEmbed || 'https://open.spotify.com/embed/playlist/37i9dQZF1DX1lVhivE98y9'} width="100%" height="152" frameBorder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style={{ borderRadius: '12px', border: 'none' }} />
+
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <button 
+                        onClick={handleAddSpotifyStation}
+                        disabled={isSpotifyAdded}
+                        style={{ 
+                            padding: '10px 18px', 
+                            borderRadius: '10px', 
+                            border: 'none', 
+                            background: isSpotifyAdded ? 'var(--bg-tertiary)' : '#1DB954',
+                            color: isSpotifyAdded ? 'var(--text-secondary)' : 'white',
+                            fontWeight: '700',
+                            fontSize: '13px',
+                            cursor: isSpotifyAdded ? 'default' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}
+                    >
+                        {isSpotifyAdded ? (
+                            <><Check size={16} /> Added to FS25 Radio</>
+                        ) : (
+                            <><Plus size={16} /> Add Spotify Channel to FS25</>
+                        )}
+                    </button>
+                    <button 
+                        onClick={handleOpenSpotifyApp}
+                        style={{ 
+                            padding: '10px 14px', 
+                            borderRadius: '10px', 
+                            border: '1px solid var(--border)', 
+                            background: 'var(--bg-tertiary)', 
+                            color: 'var(--text-primary)', 
+                            fontWeight: '600', 
+                            fontSize: '13px', 
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}
+                    >
+                        <ExternalLink size={16} /> Open External App
+                    </button>
+                </div>
             </div>
 
             {/* In-Game Radio Section */}
@@ -205,11 +275,11 @@ const RadioPage = () => {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <RadioIcon size={20} style={{ color: 'var(--accent)' }} />
-                        <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>In-Game Internet Radio</h2>
+                        <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>FS25 Internet Radio Stations</h2>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={() => setViewMode('search')} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: viewMode === 'search' ? 'var(--accent)' : 'var(--bg-tertiary)', color: viewMode === 'search' ? 'white' : 'var(--text-secondary)', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Find Stations</button>
-                        <button onClick={() => setViewMode('mine')} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: viewMode === 'mine' ? 'var(--accent)' : 'var(--bg-tertiary)', color: viewMode === 'mine' ? 'white' : 'var(--text-secondary)', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Added to FS25 ({stations.length})</button>
+                        <button onClick={() => setViewMode('search')} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: viewMode === 'search' ? 'var(--accent)' : 'var(--bg-tertiary)', color: viewMode === 'search' ? 'white' : 'var(--text-secondary)', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Discover Stations</button>
+                        <button onClick={() => setViewMode('mine')} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: viewMode === 'mine' ? 'var(--accent)' : 'var(--bg-tertiary)', color: viewMode === 'mine' ? 'white' : 'var(--text-secondary)', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>In-Game Stations ({stations.length})</button>
                     </div>
                 </div>
 
@@ -229,6 +299,59 @@ const RadioPage = () => {
                                 </div>
                             )}
                         </div>
+
+                        {/* Presets */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--accent)', marginRight: '8px', fontWeight: '700' }}>Official Game Presets:</span>
+                            {OFFICIAL_PRESETS.map(p => {
+                                const isAdded = stations.some(s => s.href === p.url);
+                                return (
+                                    <button 
+                                        key={p.name}
+                                        onClick={() => handleAdd(p)}
+                                        disabled={isAdded}
+                                        style={{ 
+                                            padding: '6px 12px', 
+                                            borderRadius: '20px', 
+                                            fontSize: '11px', 
+                                            fontWeight: '700',
+                                            background: isAdded ? 'var(--bg-tertiary)' : 'var(--accent-dim)',
+                                            color: isAdded ? 'var(--text-tertiary)' : 'var(--accent)',
+                                            border: '1px solid var(--accent-dim)',
+                                            cursor: isAdded ? 'default' : 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px'
+                                        }}
+                                    >
+                                        {isAdded ? <Check size={12} /> : <Plus size={12} />} {p.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginRight: '8px', fontWeight: '600' }}>Genres:</span>
+                            {PRESET_TAGS.map(t => (
+                                <button 
+                                    key={t}
+                                    onClick={() => toggleTag(t)}
+                                    style={{ 
+                                        padding: '6px 12px', 
+                                        borderRadius: '20px', 
+                                        fontSize: '12px', 
+                                        fontWeight: '600',
+                                        background: tag === t.toLowerCase() ? 'var(--accent)' : 'var(--bg-tertiary)',
+                                        color: tag === t.toLowerCase() ? 'white' : 'var(--text-secondary)',
+                                        border: tag === t.toLowerCase() ? '1px solid var(--accent)' : '1px solid var(--border)',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {t}
+                                </button>
+                            ))}
+                        </div>
+
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
                             {isSearching ? (
                                 <div style={{ gridColumn: '1/-1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
@@ -261,16 +384,33 @@ const RadioPage = () => {
                             </div>
                         )}
                         {stations.length > 0 ? (
-                            stations.map((station, idx) => (
-                                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                                    <div style={{ width: '40px', height: '40px', background: 'var(--accent-dim)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}><Music size={20} /></div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', wordBreak: 'break-all' }}>{station.href}</div>
-                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Internet Stream</div>
+                            stations.map((station, idx) => {
+                                const isSpotify = station.href === SPOTIFY_STATION_URL || station.href.toLowerCase().includes('spotify');
+                                return (
+                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--bg-card)', borderRadius: '12px', border: isSpotify ? '1px solid #1DB954' : '1px solid var(--border)' }}>
+                                        <div style={{ width: '40px', height: '40px', background: isSpotify ? 'rgba(29, 185, 84, 0.15)' : 'var(--accent-dim)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isSpotify ? '#1DB954' : 'var(--accent)' }}>
+                                            {isSpotify ? <Disc size={20} /> : <Music size={20} />}
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', wordBreak: 'break-all' }}>
+                                                {isSpotify ? 'Spotify Radio Channel (External App Link)' : station.href}
+                                            </div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                {isSpotify ? 'Linked to external Spotify App' : 'Internet Stream'}
+                                            </div>
+                                        </div>
+                                        {isSpotify && (
+                                            <button 
+                                                onClick={handleOpenSpotifyApp}
+                                                style={{ padding: '8px 14px', background: '#1DB954', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                            >
+                                                <ExternalLink size={14} /> Open Spotify
+                                            </button>
+                                        )}
+                                        <button onClick={() => handleRemove(station.href)} style={{ padding: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', cursor: 'pointer' }} title="Remove from Game"><Trash2 size={18} /></button>
                                     </div>
-                                    <button onClick={() => handleRemove(station.href)} style={{ padding: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><Trash2 size={18} /></button>
-                                </div>
-                            ))
+                                );
+                            })
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', color: 'var(--text-secondary)', background: 'var(--bg-card)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
                                 <AlertCircle size={40} style={{ marginBottom: '12px', opacity: 0.3 }} />
@@ -282,19 +422,10 @@ const RadioPage = () => {
                 )}
             </div>
 
-            {/* Hidden Audio Element */}
             <audio 
                 ref={audioRef} 
                 onEnded={() => setPlayingStation(null)}
-                onError={(e) => {
-                    const code = audioRef.current?.error?.code;
-                    const message = getAudioErrorMessage(code);
-                    console.error('Audio Native Error:', code, message);
-                    if (playingStationUrl) {
-                        toast.error(`Playback Error: ${message}`);
-                        setPlayingStation(null);
-                    }
-                }}
+                onError={() => setPlayingStation(null)}
             />
         </div>
     );
