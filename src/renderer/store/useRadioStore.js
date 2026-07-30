@@ -1,5 +1,16 @@
 import { create } from 'zustand';
 
+const ACCOUNT_STORAGE_KEY = 'fs25_spotify_account';
+
+const getInitialSpotifyAccount = () => {
+  try {
+    const data = localStorage.getItem(ACCOUNT_STORAGE_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
 export const useRadioStore = create((set, get) => ({
   stations: [],
   searchResults: [],
@@ -7,6 +18,23 @@ export const useRadioStore = create((set, get) => ({
   isLoading: false,
 
   playingStationUrl: null,
+
+  // Spotify Account Link State
+  spotifyAccount: getInitialSpotifyAccount(),
+
+  setSpotifyAccount: (accountData) => {
+    try {
+      localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(accountData));
+    } catch (e) {}
+    set({ spotifyAccount: accountData });
+  },
+
+  clearSpotifyAccount: () => {
+    try {
+      localStorage.removeItem(ACCOUNT_STORAGE_KEY);
+    } catch (e) {}
+    set({ spotifyAccount: null });
+  },
 
   fetchRadios: async () => {
     if (!window.api?.radio) return;
