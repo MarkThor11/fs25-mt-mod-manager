@@ -165,6 +165,13 @@ async function getSystemSpecs() {
         }
     }
 
+    const perfClass = recommendPerformanceClass(specs);
+    specs.recommendedClass = perfClass;
+    specs.recommendedPreset = perfClass >= 4 ? 'ULTRA' : 
+                              perfClass === 3 ? 'VERY HIGH' : 
+                              perfClass === 2 ? 'HIGH' : 
+                              perfClass === 1 ? 'MEDIUM' : 'LOW';
+
     return specs;
 }
 

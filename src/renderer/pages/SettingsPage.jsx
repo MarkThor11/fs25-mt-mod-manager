@@ -817,12 +817,14 @@ export default function SettingsPage() {
               <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ 
                   display: 'flex', 
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
                   gap: 16, 
                   fontSize: 13, 
                   opacity: 0.9, 
                   background: 'var(--bg-tertiary)', 
                   padding: '8px 12px', 
-                  borderRadius: 4, 
+                  borderRadius: 6, 
                   border: '1px solid var(--border)',
                   width: 'fit-content',
                   marginRight: 24
@@ -831,6 +833,21 @@ export default function SettingsPage() {
                   <div><strong>GPU:</strong> {systemSpecs.gpu.name} ({systemSpecs.gpu.vramGB}GB)</div>
                   <div><strong>RAM:</strong> {systemSpecs.ram.totalGB}GB</div>
                   <div><strong>Plan:</strong> {systemSpecs.power?.planName || 'Unknown'}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <strong>Target Preset:</strong>
+                    <span style={{ 
+                      color: 'var(--accent)', 
+                      fontWeight: 700, 
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      fontSize: 11,
+                      letterSpacing: '0.5px'
+                    }}>
+                      {(systemSpecs.recommendedPreset || (systemSpecs.ram.totalGB >= 32 && systemSpecs.gpu.vramGB >= 10 ? 'ULTRA' : 'HIGH')).toUpperCase()}
+                    </span>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 12, color: 'var(--text-tertiary)', padding: '4px 4px' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>• High Performance Power Profile</span>
