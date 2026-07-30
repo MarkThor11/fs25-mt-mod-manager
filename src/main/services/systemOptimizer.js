@@ -33,8 +33,7 @@ async function getSystemSpecs() {
 
     if (process.platform === 'win32') {
         try {
-            // 1. IMPROVED GPU DETECTION (Bypassing 4GB WMI Cap)
-            // We use a combination of CIM and a registry fallback for VRAM
+            // 1. Get GPU Name & WMI AdapterRAM via CIM
             const psGpuCommand = 'powershell "Get-CimInstance Win32_VideoController | Select-Object Name, @{Name=\'VRAM\';Expression={[int64]$_.AdapterRAM}} | ConvertTo-Json"';
             const gpuOutput = execSync(psGpuCommand).toString();
             
@@ -46,37 +45,113 @@ async function getSystemSpecs() {
             if (gpuData && gpuData.Name) {
                 specs.gpu.name = gpuData.Name;
                 let ramBytes = parseInt(gpuData.VRAM || 0);
-                
-                // If it's capped at exactly 4GB (4294967295), it's likely a WMI bug
-                if (ramBytes === 4294967295 || ramBytes === -1 || ramBytes === 4294901760) {
+
+                // 2. Registry Fallback: Query 64-bit qwMemorySize first (QWORD), then MemorySize (DWORD)
+                // Win32_VideoController.AdapterRAM caps at 4GB (32-bit uint) for high-vram GPUs
+                try {
+                    const regScript = `
+                        Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\00*' | Where-Object { $_.'HardwareInformation.AdapterString' -or $_.DriverDesc } | ForEach-Object {
+                            [PSCustomObject]@{
+                                Name = if ($_.'HardwareInformation.AdapterString') { $_.'HardwareInformation.AdapterString' } else { $_.DriverDesc }
+                                qwMem = [int64]($_.'HardwareInformation.qwMemorySize')
+                                mem = [int64]($_.'HardwareInformation.MemorySize')
+                            }
+                        } | ConvertTo-Json
+                    `;
+                    const buffer = Buffer.from(regScript, 'utf16le');
+                    const base64 = buffer.toString('base64');
+                    const regOutput = execSync(`powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${base64}`).toString();
+                    
+                    const jsonStart = regOutput.indexOf('[');
+                    const jsonStartObj = regOutput.indexOf('{');
+                    let cleanJson = regOutput;
+                    if (jsonStart !== -1 || jsonStartObj !== -1) {
+                        const startIdx = (jsonStart !== -1 && (jsonStartObj === -1 || jsonStart < jsonStartObj)) ? jsonStart : jsonStartObj;
+                        cleanJson = regOutput.substring(startIdx);
+                    }
+                    
+                    let regEntries = JSON.parse(cleanJson);
+                    if (!Array.isArray(regEntries)) regEntries = [regEntries];
+                    
+                    const matched = regEntries.find(e => e.Name && e.Name.toLowerCase() === specs.gpu.name.toLowerCase()) || 
+                                    regEntries.sort((a, b) => (b.qwMem || b.mem || 0) - (a.qwMem || a.mem || 0))[0];
+                                    
+                    if (matched) {
+                        if (matched.qwMem && matched.qwMem > 0) {
+                            ramBytes = matched.qwMem;
+                        } else if (matched.mem && matched.mem > 0 && ramBytes <= 4294967295) {
+                            ramBytes = matched.mem;
+                        }
+                    }
+                } catch (e) {}
+
+                // 3. nvidia-smi fallback for NVIDIA GPUs if ramBytes is still capped at <= 4GB
+                if (ramBytes <= 4294967295 && specs.gpu.name.toLowerCase().includes('nvidia')) {
                     try {
-                        // Fallback to registry for actual VRAM size - search across all active display instances
-                        const regCommand = 'powershell "Get-ItemProperty HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\000* | Where-Object { $_.\'HardwareInformation.AdapterString\' -ne $null } | Select-Object -ExpandProperty \'HardwareInformation.MemorySize\'"';
-                        const regOutput = execSync(regCommand).toString().trim().split('\n')[0]; // Take first valid entry
-                        if (regOutput && !isNaN(parseInt(regOutput))) {
-                            ramBytes = parseInt(regOutput);
+                        const smiOut = execSync('nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits').toString().trim();
+                        const smiMb = parseInt(smiOut.split('\n')[0]);
+                        if (!isNaN(smiMb) && smiMb > 0) {
+                            ramBytes = smiMb * 1024 * 1024;
                         }
                     } catch (e) {}
                 }
 
                 specs.gpu.vramGB = Math.round(ramBytes / (1024 * 1024 * 1024));
-                
-                // Heuristic Fallback: If it's an RTX/GTX card and still says 0 or 4, but we know it's higher
+
+                // 4. Heuristic Fallback for known GPU series if vramGB is still <= 4
                 if (specs.gpu.vramGB <= 4) {
                     const name = specs.gpu.name.toLowerCase();
-                    if (name.includes('rtx 4090')) specs.gpu.vramGB = 24;
+                    // RTX 50 Series
+                    if (name.includes('rtx 5090')) specs.gpu.vramGB = 32;
+                    else if (name.includes('rtx 5080')) specs.gpu.vramGB = 16;
+                    else if (name.includes('rtx 5070 ti')) specs.gpu.vramGB = 16;
+                    else if (name.includes('rtx 5070')) specs.gpu.vramGB = 12;
+                    else if (name.includes('rtx 5060 ti')) specs.gpu.vramGB = 16;
+                    else if (name.includes('rtx 5060')) specs.gpu.vramGB = 8;
+                    // RTX 40 Series
+                    else if (name.includes('rtx 4090')) specs.gpu.vramGB = 24;
                     else if (name.includes('rtx 4080')) specs.gpu.vramGB = 16;
+                    else if (name.includes('rtx 4070 ti')) specs.gpu.vramGB = 12;
                     else if (name.includes('rtx 4070')) specs.gpu.vramGB = 12;
+                    else if (name.includes('rtx 4060 ti')) specs.gpu.vramGB = 16;
+                    else if (name.includes('rtx 4060')) specs.gpu.vramGB = 8;
+                    // RTX 30 Series
                     else if (name.includes('rtx 3090')) specs.gpu.vramGB = 24;
+                    else if (name.includes('rtx 3080 ti')) specs.gpu.vramGB = 12;
                     else if (name.includes('rtx 3080')) specs.gpu.vramGB = 10;
+                    else if (name.includes('rtx 3070 ti')) specs.gpu.vramGB = 8;
                     else if (name.includes('rtx 3070')) specs.gpu.vramGB = 8;
+                    else if (name.includes('rtx 3060 ti')) specs.gpu.vramGB = 8;
                     else if (name.includes('rtx 3060')) specs.gpu.vramGB = 12;
+                    // RTX 20 Series
+                    else if (name.includes('rtx 2080 ti')) specs.gpu.vramGB = 11;
+                    else if (name.includes('rtx 2080')) specs.gpu.vramGB = 8;
+                    else if (name.includes('rtx 2070')) specs.gpu.vramGB = 8;
+                    else if (name.includes('rtx 2060 super')) specs.gpu.vramGB = 8;
+                    else if (name.includes('rtx 2060')) specs.gpu.vramGB = 6;
+                    // GTX 10 Series
                     else if (name.includes('1080 ti')) specs.gpu.vramGB = 11;
                     else if (name.includes('1080')) specs.gpu.vramGB = 8;
+                    else if (name.includes('1070')) specs.gpu.vramGB = 8;
+                    else if (name.includes('1060')) specs.gpu.vramGB = 6;
+                    // AMD RX Series
+                    else if (name.includes('rx 7900 xtx')) specs.gpu.vramGB = 24;
+                    else if (name.includes('rx 7900 xt')) specs.gpu.vramGB = 20;
+                    else if (name.includes('rx 7900 gre')) specs.gpu.vramGB = 16;
+                    else if (name.includes('rx 7800')) specs.gpu.vramGB = 16;
+                    else if (name.includes('rx 7700')) specs.gpu.vramGB = 12;
+                    else if (name.includes('rx 6950') || name.includes('rx 6900')) specs.gpu.vramGB = 16;
+                    else if (name.includes('rx 6800')) specs.gpu.vramGB = 16;
+                    else if (name.includes('rx 6750') || name.includes('rx 6700')) specs.gpu.vramGB = 12;
+                    else if (name.includes('rx 6650') || name.includes('rx 6600')) specs.gpu.vramGB = 8;
+                    // Intel Arc Series
+                    else if (name.includes('arc a770')) specs.gpu.vramGB = 16;
+                    else if (name.includes('arc a750') || name.includes('arc a580')) specs.gpu.vramGB = 8;
+                    else if (name.includes('arc b580')) specs.gpu.vramGB = 12;
                 }
             }
 
-            // 2. POWER PLAN DETECTION
+            // 5. POWER PLAN DETECTION
             try {
                 const powerCommand = 'powercfg /getactivescheme';
                 const powerOutput = execSync(powerCommand).toString();
@@ -102,7 +177,7 @@ function recommendPerformanceClass(specs) {
     const gpuLower = gpu.name.toLowerCase();
 
     // ULTRA (4)
-    if (ram.totalGB >= 32 && (gpu.vramGB >= 10 || gpuLower.includes('rtx 40') || gpuLower.includes('rtx 3080') || gpuLower.includes('rtx 3090') || gpuLower.includes('rx 7900') || gpuLower.includes('1080 ti'))) {
+    if (ram.totalGB >= 32 && (gpu.vramGB >= 10 || gpuLower.includes('rtx 50') || gpuLower.includes('rtx 40') || gpuLower.includes('rtx 3080') || gpuLower.includes('rtx 3090') || gpuLower.includes('rx 7900') || gpuLower.includes('1080 ti'))) {
         return 4;
     }
 
