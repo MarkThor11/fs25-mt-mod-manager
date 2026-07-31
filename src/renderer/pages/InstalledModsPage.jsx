@@ -1558,14 +1558,7 @@ export default function InstalledModsPage() {
           <Plus size={16} style={{ marginRight: 6 }} /> New Folder
         </button>
 
-        <button 
-          className="btn btn--secondary btn--sm" 
-          onClick={handleFlattenSubfolders}
-          style={{ minWidth: 'auto', padding: '0 16px', height: 36, display: 'flex', alignItems: 'center', gap: 6, fontWeight: '700' }}
-          title="Move all mods stored inside subfolders back to the main mods folder"
-        >
-          <FolderOutput size={16} /> Move All to Main Folder
-        </button>
+
 
         <div className="sort-bar__view-toggle" style={{ display: 'flex', gap: 4, background: 'var(--bg-tertiary)', padding: 4, borderRadius: 8, border: '1px solid var(--border)' }}>
           <button 

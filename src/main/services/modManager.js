@@ -3804,8 +3804,8 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 			if (alreadyInstalled) {
 				// If it's already installed but NOT in the requested subfolder, move it there
 				// This respects the user's desire for folder isolation even for existing mods.
-				if (subFolder && localMod && localMod.folder !== subFolder) {
-					console.log(`[AUTO-INSTALL] Moving existing mod ${modName} from "${localMod.folder || 'MAIN'}" to "${subFolder}"`);
+				if (subFolder && localMod && localMod.folder !== subFolder && (localMod.isMap || subFolder.toLowerCase().includes('map'))) {
+					console.log(`[AUTO-INSTALL] Moving existing map mod ${modName} from "${localMod.folder || 'MAIN'}" to "${subFolder}"`);
 					try {
 						await moveModsToFolder([localMod.fileName], subFolder, localMod.folder);
 					} catch (moveErr) {
