@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, X, Play, Square, RefreshCw, CheckCircle, Package, Layers, Zap, AlertCircle, Shield } from 'lucide-react';
+import { Download, X, Play, Square, RefreshCw, CheckCircle, Package, Layers, Zap, AlertCircle, Shield, RotateCcw } from 'lucide-react';
 import { useDownloadStore } from '../../store/useDownloadStore';
 import { useToastStore } from '../../store/useToastStore';
 import { useModHubStore } from '../../store/useModHubStore';
@@ -15,6 +15,7 @@ export default function MassDownloaderModal({ isOpen, onClose }) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadedCount, setDownloadedCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
+  const [failedModsList, setFailedModsList] = useState([]);
   const [currentModTitle, setCurrentModTitle] = useState('');
   const [currentCategoryName, setCurrentCategoryName] = useState('');
   const [log, setLog] = useState([]);
@@ -30,7 +31,6 @@ export default function MassDownloaderModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  // Flatten categories list for selection
   const categoryOptions = [
     { filter: 'all', name: '⚡ All Categories (Sequential)' },
     { filter: 'latest', name: '🆕 Latest Releases' },
@@ -62,13 +62,13 @@ export default function MassDownloaderModal({ isOpen, onClose }) {
     isCancelledRef.current = false;
     setDownloadedCount(0);
     setFailedCount(0);
+    setFailedModsList([]);
     setLog([]);
     appendLog(`🚀 Starting mass download sequence (Target: ${targetCount} mods)...`);
 
     let totalQueued = 0;
-    let totalFailed = 0;
+    let failedItems = [];
 
-    // Determine target category filters
     let targetFilters = [];
     if (selectedCategory === 'all') {
       targetFilters = ['latest', 'best', 'tractorsS', 'tractorsM', 'tractorsL', 'trucks', 'trailers', 'combines', 'cutters', 'cultivators', 'seeders', 'sprayers', 'mowers', 'baling', 'buildings'];
@@ -99,14 +99,14 @@ export default function MassDownloaderModal({ isOpen, onClose }) {
               setCurrentModTitle(mod.title || `Mod ${mod.modId}`);
 
               try {
-                // Fetch mod detail to obtain download URL
                 const detail = await window.api.modhub.fetchModDetail({ modId: mod.modId });
                 const downloadUrl = detail?.downloadUrl || mod.downloadUrl;
 
                 if (!downloadUrl) {
                   appendLog(`⚠️ Skipping ${mod.title}: No download URL found`);
-                  totalFailed++;
-                  setFailedCount(totalFailed);
+                  failedItems.push(mod);
+                  setFailedCount(failedItems.length);
+                  setFailedModsList([...failedItems]);
                   continue;
                 }
 
@@ -125,18 +125,19 @@ export default function MassDownloaderModal({ isOpen, onClose }) {
                   setDownloadedCount(totalQueued);
                   appendLog(`✅ Downloaded [${totalQueued}/${targetCount}]: ${mod.title}`);
                 } else {
-                  totalFailed++;
-                  setFailedCount(totalFailed);
+                  failedItems.push(mod);
+                  setFailedCount(failedItems.length);
+                  setFailedModsList([...failedItems]);
                   removeDownload(mod.modId);
                   appendLog(`❌ Failed: ${mod.title} (${result?.error || 'Unknown error'})`);
                 }
 
-                // Brief throttling pause (250ms) to ensure stability & prevent API rate blocks
                 await new Promise((r) => setTimeout(r, 250));
 
               } catch (err) {
-                totalFailed++;
-                setFailedCount(totalFailed);
+                failedItems.push(mod);
+                setFailedCount(failedItems.length);
+                setFailedModsList([...failedItems]);
                 removeDownload(mod.modId);
                 appendLog(`❌ Exception downloading ${mod.title}: ${err.message}`);
               }
@@ -162,6 +163,76 @@ export default function MassDownloaderModal({ isOpen, onClose }) {
     } catch (err) {
       appendLog(`💥 Critical error: ${err.message}`);
       toast.error(`Mass download encountered an error: ${err.message}`);
+    } finally {
+      setIsDownloading(false);
+      setCurrentModTitle('');
+    }
+  };
+
+  const handleRetryFailed = async () => {
+    if (isDownloading || failedModsList.length === 0) return;
+
+    setIsDownloading(true);
+    isCancelledRef.current = false;
+    const retryQueue = [...failedModsList];
+    setFailedModsList([]);
+    appendLog(`🔄 Retrying ${retryQueue.length} failed downloads...`);
+
+    let retrySuccess = 0;
+    let remainingFailed = [];
+
+    try {
+      for (const mod of retryQueue) {
+        if (isCancelledRef.current) break;
+        setCurrentModTitle(mod.title || `Mod ${mod.modId}`);
+
+        try {
+          // Bust cache to ensure a fresh URL fetch
+          const detail = await window.api.modhub.fetchModDetail({ modId: mod.modId, bustCache: true });
+          const downloadUrl = detail?.downloadUrl || mod.downloadUrl;
+
+          if (!downloadUrl) {
+            appendLog(`⚠️ Retry skipped ${mod.title}: No download URL`);
+            remainingFailed.push(mod);
+            continue;
+          }
+
+          addDownload(mod.modId, mod.title || `Mod #${mod.modId}`);
+
+          const result = await window.api.mods.install({
+            modId: mod.modId,
+            modTitle: mod.title,
+            downloadUrl: downloadUrl,
+            category: mod.category || 'retry',
+            subFolder: null
+          });
+
+          if (result && result.success) {
+            retrySuccess++;
+            setDownloadedCount((prev) => prev + 1);
+            appendLog(`✅ Retry Successful: ${mod.title}`);
+          } else {
+            remainingFailed.push(mod);
+            removeDownload(mod.modId);
+            appendLog(`❌ Retry Failed: ${mod.title}`);
+          }
+
+          await new Promise((r) => setTimeout(r, 300));
+        } catch (e) {
+          remainingFailed.push(mod);
+          removeDownload(mod.modId);
+          appendLog(`❌ Retry Error ${mod.title}: ${e.message}`);
+        }
+      }
+
+      setFailedModsList(remainingFailed);
+      setFailedCount(remainingFailed.length);
+
+      if (retrySuccess > 0) {
+        toast.success(`Successfully retried and downloaded ${retrySuccess} mods!`);
+        await useLocalModsStore.getState().scanMods();
+      }
+
     } finally {
       setIsDownloading(false);
       setCurrentModTitle('');
@@ -377,6 +448,27 @@ export default function MassDownloaderModal({ isOpen, onClose }) {
           </span>
 
           <div style={{ display: 'flex', gap: '10px' }}>
+            {failedModsList.length > 0 && !isDownloading && (
+              <button
+                onClick={handleRetryFailed}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '10px',
+                  border: '1px solid #ef4444',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: '#ef4444',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <RotateCcw size={16} /> Retry Failed ({failedModsList.length})
+              </button>
+            )}
+
             <button
               onClick={onClose}
               disabled={isDownloading}
