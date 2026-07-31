@@ -944,11 +944,7 @@ async function performScan(manualPaths = null) {
 		const isZip = entryName.toLowerCase().endsWith('.zip');
 		let isModDir = false;
 
-		// ── FAST SKIP INVALID FILENAMES ──
-		if (/^[0-9]/.test(entryName)) {
-			console.warn(`[SCAN] Skipping invalid mod name (must not start with a digit): ${entryName}`);
-			return;
-		}
+		// Allow all zip files and directories regardless of leading digits
 		
 		try {
 			// Use asynchronous stat to prevent blocking, especially on NAS
@@ -1268,12 +1264,9 @@ async function performScan(manualPaths = null) {
 
 	for (const m of sortedForDedupe) {
 		const idKey = m.modId ? `ID_${m.modId}` : null;
-		const modNameKey = m.modName ? `MODNAME_${m.modName.toLowerCase()}` : null;
-		const nameKey = m.technicalName ? `NAME_${m.technicalName.toLowerCase()}` : null;
 		const fileKey = `FILE_${path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '')}`;
-		// We deliberately do NOT dedupe by title. Many different mods share generic titles like "Wooden Shed".
 
-		const keys = [idKey, modNameKey, nameKey, fileKey].filter(Boolean);
+		const keys = [idKey, fileKey].filter(Boolean);
 		let alreadySeen = false;
 		for (const k of keys) {
 			if (uniqueModsMap.has(k)) {
