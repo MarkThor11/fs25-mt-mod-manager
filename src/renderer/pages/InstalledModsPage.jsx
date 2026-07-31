@@ -984,9 +984,12 @@ export default function InstalledModsPage() {
         return filteredMods.find(m => matchModWithDependency(m, dep));
     };
 
-    // 1. Group physical mods into their folders
+    // 1. Group physical mods into their folders (Maps are excluded from MAIN and routed to their own map group)
     const groups = filteredMods.reduce((acc, mod) => {
-      const folder = mod.folder || '';
+      let folder = mod.folder || '';
+      if (mod.isMap && !folder) {
+        folder = mod.title.replace(/\([^)]+\)/g, '').trim() || 'Custom Maps';
+      }
       if (!acc[folder]) acc[folder] = [];
       acc[folder].push(mod);
       return acc;
