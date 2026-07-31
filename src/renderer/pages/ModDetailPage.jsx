@@ -576,7 +576,7 @@ export default function ModDetailPage() {
     try {
       const isMap = mod.isMap || mod.category?.toUpperCase().includes('MAP') || (localMod && localMod.isMap);
       const cleanTitle = mod.title.replace(/\([^)]+\)/g, '').trim();
-      const subFolder = parentFolder || (isMap ? cleanTitle : null);
+      const subFolder = parentFolder || null;
 
 
       // 2. Normal install flow

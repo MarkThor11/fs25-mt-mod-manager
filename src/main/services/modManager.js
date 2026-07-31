@@ -1781,16 +1781,8 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 	* We intercept the download event from the session.
 	*/
 async function installModInternal(modId, modTitle, downloadUrl, onProgress, category, subFolder = null, techData = null) {
-	// Subfolders are reserved exclusively for Maps. All regular mods go directly to root mods folder.
-	const isMapMod = (category && category.toUpperCase().includes('MAP')) || (modTitle && modTitle.toLowerCase().includes('map'));
-	if (isMapMod) {
-		modTitle = modTitle.replace(/\([^)]+\)/, '').trim();
-		if (!subFolder) {
-			subFolder = modTitle;
-			console.log(`[INSTALL] Map detected without subfolder. Auto-assigned to: ${subFolder}`);
-		}
-	} else if (subFolder && !path.isAbsolute(subFolder)) {
-		// Non-map mods always install directly to the main root mods folder
+	// All downloaded/installed mods and maps go directly to the main root mods folder by default
+	if (subFolder && !path.isAbsolute(subFolder)) {
 		subFolder = null;
 	}
 
