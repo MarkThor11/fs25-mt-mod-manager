@@ -71,6 +71,22 @@ export const useLocalModsStore = create((set, get) => ({
     }
   },
 
+  flattenSubfolders: async () => {
+    if (!window.api?.localMods?.flattenSubfolders) return { success: false, error: 'API unavailable' };
+    set({ isLoading: true });
+    try {
+      const res = await window.api.localMods.flattenSubfolders();
+      if (res.success) {
+        await get().scanMods(null, true);
+      }
+      set({ isLoading: false });
+      return res;
+    } catch (err) {
+      set({ isLoading: false });
+      return { success: false, error: err.message };
+    }
+  },
+
   initListeners: () => {
     if (!window.api?.on) return;
     

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   RefreshCw, Download, Trash2, FolderOpen, Package, Lock,
   CheckCircle, Check, AlertTriangle, HardDrive, Search, List, LayoutGrid, ChevronDown, ChevronRight,
-  Tag, Plus, X, Settings2, Folder, FolderPlus, Eye, EyeOff, MoreVertical, Zap, Layers, RefreshCcw,
+  Tag, Plus, X, Settings2, Folder, FolderPlus, FolderOutput, Eye, EyeOff, MoreVertical, Zap, Layers, RefreshCcw,
   Heart, Star, Share2, Pencil, GripVertical, User, Pin
 } from 'lucide-react';
 import { useLocalModsStore } from '../store/useLocalModsStore';
@@ -1160,6 +1160,23 @@ export default function InstalledModsPage() {
     useToastStore.getState().success(`Folder "${newFolderName}" created.`);
   };
 
+  const handleFlattenSubfolders = async () => {
+    const toastStore = useToastStore.getState();
+    toastStore.info("Moving all subfolder mods to main folder...", { id: 'flatten-mods' });
+    const { flattenSubfolders } = useLocalModsStore.getState();
+    const result = await flattenSubfolders();
+
+    if (result.success) {
+      if (result.movedCount > 0) {
+        toastStore.success(`Successfully moved ${result.movedCount} mods from subfolders to main folder!`, { id: 'flatten-mods' });
+      } else {
+        toastStore.info("All mods are already in the main folder.", { id: 'flatten-mods' });
+      }
+    } else {
+      toastStore.error(`Flatten subfolders failed: ${result.error}`, { id: 'flatten-mods' });
+    }
+  };
+
   const handleMoveTo = async (dest) => {
     if (selectedMods.length === 0) return;
     
@@ -1539,6 +1556,15 @@ export default function InstalledModsPage() {
           style={{ minWidth: 'auto', padding: '0 16px', height: 36 }}
         >
           <Plus size={16} style={{ marginRight: 6 }} /> New Folder
+        </button>
+
+        <button 
+          className="btn btn--secondary btn--sm" 
+          onClick={handleFlattenSubfolders}
+          style={{ minWidth: 'auto', padding: '0 16px', height: 36, display: 'flex', alignItems: 'center', gap: 6, fontWeight: '700' }}
+          title="Move all mods stored inside subfolders back to the main mods folder"
+        >
+          <FolderOutput size={16} /> Move All to Main Folder
         </button>
 
         <div className="sort-bar__view-toggle" style={{ display: 'flex', gap: 4, background: 'var(--bg-tertiary)', padding: 4, borderRadius: 8, border: '1px solid var(--border)' }}>

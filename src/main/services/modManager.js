@@ -4483,6 +4483,62 @@ async function deduplicateSubfolderMods(modsPath) {
 	}
 }
 
+async function flattenSubfolders() {
+	if (await gameLauncher.isGameRunning()) {
+		return { success: false, error: 'Cannot move mods: Farming Simulator 25 is currently running. Please close the game first.' };
+	}
+
+	const modsPath = getModsPath();
+	if (!modsPath || !await fs.pathExists(modsPath)) {
+		return { success: false, error: 'Mods directory not found' };
+	}
+
+	let movedCount = 0;
+	try {
+		const entries = await fs.readdir(modsPath, { withFileTypes: true });
+		for (const entry of entries) {
+			if (!entry.isDirectory()) continue;
+			const folderNameLower = entry.name.toLowerCase();
+			if (entry.name.startsWith('.') || folderNameLower === 'backups' || folderNameLower === 'pdlc') continue;
+
+			const subDir = path.join(modsPath, entry.name);
+			const subEntries = await fs.readdir(subDir, { withFileTypes: true });
+
+			for (const subEntry of subEntries) {
+				const isZip = subEntry.name.toLowerCase().endsWith('.zip');
+				const subPath = path.join(subDir, subEntry.name);
+				const isModDir = subEntry.isDirectory() && await fs.pathExists(path.join(subPath, 'modDesc.xml'));
+
+				if (isZip || isModDir) {
+					const targetPath = path.join(modsPath, subEntry.name);
+					try {
+						if (subPath.toLowerCase() !== targetPath.toLowerCase()) {
+							if (await fs.pathExists(targetPath)) {
+								await fs.remove(targetPath);
+							}
+							await fs.move(subPath, targetPath, { overwrite: true });
+							movedCount++;
+						}
+					} catch (e) {
+						console.error(`[FLATTEN] Error moving ${subEntry.name}:`, e.message);
+					}
+				}
+			}
+
+			const remaining = await fs.readdir(subDir).catch(() => []);
+			if (remaining.length === 0) {
+				await fs.remove(subDir).catch(() => {});
+			}
+		}
+
+		await scanLocalMods(null, true);
+		return { success: true, movedCount };
+	} catch (err) {
+		console.error('[FLATTEN] Error flattening subfolders:', err);
+		return { success: false, error: err.message };
+	}
+}
+
 module.exports = {
 	getModsPaths,
 	getModsPath,
@@ -4506,6 +4562,7 @@ module.exports = {
 	renameFolder,
 	deleteFolder,
 	moveModsToFolder,
+	flattenSubfolders,
 	getDefaultModsPath,
 	installLocalMods,
 	restoreModVersion,

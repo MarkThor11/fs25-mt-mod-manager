@@ -621,6 +621,15 @@ ipcMain.handle('localMods:scan', async (_, force = false) => {
   }
 });
 
+ipcMain.handle('localMods:flattenSubfolders', async () => {
+  try {
+    return await modManager.flattenSubfolders();
+  } catch (err) {
+    console.error('Flatten subfolders failed:', err);
+    return { success: false, error: err.message };
+  }
+});
+
 ipcMain.handle('localMods:checkUpdates', async () => {
   try {
     return await versionManager.checkAllUpdates();

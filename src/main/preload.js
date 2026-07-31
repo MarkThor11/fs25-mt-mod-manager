@@ -58,6 +58,7 @@ contextBridge.exposeInMainWorld('api', {
   // Local Mods
   localMods: {
     scan: (force = false) => ipcRenderer.invoke('localMods:scan', force),
+    flattenSubfolders: () => ipcRenderer.invoke('localMods:flattenSubfolders'),
     checkUpdates: () => ipcRenderer.invoke('localMods:checkUpdates'),
     updateMod: (params) => ipcRenderer.invoke('localMods:updateMod', params),
     restoreVersion: (params) => ipcRenderer.invoke('localMods:restoreVersion', params),
