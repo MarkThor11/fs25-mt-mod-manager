@@ -989,62 +989,8 @@ async function scanLocalMods(manualPaths = null, force = false) {
 	return activeScanPromise;
 }
 
-async function autoMoveNonMapModsToMain() {
-	if (await gameLauncher.isGameRunning()) return;
-	const modsPath = getModsPath();
-	if (!modsPath || !await fs.pathExists(modsPath)) return;
-
-	try {
-		const entries = await fs.readdir(modsPath, { withFileTypes: true });
-		for (const entry of entries) {
-			if (!entry.isDirectory()) continue;
-			const folderLower = entry.name.toLowerCase();
-			if (entry.name.startsWith('.') || folderLower === 'backups' || folderLower === 'pdlc') continue;
-
-			const subDir = path.join(modsPath, entry.name);
-			const isModMapDir = await fs.pathExists(path.join(subDir, 'modDesc.xml')) && await looksLikeMap(subDir);
-			if (isModMapDir) continue;
-
-			const subEntries = await fs.readdir(subDir, { withFileTypes: true }).catch(() => []);
-			for (const subEntry of subEntries) {
-				const isZip = subEntry.name.toLowerCase().endsWith('.zip');
-				const subPath = path.join(subDir, subEntry.name);
-
-				if (isZip) {
-					const isZipMap = await looksLikeMap(subPath);
-					if (isZipMap) continue;
-
-					const targetPath = path.join(modsPath, subEntry.name);
-					try {
-						if (subPath.toLowerCase() !== targetPath.toLowerCase()) {
-							if (await fs.pathExists(targetPath)) {
-								await fs.remove(targetPath);
-							}
-							await fs.move(subPath, targetPath, { overwrite: true });
-							console.log(`[AUTO-FLATTEN] Moved non-map mod "${subEntry.name}" from subfolder "${entry.name}" to main mods folder.`);
-						}
-					} catch (err) {
-						console.error(`[AUTO-FLATTEN] Error moving ${subEntry.name}:`, err.message);
-					}
-				}
-			}
-
-			const remaining = await fs.readdir(subDir).catch(() => []);
-			if (remaining.length === 0) {
-				await fs.remove(subDir).catch(() => {});
-				console.log(`[AUTO-FLATTEN] Removed empty organizational subfolder: ${entry.name}`);
-			}
-		}
-	} catch (e) {
-		console.error('[AUTO-FLATTEN] Error during startup flattening:', e.message);
-	}
-}
-
 async function performScan(manualPaths = null) {
 	debugLog('[SCAN] Starting scan...');
-	
-	// Automatically move any non-map mods currently sitting in subfolders directly into the main mods root folder
-	await autoMoveNonMapModsToMain();
 
 	// Safe execution of backup pruning
 	pruneBackups().catch(e => console.error('[CLEANUP] Top-level pruning error:', e));
