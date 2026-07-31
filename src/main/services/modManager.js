@@ -1781,8 +1781,18 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 	* We intercept the download event from the session.
 	*/
 async function installModInternal(modId, modTitle, downloadUrl, onProgress, category, subFolder = null, techData = null) {
-	// All downloaded/installed mods and maps go directly to the main root mods folder by default
-	if (subFolder && !path.isAbsolute(subFolder)) {
+	// Only custom Mod Maps get dedicated subfolders. Base maps and regular mods go to main root mods folder.
+	const titleClean = (modTitle || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+	const isBaseMap = titleClean.startsWith('mapus') || titleClean.startsWith('mapeu') || titleClean.startsWith('mapas') || titleClean.startsWith('kinlaig') || titleClean.startsWith('zielonka') || titleClean.startsWith('elmcreek') || titleClean.startsWith('hautbeyleron') || titleClean.startsWith('erlengrat') || titleClean.startsWith('pdlc');
+	const isModMap = !isBaseMap && ((category && category.toUpperCase().includes('MAP')) || (modTitle && /\bmap\b/i.test(modTitle)));
+
+	if (isModMap) {
+		const cleanMapFolder = modTitle.replace(/\([^)]+\)/g, '').trim();
+		if (!subFolder) {
+			subFolder = cleanMapFolder;
+			console.log(`[INSTALL] Custom Mod Map detected ("${cleanMapFolder}"). Auto-assigned to dedicated subfolder: ${subFolder}`);
+		}
+	} else if (subFolder && !path.isAbsolute(subFolder)) {
 		subFolder = null;
 	}
 
