@@ -272,7 +272,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
         modTitle: mod.title,
         downloadUrl: downloadUrl,
         category: mod.category || detail?.category || currentFilter || '',
-        subFolder: mod.folder || (isModMap || detail?.isMap ? mod.title.replace(/\([^)]+\)/g, '').trim() : null)
+        subFolder: (isModMap || detail?.isMap) ? mod.title.replace(/\([^)]+\)/g, '').trim() : null
       });
 
 
