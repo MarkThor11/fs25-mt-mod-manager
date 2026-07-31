@@ -1783,7 +1783,8 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 async function installModInternal(modId, modTitle, downloadUrl, onProgress, category, subFolder = null, techData = null) {
 	// Only custom Mod Maps get dedicated subfolders. Base maps and regular mods go to main root mods folder.
 	const titleClean = (modTitle || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
-	const isBaseMap = titleClean.startsWith('mapus') || titleClean.startsWith('mapeu') || titleClean.startsWith('mapas') || titleClean.startsWith('kinlaig') || titleClean.startsWith('zielonka') || titleClean.startsWith('elmcreek') || titleClean.startsWith('hautbeyleron') || titleClean.startsWith('erlengrat') || titleClean.startsWith('pdlc');
+	// FS25 Official Base Maps: MapUS (Riverbend Springs), MapEU (Zielonka), MapAS (Hutan Pantai), Kinlaig (Highlands DLC), pdlc
+	const isBaseMap = titleClean.startsWith('mapus') || titleClean.startsWith('mapeu') || titleClean.startsWith('mapas') || titleClean.startsWith('riverbend') || titleClean.startsWith('hutan') || titleClean.startsWith('kinlaig') || titleClean.startsWith('zielonka') || titleClean.startsWith('pdlc');
 	const isModMap = !isBaseMap && ((category && category.toUpperCase().includes('MAP')) || (modTitle && /\bmap\b/i.test(modTitle)));
 
 	if (isModMap) {
