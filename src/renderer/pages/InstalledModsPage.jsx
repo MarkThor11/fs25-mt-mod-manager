@@ -12,7 +12,7 @@ import { useToastStore } from '../store/useToastStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useModHubStore } from '../store/useModHubStore';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
-import { resolveRecursiveDependencies, matchModWithDependency } from '../utils/modUtils';
+import { resolveRecursiveDependencies, matchModWithDependency, normalizeForMatching } from '../utils/modUtils';
 
 
 
