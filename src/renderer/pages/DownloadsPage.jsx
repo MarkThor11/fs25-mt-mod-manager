@@ -7,18 +7,30 @@ export default function DownloadsPage() {
   const { activeDownloads, removeDownload, cancelDownload, clearFinished } = useDownloadStore();
   const navigate = useNavigate();
 
+  const isFinished = (dl) => {
+    if (!dl) return false;
+    const st = (dl.status || '').toLowerCase();
+    const isDoneStatus = ['success', 'completed', 'done', 'finished', 'installed', 'error', 'failed', 'cancelled'].includes(st);
+    const is100 = typeof dl.progress === 'number' && dl.progress >= 100;
+    const isNotActive = st !== 'downloading' && st !== 'waiting' && st !== 'queued' && st !== 'connecting';
+    return isDoneStatus || is100 || isNotActive;
+  };
+
   const downloadsArray = Object.values(activeDownloads).sort((a, b) => {
-    // Sort completed first, then descending progress
-    if (a.status === 'success' && b.status !== 'success') return -1;
-    if (b.status === 'success' && a.status !== 'success') return 1;
-    return b.progress - a.progress;
+    const aDone = isFinished(a);
+    const bDone = isFinished(b);
+    if (aDone && !bDone) return -1;
+    if (bDone && !aDone) return 1;
+    return (b.progress || 0) - (a.progress || 0);
   });
 
   const cancelAll = () => {
     if (window.confirm('Cancel all active downloads?')) {
       downloadsArray.forEach(dl => {
-        if (dl.status !== 'success' && dl.progress < 100) {
+        if (!isFinished(dl)) {
           cancelDownload(dl.modId);
+        } else {
+          removeDownload(dl.modId);
         }
       });
     }
@@ -39,13 +51,13 @@ export default function DownloadsPage() {
 
         {downloadsArray.length > 0 && (
           <div style={{ display: 'flex', gap: 12 }}>
-            {downloadsArray.some(dl => dl.status === 'success' || dl.status === 'error' || dl.progress >= 100) && (
+            {downloadsArray.some(isFinished) && (
               <button className="btn btn--ghost btn--sm" onClick={clearFinished} style={{ gap: 8 }}>
                 <CheckCircle size={14} />
                 Clear Completed
               </button>
             )}
-            {downloadsArray.some(dl => dl.status !== 'success' && dl.progress < 100) && (
+            {downloadsArray.some(dl => !isFinished(dl)) && (
               <button className="btn btn--danger btn--sm" onClick={cancelAll} style={{ gap: 8 }}>
                 <Trash2 size={14} />
                 Cancel All
@@ -143,7 +155,7 @@ export default function DownloadsPage() {
                     {dl.status === 'success' ? 100 : Math.round(dl.progress || 0)}%
                   </div>
                   
-                  {dl.progress < 100 && dl.status !== 'success' ? (
+                  {!isFinished(dl) ? (
                     <button 
                       className="btn--cancel"
                       onClick={() => cancelDownload(dl.modId)}

@@ -93,9 +93,14 @@ export const useDownloadStore = create((set, get) => ({
   },
 
   removeDownload: (modId) => {
+    if (modId === undefined || modId === null) return;
     set((s) => {
       const next = { ...s.activeDownloads };
       delete next[modId];
+      delete next[String(modId)];
+      if (typeof modId === 'number' || !isNaN(Number(modId))) {
+        delete next[Number(modId)];
+      }
       return { activeDownloads: next };
     });
   },
@@ -125,6 +130,7 @@ export const useDownloadStore = create((set, get) => ({
       get().removeDownload(modId);
     } catch (err) {
       console.error('Failed to cancel download:', err);
+      get().removeDownload(modId);
     }
   },
 
@@ -132,8 +138,16 @@ export const useDownloadStore = create((set, get) => ({
     set((s) => {
       const next = { ...s.activeDownloads };
       Object.keys(next).forEach(modId => {
-        if (next[modId].status === 'success' || next[modId].status === 'error') {
+        const item = next[modId];
+        if (!item) return;
+        const st = (item.status || '').toLowerCase();
+        const isDone = ['success', 'completed', 'done', 'finished', 'installed', 'error', 'failed', 'cancelled'].includes(st);
+        const is100 = typeof item.progress === 'number' && item.progress >= 100;
+        const isNotActive = st !== 'downloading' && st !== 'waiting' && st !== 'queued' && st !== 'connecting';
+
+        if (isDone || is100 || isNotActive) {
           delete next[modId];
+          delete next[String(modId)];
         }
       });
       return { activeDownloads: next };
