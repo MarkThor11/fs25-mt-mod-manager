@@ -76,6 +76,20 @@ export default function MassDownloaderModal({ isOpen, onClose }) {
       targetFilters = [selectedCategory];
     }
 
+    const localMods = useLocalModsStore.getState().mods || [];
+    const installedIds = new Set(localMods.map(m => m.modId ? String(m.modId) : '').filter(Boolean));
+    const installedTitles = new Set(localMods.map(m => (m.title || '').toLowerCase().trim()).filter(Boolean));
+    const installedFiles = new Set(localMods.map(m => (m.fileName || '').toLowerCase().replace(/\.zip$/i, '').trim()).filter(Boolean));
+
+    const isAlreadyInstalled = (m) => {
+      if (m.modId && installedIds.has(String(m.modId))) return true;
+      if (m.title && installedTitles.has(m.title.toLowerCase().trim())) return true;
+      if (m.fileName && installedFiles.has(m.fileName.toLowerCase().replace(/\.zip$/i, '').trim())) return true;
+      return false;
+    };
+
+    let skippedCount = 0;
+
     try {
       for (const filter of targetFilters) {
         if (isCancelledRef.current || totalQueued >= targetCount) break;
@@ -85,7 +99,7 @@ export default function MassDownloaderModal({ isOpen, onClose }) {
         appendLog(`📂 Fetching category: ${catName}...`);
 
         let page = 0;
-        let maxPages = 15;
+        let maxPages = targetCount >= 5000 ? 100 : 25;
 
         while (page < maxPages && totalQueued < targetCount && !isCancelledRef.current) {
           try {
@@ -95,6 +109,12 @@ export default function MassDownloaderModal({ isOpen, onClose }) {
             for (const mod of pageMods) {
               if (isCancelledRef.current || totalQueued >= targetCount) break;
               if (!mod.modId) continue;
+
+              if (isAlreadyInstalled(mod)) {
+                skippedCount++;
+                appendLog(`⏭️ Skipped (Already on PC): ${mod.title || mod.modId}`);
+                continue;
+              }
 
               setCurrentModTitle(mod.title || `Mod ${mod.modId}`);
 
@@ -350,12 +370,13 @@ export default function MassDownloaderModal({ isOpen, onClose }) {
                   cursor: isDownloading ? 'not-allowed' : 'pointer'
                 }}
               >
-                <option value={25}>25 Mods (Quick Test)</option>
-                <option value={50}>50 Mods</option>
-                <option value={100}>100 Mods (Recommended)</option>
-                <option value={250}>250 Mods</option>
-                <option value={500}>500 Mods (Heavy)</option>
-                <option value={1000}>1000 Mods (Extreme Stress Test)</option>
+                <option value={100}>100 Missing Mods</option>
+                <option value={250}>250 Missing Mods</option>
+                <option value={500}>500 Missing Mods</option>
+                <option value={1000}>1000 Missing Mods</option>
+                <option value={2500}>2500 Missing Mods</option>
+                <option value={5000}>5000 Missing Mods</option>
+                <option value={99999}>🔥 ALL Missing Mods Not On PC (Full Library Download)</option>
               </select>
             </div>
           </div>
