@@ -943,23 +943,44 @@ export default function InstalledModsPage() {
     };
   }, [isInternalDragging]);
 
-  const filteredMods = mods.filter((m) => {
-    const isDLCItem = m.isDLC || m.folder === 'DLC';
+  const favModIdsSet = useMemo(() => {
+    const set = new Set();
+    favoriteMods.forEach(fv => {
+      if (fv.modId) set.add(String(fv.modId));
+      if (fv.fileName) set.add(fv.fileName);
+    });
+    return set;
+  }, [favoriteMods]);
 
-    const matchesSearch = (m.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (m.author || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (m.tags || []).some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
-    if (!matchesSearch) return false;
+  const favAuthorsSet = useMemo(() => {
+    return new Set(favoriteAuthors.map(fa => (fa.name || '').toLowerCase()));
+  }, [favoriteAuthors]);
 
-    // Favoriting, tag filtering, and update filtering apply to regular user mods
-    if (!isDLCItem) {
-      if (showOnlyFavorites) {
-          const isModFav = favoriteMods.some(fv => (fv.modId && m.modId && String(fv.modId) === String(m.modId)) || (fv.fileName === m.fileName));
-          const isAuthorFav = favoriteAuthors.some(fa => fa.name === m.author);
-          if (!isModFav && !isAuthorFav) return false;
+  const updateFileNamesSet = useMemo(() => {
+    return new Set(updates.map(u => u.fileName));
+  }, [updates]);
+
+  const filteredMods = useMemo(() => {
+    const sLower = searchQuery.toLowerCase().trim();
+
+    return mods.filter((m) => {
+      const isDLCItem = m.isDLC || m.folder === 'DLC';
+
+      if (sLower) {
+        const titleMatch = m.title && m.title.toLowerCase().includes(sLower);
+        const authorMatch = m.author && m.author.toLowerCase().includes(sLower);
+        const tagMatch = m.tags && m.tags.some(t => t.toLowerCase().includes(sLower));
+        if (!titleMatch && !authorMatch && !tagMatch) return false;
       }
 
-      if (selectedTags.length > 0) {
+      if (!isDLCItem) {
+        if (showOnlyFavorites) {
+          const isModFav = (m.modId && favModIdsSet.has(String(m.modId))) || favModIdsSet.has(m.fileName);
+          const isAuthorFav = m.author && favAuthorsSet.has(m.author.toLowerCase());
+          if (!isModFav && !isAuthorFav) return false;
+        }
+
+        if (selectedTags.length > 0) {
           const hasMatch = selectedTags.some(tag => {
             const tLower = tag.toLowerCase();
             return (m.tags || []).some(t => t.toLowerCase() === tLower) ||
@@ -967,21 +988,49 @@ export default function InstalledModsPage() {
                    (m.isMap && tLower === 'maps');
           });
           if (!hasMatch) return false;
+        }
+
+        if (showOnlyUpdates) {
+          if (!updateFileNamesSet.has(m.fileName)) return false;
+        }
       }
 
-      if (showOnlyUpdates) {
-          const hasUpdate = updates.some(u => u.fileName === m.fileName);
-          if (!hasUpdate) return false;
+      return true;
+    });
+  }, [mods, searchQuery, showOnlyFavorites, favModIdsSet, favAuthorsSet, selectedTags, showOnlyUpdates, updateFileNamesSet]);
+
+  const modLookupIndex = useMemo(() => {
+    const byId = new Map();
+    const byName = new Map();
+    const byFile = new Map();
+
+    for (let i = 0; i < filteredMods.length; i++) {
+      const m = filteredMods[i];
+      if (m.modId) byId.set(String(m.modId).replace(/^0+/, ''), m);
+      if (m.modName) {
+        const norm = m.modName.toLowerCase();
+        byName.set(norm, m);
+        byName.set(normalizeForMatching(m.modName), m);
+      }
+      if (m.fileName) {
+        const cleanFile = m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
+        byFile.set(cleanFile, m);
+        byFile.set(normalizeForMatching(m.fileName), m);
+      }
+      if (m.title) {
+        byName.set(m.title.toLowerCase(), m);
       }
     }
-
-    return true;
-  });
+    return { byId, byName, byFile };
+  }, [filteredMods]);
 
   const folders = useMemo(() => {
     const findFastMatch = (dep) => {
         if (!dep) return null;
-        return filteredMods.find(m => matchModWithDependency(m, dep));
+        let depStr = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
+        if (!depStr) return null;
+        const norm = normalizeForMatching(depStr);
+        return modLookupIndex.byName.get(norm) || modLookupIndex.byFile.get(norm) || null;
     };
 
     // 1. Group physical mods into their folders (Maps are excluded from MAIN and routed to their own map group)
@@ -1006,7 +1055,6 @@ export default function InstalledModsPage() {
         mapsInFolder.forEach(mapMod => {
             if (mapMod.dependencies && mapMod.dependencies.length > 0) {
                 mapMod.dependencies.forEach(dep => {
-                    // Check if it's already visible in this folder (physical or already virtualized)
                     const isVisible = modsInThisFolder.some(m => matchModWithDependency(m, dep));
                     
                     if (!isVisible) {
