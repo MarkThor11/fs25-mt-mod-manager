@@ -217,11 +217,26 @@ export default function WelcomeTour({ forceShow = false, onClose }) {
   const highlightTimer = useRef(null);
 
   useEffect(() => {
-    // If the user hasn't seen the guide AT ALL, or if the seen version is older than CURRENT_TOUR_VERSION
-    if (forceShow || !hasSeenGuide || tourVersion !== CURRENT_TOUR_VERSION) {
+    // Only auto-show if explicitly requested (forceShow) or if the user has NEVER seen the guide at all.
+    // If user has already seen the guide, sync the tour version silently without trapping them in a modal on app restart.
+    if (forceShow || !hasSeenGuide) {
       setVisible(true);
+    } else if (hasSeenGuide && tourVersion !== CURRENT_TOUR_VERSION) {
+      setTourVersion(CURRENT_TOUR_VERSION);
     }
   }, [hasSeenGuide, tourVersion, forceShow]);
+
+  // Escape key handler to close tour safely
+  useEffect(() => {
+    if (!visible) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) {
@@ -231,7 +246,6 @@ export default function WelcomeTour({ forceShow = false, onClose }) {
 
     const slide = SLIDES[currentSlide];
     if (slide.targetId) {
-      // Small delay to ensure DOM is ready and animations have settled
       highlightTimer.current = setTimeout(() => {
         const el = document.getElementById(slide.targetId);
         if (el) {
@@ -280,7 +294,16 @@ export default function WelcomeTour({ forceShow = false, onClose }) {
   const slide = SLIDES[currentSlide];
 
   return (
-    <div className="modal-overlay tour-overlay" style={{ zIndex: 1100, backdropFilter: 'none' }}>
+    <div 
+      className="modal-overlay tour-overlay" 
+      style={{ zIndex: 1100, backdropFilter: 'none' }}
+      onClick={(e) => {
+        // Clicking backdrop outside the modal content dismisses the tour
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+    >
       {/* Target Highlight */}
       {highlightStyle && (
         <div 
@@ -320,6 +343,37 @@ export default function WelcomeTour({ forceShow = false, onClose }) {
         boxShadow: `0 0 40px ${slide.color ? slide.color + '44' : 'rgba(0,0,0,0.5)'}, 0 20px 40px rgba(0,0,0,0.4)`,
         borderRadius: 'var(--radius-xl)'
       }}>
+
+        {/* Close X Button */}
+        <button 
+          onClick={handleClose}
+          title="Close Tour"
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--text-tertiary)',
+            cursor: 'pointer',
+            padding: 4,
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'color 0.2s ease, background 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = 'var(--text-primary)';
+            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'var(--text-tertiary)';
+            e.currentTarget.style.background = 'transparent';
+          }}
+        >
+          <X size={20} />
+        </button>
 
         <div className="tour-icon-wrap" style={{ 
           marginBottom: 'var(--sp-6)', 
@@ -368,11 +422,11 @@ export default function WelcomeTour({ forceShow = false, onClose }) {
             >
               <ChevronLeft size={18} /> Back
             </button>
-            {currentSlide > 0 && currentSlide < SLIDES.length - 1 && (
+            {currentSlide < SLIDES.length - 1 && (
               <button 
                 className="btn btn--secondary btn--sm" 
                 onClick={handleClose}
-                style={{ minWidth: 72, padding: 'var(--sp-2) var(--sp-4)', opacity: 0.6, fontSize: 'var(--fs-xs)' }}
+                style={{ minWidth: 72, padding: 'var(--sp-2) var(--sp-4)', opacity: 0.7, fontSize: 'var(--fs-xs)' }}
               >
                 Skip Tour
               </button>
