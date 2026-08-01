@@ -1,8 +1,14 @@
 import { create } from 'zustand';
 import { useSettingsStore } from './useSettingsStore';
 
+function computeModCount(mods) {
+  if (!Array.isArray(mods)) return 0;
+  return mods.filter(m => !m.isDLC && m.folder !== 'DLC' && !m.fileName?.toLowerCase().startsWith('pdlc_')).length;
+}
+
 export const useLocalModsStore = create((set, get) => ({
   mods: [],
+  modCount: 0,
   allFolders: [],
   isLoading: false,
   isCheckingUpdates: false,
@@ -22,7 +28,8 @@ export const useLocalModsStore = create((set, get) => ({
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed.mods) && parsed.mods.length > 0) {
-          set({ mods: parsed.mods, allFolders: parsed.allFolders || [] });
+          const modArray = parsed.mods;
+          set({ mods: modArray, modCount: computeModCount(modArray), allFolders: parsed.allFolders || [] });
         }
       }
     } catch (e) {
@@ -45,9 +52,11 @@ export const useLocalModsStore = create((set, get) => ({
       }
       
       const { mods, allFolders, conflicts, missingDependencies, error } = await window.api.localMods.scan(force);
+      const modArray = mods || [];
       
       set({
-        mods: mods || [],
+        mods: modArray,
+        modCount: computeModCount(modArray),
         allFolders: allFolders || [],
         conflicts: conflicts || [],
         missingDependencies: missingDependencies || [],
@@ -151,9 +160,10 @@ export const useLocalModsStore = create((set, get) => ({
       if (!window.api?.mods) return { success: false, error: 'Bridge not available' };
       const result = await window.api.mods.uninstall({ modFileName, folder });
       if (result.success) {
-        set((s) => ({
-          mods: s.mods.filter((m) => m.fileName !== modFileName),
-        }));
+        set((s) => {
+          const nextMods = s.mods.filter((m) => m.fileName !== modFileName);
+          return { mods: nextMods, modCount: computeModCount(nextMods) };
+        });
       }
       return result;
     } catch (err) {
@@ -167,9 +177,10 @@ export const useLocalModsStore = create((set, get) => ({
       if (!window.api?.mods) return { success: false };
       
       const fileNamesToRemove = modsList.map(m => m.fileName);
-      set(s => ({
-          mods: s.mods.filter(m => !fileNamesToRemove.includes(m.fileName))
-      }));
+      set(s => {
+        const nextMods = s.mods.filter(m => !fileNamesToRemove.includes(m.fileName));
+        return { mods: nextMods, modCount: computeModCount(nextMods) };
+      });
       
       const promises = modsList.map(m => window.api.mods.uninstall({ modFileName: m.fileName, folder: m.folder }));
       await Promise.allSettled(promises);
@@ -245,10 +256,14 @@ export const useLocalModsStore = create((set, get) => ({
             const newOrder = folderOrder.filter(f => f !== folderName);
             setFolderOrder(newOrder);
         }
-        set(state => ({
+        set(state => {
+          const nextMods = state.mods.filter(m => (m.folder || '') !== folderName);
+          return {
             allFolders: state.allFolders.filter(f => f !== folderName),
-            mods: state.mods.filter(m => (m.folder || '') !== folderName)
-        }));
+            mods: nextMods,
+            modCount: computeModCount(nextMods)
+          };
+        });
       }
       return res;
     } finally {

@@ -65,6 +65,10 @@ app.whenReady().then(() => {
       }
     });
 
+    // In-memory icon buffer cache to avoid repetitive SQLite disk reads during fast scrolling
+    const iconBufferCache = new Map();
+    const MAX_ICON_CACHE_SIZE = 1500;
+
     // Mod icon local stream protocol
     protocol.handle('mod-icon', async (request) => {
       try {
@@ -75,11 +79,23 @@ app.whenReady().then(() => {
            return new Response('Not Found', { status: 404 });
         }
 
+        // 0. Check In-Memory Fast Cache
+        if (iconBufferCache.has(filePath)) {
+          return new Response(iconBufferCache.get(filePath), {
+            headers: { 'Content-Type': 'image/png' }
+          });
+        }
+
         // 1. Check SQLite Cache
         const cached = cache.getLocalModCache(filePath);
         if (cached && cached.icon_base64 && !cached.icon_base64.startsWith('CATEGORY:')) {
           const base64Data = cached.icon_base64.replace(/^data:image\/\w+;base64,/, '');
           const buffer = Buffer.from(base64Data, 'base64');
+          if (iconBufferCache.size >= MAX_ICON_CACHE_SIZE) {
+            const firstKey = iconBufferCache.keys().next().value;
+            iconBufferCache.delete(firstKey);
+          }
+          iconBufferCache.set(filePath, buffer);
           return new Response(buffer, {
             headers: { 'Content-Type': 'image/png' }
           });
@@ -91,6 +107,11 @@ app.whenReady().then(() => {
           cache.updateLocalModIcon(filePath, base64);
           const base64Data = base64.replace(/^data:image\/\w+;base64,/, '');
           const buffer = Buffer.from(base64Data, 'base64');
+          if (iconBufferCache.size >= MAX_ICON_CACHE_SIZE) {
+            const firstKey = iconBufferCache.keys().next().value;
+            iconBufferCache.delete(firstKey);
+          }
+          iconBufferCache.set(filePath, buffer);
           return new Response(buffer, {
             headers: { 'Content-Type': 'image/png' }
           });

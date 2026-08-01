@@ -76,20 +76,29 @@ export default function SettingsPage() {
   const { mods } = useLocalModsStore();
 
   const folderStats = React.useMemo(() => {
+    if (!mods || mods.length === 0 || !modsPaths || modsPaths.length === 0) return {};
+    
+    const normalizedMods = mods.map(m => ({
+      path: (m.filePath || '').replace(/\\/g, '/').toLowerCase(),
+      size: m.size || 0
+    }));
+
     const stats = {};
-    modsPaths.forEach(p => {
+    for (let pIdx = 0; pIdx < modsPaths.length; pIdx++) {
+      const p = modsPaths[pIdx];
       const pPath = p.replace(/\\/g, '/').toLowerCase();
       const pPathWithSlash = pPath.endsWith('/') ? pPath : pPath + '/';
       
-      const folderMods = mods.filter(m => {
-          const mPath = (m.filePath || '').replace(/\\/g, '/').toLowerCase();
-          return mPath.startsWith(pPathWithSlash);
-      });
-      stats[p] = {
-        count: folderMods.length,
-        size: folderMods.reduce((acc, m) => acc + (m.size || 0), 0)
-      };
-    });
+      let count = 0;
+      let size = 0;
+      for (let mIdx = 0; mIdx < normalizedMods.length; mIdx++) {
+        if (normalizedMods[mIdx].path.startsWith(pPathWithSlash)) {
+          count++;
+          size += normalizedMods[mIdx].size;
+        }
+      }
+      stats[p] = { count, size };
+    }
     return stats;
   }, [mods, modsPaths]);
 

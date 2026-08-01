@@ -112,18 +112,14 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
  * @returns {Object} - { installed: Set(names), missing: Set(names) }
  */
 export const resolveRecursiveDependencies = (targetModName, allMods, sessionInstalled = {}, resolvedMetadata = {}) => {
-  console.log(`[RESOLVE] targetModName=${targetModName} allMods.length=${allMods ? allMods.length : 0}`);
   const installed = new Set();
   const missing = new Set();
   const processed = new Set();
 
-  // If the target mod resides in a subfolder (organizational folder),
-  // automatically include all other mods sharing the exact same subfolder.
   if (targetModName && allMods) {
     const targetMod = allMods.find(m => m.modName && m.modName.toLowerCase() === targetModName.toLowerCase());
     if (targetMod && targetMod.folder && targetMod.folder.toLowerCase() !== 'mods' && targetMod.folder.toLowerCase() !== '') {
       const folderLower = targetMod.folder.toLowerCase();
-      console.log(`[RESOLVE] Target mod is in subfolder '${targetMod.folder}'. Auto-selecting sibling mods...`);
       allMods.forEach(m => {
         if (m.folder && m.folder.toLowerCase() === folderLower && m.modName && m.modName.toLowerCase() !== targetModName.toLowerCase()) {
           installed.add(m.modName);
@@ -155,19 +151,14 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
     if (!cleanedName) return;
     const nameLower = cleanedName.toLowerCase();
     
-    // To prevent infinite loops, we track by nameLower. If we have depId, we could track by ID too, but nameLower is safe enough.
     if (processed.has(nameLower)) return;
     processed.add(nameLower);
 
-    // Two-pass matching: strong match first (strict = true), fallback to weak title match (strict = false)
     let match = allMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, true));
     if (!match) {
         match = allMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, false));
     }
     
-    console.log(`[RESOLVE-STEP] depString=${depString} cleanedName=${cleanedName} foundMatch=${match ? 'YES' : 'NO'}`);
-
-    // Check if any value in sessionInstalled matches the requested dependency name
     const isSessionInstalledByName = Object.values(sessionInstalled).some(val => val && val.toLowerCase() === nameLower);
 
     if (match) {
@@ -175,7 +166,6 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
         installed.add(match.modName);
       }
       if (match.dependencies) {
-        console.log(`[RESOLVE-DEPS] Match ${match.modName} has ${match.dependencies.length} deps:`, match.dependencies);
         match.dependencies.forEach(dep => resolve(dep));
       }
     } else if ((depId && sessionInstalled[depId]) || isSessionInstalledByName) {

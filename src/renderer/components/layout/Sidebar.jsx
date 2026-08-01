@@ -37,7 +37,7 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
   const scrollRef = useScrollPersistence('sidebar');
   
-  const modCount = useLocalModsStore((s) => (s.mods || []).filter(m => !m.isDLC && m.folder !== 'DLC' && !m.fileName?.toLowerCase().startsWith('pdlc_')).length);
+  const modCount = useLocalModsStore((s) => s.modCount);
   const { favoriteAuthors, favoriteMods } = useModHubStore();
   const favCount = (favoriteAuthors?.length || 0) + (favoriteMods?.length || 0);
   const hiddenCount = useModHubStore((s) => s.hiddenMods?.length || 0);
