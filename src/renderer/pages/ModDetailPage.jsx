@@ -773,8 +773,29 @@ export default function ModDetailPage() {
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sp-5)' }}>
                   <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Package size={16} /> Required Mods & Dependencies
+                    <Package size={16} /> Required Mods & Dependencies ({uniqueDependencies.length})
                   </div>
+                  {uniqueDependencies.length > 0 && isOnline && (
+                    <button
+                      className="btn btn--primary btn--sm animate-pulse-subtle"
+                      onClick={() => setShowDepModal(true)}
+                      style={{
+                        background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                        color: '#000',
+                        fontWeight: 800,
+                        fontSize: 11,
+                        padding: '6px 14px',
+                        borderRadius: 'var(--radius-md)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        boxShadow: '0 4px 12px rgba(251, 191, 36, 0.3)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Download size={14} /> Download All ({uniqueDependencies.length})
+                    </button>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {uniqueDependencies.map((dep) => {
@@ -1021,44 +1042,80 @@ export default function ModDetailPage() {
                 </div>
               </div>
             ) : showAsInstalled ? (
-              hasUpdate ? (
+              <>
+                {dependencyStatus.missingCount > 0 && (
+                  <button
+                    className="btn btn--primary btn--lg btn--full"
+                    onClick={() => setShowDepModal(true)}
+                    disabled={!isOnline}
+                    style={{
+                      background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                      color: '#000',
+                      fontWeight: 800,
+                      marginBottom: 8,
+                      boxShadow: '0 4px 16px rgba(251, 191, 36, 0.3)'
+                    }}
+                  >
+                    <Download size={18} style={{ marginRight: 8 }} /> Download {dependencyStatus.missingCount} Missing Required Mods
+                  </button>
+                )}
+                {hasUpdate ? (
+                  <button
+                    className="btn btn--primary btn--lg btn--full"
+                    style={{ background: 'var(--warning)', color: 'black' }}
+                    onClick={async () => {
+                        handleInstall();
+                    }}
+                    disabled={isCurrentlyInstalling || !isOnline}
+                    title={!isOnline ? "Internet connection required" : ""}
+                  >
+                    {isCurrentlyInstalling ? <RefreshCw size={18} className="animate-spin" /> : <Download size={18} />}
+                    {!isOnline ? 'Update Unavailable' : `Update to v${mod.version}`}
+                  </button>
+                ) : (
+                  <button 
+                    className="btn btn--ghost btn--lg btn--full" 
+                    disabled 
+                    style={{ 
+                      opacity: 0.8, 
+                      color: 'var(--accent)', 
+                      border: '1px solid var(--accent)',
+                      background: 'rgba(var(--accent-rgb), 0.1)',
+                      cursor: 'default'
+                    }}
+                  >
+                    <Check size={18} style={{ marginRight: 8 }} /> Installed (Latest)
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                {uniqueDependencies.length > 0 && (
+                  <button
+                    className="btn btn--primary btn--lg btn--full animate-pulse-subtle"
+                    onClick={() => setShowDepModal(true)}
+                    disabled={!isOnline}
+                    style={{
+                      background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                      color: '#000',
+                      fontWeight: 800,
+                      marginBottom: 8,
+                      boxShadow: '0 4px 20px rgba(251, 191, 36, 0.4)'
+                    }}
+                  >
+                    <Download size={18} style={{ marginRight: 8 }} /> Download All ({uniqueDependencies.length + 1} Mods)
+                  </button>
+                )}
                 <button
-                  className="btn btn--primary btn--lg btn--full"
-                  style={{ background: 'var(--warning)', color: 'black' }}
-                  onClick={async () => {
-                      handleInstall();
-                  }}
-                  disabled={isCurrentlyInstalling || !isOnline}
+                  className={`btn ${uniqueDependencies.length > 0 ? 'btn--secondary' : 'btn--primary'} btn--lg btn--full`}
+                  onClick={handleInstall}
+                  disabled={!isOnline}
+                  id="install-mod-btn"
                   title={!isOnline ? "Internet connection required" : ""}
                 >
-                  {isCurrentlyInstalling ? <RefreshCw size={18} className="animate-spin" /> : <Download size={18} />}
-                  {!isOnline ? 'Update Unavailable' : `Update to v${mod.version}`}
+                  <Download size={18} style={{ marginRight: 8 }} /> {!isOnline ? 'Internet Required' : (uniqueDependencies.length > 0 ? 'Download Map Only' : 'Download & Install')}
                 </button>
-              ) : (
-                <button 
-                  className="btn btn--ghost btn--lg btn--full" 
-                  disabled 
-                  style={{ 
-                    opacity: 0.8, 
-                    color: 'var(--accent)', 
-                    border: '1px solid var(--accent)',
-                    background: 'rgba(var(--accent-rgb), 0.1)',
-                    cursor: 'default'
-                  }}
-                >
-                  <Check size={18} style={{ marginRight: 8 }} /> Installed (Latest)
-                </button>
-              )
-            ) : (
-              <button
-                className="btn btn--primary btn--lg btn--full"
-                onClick={handleInstall}
-                disabled={!isOnline}
-                id="install-mod-btn"
-                title={!isOnline ? "Internet connection required" : ""}
-              >
-                <Download size={18} style={{ marginRight: 8 }} /> {!isOnline ? 'Internet Required' : 'Download & Install'}
-              </button>
+              </>
             )}
 
             {/* Rollback Support */}
@@ -1249,6 +1306,25 @@ export default function ModDetailPage() {
         </div>
       </div>
 
+      {showDepModal && (
+        <DependencyDownloadModal
+          missingMods={dependencyStatus.missingList && dependencyStatus.missingList.length > 0 ? dependencyStatus.missingList : uniqueDependencies}
+          subFolder={parentFolder || (mod?.isMap || mod?.category?.toUpperCase().includes('MAP') ? mod.title.replace(/\([^)]+\)/g, '').trim() : null)}
+          parentId={mod?.modId}
+          mainTask={!showAsInstalled ? {
+            modId: mod.modId,
+            modTitle: mod.title,
+            downloadUrl: mod.downloadUrl || '',
+            category: mod.category || '',
+            subFolder: parentFolder || (mod?.isMap || mod?.category?.toUpperCase().includes('MAP') ? mod.title.replace(/\([^)]+\)/g, '').trim() : null)
+          } : null}
+          onComplete={() => {
+            setShowDepModal(false);
+            scanMods();
+          }}
+          onCancel={() => setShowDepModal(false)}
+        />
+      )}
       </div>
     );
   }
