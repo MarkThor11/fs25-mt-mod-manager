@@ -164,11 +164,42 @@ function createWindow() {
     icon: path.join(__dirname, '../../assets/icon.png'),
   });
 
-  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+  let logBuffer = [];
+  let isWritingLog = false;
+  const MAX_LOG_SIZE = 5 * 1024 * 1024; // 5MB cap
+
+  const flushLogBuffer = () => {
+    if (logBuffer.length === 0 || isWritingLog) return;
+    isWritingLog = true;
+    const chunk = logBuffer.join('');
+    logBuffer = [];
+
     try {
       const logPath = path.join(app.getPath('userData'), 'renderer_console.log');
-      fs.appendFileSync(logPath, `[Renderer] [L${level}] [${path.basename(sourceId)}:${line}] ${message}\n`, 'utf8');
-    } catch(e) {}
+      fs.stat(logPath, (err, stats) => {
+        const doAppend = () => {
+          fs.appendFile(logPath, chunk, 'utf8', () => {
+            isWritingLog = false;
+            if (logBuffer.length > 0) flushLogBuffer();
+          });
+        };
+
+        if (!err && stats && stats.size > MAX_LOG_SIZE) {
+          fs.writeFile(logPath, '[LOG ROTATED]\n', 'utf8', doAppend);
+        } else {
+          doAppend();
+        }
+      });
+    } catch (e) {
+      isWritingLog = false;
+    }
+  };
+
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    logBuffer.push(`[Renderer] [L${level}] [${path.basename(sourceId)}:${line}] ${message}\n`);
+    if (logBuffer.length >= 25) {
+      flushLogBuffer();
+    }
   });
   
   const appFullscreen = cache.getSetting('appFullscreen') !== 'false';
