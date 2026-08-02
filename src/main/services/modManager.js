@@ -1647,6 +1647,25 @@ function detectConflicts(mods) {
 	return conflicts;
 }
 
+function checkFreeDiskSpace(targetPath = null, minBytes = 1073741824) {
+	try {
+		const p = targetPath || getModsPath();
+		if (p && fs.existsSync(p)) {
+			const stats = nodeFs.statfsSync(p);
+			const freeBytes = Number(stats.bfree) * Number(stats.bsize);
+			if (freeBytes < minBytes) {
+				const freeMB = Math.round(freeBytes / (1024 * 1024));
+				return {
+					ok: false,
+					freeMB,
+					error: `Low Disk Space: Only ${freeMB} MB free on drive. Minimum 1 GB required.`
+				};
+			}
+		}
+	} catch (e) {}
+	return { ok: true };
+}
+
 /**
 	* Internal function for the queue worker to run.
 	*/
@@ -1668,7 +1687,6 @@ async function runInstallTask(task) {
 				const bakPath = path.join(backupsDir, `${fileName}.bak`);
 				
 				if (oldPath !== result.filePath) {
-					// Filename changed: Move old file to backups folder
 					console.log(`[UPDATE] Filename changed. Moving old version to backup: ${fileName}`);
 					try {
 						await fs.ensureDir(backupsDir);
@@ -1676,8 +1694,6 @@ async function runInstallTask(task) {
 						await fs.move(oldPath, bakPath);
 					} catch (e) { console.warn(`[UPDATE] Failed to move old mod to backup: ${e.message}`); }
 				} else {
-					// Filename stayed same: It was overwritten. 
-					// If we have a recovery copy, move THAT to the backups folder so the user has the old version.
 					if (recoveryPath && fs.existsSync(recoveryPath)) {
 						console.log(`[UPDATE] Filename same (overwritten). Moving recovery copy to backup: ${fileName}`);
 						try {
@@ -1689,18 +1705,28 @@ async function runInstallTask(task) {
 				}
 			}
 
-			// Final cleanup of recovery file if it still exists
 			if (recoveryPath && fs.existsSync(recoveryPath)) {
 				await fs.remove(recoveryPath).catch(() => {});
 			}
 		}
 
 		broadcastStatus?.(modId, 'success');
-		onProgress?.({ status: 'success' }); // Explicit completion for dedicated listeners
+		onProgress?.({ status: 'success' });
 		return result;
 	} catch (err) {
 		console.error(`[QUEUE] Task failed for ${modTitle}:`, err);
 		
+		// ── LOW DISK SPACE / ENOSPC PURGE ──
+		if (err && (err.code === 'ENOSPC' || (err.message && err.message.toLowerCase().includes('enospc')) || (err.message && err.message.toLowerCase().includes('low disk space')))) {
+			console.error(`[QUEUE] DISK EXHAUSTED (ENOSPC). Immediately purging all ${downloadQueue.length} queued items.`);
+			while (downloadQueue.length > 0) {
+				const purged = downloadQueue.shift();
+				broadcastStatus?.(purged.modId, 'error');
+				purged.onProgress?.({ status: 'error' });
+			}
+			activeBatchTasks.clear();
+		}
+
 		// ── ERROR RECOVERY ──
 		if (recoveryPath && fs.existsSync(recoveryPath) && oldPath) {
 			console.log(`[UPDATE] Installation failed. Restoring backup for: ${modTitle}`);
@@ -1711,10 +1737,9 @@ async function runInstallTask(task) {
 		}
 
 		broadcastStatus?.(modId, 'error');
-		onProgress?.({ status: 'error' }); // Explicit failure for dedicated listeners
+		onProgress?.({ status: 'error' });
 		throw err;
 	}
-
 }
 
 /**
@@ -1747,7 +1772,14 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 		return { success: false, error: 'Already in progress or queued' };
 	}
 
-	// ── OPTIMIZATION: Scrape for techData/downloadUrl only if missing ──
+	// ── DISK SPACE SAFETY CHECK ──
+	const spaceCheck = checkFreeDiskSpace(subFolder ? path.join(getModsPath(), subFolder) : getModsPath());
+	if (!spaceCheck.ok) {
+		console.warn(`[QUEUE] Refusing to queue ${modTitle}: ${spaceCheck.error}`);
+		broadcastStatus?.(modId, 'error');
+		return { success: false, error: spaceCheck.error };
+	}
+
 	let techData = null;
 	if (!downloadUrl) {
 		try {
@@ -1760,16 +1792,11 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 			debugLog(`[QUEUE] Scraper failed for ${modId}: ${e.message}`);
 		}
 	} else {
-		// downloadUrl provided — try to get techData quietly in background but don't block
 		scraper.fetchModDetail(modId).then(detail => { techData = detail?.techData || null; }).catch(() => {});
 	}
 
 	downloadQueue.push({ modId, modTitle, downloadUrl, onProgress, category, subFolder, techData, oldPath, recoveryPath });
-	
-	// Immediate broadcast so UI knows it is queued
 	broadcastStatus?.(modId, 'queued');
-	
-	// Start processing if not already
 	processQueue();
 
 	return { success: true, queued: true };
