@@ -9,6 +9,7 @@ export const useDownloadStore = create((set, get) => ({
   sessionInstalled: {}, // { modId: normalizedTitle }
 
   addDownload: (modId, title, icon = null) => {
+    if (modId === undefined || modId === null) return;
     set((s) => ({
       activeDownloads: {
         ...s.activeDownloads,
@@ -52,56 +53,116 @@ export const useDownloadStore = create((set, get) => ({
     });
   },
 
-  setStatus: (modId, status) => {
-    const active = get().activeDownloads[modId];
-    if (!active) return;
+  setStatus: (targetKey, status) => {
+    if (targetKey === undefined || targetKey === null) return;
+    const targetStr = String(targetKey).toLowerCase();
 
-    set((s) => ({
-      activeDownloads: {
-        ...s.activeDownloads,
-        [modId]: { ...active, status },
-      },
-    }));
-  },
-
-  setProgress: (modId, progressData) => {
-    const active = get().activeDownloads[modId];
-    if (!active) return;
-
-    // The backend sometimes sends { status: 'success' } via the progress stream.
-    // If it does, ignore it here, as it is properly handled by setStatus via the downloadStatus listener.
-    if (progressData && typeof progressData === 'object' && progressData.status) {
-       return;
-    }
-
-    const progress = typeof progressData === 'object' ? progressData.percent : progressData;
-    const receivedBytes = typeof progressData === 'object' ? progressData.receivedBytes : active.receivedBytes;
-    const totalBytes = typeof progressData === 'object' ? progressData.totalBytes : active.totalBytes;
-
-    set((s) => ({
-      activeDownloads: {
-        ...s.activeDownloads,
-        [modId]: { 
-          ...active, 
-          progress: typeof progress === 'number' ? progress : active.progress, 
-          receivedBytes, 
-          totalBytes,
-          status: 'downloading' 
-        },
-      },
-    }));
-  },
-
-  removeDownload: (modId) => {
-    if (modId === undefined || modId === null) return;
     set((s) => {
       const next = { ...s.activeDownloads };
-      delete next[modId];
-      delete next[String(modId)];
-      if (typeof modId === 'number' || !isNaN(Number(modId))) {
-        delete next[Number(modId)];
-      }
-      return { activeDownloads: next };
+      let changed = false;
+
+      Object.keys(next).forEach((key) => {
+        const item = next[key];
+        if (!item) return;
+
+        const keyStr = String(key).toLowerCase();
+        const modIdStr = String(item.modId || '').toLowerCase();
+        const titleStr = String(item.title || '').toLowerCase();
+
+        if (
+          key === targetKey ||
+          keyStr === targetStr ||
+          modIdStr === targetStr ||
+          titleStr === targetStr
+        ) {
+          next[key] = { ...item, status };
+          changed = true;
+        }
+      });
+
+      return changed ? { activeDownloads: next } : s;
+    });
+  },
+
+  setProgress: (targetKey, progressData) => {
+    if (targetKey === undefined || targetKey === null) return;
+    const targetStr = String(targetKey).toLowerCase();
+
+    set((s) => {
+      const next = { ...s.activeDownloads };
+      let changed = false;
+
+      Object.keys(next).forEach((key) => {
+        const item = next[key];
+        if (!item) return;
+
+        const keyStr = String(key).toLowerCase();
+        const modIdStr = String(item.modId || '').toLowerCase();
+        const titleStr = String(item.title || '').toLowerCase();
+
+        if (
+          key === targetKey ||
+          keyStr === targetStr ||
+          modIdStr === targetStr ||
+          titleStr === targetStr
+        ) {
+          // Do NOT revert completed/terminal statuses back to downloading!
+          const currentStatus = (item.status || '').toLowerCase();
+          if (['success', 'completed', 'done', 'finished', 'installed', 'error', 'failed', 'cancelled'].includes(currentStatus)) {
+            return;
+          }
+
+          if (progressData && typeof progressData === 'object' && progressData.status) {
+            return;
+          }
+
+          const progress = typeof progressData === 'object' ? progressData.percent : progressData;
+          const receivedBytes = typeof progressData === 'object' ? progressData.receivedBytes : item.receivedBytes;
+          const totalBytes = typeof progressData === 'object' ? progressData.totalBytes : item.totalBytes;
+
+          next[key] = {
+            ...item,
+            progress: typeof progress === 'number' ? progress : item.progress,
+            receivedBytes,
+            totalBytes,
+            status: 'downloading'
+          };
+          changed = true;
+        }
+      });
+
+      return changed ? { activeDownloads: next } : s;
+    });
+  },
+
+  removeDownload: (targetKey) => {
+    if (targetKey === undefined || targetKey === null) return;
+    const targetStr = String(targetKey).toLowerCase();
+
+    set((s) => {
+      const next = { ...s.activeDownloads };
+      let changed = false;
+
+      Object.keys(next).forEach((key) => {
+        const item = next[key];
+        if (!item) return;
+
+        const keyStr = String(key).toLowerCase();
+        const modIdStr = String(item.modId || '').toLowerCase();
+        const titleStr = String(item.title || '').toLowerCase();
+
+        if (
+          key === targetKey ||
+          keyStr === targetStr ||
+          modIdStr === targetStr ||
+          titleStr === targetStr
+        ) {
+          delete next[key];
+          changed = true;
+        }
+      });
+
+      return changed ? { activeDownloads: next } : s;
     });
   },
 
@@ -113,7 +174,6 @@ export const useDownloadStore = create((set, get) => ({
         console.log(`[STORE] Cancelling batch ${modId} with ${batch.childIds.length} children`);
         for (const childId of batch.childIds) {
           if (get().activeDownloads[childId]) {
-            // Internal call to avoid recursive batch lookups
             if (window.api?.mods?.cancelInstall) {
                window.api.mods.cancelInstall({ modId: childId }).catch(() => {});
             }
@@ -137,29 +197,49 @@ export const useDownloadStore = create((set, get) => ({
   clearFinished: () => {
     set((s) => {
       const next = { ...s.activeDownloads };
-      Object.keys(next).forEach(modId => {
-        const item = next[modId];
-        if (!item) return;
-        const st = (item.status || '').toLowerCase();
-        const isDone = ['success', 'completed', 'done', 'finished', 'installed', 'error', 'failed', 'cancelled'].includes(st);
-        const is100 = typeof item.progress === 'number' && item.progress >= 100;
-        const isNotActive = st !== 'downloading' && st !== 'waiting' && st !== 'queued' && st !== 'connecting';
+      let changed = false;
 
-        if (isDone || is100 || isNotActive) {
-          delete next[modId];
-          delete next[String(modId)];
+      Object.keys(next).forEach((key) => {
+        const item = next[key];
+        if (!item) return;
+
+        const st = (item.status || '').toLowerCase();
+        const isDoneStatus = ['success', 'completed', 'done', 'finished', 'installed', 'error', 'failed', 'cancelled'].includes(st);
+        const is100 = typeof item.progress === 'number' && item.progress >= 100;
+        const isNotActive = !['downloading', 'waiting', 'queued', 'connecting', 'starting', 'handshaking'].includes(st);
+
+        if (isDoneStatus || is100 || isNotActive) {
+          delete next[key];
+          changed = true;
         }
       });
-      return { activeDownloads: next };
+
+      return changed ? { activeDownloads: next } : s;
     });
   },
 
   isDownloading: (modId) => {
-    return !!get().activeDownloads[modId];
+    if (!modId) return false;
+    const downloads = get().activeDownloads;
+    const targetStr = String(modId).toLowerCase();
+    return Object.keys(downloads).some(key => {
+      const item = downloads[key];
+      if (!item) return false;
+      return key === modId || String(key).toLowerCase() === targetStr || String(item.modId || '').toLowerCase() === targetStr;
+    });
   },
 
   getProgress: (modId) => {
-    return get().activeDownloads[modId]?.progress || 0;
+    if (!modId) return 0;
+    const downloads = get().activeDownloads;
+    const targetStr = String(modId).toLowerCase();
+    for (const key of Object.keys(downloads)) {
+      const item = downloads[key];
+      if (item && (key === modId || String(key).toLowerCase() === targetStr || String(item.modId || '').toLowerCase() === targetStr)) {
+        return item.progress || 0;
+      }
+    }
+    return 0;
   },
 
   addSessionInstalled: (modId, title) => {
@@ -186,7 +266,6 @@ export const useDownloadStore = create((set, get) => ({
 if (window.api?.on) {
   if (window.api.on.downloadProgress) {
     window.api.on.downloadProgress((data) => {
-      // Data contains { modId, progress: { percent, receivedBytes, totalBytes, fileName } }
       useDownloadStore.getState().setProgress(data.modId, data.progress);
     });
   }
@@ -194,6 +273,7 @@ if (window.api?.on) {
   if (window.api.on.downloadStatus) {
     window.api.on.downloadStatus((data) => {
       const { modId, status } = data;
+      if (!modId) return;
       
       if (status === 'cancelled') {
         useDownloadStore.getState().removeDownload(modId);
@@ -207,73 +287,57 @@ if (window.api?.on) {
 
       useDownloadStore.getState().setStatus(modId, status);
 
-      // Auto-clear successful downloads after a delay
-      if (status === 'success') {
+      // Auto-clear successful downloads after 1.5s delay
+      if (status === 'success' || status === 'completed' || status === 'installed') {
         const active = useDownloadStore.getState().activeDownloads[modId];
         if (active) {
             useToastStore.getState().success(`${active.title || 'Mod'} updated successfully!`);
         }
         
-        // Trigger a re-scan and optimistic UI update
-        useDownloadStore.getState().addSessionInstalled(modId);
+        useDownloadStore.getState().addSessionInstalled(modId, active?.title);
         useDownloadStore.getState().triggerScan();
 
         setTimeout(() => {
           useDownloadStore.getState().removeDownload(modId);
-        }, 1000);
+          if (active?.title) useDownloadStore.getState().removeDownload(active.title);
+        }, 1500);
       } else if (status === 'error') {
         const active = useDownloadStore.getState().activeDownloads[modId];
         if (active) {
             useToastStore.getState().error(`Download failed: ${active.title || modId}`);
         }
-        // Keep it in the store so UI shows 'FAILED' for a while
         console.warn(`Download failed for mod ${modId}`);
         setTimeout(() => {
           useDownloadStore.getState().removeDownload(modId);
-        }, 15000); // 15 seconds for errors
+        }, 15000);
       }
     });
   }
-
 
   if (window.api.on.dependencyProgress) {
     window.api.on.dependencyProgress((data) => {
       const { type, modId, status, percent, title, parentId, modName } = data;
       const displayTitle = title || modName;
-      if (!modId && !displayTitle) return;
+      const targetKey = modId || displayTitle;
+      if (!targetKey) return;
 
       if (type === 'STATUS') {
         if (status === 'DOWNLOADING') {
-          useDownloadStore.getState().addDownload(modId, title);
+          useDownloadStore.getState().addDownload(targetKey, displayTitle);
           if (parentId) {
-             useDownloadStore.getState().updateBatchProgress(parentId, useDownloadStore.getState().batchProgress[parentId]?.completed || 0, modId);
+             useDownloadStore.getState().updateBatchProgress(parentId, useDownloadStore.getState().batchProgress[parentId]?.completed || 0, targetKey);
           }
-        } else if (status === 'success') {
-          // Atomic update: Status + Session Cache + Scan Trigger
-          useDownloadStore.setState(state => {
-            const nextActive = { ...state.activeDownloads };
-            if (nextActive[modId]) {
-              nextActive[modId] = { ...nextActive[modId], status: 'success' };
-            }
-            
-            const nextSession = { ...state.sessionInstalled };
-            const normTitle = title ? title.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
-            nextSession[String(modId)] = normTitle;
-            
-            return { 
-              activeDownloads: nextActive,
-              sessionInstalled: nextSession 
-            };
-          });
-
-          // Update Batch Progress if part of a group
+        } else if (status === 'success' || status === 'completed' || status === 'installed') {
+          useDownloadStore.getState().setStatus(targetKey, 'success');
+          useDownloadStore.getState().addSessionInstalled(targetKey, displayTitle);
+          
           if (parentId) {
             const batch = useDownloadStore.getState().batchProgress[parentId];
             if (batch) {
               const nextCompleted = batch.completed + 1;
-              useDownloadStore.getState().updateBatchProgress(parentId, nextCompleted, modId);
+              useDownloadStore.getState().updateBatchProgress(parentId, nextCompleted, targetKey);
               if (nextCompleted >= batch.total) {
-                setTimeout(() => useDownloadStore.getState().removeBatch(parentId), 5000);
+                setTimeout(() => useDownloadStore.getState().removeBatch(parentId), 3000);
               }
             }
           }
@@ -281,32 +345,24 @@ if (window.api?.on) {
           useDownloadStore.getState().triggerScan();
 
           setTimeout(() => {
-            useDownloadStore.getState().removeDownload(modId);
-          }, 1000);
+            useDownloadStore.getState().removeDownload(targetKey);
+          }, 1500);
         } else if (status === 'error' || status === 'NOT_FOUND_ON_MODHUB') {
-          useDownloadStore.getState().setStatus(modId || displayTitle, 'error');
+          useDownloadStore.getState().setStatus(targetKey, 'error');
           
-          // Still increment batch so the parent doesn't hang forever, but it will show failed deps
           if (parentId) {
             const batch = useDownloadStore.getState().batchProgress[parentId];
             if (batch) {
-                // For NOT_FOUND_ON_MODHUB, title is often the name itself as modId might be null
-                useDownloadStore.getState().updateBatchProgress(parentId, batch.completed + 1, modId || displayTitle);
+                useDownloadStore.getState().updateBatchProgress(parentId, batch.completed + 1, targetKey);
             }
           }
-          if (status === 'error') {
-            console.error(`Dependency ${modId} (Title: ${displayTitle}) failed to install for parent ${parentId}`);
-          } else {
-            console.warn(`Dependency ${displayTitle} not found on ModHub for parent ${parentId}`);
-          }
 
-          // Auto-clear failed dependencies after a delay
           setTimeout(() => {
-            useDownloadStore.getState().removeDownload(modId || displayTitle);
-          }, 15000); // 15 seconds for errors
+            useDownloadStore.getState().removeDownload(targetKey);
+          }, 15000);
         }
       } else if (type === 'PROGRESS') {
-        useDownloadStore.getState().setProgress(modId, percent);
+        useDownloadStore.getState().setProgress(targetKey, percent);
       }
     });
   }
