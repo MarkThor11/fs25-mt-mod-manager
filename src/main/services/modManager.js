@@ -1647,18 +1647,28 @@ function detectConflicts(mods) {
 	return conflicts;
 }
 
-function checkFreeDiskSpace(targetPath = null, minBytes = 1073741824) {
+function checkFreeDiskSpace(targetPath = null, requiredBytes = 0, safetyBufferBytes = 524288000) {
 	try {
 		const p = targetPath || getModsPath();
 		if (p && fs.existsSync(p)) {
 			const stats = nodeFs.statfsSync(p);
 			const freeBytes = Number(stats.bfree) * Number(stats.bsize);
-			if (freeBytes < minBytes) {
-				const freeMB = Math.round(freeBytes / (1024 * 1024));
+			
+			// If requiredBytes is unknown (0), demand at least 2.5 GB to safely cover massive 4x/16x maps.
+			// If requiredBytes is known, demand (requiredBytes * 1.5) + 500 MB buffer for zip extraction & backups.
+			const minRequired = requiredBytes > 0 
+				? Math.round(requiredBytes * 1.5) + safetyBufferBytes 
+				: 2684354560; // 2.5 GB safety default for single unknown mod/map
+
+			if (freeBytes < minRequired) {
+				const freeGB = (freeBytes / (1024 ** 3)).toFixed(2);
+				const reqGB = (minRequired / (1024 ** 3)).toFixed(2);
 				return {
 					ok: false,
-					freeMB,
-					error: `Low Disk Space: Only ${freeMB} MB free on drive. Minimum 1 GB required.`
+					freeMB: Math.round(freeBytes / (1024 * 1024)),
+					freeGB,
+					reqGB,
+					error: `Insufficient Disk Space: ${freeGB} GB available on drive, but ${reqGB} GB required for this download.`
 				};
 			}
 		}
@@ -3673,6 +3683,14 @@ async function batchInstallMods(modList, onProgress) {
   
   console.log(`[BATCH] Starting batch install for ${modList.length} mods.`);
   
+  // ── DYNAMIC DISK SPACE CHECK FOR BULK BATCH ──
+  const totalEstimatedBytes = modList.reduce((acc, m) => acc + (m.fileSize || m.size || 350 * 1024 * 1024), 0);
+  const spaceCheck = checkFreeDiskSpace(null, totalEstimatedBytes);
+  if (!spaceCheck.ok) {
+    console.warn(`[BATCH] Refusing batch install: ${spaceCheck.error}`);
+    return { success: [], failed: modList.map(m => ({ modTitle: m.modTitle, error: spaceCheck.error })) };
+  }
+
   // 1. Pre-register all in the UI as 'queued'
   for (const mod of modList) {
     broadcastStatus?.(mod.modId, 'queued');
@@ -3722,6 +3740,15 @@ async function createFolder(folderName) {
 async function autoInstallDependencies(mods, onProgress, subFolder = null, parentId = null) {
 	if (parentId) {
 		activeBatchTasks.add(parentId);
+	}
+
+	// ── DYNAMIC DISK SPACE CHECK FOR MAP DEPENDENCIES ──
+	const totalEstimatedBytes = mods.reduce((acc, m) => acc + (m.fileSize || m.size || 450 * 1024 * 1024), 0);
+	const spaceCheck = checkFreeDiskSpace(subFolder ? path.join(getModsPath(), subFolder) : getModsPath(), totalEstimatedBytes);
+	if (!spaceCheck.ok) {
+		console.warn(`[AUTO-INSTALL] Refusing dependency batch: ${spaceCheck.error}`);
+		if (parentId) activeBatchTasks.delete(parentId);
+		return { total: mods.length, installed: 0, failed: mods.map(m => m.title), error: spaceCheck.error };
 	}
 
 	// ── ROBUST FOLDER RESOLUTION ──
