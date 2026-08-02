@@ -11,8 +11,7 @@ const logFile = (app && typeof app.getPath === 'function')
     : path.join(process.cwd(), 'download_debug.log');
 function debugLog(msg) {
     const entry = `${new Date().toISOString()} - ${msg}\n`;
-    console.log(`[DEBUG] ${msg}`);
-    try { nodeFs.appendFileSync(logFile, entry); } catch (e) {}
+    try { nodeFs.appendFile(logFile, entry, 'utf8', () => {}); } catch (e) {}
 }
 
 const cache = require('./cache');

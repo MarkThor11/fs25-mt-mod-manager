@@ -14,7 +14,7 @@ function getDbPath() {
 function debugLog(msg) {
   try {
     const logPath = path.join(app.getPath('userData'), 'detection_log.txt');
-    fs.appendFileSync(logPath, `[${new Date().toISOString()}] [CACHE] ${msg}\n`);
+    fs.appendFile(logPath, `[${new Date().toISOString()}] [CACHE] ${msg}\n`, 'utf8', () => {});
   } catch (e) {}
 }
 
