@@ -180,9 +180,22 @@ function clearAll() {
   db.prepare('DELETE FROM image_cache').run();
 }
   
+let cachedBundledData = null;
+
 function getModHubMetadataPool() {
   if (!db) return {};
   const pool = {};
+  const poolByCleanTitle = {};
+
+  const addToTitleIndex = (item) => {
+    if (item && item.title) {
+      const cleanTitle = item.title.replace(/\s+/g, '').replace(/_/g, '').toLowerCase();
+      if (cleanTitle && !poolByCleanTitle[cleanTitle]) {
+        poolByCleanTitle[cleanTitle] = item;
+      }
+    }
+  };
+
   try {
     // 1. Scan scraper cache for all ever-browsed mods
     const rows = db.prepare("SELECT key, value FROM cache WHERE key LIKE 'mods_%' OR key LIKE 'modDetail_%'").all();
@@ -192,11 +205,15 @@ function getModHubMetadataPool() {
         const data = JSON.parse(row.value);
         if (row.key.startsWith('modDetail_')) {
           if (data && data.modId) {
-              pool[String(data.modId)] = { ...data, timestamp: now };
+            pool[String(data.modId)] = { ...data, timestamp: now };
+            addToTitleIndex(data);
           }
         } else if (data && Array.isArray(data.mods)) {
           for (const m of data.mods) {
-            if (m.modId) pool[String(m.modId)] = { ...m, timestamp: now };
+            if (m.modId) {
+              pool[String(m.modId)] = { ...m, timestamp: now };
+              addToTitleIndex(m);
+            }
           }
         }
       } catch (e) {}
@@ -229,6 +246,8 @@ function getModHubMetadataPool() {
             pool[id].techData = techData || { hp: t.hp, price: t.price };
         }
       }
+      addToTitleIndex(pool[id]);
+
       // Also index by fileName for easier matching by title-less local mods
       if (t.local_file_name) {
           const fileId = `file_${t.local_file_name.toLowerCase()}`;
@@ -240,23 +259,28 @@ function getModHubMetadataPool() {
     console.error('[CACHE] Metadata pool scan failed:', err.message);
   }
 
-  // 3. Fallback: merge bundled_cache.json if we have very little data
-  // Since this is a synchronous function, we use fs.readFileSync.
+  // 3. Fallback: merge bundled_cache.json (memoized in memory)
   try {
-    const fs = require('fs-extra');
-    const path = require('path');
-    const { app } = require('electron');
-    const bundledPath = path.join(app.getAppPath(), 'src/main/resources/bundled_cache.json');
-    if (fs.existsSync(bundledPath)) {
-        const bundledData = fs.readJsonSync(bundledPath);
-        for (const [k, v] of Object.entries(bundledData)) {
-            if (!pool[k]) pool[k] = v;
-        }
+    if (!cachedBundledData) {
+      const fs = require('fs-extra');
+      const path = require('path');
+      const { app } = require('electron');
+      const bundledPath = path.join(app.getAppPath(), 'src/main/resources/bundled_cache.json');
+      if (fs.existsSync(bundledPath)) {
+        cachedBundledData = fs.readJsonSync(bundledPath);
+      } else {
+        cachedBundledData = {};
+      }
+    }
+    for (const [k, v] of Object.entries(cachedBundledData)) {
+      if (!pool[k]) pool[k] = v;
+      addToTitleIndex(v);
     }
   } catch (err) {
     // Ignore if not present
   }
 
+  pool._byCleanTitle = poolByCleanTitle;
   return pool;
 }
 

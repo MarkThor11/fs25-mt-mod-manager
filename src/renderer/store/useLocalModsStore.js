@@ -17,6 +17,7 @@ export const useLocalModsStore = create((set, get) => ({
   updates: [],
   conflicts: [],
   lastUpdateCheck: 0,
+  lastScanTime: 0,
   isResolving: false,
   resolvingStatus: null, // { modName, status, progress }
   showOnlyUpdates: false,
@@ -40,8 +41,9 @@ export const useLocalModsStore = create((set, get) => ({
   },
 
   scanMods: async (manualPaths = null, force = false) => {
-    // Prevent multiple concurrent scans unless forced
-    if (get().isLoading && !force && get().mods.length > 0) return;
+    const now = Date.now();
+    // Prevent multiple concurrent or duplicate scans within 5 seconds unless forced
+    if (!force && get().mods.length > 0 && (get().isLoading || (now - get().lastScanTime < 5000))) return;
 
     set({ isLoading: true, error: null });
 
@@ -61,6 +63,7 @@ export const useLocalModsStore = create((set, get) => ({
         conflicts: conflicts || [],
         missingDependencies: missingDependencies || [],
         isLoading: false,
+        lastScanTime: Date.now(),
         error: error || null,
       });
       

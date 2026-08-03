@@ -1002,6 +1002,26 @@ async function performScan(manualPaths = null) {
 
 	// Fetch the ModHub metadata pool once to avoid heavy DB queries in the loop
 	const pool = cache.getModHubMetadataPool();
+	const poolByCleanTitle = pool._byCleanTitle || {};
+
+	// Batch load all local mod cache and tracking entries to eliminate thousands of DB queries in loop
+	const allCacheRows = cache.getAllLocalModCache();
+	const localCacheMap = new Map();
+	for (const row of allCacheRows) {
+		localCacheMap.set(row.file_path, row);
+	}
+
+	const allTrackingRows = cache.getAllModTracking();
+	const trackingFileMap = new Map();
+	const trackingBaseNameMap = new Map();
+	for (const t of allTrackingRows) {
+		if (t.local_file_name) {
+			trackingFileMap.set(t.local_file_name, t);
+			trackingFileMap.set(t.local_file_name.toLowerCase(), t);
+			const baseName = path.basename(t.local_file_name).toLowerCase();
+			trackingBaseNameMap.set(baseName, t);
+		}
+	}
 
 	// ── SCAN DLCs ──
 	const dataRoot = getFS25DataRoot();
@@ -1097,7 +1117,7 @@ async function performScan(manualPaths = null) {
 			
 			if (!isZip && !isModDir) return;
 			
-			const cached = cache.getLocalModCache(fullPath);
+			const cached = localCacheMap.get(fullPath);
 			let modDesc = null;
 			let fileHash = null;
 			if (cached && cached.mtime === Math.floor(mtime) && cached.size === size) {
@@ -1189,28 +1209,21 @@ async function performScan(manualPaths = null) {
 			
 			let calculatedModId = modDesc?.modId || null;
 			if (!calculatedModId) {
-				const tracked = cache.getModTrackingByFile(relativePath) || cache.getModTrackingByFile(entryName);
+				const tracked = trackingFileMap.get(relativePath) || trackingFileMap.get(entryName) || trackingFileMap.get(entryName.toLowerCase());
 				if (tracked?.mod_id) {
 					calculatedModId = tracked.mod_id;
 				} else {
-					const trackedBase = cache.getModTrackingByBaseName(entryName);
+					const trackedBase = trackingBaseNameMap.get(entryName.toLowerCase());
 					if (trackedBase?.mod_id) calculatedModId = trackedBase.mod_id;
 				}
 			}
 
 			let remoteMod = pool[fileId] || (calculatedModId ? pool[String(calculatedModId)] : null);
 
-            // Fallback for manually downloaded mods: fuzzy match title against pool
+            // Fallback for manually downloaded mods: fuzzy match title against pool (O(1) lookup!)
             if (!remoteMod) {
                 const cleanName = entryName.replace('.zip', '').replace(/^fs25_/i, '').replace(/_/g, '').toLowerCase();
-                for (const [key, value] of Object.entries(pool)) {
-                    if (!value.title) continue;
-                    const cleanPoolTitle = value.title.replace(/\s+/g, '').replace(/_/g, '').toLowerCase();
-                    if (cleanPoolTitle === cleanName) {
-                        remoteMod = value;
-                        break;
-                    }
-                }
+                remoteMod = poolByCleanTitle[cleanName] || null;
             }
 
 			if (remoteMod) {
