@@ -359,7 +359,7 @@ if (window.api?.on) {
       if (status === 'success' || status === 'completed' || status === 'installed') {
         const active = useDownloadStore.getState().activeDownloads[modId];
         if (active) {
-            useToastStore.getState().success(`${active.title || 'Mod'} updated successfully!`);
+            useToastStore.getState().success(`${active.title || 'Mod'} installed successfully!`);
         }
         
         useDownloadStore.getState().addSessionInstalled(modId, active?.title);

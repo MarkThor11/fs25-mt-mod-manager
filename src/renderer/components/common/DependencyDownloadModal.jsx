@@ -38,27 +38,63 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
     useEffect(() => {
         if (!window.api?.on) return;
         const removeListener = window.api.on.dependencyProgress((data) => {
-            const { type, modName, status, percent, title } = data;
-            
+            const { type, modName, status, percent, title, modId } = data;
+            const targetModIdStr = modId ? String(modId) : null;
+            const targetTitle = (title || modName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
             setModStatuses(prev => {
-                const depKey = getModKey({ title: modName, modName });
-                const current = prev[depKey] || prev[modName] || { status: 'pending', progress: 0 };
+                let matchedKey = null;
+
+                // 1. Check for modId match
+                if (targetModIdStr) {
+                    matchedKey = Object.keys(prev).find(k => k === `id_${targetModIdStr}` || k === targetModIdStr);
+                }
+
+                // 2. Check for title match
+                if (!matchedKey && targetTitle) {
+                    matchedKey = Object.keys(prev).find(k => {
+                        const item = prev[k];
+                        const itemTitle = (item.title || k).toLowerCase().replace(/[^a-z0-9]/g, '');
+                        return itemTitle && (itemTitle === targetTitle || itemTitle.includes(targetTitle) || targetTitle.includes(itemTitle));
+                    });
+                }
+
+                if (!matchedKey) {
+                    matchedKey = getModKey({ modId, title: title || modName, modName });
+                }
+
+                const current = prev[matchedKey] || { status: 'pending', progress: 0, title: title || modName };
                 const next = { ...current };
-                
+
                 if (type === 'STATUS') {
                     next.status = status;
                     if (title) next.title = title;
                 } else if (type === 'PROGRESS') {
                     next.progress = percent;
-                    next.status = 'downloading';
+                    if (next.status !== 'success') next.status = 'downloading';
                 }
-                
-                return { ...prev, [depKey]: next, [modName]: next };
+
+                return { ...prev, [matchedKey]: next };
             });
         });
 
         return () => removeListener();
     }, []);
+
+    // Auto-dismiss once all unique mods have succeeded
+    useEffect(() => {
+        const statuses = Object.values(modStatuses);
+        if (statuses.length > 0 && status === 'processing') {
+            const allSuccess = statuses.every(s => s.status === 'success' || s.status === 'installed');
+            if (allSuccess) {
+                const timer = setTimeout(() => {
+                    setStatus('complete');
+                    onComplete?.();
+                }, 1500);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [modStatuses, status, onComplete]);
 
     const handleManualSearch = (modName) => {
         window.api.shell.openExternal(`https://www.farming-simulator.com/mods.php?title=${encodeURIComponent(modName)}`);
@@ -75,7 +111,7 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
         if (parentId) {
             registerBatch(parentId, uniqueMods.length);
         }
-        const result = await window.api.localMods.autoInstallDependencies({ 
+        await window.api.localMods.autoInstallDependencies({ 
             mods: uniqueMods, 
             subFolder,
             parentId
@@ -85,10 +121,6 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
         const { useLocalModsStore } = await import('../../store/useLocalModsStore');
         const store = useLocalModsStore.getState();
         await store.scanMods();
-        
-        // If everything perfectly satisfied, we can close automatically, 
-        // otherwise stay open so user can see what failed and search manually.
-        setStatus('complete');
     };
 
 
