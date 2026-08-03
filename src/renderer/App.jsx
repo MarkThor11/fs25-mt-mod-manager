@@ -71,15 +71,13 @@ export default function App() {
         // ── DOWNLOAD RESUMPTION ──
         // Check if there were any interrupted downloads and resume them automatically
         if (window.api?.localMods?.resumePending) {
-            window.api.localMods.resumePending().then(res => {
-                if (res?.count > 0 && res.items) {
-                    console.log(`[APP] Resumed ${res.count} pending downloads.`);
-                    const { addDownload } = useDownloadStore.getState();
-                    res.items.forEach(item => {
-                        addDownload(item.mod_id, item.mod_title, null);
-                    });
-                }
-            }).catch(err => console.error('[APP] Failed to resume downloads:', err));
+            useDownloadStore.getState().loadPendingDownloads().then(() => {
+                window.api.localMods.resumePending().then(res => {
+                    if (res?.count > 0) {
+                        console.log(`[APP] Resumed ${res.count} pending downloads.`);
+                    }
+                }).catch(err => console.error('[APP] Failed to resume downloads:', err));
+            });
         }
     };
 

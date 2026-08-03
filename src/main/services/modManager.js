@@ -1806,6 +1806,25 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 	}
 
 	downloadQueue.push({ modId, modTitle, downloadUrl, onProgress, category, subFolder, techData, oldPath, recoveryPath });
+
+	// Persist to pending database table so it survives app restarts even before connection starts
+	try {
+		const targetDir = subFolder ? (path.isAbsolute(subFolder) ? subFolder : path.join(getModsPath(), subFolder)) : getModsPath();
+		cache.savePendingDownload({
+			mod_id: String(modId),
+			mod_title: modTitle,
+			download_url: downloadUrl || '',
+			target_dir: targetDir,
+			file_name: null,
+			total_bytes: 0,
+			received_bytes: 0,
+			category: category || null,
+			tech_data: techData ? JSON.stringify(techData) : null
+		});
+	} catch (e) {
+		console.warn(`[QUEUE] Failed to save pending download state for ${modId}:`, e.message);
+	}
+
 	broadcastStatus?.(modId, 'queued');
 	processQueue();
 
@@ -1884,8 +1903,15 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 
 		const modUrl = `https://www.farming-simulator.com/mod.php?mod_id=${modId}&title=fs2025`;
 
-		// ── Step 0: Direct Hand-off (If URL is already known) ──
-		if (downloadUrl && (downloadUrl.startsWith('http') || downloadUrl.includes('storage/'))) {
+		// ── Step 0: Direct Hand-off (If URL is already known and is a direct download link) ──
+		const isDirectZipLink = downloadUrl && (
+			downloadUrl.includes('storage/') || 
+			downloadUrl.toLowerCase().endsWith('.zip') || 
+			downloadUrl.toLowerCase().includes('.zip?') ||
+			downloadUrl.includes('download.php')
+		) && !downloadUrl.includes('mod.php?');
+
+		if (isDirectZipLink) {
 			debugLog(`[INSTALL] Direct Hand-off for ${modId} (URL: ${downloadUrl})`);
 			broadcastStatus?.(modId, 'starting');
 			onProgress?.({ percent: 0, receivedBytes: 0, totalBytes: 0, fileName: 'Initializing...' });
@@ -2084,7 +2110,7 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 			// Set socket timeout to prevent hanging on silent connections
 			request.setTimeout(45000, () => {
 				debugLog(`[HTTPS-DL] Request timed out for ${modId}`);
-				request.destroy();
+				request.destroy(new Error('Request timed out'));
 			});
 
 			// Handle Redirects
@@ -2103,6 +2129,18 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 					.then(resolve)
 					.catch(reject);
 				return;
+			}
+
+			// Handle Expired or Unauthorized download links (HTTP 403 / 404)
+			if ((response.statusCode === 403 || response.statusCode === 404) && redirectCount === 0) {
+				debugLog(`[HTTPS-DL] Direct link expired (${response.statusCode}). Attempting re-scrape for ${modId}...`);
+				return scraper.fetchModDetail(modId).then(details => {
+					if (details && details.downloadUrl && details.downloadUrl !== url) {
+						return downloadWithNet(modId, details.downloadUrl, modsPath, modTitle, onProgress, category, redirectCount + 1, techData, refererUrl, cookies)
+							.then(resolve).catch(reject);
+					}
+					reject(new Error(`HTTP ${response.statusCode}`));
+				}).catch(reject);
 			}
 
 			if (response.statusCode >= 400 && response.statusCode !== 416) {
@@ -4459,21 +4497,18 @@ async function resumePendingDownloads(onProgress) {
 	const pending = cache.getPendingDownloads();
 	if (pending.length === 0) return { success: true, count: 0 };
 	
-	console.log(`[RESUME] Found ${pending.length} interrupted downloads. Resuming...`);
+	console.log(`[RESUME] Found ${pending.length} interrupted downloads. Resuming via queue...`);
 	
 	const results = [];
 	for (const item of pending) {
 		try {
-			const techData = item.tech_data ? JSON.parse(item.tech_data) : null;
-			// We use installModInternal to handle the actual logic
-			const promise = installModInternal(
+			const promise = enqueueInstall(
 				item.mod_id, 
 				item.mod_title, 
 				item.download_url, 
 				(progress) => onProgress?.(item.mod_id, progress),
 				item.category,
-				item.target_dir, // use exact absolute path
-				techData
+				item.target_dir
 			);
 			results.push(promise);
 		} catch (err) {

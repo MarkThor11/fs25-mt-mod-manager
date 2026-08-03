@@ -8,14 +8,54 @@ export const useDownloadStore = create((set, get) => ({
   scanTimeout: null,
   sessionInstalled: {}, // { modId: normalizedTitle }
 
-  addDownload: (modId, title, icon = null) => {
+  addDownload: (modId, title, icon = null, progress = 0, receivedBytes = null, totalBytes = null, status = 'waiting') => {
     if (modId === undefined || modId === null) return;
-    set((s) => ({
-      activeDownloads: {
-        ...s.activeDownloads,
-        [modId]: { modId, title, progress: 0, icon, status: 'waiting' },
-      },
-    }));
+    const modIdStr = String(modId);
+
+    set((s) => {
+      const existing = s.activeDownloads[modId] || s.activeDownloads[modIdStr];
+      if (existing) {
+        // Do not reset an already active/downloading item back to 0 waiting!
+        const currentStatus = (existing.status || '').toLowerCase();
+        if (['downloading', 'connecting', 'starting', 'handshaking', 'queued'].includes(currentStatus)) {
+          return s;
+        }
+      }
+
+      return {
+        activeDownloads: {
+          ...s.activeDownloads,
+          [modIdStr]: { 
+            modId: modIdStr, 
+            title: title || existing?.title || `Mod ${modIdStr}`, 
+            progress: typeof progress === 'number' ? progress : (existing?.progress || 0), 
+            icon: icon || existing?.icon || null, 
+            receivedBytes: receivedBytes !== null ? receivedBytes : (existing?.receivedBytes || null),
+            totalBytes: totalBytes !== null ? totalBytes : (existing?.totalBytes || null),
+            status: status || existing?.status || 'waiting' 
+          },
+        },
+      };
+    });
+  },
+
+  loadPendingDownloads: async () => {
+    try {
+      if (window.api?.localMods?.getPending) {
+        const pending = await window.api.localMods.getPending();
+        if (Array.isArray(pending) && pending.length > 0) {
+          pending.forEach(item => {
+            const modIdStr = String(item.mod_id);
+            const received = item.received_bytes || 0;
+            const total = item.total_bytes || 0;
+            const percent = total > 0 ? Math.round((received / total) * 100) : 0;
+            get().addDownload(modIdStr, item.mod_title, null, percent, received, total, 'waiting');
+          });
+        }
+      }
+    } catch (e) {
+      console.error('[STORE] Failed to load pending downloads:', e);
+    }
   },
 
   registerBatch: (parentId, total) => {
@@ -55,7 +95,8 @@ export const useDownloadStore = create((set, get) => ({
 
   setStatus: (targetKey, status) => {
     if (targetKey === undefined || targetKey === null) return;
-    const targetStr = String(targetKey).toLowerCase();
+    const targetStr = String(targetKey);
+    const targetLower = targetStr.toLowerCase();
 
     set((s) => {
       const next = { ...s.activeDownloads };
@@ -71,14 +112,24 @@ export const useDownloadStore = create((set, get) => ({
 
         if (
           key === targetKey ||
-          keyStr === targetStr ||
-          modIdStr === targetStr ||
-          titleStr === targetStr
+          keyStr === targetLower ||
+          modIdStr === targetLower ||
+          titleStr === targetLower
         ) {
           next[key] = { ...item, status };
           changed = true;
         }
       });
+
+      if (!changed && !['success', 'completed', 'cancelled'].includes(status)) {
+        next[targetStr] = {
+          modId: targetStr,
+          title: `Mod ${targetStr}`,
+          progress: 0,
+          status
+        };
+        changed = true;
+      }
 
       return changed ? { activeDownloads: next } : s;
     });
@@ -86,7 +137,8 @@ export const useDownloadStore = create((set, get) => ({
 
   setProgress: (targetKey, progressData) => {
     if (targetKey === undefined || targetKey === null) return;
-    const targetStr = String(targetKey).toLowerCase();
+    const targetStr = String(targetKey);
+    const targetLower = targetStr.toLowerCase();
 
     set((s) => {
       const next = { ...s.activeDownloads };
@@ -102,9 +154,9 @@ export const useDownloadStore = create((set, get) => ({
 
         if (
           key === targetKey ||
-          keyStr === targetStr ||
-          modIdStr === targetStr ||
-          titleStr === targetStr
+          keyStr === targetLower ||
+          modIdStr === targetLower ||
+          titleStr === targetLower
         ) {
           // Do NOT revert completed/terminal statuses back to downloading!
           const currentStatus = (item.status || '').toLowerCase();
@@ -130,6 +182,22 @@ export const useDownloadStore = create((set, get) => ({
           changed = true;
         }
       });
+
+      if (!changed) {
+        const progress = typeof progressData === 'object' ? progressData.percent : progressData;
+        const receivedBytes = typeof progressData === 'object' ? progressData.receivedBytes : null;
+        const totalBytes = typeof progressData === 'object' ? progressData.totalBytes : null;
+
+        next[targetStr] = {
+          modId: targetStr,
+          title: `Mod ${targetStr}`,
+          progress: typeof progress === 'number' ? progress : 0,
+          receivedBytes,
+          totalBytes,
+          status: 'downloading'
+        };
+        changed = true;
+      }
 
       return changed ? { activeDownloads: next } : s;
     });

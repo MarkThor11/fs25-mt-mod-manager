@@ -508,6 +508,10 @@ ipcMain.handle('mods:resumePending', async () => {
   });
 });
 
+ipcMain.handle('mods:getPending', async () => {
+  return cache.getPendingDownloads();
+});
+
 ipcMain.handle('mods:batchInstall', async (_, modList) => {
   return await modManager.batchInstallMods(modList, (progress) => {
     mainWindow?.webContents.send('mods:batchProgress', progress);
