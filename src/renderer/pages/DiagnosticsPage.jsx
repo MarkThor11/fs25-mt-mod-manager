@@ -8,7 +8,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 export default function DiagnosticsPage() {
   const [copied, setCopied] = useState(false);
   
-  const modCount = useLocalModsStore(s => s.mods?.length || 0);
+  const modCount = useLocalModsStore(s => s.modCount);
   const savegameCount = useSavegameStore(s => s.savegames?.length || 0);
   const favCount = useModHubStore(s => (s.favoriteMods?.length || 0) + (s.favoriteAuthors?.length || 0));
   

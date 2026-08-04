@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   RefreshCw, Download, Trash2, FolderOpen, Package, Lock,
-  CheckCircle, Check, AlertTriangle, HardDrive, Search, List, LayoutGrid, ChevronDown, ChevronRight,
+  CheckCircle, Check, AlertTriangle, HardDrive, Search, List, LayoutGrid, ChevronDown, ChevronRight, ChevronsUp, ChevronsDown,
   Tag, Plus, X, Settings2, Folder, FolderPlus, FolderOutput, Eye, EyeOff, MoreVertical, Zap, Layers, RefreshCcw,
   Heart, Star, Share2, Pencil, GripVertical, User, Pin
 } from 'lucide-react';
@@ -485,12 +485,12 @@ const LazyModList = ({
   handleUpdate,
   handleUninstall
 }) => {
-  const [visibleCount, setVisibleCount] = useState(60);
+  const [visibleCount, setVisibleCount] = useState(20);
   const sentinelRef = React.useRef(null);
   const { toggleFavoriteMod, toggleFavoriteAuthor, toggleMustHaveMod } = useModHubStore();
 
   useEffect(() => {
-    setVisibleCount(60);
+    setVisibleCount(20);
   }, [folderMods]);
 
   useEffect(() => {
@@ -498,7 +498,7 @@ const LazyModList = ({
 
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {
-        setVisibleCount((prev) => Math.min(prev + 60, folderMods.length));
+        setVisibleCount((prev) => Math.min(prev + 30, folderMods.length));
       }
     }, {
       root: null,
@@ -827,8 +827,8 @@ export default function InstalledModsPage() {
   const [autoResolveMode, setAutoResolveMode] = useState(false);
 
   useEffect(() => {
-    if (isLoaded) scanMods();
-  }, [isLoaded]);
+    if (isLoaded && mods.length === 0) scanMods();
+  }, [isLoaded, mods.length]);
 
   useEffect(() => {
     const unsub = initListeners();
@@ -871,7 +871,7 @@ export default function InstalledModsPage() {
   const [selectedMods, setSelectedMods] = useState([]);
   const [showFolderInput, setShowFolderInput] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
-  const { expandedFolders, setExpandedFolder, skipDeleteConfirm } = useSettingsStore();
+  const { expandedFolders, setExpandedFolder, collapseAllFolders, expandAllFolders, skipDeleteConfirm } = useSettingsStore();
   const [renamingFolder, setRenamingFolder] = useState(null);
   const [renameValue, setRenameValue] = useState('');
   const [draggedFolder, setDraggedFolder] = useState(null);
@@ -1004,8 +1004,8 @@ export default function InstalledModsPage() {
     const byName = new Map();
     const byFile = new Map();
 
-    for (let i = 0; i < filteredMods.length; i++) {
-      const m = filteredMods[i];
+    for (let i = 0; i < mods.length; i++) {
+      const m = mods[i];
       if (m.modId) byId.set(String(m.modId).replace(/^0+/, ''), m);
       if (m.modName) {
         const norm = m.modName.toLowerCase();
@@ -1022,9 +1022,10 @@ export default function InstalledModsPage() {
       }
     }
     return { byId, byName, byFile };
-  }, [filteredMods]);
+  }, [mods]);
 
   const folders = useMemo(() => {
+    const mapDepCache = new Map();
     const findFastMatch = (dep) => {
         if (!dep) return null;
         let depStr = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
@@ -1126,12 +1127,13 @@ export default function InstalledModsPage() {
             for (const map of maps) {
                 if (!map.dependencies || map.dependencies.length === 0) continue;
                 
-                const { missing } = resolveRecursiveDependencies(map.modName || map.fileName, mods, sessionInstalled);
-                missing.forEach(m => missingMods.add(m));
-
-                if (missingMods.size > 0 && map.modName === 'FS25_The_Peasant_Valley') {
-                    console.log(`[DEBUG-MISSING] The Peasant Valley is missing:`, Array.from(missingMods));
+                const mapKey = map.modName || map.fileName;
+                if (!mapDepCache.has(mapKey)) {
+                    const { missing } = resolveRecursiveDependencies(mapKey, mods, sessionInstalled);
+                    mapDepCache.set(mapKey, missing);
                 }
+                const missing = mapDepCache.get(mapKey);
+                missing.forEach(m => missingMods.add(m));
 
                 requirementStatus = { 
                     status: missingMods.size === 0 ? 'satisfied' : 'missing', 
@@ -1541,7 +1543,7 @@ export default function InstalledModsPage() {
           </h1>
           <p className="page__subtitle" style={{ fontSize: 'var(--fs-sm)', display: 'flex', alignItems: 'center', gap: 12 }}>
             <span>
-                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{mods.filter(m => !m.isDLC && m.folder !== 'DLC' && !m.fileName?.toLowerCase().startsWith('pdlc_') && !hiddenFolders.includes(m.folder || '')).length}</span> mods • <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{Object.keys(folders).filter(f => f !== 'DLC').length}</span> folders visible
+                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{mods.filter(m => !m.isDLC && m.folder !== 'DLC' && !m.fileName?.toLowerCase().startsWith('pdlc_') && !m.fileName?.toLowerCase().endsWith('.dlc') && !hiddenFolders.includes(m.folder || '')).length}</span> mods • <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{Object.keys(folders).filter(f => f !== 'DLC').length}</span> folders visible
             </span>
             {hiddenFolders.length > 0 && (
                 <button 
@@ -1726,6 +1728,27 @@ export default function InstalledModsPage() {
                 {selectedTags.length}
             </span>
           )}
+        </button>
+        <button 
+          className="btn btn--secondary btn--sm"
+          onClick={() => {
+            const folderKeys = Object.keys(folders);
+            const areAllCollapsed = folderKeys.length > 0 && folderKeys.every(f => expandedFolders[f] === false);
+            if (areAllCollapsed) {
+              expandAllFolders(folderKeys);
+            } else {
+              collapseAllFolders(folderKeys);
+            }
+          }}
+          style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
+          title={Object.keys(folders).length > 0 && Object.keys(folders).every(f => expandedFolders[f] === false) ? "Expand all folders" : "Collapse all folders"}
+        >
+          {Object.keys(folders).length > 0 && Object.keys(folders).every(f => expandedFolders[f] === false) ? (
+            <ChevronsDown size={14} />
+          ) : (
+            <ChevronsUp size={14} />
+          )}
+          {Object.keys(folders).length > 0 && Object.keys(folders).every(f => expandedFolders[f] === false) ? "Expand All" : "Collapse All"}
         </button>
 
 

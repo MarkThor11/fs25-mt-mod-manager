@@ -13,7 +13,7 @@ import { useInstalledLookup } from '../hooks/useInstalledLookup';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { mods: localMods, scanMods, checkUpdates, updates, isCheckingUpdates } = useLocalModsStore();
+  const { mods: localMods, modCount, scanMods, checkUpdates, updates, isCheckingUpdates } = useLocalModsStore();
   const { savegames, fetchSavegames } = useSavegameStore();
   const { 
     totalMods, latestCount, newCount, updateCount, fetchStats,
@@ -146,7 +146,7 @@ export default function HomePage() {
               <Package size={22} />
             </div>
             <div>
-              <div className="stat-card__value">{localMods.filter(m => !m.isDLC && m.folder !== 'DLC' && !m.fileName?.toLowerCase().startsWith('pdlc_')).length}</div>
+              <div className="stat-card__value">{modCount}</div>
               <div className="stat-card__label">Installed Mods</div>
             </div>
           </div>

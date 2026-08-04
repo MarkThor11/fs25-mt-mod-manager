@@ -1375,7 +1375,7 @@ async function performScan(manualPaths = null) {
 	debugLog(`[SCAN] Queuing ${allEntries.length} items for processing...`);
 
 	// Process with concurrency limit for speed
-	const limit = 10;
+	const limit = 50;
 	for (let i = 0; i < allEntries.length; i += limit) {
 		const chunk = allEntries.slice(i, i + limit);
 		
@@ -1388,8 +1388,8 @@ async function performScan(manualPaths = null) {
 			try { cache.commitTransaction(); } catch (e2) {}
 		}
 
-		// Yield slightly between chunks to keep UI responsive
-		await new Promise(r => setTimeout(r, 10));
+		// Micro-yield between chunks to keep event loop responsive
+		if (i % 200 === 0) await new Promise(r => setImmediate(r));
 	}
 
 	// TRIGGER MIRROR SYNC IN BACKGROUND
@@ -1432,6 +1432,12 @@ async function performScan(manualPaths = null) {
 	// Filter out internal background logic mods so they don't appear in UI
 	const internalMods = ['fs25_rememberpositions', 'fs25_managerpersistencebridge'];
 	finalMods = finalMods.filter(m => !internalMods.includes((m.modName || '').toLowerCase()));
+
+function getTemplatesPath() {
+	const p = path.join(pathProvider.getFS25DataRoot(), 'modManagerTemplates');
+	if (!fs.existsSync(p)) fs.ensureDirSync(p);
+	return p;
+}
 
 	// ── TEMPLATE-BASED MAP FOLDER METADATA ENRICHMENT ──
 	// Ensure that every map subfolder matching a master template is recognized as a Map folder with full title, author, and dependencies!
@@ -2029,6 +2035,37 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 				item.once('done', (event, state) => {
 					debugLog(`[INSTALL] Window download done for ${modId}. State: ${state}`);
 					if (state === 'completed') {
+						// Verify ZIP archive integrity
+						if (savePath.toLowerCase().endsWith('.zip')) {
+							try {
+								const fd = fs.openSync(savePath, 'r');
+								const headerBuf = Buffer.alloc(4);
+								fs.readSync(fd, headerBuf, 0, 4, 0);
+								fs.closeSync(fd);
+
+								if (headerBuf[0] !== 0x50 || headerBuf[1] !== 0x4B) {
+									try { fs.unlinkSync(savePath); } catch (e) {}
+									activeInstalls.delete(String(modId));
+									wrappedReject(new Error('Downloaded file is not a valid ZIP archive (server returned HTML or invalid response)'));
+									return;
+								}
+
+								const testZip = new AdmZip(savePath);
+								const entries = testZip.getEntries();
+								if (!entries || entries.length === 0) {
+									try { fs.unlinkSync(savePath); } catch (e) {}
+									activeInstalls.delete(String(modId));
+									wrappedReject(new Error('Downloaded ZIP archive contains no entries'));
+									return;
+								}
+							} catch (zipErr) {
+								try { fs.unlinkSync(savePath); } catch (e) {}
+								activeInstalls.delete(String(modId));
+								wrappedReject(new Error(`Downloaded ZIP is corrupted: ${zipErr.message}`));
+								return;
+							}
+						}
+
 						try {
 							const relativePath = path.relative(getModsPath(), savePath);
 							cache.setModTracking(modId, { 
@@ -2290,7 +2327,57 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 
 			fileStream.on('finish', () => {
 				clearInterval(dlStallTimer);
-				debugLog(`[HTTPS-DL] Success: ${fileName}`);
+
+				// 1. Verify byte count completeness
+				if (totalBytes > 0 && receivedBytes < totalBytes) {
+					debugLog(`[HTTPS-DL] Incomplete download for ${fileName}: received ${receivedBytes}/${totalBytes} bytes`);
+					try { fs.unlinkSync(savePath); } catch (e) {}
+					activeInstalls.delete(String(modId));
+					broadcastStatus?.(modId, 'error');
+					reject(new Error(`Download incomplete (${(receivedBytes/1024/1024).toFixed(1)}MB / ${(totalBytes/1024/1024).toFixed(1)}MB received)`));
+					return;
+				}
+
+				// 2. Verify file header magic bytes if .zip
+				if (savePath.toLowerCase().endsWith('.zip')) {
+					try {
+						const fd = fs.openSync(savePath, 'r');
+						const headerBuf = Buffer.alloc(4);
+						fs.readSync(fd, headerBuf, 0, 4, 0);
+						fs.closeSync(fd);
+
+						// ZIP signature is PK (0x50 0x4B)
+						if (headerBuf[0] !== 0x50 || headerBuf[1] !== 0x4B) {
+							debugLog(`[HTTPS-DL] Invalid ZIP header for ${fileName}: magic bytes = ${headerBuf.toString('hex')}`);
+							try { fs.unlinkSync(savePath); } catch (e) {}
+							activeInstalls.delete(String(modId));
+							broadcastStatus?.(modId, 'error');
+							reject(new Error('Downloaded file is not a valid ZIP archive (server returned HTML or invalid response)'));
+							return;
+						}
+
+						// 3. Verify ZIP CEN structure with AdmZip
+						const testZip = new AdmZip(savePath);
+						const entries = testZip.getEntries();
+						if (!entries || entries.length === 0) {
+							debugLog(`[HTTPS-DL] Empty ZIP archive for ${fileName}`);
+							try { fs.unlinkSync(savePath); } catch (e) {}
+							activeInstalls.delete(String(modId));
+							broadcastStatus?.(modId, 'error');
+							reject(new Error('Downloaded ZIP archive contains no entries'));
+							return;
+						}
+					} catch (zipErr) {
+						debugLog(`[HTTPS-DL] ZIP verification error for ${fileName}: ${zipErr.message}`);
+						try { fs.unlinkSync(savePath); } catch (e) {}
+						activeInstalls.delete(String(modId));
+						broadcastStatus?.(modId, 'error');
+						reject(new Error(`Downloaded ZIP is corrupted: ${zipErr.message}`));
+						return;
+					}
+				}
+
+				debugLog(`[HTTPS-DL] Success & Verified: ${fileName}`);
 				
 				// Final Tracking
 				const relativePath = path.relative(getModsPath(), savePath);
@@ -3074,18 +3161,23 @@ function getImageDimensions(buffer) {
     if (buffer[0] === 0x44 && buffer[1] === 0x44 && buffer[2] === 0x53 && buffer[3] === 0x20) {
         const height = buffer.readInt32LE(12);
         const width = buffer.readInt32LE(16);
-        const fourCC = buffer.toString('utf8', 84, 88);
-        debugLog(`[DECODER] Decoding DDS: ${width}x${height}, format=${fourCC}`);
-        // Header flags for DXT detection
         const pfFlags = buffer.readUInt32LE(80); // PixelFormat flags
         const pfFourCC = buffer.toString('utf8', 84, 88); // Direct DXT indicator
         let format = 'rgba';
-        if (pfFlags & 0x4) { // DDPF_FOURCC
+        let dataOffset = 128;
+        if (pfFourCC === 'DX10' && buffer.length >= 148) {
+            dataOffset = 148;
+            const dxgiFormat = buffer.readUInt32LE(128);
+            if (dxgiFormat === 71 || dxgiFormat === 72) format = 'dxt1';
+            else if (dxgiFormat === 74 || dxgiFormat === 75) format = 'dxt3';
+            else if (dxgiFormat === 77 || dxgiFormat === 78) format = 'dxt5';
+            else if (dxgiFormat === 98 || dxgiFormat === 99) format = 'bc7';
+        } else if (pfFlags & 0x4) { // DDPF_FOURCC
             if (pfFourCC === 'DXT1') format = 'dxt1';
             else if (pfFourCC === 'DXT3') format = 'dxt3'; // Limited support
             else if (pfFourCC === 'DXT5') format = 'dxt5';
 		}
-        return { width, height, type: 'dds', format };
+        return { width, height, type: 'dds', format, dataOffset };
 	}
     
     return null;
@@ -3094,9 +3186,8 @@ function getImageDimensions(buffer) {
 /**
 	* Minimal DXT1/DXT5 decoder to translate binary DDS data to raw RGBA.
 */
-function decodeDDS(buffer, width, height, format) {
+function decodeDDS(buffer, width, height, format, dataOffset = 128) {
     const rgba = Buffer.alloc(width * height * 4);
-    const dataOffset = 128; // Standard DDS header size
     let offset = dataOffset;
 	
     const decode565 = (val) => {
@@ -3206,7 +3297,33 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 
 		if (!filePath || !fs.existsSync(filePath)) return 'CATEGORY:generic';
 
-		const normalizedIcon = iconFile ? iconFile.replace(/\\/g, '/') : null;
+		let normalizedIcon = iconFile ? iconFile.replace(/\\/g, '/') : null;
+		
+		// If iconFile was not passed in, attempt to auto-detect iconFilename from modDesc.xml
+		if (!normalizedIcon && filePath && fs.existsSync(filePath)) {
+			try {
+				let xmlStr = null;
+				if (filePath.endsWith('.zip')) {
+					const zip = zipInstance || new AdmZip(filePath);
+					const modDescEntry = zip.getEntries().find(e => e.entryName.toLowerCase() === 'moddesc.xml');
+					if (modDescEntry) xmlStr = modDescEntry.getData().toString('utf8');
+				} else {
+					const xmlPath = path.join(filePath, 'modDesc.xml');
+					if (fs.existsSync(xmlPath)) xmlStr = fs.readFileSync(xmlPath, 'utf8');
+				}
+				if (xmlStr) {
+					xmlStr = xmlStr.replace(/<!--[\s\S]*?-->/g, '');
+					let raw = (
+						(xmlStr.match(/<iconFilename[^>]*>([\s\S]*?)<\/iconFilename>/i) || [])[1] ||
+						(xmlStr.match(/<icon[^>]+filename=["']([^"']+)["']/i) || [])[1] ||
+						(xmlStr.match(/<icon[^>]*>([\s\S]*?)<\/icon>/i) || [])[1] ||
+						''
+					).trim();
+					if (raw.includes('<')) raw = raw.replace(/<[^>]*>/g, '').trim();
+					if (raw) normalizedIcon = raw.replace(/\\/g, '/');
+				}
+			} catch (e) {}
+		}
 		
 		const getCategoryFallback = (entries = null) => {
 			if (modDesc?.isMap) return 'CATEGORY:map';
@@ -3230,29 +3347,7 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 			const entries = zip.getEntries();
 			let entry = null;
 
-			// 0. Store Priority (if enabled)
-			if (prioritizeStore) {
-				entry = entries.find(e => {
-					const n = e.entryName.toLowerCase();
-					// Root-level store_*.dds or store_*.png (User's specific pattern)
-					return (n.startsWith('store_') && (n.endsWith('.dds') || n.endsWith('.png'))) && !n.includes('/');
-				}) || entries.find(e => {
-					const n = e.entryName.toLowerCase();
-					// Standard fallbacks
-					return n === 'store.png' || n === 'store.dds' || n === 'shop.png' || n === 'shop.dds';
-				});
-			}
-
-			// 0.5 Icon Priority (if not store)
-			if (!entry && !prioritizeStore) {
-				entry = entries.find(e => {
-					const n = e.entryName.toLowerCase();
-					// Root-level icon_*.dds or icon_*.png (User's specific pattern)
-					return (n.startsWith('icon_') && (n.endsWith('.dds') || n.endsWith('.png'))) && !n.includes('/');
-				});
-			}
-			
-			// 1. Primary: Search for exact filename (if not store priority or store not found)
+			// 1. Primary: Search for exact filename of normalizedIcon
 			if (!entry && normalizedIcon) {
 				entry = entries.find(e => e.entryName.toLowerCase() === normalizedIcon.toLowerCase());
 			}
@@ -3262,19 +3357,32 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 				const iconBaseWithExt = path.basename(normalizedIcon).toLowerCase();
 				const iconBaseNoExt = iconBaseWithExt.split('.')[0];
 				
-				// Try case-insensitive basename match with different extension
 				entry = entries.find(e => {
 					const name = path.basename(e.entryName).toLowerCase();
 					return name === iconBaseWithExt || name === iconBaseNoExt + '.dds' || name === iconBaseNoExt + '.png' || name === iconBaseNoExt + '.jpg';
+				}) || entries.find(e => e.entryName.toLowerCase().endsWith('/' + iconBaseWithExt) || e.entryName.toLowerCase().endsWith('/' + iconBaseNoExt + '.dds') || e.entryName.toLowerCase().endsWith('/' + iconBaseNoExt + '.png'));
+			}
+
+			// 3. Store Priority (if enabled)
+			if (!entry && prioritizeStore) {
+				entry = entries.find(e => {
+					const n = e.entryName.toLowerCase();
+					return (n.startsWith('store_') && (n.endsWith('.dds') || n.endsWith('.png'))) && !n.includes('/');
+				}) || entries.find(e => {
+					const n = e.entryName.toLowerCase();
+					return n === 'store.png' || n === 'store.dds' || n === 'shop.png' || n === 'shop.dds';
 				});
-				
-				if (!entry) {
-					// Deep search for the same basename
-					entry = entries.find(e => e.entryName.toLowerCase().endsWith('/' + iconBaseWithExt) || e.entryName.toLowerCase().endsWith('/' + iconBaseNoExt + '.dds'));
-				}
+			}
+
+			// 4. Icon Priority (if not store)
+			if (!entry) {
+				entry = entries.find(e => {
+					const n = e.entryName.toLowerCase();
+					return (n.startsWith('icon_') && (n.endsWith('.dds') || n.endsWith('.png'))) && !n.includes('/');
+				});
 			}
 			
-			// 3. Last Resort: Search for common icon filenames
+			// 5. Common Icon Filenames
 			if (!entry) {
 				entry = entries.find(e => {
 					const name = e.entryName.toLowerCase();
@@ -3357,11 +3465,18 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 			if (entry) {
 				const buffer = entry.getData();
 				const info = getImageDimensions(buffer);
-				if (info && info.type === 'dds' && (info.format === 'dxt1' || info.format === 'dxt5')) {
+				let nativeImage = null;
+				try {
+					const electron = require('electron');
+					if (electron && typeof electron === 'object' && electron.nativeImage) {
+						nativeImage = electron.nativeImage;
+					}
+				} catch (e) {}
+
+				if (info && info.type === 'dds' && (info.format === 'dxt1' || info.format === 'dxt5') && nativeImage) {
 					try {
 						// DECODE DDS AND CONVERT TO PNG Base64
-						const { nativeImage } = require('electron');
-						const rgba = decodeDDS(buffer, info.width, info.height, info.format);
+						const rgba = decodeDDS(buffer, info.width, info.height, info.format, info.dataOffset);
 						let img = nativeImage.createFromBitmap(rgba, { width: info.width, height: info.height });
 						
 						// ── AGGRESSIVE DOWNSCALING ──
@@ -3373,52 +3488,60 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 						}
 						
 						return img.toDataURL();
-						} catch (e) {
+					} catch (e) {
 						console.error('[DDS] Render failed:', e);
 					}
 				}
 				
 				const ext = path.extname(entry.entryName).replace('.', '').toLowerCase() || 'png';
-				if (ext === 'dds') return getCategoryFallback(entries); 
+				if (ext === 'dds') {
+					// Fallback search for PNG/JPG alternative in zip before category
+					const altPng = entries.find(e => {
+						const n = e.entryName.toLowerCase();
+						return (n.endsWith('.png') || n.endsWith('.jpg') || n.endsWith('.jpeg')) && !n.includes('textures');
+					});
+					if (altPng) {
+						try {
+							const altBuffer = altPng.getData();
+							if (nativeImage) {
+								let img = nativeImage.createFromBuffer(altBuffer);
+								const size = img.getSize();
+								if (size.width > 512 || size.height > 512) {
+									img = img.resize({ width: 512, height: 512, quality: 'good' });
+								}
+								return img.toDataURL();
+							}
+							const altExt = path.extname(altPng.entryName).replace('.', '').toLowerCase() || 'png';
+							return `data:image/${altExt === 'jpg' ? 'jpeg' : altExt};base64,${altBuffer.toString('base64')}`;
+						} catch (e) {}
+					}
+					return getCategoryFallback(entries);
+				}
 				// Don't return tiny images (likely textures) unless it's the named icon
 				if (buffer.length < 5000 && !entry.entryName.toLowerCase().includes('icon')) return getCategoryFallback(entries);
 				
 				try {
-					const { nativeImage } = require('electron');
-					let img = nativeImage.createFromBuffer(buffer);
-					const size = img.getSize();
-					if (size.width > 512 || size.height > 512) {
-						img = img.resize({ width: 512, height: 512, quality: 'good' });
+					if (nativeImage) {
+						let img = nativeImage.createFromBuffer(buffer);
+						const size = img.getSize();
+						if (size.width > 512 || size.height > 512) {
+							img = img.resize({ width: 512, height: 512, quality: 'good' });
+						}
+						return img.toDataURL();
 					}
-					return img.toDataURL();
+					return `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${buffer.toString('base64')}`;
 				} catch (e) {
 					return `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${buffer.toString('base64')}`;
 				}
 			}
 		} else {
 			// It's a directory
+			let hints = null;
 			let fullIconPath = null;
 			const dirFiles = fs.readdirSync(filePath);
+			hints = dirFiles.map(f => ({ entryName: f }));
 			const lowerFiles = dirFiles.map(f => f.toLowerCase());
 
-			// 0. Store Priority (Directories)
-			if (prioritizeStore) {
-				const storeMatch = dirFiles.find(f => {
-					const low = f.toLowerCase();
-					return (low.startsWith('store_') && (low.endsWith('.dds') || low.endsWith('.png'))) || low === 'store.png' || low === 'store.dds' || low === 'shop.png' || low === 'shop.dds';
-				});
-				if (storeMatch) fullIconPath = path.join(filePath, storeMatch);
-			}
-
-			// 0.5 Icon Priority (Directories)
-			if (!fullIconPath && !prioritizeStore) {
-				const iconMatch = dirFiles.find(f => {
-					const low = f.toLowerCase();
-					return (low.startsWith('icon_') && (low.endsWith('.dds') || low.endsWith('.png')));
-				});
-				if (iconMatch) fullIconPath = path.join(filePath, iconMatch);
-			}
-			
 			// 1. Primary: Search for exact filename (modDesc)
 			if (!fullIconPath && normalizedIcon) {
 				const match = dirFiles.find(f => f.toLowerCase() === normalizedIcon.toLowerCase());
@@ -3430,6 +3553,24 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 						fullIconPath = candidatePath;
 					}
 				}
+			}
+
+			// 2. Store Priority (Directories)
+			if (!fullIconPath && prioritizeStore) {
+				const storeMatch = dirFiles.find(f => {
+					const low = f.toLowerCase();
+					return (low.startsWith('store_') && (low.endsWith('.dds') || low.endsWith('.png'))) || low === 'store.png' || low === 'store.dds' || low === 'shop.png' || low === 'shop.dds';
+				});
+				if (storeMatch) fullIconPath = path.join(filePath, storeMatch);
+			}
+
+			// 3. Icon Priority (Directories)
+			if (!fullIconPath) {
+				const iconMatch = dirFiles.find(f => {
+					const low = f.toLowerCase();
+					return (low.startsWith('icon_') && (low.endsWith('.dds') || low.endsWith('.png')));
+				});
+				if (iconMatch) fullIconPath = path.join(filePath, iconMatch);
 			}
 
 			// 2. Secondary: If still not found, try common names at root
@@ -3536,7 +3677,7 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 					if (info && info.type === 'dds' && (info.format === 'dxt1' || info.format === 'dxt5')) {
 						try {
 							const { nativeImage } = require('electron');
-							const rgba = decodeDDS(buffer, info.width, info.height, info.format);
+							const rgba = decodeDDS(buffer, info.width, info.height, info.format, info.dataOffset);
 							let img = nativeImage.createFromBitmap(rgba, { width: info.width, height: info.height });
 							
 							const size = img.getSize();
@@ -3550,21 +3691,30 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 					
 					const ext = path.extname(fullIconPath).replace('.', '').toLowerCase() || 'png';
 					if (ext === 'dds') {
-						// If we couldn't decode it above, and it's not a zip, we can try to fall back to the modDesc icon
-						// if it's different from the one we just tried.
+						// If we couldn't decode it above, try to fall back to the modDesc icon if PNG/JPG
 						if (normalizedIcon && !fullIconPath.toLowerCase().endsWith(normalizedIcon.toLowerCase())) {
 							const secondChance = path.join(filePath, normalizedIcon);
-							if (fs.existsSync(secondChance)) {
-								fullIconPath = secondChance;
-								// We continue the loop/logic to process this secondChance
-								const secondBuffer = fs.readFileSync(fullIconPath);
-								const secondExt = path.extname(fullIconPath).replace('.', '').toLowerCase();
+							if (fs.existsSync(secondChance) && !secondChance.toLowerCase().endsWith('.dds')) {
 								try {
+									const secondBuffer = fs.readFileSync(secondChance);
 									const { nativeImage } = require('electron');
 									let img = nativeImage.createFromBuffer(secondBuffer);
 									return img.toDataURL();
 								} catch (e) {}
 							}
+						}
+						// Check for any PNG/JPG in directory
+						const altPngName = dirFiles.find(f => {
+							const low = f.toLowerCase();
+							return (low.endsWith('.png') || low.endsWith('.jpg') || low.endsWith('.jpeg')) && !low.includes('textures');
+						});
+						if (altPngName) {
+							try {
+								const altBuf = fs.readFileSync(path.join(filePath, altPngName));
+								const { nativeImage } = require('electron');
+								let img = nativeImage.createFromBuffer(altBuf);
+								return img.toDataURL();
+							} catch (e) {}
 						}
 						return getCategoryFallback(hints);
 					}
@@ -3582,13 +3732,6 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 					}
 				}
 			}
-			// For unzipped folders, provide hints to getCategoryFallback
-			let hints = null;
-			try {
-				const files = fs.readdirSync(filePath);
-				hints = files.map(f => ({ entryName: f }));
-			} catch (e) {}
-			
 			return getCategoryFallback(hints);
 		}
 	} catch (err) {

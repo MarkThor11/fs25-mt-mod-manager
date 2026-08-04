@@ -16,6 +16,7 @@ const getModKey = (m) => {
 export default function DependencyDownloadModal({ missingMods, onComplete, onCancel, subFolder, parentId, mainTask }) {
     const registerBatch = useDownloadStore(s => s.registerBatch);
     const [status, setStatus] = useState('confirming'); // confirming, processing, complete
+    const [modStatuses, setModStatuses] = useState({});
     
     // --- Deduplicate internally by unique mod key ---
     const uniqueMods = React.useMemo(() => {

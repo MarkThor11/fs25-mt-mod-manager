@@ -384,6 +384,38 @@ export const useSettingsStore = create((set) => ({
     });
   },
 
+  collapseAllFolders: async (allFolderNames = []) => {
+    set((state) => {
+      const newExpanded = { ...state.expandedFolders };
+      if (Array.isArray(allFolderNames)) {
+        allFolderNames.forEach(f => {
+          newExpanded[f] = false;
+        });
+      }
+      Object.keys(newExpanded).forEach(k => {
+        newExpanded[k] = false;
+      });
+      if (window.api?.settings) window.api.settings.set('expandedFolders', JSON.stringify(newExpanded)).catch(console.error);
+      return { expandedFolders: newExpanded };
+    });
+  },
+
+  expandAllFolders: async (allFolderNames = []) => {
+    set((state) => {
+      const newExpanded = { ...state.expandedFolders };
+      if (Array.isArray(allFolderNames)) {
+        allFolderNames.forEach(f => {
+          newExpanded[f] = true;
+        });
+      }
+      Object.keys(newExpanded).forEach(k => {
+        newExpanded[k] = true;
+      });
+      if (window.api?.settings) window.api.settings.set('expandedFolders', JSON.stringify(newExpanded)).catch(console.error);
+      return { expandedFolders: newExpanded };
+    });
+  },
+
   setSelectiveLoading: async (val) => {
     set({ selectiveLoading: val });
     if (window.api?.settings) await window.api.settings.set('selectiveLoading', String(val));

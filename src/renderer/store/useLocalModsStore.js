@@ -3,7 +3,15 @@ import { useSettingsStore } from './useSettingsStore';
 
 function computeModCount(mods) {
   if (!Array.isArray(mods)) return 0;
-  return mods.filter(m => !m.isDLC && m.folder !== 'DLC' && !m.fileName?.toLowerCase().startsWith('pdlc_')).length;
+  return mods.filter(m => {
+    if (!m) return false;
+    if (m.isDLC) return false;
+    if (m.folder === 'DLC') return false;
+    const fn = (m.fileName || '').toLowerCase();
+    if (fn.endsWith('.dlc') || fn.startsWith('pdlc_')) return false;
+    if (Array.isArray(m.tags) && m.tags.includes('DLC')) return false;
+    return true;
+  }).length;
 }
 
 export const useLocalModsStore = create((set, get) => ({
@@ -36,16 +44,15 @@ export const useLocalModsStore = create((set, get) => ({
     } catch (e) {
       console.error("Failed to parse mod cache", e);
     }
-    // Background sync to find new/deleted files
+    // Background sync
     get().scanMods();
   },
 
   scanMods: async (manualPaths = null, force = false) => {
     const now = Date.now();
-    // Prevent multiple concurrent or duplicate scans within 5 seconds unless forced
-    if (!force && get().mods.length > 0 && (get().isLoading || (now - get().lastScanTime < 5000))) return;
+    if (!force && get().mods.length > 0 && (get().isLoading || (now - get().lastScanTime < 30000))) return;
 
-    set({ isLoading: true, error: null });
+    set({ isLoading: get().mods.length === 0, error: null });
 
     try {
       if (!window.api?.localMods) {

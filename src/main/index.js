@@ -103,18 +103,20 @@ app.whenReady().then(() => {
 
         // 2. Extract on the fly if not in cache (Browser lazy-loading naturally staggers this)
         const base64 = await modManager.getModIcon(filePath);
-        if (base64 && !base64.startsWith('CATEGORY:')) {
+        if (base64) {
           cache.updateLocalModIcon(filePath, base64);
-          const base64Data = base64.replace(/^data:image\/\w+;base64,/, '');
-          const buffer = Buffer.from(base64Data, 'base64');
-          if (iconBufferCache.size >= MAX_ICON_CACHE_SIZE) {
-            const firstKey = iconBufferCache.keys().next().value;
-            iconBufferCache.delete(firstKey);
+          if (!base64.startsWith('CATEGORY:')) {
+            const base64Data = base64.replace(/^data:image\/\w+;base64,/, '');
+            const buffer = Buffer.from(base64Data, 'base64');
+            if (iconBufferCache.size >= MAX_ICON_CACHE_SIZE) {
+              const firstKey = iconBufferCache.keys().next().value;
+              iconBufferCache.delete(firstKey);
+            }
+            iconBufferCache.set(filePath, buffer);
+            return new Response(buffer, {
+              headers: { 'Content-Type': 'image/png' }
+            });
           }
-          iconBufferCache.set(filePath, buffer);
-          return new Response(buffer, {
-            headers: { 'Content-Type': 'image/png' }
-          });
         }
         
         return new Response('Not Found', { status: 404 });
