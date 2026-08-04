@@ -28,12 +28,21 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
         });
     }, [missingMods]);
 
-    const [modStatuses, setModStatuses] = useState(
-        uniqueMods.reduce((acc, mod) => {
-            const key = getModKey(mod);
-            return { ...acc, [key]: { status: 'pending', progress: 0, title: mod.title || mod.modName || key } };
-        }, {})
-    );
+    // Keep modStatuses in sync with uniqueMods props (merge new mods as pending)
+    useEffect(() => {
+        setModStatuses(prev => {
+            let changed = false;
+            const next = { ...prev };
+            uniqueMods.forEach(mod => {
+                const key = getModKey(mod);
+                if (!next[key]) {
+                    next[key] = { status: 'pending', progress: 0, title: mod.title || mod.modName || key };
+                    changed = true;
+                }
+            });
+            return changed ? next : prev;
+        });
+    }, [uniqueMods]);
 
     useEffect(() => {
         if (!window.api?.on) return;
@@ -81,46 +90,83 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
         return () => removeListener();
     }, []);
 
-    // Auto-dismiss once all unique mods have succeeded
-    useEffect(() => {
-        const statuses = Object.values(modStatuses);
-        if (statuses.length > 0 && status === 'processing') {
-            const allSuccess = statuses.every(s => s.status === 'success' || s.status === 'installed');
-            if (allSuccess) {
-                const timer = setTimeout(() => {
-                    setStatus('complete');
-                    onComplete?.();
-                }, 1500);
-                return () => clearTimeout(timer);
-            }
-        }
-    }, [modStatuses, status, onComplete]);
+    const processingRef = React.useRef(false);
 
-    const handleManualSearch = (modName) => {
-        window.api.shell.openExternal(`https://www.farming-simulator.com/mods.php?title=${encodeURIComponent(modName)}`);
-    };
+    const processPendingMods = React.useCallback(async (modsToProcess) => {
+        if (!modsToProcess || modsToProcess.length === 0 || processingRef.current) return;
+        processingRef.current = true;
+        setStatus('processing');
+
+        try {
+            if (parentId) {
+                registerBatch(parentId, modsToProcess.length);
+            }
+            await window.api.localMods.autoInstallDependencies({ 
+                mods: modsToProcess, 
+                subFolder,
+                parentId
+            });
+            
+            // Refresh library
+            const { useLocalModsStore } = await import('../../store/useLocalModsStore');
+            await useLocalModsStore.getState().scanMods();
+        } catch (err) {
+            console.error('[DEPENDENCY MODAL] Processing error:', err);
+        } finally {
+            processingRef.current = false;
+        }
+    }, [parentId, registerBatch, subFolder]);
 
     const handleConfirm = async () => {
-        setStatus('processing');
-        
-        // IMPORTANT: Queue the MAP/MAIN mod FIRST so it takes internal priority
         if (mainTask) {
             await window.api.mods.install(mainTask);
         }
+        await processPendingMods(uniqueMods);
+    };
 
-        if (parentId) {
-            registerBatch(parentId, uniqueMods.length);
+    // Auto-trigger processing for newly added pending mods when modal is active
+    useEffect(() => {
+        if (status === 'processing' && !processingRef.current) {
+            const pendingMods = uniqueMods.filter(m => {
+                const key = getModKey(m);
+                const st = modStatuses[key]?.status;
+                return !st || st === 'pending';
+            });
+            if (pendingMods.length > 0) {
+                processPendingMods(pendingMods);
+            }
         }
-        await window.api.localMods.autoInstallDependencies({ 
-            mods: uniqueMods, 
-            subFolder,
-            parentId
-        });
-        
-        // Refresh library
-        const { useLocalModsStore } = await import('../../store/useLocalModsStore');
-        const store = useLocalModsStore.getState();
-        await store.scanMods();
+    }, [uniqueMods, modStatuses, status, processPendingMods]);
+
+    // Check terminal statuses & auto-dismiss once all unique mods complete
+    useEffect(() => {
+        if (status === 'processing' && !processingRef.current) {
+            const keys = uniqueMods.map(m => getModKey(m));
+            const statuses = keys.map(k => modStatuses[k]?.status).filter(Boolean);
+
+            if (statuses.length > 0 && statuses.length === uniqueMods.length) {
+                const isAllTerminal = statuses.every(st => 
+                    ['success', 'installed', 'error', 'NOT_FOUND_ON_MODHUB'].includes(st)
+                );
+
+                if (isAllTerminal) {
+                    const allSuccess = statuses.every(st => st === 'success' || st === 'installed');
+                    if (allSuccess) {
+                        const timer = setTimeout(() => {
+                            setStatus('complete');
+                            onComplete?.();
+                        }, 1200);
+                        return () => clearTimeout(timer);
+                    } else {
+                        setStatus('complete');
+                    }
+                }
+            }
+        }
+    }, [uniqueMods, modStatuses, status, onComplete]);
+
+    const handleManualSearch = (modName) => {
+        window.api.shell.openExternal(`https://www.farming-simulator.com/mods.php?title=${encodeURIComponent(modName)}`);
     };
 
 
