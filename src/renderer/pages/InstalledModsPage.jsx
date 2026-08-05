@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useDeferredValue } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   RefreshCw, Download, Trash2, FolderOpen, Package, Lock,
@@ -461,7 +461,65 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
 
 
 
+
+// --- LAZY REQUIREMENTS BADGE ---
+// Computes dependency status per-folder after the folder is already rendered,
+// so it never blocks the initial page paint. Previously this ran inside the
+// global `folders` useMemo, doing O(N×M) work before a single pixel appeared.
+const FolderRequirements = React.memo(({ folderMods, allMods, sessionInstalled, isResolving, resolvingStatus, folderName }) => {
+  const maps = useMemo(() => folderMods.filter(m => m.isMap && m.dependencies && m.dependencies.length > 0), [folderMods]);
+
+  const result = useMemo(() => {
+    if (maps.length === 0) return { status: 'none', missing: [] };
+    const missingMods = new Set();
+    for (const map of maps) {
+      const mapKey = map.modName || map.fileName;
+      const { missing } = resolveRecursiveDependencies(mapKey, allMods, sessionInstalled);
+      missing.forEach(m => missingMods.add(m));
+    }
+    return {
+      status: missingMods.size === 0 ? 'satisfied' : 'missing',
+      missing: Array.from(missingMods)
+    };
+  }, [maps, allMods, sessionInstalled]);
+
+  if (result.status === 'none') return null;
+
+  return (
+    <div
+      className="dependency-badge"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '3px 12px',
+        borderRadius: 100,
+        fontSize: 10,
+        fontWeight: 900,
+        background: result.status === 'satisfied' ? 'rgba(34, 197, 94, 0.12)' : 'rgba(251, 191, 36, 0.12)',
+        color: result.status === 'satisfied' ? '#22c55e' : '#fbbf24',
+        border: `1px solid ${result.status === 'satisfied' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(251, 191, 36, 0.3)'}`,
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+        cursor: 'default',
+        position: 'relative',
+        transition: 'all 0.2s ease'
+      }}
+    >
+      {result.status === 'satisfied' ? <Check size={11} /> : <AlertTriangle size={11} />}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {result.status === 'satisfied'
+          ? 'Requirements Met'
+          : isResolving && resolvingStatus?.targetFolder === folderName
+            ? 'Resolving...'
+            : `${result.missing.length} Missing`}
+      </div>
+    </div>
+  );
+});
+
 const LazyModList = ({
+
   folderMods,
   folderName,
   folderZooms,
@@ -804,7 +862,7 @@ const LazyModList = ({
 
 export default function InstalledModsPage() {
   const {
-    mods, allFolders, isLoading, isCheckingUpdates, updates, error,
+    mods: rawMods, allFolders, isLoading, isCheckingUpdates, updates, error,
     isResolving, resolvingStatus, showOnlyUpdates, setShowOnlyUpdates,
     scanMods, checkUpdates, uninstallMod, updateMod, initListeners, toggleAutoResolve,
     createFolder, renameFolder, deleteFolder, moveModsToFolder, exportCollection
@@ -819,6 +877,12 @@ export default function InstalledModsPage() {
   const { activeDownloads, sessionInstalled } = useDownloadStore();
   const navigate = useNavigate();
 
+  // useDeferredValue lets React prioritize urgent renders (user interactions) over
+  // the expensive useMemo recalculations that happen when a background scan updates mods.
+  // Without this, every background scan would cause a synchronous freeze while all
+  // memos (filteredMods, modLookupIndex, folders, etc.) recompute across 3k mods.
+  const mods = useDeferredValue(rawMods);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [selectedTags, setSelectedTags] = useState([]);
@@ -827,8 +891,8 @@ export default function InstalledModsPage() {
   const [autoResolveMode, setAutoResolveMode] = useState(false);
 
   useEffect(() => {
-    if (isLoaded && mods.length === 0) scanMods();
-  }, [isLoaded, mods.length]);
+    if (isLoaded && rawMods.length === 0) scanMods();
+  }, [isLoaded, rawMods.length]);
 
   useEffect(() => {
     const unsub = initListeners();
@@ -1025,7 +1089,6 @@ export default function InstalledModsPage() {
   }, [mods]);
 
   const folders = useMemo(() => {
-    const mapDepCache = new Map();
     const findFastMatch = (dep) => {
         if (!dep) return null;
         let depStr = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
@@ -1048,25 +1111,25 @@ export default function InstalledModsPage() {
     // 2. Identify all Map Folders
     const mapFolders = Object.keys(groups).filter(name => groups[name].some(m => m.isMap));
     
-    // 3. Virtual Injection: If a mod is a dependency of a map in a folder, show it there virtually
+    // 3. Virtual Injection: If a mod is a dependency of a map in a folder, show it there virtually.
+    // Use a fileName Set per folder for O(1) visibility checks instead of calling the
+    // expensive matchModWithDependency in a nested loop for every dep × every mod.
     mapFolders.forEach(folderName => {
         const modsInThisFolder = groups[folderName];
         const mapsInFolder = modsInThisFolder.filter(m => m.isMap);
-        
+        // Build a fast lookup of filenames already physically in this folder
+        const folderFileNames = new Set(modsInThisFolder.map(m => m.fileName));
+
         mapsInFolder.forEach(mapMod => {
             if (mapMod.dependencies && mapMod.dependencies.length > 0) {
                 mapMod.dependencies.forEach(dep => {
-                    const isVisible = modsInThisFolder.some(m => matchModWithDependency(m, dep));
-                    
-                    if (!isVisible) {
-                        const physicalDep = findFastMatch(dep);
-                        if (physicalDep) {
-                            modsInThisFolder.push({
-                                ...physicalDep,
-                                isVirtual: true
-                            });
-                        }
-                    }
+                    // Fast path: if the dep resolves to a mod whose fileName is already in the folder, skip
+                    const physicalDep = findFastMatch(dep);
+                    if (!physicalDep) return; // dep not installed at all, nothing to inject
+                    if (folderFileNames.has(physicalDep.fileName)) return; // already visible
+                    // Inject the physical dep as a virtual reference
+                    modsInThisFolder.push({ ...physicalDep, isVirtual: true });
+                    folderFileNames.add(physicalDep.fileName); // prevent duplicate injection
                 });
             }
         });
@@ -1118,38 +1181,16 @@ export default function InstalledModsPage() {
             return true;
         });
 
-        // -- Requirement Check (Pre-computed for Performance) --
-        const maps = uniqueModsInFolder.filter(m => m.isMap);
-        let requirementStatus = { status: 'none', missing: [] };
-        
-        if (maps.length > 0) {
-            const missingMods = new Set();
-            for (const map of maps) {
-                if (!map.dependencies || map.dependencies.length === 0) continue;
-                
-                const mapKey = map.modName || map.fileName;
-                if (!mapDepCache.has(mapKey)) {
-                    const { missing } = resolveRecursiveDependencies(mapKey, mods, sessionInstalled);
-                    mapDepCache.set(mapKey, missing);
-                }
-                const missing = mapDepCache.get(mapKey);
-                missing.forEach(m => missingMods.add(m));
-
-                requirementStatus = { 
-                    status: missingMods.size === 0 ? 'satisfied' : 'missing', 
-                    missing: Array.from(missingMods) 
-                };
-            }
-        }
-
         acc[name] = {
             mods: uniqueModsInFolder,
             isHidden: hiddenFolders.includes(name),
-            requirements: requirementStatus
+            // Requirements are computed lazily per-folder to avoid blocking initial render.
+            // resolveRecursiveDependencies on 3k mods × many map folders was the main perf bottleneck.
+            requirements: null,
         };
         return acc;
     }, {});
-  }, [mods, filteredMods, allFolders, searchQuery, hiddenFolders, folderOrder, selectedTags, showOnlyFavorites, sessionInstalled]);
+  }, [mods, filteredMods, allFolders, searchQuery, hiddenFolders, folderOrder, selectedTags, showOnlyFavorites]);
 
   const flatViewList = useMemo(() => {
     return Object.values(folders).flatMap(f => f.mods);
@@ -2065,44 +2106,15 @@ export default function InstalledModsPage() {
                               })()}
                             </span>
                             
-                            {/* Requirements Badge for Maps */}
-                            {(() => {
-                               const result = folderData.requirements;
-                               if (result.status === 'none') return null;
-                               return (
-                                 <>
-                                   <div 
-                                     className="dependency-badge"
-                                     style={{ 
-                                         display: 'flex', 
-                                         alignItems: 'center', 
-                                         gap: 6, 
-                                         padding: '3px 12px', 
-                                         borderRadius: 100, 
-                                         fontSize: 10, 
-                                         fontWeight: 900,
-                                         background: result.status === 'satisfied' ? 'rgba(34, 197, 94, 0.12)' : 'rgba(251, 191, 36, 0.12)',
-                                         color: result.status === 'satisfied' ? '#22c55e' : '#fbbf24',
-                                         border: `1px solid ${result.status === 'satisfied' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(251, 191, 36, 0.3)'}`,
-                                         textTransform: 'uppercase',
-                                         letterSpacing: '0.06em',
-                                         cursor: 'default',
-                                         position: 'relative',
-                                         transition: 'all 0.2s ease'
-                                     }}
-                                   >
-                                     {result.status === 'satisfied' ? <Check size={11} /> : <AlertTriangle size={11} />}
-                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                         {result.status === 'satisfied' 
-                                            ? 'Requirements Met' 
-                                            : isResolving && resolvingStatus?.targetFolder === folderName
-                                              ? 'Resolving...'
-                                              : `${result.missing.length} Missing`}
-                                     </div>
-                                   </div>
-                                 </>
-                               );
-                            })()}
+                            {/* Requirements Badge for Maps — computed lazily to keep initial render fast */}
+                             <FolderRequirements
+                               folderMods={folderMods}
+                               allMods={mods}
+                               sessionInstalled={sessionInstalled}
+                               isResolving={isResolving}
+                               resolvingStatus={resolvingStatus}
+                               folderName={folderName}
+                             />
                           </div>
                         )}
                         {isHidden && (

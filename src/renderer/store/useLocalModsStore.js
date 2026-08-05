@@ -50,7 +50,7 @@ export const useLocalModsStore = create((set, get) => ({
 
   scanMods: async (manualPaths = null, force = false) => {
     const now = Date.now();
-    if (!force && get().mods.length > 0 && (get().isLoading || (now - get().lastScanTime < 30000))) return;
+    if (!force && get().mods.length > 0 && (get().isLoading || (now - get().lastScanTime < 300000))) return;
 
     set({ isLoading: get().mods.length === 0, error: null });
 
