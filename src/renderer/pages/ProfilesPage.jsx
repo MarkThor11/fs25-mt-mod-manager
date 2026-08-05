@@ -1324,7 +1324,7 @@ export default function ProfilesPage() {
           />
       )}
 
-      <style jsx>{`
+      <style>{`
         .tab-switcher {
           display: flex;
           gap: var(--sp-1);

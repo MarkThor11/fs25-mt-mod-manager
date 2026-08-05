@@ -97,7 +97,7 @@ export default function SaveSlotModal({ onClose, onCreate, profile }) {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .save-slot-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
