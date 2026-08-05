@@ -1309,13 +1309,6 @@ async function performScan(manualPaths = null) {
 
 	const resultData = { mods: finalMods, allFolders: Array.from(new Set(allFolders)).sort(), conflicts, missingDependencies };
 	
-	// ── BACKGROUND AUTO-RESOLVE ──
-	const autoResolve = cache.getSetting('autoResolveDependencies') === 'true';
-	if (autoResolve) {
-		autoResolveMissingDependencies(finalMods).catch(err => {
-			console.error('[AUTO-RESOLVE] Background reconciliation failed:', err);
-		});
-	}
 
 	debugLog(`[SCAN] Finished. Total unique mods: ${finalMods.length} (from ${mods.length} physical files)`);
 	return resultData;

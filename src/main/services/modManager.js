@@ -1588,13 +1588,6 @@ function getTemplatesPath() {
 	const cleanFolders = Array.from(new Set(allFolders)).sort();
 	const resultData = { mods: finalMods, dlcs: allDlcs, allFolders: cleanFolders, conflicts, missingDependencies };
 	
-	// ── BACKGROUND AUTO-RESOLVE ──
-	const autoResolve = cache.getSetting('autoResolveDependencies') === 'true';
-	if (autoResolve) {
-		autoResolveMissingDependencies(finalMods).catch(err => {
-			console.error('[AUTO-RESOLVE] Background reconciliation failed:', err);
-		});
-	}
 
 	// ── PURGE STALE CACHE FOR DELETED DISK FILES ──
 	try {

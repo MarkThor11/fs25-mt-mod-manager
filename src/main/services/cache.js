@@ -121,6 +121,9 @@ function init() {
     insertDefault.run(key, value);
   }
 
+  // Enforce autoResolveDependencies to false
+  db.prepare('UPDATE settings SET value = ? WHERE key = ?').run('false', 'autoResolveDependencies');
+
   // ── STARTUP OPTIMIZATION ──
   // We used to purge 'Latest' here, but we'll now rely on TTL to keep things fresh 
   // without forcing a slow reload on every single startup.
