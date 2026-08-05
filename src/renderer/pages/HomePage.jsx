@@ -46,7 +46,10 @@ export default function HomePage() {
     if (homeShowLatest) loadFeaturedMods();
     if (homeShowDownloaded) loadTopDownloadedMods();
     if (autoCheckUpdates) {
-      checkUpdates();
+      const timer = setTimeout(() => {
+        checkUpdates();
+      }, 1200);
+      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -155,11 +158,10 @@ export default function HomePage() {
               <Download size={22} />
             </div>
             <div>
-              <div className="stat-card__value">
-                {isCheckingUpdates ? (
-                  <RefreshCw size={18} className="animate-spin" />
-                ) : (
-                  updates.length
+              <div className="stat-card__value" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>{updates.length}</span>
+                {isCheckingUpdates && (
+                  <RefreshCw size={14} className="animate-spin" style={{ opacity: 0.6 }} title="Checking for updates in background..." />
                 )}
               </div>
               <div className="stat-card__label">Your Updates</div>

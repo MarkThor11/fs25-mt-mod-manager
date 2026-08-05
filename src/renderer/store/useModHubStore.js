@@ -47,10 +47,20 @@ export const useModHubStore = create((set, get) => ({
   hpMatchMode: 'high', // 'low' | 'high' | 'range'
   selectedHP: 0, // Specifically selected HP from a pack/range
   lastRequestId: 0,
-  totalMods: 0,
-  latestCount: 0,
-  newCount: 0,
-  updateCount: 0,
+  ...(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('modhub_stats') || '{}');
+      return {
+        totalMods: cached.totalMods || 0,
+        latestCount: cached.latestCount || 0,
+        newCount: cached.newCount || 0,
+        updateCount: cached.updateCount || 0,
+      };
+    } catch (_) {
+      return { totalMods: 0, latestCount: 0, newCount: 0, updateCount: 0 };
+    }
+  })(),
+  isFetchingStats: false,
   statsIntervalId: null,
   homeFeatured: JSON.parse(localStorage.getItem('home_featured') || '[]'),
   homeTopDownloaded: JSON.parse(localStorage.getItem('home_top') || '[]'),
@@ -607,19 +617,26 @@ export const useModHubStore = create((set, get) => ({
   },
 
   fetchStats: async () => {
-    if (!window.api?.modhub) return;
+    if (!window.api?.modhub || get().isFetchingStats) return;
+    set({ isFetchingStats: true });
     try {
       const result = await window.api.modhub.getStats();
       if (result.success) {
-        set({ 
+        const statsObj = { 
           totalMods: result.totalMods, 
           latestCount: result.latestCount,
           newCount: result.newCount || 0,
           updateCount: result.updateCount || 0
-        });
+        };
+        set({ ...statsObj });
+        try {
+          localStorage.setItem('modhub_stats', JSON.stringify(statsObj));
+        } catch (_) {}
       }
     } catch (err) {
       console.error('Failed to fetch ModHub stats:', err);
+    } finally {
+      set({ isFetchingStats: false });
     }
   },
 

@@ -22,9 +22,15 @@ export const useLocalModsStore = create((set, get) => ({
   isCheckingUpdates: false,
   isSyncing: false,
   error: null,
-  updates: [],
+  updates: (() => {
+    try {
+      return JSON.parse(localStorage.getItem('mod_updates') || '[]');
+    } catch (_) {
+      return [];
+    }
+  })(),
   conflicts: [],
-  lastUpdateCheck: 0,
+  lastUpdateCheck: parseInt(localStorage.getItem('last_update_check') || '0', 10),
   lastScanTime: 0,
   isResolving: false,
   resolvingStatus: null, // { modName, status, progress }
@@ -153,12 +159,16 @@ export const useLocalModsStore = create((set, get) => ({
         return;
       }
       const result = await window.api.localMods.checkUpdates();
-      // result is now the array of update objects directly
+      const updatesList = result || [];
       set({
-        updates: result || [],
+        updates: updatesList,
         isCheckingUpdates: false,
         lastUpdateCheck: now,
       });
+      try {
+        localStorage.setItem('mod_updates', JSON.stringify(updatesList));
+        localStorage.setItem('last_update_check', String(now));
+      } catch (_) {}
     } catch (err) {
       set({ isCheckingUpdates: false, error: err.message });
       console.error('Update check failed:', err);
