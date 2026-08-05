@@ -246,46 +246,63 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
 
   const handleInstall = async (e) => {
     e.stopPropagation();
-    if (activeDownloads[mod.modId]) return;
-    
-    // Register in global store
-    addDownload(mod.modId, mod.title, imgSrc);
+    if (useDownloadStore.getState().activeDownloads[mod.modId]) return;
+
+    const modId = mod.modId;
+    const modTitle = mod.title;
+    const modCategory = mod.category || currentFilter || '';
+    let installQueued = false;
 
     try {
       let downloadUrl = mod.downloadUrl;
       let detail = null;
-      
-      // If we don't have a download URL (common in listings), fetch it from details
+
+      // Fetch the download URL BEFORE registering in the store.
+      // This way, if the user navigates away while we're fetching the URL, the
+      // ModCard unmounts but the download was never registered — so nothing gets
+      // falsely cancelled or removed.
       if (!downloadUrl && window.api?.modhub) {
-        useToastStore.getState().info(`Fetching download link for ${mod.title}...`);
-        detail = await window.api.modhub.fetchModDetail({ modId: mod.modId });
-        downloadUrl = detail.downloadUrl;
+        useToastStore.getState().info(`Fetching download link for ${modTitle}...`);
+        detail = await window.api.modhub.fetchModDetail({ modId });
+        downloadUrl = detail?.downloadUrl;
       }
 
       if (!downloadUrl) {
         throw new Error('Could not find a valid download link for this mod.');
       }
 
+      // Only register the download now that we have everything we need
+      useDownloadStore.getState().addDownload(modId, modTitle, imgSrc);
+
       if (!window.api?.mods) throw new Error('System bridge not available');
       const result = await window.api.mods.install({
-        modId: mod.modId,
-        modTitle: mod.title,
-        downloadUrl: downloadUrl,
-        category: mod.category || detail?.category || currentFilter || '',
+        modId,
+        modTitle,
+        downloadUrl,
+        category: detail?.category || modCategory,
         subFolder: null
       });
 
-
       if (result.success) {
-        useToastStore.getState().success(`${mod.title} install started!`);
-        await useLocalModsStore.getState().scanMods();
+        installQueued = true;
+        useToastStore.getState().success(`${modTitle} install started!`);
+        // Fire-and-forget: don't await — a slow scan (up to 12s) would keep this
+        // async function alive. If the user changes pages mid-scan the catch block
+        // would wrongly remove the download entry from the store, cancelling the
+        // download in the UI even though the main process is still running it.
+        useLocalModsStore.getState().scanMods();
       } else {
         useToastStore.getState().error(`Failed: ${result.error}`);
-        removeDownload(mod.modId);
+        useDownloadStore.getState().removeDownload(modId);
       }
     } catch (err) {
-      useToastStore.getState().error(`Install failed: ${err.message}`);
-      removeDownload(mod.modId);
+      // Only show an error and remove the entry if the install was never successfully
+      // queued. Once queued, the main process owns the download and will broadcast its
+      // own status/progress events — we must NOT wipe it from the store here.
+      if (!installQueued) {
+        useToastStore.getState().error(`Install failed: ${err.message}`);
+        useDownloadStore.getState().removeDownload(mod.modId);
+      }
     }
   };
 
