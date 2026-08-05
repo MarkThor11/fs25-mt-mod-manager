@@ -511,7 +511,16 @@ ipcMain.handle('mods:resumePending', async () => {
 });
 
 ipcMain.handle('mods:getPending', async () => {
-  return cache.getPendingDownloads();
+  const pending = cache.getPendingDownloads();
+  const pool = cache.getModHubMetadataPool();
+  return pending.map(item => {
+    let title = item.mod_title;
+    const strId = String(item.mod_id);
+    if (!title || title === `Mod ${strId}` || title === strId) {
+      if (pool[strId]?.title) title = pool[strId].title;
+    }
+    return { ...item, mod_title: title };
+  });
 });
 
 ipcMain.handle('mods:batchInstall', async (_, modList) => {

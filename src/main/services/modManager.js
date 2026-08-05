@@ -1744,12 +1744,14 @@ async function runInstallTask(task) {
 		return result;
 	} catch (err) {
 		console.error(`[QUEUE] Task failed for ${modTitle}:`, err);
+		try { cache.removePendingDownload(String(modId)); } catch (_) {}
 		
 		// ── LOW DISK SPACE / ENOSPC PURGE ──
 		if (err && (err.code === 'ENOSPC' || (err.message && err.message.toLowerCase().includes('enospc')) || (err.message && err.message.toLowerCase().includes('low disk space')))) {
 			console.error(`[QUEUE] DISK EXHAUSTED (ENOSPC). Immediately purging all ${downloadQueue.length} queued items.`);
 			while (downloadQueue.length > 0) {
 				const purged = downloadQueue.shift();
+				try { cache.removePendingDownload(String(purged.modId)); } catch (_) {}
 				broadcastStatus?.(purged.modId, 'error');
 				purged.onProgress?.({ status: 'error' });
 			}
@@ -1824,14 +1826,24 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 		scraper.fetchModDetail(modId).then(detail => { techData = detail?.techData || null; }).catch(() => {});
 	}
 
-	downloadQueue.push({ modId, modTitle, downloadUrl, onProgress, category, subFolder, techData, oldPath, recoveryPath });
+	// Enrich human-readable title if generic or missing
+	let resolvedTitle = modTitle;
+	const strModId = String(modId);
+	if (!resolvedTitle || resolvedTitle === `Mod ${strModId}` || resolvedTitle === strModId) {
+		const pool = cache.getModHubMetadataPool();
+		if (pool[strModId]?.title) {
+			resolvedTitle = pool[strModId].title;
+		}
+	}
+
+	downloadQueue.push({ modId, modTitle: resolvedTitle, downloadUrl, onProgress, category, subFolder, techData, oldPath, recoveryPath });
 
 	// Persist to pending database table so it survives app restarts even before connection starts
 	try {
 		const targetDir = subFolder ? (path.isAbsolute(subFolder) ? subFolder : path.join(getModsPath(), subFolder)) : getModsPath();
 		cache.savePendingDownload({
-			mod_id: String(modId),
-			mod_title: modTitle,
+			mod_id: strModId,
+			mod_title: resolvedTitle,
 			download_url: downloadUrl || '',
 			target_dir: targetDir,
 			file_name: null,
@@ -2826,8 +2838,12 @@ async function installMod(modId, modTitle, downloadUrl, onProgress, category, su
 	* Cancel an active installation.
 */
 async function cancelInstall(modId) {
+	const strModId = String(modId);
+	// Always remove from pending downloads table so it won't re-appear on next launch
+	try { cache.removePendingDownload(strModId); } catch (_) {}
+
 	// 1. Check if it's in the queue but not yet active
-	const queueIdx = downloadQueue.findIndex(t => t.modId === modId);
+	const queueIdx = downloadQueue.findIndex(t => String(t.modId) === strModId);
 	if (queueIdx !== -1) {
 		console.log(`[CANCEL] Removing from queue: ${modId}`);
 		downloadQueue.splice(queueIdx, 1);
@@ -4653,26 +4669,45 @@ async function resumePendingDownloads(onProgress) {
 	const pending = cache.getPendingDownloads();
 	if (pending.length === 0) return { success: true, count: 0 };
 	
-	console.log(`[RESUME] Found ${pending.length} interrupted downloads. Resuming via queue...`);
-	
+	console.log(`[RESUME] Found ${pending.length} pending downloads in database.`);
+	const pool = cache.getModHubMetadataPool();
+	const now = Date.now();
 	const results = [];
+	
 	for (const item of pending) {
+		const strId = String(item.mod_id);
+		const age = now - (item.created_at || 0);
+
+		// Purge stale or invalid pending records (older than 24 hours or missing download_url)
+		if (!item.download_url || (item.created_at && age > 24 * 60 * 60 * 1000)) {
+			console.log(`[RESUME] Purging invalid/stale pending download record for mod: ${strId}`);
+			try { cache.removePendingDownload(strId); } catch (_) {}
+			continue;
+		}
+
+		// Enrich title if generic
+		let title = item.mod_title;
+		if (!title || title === `Mod ${strId}` || title === strId) {
+			if (pool[strId]?.title) title = pool[strId].title;
+		}
+
 		try {
 			const promise = enqueueInstall(
-				item.mod_id, 
-				item.mod_title, 
+				strId, 
+				title, 
 				item.download_url, 
-				(progress) => onProgress?.(item.mod_id, progress),
+				(progress) => onProgress?.(strId, progress),
 				item.category,
 				item.target_dir
 			);
 			results.push(promise);
 		} catch (err) {
-			console.error(`[RESUME] Failed to start resumption for ${item.mod_id}:`, err.message);
+			console.error(`[RESUME] Failed to resume ${strId}:`, err.message);
+			try { cache.removePendingDownload(strId); } catch (_) {}
 		}
 	}
 	
-	return { success: true, count: results.length, items: pending };
+	return { success: true, count: results.length };
 }
 
 async function deduplicateSubfolderMods(modsPath) {
