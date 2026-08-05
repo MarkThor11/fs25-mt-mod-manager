@@ -13,7 +13,7 @@ import { useInstalledLookup } from '../hooks/useInstalledLookup';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { mods: localMods, modCount, scanMods, checkUpdates, updates, isCheckingUpdates } = useLocalModsStore();
+  const { mods: localMods, modCount, scanMods, checkUpdates, updates, isCheckingUpdates, setShowOnlyUpdates } = useLocalModsStore();
   const { savegames, fetchSavegames } = useSavegameStore();
   const { 
     totalMods, latestCount, newCount, updateCount, fetchStats,
@@ -153,7 +153,15 @@ export default function HomePage() {
               <div className="stat-card__label">Installed Mods</div>
             </div>
           </div>
-          <div className="stat-card">
+          <div 
+            className="stat-card stat-card--clickable" 
+            onClick={() => {
+              setShowOnlyUpdates(true);
+              navigate('/installed');
+            }}
+            style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
+            title="Click to view installed mods with updates available"
+          >
             <div className="stat-card__icon stat-card__icon--yellow">
               <Download size={22} />
             </div>
@@ -254,20 +262,6 @@ export default function HomePage() {
         </div>
       )}
 
-
-      {/* Quick Actions */}
-      {homeShowUpdates && updates.length > 0 && (
-        <div className="home-section">
-          <div className="home-section__header">
-            <h2 className="home-section__title">
-              🔄 {updates.length} Update{updates.length > 1 ? 's' : ''} Available
-            </h2>
-            <button className="btn btn--primary btn--sm" onClick={() => navigate('/installed')}>
-              View Updates <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Multiplayer Sync Section */}
       <div className="home-section" style={{ marginTop: 'var(--sp-8)' }}>
