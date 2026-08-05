@@ -225,6 +225,7 @@ export const useModHubStore = create((set, get) => ({
       activeFilters: { ...state.activeFilters, ...filters },
       currentPage: 0
     }));
+    get().fetchMods();
   },
 
   resetFilters: async () => {
@@ -705,15 +706,43 @@ export const useModHubStore = create((set, get) => ({
     }
 
     try {
+      const { activeFilters } = get();
+      const isHideInstalled = activeFilters.hideInstalled;
+
+      // Installed lookup sets for fast filtering during multi-page fetch
+      let isModInstalled = () => false;
+      if (isHideInstalled) {
+        try {
+          const localMods = useLocalModsStore.getState().mods || [];
+          const installedIds = new Set(localMods.map(m => m.modId ? String(m.modId).replace(/^0+/, '') : null).filter(Boolean));
+          const installedTitles = new Set(localMods.map(m => m.title ? String(m.title).toLowerCase().trim() : null).filter(Boolean));
+          const installedNames = new Set(localMods.map(m => m.modName ? String(m.modName).toLowerCase().trim() : null).filter(Boolean));
+          const installedFiles = new Set(localMods.map(m => m.fileName ? String(m.fileName).toLowerCase().replace(/\.zip$/i, '').trim() : null).filter(Boolean));
+
+          isModInstalled = (m) => {
+            if (!m) return false;
+            if (m.modId && installedIds.has(String(m.modId).replace(/^0+/, ''))) return true;
+            if (m.title && installedTitles.has(String(m.title).toLowerCase().trim())) return true;
+            if (m.modName && installedNames.has(String(m.modName).toLowerCase().trim())) return true;
+            if (m.fileName && installedFiles.has(String(m.fileName).toLowerCase().replace(/\.zip$/i, '').trim())) return true;
+            return false;
+          };
+        } catch (_) {}
+      }
+
       // Calculate how many ModHub pages (at 24 each) we need to fulfill the requested pageSize
       const fetchMultiplier = Math.ceil(pageSize / 24);
-      const startPage = p * fetchMultiplier;
-      
+      let pageOffset = 0;
       let allMods = [];
       let maxTotalPages = 1;
+      let iterations = 0;
+      const maxIterations = isHideInstalled ? 12 : fetchMultiplier;
 
-      for (let i = 0; i < fetchMultiplier; i++) {
-        const pageToFetch = startPage + i;
+      while (allMods.length < pageSize && iterations < maxIterations) {
+        const pageToFetch = (p * fetchMultiplier) + pageOffset;
+        pageOffset++;
+        iterations++;
+        
         let result;
 
         if (authorFilter) {
@@ -764,11 +793,13 @@ export const useModHubStore = create((set, get) => ({
         if (get().lastRequestId !== requestId && !isPrefetch) return;
 
         if (result.mods && result.mods.length > 0) {
-          allMods = [...allMods, ...result.mods];
           const totalFromApi = result.pagination?.total || result.totalPages || 1;
           maxTotalPages = Math.max(maxTotalPages, totalFromApi);
-          // If we are on an aggregate filter, the first page might already have fulfilled the pageSize
-          if (f.startsWith('aggregate:') && allMods.length >= pageSize) break;
+
+          const validPageMods = isHideInstalled ? result.mods.filter(m => !isModInstalled(m)) : result.mods;
+          allMods = [...allMods, ...validPageMods];
+
+          if (pageToFetch >= maxTotalPages - 1) break;
         } else {
           break;
         }
