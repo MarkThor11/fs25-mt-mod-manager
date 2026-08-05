@@ -169,9 +169,52 @@ export const useLocalModsStore = create((set, get) => ({
         localStorage.setItem('mod_updates', JSON.stringify(updatesList));
         localStorage.setItem('last_update_check', String(now));
       } catch (_) {}
+
+      // If modUpdateMode is set to 'auto', trigger background installation of found updates
+      if (updatesList.length > 0) {
+        setTimeout(() => {
+          get().triggerAutoUpdateIfNeeded();
+        }, 500);
+      }
     } catch (err) {
       set({ isCheckingUpdates: false, error: err.message });
       console.error('Update check failed:', err);
+    }
+  },
+
+  triggerAutoUpdateIfNeeded: async () => {
+    const { updates, updateMod, mods } = get();
+    const { modUpdateMode } = useSettingsStore.getState();
+
+    if (modUpdateMode !== 'auto' || !Array.isArray(updates) || updates.length === 0) return;
+
+    if (window.api?.game?.isRunning) {
+      try {
+        const isRunning = await window.api.game.isRunning();
+        if (isRunning) {
+          console.log('[AUTO-UPDATE] Game is running. Deferring background updates.');
+          return;
+        }
+      } catch (_) {}
+    }
+
+    const modsToUpdate = updates.filter(update => {
+      const localMod = mods.find(m => m.fileName === update.fileName);
+      return !(localMod && (localMod.tags || []).includes('lock-updates'));
+    });
+
+    if (modsToUpdate.length === 0) return;
+
+    import('./useToastStore').then(t => {
+      t.useToastStore.getState().info(`Auto-Update Active: Installing ${modsToUpdate.length} update${modsToUpdate.length > 1 ? 's' : ''}...`);
+    }).catch(() => {});
+
+    for (const update of modsToUpdate) {
+      try {
+        await updateMod(update.fileName, update.modId);
+      } catch (err) {
+        console.error(`[AUTO-UPDATE] Failed to update ${update.fileName}:`, err);
+      }
     }
   },
 
