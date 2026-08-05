@@ -4576,6 +4576,8 @@ async function deepScanModIcons(onProgress) {
 	}
 }
 
+const failedAutoResolves = new Set();
+
 /**
  * Background service to silently fix missing map dependencies.
  * Exported at bottom for use by other services.
@@ -4598,15 +4600,11 @@ async function autoResolveMissingDependencies(mods, targetMapName = null) {
         const needsModHubFetch = mapDeps.some(d => typeof d === 'string' || !d.url);
         
         if (needsModHubFetch) {
-            console.log(`[AUTO-RESOLVE] Map ${map.title} has raw string dependencies. Fetching exact dependencies from ModHub...`);
             try {
-                const scraper = require('./scraper');
-                const searchResult = await scraper.searchMods(map.title || map.modName);
-                const remoteMap = searchResult && searchResult.mods && searchResult.mods[0];
-                
-                if (remoteMap && remoteMap.modId) {
-                    const detail = await scraper.fetchModDetail(remoteMap.modId);
-                    if (detail && detail.dependencies && detail.dependencies.length > 0) {
+                if (map.modId) {
+                    const scraper = require('./scraper');
+                    const detail = await scraper.fetchModDetail(map.modId);
+                    if (detail && detail.dependencies) {
                         console.log(`[AUTO-RESOLVE] Successfully fetched exact ModHub dependencies for map.`);
                         mapDeps = detail.dependencies;
                     }
@@ -4631,6 +4629,12 @@ async function autoResolveMissingDependencies(mods, targetMapName = null) {
 
 			if (!found) {
 				const depObj = typeof dep === 'object' ? dep : { title: depTitle, url: null };
+				const depKey = depId || depTitle;
+				if (depKey && failedAutoResolves.has(depKey)) {
+					// Skip dependencies that failed previously so we don't retry downloading them endlessly on every scan
+					continue;
+				}
+
 				const alreadyQueued = allMissing.some(d => d.title === depTitle);
 				if (!alreadyQueued) {
 					allMissing.push(depObj);
@@ -4646,6 +4650,8 @@ async function autoResolveMissingDependencies(mods, targetMapName = null) {
 	
 	for (const dep of allMissing) {
 		const targetFolder = mapToFolderMap[dep.title];
+		const depKey = (typeof dep === 'object' && dep.url ? (dep.url.match(/mod_id=(\d+)/)?.[1] || dep.url.match(/storage\/(\d+)\//)?.[1]) : null) || dep.title;
+
 		try {
 			await autoInstallDependencies([dep], (progress) => {
 				if (broadcastStatus) {
@@ -4657,7 +4663,8 @@ async function autoResolveMissingDependencies(mods, targetMapName = null) {
 				}
 			}, targetFolder);
 		} catch (err) {
-			console.error(`[AUTO-RESOLVE] Failed: ${dep.title}`, err.message);
+			console.log(`[AUTO-RESOLVE] Dependency install failed for ${dep.title}. Skipping future automatic retries.`);
+			if (depKey) failedAutoResolves.add(depKey);
 		}
 	}
 }
