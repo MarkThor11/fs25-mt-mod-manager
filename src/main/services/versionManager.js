@@ -40,48 +40,47 @@ async function findModHubId(localMod) {
  */
 async function checkAllUpdates() {
   const { mods: localMods } = await modManager.scanLocalMods();
+  if (!Array.isArray(localMods) || localMods.length === 0) return [];
+
+  // Load tracking map and metadata pool ONCE in memory for O(1) lookups
+  // avoids thousands of repeated DB queries and sequential web scraper HTTP requests
+  const trackingMap = cache.getAllModTrackingMap();
+  const pool = cache.getModHubMetadataPool();
   const results = [];
 
   for (const localMod of localMods) {
-    const modId = await findModHubId(localMod);
-    if (!modId) {
-        results.push({ ...localMod, hasUpdate: false, modId: null });
-        continue;
-    }
+    if (!localMod || localMod.isDLC || localMod.folder === 'DLC') continue;
 
-    try {
-        const detail = await scraper.fetchModDetail(modId);
-        const hasUpdate = compareVersions(localMod.version, detail.version) > 0;
-        
-        // Update cache
-        cache.setModTracking(modId, {
-            localFileName: localMod.fileName,
-            localVersion: localMod.version,
-            remoteVersion: detail.version,
-            modhubTitle: detail.title,
-            category: detail.category
-        });
+    const modId = localMod.modId || null;
+    const cleanFileName = (localMod.fileName || '').replace(/\\/g, '/').split('/').pop().toLowerCase();
+    
+    // Look up tracking record in memory
+    const tracked = (modId ? trackingMap.get(`ID_${modId}`) : null) || 
+                    (cleanFileName ? trackingMap.get(`FILE_${cleanFileName}`) : null);
 
-        results.push({
-            ...localMod,
-            modId,
-            remoteVersion: detail.version,
-            hasUpdate,
-            modhubTitle: detail.title
-        });
-    } catch (err) {
-        const isRemoved = err.message.includes('HTTP 404');
-        results.push({ 
-            ...localMod, 
-            modId, 
-            hasUpdate: false, 
-            isRemoved,
-            error: err.message 
-        });
+    const effectiveModId = modId || tracked?.mod_id || null;
+    
+    // Find remote metadata from pool or tracking record
+    const poolItem = effectiveModId ? pool[String(effectiveModId)] : null;
+    const remoteVersion = tracked?.remote_version || poolItem?.version || null;
+
+    if (!remoteVersion) continue;
+
+    const hasUpdate = compareVersions(localMod.version, remoteVersion) > 0;
+    const title = tracked?.modhub_title || poolItem?.title || localMod.title;
+
+    if (hasUpdate) {
+      results.push({
+        ...localMod,
+        modId: effectiveModId,
+        remoteVersion,
+        hasUpdate: true,
+        modhubTitle: title
+      });
     }
   }
 
-  return results.filter(r => r.hasUpdate || r.isRemoved);
+  return results;
 }
 
 module.exports = {
