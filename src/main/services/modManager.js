@@ -2639,7 +2639,8 @@ async function updateMod(modFileName, modId, onProgress) {
 		
 		// 4. Download and install (respecting subFolder)
 		// We pass originalPath and backupPath to the queue so it can handle cleanup/backup AFTER completion.
-		const result = await installMod(modId, modFileName.replace('.zip', ''), directUrl, onProgress, category, subFolder, detail?.techData, originalPath, backupPath);
+		const updateTitle = detail?.title || modFileName.replace('.zip', '');
+		const result = await installMod(modId, updateTitle, directUrl, onProgress, category, subFolder, detail?.techData, originalPath, backupPath);
 		
 		return result;
 	} catch (err) {

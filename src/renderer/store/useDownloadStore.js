@@ -1,6 +1,38 @@
 import { create } from 'zustand';
 import { useLocalModsStore } from './useLocalModsStore';
+import { useModHubStore } from './useModHubStore';
 import { useToastStore } from './useToastStore';
+
+function resolveDownloadTitle(modIdStr, defaultTitle) {
+  if (defaultTitle && !defaultTitle.startsWith('Mod ') && defaultTitle !== modIdStr && !defaultTitle.startsWith('FS25_mod_')) {
+    return defaultTitle;
+  }
+
+  try {
+    const updates = useLocalModsStore.getState().updates || [];
+    const matchingUpdate = updates.find(u => String(u.modId) === String(modIdStr) || (u.fileName && u.fileName.toLowerCase().includes(modIdStr.toLowerCase())));
+    if (matchingUpdate && (matchingUpdate.modhubTitle || matchingUpdate.title)) {
+      return matchingUpdate.modhubTitle || matchingUpdate.title;
+    }
+  } catch (_) {}
+
+  try {
+    const localMods = useLocalModsStore.getState().mods || [];
+    const matchingMod = localMods.find(m => String(m.modId) === String(modIdStr) || (m.fileName && m.fileName.toLowerCase().includes(modIdStr.toLowerCase())));
+    if (matchingMod && matchingMod.title) {
+      return matchingMod.title;
+    }
+  } catch (_) {}
+
+  try {
+    const modCache = useModHubStore.getState().modCache || {};
+    if (modCache[modIdStr]?.title) {
+      return modCache[modIdStr].title;
+    }
+  } catch (_) {}
+
+  return defaultTitle || `Mod ${modIdStr}`;
+}
 
 export const useDownloadStore = create((set, get) => ({
   activeDownloads: {},
@@ -11,6 +43,7 @@ export const useDownloadStore = create((set, get) => ({
   addDownload: (modId, title, icon = null, progress = 0, receivedBytes = null, totalBytes = null, status = 'waiting') => {
     if (modId === undefined || modId === null) return;
     const modIdStr = String(modId);
+    const resolvedTitle = resolveDownloadTitle(modIdStr, title);
 
     set((s) => {
       const existing = s.activeDownloads[modId] || s.activeDownloads[modIdStr];
@@ -27,7 +60,7 @@ export const useDownloadStore = create((set, get) => ({
           ...s.activeDownloads,
           [modIdStr]: { 
             modId: modIdStr, 
-            title: title || existing?.title || `Mod ${modIdStr}`, 
+            title: resolvedTitle || existing?.title || `Mod ${modIdStr}`, 
             progress: typeof progress === 'number' ? progress : (existing?.progress || 0), 
             icon: icon || existing?.icon || null, 
             receivedBytes: receivedBytes !== null ? receivedBytes : (existing?.receivedBytes || null),
@@ -190,7 +223,7 @@ export const useDownloadStore = create((set, get) => ({
 
         next[targetStr] = {
           modId: targetStr,
-          title: `Mod ${targetStr}`,
+          title: resolveDownloadTitle(targetStr, typeof progressData === 'object' ? progressData.title : null),
           progress: typeof progress === 'number' ? progress : 0,
           receivedBytes,
           totalBytes,
