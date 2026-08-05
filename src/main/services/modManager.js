@@ -4669,7 +4669,7 @@ async function resumePendingDownloads(onProgress) {
 	const pending = cache.getPendingDownloads();
 	if (pending.length === 0) return { success: true, count: 0 };
 	
-	console.log(`[RESUME] Found ${pending.length} pending downloads in database.`);
+	console.log(`[RESUME] Found ${pending.length} pending download records in database.`);
 	const pool = cache.getModHubMetadataPool();
 	const now = Date.now();
 	const results = [];
@@ -4677,10 +4677,11 @@ async function resumePendingDownloads(onProgress) {
 	for (const item of pending) {
 		const strId = String(item.mod_id);
 		const age = now - (item.created_at || 0);
+		const received = item.received_bytes || 0;
 
-		// Purge stale or invalid pending records (older than 24 hours or missing download_url)
-		if (!item.download_url || (item.created_at && age > 24 * 60 * 60 * 1000)) {
-			console.log(`[RESUME] Purging invalid/stale pending download record for mod: ${strId}`);
+		// Purge unstarted phantom records (0 received bytes), stale records (>2 hours old), or missing download_url
+		if (!item.download_url || received <= 0 || (item.created_at && age > 2 * 60 * 60 * 1000)) {
+			console.log(`[RESUME] Purging unstarted/stale pending download record for mod: ${strId} (received: ${received}b)`);
 			try { cache.removePendingDownload(strId); } catch (_) {}
 			continue;
 		}
