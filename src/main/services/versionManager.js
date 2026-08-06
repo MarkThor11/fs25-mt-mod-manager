@@ -66,7 +66,8 @@ async function checkAllUpdates() {
 
     if (!remoteVersion) continue;
 
-    const hasUpdate = compareVersions(localMod.version, remoteVersion) > 0;
+    const localVersion = tracked?.local_version || localMod.version;
+    const hasUpdate = compareVersions(localVersion, remoteVersion) > 0;
     const title = tracked?.modhub_title || poolItem?.title || localMod.title;
 
     if (hasUpdate) {

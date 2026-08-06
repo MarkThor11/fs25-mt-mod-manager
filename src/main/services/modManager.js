@@ -2642,6 +2642,21 @@ async function updateMod(modFileName, modId, onProgress) {
 		const updateTitle = detail?.title || modFileName.replace('.zip', '');
 		const result = await installMod(modId, updateTitle, directUrl, onProgress, category, subFolder, detail?.techData, originalPath, backupPath);
 		
+		if (result && result.success && detail?.version) {
+			try {
+				cache.setModTracking({
+					mod_id: String(modId),
+					local_file_name: modFileName,
+					local_version: detail.version,
+					remote_version: detail.version,
+					modhub_title: updateTitle
+				});
+				console.log(`[UPDATE] Mod ${modId} tracking record updated: version ${detail.version}`);
+			} catch (e) {
+				console.warn('[UPDATE] Failed to save tracking record:', e);
+			}
+		}
+
 		return result;
 	} catch (err) {
 		// Restore backup on failure
@@ -4157,6 +4172,13 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 						break; // Found it!
 					}
 				}
+			}
+
+			if (!modId) {
+				console.warn(`[AUTO-INSTALL] Could not resolve ModHub ID for dependency: ${modName}`);
+				onProgress?.({ type: 'STATUS', modName, status: 'error', message: 'Not found on ModHub (Third-party file)', parentId });
+				results.failed.push(modName);
+				continue;
 			}
 
 			if (modId) {
