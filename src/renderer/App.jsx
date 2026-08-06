@@ -67,7 +67,7 @@ export default function App() {
             useLocalModsStore.getState().scanMods();
             useMapStore.getState().fetchTemplates();
             useLocalModsStore.getState().triggerAutoUpdateIfNeeded();
-        }, 2000);
+        }, 4000);
 
         // ── DOWNLOAD RESUMPTION ──
         // Check if there were any interrupted downloads and resume them automatically

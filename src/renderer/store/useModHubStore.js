@@ -250,11 +250,8 @@ export const useModHubStore = create((set, get) => ({
   },
 
   prefetchCategories: async () => {
-    const { categories, fetchMods, pageSize, authorFilter, startGlobalWarming } = get();
-    if (!categories || categories.length === 0) return;
-
-    // Trigger the new deep warming service instead of the old simple prefetch
-    startGlobalWarming();
+    // Lightweight prefetch only if needed
+    console.log('[MODHUB] Prefetch skipped on launch to maximize responsiveness.');
   },
 
   startGlobalWarming: async () => {

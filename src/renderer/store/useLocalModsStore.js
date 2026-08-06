@@ -44,14 +44,12 @@ export const useLocalModsStore = create((set, get) => ({
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed.mods) && parsed.mods.length > 0) {
           const modArray = parsed.mods;
-          set({ mods: modArray, modCount: computeModCount(modArray), allFolders: parsed.allFolders || [] });
+          set({ mods: modArray, modCount: computeModCount(modArray), allFolders: parsed.allFolders || [], lastScanTime: Date.now() });
         }
       }
     } catch (e) {
       console.error("Failed to parse mod cache", e);
     }
-    // Background sync
-    get().scanMods();
   },
 
   scanMods: async (manualPaths = null, force = false) => {
