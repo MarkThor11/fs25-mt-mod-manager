@@ -356,7 +356,7 @@ export const useDownloadStore = create((set, get) => ({
   triggerScan: () => {
     if (get().scanTimeout) clearTimeout(get().scanTimeout);
     const timeoutId = setTimeout(() => {
-      useLocalModsStore.getState().scanMods();
+      useLocalModsStore.getState().scanMods(null, true);
       set({ scanTimeout: null });
     }, 200);
     set({ scanTimeout: timeoutId });

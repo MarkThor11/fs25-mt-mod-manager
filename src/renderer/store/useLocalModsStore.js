@@ -136,7 +136,7 @@ export const useLocalModsStore = create((set, get) => ({
             
             // Refresh library once a background mod finishes successfully
             if (data.status === 'success') {
-                get().scanMods();
+                get().scanMods(null, true);
             }
         }
     });
@@ -266,7 +266,7 @@ export const useLocalModsStore = create((set, get) => ({
       const result = await window.api.localMods.updateMod({ modFileName, modId });
       if (result.success) {
         // Re-scan after update
-        await get().scanMods();
+        await get().scanMods(null, true);
         // Clear the specific update flag immediately
         set((state) => ({
           updates: state.updates.filter((u) => u.fileName !== modFileName),
@@ -283,7 +283,7 @@ export const useLocalModsStore = create((set, get) => ({
     try {
       if (!window.api?.mods) return { success: false, error: 'Bridge not available' };
       const res = await window.api.mods.syncMetadata();
-      await get().scanMods();
+      await get().scanMods(null, true);
       return res;
     } finally {
       set({ isSyncing: false });
