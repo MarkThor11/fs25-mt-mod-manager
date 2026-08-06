@@ -711,9 +711,11 @@ ipcMain.handle('localMods:checkUpdates', async () => {
 ipcMain.handle('localMods:updateMod', async (_, { modFileName, modId }) => {
   try {
     return await modManager.updateMod(modFileName, modId, (progress) => {
-      mainWindow?.webContents.send('download:progress', { modId, progress });
+      const progressObj = typeof progress === 'object' ? progress : { percent: progress };
+      mainWindow?.webContents.send('download:progress', { modId, progress: progressObj });
     });
   } catch (err) {
+    console.error(`[UPDATE] Error updating ${modFileName}:`, err);
     return { success: false, error: err.message };
   }
 });

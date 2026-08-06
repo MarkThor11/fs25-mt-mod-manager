@@ -155,9 +155,9 @@ export const useLocalModsStore = create((set, get) => ({
     const { isCheckingUpdates, lastUpdateCheck } = get();
     const now = Date.now();
     
-    // Guard: Only check if not already checking, and last check > 5 min ago (unless forced)
+    // Guard: Only check if not already checking, and last check > 24 hours ago (unless forced)
     if (isCheckingUpdates) return;
-    if (!force && now - lastUpdateCheck < 5 * 60 * 1000) return;
+    if (!force && now - lastUpdateCheck < 24 * 60 * 60 * 1000) return;
 
     set({ isCheckingUpdates: true, error: null });
     try {
@@ -218,6 +218,11 @@ export const useLocalModsStore = create((set, get) => ({
 
     for (const update of modsToUpdate) {
       try {
+        const titleToUse = update.modhubTitle || update.title || update.fileName.replace(/\.zip$/i, '');
+        import('./useDownloadStore').then(d => {
+          d.useDownloadStore.getState().addDownload(update.modId || update.fileName, titleToUse, null, 0, null, null, 'downloading');
+        }).catch(() => {});
+
         await updateMod(update.fileName, update.modId);
       } catch (err) {
         console.error(`[AUTO-UPDATE] Failed to update ${update.fileName}:`, err);
