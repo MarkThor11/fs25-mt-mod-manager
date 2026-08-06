@@ -36,6 +36,8 @@ export const useLocalModsStore = create((set, get) => ({
   resolvingStatus: null, // { modName, status, progress }
   showOnlyUpdates: false,
 
+  isScanning: false,
+
   loadCache: async () => {
     if (!window.api?.settings) return;
     try {
@@ -44,7 +46,7 @@ export const useLocalModsStore = create((set, get) => ({
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed.mods) && parsed.mods.length > 0) {
           const modArray = parsed.mods;
-          set({ mods: modArray, modCount: computeModCount(modArray), allFolders: parsed.allFolders || [], lastScanTime: Date.now() });
+          set({ mods: modArray, modCount: computeModCount(modArray), allFolders: parsed.allFolders || [] });
         }
       }
     } catch (e) {
@@ -54,13 +56,19 @@ export const useLocalModsStore = create((set, get) => ({
 
   scanMods: async (manualPaths = null, force = false) => {
     const now = Date.now();
-    if (!force && get().mods.length > 0 && (get().isLoading || (now - get().lastScanTime < 300000))) return;
+    const { isScanning, lastScanTime, mods: currentMods } = get();
 
-    set({ isLoading: get().mods.length === 0, error: null });
+    // Prevent duplicate parallel scans if already scanning
+    if (isScanning) return;
+
+    // Cooldown check for unforced scans when we already have scanned mods
+    if (!force && currentMods.length > 0 && lastScanTime > 0 && (now - lastScanTime < 300000)) return;
+
+    set({ isScanning: true, isLoading: currentMods.length === 0, error: null });
 
     try {
       if (!window.api?.localMods) {
-        set({ isLoading: false });
+        set({ isLoading: false, isScanning: false });
         return;
       }
       
@@ -74,6 +82,7 @@ export const useLocalModsStore = create((set, get) => ({
         conflicts: conflicts || [],
         missingDependencies: missingDependencies || [],
         isLoading: false,
+        isScanning: false,
         lastScanTime: Date.now(),
         error: error || null,
       });

@@ -62,12 +62,12 @@ export default function App() {
         
         startPeriodicStats();
         
-        // Full scan runs in background with a delay to let startup settle
+        // Full scan runs in background with a slight delay to let startup settle
         setTimeout(() => {
             useLocalModsStore.getState().scanMods();
             useMapStore.getState().fetchTemplates();
             useLocalModsStore.getState().triggerAutoUpdateIfNeeded();
-        }, 4000);
+        }, 1000);
 
         // ── DOWNLOAD RESUMPTION ──
         // Check if there were any interrupted downloads and resume them automatically
