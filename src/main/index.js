@@ -725,9 +725,18 @@ ipcMain.handle('localMods:restoreVersion', async (_, { filePath }) => {
 });
 
 ipcMain.handle('localMods:autoInstallDependencies', async (event, { mods, subFolder, parentId }) => {
-  return await modManager.autoInstallDependencies(mods, (progress) => {
-    event.sender.send('dependency:progress', progress);
-  }, subFolder, parentId);
+  try {
+    return await modManager.autoInstallDependencies(mods, (progress) => {
+      try {
+        if (event.sender && !event.sender.isDestroyed()) {
+          event.sender.send('dependency:progress', progress);
+        }
+      } catch (_) {}
+    }, subFolder, parentId);
+  } catch (err) {
+    console.error('[AUTO-INSTALL] Error in autoInstallDependencies IPC handler:', err);
+    return { total: mods?.length || 0, installed: 0, failed: mods || [], error: err.message };
+  }
 });
 
 // Dedicated handler: install Store Deliveries mod directly from known CDN URL
