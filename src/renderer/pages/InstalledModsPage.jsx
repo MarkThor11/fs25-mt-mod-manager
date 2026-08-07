@@ -1074,12 +1074,10 @@ export default function InstalledModsPage() {
       if (m.modName) {
         const norm = m.modName.toLowerCase();
         byName.set(norm, m);
-        byName.set(normalizeForMatching(m.modName), m);
       }
       if (m.fileName) {
         const cleanFile = m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
         byFile.set(cleanFile, m);
-        byFile.set(normalizeForMatching(m.fileName), m);
       }
       if (m.title) {
         byName.set(m.title.toLowerCase(), m);

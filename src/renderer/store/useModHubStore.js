@@ -646,8 +646,10 @@ export const useModHubStore = create((set, get) => ({
     const id = setInterval(fetchStats, 30 * 60 * 1000);
     set({ statsIntervalId: id });
     
-    // Initial fetch
-    fetchStats();
+    // Defer live network scraping fetch by 15 seconds after launch so startup is 100% idle
+    setTimeout(() => {
+      fetchStats();
+    }, 15000);
   },
 
   stopPeriodicStats: () => {
