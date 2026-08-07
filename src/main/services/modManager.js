@@ -3999,6 +3999,21 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 	// Fetch pool of currently installed mods to check for duplicates
 	const localPool = cache.getModHubMetadataPool();
 
+	// Direct Map Page Dependency Link Resolution:
+	// If parentId (map ID) is provided, fetch the map's ModHub detail page to get direct dependency links
+	let scrapedMapDeps = [];
+	if (parentId) {
+		try {
+			const detail = await scraper.fetchModDetail(parentId);
+			if (detail && Array.isArray(detail.dependencies)) {
+				scrapedMapDeps = detail.dependencies;
+				console.log(`[AUTO-INSTALL] Retrieved ${scrapedMapDeps.length} direct dependency links from map ${parentId}'s ModHub page.`);
+			}
+		} catch (err) {
+			console.warn(`[AUTO-INSTALL] Could not fetch live map details for ${parentId}:`, err.message);
+		}
+	}
+
 	for (const modObj of mods) {
 		// CHECK FOR CANCELLATION
 		if (parentId && !activeBatchTasks.has(parentId)) {
@@ -4006,8 +4021,22 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 			break;
 		}
 
-		const modName = modObj.title;
-		const modUrl = modObj.url;
+		const modName = modObj.title || modObj.name || '';
+		let modUrl = modObj.url || modObj.downloadUrl || null;
+
+		// Match direct link from the map's live ModHub page if URL is missing
+		if (!modUrl && scrapedMapDeps.length > 0) {
+			const normTarget = ultraNormalize(modName);
+			const matchedMapDep = scrapedMapDeps.find(d => {
+				if (!d) return false;
+				const normTitle = ultraNormalize(d.title || '');
+				return normTitle === normTarget || (normTarget.length > 4 && (normTitle.includes(normTarget) || normTarget.includes(normTitle)));
+			});
+			if (matchedMapDep && matchedMapDep.url) {
+				modUrl = matchedMapDep.url;
+				console.log(`[AUTO-INSTALL] Direct ModHub page link matched for "${modName}": ${modUrl}`);
+			}
+		}
 		
 		try {
 			let modId = modObj.modId || modObj.id || null;
