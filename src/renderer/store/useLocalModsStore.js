@@ -272,10 +272,12 @@ export const useLocalModsStore = create((set, get) => ({
       if (result.success) {
         // Re-scan after update
         await get().scanMods(null, true);
-        // Clear the specific update flag immediately
-        set((state) => ({
-          updates: state.updates.filter((u) => u.fileName !== modFileName),
-        }));
+        // Clear the specific update flag immediately from state AND localStorage
+        const remaining = (get().updates || []).filter((u) => u.fileName !== modFileName && String(u.modId) !== String(modId));
+        set({ updates: remaining });
+        try {
+          localStorage.setItem('mod_updates', JSON.stringify(remaining));
+        } catch (_) {}
       }
       return result;
     } catch (err) {

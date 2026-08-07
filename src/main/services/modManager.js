@@ -4111,13 +4111,34 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 				}
 			}
 
+			// 2.5 LOCAL METADATA POOL CHECK (O(1) Instant Lookup before HTTP search)
+			if (!modId) {
+				const pool = cache.getModHubMetadataPool();
+				const poolMatch = Object.values(pool).find(m => {
+					if (!m) return false;
+					const mTitle = (m.title || '').toLowerCase();
+					const mName = (m.modName || m.fileName || '').toLowerCase();
+					const target = modName.toLowerCase();
+					return mTitle === target || mName === target || (target.length > 5 && (mTitle.includes(target) || target.includes(mTitle)));
+				});
+				if (poolMatch) {
+					modId = String(poolMatch.modId || poolMatch.id);
+					modTitle = poolMatch.title || modName;
+					console.log(`[AUTO-INSTALL] Found match via local metadata pool: "${modTitle}" (ID: ${modId})`);
+				}
+			}
+
 			// 3. Fallback to Search if no ID found or if we only had a title
 			if (!modId) {
+				const words = modName.split(/[^a-zA-Z0-9]/).filter(w => w.length > 2);
+				const shortQuery = words.slice(0, 3).join(' ');
+
 				const searchQueries = [
 					modName, // 1. Original
-					modName.replace(/^(fs\d{2}_?|dlc_|pdlc_|mod_|fendt_|jcb_|caseih_|newholland_|massey_)/i, ''), // 2. Prefix-less
-					modName.replace(/\[[^\]]*\]/g, '').trim(), // 3. Tag-less
-					modName.split(/[\(\[\-]/)[0].trim() // 4. Deep Clean (Name only, no versions/info)
+					shortQuery, // 2. First 2-3 words
+					modName.replace(/^(fs\d{2}_?|dlc_|pdlc_|mod_|fendt_|jcb_|caseih_|newholland_|massey_)/i, ''), // 3. Prefix-less
+					modName.replace(/\[[^\]]*\]/g, '').trim(), // 4. Tag-less
+					modName.split(/[\(\[\-]/)[0].trim() // 5. Deep Clean
 				];
 				
 				// Unique queries only
@@ -4129,9 +4150,7 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 					
 					await new Promise(r => setTimeout(r, 600)); // Rate limit safety
 					
-					// Try FS25 strictly (Absolute FS25 requirement)
 					let search = await scraper.searchMods(query, 0, 'fs2025');
-
 
 					let bestMatch = null;
 
@@ -4158,10 +4177,15 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 								const targetWords = query.toLowerCase().split(/[^a-z0-9]/).filter(w => w.length > 2);
 								const resultWords = m.title.toLowerCase().split(/[^a-z0-9]/).filter(w => w.length > 2);
 								const matchingWords = targetWords.filter(tw => resultWords.some(rw => rw.includes(tw) || tw.includes(rw)));
-								const isSimilar = targetWords.length > 0 && (matchingWords.length / targetWords.length) > 0.7;
+								const isSimilar = targetWords.length > 0 && (matchingWords.length / targetWords.length) >= 0.5;
 
 								return isOverlap || isSimilar;
 							});
+						}
+
+						// Strategy C: First search result if query was tokenized
+						if (!bestMatch && search.mods.length > 0) {
+							bestMatch = search.mods[0];
 						}
 					}
 
@@ -4176,7 +4200,7 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 
 			if (!modId) {
 				console.warn(`[AUTO-INSTALL] Could not resolve ModHub ID for dependency: ${modName}`);
-				onProgress?.({ type: 'STATUS', modName, status: 'error', message: 'Not found on ModHub (Third-party file)', parentId });
+				onProgress?.({ type: 'STATUS', modName, status: 'error', message: 'Could not locate mod on ModHub. Try downloading manually.', parentId });
 				results.failed.push(modName);
 				continue;
 			}
