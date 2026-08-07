@@ -87,10 +87,31 @@ export const useLocalModsStore = create((set, get) => ({
         error: error || null,
       });
       
-      // Persist fresh data for next launch (keep icons for instant load)
+      // Persist fresh data for next launch (keep essential properties for instant load)
       try {
+        const lightweightMods = (mods || []).map(m => ({
+          title: m.title,
+          author: m.author,
+          version: m.version,
+          category: m.category,
+          size: m.size,
+          fileName: m.fileName,
+          filePath: m.filePath,
+          folder: m.folder,
+          isDLC: m.isDLC,
+          isMap: m.isMap,
+          mapId: m.mapId,
+          mapTitle: m.mapTitle,
+          modName: m.modName,
+          technicalName: m.technicalName,
+          dependencies: m.dependencies,
+          modId: m.modId,
+          iconData: m.iconData,
+          tags: m.tags
+        }));
+
         await window.api.settings.set('modCache', JSON.stringify({
-            mods: mods || [],
+            mods: lightweightMods,
             allFolders: allFolders || []
         }));
       } catch (_) {}
