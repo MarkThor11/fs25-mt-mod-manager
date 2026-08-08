@@ -132,12 +132,28 @@ export default function ModDetailPage() {
     return compareVersions(mod.version, localMod.version) > 0;
   }, [mod, localMod]);
 
-  const currentDownload = activeDownloads[modId];
+  const currentDownload = activeDownloads[modId || mod?.modId];
   const isCurrentlyInstalling = !!currentDownload && currentDownload.status !== 'success';
   const showAsInstalled = !!localMod || currentDownload?.status === 'success';
   const downloadProgress = currentDownload?.progress || 0;
 
-  const isModFav = favoriteMods.some(m => m.modId === modId);
+  const isModFav = useMemo(() => {
+    if (!mod) return false;
+    const targetId = modId || mod.modId;
+    return favoriteMods.some(f => 
+      (targetId && f.modId && String(f.modId) === String(targetId)) || 
+      (mod.fileName && f.fileName && f.fileName === mod.fileName)
+    );
+  }, [mod, modId, favoriteMods]);
+
+  const isMustHave = useMemo(() => {
+    if (!mod) return false;
+    const targetId = modId || mod.modId;
+    return favoriteMods.some(f => 
+      ((targetId && f.modId && String(f.modId) === String(targetId)) || 
+       (mod.fileName && f.fileName && f.fileName === mod.fileName)) && f.isMustHave
+    );
+  }, [mod, modId, favoriteMods]);
   const isOnline = useSettingsStore(s => s.isOnline);
   const { conflicts, missingDependencies, setModTags, restoreModVersion } = useLocalModsStore();
   const [newTag, setNewTag] = useState('');
@@ -576,10 +592,13 @@ export default function ModDetailPage() {
   };
 
   const handleOpenWebsite = () => {
-    if (modId) {
-      window.api.modhub.openInBrowser(modId);
+    const targetId = modId || mod?.modId;
+    if (targetId) {
+      window.api.modhub.openInBrowser(targetId);
     } else if (mod?.url) {
       window.api.shell.openExternal(mod.url);
+    } else if (mod?.title) {
+      window.api.shell.openExternal(`https://www.farming-simulator.com/mods.php?title=${encodeURIComponent(mod.title)}`);
     }
   };
 
@@ -1136,12 +1155,12 @@ export default function ModDetailPage() {
             </button>
 
             <button 
-              className={`btn btn--full ${favoriteMods.find(m => (m.modId && modId && String(m.modId) === String(modId)) || (m.fileName && mod.fileName && m.fileName === mod.fileName))?.isMustHave ? 'btn--accent' : 'btn--secondary'}`}
+              className={`btn btn--full ${isMustHave ? 'btn--accent' : 'btn--secondary'}`}
               onClick={() => toggleMustHaveMod(mod)}
-              style={favoriteMods.find(m => (m.modId && modId && String(m.modId) === String(modId)) || (m.fileName && mod.fileName && m.fileName === mod.fileName))?.isMustHave ? { background: 'rgba(var(--accent-rgb), 0.1)', borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 800 } : { fontWeight: 800 }}
+              style={isMustHave ? { background: 'rgba(var(--accent-rgb), 0.1)', borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 800 } : { fontWeight: 800 }}
             >
-              <Pin size={16} fill={favoriteMods.find(m => (m.modId && modId && String(m.modId) === String(modId)) || (m.fileName && mod.fileName && m.fileName === mod.fileName))?.isMustHave ? "currentColor" : "none"} />
-              {favoriteMods.find(m => (m.modId && modId && String(m.modId) === String(modId)) || (m.fileName && mod.fileName && m.fileName === mod.fileName))?.isMustHave ? 'Must-Have Mod' : 'Designate as Must-Have'}
+              <Pin size={16} fill={isMustHave ? "currentColor" : "none"} />
+              {isMustHave ? 'Must-Have Mod' : 'Designate as Must-Have'}
             </button>
 
             {localMod && (
