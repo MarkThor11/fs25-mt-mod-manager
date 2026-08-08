@@ -2850,7 +2850,39 @@ async function autoOrganizeMaps() {
 	* Exported alias for the queue entry point
 */
 async function installMod(modId, modTitle, downloadUrl, onProgress, category, subFolder = null, techData = null, oldPath = null, recoveryPath = null) {
-    return await enqueueInstall(modId, modTitle, downloadUrl, onProgress, category, subFolder, oldPath, recoveryPath);
+	return new Promise((resolve) => {
+		let finished = false;
+		const wrappedProgress = (p) => {
+			try { onProgress?.(p); } catch (_) {}
+			if (p && (p.status === 'success' || p.status === 'installed')) {
+				if (!finished) { 
+					finished = true; 
+					resolve({ success: true }); 
+				}
+			} else if (p && (p.status === 'error' || p.status === 'failed')) {
+				if (!finished) { 
+					finished = true; 
+					resolve({ success: false, error: p.message || 'Download failed' }); 
+				}
+			}
+		};
+
+		enqueueInstall(modId, modTitle, downloadUrl, wrappedProgress, category, subFolder, techData, oldPath, recoveryPath)
+			.then((res) => {
+				if (res && !res.success) {
+					if (!finished) { 
+						finished = true; 
+						resolve(res); 
+					}
+				}
+			})
+			.catch((err) => {
+				if (!finished) { 
+					finished = true; 
+					resolve({ success: false, error: err.message }); 
+				}
+			});
+	});
 }
 
 /**
