@@ -116,15 +116,36 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
   const missing = new Set();
   const processed = new Set();
 
-  if (targetModName && allMods) {
-    const targetMod = allMods.find(m => m.modName && m.modName.toLowerCase() === targetModName.toLowerCase());
+  if (!allMods || allMods.length === 0) {
+    return { installed: [], missing: [] };
+  }
+
+  // Pre-build O(1) fast lookup index across all installed mods
+  const indexById = new Map();
+  const indexByName = new Map();
+
+  for (let i = 0; i < allMods.length; i++) {
+    const m = allMods[i];
+    if (!m) continue;
+    if (m.modId) indexById.set(String(m.modId).replace(/^0+/, ''), m);
+    if (m.modName) indexByName.set(m.modName.toLowerCase(), m);
+    if (m.fileName) {
+      const cleanFile = m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
+      indexByName.set(cleanFile, m);
+    }
+    if (m.title) indexByName.set(m.title.toLowerCase(), m);
+  }
+
+  if (targetModName) {
+    const targetMod = indexByName.get(targetModName.toLowerCase());
     if (targetMod && targetMod.folder && targetMod.folder.toLowerCase() !== 'mods' && targetMod.folder.toLowerCase() !== '') {
       const folderLower = targetMod.folder.toLowerCase();
-      allMods.forEach(m => {
+      for (let i = 0; i < allMods.length; i++) {
+        const m = allMods[i];
         if (m.folder && m.folder.toLowerCase() === folderLower && m.modName && m.modName.toLowerCase() !== targetModName.toLowerCase()) {
           installed.add(m.modName);
         }
-      });
+      }
     }
   }
 
@@ -154,9 +175,11 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
     if (processed.has(nameLower)) return;
     processed.add(nameLower);
 
-    let match = allMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, true));
+    // O(1) Instant Lookup Strategy
+    let match = (depId ? indexById.get(depId) : null) || indexByName.get(nameLower);
+    
     if (!match) {
-        match = allMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, false));
+      match = allMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, false));
     }
     
     const isSessionInstalledByName = Object.values(sessionInstalled).some(val => val && val.toLowerCase() === nameLower);

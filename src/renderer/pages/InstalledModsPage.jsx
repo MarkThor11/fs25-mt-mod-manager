@@ -468,19 +468,26 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
 // global `folders` useMemo, doing O(N×M) work before a single pixel appeared.
 const FolderRequirements = React.memo(({ folderMods, allMods, sessionInstalled, isResolving, resolvingStatus, folderName }) => {
   const maps = useMemo(() => folderMods.filter(m => m.isMap && m.dependencies && m.dependencies.length > 0), [folderMods]);
+  const [result, setResult] = useState({ status: 'none', missing: [] });
 
-  const result = useMemo(() => {
-    if (maps.length === 0) return { status: 'none', missing: [] };
-    const missingMods = new Set();
-    for (const map of maps) {
-      const mapKey = map.modName || map.fileName;
-      const { missing } = resolveRecursiveDependencies(mapKey, allMods, sessionInstalled);
-      missing.forEach(m => missingMods.add(m));
+  useEffect(() => {
+    if (maps.length === 0) {
+      setResult({ status: 'none', missing: [] });
+      return;
     }
-    return {
-      status: missingMods.size === 0 ? 'satisfied' : 'missing',
-      missing: Array.from(missingMods)
-    };
+    const timer = setTimeout(() => {
+      const missingMods = new Set();
+      for (const map of maps) {
+        const mapKey = map.modName || map.fileName;
+        const { missing } = resolveRecursiveDependencies(mapKey, allMods, sessionInstalled);
+        missing.forEach(m => missingMods.add(m));
+      }
+      setResult({
+        status: missingMods.size === 0 ? 'satisfied' : 'missing',
+        missing: Array.from(missingMods)
+      });
+    }, 50);
+    return () => clearTimeout(timer);
   }, [maps, allMods, sessionInstalled]);
 
   if (result.status === 'none') return null;
