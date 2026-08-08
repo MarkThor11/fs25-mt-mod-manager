@@ -4255,31 +4255,52 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 					console.log(`[AUTO-INSTALL] Constructed fallback ModHub CDN URL for mod ${modId}: ${downloadUrl}`);
 				}
 
-				// 5. Trigger Install
+				// 5. Trigger Install with automatic 3-attempt retry loop
 				onProgress?.({ type: 'STATUS', modId, modName, status: 'DOWNLOADING', title: modTitle, parentId });
 				
-				const installResult = await installMod(
-					modId,
-					modTitle,
-					downloadUrl, 
-					(p) => {
-					    onProgress?.({ 
-                            type: p.status ? 'STATUS' : 'PROGRESS', 
-                            modId, 
-                            modName, 
-                            parentId, 
-                            ...p 
-                        });
-				    },
-					category,
-					subFolder || modObj.subFolder // Inherit from parent if this is a dependency call
-				);
+				let installResult = null;
+				let lastError = null;
 
-				if (installResult.success) {
+				for (let attempt = 1; attempt <= 3; attempt++) {
+					try {
+						if (attempt > 1) {
+							console.log(`[AUTO-INSTALL] Retrying download for ${modTitle} (Attempt ${attempt}/3)...`);
+							onProgress?.({ type: 'STATUS', modId, modName, status: 'DOWNLOADING', title: `${modTitle} (Retry ${attempt}/3)`, parentId });
+							await new Promise(r => setTimeout(r, 2000)); // 2s backoff delay before retrying
+						}
+
+						installResult = await installMod(
+							modId,
+							modTitle,
+							downloadUrl, 
+							(p) => {
+								onProgress?.({ 
+									type: p.status ? 'STATUS' : 'PROGRESS', 
+									modId, 
+									modName, 
+									parentId, 
+									...p 
+								});
+							},
+							category,
+							subFolder || modObj.subFolder // Inherit from parent if this is a dependency call
+						);
+
+						if (installResult.success) {
+							break;
+						} else {
+							lastError = new Error(installResult.error || 'Install failed');
+						}
+					} catch (attemptErr) {
+						lastError = attemptErr;
+					}
+				}
+
+				if (installResult && installResult.success) {
 					results.installed++;
 					console.log(`[AUTO-INSTALL] Successfully installed ${modName}`);
 				} else {
-					throw new Error(installResult.error || 'Install failed');
+					throw lastError || new Error('Install failed after 3 attempts');
 				}
 			} else {
 				console.warn(`[AUTO-INSTALL] Could not find ${modName} on ModHub`);

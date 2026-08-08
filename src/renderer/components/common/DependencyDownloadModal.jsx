@@ -241,17 +241,34 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
                                     {(mod.status === 'SEARCHING' || isNotFound || isError) && (
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
                                             <span style={{ fontSize: 11, color: isNotFound || isError ? 'var(--error)' : 'var(--text-secondary)', opacity: 0.8 }}>
-                                                {isNotFound ? 'Exhausted FS25 search database.' : isError ? 'An error occurred during download.' : 'Pinpointing best match on ModHub...'}
+                                                {isNotFound ? 'Exhausted FS25 search database.' : isError ? 'Download failed. Click Retry or Search Manually.' : 'Pinpointing best match on ModHub...'}
                                             </span>
-                                            {isNotFound && (
-                                                <button 
-                                                    className="btn btn--ghost btn--xs" 
-                                                    onClick={() => handleManualSearch(m.title)}
-                                                    style={{ padding: '2px 8px', color: 'var(--accent)', textDecoration: 'underline' }}
-                                                >
-                                                    Search Manually
-                                                </button>
-                                            )}
+                                            <div style={{ display: 'flex', gap: 6 }}>
+                                                {isError && (
+                                                    <button 
+                                                        className="btn btn--secondary btn--xs" 
+                                                        onClick={() => {
+                                                            setModStatuses(prev => ({
+                                                                ...prev,
+                                                                [depKey]: { status: 'pending', progress: 0, title: m.title || depKey }
+                                                            }));
+                                                            processPendingMods([m]);
+                                                        }}
+                                                        style={{ padding: '2px 8px', fontSize: 10 }}
+                                                    >
+                                                        Retry Download
+                                                    </button>
+                                                )}
+                                                {(isNotFound || isError) && (
+                                                    <button 
+                                                        className="btn btn--ghost btn--xs" 
+                                                        onClick={() => handleManualSearch(m.title || m.modName || depKey)}
+                                                        style={{ padding: '2px 8px', color: 'var(--accent)', textDecoration: 'underline' }}
+                                                    >
+                                                        Search Manually
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
