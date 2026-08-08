@@ -356,9 +356,22 @@ export const useDownloadStore = create((set, get) => ({
   triggerScan: () => {
     if (get().scanTimeout) clearTimeout(get().scanTimeout);
     const timeoutId = setTimeout(() => {
+      const activeKeys = Object.keys(get().activeDownloads);
+      const isStillDownloading = activeKeys.some(k => {
+        const item = get().activeDownloads[k];
+        const st = (item?.status || '').toLowerCase();
+        return ['downloading', 'waiting', 'queued', 'connecting', 'starting'].includes(st);
+      });
+
+      // If active downloads are still running, defer scan until batch finishes
+      if (isStillDownloading) {
+        get().triggerScan();
+        return;
+      }
+
       useLocalModsStore.getState().scanMods(null, true);
       set({ scanTimeout: null });
-    }, 200);
+    }, 500);
     set({ scanTimeout: timeoutId });
   }
 }));

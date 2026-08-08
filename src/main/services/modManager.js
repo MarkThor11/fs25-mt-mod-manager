@@ -1142,11 +1142,21 @@ async function performScan(manualPaths = null) {
 			// Also force re-parse for cached maps with no dependencies (stale cache from before dep-parsing was added)
 			const isPlaceholder = iconBase64 === 'CATEGORY:map' || iconBase64 === 'CATEGORY:generic';
 			const hasStaleDeps = modDesc?.isMap && (!modDesc.dependencies || modDesc.dependencies.length === 0);
+			// Skip zip parsing for files currently being downloaded by activeInstalls to prevent AdmZip crash
+			const isDownloadingFile = Array.from(activeInstalls.values()).some(inst => {
+				if (!inst || !inst.savePath) return false;
+				return path.basename(inst.savePath).toLowerCase() === entryName.toLowerCase() || inst.savePath === fullPath;
+			});
+
 			if (!modDesc || !iconBase64 || isPlaceholder || hasStaleDeps) {
 				try {
 					let zipInstance = null;
-					if (targetPath.toLowerCase().endsWith('.zip')) {
-						try { zipInstance = new AdmZip(targetPath); } catch (e) { console.error(`[SCAN] Corrupt Zip: ${entryName}`); }
+					if (targetPath.toLowerCase().endsWith('.zip') && !isDownloadingFile) {
+						try { 
+							zipInstance = new AdmZip(targetPath); 
+						} catch (e) { 
+							console.warn(`[SCAN] Could not parse Zip (file locked or downloading): ${entryName}`); 
+						}
 					}
 
 					const modDescResult = parseModDesc(targetPath, zipInstance);
