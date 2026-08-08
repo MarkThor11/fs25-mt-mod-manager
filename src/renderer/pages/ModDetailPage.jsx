@@ -155,7 +155,7 @@ export default function ModDetailPage() {
     );
   }, [mod, modId, favoriteMods]);
   const isOnline = useSettingsStore(s => s.isOnline);
-  const { conflicts, missingDependencies, setModTags, restoreModVersion } = useLocalModsStore();
+  const { conflicts, missingDependencies, setModTags, restoreModVersion, scanMods } = useLocalModsStore();
   const [newTag, setNewTag] = useState('');
   const [resolvedMetadata, setResolvedMetadata] = useState({});
   const [restoring, setRestoring] = useState(false);
