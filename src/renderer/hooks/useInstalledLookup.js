@@ -16,93 +16,72 @@ export function useInstalledLookup() {
 
   const cleanStr = (s) => s ? String(s).trim().toLowerCase() : '';
 
-  // 1. Build heavy index ONLY when localMods changes
-  const localIndexes = useMemo(() => {
+  // Single unified lookup index precomputed ONCE per change
+  const lookupIndex = useMemo(() => {
     const byModId = new Map();
     const byExactTitle = new Map();
     const byExactName = new Map();
 
+    // 1. Process local installed mods
     for (let i = 0; i < localMods.length; i++) {
       const lm = localMods[i];
       if (!lm) continue;
       if (lm.modId) {
         const cleanId = String(lm.modId).replace(/^0+/, '');
-        byModId.set(cleanId, lm.version);
+        byModId.set(cleanId, lm.version || "0.0.0.0");
       }
       if (lm.title) {
         const norm = cleanStr(lm.title);
-        if (norm) byExactTitle.set(norm, lm.version);
+        if (norm) byExactTitle.set(norm, lm.version || "0.0.0.0");
       }
       if (lm.modName) {
         const norm = cleanStr(lm.modName);
-        if (norm) byExactName.set(norm, lm.version);
-      }
-    }
-    return { byModId, byExactTitle, byExactName };
-  }, [localMods]);
-
-  const finishedDownloads = useMemo(() => 
-    Object.values(activeDownloads).filter(d => d.status === 'success'),
-    [activeDownloads]
-  );
-
-  return useMemo(() => {
-    const byModId = new Map(localIndexes.byModId);
-    const byExactTitle = new Map(localIndexes.byExactTitle);
-    const byExactName = new Map(localIndexes.byExactName);
-
-    // Add finished downloads (Optimistic UI)
-    for (const d of finishedDownloads) {
-      if (d.modId) {
-        const cleanId = String(d.modId).replace(/^0+/, '');
-        byModId.set(cleanId, 'Installed');
-      }
-      if (d.title) {
-        const norm = cleanStr(d.title);
-        if (norm) byExactTitle.set(norm, 'Installed');
+        if (norm) byExactName.set(norm, lm.version || "0.0.0.0");
       }
     }
 
-    // Add session-installed mods
+    // 2. Overlay finished downloads
+    Object.values(activeDownloads).forEach(d => {
+      if (d.status === 'success') {
+        if (d.modId) byModId.set(String(d.modId).replace(/^0+/, ''), 'Installed');
+        if (d.title) {
+          const norm = cleanStr(d.title);
+          if (norm) byExactTitle.set(norm, 'Installed');
+        }
+      }
+    });
+
+    // 3. Overlay session installed mods
     Object.entries(sessionInstalled || {}).forEach(([modId, normTitle]) => {
-      if (modId) {
-        const cleanId = String(modId).replace(/^0+/, '');
-        byModId.set(cleanId, 'Installed');
-      }
+      if (modId) byModId.set(String(modId).replace(/^0+/, ''), 'Installed');
       if (normTitle) {
         const norm = cleanStr(normTitle);
         if (norm) byExactTitle.set(norm, 'Installed');
       }
     });
 
-    /**
-     * Fast installed-version check. Returns the installed version string or null.
-     */
+    return { byModId, byExactTitle, byExactName };
+  }, [localMods, activeDownloads, sessionInstalled]);
+
+  return useMemo(() => {
     function getInstalledVersion(mod) {
       if (!mod) return null;
 
-      // 1. Direct modId match (fastest)
       if (mod.modId) {
         const cleanId = String(mod.modId).replace(/^0+/, '');
-        if (byModId.has(cleanId)) {
-          return byModId.get(cleanId) || "0.0.0.0";
-        }
+        if (lookupIndex.byModId.has(cleanId)) return lookupIndex.byModId.get(cleanId);
       }
 
-      // 2. Title/Name match (Exact string match preserving hyphens/punctuation)
       if (mod.title) {
         const normTitle = cleanStr(mod.title);
         if (normTitle) {
-          if (byExactTitle.has(normTitle)) return byExactTitle.get(normTitle) || "0.0.0.0";
-          if (byExactName.has(normTitle)) return byExactName.get(normTitle) || "0.0.0.0";
-        }
-      }
-
+          if (lookupIndex.byExactTitle.has(normTitle)) return lookupIndex.byExactTitle.get(normTitle);
+          if (lookupIndex.byExactName.has(normTitle)) return lookupIndex.byExactName.get(normTitle);
       if (mod.modName) {
         const normName = cleanStr(mod.modName);
         if (normName) {
-          if (byExactName.has(normName)) return byExactName.get(normName) || "0.0.0.0";
-          if (byExactTitle.has(normName)) return byExactTitle.get(normName) || "0.0.0.0";
+          if (lookupIndex.byExactName.has(normName)) return lookupIndex.byExactName.get(normName);
+          if (lookupIndex.byExactTitle.has(normName)) return lookupIndex.byExactTitle.get(normName);
         }
       }
 
@@ -110,5 +89,5 @@ export function useInstalledLookup() {
     }
 
     return getInstalledVersion;
-  }, [localMods, finishedDownloads, sessionInstalled]);
+  }, [lookupIndex]);
 }

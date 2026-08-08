@@ -1402,8 +1402,10 @@ async function performScan(manualPaths = null) {
 		if (i % 200 === 0) await new Promise(r => setImmediate(r));
 	}
 
-	// TRIGGER MIRROR SYNC IN BACKGROUND
-	syncMirrorLinks(modsPaths[0]).catch(err => console.error('[MIRROR] Background sync failed:', err));
+	// TRIGGER MIRROR SYNC IN BACKGROUND AFTER STARTUP
+	setTimeout(() => {
+		syncMirrorLinks(modsPaths[0]).catch(err => console.error('[MIRROR] Background sync failed:', err));
+	}, 10000);
 	
 	// ── FINAL DEDUPLICATION (By Identity & Filename) ──
 	// We use multiple keys to catch duplicates even if the filename or version changed.
