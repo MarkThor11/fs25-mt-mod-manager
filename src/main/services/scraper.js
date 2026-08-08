@@ -483,30 +483,32 @@ async function fetchModDetail(modId) {
   // ── Download URL ── link to .zip on giants-software CDN
   let downloadUrl = '';
 
-  // Helper to check if element is inside a dependencies section
+  // Helper to check if element is strictly inside a Required Mods list container
   const isExcluded = (el) => {
-    // 1. Direct check of parent text (for simple lists)
     const $el = $(el);
-    const container = $el.closest('.row, .columns, section, div, ul');
-    
-    // Check if the container itself or any immediate predecessor is a "Required Mods" area
-    const containerText = container.text().toLowerCase();
-    const prevText = container.prevAll('h2, h3, h4').first().text().toLowerCase();
-    
-    const isRequiredArea = containerText.includes('required mods') || containerText.includes('necessary') 
-                           || prevText.includes('required mods') || prevText.includes('necessary');
 
-    // 2. But if it's inside the EXPLICIT download section, it's never excluded
-    if ($el.closest('.download-box').length > 0) return false;
-    
-    return isRequiredArea;
+    // If it's the main download button or inside any download box/container, NEVER exclude
+    if ($el.closest('.download-box, .mod-item__btn, .download-btn, [class*="download"]').length > 0) {
+      return false;
+    }
+
+    // Only exclude if it's inside an explicit required mods list/container
+    const listContainer = $el.closest('ul, ol, .required-mods, .dependencies-list');
+    if (listContainer.length > 0) {
+      const prevHeader = listContainer.prevAll('h2, h3, h4, .title-mods-label').first().text().toLowerCase();
+      if (prevHeader.includes('required') || prevHeader.includes('erforderliche') || prevHeader.includes('nécessaires')) {
+        return true;
+      }
+    }
+
+    return false;
   };
 
-  // Tier 1: Look for explicit download container (Highest Priority)
-  const mainDownloadBtn = $('.download-box a[href*=".zip"], .download-box a.button-buy, .download-box a.button-dark-green').first();
+  // Tier 1: Look for explicit download container & direct storage zip buttons (Highest Priority)
+  const mainDownloadBtn = $('.download-box a[href*=".zip"], .mod-item__btn a[href*=".zip"], a.button-buy[href*=".zip"], a.button-dark-green[href*=".zip"], a[href*="/storage/"][href*=".zip"]').first();
   if (mainDownloadBtn.length) {
     downloadUrl = resolveUrl(mainDownloadBtn.attr('href'));
-    console.log(`[SCRAPER] Found download URL via explicit container: ${downloadUrl}`);
+    console.log(`[SCRAPER] Found download URL via direct download button: ${downloadUrl}`);
   }
 
   // Tier 2: Look for specific download-related patterns in the href
