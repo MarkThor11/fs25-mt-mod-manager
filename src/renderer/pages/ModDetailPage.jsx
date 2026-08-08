@@ -418,57 +418,33 @@ export default function ModDetailPage() {
           }
       };
 
-      // 1. Resolve remote map data if online
-      let remoteDeps = [];
-      let resolvedMetaUpdate = {};
+      // If local mod data exists, render it immediately to prevent skeleton loading screens
+      if (modData) {
+          setMod(modData);
+          setLoading(false);
+      }
 
+      // 1. Resolve remote map data asynchronously if online
       if (effectiveModId) {
           try {
               const remote = await window.api.modhub.fetchModDetail({ modId: effectiveModId });
               if (remote && !remote.error) {
-                  remoteDeps = remote.dependencies || [];
-                  // Prefetch filenames for all remote dependencies listed on the map page
-                  resolvedMetaUpdate = await prefetchDependencies(remoteDeps);
+                  const remoteDeps = remote.dependencies || [];
+                  const updatedModData = { ...(modData || {}), ...remote };
+                  if (remoteDeps.length > 0) updatedModData.dependencies = remoteDeps;
                   
-                  modData = { 
-                      ...modData, 
-                      ...remote
-                  };
+                  setMod(updatedModData);
+
+                  // Background prefetch for dependency metadata
+                  prefetchDependencies(remoteDeps).then(resolvedMetaUpdate => {
+                      if (Object.keys(resolvedMetaUpdate).length > 0) {
+                          setResolvedMetadata(prev => ({ ...prev, ...resolvedMetaUpdate }));
+                      }
+                  }).catch(() => {});
               }
           } catch (err) {
               console.warn('Remote fetch failed, falling back to local metadata');
           }
-      } else if (modData && modData.isMap && modData.dependencies && modData.dependencies.some(d => typeof d === 'string' || !d.url)) {
-          // If we only have local map metadata, search by map title to locate its ModHub ID and page
-          try {
-              const searchRes = await window.api.modhub.search({ query: modData.title || modData.modName, page: 0 });
-              const remoteMap = searchRes?.mods?.[0];
-              if (remoteMap && remoteMap.modId) {
-                  const detail = await window.api.modhub.fetchModDetail({ modId: remoteMap.modId });
-                  if (detail && detail.dependencies) {
-                      remoteDeps = detail.dependencies;
-                      resolvedMetaUpdate = await prefetchDependencies(remoteDeps);
-                      modData = {
-                          ...modData,
-                          ...detail
-                      };
-                  }
-              }
-          } catch (e) {
-              console.error('Failed to dynamically fetch map details from ModHub', e);
-          }
-      }
-
-      // 2. Use remote dependencies if available (prefetched metadata resolves the filenames)
-      if (modData) {
-          if (remoteDeps && remoteDeps.length > 0) {
-              modData.dependencies = remoteDeps;
-          }
-          
-          if (Object.keys(resolvedMetaUpdate).length > 0) {
-              setResolvedMetadata(prev => ({ ...prev, ...resolvedMetaUpdate }));
-          }
-          setMod(modData);
       } else if (modId) {
           const result = await window.api.modhub.fetchModDetail({ modId });
           setMod(result);
