@@ -77,6 +77,9 @@ export function useInstalledLookup() {
         if (normTitle) {
           if (lookupIndex.byExactTitle.has(normTitle)) return lookupIndex.byExactTitle.get(normTitle);
           if (lookupIndex.byExactName.has(normTitle)) return lookupIndex.byExactName.get(normTitle);
+        }
+      }
+
       if (mod.modName) {
         const normName = cleanStr(mod.modName);
         if (normName) {
