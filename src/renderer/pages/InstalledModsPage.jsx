@@ -1091,7 +1091,7 @@ export default function InstalledModsPage() {
         if (!dep) return null;
         let depStr = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
         if (!depStr) return null;
-        const norm = normalizeForMatching(depStr);
+        const norm = depStr.toLowerCase();
         return modLookupIndex.byName.get(norm) || modLookupIndex.byFile.get(norm) || null;
     };
 
@@ -1164,11 +1164,13 @@ export default function InstalledModsPage() {
     return sortedKeys.reduce((acc, name) => {
         const modsInFolder = groups[name] || [];
         
-        // Internal sort: Maps first, then by title
+        // Internal sort: Maps first, then by title using fast string comparison
         modsInFolder.sort((a, b) => {
             if (a.isMap && !b.isMap) return -1;
             if (!a.isMap && b.isMap) return 1;
-            return a.title.localeCompare(b.title);
+            const tA = (a.title || a.fileName || '').toLowerCase();
+            const tB = (b.title || b.fileName || '').toLowerCase();
+            return tA < tB ? -1 : (tA > tB ? 1 : 0);
         });
 
         // Final uniqueness guard for folder mods
