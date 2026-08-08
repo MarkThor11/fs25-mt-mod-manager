@@ -922,18 +922,20 @@ export default function InstalledModsPage() {
   // Compute all unique tags across all mods (excluding DLC system tag)
   const allUniqueTags = useMemo(() => {
     const tagCounts = {};
-    mods.forEach(mod => {
-      if (!mod.isDLC && mod.folder !== 'DLC') {
-        const modTags = new Set([
-          ...(mod.tags || []),
-          ...(mod.category && mod.category !== 'generic' ? [mod.category] : [])
-        ].filter(t => t && t !== 'DLC'));
-
-        modTags.forEach(tag => {
-          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-        });
+    for (let i = 0; i < mods.length; i++) {
+      const mod = mods[i];
+      if (mod && !mod.isDLC && mod.folder !== 'DLC') {
+        if (mod.tags) {
+          for (let j = 0; j < mod.tags.length; j++) {
+            const tag = mod.tags[j];
+            if (tag && tag !== 'DLC') tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+          }
+        }
+        if (mod.category && mod.category !== 'generic' && mod.category !== 'DLC') {
+          tagCounts[mod.category] = (tagCounts[mod.category] || 0) + 1;
+        }
       }
-    });
+    }
     return Object.entries(tagCounts)
       .sort((a,b) => b[1] - a[1]) // Most frequent first
       .map(([name, count]) => ({ name, count }));
@@ -1033,6 +1035,10 @@ export default function InstalledModsPage() {
 
   const filteredMods = useMemo(() => {
     const sLower = searchQuery.toLowerCase().trim();
+
+    if (!sLower && !showOnlyFavorites && selectedTags.length === 0 && !showOnlyUpdates) {
+      return mods;
+    }
 
     return mods.filter((m) => {
       const isDLCItem = m.isDLC || m.folder === 'DLC';
