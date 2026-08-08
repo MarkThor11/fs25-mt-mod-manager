@@ -4238,10 +4238,21 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 				// 4. Fetch Detail if we don't have direct download link yet
 				let category = 'Unknown';
 				if (!downloadUrl) {
-					const detail = await scraper.fetchModDetail(modId);
-					modTitle = detail?.title || modTitle;
-					downloadUrl = detail?.downloadUrl;
-					category = (detail?.category || 'Unknown').toUpperCase();
+					try {
+						const detail = await scraper.fetchModDetail(modId);
+						modTitle = detail?.title || modTitle;
+						downloadUrl = detail?.downloadUrl || null;
+						category = (detail?.category || 'Unknown').toUpperCase();
+					} catch (err) {
+						console.warn(`[AUTO-INSTALL] fetchModDetail failed for ID ${modId}, using CDN fallback:`, err.message);
+					}
+				}
+
+				// Deterministic ModHub CDN URL Fallback if downloadUrl is still missing
+				if (!downloadUrl && modId) {
+					const paddedId = String(modId).padStart(8, '0');
+					downloadUrl = `https://cdn18.giants-software.com/modHub/storage/${paddedId}/FS25_mod_${modId}.zip`;
+					console.log(`[AUTO-INSTALL] Constructed fallback ModHub CDN URL for mod ${modId}: ${downloadUrl}`);
 				}
 
 				// 5. Trigger Install
@@ -4282,8 +4293,8 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 			onProgress?.({ type: 'STATUS', modName, status: 'error', parentId });
 		}
 
-		// Sequential delay
-		await new Promise(r => setTimeout(r, 1000));
+		// Rate limit delay between sequential dependency downloads
+		await new Promise(r => setTimeout(r, 1500));
 	}
 
 	if (parentId) {
