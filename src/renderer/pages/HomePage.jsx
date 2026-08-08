@@ -42,15 +42,9 @@ export default function HomePage() {
 
   useEffect(() => {
     fetchSavegames();
-    fetchStats();
-    if (homeShowLatest) loadFeaturedMods();
-    if (homeShowDownloaded) loadTopDownloadedMods();
-    if (autoCheckUpdates) {
-      const timer = setTimeout(() => {
-        checkUpdates();
-      }, 1200);
-      return () => clearTimeout(timer);
-    }
+    // Only fetch live network items if local cache is empty
+    if (homeShowLatest && homeFeatured.length === 0) loadFeaturedMods();
+    if (homeShowDownloaded && homeTopDownloaded.length === 0) loadTopDownloadedMods();
   }, []);
 
   const loadFeaturedMods = async () => {

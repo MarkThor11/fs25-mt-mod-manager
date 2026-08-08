@@ -13,45 +13,17 @@ export function useInstalledLookup() {
   const localMods = useLocalModsStore((s) => s.mods);
   const activeDownloads = useDownloadStore((s) => s.activeDownloads);
   const sessionInstalled = useDownloadStore((s) => s.sessionInstalled);
-  const finishedDownloads = useMemo(() => 
-    Object.values(activeDownloads).filter(d => d.status === 'success'),
-    [activeDownloads]
-  );
 
-  return useMemo(() => {
-    // Build multiple indexes for fast O(1) lookups
-    const byModId = new Map();          // modId -> version
-    const byExactTitle = new Map();     // exact title (lowercased & trimmed) -> version
-    const byExactName = new Map();      // exact modName (lowercased & trimmed) -> version
+  const cleanStr = (s) => s ? String(s).trim().toLowerCase() : '';
 
-    const cleanStr = (s) => s ? String(s).trim().toLowerCase() : '';
+  // 1. Build heavy index ONLY when localMods changes
+  const localIndexes = useMemo(() => {
+    const byModId = new Map();
+    const byExactTitle = new Map();
+    const byExactName = new Map();
 
-    // 1. Add finished downloads first (Optimistic UI)
-    for (const d of finishedDownloads) {
-      if (d.modId) {
-        const cleanId = String(d.modId).replace(/^0+/, '');
-        byModId.set(cleanId, 'Installed');
-      }
-      if (d.title) {
-        const norm = cleanStr(d.title);
-        if (norm) byExactTitle.set(norm, 'Installed');
-      }
-    }
-
-    // 1b. Add session-installed mods (prevents flicker after download removed but before scan done)
-    Object.entries(sessionInstalled || {}).forEach(([modId, normTitle]) => {
-      if (modId) {
-        const cleanId = String(modId).replace(/^0+/, '');
-        byModId.set(cleanId, 'Installed');
-      }
-      if (normTitle) {
-        const norm = cleanStr(normTitle);
-        if (norm) byExactTitle.set(norm, 'Installed');
-      }
-    });
-
-    // 2. Add actual local mods (takes precedence for version info)
-    for (const lm of localMods) {
+    for (let i = 0; i < localMods.length; i++) {
+      const lm = localMods[i];
       if (!lm) continue;
       if (lm.modId) {
         const cleanId = String(lm.modId).replace(/^0+/, '');
@@ -66,6 +38,42 @@ export function useInstalledLookup() {
         if (norm) byExactName.set(norm, lm.version);
       }
     }
+    return { byModId, byExactTitle, byExactName };
+  }, [localMods]);
+
+  const finishedDownloads = useMemo(() => 
+    Object.values(activeDownloads).filter(d => d.status === 'success'),
+    [activeDownloads]
+  );
+
+  return useMemo(() => {
+    const byModId = new Map(localIndexes.byModId);
+    const byExactTitle = new Map(localIndexes.byExactTitle);
+    const byExactName = new Map(localIndexes.byExactName);
+
+    // Add finished downloads (Optimistic UI)
+    for (const d of finishedDownloads) {
+      if (d.modId) {
+        const cleanId = String(d.modId).replace(/^0+/, '');
+        byModId.set(cleanId, 'Installed');
+      }
+      if (d.title) {
+        const norm = cleanStr(d.title);
+        if (norm) byExactTitle.set(norm, 'Installed');
+      }
+    }
+
+    // Add session-installed mods
+    Object.entries(sessionInstalled || {}).forEach(([modId, normTitle]) => {
+      if (modId) {
+        const cleanId = String(modId).replace(/^0+/, '');
+        byModId.set(cleanId, 'Installed');
+      }
+      if (normTitle) {
+        const norm = cleanStr(normTitle);
+        if (norm) byExactTitle.set(norm, 'Installed');
+      }
+    });
 
     /**
      * Fast installed-version check. Returns the installed version string or null.
