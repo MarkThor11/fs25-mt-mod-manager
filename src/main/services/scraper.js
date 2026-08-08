@@ -75,7 +75,7 @@ async function throttledFetch(url) {
       options.headers['Cookie'] = phpsessid;
     }
 
-    https.get(url, options, (res) => {
+    const req = https.get(url, options, (res) => {
       if (res.statusCode >= 400) {
         reject(new Error(`HTTP ${res.statusCode}`));
         return;
@@ -97,8 +97,17 @@ async function throttledFetch(url) {
       let data = '';
       bodyStream.on('data', (d) => { data += d; });
       bodyStream.on('end', () => resolve(data));
-      bodyStream.on('error', reject);
-    }).on('error', reject);
+      bodyStream.on('error', (err) => reject(err));
+    });
+
+    req.on('error', (err) => {
+      console.warn(`[SCRAPER] Network error for ${url}: ${err.message}`);
+      reject(err);
+    });
+
+    req.setTimeout(30000, () => {
+      req.destroy(new Error('Request timed out'));
+    });
   });
 }
 
