@@ -47,14 +47,18 @@ const VirtualModCard = React.memo((props) => {
 // --- MAIN COMPONENT ---
 const LocalModIcon = React.memo(({ mod }) => {
   const [error, setError] = useState(false);
-  const fallbackCategory = mod.iconData || mod.storeData || 'CATEGORY:generic';
-  const categoryType = fallbackCategory.startsWith('CATEGORY:') ? fallbackCategory.split(':')[1] : 'generic';
 
-  const imageUrl = (mod.iconData && (mod.iconData.startsWith('http') || mod.iconData.startsWith('data:'))) 
-    ? mod.iconData 
-    : ((mod.storeData && (mod.storeData.startsWith('http') || mod.storeData.startsWith('data:'))) ? mod.storeData : null);
+  let imageUrl = mod.iconData || mod.storeData || null;
+  if (imageUrl && typeof imageUrl === 'string') {
+    if (!imageUrl.startsWith('http') && !imageUrl.startsWith('data:') && !imageUrl.startsWith('CATEGORY:')) {
+      imageUrl = `data:image/png;base64,${imageUrl}`;
+    }
+  }
 
-  if (imageUrl && !error) {
+  const fallbackCategory = (typeof imageUrl === 'string' && imageUrl.startsWith('CATEGORY:')) ? imageUrl : 'CATEGORY:generic';
+  const categoryType = fallbackCategory.split(':')[1] || 'generic';
+
+  if (imageUrl && !imageUrl.startsWith('CATEGORY:') && !error) {
     return (
       <div style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
         <img 
