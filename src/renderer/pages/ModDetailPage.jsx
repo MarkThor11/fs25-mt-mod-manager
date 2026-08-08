@@ -770,7 +770,7 @@ export default function ModDetailPage() {
                   <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Package size={16} /> Required Mods & Dependencies ({uniqueDependencies.length})
                   </div>
-                  {uniqueDependencies.length > 0 && isOnline && (
+                  {dependencyStatus.missingCount > 0 && isOnline && (
                     <button
                       className="btn btn--primary btn--sm animate-pulse-subtle"
                       onClick={() => setShowDepModal(true)}
@@ -788,7 +788,7 @@ export default function ModDetailPage() {
                         cursor: 'pointer'
                       }}
                     >
-                      <Download size={14} /> Download All ({uniqueDependencies.length})
+                      <Download size={14} /> Download {dependencyStatus.missingCount} Missing Required Mods
                     </button>
                   )}
                 </div>
@@ -1308,7 +1308,7 @@ export default function ModDetailPage() {
 
       {showDepModal && (
         <DependencyDownloadModal
-          missingMods={dependencyStatus.missingList && dependencyStatus.missingList.length > 0 ? dependencyStatus.missingList : uniqueDependencies}
+          missingMods={dependencyStatus.missingList}
           subFolder={parentFolder || (mod?.isMap || mod?.category?.toUpperCase().includes('MAP') ? mod.title.replace(/\([^)]+\)/g, '').trim() : null)}
           parentId={mod?.modId}
           mainTask={!showAsInstalled ? {
