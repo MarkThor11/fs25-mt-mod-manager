@@ -962,10 +962,24 @@ function extractVehicleSpecs(modPath, xmlPath) {
 	}
 }
 
+let lastScanResult = null;
+let lastScanTime = 0;
+const SCAN_CACHE_TTL = 15000; // 15s in-memory cache TTL for unforced scans
+
+function getLastScanResult() {
+	return lastScanResult;
+}
+
 /**
 	* Scan the local mods folder and return metadata for each mod.
 */
 async function scanLocalMods(manualPaths = null, force = false) {
+	const now = Date.now();
+	if (!force && !manualPaths && lastScanResult && (now - lastScanTime < SCAN_CACHE_TTL)) {
+		debugLog('[SCAN] Returning cached scan result.');
+		return lastScanResult;
+	}
+
 	if (activeScanPromise && !force) {
 		debugLog('[SCAN] Scan already in progress, returning existing promise.');
 		return activeScanPromise;
@@ -979,6 +993,8 @@ async function scanLocalMods(manualPaths = null, force = false) {
 	activeScanPromise = (async () => {
 		try {
 			const result = await performScan(manualPaths);
+			lastScanResult = result;
+			lastScanTime = Date.now();
 			return result;
 		} finally {
 			activeScanPromise = null;
@@ -1384,8 +1400,8 @@ async function performScan(manualPaths = null) {
 
 	debugLog(`[SCAN] Queuing ${allEntries.length} items for processing...`);
 
-	// Process with concurrency limit for speed
-	const limit = 50;
+	// Process with concurrency limit (10 items per batch keeps memory footprint low for large map ZIPs)
+	const limit = 10;
 	for (let i = 0; i < allEntries.length; i += limit) {
 		const chunk = allEntries.slice(i, i + limit);
 		
@@ -1398,14 +1414,11 @@ async function performScan(manualPaths = null) {
 			try { cache.commitTransaction(); } catch (e2) {}
 		}
 
-		// Micro-yield between chunks to keep event loop responsive
-		if (i % 200 === 0) await new Promise(r => setImmediate(r));
+		// Yield event loop after every batch so V8 Garbage Collector can instantly reclaim uncompressed ZIP heap memory
+		await new Promise(r => setTimeout(r, 10));
 	}
 
-	// TRIGGER MIRROR SYNC IN BACKGROUND AFTER STARTUP
-	setTimeout(() => {
-		syncMirrorLinks(modsPaths[0]).catch(err => console.error('[MIRROR] Background sync failed:', err));
-	}, 10000);
+	// Mirror sync is available via explicit user settings or folder changes to prevent launch lag
 	
 	// ── FINAL DEDUPLICATION (By Identity & Filename) ──
 	// We use multiple keys to catch duplicates even if the filename or version changed.
@@ -1580,17 +1593,61 @@ function getTemplatesPath() {
 	finalMods.sort((a, b) => a.title.localeCompare(b.title));
 	const conflicts = detectConflicts(finalMods);
 	
-	// Identify missing dependencies (using the deduplicated set for lookup)
-	const modNames = new Set(finalMods.map(m => m.modName.toLowerCase()));
+	// Identify missing dependencies (checking Mod ID, ZIP filename, technical name, and title)
+	const installedIds = new Set();
+	const installedFileNames = new Set();
+	const installedModNames = new Set();
+	const installedTitles = new Set();
+
+	for (const m of finalMods) {
+		if (m.modId) installedIds.add(String(m.modId).replace(/^0+/, ''));
+		if (m.fileName) installedFileNames.add(m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase());
+		if (m.modName) installedModNames.add(m.modName.toLowerCase());
+		if (m.title) installedTitles.add(m.title.toLowerCase());
+	}
+
 	const missingDependencies = [];
 	for (const mod of finalMods) {
 		for (const dep of (mod.dependencies || [])) {
-			const depString = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
-			if (!depString) continue;
-			if (!modNames.has(depString.toLowerCase())) {
+			let isInstalled = false;
+
+			// 1. Try URL extraction (Mod ID & ZIP filename)
+			const depUrl = typeof dep === 'object' ? dep.url : (typeof dep === 'string' && dep.includes('http') ? dep : null);
+			if (depUrl) {
+				const idMatch = depUrl.match(/mod_id=(\d+)/i) || depUrl.match(/storage\/(\d+)\//i);
+				if (idMatch && idMatch[1]) {
+					const cleanId = idMatch[1].replace(/^0+/, '');
+					if (installedIds.has(cleanId)) isInstalled = true;
+				}
+				const fileMatch = depUrl.match(/\/([^\/]+\.zip)$/i);
+				if (fileMatch && fileMatch[1]) {
+					const cleanFile = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
+					if (installedFileNames.has(cleanFile) || installedModNames.has(cleanFile)) isInstalled = true;
+				}
+			}
+
+			// 2. Try explicit modId property
+			if (!isInstalled && typeof dep === 'object' && dep.modId) {
+				const cleanId = String(dep.modId).replace(/^0+/, '');
+				if (installedIds.has(cleanId)) isInstalled = true;
+			}
+
+			// 3. Try filename / modName / title
+			if (!isInstalled) {
+				const depStr = typeof dep === 'string' ? dep : (dep.fileName || dep.modName || dep.technicalName || dep.title || '');
+				if (depStr) {
+					const norm = depStr.replace(/\.zip$/i, '').toLowerCase();
+					if (installedFileNames.has(norm) || installedModNames.has(norm) || installedTitles.has(norm)) {
+						isInstalled = true;
+					}
+				}
+			}
+
+			if (!isInstalled) {
+				const displayDep = typeof dep === 'string' ? dep : (dep.title || dep.modName || dep.fileName || 'Unknown Mod');
 				missingDependencies.push({
 					mod: mod.title,
-					dependency: depString,
+					dependency: displayDep,
 					modPath: mod.filePath
 				});
 			}
@@ -1706,7 +1763,7 @@ function checkFreeDiskSpace(targetPath = null, requiredBytes = 0, safetyBufferBy
 async function runInstallTask(task) {
 	const { modId, modTitle, downloadUrl, onProgress, category, subFolder, techData, oldPath, recoveryPath } = task;
 	
-	broadcastStatus?.(modId, 'connecting');
+	broadcastStatus?.(modId, 'connecting', { title: modTitle, modTitle });
 	
 	try {
 		const result = await installModInternal(modId, modTitle, downloadUrl, onProgress, category, subFolder, techData);
@@ -1744,8 +1801,8 @@ async function runInstallTask(task) {
 			}
 		}
 
-		broadcastStatus?.(modId, 'success');
-		onProgress?.({ status: 'success' });
+		broadcastStatus?.(modId, 'success', { title: modTitle, modTitle });
+		onProgress?.({ status: 'success', title: modTitle, modTitle });
 		return result;
 	} catch (err) {
 		console.error(`[QUEUE] Task failed for ${modTitle}:`, err);
@@ -2656,12 +2713,11 @@ async function updateMod(modFileName, modId, onProgress) {
 		
 		if (result && result.success && detail?.version) {
 			try {
-				cache.setModTracking({
-					mod_id: String(modId),
-					local_file_name: modFileName,
-					local_version: detail.version,
-					remote_version: detail.version,
-					modhub_title: updateTitle
+				cache.setModTracking(String(modId), {
+					localFileName: modFileName,
+					localVersion: detail.version,
+					remoteVersion: detail.version,
+					modhubTitle: updateTitle
 				});
 				console.log(`[UPDATE] Mod ${modId} tracking record updated: version ${detail.version}`);
 			} catch (e) {
@@ -4992,6 +5048,7 @@ module.exports = {
 	getFS25DataRoot,
 	getAllFS25DataRoots,
 	scanLocalMods,
+	getLastScanResult,
 	installMod,
 	enqueueInstall,
 	cancelInstall,

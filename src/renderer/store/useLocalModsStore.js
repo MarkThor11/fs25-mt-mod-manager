@@ -14,6 +14,29 @@ function computeModCount(mods) {
   }).length;
 }
 
+function reconcileUpdates(currentUpdates, localMods) {
+  if (!Array.isArray(currentUpdates) || currentUpdates.length === 0) return [];
+  if (!Array.isArray(localMods) || localMods.length === 0) return currentUpdates;
+
+  return currentUpdates.filter(u => {
+    const local = localMods.find(m => m.fileName === u.fileName || (m.modId && String(m.modId) === String(u.modId)));
+    if (!local) return true;
+    if (!u.remoteVersion || !local.version) return true;
+
+    const parts1 = String(local.version).split(/[.-]/).map(p => parseInt(p, 10) || 0);
+    const parts2 = String(u.remoteVersion).split(/[.-]/).map(p => parseInt(p, 10) || 0);
+    const maxLen = Math.max(parts1.length, parts2.length);
+
+    for (let i = 0; i < maxLen; i++) {
+      const p1 = parts1[i] || 0;
+      const p2 = parts2[i] || 0;
+      if (p1 < p2) return true;  // Local is older, update needed
+      if (p1 > p2) return false; // Local is newer, update complete
+    }
+    return false; // Same version, update complete
+  });
+}
+
 export const useLocalModsStore = create((set, get) => ({
   mods: [],
   modCount: 0,
@@ -46,7 +69,9 @@ export const useLocalModsStore = create((set, get) => ({
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed.mods) && parsed.mods.length > 0) {
           const modArray = parsed.mods;
-          set({ mods: modArray, modCount: computeModCount(modArray), allFolders: parsed.allFolders || [], lastScanTime: Date.now() });
+          const cleanUpdates = reconcileUpdates(get().updates, modArray);
+          set({ mods: modArray, modCount: computeModCount(modArray), allFolders: parsed.allFolders || [], updates: cleanUpdates, lastScanTime: Date.now() });
+          try { localStorage.setItem('mod_updates', JSON.stringify(cleanUpdates)); } catch (_) {}
         }
       }
     } catch (e) {
@@ -74,18 +99,22 @@ export const useLocalModsStore = create((set, get) => ({
       
       const { mods, allFolders, conflicts, missingDependencies, error } = await window.api.localMods.scan(force);
       const modArray = mods || [];
-      
+      const cleanUpdates = reconcileUpdates(get().updates, modArray);
+
       set({
         mods: modArray,
         modCount: computeModCount(modArray),
         allFolders: allFolders || [],
         conflicts: conflicts || [],
         missingDependencies: missingDependencies || [],
+        updates: cleanUpdates,
         isLoading: false,
         isScanning: false,
         lastScanTime: Date.now(),
         error: error || null,
       });
+
+      try { localStorage.setItem('mod_updates', JSON.stringify(cleanUpdates)); } catch (_) {}
       
       // Persist fresh data for next launch (keep essential properties for instant load)
       try {
@@ -155,9 +184,13 @@ export const useLocalModsStore = create((set, get) => ({
                 }
             }));
             
-            // Refresh library once a background mod finishes successfully
-            if (data.status === 'success') {
-                get().scanMods(null, true);
+            // Refresh library once a background mod finishes successfully (debounced)
+            if (data.status === 'success' || data.status === 'installed') {
+                import('./useDownloadStore').then(d => {
+                    d.useDownloadStore.getState().triggerScan();
+                }).catch(() => {
+                    get().scanMods();
+                });
             }
         }
     });
@@ -173,10 +206,17 @@ export const useLocalModsStore = create((set, get) => ({
   },
 
   checkUpdates: async (force = false) => {
-    const { isCheckingUpdates, lastUpdateCheck } = get();
+    const { isCheckingUpdates, lastUpdateCheck, updates: currentUpdates, mods: currentMods } = get();
     const now = Date.now();
     
-    // Guard: Only check if not already checking, and last check > 24 hours ago (unless forced)
+    // Always reconcile existing updates list against current installed mods on disk
+    const reconciled = reconcileUpdates(currentUpdates, currentMods);
+    if (reconciled.length !== currentUpdates.length) {
+      set({ updates: reconciled });
+      try { localStorage.setItem('mod_updates', JSON.stringify(reconciled)); } catch (_) {}
+    }
+
+    // Guard: Only fetch remote updates if not already checking, and last check > 24 hours ago (unless forced)
     if (isCheckingUpdates) return;
     if (!force && now - lastUpdateCheck < 24 * 60 * 60 * 1000) return;
 
@@ -187,7 +227,8 @@ export const useLocalModsStore = create((set, get) => ({
         return;
       }
       const result = await window.api.localMods.checkUpdates();
-      const updatesList = result || [];
+      const rawUpdatesList = result || [];
+      const updatesList = reconcileUpdates(rawUpdatesList, get().mods);
       set({
         updates: updatesList,
         isCheckingUpdates: false,
@@ -211,10 +252,16 @@ export const useLocalModsStore = create((set, get) => ({
   },
 
   triggerAutoUpdateIfNeeded: async () => {
-    const { updates, updateMod, mods } = get();
     const { modUpdateMode } = useSettingsStore.getState();
+    if (modUpdateMode !== 'auto') return;
+    await get().updateAllMods();
+  },
 
-    if (modUpdateMode !== 'auto' || !Array.isArray(updates) || updates.length === 0) return;
+  updateAllMods: async (customUpdatesList = null) => {
+    const { updates, updateMod, mods } = get();
+    const targetUpdates = customUpdatesList || updates;
+
+    if (!Array.isArray(targetUpdates) || targetUpdates.length === 0) return;
 
     if (window.api?.game?.isRunning) {
       try {
@@ -226,7 +273,7 @@ export const useLocalModsStore = create((set, get) => ({
       } catch (_) {}
     }
 
-    const modsToUpdate = updates.filter(update => {
+    const modsToUpdate = targetUpdates.filter(update => {
       const localMod = mods.find(m => m.fileName === update.fileName);
       return !(localMod && (localMod.tags || []).includes('lock-updates'));
     });
@@ -234,21 +281,20 @@ export const useLocalModsStore = create((set, get) => ({
     if (modsToUpdate.length === 0) return;
 
     import('./useToastStore').then(t => {
-      t.useToastStore.getState().info(`Auto-Update Active: Installing ${modsToUpdate.length} update${modsToUpdate.length > 1 ? 's' : ''}...`);
+      t.useToastStore.getState().info(`Queueing ${modsToUpdate.length} mod update${modsToUpdate.length > 1 ? 's' : ''}...`);
     }).catch(() => {});
 
-    for (const update of modsToUpdate) {
-      try {
-        const titleToUse = update.modhubTitle || update.title || update.fileName.replace(/\.zip$/i, '');
-        import('./useDownloadStore').then(d => {
-          d.useDownloadStore.getState().addDownload(update.modId || update.fileName, titleToUse, null, 0, null, null, 'downloading');
-        }).catch(() => {});
+    // Dispatch all updates concurrently into backend download queue (with skipScan = true for batch)
+    const updatePromises = modsToUpdate.map(update => {
+      const titleToUse = update.modhubTitle || update.title || update.fileName.replace(/\.zip$/i, '');
+      import('./useDownloadStore').then(d => {
+        d.useDownloadStore.getState().addDownload(update.modId || update.fileName, titleToUse, null, 0, null, null, 'downloading');
+      }).catch(() => {});
 
-        await updateMod(update.fileName, update.modId);
-      } catch (err) {
-        console.error(`[AUTO-UPDATE] Failed to update ${update.fileName}:`, err);
-      }
-    }
+      return updateMod(update.fileName, update.modId, true);
+    });
+
+    await Promise.allSettled(updatePromises);
   },
 
   uninstallMod: async (modFileName, folder = null) => {
@@ -286,13 +332,20 @@ export const useLocalModsStore = create((set, get) => ({
     }
   },
 
-  updateMod: async (modFileName, modId) => {
+  updateMod: async (modFileName, modId, skipScan = false) => {
     try {
       if (!window.api?.localMods) return { success: false, error: 'Bridge not available' };
+      const titleToUse = modFileName.replace(/\.zip$/i, '');
+      import('./useDownloadStore').then(d => {
+        d.useDownloadStore.getState().addDownload(modId || modFileName, titleToUse, null, 0, null, null, 'downloading');
+      }).catch(() => {});
+
       const result = await window.api.localMods.updateMod({ modFileName, modId });
       if (result.success) {
-        // Re-scan after update
-        await get().scanMods(null, true);
+        // Re-scan after single update if not in a batch
+        if (!skipScan) {
+          await get().scanMods(null, false);
+        }
         // Clear the specific update flag immediately from state AND localStorage
         const remaining = (get().updates || []).filter((u) => u.fileName !== modFileName && String(u.modId) !== String(modId));
         set({ updates: remaining });

@@ -286,21 +286,14 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
       if (result.success) {
         installQueued = true;
         useToastStore.getState().success(`${modTitle} install started!`);
-        // Fire-and-forget: don't await — a slow scan (up to 12s) would keep this
-        // async function alive. If the user changes pages mid-scan the catch block
-        // would wrongly remove the download entry from the store, cancelling the
-        // download in the UI even though the main process is still running it.
         useLocalModsStore.getState().scanMods();
       } else {
-        useToastStore.getState().error(`Failed: ${result.error}`);
+        useToastStore.getState().error(`Failed: ${result.error}`, { id: `dl-toast-${modId}` });
         useDownloadStore.getState().removeDownload(modId);
       }
     } catch (err) {
-      // Only show an error and remove the entry if the install was never successfully
-      // queued. Once queued, the main process owns the download and will broadcast its
-      // own status/progress events — we must NOT wipe it from the store here.
       if (!installQueued) {
-        useToastStore.getState().error(`Install failed: ${err.message}`);
+        useToastStore.getState().error(`Install failed: ${err.message}`, { id: `dl-toast-${mod.modId}` });
         useDownloadStore.getState().removeDownload(mod.modId);
       }
     }

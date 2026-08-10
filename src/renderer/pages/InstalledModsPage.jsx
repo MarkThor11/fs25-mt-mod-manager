@@ -542,7 +542,7 @@ const LazyModList = ({
   getModStatus,
   getUpdateInfo,
   updatingMod,
-  activeDownloads,
+  activeDownloadsKeys,
   formatSize,
   iconOnlyFolders,
   installedModsViewMode,
@@ -616,7 +616,7 @@ const LazyModList = ({
                   onUninstall={handleUninstallCallback}
                   status={getModStatus(mod)}
                   updateInfo={getUpdateInfo(mod)}
-                  isUpdating={updatingMod === mod.fileName || !!activeDownloads[mod.modId]}
+                  isUpdating={updatingMod === mod.fileName || (mod.modId && activeDownloadsKeys.includes(String(mod.modId)))}
                   formatSize={formatSize}
                   isIconOnly={iconOnlyFolders.includes(folderName)}
                   zoom={folderZooms[folderName] || 180}
@@ -628,7 +628,7 @@ const LazyModList = ({
         visibleMods.map((mod) => {
           const status = getModStatus(mod);
           const updateInfo = getUpdateInfo(mod);
-          const isUpdating = updatingMod === mod.fileName || !!activeDownloads[mod.modId];
+          const isUpdating = updatingMod === mod.fileName || (mod.modId && activeDownloadsKeys.includes(String(mod.modId)));
           const isSelected = selectedMods.includes(mod.fileName);
           const modIdKey = mod.modId ? String(mod.modId) : mod.fileName;
           const isFavMod = favModIds.has(modIdKey);
@@ -875,17 +875,18 @@ export default function InstalledModsPage() {
   const {
     mods: rawMods, allFolders, isLoading, isCheckingUpdates, updates, error,
     isResolving, resolvingStatus, showOnlyUpdates, setShowOnlyUpdates,
-    scanMods, checkUpdates, uninstallMod, updateMod, initListeners, toggleAutoResolve,
+    scanMods, checkUpdates, uninstallMod, updateMod, updateAllMods, initListeners, toggleAutoResolve,
     createFolder, renameFolder, deleteFolder, moveModsToFolder, exportCollection
   } = useLocalModsStore();
 
   const { 
     hiddenFolders, toggleHiddenFolder, installedModsViewMode, setInstalledModsViewMode,
     folderOrder, setFolderOrder, folderZooms, setFolderZoom, isInternalDragging, setIsInternalDragging,
-    iconOnlyFolders, toggleIconOnlyFolder, isOnline, isLoaded
+    iconOnlyFolders, toggleIconOnlyFolder, isOnline, isLoaded, modUpdateMode
   } = useSettingsStore();
   const { toggleFavoriteMod, toggleFavoriteAuthor, favoriteMods, favoriteAuthors } = useModHubStore();
-  const { activeDownloads, sessionInstalled } = useDownloadStore();
+  const sessionInstalled = useDownloadStore((s) => s.sessionInstalled);
+  const activeDownloadsKeys = useDownloadStore((s) => Object.keys(s.activeDownloads));
   const navigate = useNavigate();
 
   // useDeferredValue lets React prioritize urgent renders (user interactions) over
@@ -1106,20 +1107,63 @@ export default function InstalledModsPage() {
   const folders = useMemo(() => {
     const findFastMatch = (dep) => {
         if (!dep) return null;
-        let depStr = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
-        if (!depStr) return null;
-        const norm = depStr.toLowerCase();
-        return modLookupIndex.byName.get(norm) || modLookupIndex.byFile.get(norm) || null;
+        
+        // 1. Try URL extraction (high precision matching for ModHub map dependencies)
+        const depUrl = typeof dep === 'object' ? dep.url : (typeof dep === 'string' && dep.includes('http') ? dep : null);
+        if (depUrl) {
+            const idMatch = depUrl.match(/mod_id=(\d+)/i) || depUrl.match(/storage\/(\d+)\//i);
+            if (idMatch && idMatch[1]) {
+                const cleanId = idMatch[1].replace(/^0+/, '');
+                if (modLookupIndex.byId.has(cleanId)) return modLookupIndex.byId.get(cleanId);
+            }
+            const fileMatch = depUrl.match(/\/([^\/]+\.zip)$/i);
+            if (fileMatch && fileMatch[1]) {
+                const cleanFile = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
+                if (modLookupIndex.byFile.has(cleanFile)) return modLookupIndex.byFile.get(cleanFile);
+            }
+        }
+
+        // 2. Try explicit modId property
+        if (typeof dep === 'object' && dep.modId) {
+            const cleanId = String(dep.modId).replace(/^0+/, '');
+            if (modLookupIndex.byId.has(cleanId)) return modLookupIndex.byId.get(cleanId);
+        }
+
+        // 3. Try filename / modName / title
+        let depStr = typeof dep === 'string' ? dep : (dep.fileName || dep.modName || dep.technicalName || dep.title || '');
+        if (depStr) {
+            const norm = depStr.replace(/\.zip$/i, '').toLowerCase();
+            if (modLookupIndex.byFile.has(norm)) return modLookupIndex.byFile.get(norm);
+            if (modLookupIndex.byName.has(norm)) return modLookupIndex.byName.get(norm);
+        }
+
+        return null;
     };
 
     // 1. Group physical mods into their folders (Maps are excluded from MAIN and routed to their own map group)
+    const folderKeyMap = new Map(); // normalized lower -> canonical folder name
+
+    const getCanonicalFolder = (folderName) => {
+        if (!folderName) return '';
+        const lower = folderName.toLowerCase();
+        if (folderKeyMap.has(lower)) return folderKeyMap.get(lower);
+        folderKeyMap.set(lower, folderName);
+        return folderName;
+    };
+
+    // Pre-populate canonical keys from allFolders so disk folder casing takes priority
+    (allFolders || []).forEach(f => {
+        if (f) getCanonicalFolder(f);
+    });
+
     const groups = filteredMods.reduce((acc, mod) => {
       let folder = mod.folder || '';
       if (mod.isMap && !folder) {
         folder = mod.title.replace(/\([^)]+\)/g, '').trim() || 'Custom Maps';
       }
-      if (!acc[folder]) acc[folder] = [];
-      acc[folder].push(mod);
+      const canonical = getCanonicalFolder(folder);
+      if (!acc[canonical]) acc[canonical] = [];
+      acc[canonical].push(mod);
       return acc;
     }, { '': [] });
     
@@ -1151,9 +1195,10 @@ export default function InstalledModsPage() {
     });
 
 
-    // 4. Include empty folders from allFolders
-    allFolders.forEach(f => {
-        if (!groups[f]) groups[f] = [];
+    // 4. Include empty folders from allFolders case-insensitively
+    (allFolders || []).forEach(f => {
+        const canonical = getCanonicalFolder(f);
+        if (!groups[canonical]) groups[canonical] = [];
     });
 
     // 5. Strict Map Filtering: If "Maps" tag is active, hide folders that don't contain a map
@@ -1738,28 +1783,42 @@ export default function InstalledModsPage() {
           <Heart size={14} fill={showOnlyFavorites ? 'currentColor' : 'none'} /> Favorites
         </button>
 
-        <button 
-          className={`btn ${showOnlyUpdates ? 'btn--primary' : 'btn--secondary'} btn--sm`}
-          onClick={() => setShowOnlyUpdates(!showOnlyUpdates)}
-          style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
-          title={updates.length === 0 ? "No updates detected. Run 'Check for Updates' first." : "Filter by mods needing updates"}
-        >
-          <RefreshCw size={14} className={showOnlyUpdates ? 'animate-pulse' : ''} /> Updates
-          {updates.length > 0 && (
-            <span style={{ 
-                background: showOnlyUpdates ? 'white' : 'var(--accent)', 
-                color: showOnlyUpdates ? 'var(--accent)' : 'white', 
-                borderRadius: 10, 
-                padding: '1px 6px', 
-                fontSize: 10,
-                fontWeight: 900,
-                minWidth: 18,
-                textAlign: 'center'
-            }}>
-                {updates.length}
-            </span>
-          )}
-        </button>
+        {modUpdateMode !== 'auto' && (
+          <>
+            <button 
+              className={`btn ${showOnlyUpdates ? 'btn--primary' : 'btn--secondary'} btn--sm`}
+              onClick={() => setShowOnlyUpdates(!showOnlyUpdates)}
+              style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
+              title={updates.length === 0 ? "No updates detected. Run 'Check for Updates' first." : "Filter by mods needing updates"}
+            >
+              <RefreshCw size={14} className={showOnlyUpdates ? 'animate-pulse' : ''} /> Updates
+              {updates.length > 0 && (
+                <span style={{ 
+                    background: showOnlyUpdates ? 'white' : 'var(--accent)', 
+                    color: showOnlyUpdates ? 'var(--accent)' : 'white', 
+                    borderRadius: 10, 
+                    padding: '1px 6px', 
+                    fontSize: 10,
+                    fontWeight: 900,
+                    minWidth: 18,
+                    textAlign: 'center'
+                }}>
+                    {updates.length}
+                </span>
+              )}
+            </button>
+            {updates.length > 0 && (
+              <button
+                className="btn btn--primary btn--sm animate-fade-in"
+                onClick={() => updateAllMods()}
+                style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)' }}
+                title="Download and install all available mod updates concurrently"
+              >
+                <Download size={14} /> Update All ({updates.length})
+              </button>
+            )}
+          </>
+        )}
         <button 
           className={`btn ${showTagBar || selectedTags.length > 0 ? 'btn--primary' : 'btn--secondary'} btn--sm`}
           onClick={() => {
@@ -2304,7 +2363,7 @@ export default function InstalledModsPage() {
                       getModStatus={getModStatus}
                       getUpdateInfo={getUpdateInfo}
                       updatingMod={updatingMod}
-                      activeDownloads={activeDownloads}
+                      activeDownloadsKeys={activeDownloadsKeys}
                       formatSize={formatSize}
                       iconOnlyFolders={iconOnlyFolders}
                       installedModsViewMode={installedModsViewMode}
@@ -2324,12 +2383,19 @@ export default function InstalledModsPage() {
         })}
       </div>
 
-      {mods.length === 0 && !isLoading && (
+      {mods.length === 0 && !isLoading && !isScanning && (
         <div className="empty-state" style={{ padding: '80px 0' }}>
           <Package className="empty-state__icon" size={64} style={{ opacity: 0.3 }} />
           <div className="empty-state__title">Library empty</div>
           <div className="empty-state__desc">Install some mods from the ModHub to get started.</div>
+        </div>
+      )}
 
+      {mods.length === 0 && (isLoading || isScanning) && (
+        <div className="empty-state" style={{ padding: '80px 0' }}>
+          <Loader2 className="empty-state__icon animate-spin text-accent" size={48} style={{ marginBottom: 16 }} />
+          <div className="empty-state__title">Scanning Mod Library</div>
+          <div className="empty-state__desc">Indexing installed mods from disk... Please wait</div>
         </div>
       )}
 

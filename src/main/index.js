@@ -16,6 +16,22 @@ const { initAppUpdater } = require('./services/appUpdater');
 const CATEGORIES = require('./resources/data/categories');
 const isDev = !app.isPackaged;
 
+// Increase V8 JavaScript Heap allocation limit to 8GB to handle scanning thousands of large map ZIPs
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192');
+
+// Enforce single-instance lock to prevent process collisions
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 // Register radio-proxy and mod-icon as privileged
 protocol.registerSchemesAsPrivileged([
   { 
@@ -233,8 +249,12 @@ function createWindow() {
   });
 
   // Set up download status broadcaster
-  modManager.setBroadcastStatus((modId, status) => {
-    mainWindow?.webContents.send('download:status', { modId, status });
+  modManager.setBroadcastStatus((modId, status, extraData) => {
+    if (typeof modId === 'string' && (modId === 'dependency:progress' || modId === 'move:progress')) {
+      mainWindow?.webContents.send(modId, status);
+    } else {
+      mainWindow?.webContents.send('download:status', { modId, status, ...(typeof extraData === 'object' ? extraData : {}) });
+    }
   });
 
   // Initialize App Auto-Updater (Production only)
@@ -1144,9 +1164,7 @@ app.whenReady().then(() => {
   // 1. Content Security Policy (Hardened for Production)
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     // Tightened CSP: removed unsafe-inline where possible, kept fonts/images from trusted sources
-    const csp = isDev 
-      ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: ws:;"
-      : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:;";
+    const csp = "default-src 'self' mod-icon: radio-proxy:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: mod-icon:; connect-src 'self' https: ws: radio-proxy:;";
     
     callback({
       responseHeaders: {

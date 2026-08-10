@@ -1354,6 +1354,8 @@
   display: flex;
   flex-direction: column;
   transition: all var(--duration-fast) var(--ease-out);
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 220px;
 }
 .mod-card-library:hover {
   transform: translateY(-4px);
@@ -1364,6 +1366,11 @@
   background: var(--accent-dim) !important;
   border-color: var(--accent) !important;
   box-shadow: 0 0 0 1px var(--accent);
+}
+
+.folder-group {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 180px;
 }
 
 /* ═══════════════════════════════════════════

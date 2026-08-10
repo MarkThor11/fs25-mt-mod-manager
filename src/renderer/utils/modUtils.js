@@ -23,85 +23,67 @@ export const normalizeForMatching = (str) => {
  */
 export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = false) => {
   if (!dep || !m) return false;
-  
-  let depString = '';
+
   let depId = null;
-  let fallbackFileName = null;
-  let resolvedFileName = null;
-  let resolvedTitle = null;
-  
+  let depFileName = null;
+  let depTitle = null;
+
   if (typeof dep === 'string') {
-      depString = dep;
-  } else {
-      const url = dep.url || '';
-      if (url) {
-          const fileMatch = url.match(/\/([^\/]+\.zip)$/i);
-          if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
-      }
-      
-      depString = fallbackFileName || dep.modName || dep.technicalName || dep.title || dep.fileName || '';
-      resolvedFileName = dep.fileName || null;
-      resolvedTitle = dep.title || null;
-      
-      const idMatch = url.match(/mod_id=(\d+)/) || url.match(/storage\/(\d+)\//);
+    if (dep.includes('http')) {
+      const idMatch = dep.match(/mod_id=(\d+)/i) || dep.match(/storage\/(\d+)\//i);
       if (idMatch) depId = parseInt(idMatch[1], 10).toString();
+      const fileMatch = dep.match(/\/([^\/]+\.zip)$/i);
+      if (fileMatch) depFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
+    } else {
+      depTitle = dep.trim();
+      depFileName = dep.replace(/\.zip$/i, '').trim().toLowerCase();
+    }
+  } else if (typeof dep === 'object') {
+    if (dep.modId) depId = String(dep.modId).replace(/^0+/, '');
+    if (dep.url) {
+      const idMatch = dep.url.match(/mod_id=(\d+)/i) || dep.url.match(/storage\/(\d+)\//i);
+      if (idMatch && !depId) depId = parseInt(idMatch[1], 10).toString();
+      const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
+      if (fileMatch) depFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
+    }
+    if (!depFileName) {
+      const fn = dep.fileName || dep.modName || dep.technicalName;
+      if (fn) depFileName = fn.replace(/\.zip$/i, '').toLowerCase();
+    }
+    if (dep.title) depTitle = dep.title.trim();
   }
 
-  const cleanedName = cleanModName(depString);
-  if (!cleanedName) return false;
-  
-  // Attempt lookup in resolvedMetadata if available
-  const depTitle = typeof dep === 'string' ? dep : dep.title;
-  const resolvedObj = resolvedMetadata[depTitle] || (typeof dep === 'object' ? (resolvedMetadata[dep.title] || resolvedMetadata[dep.modName] || resolvedMetadata[dep.fileName]) : null);
-  
-  if (resolvedObj) {
-      if (resolvedObj.modId) depId = String(resolvedObj.modId);
-      if (resolvedObj.fileName) resolvedFileName = resolvedObj.fileName;
-      if (resolvedObj.title) resolvedTitle = resolvedObj.title;
+  // Check resolvedMetadata pool if available
+  if (depTitle && resolvedMetadata[depTitle]) {
+    const meta = resolvedMetadata[depTitle];
+    if (meta.modId && !depId) depId = String(meta.modId).replace(/^0+/, '');
+    if (meta.fileName && !depFileName) depFileName = meta.fileName.replace(/\.zip$/i, '').toLowerCase();
+    if (meta.title && !depTitle) depTitle = meta.title.trim();
   }
 
-  // 1. Mod ID Match (100% accurate)
+  // 1. Identity 1: ModHub ID Match
   if (depId && m.modId) {
-      const safeModId = String(m.modId).replace(/^0+/, '');
-      if (safeModId === depId) return true;
+    const safeModId = String(m.modId).replace(/^0+/, '');
+    if (safeModId === depId) return true;
   }
 
-  // 2. Exact/Normalized ModName match
-  const targetNormalized = normalizeForMatching(cleanedName);
-  if (m.modName) {
-      if (m.modName.toLowerCase() === cleanedName.toLowerCase()) return true;
-      if (normalizeForMatching(m.modName) === targetNormalized) return true;
-  }
-
-  // 3. Exact/Normalized FileName match
-  if (m.fileName) {
-      const cleanFile = m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
-      if (cleanFile === cleanedName.toLowerCase()) return true;
-      if (normalizeForMatching(m.fileName) === targetNormalized) return true;
-  }
-
-  // 4. Filename fallback if ModHub ID was resolved but ID match failed
-  const fileToCheck = resolvedFileName || (typeof dep === 'object' && dep.fileName ? dep.fileName : null);
-  if (fileToCheck) {
-      const rFile = normalizeForMatching(fileToCheck);
-      const lFile = normalizeForMatching(m.fileName);
-      if (rFile && lFile && rFile === lFile) return true;
+  // 2. Identity 2: ZIP Filename / Technical Mod Name Match
+  if (depFileName) {
+    const normDepFile = normalizeForMatching(depFileName);
+    if (m.fileName && normalizeForMatching(m.fileName) === normDepFile) return true;
+    if (m.modName && normalizeForMatching(m.modName) === normDepFile) return true;
   }
 
   if (strict) return false;
 
-  // 5. ModHub Title fallback if titles match case-insensitively (lowest priority, last resort)
-  const titleToCheck = resolvedTitle || (typeof dep === 'object' && dep.title ? dep.title : null);
-  if (titleToCheck && m.title && titleToCheck.toLowerCase() === m.title.toLowerCase()) {
-      // Reject if both have technical names but they don't match
-      if (cleanedName && m.modName) {
-          const targetNorm = normalizeForMatching(cleanedName);
-          const mNorm = normalizeForMatching(m.modName);
-          if (targetNorm !== mNorm) return false;
-      }
-      return true;
+  // 3. Identity 3: Internal modDesc.xml Mod Title Match
+  if (depTitle) {
+    const cleanDepTitle = cleanModName(depTitle).toLowerCase();
+    if (m.title && cleanModName(m.title).toLowerCase() === cleanDepTitle) return true;
+    if (m.modName && cleanModName(m.modName).toLowerCase() === cleanDepTitle) return true;
+    if (m.fileName && normalizeForMatching(m.fileName) === normalizeForMatching(cleanDepTitle)) return true;
   }
-  
+
   return false;
 };
 

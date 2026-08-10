@@ -39,7 +39,9 @@ async function findModHubId(localMod) {
  * Checks all local mods for updates.
  */
 async function checkAllUpdates() {
-  const { mods: localMods } = await modManager.scanLocalMods();
+  const cachedScan = modManager.getLastScanResult();
+  const scanData = cachedScan || await modManager.scanLocalMods();
+  const localMods = scanData?.mods || [];
   if (!Array.isArray(localMods) || localMods.length === 0) return [];
 
   // Load tracking map and metadata pool ONCE in memory for O(1) lookups
@@ -66,7 +68,10 @@ async function checkAllUpdates() {
 
     if (!remoteVersion) continue;
 
-    const localVersion = tracked?.local_version || localMod.version;
+    // Physical version on disk (from modDesc.xml) takes absolute precedence over stale tracking entries
+    const localVersion = localMod.version || tracked?.local_version;
+    if (!localVersion) continue;
+
     const hasUpdate = compareVersions(localVersion, remoteVersion) > 0;
     const title = tracked?.modhub_title || poolItem?.title || localMod.title;
 

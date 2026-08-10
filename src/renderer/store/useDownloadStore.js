@@ -4,34 +4,78 @@ import { useModHubStore } from './useModHubStore';
 import { useToastStore } from './useToastStore';
 
 function resolveDownloadTitle(modIdStr, defaultTitle) {
-  if (defaultTitle && !defaultTitle.startsWith('Mod ') && defaultTitle !== modIdStr && !defaultTitle.startsWith('FS25_mod_')) {
-    return defaultTitle;
+  const strVal = modIdStr ? String(modIdStr).trim() : '';
+
+  // If defaultTitle is already valid (not "Mod 123", not raw numbers, not generic FS25_mod_)
+  if (defaultTitle && typeof defaultTitle === 'string') {
+    const trimmed = defaultTitle.trim();
+    const isGenericId = /^mod\s*\d+$/i.test(trimmed) || /^\d+$/.test(trimmed) || trimmed.startsWith('FS25_mod_');
+    if (!isGenericId) {
+      return trimmed;
+    }
   }
 
+  // 0. Search in active downloads store map (e.g. activeDownloads['319981'])
+  try {
+    const activeDownloads = useDownloadStore.getState().activeDownloads || {};
+    const active = activeDownloads[strVal] || activeDownloads[modIdStr];
+    if (active && active.title) {
+      const trimmed = String(active.title).trim();
+      const isGeneric = /^mod\s*\d+$/i.test(trimmed) || /^\d+$/.test(trimmed) || trimmed.startsWith('FS25_mod_');
+      if (!isGeneric) return trimmed;
+    }
+  } catch (_) {}
+
+  // 0.5. Search in sessionInstalled store map
+  try {
+    const sessionInstalled = useDownloadStore.getState().sessionInstalled || {};
+    const sessionTitle = sessionInstalled[strVal] || sessionInstalled[modIdStr];
+    if (sessionTitle) {
+      const trimmed = String(sessionTitle).trim();
+      const isGeneric = /^mod\s*\d+$/i.test(trimmed) || /^\d+$/.test(trimmed) || trimmed.startsWith('FS25_mod_');
+      if (!isGeneric) return trimmed;
+    }
+  } catch (_) {}
+
+  // 1. Search in useLocalModsStore updates
   try {
     const updates = useLocalModsStore.getState().updates || [];
-    const matchingUpdate = updates.find(u => String(u.modId) === String(modIdStr) || (u.fileName && u.fileName.toLowerCase().includes(modIdStr.toLowerCase())));
-    if (matchingUpdate && (matchingUpdate.modhubTitle || matchingUpdate.title)) {
-      return matchingUpdate.modhubTitle || matchingUpdate.title;
-    }
+    const match = updates.find(u => String(u.modId) === strVal || (u.fileName && u.fileName.toLowerCase().includes(strVal.toLowerCase())));
+    if (match && (match.modhubTitle || match.title)) return match.modhubTitle || match.title;
   } catch (_) {}
 
+  // 2. Search in useLocalModsStore local mods
   try {
     const localMods = useLocalModsStore.getState().mods || [];
-    const matchingMod = localMods.find(m => String(m.modId) === String(modIdStr) || (m.fileName && m.fileName.toLowerCase().includes(modIdStr.toLowerCase())));
-    if (matchingMod && matchingMod.title) {
-      return matchingMod.title;
-    }
+    const match = localMods.find(m => String(m.modId) === strVal || (m.fileName && m.fileName.toLowerCase().includes(strVal.toLowerCase())));
+    if (match && match.title) return match.title;
   } catch (_) {}
 
+  // 3. Search in useModHubStore (modCache, searchResults, latestMods, topDownloadedMods, homeFeatured)
   try {
-    const modCache = useModHubStore.getState().modCache || {};
-    if (modCache[modIdStr]?.title) {
-      return modCache[modIdStr].title;
-    }
+    const mh = useModHubStore.getState();
+    if (mh.modCache && mh.modCache[strVal]?.title) return mh.modCache[strVal].title;
+
+    const allMh = [
+      ...(mh.searchResults || []),
+      ...(mh.latestMods || []),
+      ...(mh.topDownloadedMods || []),
+      ...(mh.homeFeatured || []),
+      ...(mh.homeTopDownloaded || [])
+    ];
+    const matchMh = allMh.find(m => String(m.modId) === strVal || (m.fileName && m.fileName.toLowerCase() === strVal.toLowerCase()));
+    if (matchMh && (matchMh.title || matchMh.modTitle)) return matchMh.title || matchMh.modTitle;
   } catch (_) {}
 
-  return defaultTitle || `Mod ${modIdStr}`;
+  // 4. Format filename if strVal looks like a filename (e.g. FS25_FD_Puma_CVX_EP.zip)
+  if (strVal && (strVal.toLowerCase().endsWith('.zip') || strVal.includes('_'))) {
+    const cleanName = strVal.replace(/\.zip$/i, '').replace(/_/g, ' ').replace(/^FS25\s+/i, '').trim();
+    if (cleanName && !/^\d+$/.test(cleanName)) return cleanName;
+  }
+
+  // 5. Fallback
+  if (defaultTitle && !/^\d+$/.test(String(defaultTitle).trim())) return defaultTitle;
+  return `Mod ${strVal}`;
 }
 
 export const useDownloadStore = create((set, get) => ({
@@ -205,6 +249,11 @@ export const useDownloadStore = create((set, get) => ({
           const receivedBytes = typeof progressData === 'object' ? progressData.receivedBytes : item.receivedBytes;
           const totalBytes = typeof progressData === 'object' ? progressData.totalBytes : item.totalBytes;
 
+          // Skip redundant state mutations if percentage, receivedBytes, and status haven't changed
+          if (item.progress === progress && item.receivedBytes === receivedBytes && item.status === 'downloading') {
+            return;
+          }
+
           next[key] = {
             ...item,
             progress: typeof progress === 'number' ? progress : item.progress,
@@ -356,22 +405,10 @@ export const useDownloadStore = create((set, get) => ({
   triggerScan: () => {
     if (get().scanTimeout) clearTimeout(get().scanTimeout);
     const timeoutId = setTimeout(() => {
-      const activeKeys = Object.keys(get().activeDownloads);
-      const isStillDownloading = activeKeys.some(k => {
-        const item = get().activeDownloads[k];
-        const st = (item?.status || '').toLowerCase();
-        return ['downloading', 'waiting', 'queued', 'connecting', 'starting'].includes(st);
-      });
-
-      // If active downloads are still running, defer scan until batch finishes
-      if (isStillDownloading) {
-        get().triggerScan();
-        return;
-      }
-
-      useLocalModsStore.getState().scanMods(null, true);
+      useLocalModsStore.getState().scanMods(null, false);
       set({ scanTimeout: null });
     }, 500);
+
     set({ scanTimeout: timeoutId });
   }
 }));
@@ -386,43 +423,53 @@ if (window.api?.on) {
 
   if (window.api.on.downloadStatus) {
     window.api.on.downloadStatus((data) => {
-      const { modId, status } = data;
+      const { modId, status, title, modTitle, fileName } = data;
       if (!modId) return;
+      const strId = String(modId);
       
       if (status === 'cancelled') {
-        useDownloadStore.getState().removeDownload(modId);
+        useDownloadStore.getState().removeDownload(strId);
         return;
       }
       
       if (status === 'queued') {
-        useDownloadStore.getState().setStatus(modId, 'queued');
+        useDownloadStore.getState().setStatus(strId, 'queued');
         return;
       }
 
-      useDownloadStore.getState().setStatus(modId, status);
+      useDownloadStore.getState().setStatus(strId, status);
 
-      // Auto-clear successful downloads after 1.5s delay
+      const active = useDownloadStore.getState().activeDownloads[strId] || useDownloadStore.getState().activeDownloads[modId];
+      const incomingTitle = title || modTitle || fileName;
+      const resolvedTitle = resolveDownloadTitle(strId, incomingTitle || active?.title);
+
+      // Complete flow: Download -> Index Library -> Display Toast
       if (status === 'success' || status === 'completed' || status === 'installed') {
-        const active = useDownloadStore.getState().activeDownloads[modId];
-        if (active) {
-            useToastStore.getState().success(`${active.title || 'Mod'} installed successfully!`);
-        }
+        useDownloadStore.getState().addSessionInstalled(strId, resolvedTitle);
         
-        useDownloadStore.getState().addSessionInstalled(modId, active?.title);
-        useDownloadStore.getState().triggerScan();
+        // 1. Index newly downloaded mod into library first
+        useLocalModsStore.getState().scanMods(null, false).then(() => {
+          // 2. Resolve title from fresh indexed library state
+          const displayTitle = resolveDownloadTitle(strId, incomingTitle || active?.title);
+          // 3. Display success toast notification
+          useToastStore.getState().success(`${displayTitle} installed successfully!`, { id: `dl-toast-${strId}` });
+        }).catch(() => {
+          const displayTitle = (resolvedTitle && !resolvedTitle.startsWith('Mod ')) ? resolvedTitle : (active?.title || incomingTitle || `Mod ${strId}`);
+          useToastStore.getState().success(`${displayTitle} installed successfully!`, { id: `dl-toast-${strId}` });
+        });
 
         setTimeout(() => {
-          useDownloadStore.getState().removeDownload(modId);
+          useDownloadStore.getState().removeDownload(strId);
           if (active?.title) useDownloadStore.getState().removeDownload(active.title);
         }, 1500);
       } else if (status === 'error') {
-        const active = useDownloadStore.getState().activeDownloads[modId];
-        if (active) {
-            useToastStore.getState().error(`Download failed: ${active.title || modId}`);
-        }
-        console.warn(`Download failed for mod ${modId}`);
+        const displayTitle = (resolvedTitle && !resolvedTitle.startsWith('Mod ')) ? resolvedTitle : (active?.title || incomingTitle || `Mod ${strId}`);
+        
+        useToastStore.getState().error(`Download failed: ${displayTitle}`, { id: `dl-toast-${strId}` });
+        
+        console.warn(`Download failed for mod ${strId}`);
         setTimeout(() => {
-          useDownloadStore.getState().removeDownload(modId);
+          useDownloadStore.getState().removeDownload(strId);
         }, 15000);
       }
     });
@@ -434,22 +481,27 @@ if (window.api?.on) {
       const displayTitle = title || modName;
       const targetKey = modId || displayTitle;
       if (!targetKey) return;
+      const strKey = String(targetKey);
 
       if (type === 'STATUS') {
         if (status === 'DOWNLOADING') {
-          useDownloadStore.getState().addDownload(targetKey, displayTitle);
+          useDownloadStore.getState().addDownload(strKey, displayTitle);
           if (parentId) {
-             useDownloadStore.getState().updateBatchProgress(parentId, useDownloadStore.getState().batchProgress[parentId]?.completed || 0, targetKey);
+             useDownloadStore.getState().updateBatchProgress(parentId, useDownloadStore.getState().batchProgress[parentId]?.completed || 0, strKey);
           }
         } else if (status === 'success' || status === 'completed' || status === 'installed') {
-          useDownloadStore.getState().setStatus(targetKey, 'success');
-          useDownloadStore.getState().addSessionInstalled(targetKey, displayTitle);
+          useDownloadStore.getState().setStatus(strKey, 'success');
+          const active = useDownloadStore.getState().activeDownloads[strKey] || useDownloadStore.getState().activeDownloads[targetKey];
+          const resolvedTitle = resolveDownloadTitle(strKey, displayTitle || active?.title);
+          const finalTitle = (resolvedTitle && !resolvedTitle.startsWith('Mod ')) ? resolvedTitle : (displayTitle || `Mod ${strKey}`);
+
+          useDownloadStore.getState().addSessionInstalled(strKey, finalTitle);
           
           if (parentId) {
             const batch = useDownloadStore.getState().batchProgress[parentId];
             if (batch) {
               const nextCompleted = batch.completed + 1;
-              useDownloadStore.getState().updateBatchProgress(parentId, nextCompleted, targetKey);
+              useDownloadStore.getState().updateBatchProgress(parentId, nextCompleted, strKey);
               if (nextCompleted >= batch.total) {
                 setTimeout(() => useDownloadStore.getState().removeBatch(parentId), 3000);
               }
@@ -459,24 +511,31 @@ if (window.api?.on) {
           useDownloadStore.getState().triggerScan();
 
           setTimeout(() => {
-            useDownloadStore.getState().removeDownload(targetKey);
+            useDownloadStore.getState().removeDownload(strKey);
           }, 1500);
         } else if (status === 'error' || status === 'NOT_FOUND_ON_MODHUB') {
-          useDownloadStore.getState().setStatus(targetKey, 'error');
+          useDownloadStore.getState().setStatus(strKey, 'error');
+          const active = useDownloadStore.getState().activeDownloads[strKey] || useDownloadStore.getState().activeDownloads[targetKey];
+          const resolvedTitle = resolveDownloadTitle(strKey, displayTitle || active?.title);
+          const finalTitle = (resolvedTitle && !resolvedTitle.startsWith('Mod ')) ? resolvedTitle : (displayTitle || `Mod ${strKey}`);
+
+          if (!data.isBackground) {
+            useToastStore.getState().error(`Download failed: ${finalTitle}`, { id: `dl-toast-${strKey}` });
+          }
           
           if (parentId) {
             const batch = useDownloadStore.getState().batchProgress[parentId];
             if (batch) {
-                useDownloadStore.getState().updateBatchProgress(parentId, batch.completed + 1, targetKey);
+                useDownloadStore.getState().updateBatchProgress(parentId, batch.completed + 1, strKey);
             }
           }
 
           setTimeout(() => {
-            useDownloadStore.getState().removeDownload(targetKey);
+            useDownloadStore.getState().removeDownload(strKey);
           }, 15000);
         }
       } else if (type === 'PROGRESS') {
-        useDownloadStore.getState().setProgress(targetKey, percent);
+        useDownloadStore.getState().setProgress(strKey, percent);
       }
     });
   }

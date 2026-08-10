@@ -18,12 +18,28 @@ function debugLog(msg) {
   } catch (e) {}
 }
 
+function openDatabase(dbPath) {
+  try {
+    return new Database(dbPath);
+  } catch (err) {
+    console.error('[DB] Database open error:', err);
+    if (err.message && (err.message.includes('malformed') || err.message.includes('corrupt') || err.code === 'SQLITE_CORRUPT')) {
+      console.warn('[DB] Database file corrupted. Backing up and recreating fresh DB...');
+      try {
+        if (fs.existsSync(dbPath)) fs.renameSync(dbPath, `${dbPath}.corrupted.${Date.now()}`);
+      } catch (_) {}
+      return new Database(dbPath);
+    }
+    throw err;
+  }
+}
+
 function init() {
   try {
     const dbPath = getDbPath();
     fs.ensureDirSync(path.dirname(dbPath));
     
-    db = new Database(dbPath);
+    db = openDatabase(dbPath);
     db.pragma('journal_mode = WAL');
 
   db.exec(`

@@ -17,6 +17,7 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
     const registerBatch = useDownloadStore(s => s.registerBatch);
     const [status, setStatus] = useState('confirming'); // confirming, processing, complete
     const [modStatuses, setModStatuses] = useState({});
+    const [isProcessing, setIsProcessing] = useState(false);
     
     // --- Deduplicate internally by unique mod key ---
     const uniqueMods = React.useMemo(() => {
@@ -80,8 +81,9 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
                     next.status = status;
                     if (title) next.title = title;
                 } else if (type === 'PROGRESS') {
+                    if (current.progress === percent && (current.status === 'downloading' || current.status === 'DOWNLOADING')) return prev;
                     next.progress = percent;
-                    if (next.status !== 'success') next.status = 'downloading';
+                    if (next.status !== 'success' && next.status !== 'installed') next.status = 'downloading';
                 }
 
                 return { ...prev, [matchedKey]: next };
@@ -96,6 +98,7 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
     const processPendingMods = React.useCallback(async (modsToProcess) => {
         if (!modsToProcess || modsToProcess.length === 0 || processingRef.current) return;
         processingRef.current = true;
+        setIsProcessing(true);
         setStatus('processing');
 
         try {
@@ -108,68 +111,88 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
                 parentId
             });
             
+            // Mark non-error mods as success once background task finishes
+            setModStatuses(prev => {
+                const next = { ...prev };
+                uniqueMods.forEach(m => {
+                    const key = getModKey(m);
+                    const currentSt = next[key]?.status;
+                    if (!currentSt || !['error', 'NOT_FOUND_ON_MODHUB'].includes(currentSt)) {
+                        next[key] = { ...(next[key] || {}), status: 'success', progress: 100, title: m.title || m.modName || key };
+                    }
+                });
+                return next;
+            });
+
             // Refresh library
-            const { useLocalModsStore } = await import('../../store/useLocalModsStore');
-            await useLocalModsStore.getState().scanMods();
+            try {
+                const { useLocalModsStore } = await import('../../store/useLocalModsStore');
+                await useLocalModsStore.getState().scanMods();
+            } catch (_) {}
+            
+            setStatus('complete');
+            setTimeout(() => {
+                onComplete?.();
+            }, 800);
         } catch (err) {
             console.error('[DEPENDENCY MODAL] Processing error:', err);
+            setStatus('complete');
         } finally {
             processingRef.current = false;
+            setIsProcessing(false);
         }
-    }, [parentId, registerBatch, subFolder]);
+    }, [parentId, registerBatch, subFolder, uniqueMods, onComplete]);
 
     const handleConfirm = async () => {
+        setStatus('processing');
         if (mainTask) {
-            await window.api.mods.install(mainTask);
+            await window.api.mods.install(mainTask).catch(() => {});
         }
         await processPendingMods(uniqueMods);
     };
 
     // Auto-trigger processing for newly added pending mods when modal is active
     useEffect(() => {
-        if (status === 'processing' && !processingRef.current) {
+        if (status === 'processing' && !isProcessing && !processingRef.current) {
             const pendingMods = uniqueMods.filter(m => {
                 const key = getModKey(m);
-                const st = modStatuses[key]?.status;
+                const st = (modStatuses[key]?.status || '').toLowerCase();
                 return !st || st === 'pending';
             });
             if (pendingMods.length > 0) {
                 processPendingMods(pendingMods);
             }
         }
-    }, [uniqueMods, modStatuses, status, processPendingMods]);
+    }, [uniqueMods, modStatuses, status, isProcessing, processPendingMods]);
 
     // Check terminal statuses & auto-dismiss once all unique mods complete
     useEffect(() => {
-        if (status === 'processing' && !processingRef.current) {
+        if (status === 'processing' && !isProcessing) {
             const keys = uniqueMods.map(m => getModKey(m));
-            const statuses = keys.map(k => modStatuses[k]?.status).filter(Boolean);
+            const statuses = keys.map(k => (modStatuses[k]?.status || '').toLowerCase()).filter(Boolean);
 
             if (statuses.length > 0 && statuses.length === uniqueMods.length) {
                 const isAllTerminal = statuses.every(st => 
-                    ['success', 'installed', 'error', 'NOT_FOUND_ON_MODHUB'].includes(st)
+                    ['success', 'installed', 'completed', 'error', 'not_found_on_modhub'].includes(st)
                 );
 
                 if (isAllTerminal) {
-                    const allSuccess = statuses.every(st => st === 'success' || st === 'installed');
+                    setStatus('complete');
+                    const allSuccess = statuses.every(st => st === 'success' || st === 'installed' || st === 'completed');
                     if (allSuccess) {
                         const timer = setTimeout(() => {
-                            setStatus('complete');
                             onComplete?.();
-                        }, 1200);
+                        }, 800);
                         return () => clearTimeout(timer);
-                    } else {
-                        setStatus('complete');
                     }
                 }
             }
         }
-    }, [uniqueMods, modStatuses, status, onComplete]);
+    }, [uniqueMods, modStatuses, status, isProcessing, onComplete]);
 
     const handleManualSearch = (modName) => {
         window.api.shell.openExternal(`https://www.farming-simulator.com/mods.php?title=${encodeURIComponent(modName)}`);
     };
-
 
     return (
         <div className="modal-overlay" style={{ zIndex: 3000, background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(10px)' }}>
@@ -186,9 +209,7 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
                                 <p style={{ fontSize: 12, opacity: 0.6 }}>This map requires extra mods to function</p>
                             </div>
                         </div>
-                        {status !== 'processing' && (
-                            <button className="btn btn--ghost btn--sm" onClick={onCancel}><X size={20} /></button>
-                        )}
+                        <button className="btn btn--ghost btn--sm" onClick={onCancel || onComplete} title="Close"><X size={20} /></button>
                     </div>
                 </div>
 
@@ -208,8 +229,10 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
                             const mod = modStatuses[depKey] || modStatuses[m.title];
                             if (!mod) return null;
                             
-                            const isNotFound = mod.status === 'NOT_FOUND_ON_MODHUB';
-                            const isError = mod.status === 'error';
+                            const stLower = (mod.status || '').toLowerCase();
+                            const isNotFound = stLower === 'not_found_on_modhub';
+                            const isError = stLower === 'error';
+                            const isSuccess = stLower === 'success' || stLower === 'installed' || stLower === 'completed';
 
                             return (
                                 <div key={depKey} style={{ 
@@ -224,21 +247,21 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <div style={{ fontWeight: 700, fontSize: 13 }}>{mod.title || m.title}</div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 800 }}>
-                                            {mod.status === 'pending' && <span style={{ opacity: 0.8, color: 'var(--text-tertiary)' }}>PENDING</span>}
-                                            {mod.status === 'SEARCHING' && <><Loader2 size={12} className="animate-spin" /> SEARCHING</>}
-                                            {mod.status === 'DOWNLOADING' && <><Loader2 size={12} className="animate-spin text-accent" /> DOWNLOADING</>}
-                                            {mod.status === 'downloading' && <span className="text-accent">{mod.progress}%</span>}
-                                            {mod.status === 'success' && <><CheckCircle size={14} className="text-success" /> INSTALLED</>}
+                                            {stLower === 'pending' && <span style={{ opacity: 0.8, color: 'var(--text-tertiary)' }}>PENDING</span>}
+                                            {stLower === 'searching' && <><Loader2 size={12} className="animate-spin" /> SEARCHING</>}
+                                            {(stLower === 'downloading' || stLower === 'starting') && <><Loader2 size={12} className="animate-spin text-accent" /> DOWNLOADING</>}
+                                            {stLower === 'downloading' && <span className="text-accent">{mod.progress}%</span>}
+                                            {isSuccess && <><CheckCircle size={14} className="text-success" /> INSTALLED</>}
                                             {isNotFound && <><AlertCircle size={14} className="text-error" /> NOT FOUND</>}
                                             {isError && <><AlertCircle size={14} className="text-error" /> ERROR</>}
                                         </div>
                                     </div>
-                                    {mod.status === 'downloading' && (
+                                    {stLower === 'downloading' && (
                                         <div style={{ width: '100%', height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
                                             <div style={{ width: `${mod.progress}%`, height: '100%', background: 'var(--accent)', transition: 'width 0.3s ease' }} />
                                         </div>
                                     )}
-                                    {(mod.status === 'SEARCHING' || isNotFound || isError) && (
+                                    {(stLower === 'searching' || isNotFound || isError) && (
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
                                             <span style={{ fontSize: 11, color: isNotFound || isError ? 'var(--error)' : 'var(--text-secondary)', opacity: 0.8 }}>
                                                 {isNotFound ? 'Exhausted FS25 search database.' : isError ? 'Download failed. Click Retry or Search Manually.' : 'Pinpointing best match on ModHub...'}
@@ -277,12 +300,11 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
                     </div>
                 </div>
 
-
                 {/* Footer */}
                 <div style={{ padding: '16px 24px', background: 'var(--bg-tertiary)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
                     {status === 'confirming' && (
                         <>
-                            <button className="btn btn--secondary" onClick={onCancel}>Ignore</button>
+                            <button className="btn btn--secondary" onClick={onCancel || onComplete}>Ignore</button>
                             <button className="btn btn--primary" onClick={handleConfirm} style={{ padding: '0 24px' }}>
                                 <Download size={16} /> Download All
                             </button>

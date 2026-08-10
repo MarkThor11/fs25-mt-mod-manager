@@ -41,10 +41,11 @@ export default function Sidebar() {
   const { favoriteAuthors, favoriteMods } = useModHubStore();
   const favCount = (favoriteAuthors?.length || 0) + (favoriteMods?.length || 0);
   const hiddenCount = useModHubStore((s) => s.hiddenMods?.length || 0);
-  const activeDownloads = useDownloadStore((s) => s.activeDownloads);
-  const downloadCount = Object.values(activeDownloads).filter(
-    (dl) => dl.status !== 'success' && dl.status !== 'failed' && dl.status !== 'error'
-  ).length;
+  const downloadCount = useDownloadStore((s) => 
+    Object.values(s.activeDownloads).filter(
+      (dl) => dl && dl.status !== 'success' && dl.status !== 'failed' && dl.status !== 'error'
+    ).length
+  );
 
   const toggleCollapse = () => {
     const newVal = !isCollapsed;

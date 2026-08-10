@@ -582,11 +582,11 @@ export default function ModDetailPage() {
       if (result.success) {
         useToastStore.getState().success(`${mod.title} install started!`);
       } else {
-        useToastStore.getState().error(`Failed: ${result.error}`);
+        useToastStore.getState().error(`Failed: ${result.error}`, { id: `dl-toast-${mod.modId}` });
         removeDownload(mod.modId);
       }
     } catch (err) {
-      useToastStore.getState().error(`Install failed: ${err.message}`);
+      useToastStore.getState().error(`Install failed: ${err.message}`, { id: `dl-toast-${mod?.modId || modId}` });
       removeDownload(mod.modId);
     }
   };

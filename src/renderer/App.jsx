@@ -187,58 +187,34 @@ export default function App() {
   useEffect(() => {
     if (!isLoaded) return;
 
+    const { modUpdateMode } = useSettingsStore.getState();
+    const { updates, triggerAutoUpdateIfNeeded } = useLocalModsStore.getState();
+
+    // 1. Immediately trigger auto-download on launch if there are pending updates and mode is 'auto'
+    if (modUpdateMode === 'auto' && Array.isArray(updates) && updates.length > 0) {
+      console.log(`[AUTO-UPDATE] Found ${updates.length} pending update(s) on startup. Triggering auto-download...`);
+      setTimeout(() => {
+        triggerAutoUpdateIfNeeded();
+      }, 2000);
+    }
+
     const CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
 
     const runAutoUpdateCheck = async () => {
-      const { autoCheckUpdates, modUpdateMode, lastUpdateCheck, setLastUpdateCheck } = useSettingsStore.getState();
-      const { checkUpdates, updateMod, scanMods } = useLocalModsStore.getState();
-      const toast = useToastStore.getState();
+      const { autoCheckUpdates, lastUpdateCheck, setLastUpdateCheck } = useSettingsStore.getState();
+      const { checkUpdates, triggerAutoUpdateIfNeeded } = useLocalModsStore.getState();
 
-      // Only run if auto-check is enabled
       if (!autoCheckUpdates) return;
 
-      // Check if it's been long enough since last check
       const now = Date.now();
-      if (now - lastUpdateCheck < CHECK_INTERVAL) return;
+      if (now - lastUpdateCheck < CHECK_INTERVAL) {
+        triggerAutoUpdateIfNeeded();
+        return;
+      }
 
       console.log('[AUTO-UPDATE] Running background update check...');
-      await checkUpdates();
+      await checkUpdates(true);
       setLastUpdateCheck(now);
-
-      const { updates } = useLocalModsStore.getState();
-      
-      if (updates.length > 0 && modUpdateMode === 'auto') {
-        if (!window.api?.game) return;
-        const isRunning = await window.api.game.isRunning();
-        if (isRunning) {
-          console.log('[AUTO-UPDATE] Game is running. Deferring background updates.');
-          return;
-        }
-
-        const modsToUpdate = updates.filter(update => {
-          const localMod = useLocalModsStore.getState().mods.find(m => m.fileName === update.fileName);
-          return !(localMod && (localMod.tags || []).includes('lock-updates'));
-        });
-
-        if (modsToUpdate.length > 0) {
-          toast.info(`Background Update: Installing ${modsToUpdate.length} mod updates...`);
-          
-          let successCount = 0;
-          for (const update of modsToUpdate) {
-            try {
-              const result = await updateMod(update.fileName, update.modId);
-              if (result.success) successCount++;
-            } catch (err) {
-              console.error(`[AUTO-UPDATE] Failed to update ${update.fileName}:`, err);
-            }
-          }
-
-          if (successCount > 0) {
-            toast.success(`Background Update: Successfully installed ${successCount} mod updates.`);
-            await scanMods(); // Final refresh
-          }
-        }
-      }
     };
 
     // Run once on load (with a delay to let startup settle)

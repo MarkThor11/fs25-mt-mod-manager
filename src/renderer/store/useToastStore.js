@@ -35,6 +35,12 @@ export const useToastStore = create((set, get) => ({
         }
       }
 
+      // Suppress duplicate active toasts with the exact same message
+      const isDuplicateMessage = state.toasts.some(t => !t.exiting && t.message === message);
+      if (isDuplicateMessage) {
+        return state;
+      }
+
       const id = ++toastIdCounter;
       const timer = duration > 0 ? setTimeout(() => get().removeToast(id), duration) : null;
       
