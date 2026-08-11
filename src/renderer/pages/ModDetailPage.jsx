@@ -213,7 +213,7 @@ export default function ModDetailPage() {
         
         const resolvedObj = getResolvedMetadataObj(dep, resolvedMetadata);
         
-        let depId = (typeof dep === 'object' && dep.modId) ? String(dep.modId) : (resolvedObj ? String(resolvedObj.modId) : null);
+        let depId = (typeof dep === 'object' && dep.modId) ? String(dep.modId).replace(/^0+/, '') : (resolvedObj && resolvedObj.modId ? String(resolvedObj.modId).replace(/^0+/, '') : null);
         let fallbackFileName = null;
         
         if (typeof dep === 'object' && dep.url) {
@@ -1320,7 +1320,7 @@ export default function ModDetailPage() {
           } : null}
           onComplete={() => {
             setShowDepModal(false);
-            scanMods();
+            scanMods(null, true);
           }}
           onCancel={() => setShowDepModal(false)}
         />

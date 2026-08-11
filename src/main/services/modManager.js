@@ -980,14 +980,9 @@ async function scanLocalMods(manualPaths = null, force = false) {
 		return lastScanResult;
 	}
 
-	if (activeScanPromise && !force) {
-		debugLog('[SCAN] Scan already in progress, returning existing promise.');
+	if (activeScanPromise) {
+		debugLog('[SCAN] Scan already in progress, reusing active scan promise.');
 		return activeScanPromise;
-	}
-
-	if (force && activeScanPromise) {
-		debugLog('[SCAN] Forcing fresh scan, waiting for current one to finish first...');
-		await activeScanPromise;
 	}
 
 	activeScanPromise = (async () => {
@@ -1032,8 +1027,11 @@ async function performScan(manualPaths = null) {
 	const trackingBaseNameMap = new Map();
 	for (const t of allTrackingRows) {
 		if (t.local_file_name) {
+			const normFile = t.local_file_name.replace(/\\/g, '/');
 			trackingFileMap.set(t.local_file_name, t);
 			trackingFileMap.set(t.local_file_name.toLowerCase(), t);
+			trackingFileMap.set(normFile, t);
+			trackingFileMap.set(normFile.toLowerCase(), t);
 			const baseName = path.basename(t.local_file_name).toLowerCase();
 			trackingBaseNameMap.set(baseName, t);
 		}
@@ -1683,43 +1681,67 @@ function getTemplatesPath() {
  */
 function detectConflicts(mods) {
 	const conflicts = [];
-	const scriptMap = new Map(); // fileName -> [modTitle]
-	const specMap = new Map();   // specName -> [modTitle]
+	const scriptMap = new Map(); // fileName -> [{ modTitle, isMap, folder }]
+	const specMap = new Map();   // specName -> [{ modTitle, isMap, folder }]
 
 	for (const mod of (mods || [])) {
+		const isMapMod = !!(mod.isMap || (mod.category && mod.category.toUpperCase().includes('MAP')));
 		// 1. Script Conflicts (extraSourceFiles)
 		for (const scriptPath of (mod.scripts || [])) {
 			const scriptName = path.basename(scriptPath).toLowerCase();
 			if (!scriptMap.has(scriptName)) scriptMap.set(scriptName, []);
-			scriptMap.get(scriptName).push(mod.title);
+			scriptMap.get(scriptName).push({ title: mod.title, isMap: isMapMod, folder: mod.folder || 'MAIN' });
 		}
 
 		// 2. Specialization Conflicts
 		for (const specName of (mod.specializations || [])) {
 			const lowerSpec = specName.toLowerCase();
 			if (!specMap.has(lowerSpec)) specMap.set(lowerSpec, []);
-			specMap.get(lowerSpec).push(mod.title);
+			specMap.get(lowerSpec).push({ title: mod.title, isMap: isMapMod, folder: mod.folder || 'MAIN' });
 		}
 	}
 
-	// Analyze maps
-	scriptMap.forEach((modsWithScript, scriptName) => {
-		if (modsWithScript.length > 1) {
+	// Analyze script conflicts (Filter out Map-vs-Map false positives since only 1 map loads at a time in FS25)
+	scriptMap.forEach((entries, scriptName) => {
+		const uniqueMods = [];
+		const seenTitles = new Set();
+		for (const e of entries) {
+			if (!seenTitles.has(e.title)) {
+				seenTitles.add(e.title);
+				uniqueMods.push(e);
+			}
+		}
+
+		// Only flag if at least one non-map mod is involved
+		const nonMapMods = uniqueMods.filter(m => !m.isMap);
+		if (uniqueMods.length > 1 && nonMapMods.length > 0) {
 			conflicts.push({
 				type: 'script',
 				name: scriptName,
-				mods: Array.from(new Set(modsWithScript)),
+				mods: uniqueMods.map(m => m.title),
 				severity: 'warning'
 			});
 		}
 	});
 
-	specMap.forEach((modsWithSpec, specName) => {
-		if (modsWithSpec.length > 1) {
+	// Analyze specialization conflicts
+	specMap.forEach((entries, specName) => {
+		const uniqueMods = [];
+		const seenTitles = new Set();
+		for (const e of entries) {
+			if (!seenTitles.has(e.title)) {
+				seenTitles.add(e.title);
+				uniqueMods.push(e);
+			}
+		}
+
+		// Only flag if at least one non-map mod is involved
+		const nonMapMods = uniqueMods.filter(m => !m.isMap);
+		if (uniqueMods.length > 1 && nonMapMods.length > 0) {
 			conflicts.push({
 				type: 'specialization',
 				name: specName,
-				mods: Array.from(new Set(modsWithSpec)),
+				mods: uniqueMods.map(m => m.title),
 				severity: 'critical'
 			});
 		}
@@ -4214,8 +4236,11 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 						const targetSubDir = path.join(getModsPath(), subFolder);
 						await fs.ensureDir(targetSubDir);
 						if (localMod.fileName) {
-							const targetPath = path.join(targetSubDir, localMod.fileName);
-							const sourcePath = localMod.filePath || (localMod.folder ? path.join(getModsPath(), localMod.folder, localMod.fileName) : path.join(getModsPath(), localMod.fileName));
+							const baseFileName = path.basename(localMod.fileName);
+							const targetPath = path.join(targetSubDir, baseFileName);
+							const sourcePath = localMod.filePath && fs.existsSync(localMod.filePath)
+								? localMod.filePath
+								: (localMod.folder ? path.join(getModsPath(), localMod.folder, baseFileName) : path.join(getModsPath(), baseFileName));
 							if (fs.existsSync(sourcePath) && !fs.existsSync(targetPath)) {
 								await fs.link(sourcePath, targetPath).catch(async () => {
 									await fs.copy(sourcePath, targetPath).catch(() => {});

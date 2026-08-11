@@ -588,7 +588,22 @@ module.exports = {
     db.prepare('DELETE FROM pending_downloads WHERE mod_id = ?').run(modId);
   },
   close,
-  beginTransaction: () => db && db.prepare('BEGIN').run(),
-  commitTransaction: () => db && db.prepare('COMMIT').run(),
-  rollbackTransaction: () => db && db.prepare('ROLLBACK').run(),
+  beginTransaction: () => {
+    if (!db) return;
+    try {
+      db.prepare('BEGIN').run();
+    } catch (_) {}
+  },
+  commitTransaction: () => {
+    if (!db) return;
+    try {
+      db.prepare('COMMIT').run();
+    } catch (_) {}
+  },
+  rollbackTransaction: () => {
+    if (!db) return;
+    try {
+      db.prepare('ROLLBACK').run();
+    } catch (_) {}
+  },
 };

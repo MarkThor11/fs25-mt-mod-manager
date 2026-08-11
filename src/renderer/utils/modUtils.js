@@ -6,8 +6,14 @@
  */
 export const cleanModName = (name) => {
   if (!name) return "";
-  // Strip version requirements like "ModName (1.2.3.4)" or "ModName*"
-  return name.replace(/\s*\([^)]*\)/, '').replace(/\*+$/, '').trim();
+  return name
+    .replace(/^[\s\-\*\•\–\—]+/, '')
+    .replace(/\s*(?:\(|\[)?by:?[\s\S]*$/i, '')
+    .replace(/\s*\(v?\d+\.\d+.*?\)/i, '')
+    .replace(/\s*\[[^\]]*\]/g, '')
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\*+$/, '')
+    .trim();
 };
 
 export const normalizeForMatching = (str) => {
@@ -35,7 +41,7 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
       const fileMatch = dep.match(/\/([^\/]+\.zip)$/i);
       if (fileMatch) depFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
     } else {
-      depTitle = dep.trim();
+      depTitle = cleanModName(dep);
       depFileName = dep.replace(/\.zip$/i, '').trim().toLowerCase();
     }
   } else if (typeof dep === 'object') {
@@ -50,7 +56,7 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
       const fn = dep.fileName || dep.modName || dep.technicalName;
       if (fn) depFileName = fn.replace(/\.zip$/i, '').toLowerCase();
     }
-    if (dep.title) depTitle = dep.title.trim();
+    if (dep.title) depTitle = cleanModName(dep.title);
   }
 
   // Check resolvedMetadata pool if available
@@ -58,7 +64,7 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
     const meta = resolvedMetadata[depTitle];
     if (meta.modId && !depId) depId = String(meta.modId).replace(/^0+/, '');
     if (meta.fileName && !depFileName) depFileName = meta.fileName.replace(/\.zip$/i, '').toLowerCase();
-    if (meta.title && !depTitle) depTitle = meta.title.trim();
+    if (meta.title && !depTitle) depTitle = cleanModName(meta.title);
   }
 
   // 1. Identity 1: ModHub ID Match
@@ -105,6 +111,7 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
   // Pre-build O(1) fast lookup index across all installed mods
   const indexById = new Map();
   const indexByName = new Map();
+  const subfolderModsMap = new Map();
 
   for (let i = 0; i < allMods.length; i++) {
     const m = allMods[i];
@@ -116,15 +123,22 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
       indexByName.set(cleanFile, m);
     }
     if (m.title) indexByName.set(m.title.toLowerCase(), m);
+
+    if (m.folder && m.folder.toLowerCase() !== 'mods' && m.folder.toLowerCase() !== '') {
+      const fLow = m.folder.toLowerCase();
+      if (!subfolderModsMap.has(fLow)) subfolderModsMap.set(fLow, []);
+      subfolderModsMap.get(fLow).push(m);
+    }
   }
 
+  let mapSubfolderMods = [];
   if (targetModName) {
     const targetMod = indexByName.get(targetModName.toLowerCase());
     if (targetMod && targetMod.folder && targetMod.folder.toLowerCase() !== 'mods' && targetMod.folder.toLowerCase() !== '') {
       const folderLower = targetMod.folder.toLowerCase();
-      for (let i = 0; i < allMods.length; i++) {
-        const m = allMods[i];
-        if (m.folder && m.folder.toLowerCase() === folderLower && m.modName && m.modName.toLowerCase() !== targetModName.toLowerCase()) {
+      mapSubfolderMods = subfolderModsMap.get(folderLower) || [];
+      for (const m of mapSubfolderMods) {
+        if (m.modName && m.modName.toLowerCase() !== targetModName.toLowerCase()) {
           installed.add(m.modName);
         }
       }
@@ -138,7 +152,7 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
     
     if (typeof depObjOrString === 'string') {
         depString = depObjOrString;
-    } else {
+    } else if (typeof depObjOrString === 'object') {
         const url = depObjOrString.url || '';
         if (url) {
             const fileMatch = url.match(/\/([^\/]+\.zip)$/i);
@@ -148,6 +162,15 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
         
         const idMatch = url.match(/mod_id=(\d+)/) || url.match(/storage\/(\d+)\//);
         if (idMatch) depId = parseInt(idMatch[1], 10).toString();
+    }
+
+    // Handle combined author description lines (e.g., "Lizard Animal Barns - Wood Chip Production (By: JonnyXPRO)")
+    if (!depId && depString && !fallbackFileName && (depString.includes(' - ') || depString.includes('(By:') || depString.includes('(By ') || depString.includes(' (by '))) {
+      const parts = depString.replace(/\s*(?:\(|\[)?by:?.*?(?:\)|\])?$/gi, '').split(/\s+-\s+/);
+      if (parts.length > 1) {
+        parts.forEach(part => resolve(part.trim()));
+        return;
+      }
     }
 
     const cleanedName = cleanModName(depString);
@@ -163,6 +186,11 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
     if (!match) {
       match = allMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, false));
     }
+
+    // Check if installed in map subfolder
+    if (!match && mapSubfolderMods.length > 0) {
+      match = mapSubfolderMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, false));
+    }
     
     const isSessionInstalledByName = Object.values(sessionInstalled).some(val => val && val.toLowerCase() === nameLower);
 
@@ -174,7 +202,6 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
         match.dependencies.forEach(dep => resolve(dep));
       }
     } else if ((depId && sessionInstalled[depId]) || isSessionInstalledByName) {
-      // Optimistic UI: If we just installed this in the current session, assume it's installed
       installed.add(cleanedName);
     } else {
       missing.add(cleanedName);

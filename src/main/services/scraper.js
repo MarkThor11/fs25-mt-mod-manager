@@ -744,13 +744,19 @@ async function fetchModDetail(modId) {
           break;
         }
         sibling.find('a').each((_, el) => {
-          const dTitle = $(el).text().trim();
+          const rawTitle = $(el).text().trim();
           const dHref = $(el).attr('href') || '';
           
-          if (dTitle && dHref && dTitle.length > 2) {
+          if (rawTitle && dHref && rawTitle.length > 2) {
             if (dHref.includes('mod.php') || dHref.startsWith('/') || dHref.includes('farming-simulator.com') || dHref.includes('giants-software.com')) {
               const resolved = resolveUrl(dHref);
               if (!depSeenUrls.has(resolved)) {
+                const cleanTitle = rawTitle
+                  .replace(/^[\s\-\*\•\–\—]+/, '')
+                  .replace(/\s*(?:\(|\[)?by:?[\s\S]*$/i, '')
+                  .replace(/\s*\[[^\]]*\]/g, '')
+                  .trim();
+                const dTitle = cleanTitle || rawTitle;
                 dependencies.push({ title: dTitle, url: resolved });
                 depSeenUrls.add(resolved);
                 seenTitles.add(dTitle.toLowerCase());
@@ -773,6 +779,11 @@ async function fetchModDetail(modId) {
   const sortedDeps = [...dependencies].sort((a, b) => (b.url ? 1 : 0) - (a.url ? 1 : 0));
 
   for (const dep of sortedDeps) {
+    // Ignore text note entries that have no download URL and contain credit lines or combined titles
+    if (!dep.url && dep.title && (dep.title.includes('(By:') || dep.title.includes('(By ') || dep.title.includes(' (by '))) {
+      continue;
+    }
+
     // Normalize: strip authors, "Pack" suffixes, version numbers, and non-alphanumerics
     const raw = dep.title.toLowerCase()
       .replace(/\s*(?:\(|\[)?by:?.*?(?:\)|\])?$/i, '') // strip (by Author) or [by Author] or BY AUTHOR at end

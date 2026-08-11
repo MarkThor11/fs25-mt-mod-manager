@@ -62,13 +62,11 @@ export default function App() {
         
         startPeriodicStats();
         
-        // Background sync only runs if cache was empty on launch
+        // Background sync to ensure physical disk files stay 100% in sync with cache
         setTimeout(() => {
-            if (useLocalModsStore.getState().mods.length === 0) {
-                useLocalModsStore.getState().scanMods();
-            }
+            useLocalModsStore.getState().scanMods(null, true);
             useMapStore.getState().fetchTemplates();
-        }, 3000);
+        }, 2000);
 
         // ── DOWNLOAD RESUMPTION ──
         // Check if there were any interrupted downloads and resume them automatically

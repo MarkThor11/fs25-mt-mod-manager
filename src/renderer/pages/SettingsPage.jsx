@@ -72,6 +72,28 @@ export default function SettingsPage() {
   const [isDetecting, setIsDetecting] = useState(false);
   const [systemSpecs, setSystemSpecs] = useState(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [isCheckingAppUpdate, setIsCheckingAppUpdate] = useState(false);
+
+  const handleCheckAppUpdate = async () => {
+    if (!window.api?.appUpdate?.check) {
+      useToastStore.getState().warning('App updater is available in desktop builds.');
+      return;
+    }
+    setIsCheckingAppUpdate(true);
+    useToastStore.getState().info('Checking for app updates in background...');
+    try {
+      const res = await window.api.appUpdate.check();
+      setIsCheckingAppUpdate(false);
+      if (res?.error) {
+        useToastStore.getState().error(`Update check failed: ${res.error}`);
+      } else if (!res || !res.updateInfo) {
+        useToastStore.getState().success('You are using the latest version!');
+      }
+    } catch (err) {
+      setIsCheckingAppUpdate(false);
+      useToastStore.getState().error(`Update check failed: ${err.message}`);
+    }
+  };
 
   const { mods } = useLocalModsStore();
 
@@ -1097,6 +1119,23 @@ export default function SettingsPage() {
 
       {/* Updates */}
       <CollapsibleSection title="Updates" icon={RefreshCw} defaultOpen={false}>
+
+        <div className="settings-row">
+          <div>
+            <div className="settings-row__label">Check for App Updates</div>
+            <div className="settings-row__desc">Check for application software updates in the background</div>
+          </div>
+          <div className="settings-row__control">
+            <button 
+              className="btn btn--secondary btn--sm" 
+              onClick={handleCheckAppUpdate}
+              disabled={isCheckingAppUpdate}
+            >
+              <RefreshCw size={14} className={isCheckingAppUpdate ? 'animate-spin' : ''} style={{ marginRight: 6 }} />
+              {isCheckingAppUpdate ? 'Checking...' : 'Check App Updates'}
+            </button>
+          </div>
+        </div>
 
         <div className="settings-row">
           <div>

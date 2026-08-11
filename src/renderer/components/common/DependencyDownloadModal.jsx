@@ -127,7 +127,7 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
             // Refresh library
             try {
                 const { useLocalModsStore } = await import('../../store/useLocalModsStore');
-                await useLocalModsStore.getState().scanMods();
+                await useLocalModsStore.getState().scanMods(null, true);
             } catch (_) {}
             
             setStatus('complete');

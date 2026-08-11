@@ -405,7 +405,7 @@ export const useDownloadStore = create((set, get) => ({
   triggerScan: () => {
     if (get().scanTimeout) clearTimeout(get().scanTimeout);
     const timeoutId = setTimeout(() => {
-      useLocalModsStore.getState().scanMods(null, false);
+      useLocalModsStore.getState().scanMods(null, true);
       set({ scanTimeout: null });
     }, 500);
 
@@ -448,7 +448,7 @@ if (window.api?.on) {
         useDownloadStore.getState().addSessionInstalled(strId, resolvedTitle);
         
         // 1. Index newly downloaded mod into library first
-        useLocalModsStore.getState().scanMods(null, false).then(() => {
+        useLocalModsStore.getState().scanMods(null, true).then(() => {
           // 2. Resolve title from fresh indexed library state
           const displayTitle = resolveDownloadTitle(strId, incomingTitle || active?.title);
           // 3. Display success toast notification
