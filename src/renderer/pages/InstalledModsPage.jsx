@@ -1646,7 +1646,7 @@ export default function InstalledModsPage() {
           </h1>
           <div className="page__subtitle" style={{ fontSize: 'var(--fs-sm)', display: 'flex', alignItems: 'center', gap: 12 }}>
             <span>
-                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{mods.filter(m => !m.isDLC && m.folder !== 'DLC' && !m.fileName?.toLowerCase().startsWith('pdlc_') && !m.fileName?.toLowerCase().endsWith('.dlc') && !hiddenFolders.includes(m.folder || '')).length}</span> mods • <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{Object.keys(folders).filter(f => f !== 'DLC').length}</span> folders visible
+                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{mods.filter(m => !m.isVirtual && !m.isDLC && m.folder !== 'DLC' && !m.fileName?.toLowerCase().startsWith('pdlc_') && !m.fileName?.toLowerCase().endsWith('.dlc') && !hiddenFolders.includes(m.folder || '')).length}</span> mods • <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{Object.keys(folders).filter(f => f !== 'DLC').length}</span> folders visible
             </span>
             {hiddenFolders.length > 0 && (
                 <button 

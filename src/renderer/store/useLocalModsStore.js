@@ -4,7 +4,7 @@ import { useSettingsStore } from './useSettingsStore';
 function computeModCount(mods) {
   if (!Array.isArray(mods)) return 0;
   return mods.filter(m => {
-    if (!m) return false;
+    if (!m || m.isVirtual) return false;
     if (m.isDLC) return false;
     if (m.folder === 'DLC') return false;
     const fn = (m.fileName || '').toLowerCase();
