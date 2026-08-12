@@ -308,6 +308,9 @@ async function launch(options = {}) {
     // Unref the child so we don't wait for it
     if (child && child.unref) child.unref();
 
+    // Start background exit monitor to restore gameSettings.xml when player quits game
+    monitorGameExitAndRestore();
+
     return { 
       success: true, 
       gamePath, 
@@ -319,6 +322,63 @@ async function launch(options = {}) {
   } catch (err) {
     return { success: false, error: err.message };
   }
+}
+
+/**
+ * Restore gameSettings.xml to Global Virtual Mods synthesis (containing ALL valid mods cleanly symlinked).
+ * This ensures launching outside the manager passes through normal menus and shows ALL mods without crashing.
+ */
+async function restoreGlobalGameSettings() {
+  try {
+    const modManager = require('./modManager');
+    const globalVirtualPath = await modManager.prepareVirtualModsFolder(null);
+    const fs25DataRoot = pathProvider.getFS25DataRoot();
+    const gameSettingsPath = path.join(fs25DataRoot, 'gameSettings.xml');
+
+    if (fs.existsSync(gameSettingsPath) && globalVirtualPath) {
+      let settingsXml = fs.readFileSync(gameSettingsPath, 'utf8');
+      const overrideRegex = /<modsDirectoryOverride[^>]*\/>/i;
+      const newTag = `<modsDirectoryOverride active="true" directory="${globalVirtualPath.replace(/\\/g, '/')}"/>`;
+
+      if (overrideRegex.test(settingsXml)) {
+        settingsXml = settingsXml.replace(overrideRegex, newTag);
+      } else {
+        settingsXml = settingsXml.replace(/(<gameSettings[^>]*>)/i, `$1\n    ${newTag}`);
+      }
+      fs.writeFileSync(gameSettingsPath, settingsXml, 'utf8');
+      console.log('[LAUNCH] Restored gameSettings.xml to Global Virtual Active Mods:', globalVirtualPath);
+    }
+  } catch (err) {
+    console.error('[LAUNCH] Failed to restore global gameSettings:', err.message);
+  }
+}
+
+let isMonitoringExit = false;
+
+/**
+ * Monitors the FS25 process and resets modsDirectoryOverride to Global Synthesis when game exits.
+ */
+function monitorGameExitAndRestore() {
+  if (isMonitoringExit) return;
+  isMonitoringExit = true;
+
+  console.log('[LAUNCH] Started monitoring game process exit to restore global gameSettings.xml...');
+
+  const interval = setInterval(async () => {
+    try {
+      const running = await isGameRunning();
+      if (!running) {
+        clearInterval(interval);
+        isMonitoringExit = false;
+        console.log('[LAUNCH] Game process exit detected. Restoring global gameSettings.xml in 2 seconds...');
+        setTimeout(() => {
+          restoreGlobalGameSettings();
+        }, 2000);
+      }
+    } catch (e) {
+      console.error('[LAUNCH] Error monitoring game exit:', e.message);
+    }
+  }, 4000);
 }
 
 /**
@@ -345,4 +405,7 @@ async function isGameRunning() {
   }
 }
 
-module.exports = { detectGamePath, launch, isGameRunning };
+module.exports = { detectGamePath, launch, isGameRunning, restoreGlobalGameSettings };
+
+
+
