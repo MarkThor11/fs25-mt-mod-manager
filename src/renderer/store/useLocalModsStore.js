@@ -70,7 +70,7 @@ export const useLocalModsStore = create((set, get) => ({
         if (Array.isArray(parsed.mods) && parsed.mods.length > 0) {
           const modArray = parsed.mods;
           const cleanUpdates = reconcileUpdates(get().updates, modArray);
-          set({ mods: modArray, modCount: computeModCount(modArray), allFolders: parsed.allFolders || [], updates: cleanUpdates, lastScanTime: Date.now() });
+          set({ mods: modArray, modCount: computeModCount(modArray), allFolders: parsed.allFolders || [], updates: cleanUpdates, lastScanTime: 0 });
           try { localStorage.setItem('mod_updates', JSON.stringify(cleanUpdates)); } catch (_) {}
         }
       }
