@@ -74,12 +74,22 @@ const DLC_MAPPING = {
     ],
     techData: { hp: 775, price: 0 }
   },
+  'jcbFastrac4220.dlc': { 
+    title: 'JCB Fastrac 4220 iCON', 
+    author: 'GIANTS Software', 
+    version: '1.0.0.0', 
+    dlcId: 'fs25jcbwft',
+    description: 'The JCB Fastrac 4220 iCON edition bonus tractor for Farming Simulator 25.',
+    screenshots: [],
+    techData: { hp: 235, price: 216500 }
+  },
   'highlandsFishingPack.dlc': { 
     title: 'Highlands Fishing Expansion', 
     author: 'GIANTS Software', 
     version: '1.2.0.0', 
     dlcId: 'fs25highlandsfishing',
     description: 'Farming Simulator 25 gets the fun-kind of fishy with the Highlands Fishing expansion: Build a farm and man a fishing boat in the Scotland-inspired town of Kinlaig! Includes a new map, new crops, and highland cattle.',
+    isMap: true,
     screenshots: [
       'https://www.farming-simulator.com/img/dlc/fs25highlandsfishing_screenshots/fs25highlandsfishing_screenshot1.jpg',
       'https://www.farming-simulator.com/img/dlc/fs25highlandsfishing_screenshots/fs25highlandsfishing_screenshot2.jpg'
@@ -462,7 +472,12 @@ function scanDLCs(pdlcPath) {
         
         return dlcFiles.map(file => {
             const fileLower = file.toLowerCase();
-            const mappingKey = Object.keys(DLC_MAPPING).find(k => k.toLowerCase() === fileLower) || file;
+            const fileNorm = fileLower.replace(/^pdlc_/i, '');
+            const mappingKey = Object.keys(DLC_MAPPING).find(k => {
+                const kLower = k.toLowerCase();
+                const kNorm = kLower.replace(/^pdlc_/i, '');
+                return kLower === fileLower || kNorm === fileNorm;
+            }) || file;
             const mapping = DLC_MAPPING[mappingKey];
             const stats = nodeFs.statSync(path.join(pdlcPath, file));
             
@@ -1510,13 +1525,14 @@ function getTemplatesPath() {
 			}
 
 			for (const [folderName, folderModsList] of folderGroupMap.entries()) {
+				if (!folderName || folderName.toUpperCase() === 'DLC') continue;
 				const hasMap = folderModsList.some(m => m.isMap);
 				if (!hasMap) {
 					const fLower = folderName.toLowerCase();
 					let matchedMeta = templateDb.get(fLower);
 					if (!matchedMeta) {
 						for (const [k, v] of templateDb.entries()) {
-							if (k.length >= 4 && (fLower.includes(k) || k.includes(fLower))) {
+							if (k.length >= 4 && fLower.length >= 4 && (fLower.includes(k) || (k.includes(fLower) && !['dlc', 'mods', 'temp', 'pack'].includes(fLower)))) {
 								matchedMeta = v;
 								break;
 							}
