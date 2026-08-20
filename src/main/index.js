@@ -1157,6 +1157,13 @@ app.whenReady().then(() => {
     cache.set('mods_best_0', null);
   }
 
+  // Ensure modsDirectoryOverride is disabled on app startup so standalone game launches use standard mods folder
+  gameLauncher.isGameRunning().then(running => {
+    if (!running) {
+      gameLauncher.disableModsDirectoryOverride();
+    }
+  }).catch(() => {});
+
   // APP STARTUP
   // (Removed automated ingestion for native 20-slot system)
   // ── Security Hardening ──
@@ -1250,5 +1257,8 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  try {
+    gameLauncher.disableModsDirectoryOverride();
+  } catch (e) {}
   cache.close();
 });

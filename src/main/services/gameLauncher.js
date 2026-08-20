@@ -325,32 +325,33 @@ async function launch(options = {}) {
 }
 
 /**
- * Restore gameSettings.xml to Global Virtual Mods synthesis (containing ALL valid mods cleanly symlinked).
- * This ensures launching outside the manager passes through normal menus and shows ALL mods without crashing.
+ * Disables modsDirectoryOverride in gameSettings.xml so that launching the game
+ * standalone (directly from desktop/Steam) reads directly from the standard mods directory.
  */
-async function restoreGlobalGameSettings() {
+function disableModsDirectoryOverride() {
   try {
-    const modManager = require('./modManager');
-    const globalVirtualPath = await modManager.prepareVirtualModsFolder(null);
     const fs25DataRoot = pathProvider.getFS25DataRoot();
     const gameSettingsPath = path.join(fs25DataRoot, 'gameSettings.xml');
 
-    if (fs.existsSync(gameSettingsPath) && globalVirtualPath) {
+    if (fs.existsSync(gameSettingsPath)) {
       let settingsXml = fs.readFileSync(gameSettingsPath, 'utf8');
-      const overrideRegex = /<modsDirectoryOverride[^>]*\/>/i;
-      const newTag = `<modsDirectoryOverride active="true" directory="${globalVirtualPath.replace(/\\/g, '/')}"/>`;
-
-      if (overrideRegex.test(settingsXml)) {
-        settingsXml = settingsXml.replace(overrideRegex, newTag);
-      } else {
-        settingsXml = settingsXml.replace(/(<gameSettings[^>]*>)/i, `$1\n    ${newTag}`);
+      if (/<modsDirectoryOverride\s+active=["']true["']/i.test(settingsXml)) {
+        settingsXml = settingsXml.replace(/(<modsDirectoryOverride\s+active=)["']true["']/ig, `$1"false"`);
+        fs.writeFileSync(gameSettingsPath, settingsXml, 'utf8');
+        console.log('[LAUNCH] Disabled modsDirectoryOverride in gameSettings.xml (standalone launch ready)');
       }
-      fs.writeFileSync(gameSettingsPath, settingsXml, 'utf8');
-      console.log('[LAUNCH] Restored gameSettings.xml to Global Virtual Active Mods:', globalVirtualPath);
     }
   } catch (err) {
-    console.error('[LAUNCH] Failed to restore global gameSettings:', err.message);
+    console.error('[LAUNCH] Failed to disable modsDirectoryOverride:', err.message);
   }
+}
+
+/**
+ * Restore gameSettings.xml to default (active="false") when player quits game.
+ * This ensures launching outside the manager passes through normal menus and shows ALL mods directly without interference.
+ */
+async function restoreGlobalGameSettings() {
+  disableModsDirectoryOverride();
 }
 
 let isMonitoringExit = false;
@@ -405,7 +406,7 @@ async function isGameRunning() {
   }
 }
 
-module.exports = { detectGamePath, launch, isGameRunning, restoreGlobalGameSettings };
+module.exports = { detectGamePath, launch, isGameRunning, restoreGlobalGameSettings, disableModsDirectoryOverride };
 
 
 
