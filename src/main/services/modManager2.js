@@ -2114,7 +2114,8 @@ async function updateMod(modFileName, modId, onProgress) {
 	const modsPath = getModsPath();
 	const currentPath = await findModPath(modFileName);
 	const originalPath = currentPath || path.join(modsPath, modFileName);
-	const backupPath = originalPath + '.bak';
+	const backupsDir = path.join(modsPath, 'backups');
+	const backupPath = path.join(backupsDir, `${path.basename(originalPath)}.bak`);
 	
 	try {
 		// 1. Identify subfolder for persistence
@@ -2135,6 +2136,8 @@ async function updateMod(modFileName, modId, onProgress) {
 		
 		// 3. Backup the old version
 		if (fs.existsSync(originalPath)) {
+			await fs.ensureDir(backupsDir);
+			if (fs.existsSync(backupPath)) await fs.remove(backupPath);
 			await fs.copy(originalPath, backupPath);
 		}
 		
@@ -2145,10 +2148,12 @@ async function updateMod(modFileName, modId, onProgress) {
 		return result;
 	} catch (err) {
 		// Restore backup on failure
-		if (fs.existsSync(backupPath)) {
+		const legacyBackupPath = originalPath + '.bak';
+		const bakToRestore = fs.existsSync(backupPath) ? backupPath : (fs.existsSync(legacyBackupPath) ? legacyBackupPath : null);
+		if (bakToRestore && fs.existsSync(bakToRestore)) {
 			// Ensure directory exists for restore if it was deleted
 			await fs.ensureDir(path.dirname(originalPath));
-			await fs.move(backupPath, originalPath, { overwrite: true });
+			await fs.move(bakToRestore, originalPath, { overwrite: true });
 		}
 		throw err;
 	}
@@ -2380,8 +2385,13 @@ async function cancelInstall(modId) {
 						console.log(`[CANCEL] Cleaned up partial file: ${task.savePath}`);
 
 						// Restore backup if it exists
-						const bakPath = task.savePath + '.bak';
-						if (fs.existsSync(bakPath)) {
+						const modsPath = getModsPath();
+						const fileName = path.basename(task.savePath);
+						const dedicatedBakPath = path.join(modsPath, 'backups', `${fileName}.bak`);
+						const legacyBakPath = task.savePath + '.bak';
+						const bakPath = fs.existsSync(dedicatedBakPath) ? dedicatedBakPath : (fs.existsSync(legacyBakPath) ? legacyBakPath : null);
+
+						if (bakPath && fs.existsSync(bakPath)) {
 							await fs.move(bakPath, task.savePath, { overwrite: true });
 							console.log(`[CANCEL] Restored backup from .bak`);
 						}
@@ -3285,15 +3295,29 @@ async function installLocalMods(filePaths) {
  * Restore a mod to its previous version (.bak)
  */
 async function restoreModVersion(filePath) {
-	const bakPath = filePath + '.bak';
-	if (!fs.existsSync(bakPath)) return { success: false, error: 'No previous version found' };
+	const modsPath = getModsPath();
+	const fileName = path.basename(filePath);
+	const backupsDir = path.join(modsPath, 'backups');
+	const dedicatedBakPath = path.join(backupsDir, `${fileName}.bak`);
+	const legacyBakPath = filePath + '.bak';
+
+	const bakPath = fs.existsSync(dedicatedBakPath) ? dedicatedBakPath : (fs.existsSync(legacyBakPath) ? legacyBakPath : null);
+
+	if (!bakPath || !fs.existsSync(bakPath)) return { success: false, error: 'No previous version found' };
 
 	try {
-		// Swap current with backup
-		const tempPath = filePath + '.tmp';
-		if (fs.existsSync(filePath)) fs.renameSync(filePath, tempPath);
-		fs.renameSync(bakPath, filePath);
-		if (fs.existsSync(tempPath)) fs.renameSync(tempPath, bakPath);
+		await fs.ensureDir(backupsDir);
+		const targetBakPath = path.join(backupsDir, `${fileName}.bak`);
+		const tempPath = path.join(backupsDir, `${fileName}.tmp`);
+
+		// Swap current mod with backup in dedicated backups folder
+		if (fs.existsSync(filePath)) {
+			await fs.move(filePath, tempPath, { overwrite: true });
+		}
+		await fs.move(bakPath, filePath, { overwrite: true });
+		if (fs.existsSync(tempPath)) {
+			await fs.move(tempPath, targetBakPath, { overwrite: true });
+		}
 		
 		return { success: true };
 	} catch (err) {
@@ -3730,10 +3754,55 @@ async function deleteFolder(folderName) {
 }
 
 /**
+ * Migrates any loose .bak / .backup files found in the mods folder or subdirectories
+ * into the dedicated 'backups' folder.
+ */
+async function migrateLegacyBakFiles() {
+	const modsPath = getModsPath();
+	if (!modsPath || !fs.existsSync(modsPath)) return;
+
+	const backupsDir = path.join(modsPath, 'backups');
+
+	const walkAndMigrate = async (dir) => {
+		try {
+			const entries = await fs.readdir(dir, { withFileTypes: true });
+			for (const entry of entries) {
+				const fullPath = path.join(dir, entry.name);
+				if (entry.isDirectory()) {
+					if (!entry.name.startsWith('.') && entry.name.toLowerCase() !== 'backups') {
+						await walkAndMigrate(fullPath);
+					}
+				} else if (entry.isFile() && (entry.name.endsWith('.bak') || entry.name.endsWith('.backup'))) {
+					try {
+						await fs.ensureDir(backupsDir);
+						const targetBakPath = path.join(backupsDir, entry.name);
+						if (fullPath !== targetBakPath) {
+							if (fs.existsSync(targetBakPath)) {
+								await fs.remove(targetBakPath);
+							}
+							await fs.move(fullPath, targetBakPath);
+							console.log(`[MIGRATION] Moved loose backup file ${entry.name} to backups folder`);
+						}
+					} catch (moveErr) {
+						console.warn(`[MIGRATION] Failed to move backup file ${entry.name}:`, moveErr.message);
+					}
+				}
+			}
+		} catch (e) {
+			console.warn('[MIGRATION] Directory read failed during backup migration:', e.message);
+		}
+	};
+
+	await walkAndMigrate(modsPath);
+}
+
+/**
  * Prune old backup files (.bak) from the mods folder and subdirectories.
  * Uses the 'backupRetention' setting from the cache.
  */
 async function pruneBackups() {
+	await migrateLegacyBakFiles().catch(e => console.warn('[MIGRATION] Migration error:', e.message));
+
 	const policy = cache.getSetting('backupRetention') || '1w';
 	if (policy === 'forever') return;
 

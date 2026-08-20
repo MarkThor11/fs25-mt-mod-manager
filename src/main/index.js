@@ -561,9 +561,14 @@ ipcMain.handle('mods:uninstall', async (_, { modFileName, folder }) => {
 
 ipcMain.handle('mods:checkBakExists', async (_, filePath) => {
   try {
-    const bakPath = filePath + '.bak';
     const fs = require('fs-extra');
-    return fs.existsSync(bakPath);
+    const path = require('path');
+    const modsPath = modManager.getModsPath ? modManager.getModsPath() : null;
+    const fileName = path.basename(filePath);
+    const dedicatedBakPath = modsPath ? path.join(modsPath, 'backups', `${fileName}.bak`) : null;
+    const legacyBakPath = filePath + '.bak';
+
+    return (dedicatedBakPath && fs.existsSync(dedicatedBakPath)) || fs.existsSync(legacyBakPath);
   } catch {
     return false;
   }
