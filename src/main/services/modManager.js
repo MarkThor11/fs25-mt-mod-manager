@@ -4543,11 +4543,18 @@ async function deleteFolder(folderName) {
 	}
 }
 
+let hasMigratedLegacyBackups = false;
+
 /**
- * Migrates any loose .bak / .backup files found in the mods folder or subdirectories
- * into the dedicated 'backups' folder.
+ * One-time migration of any legacy loose .bak / .backup files found in the mods folder
+ * or subdirectories into the dedicated 'backups' folder.
  */
 async function migrateLegacyBakFiles() {
+	if (hasMigratedLegacyBackups || cache.getSetting('legacyBackupsMigrated')) {
+		hasMigratedLegacyBackups = true;
+		return;
+	}
+
 	const modsPath = getModsPath();
 	if (!modsPath || !fs.existsSync(modsPath)) return;
 
@@ -4584,10 +4591,12 @@ async function migrateLegacyBakFiles() {
 	};
 
 	await walkAndMigrate(modsPath);
+	hasMigratedLegacyBackups = true;
+	cache.setSetting('legacyBackupsMigrated', true);
 }
 
 /**
- * Prune old backup files (.bak) from the mods folder and subdirectories.
+ * Prune old backup files (.bak) directly from the dedicated backups folder.
  * Uses the 'backupRetention' setting from the cache.
  */
 async function pruneBackups() {
@@ -4597,7 +4606,9 @@ async function pruneBackups() {
 	if (policy === 'forever') return;
 
 	const modsPath = getModsPath();
-	if (!modsPath || !fs.existsSync(modsPath)) return;
+	if (!modsPath) return;
+	const backupsDir = path.join(modsPath, 'backups');
+	if (!fs.existsSync(backupsDir)) return;
 
 	try {
 		const now = Date.now();
@@ -4609,31 +4620,20 @@ async function pruneBackups() {
 		else if (policy === '1m') msThreshold = 30 * 24 * 60 * 60 * 1000;
 
 		let prunedCount = 0;
+		const entries = await fs.readdir(backupsDir, { withFileTypes: true });
 
-		// Local recursive scanner
-		const walkAndPrune = async (dir) => {
-			const entries = await fs.readdir(dir, { withFileTypes: true });
-			for (const entry of entries) {
-				const fullPath = path.join(dir, entry.name);
-				if (entry.isDirectory()) {
-					if (!entry.name.startsWith('.')) {
-						await walkAndPrune(fullPath);
+		for (const entry of entries) {
+			if (entry.isFile() && (entry.name.endsWith('.bak') || entry.name.endsWith('.backup'))) {
+				const fullPath = path.join(backupsDir, entry.name);
+				try {
+					const stats = await fs.stat(fullPath);
+					if (msThreshold === -1 || (now - stats.mtimeMs > msThreshold)) {
+						await fs.remove(fullPath);
+						prunedCount++;
 					}
-				} else if (entry.isFile() && (entry.name.endsWith('.bak') || entry.name.endsWith('.backup'))) {
-					try {
-						const stats = await fs.stat(fullPath);
-						if (msThreshold === -1 || (now - stats.mtimeMs > msThreshold)) {
-							await fs.remove(fullPath);
-							prunedCount++;
-						}
-					} catch (statErr) {
-						// Skip files that might have been processed by another task
-					}
-				}
+				} catch (statErr) {}
 			}
-		};
-
-		await walkAndPrune(modsPath);
+		}
 		
 		if (prunedCount > 0) {
 			console.log(`[CLEANUP] Pruned ${prunedCount} old mod backups (Policy: ${policy})`);
