@@ -1307,7 +1307,7 @@ export default function ModDetailPage() {
         </div>
       </div>
 
-      {showDepModal && (
+      {showDepModal && (dependencyStatus.missingList?.length > 0) && (
         <DependencyDownloadModal
           missingMods={dependencyStatus.missingList}
           subFolder={parentFolder || (mod?.isMap || mod?.category?.toUpperCase().includes('MAP') ? mod.title.replace(/\([^)]+\)/g, '').trim() : null)}

@@ -38,6 +38,16 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
         });
     }, [missingMods]);
 
+    // Auto-close if there are no missing mods to process
+    useEffect(() => {
+        if (!missingMods || missingMods.length === 0 || uniqueMods.length === 0) {
+            const timer = setTimeout(() => {
+                onComplete?.();
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [missingMods, uniqueMods.length, onComplete]);
+
     // Keep modStatuses in sync with uniqueMods props (merge new mods as pending)
     useEffect(() => {
         setModStatuses(prev => {
