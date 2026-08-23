@@ -173,7 +173,7 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
 
     // Check terminal statuses & auto-dismiss once all unique mods complete
     useEffect(() => {
-        if (status === 'processing' && !isProcessing) {
+        if (status === 'processing' || status === 'complete') {
             const keys = uniqueMods.map(m => getModKey(m));
             const statuses = keys.map(k => (modStatuses[k]?.status || '').toLowerCase()).filter(Boolean);
 
@@ -183,18 +183,18 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
                 );
 
                 if (isAllTerminal) {
-                    setStatus('complete');
+                    if (status !== 'complete') setStatus('complete');
                     const allSuccess = statuses.every(st => st === 'success' || st === 'installed' || st === 'completed');
                     if (allSuccess) {
                         const timer = setTimeout(() => {
                             onComplete?.();
-                        }, 800);
+                        }, 1200);
                         return () => clearTimeout(timer);
                     }
                 }
             }
         }
-    }, [uniqueMods, modStatuses, status, isProcessing, onComplete]);
+    }, [uniqueMods, modStatuses, status, onComplete]);
 
     const handleManualSearch = (modName) => {
         window.api.shell.openExternal(`https://www.farming-simulator.com/mods.php?title=${encodeURIComponent(modName)}`);
@@ -258,7 +258,7 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <div style={{ fontWeight: 700, fontSize: 13 }}>{displayTitle}</div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 800 }}>
-                                            {stLower === 'pending' && <span style={{ opacity: 0.8, color: 'var(--text-tertiary)' }}>PENDING</span>}
+                                             {stLower === 'pending' && <span style={{ opacity: 0.8, color: 'var(--text-tertiary)' }}>PENDING</span>}
                                             {stLower === 'searching' && <><Loader2 size={12} className="animate-spin" /> SEARCHING</>}
                                             {(stLower === 'downloading' || stLower === 'starting') && <><Loader2 size={12} className="animate-spin text-accent" /> DOWNLOADING</>}
                                             {stLower === 'downloading' && <span className="text-accent">{mod.progress}%</span>}
@@ -326,14 +326,14 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
                             <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--accent)' }}>
                                 <Loader2 size={16} className="animate-spin" /> Processing queue...
                             </div>
-                            <button className="btn btn--primary" onClick={onComplete} style={{ padding: '0 24px' }}>
-                                Continue to Map Selection
+                            <button className="btn btn--secondary" onClick={onComplete || onCancel} style={{ padding: '0 20px' }}>
+                                Close
                             </button>
                         </div>
                     )}
                     {status === 'complete' && (
-                        <button className="btn btn--primary" onClick={onComplete} style={{ width: '100%', height: 44 }}>
-                            Continue to Map Selection
+                        <button className="btn btn--primary" onClick={onComplete || onCancel} style={{ width: '100%', height: 44 }}>
+                            Done
                         </button>
                     )}
                 </div>
