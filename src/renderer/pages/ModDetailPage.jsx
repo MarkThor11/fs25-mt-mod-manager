@@ -212,6 +212,7 @@ export default function ModDetailPage() {
         let isInstalled = false;
         
         const resolvedObj = getResolvedMetadataObj(dep, resolvedMetadata);
+        const depTitle = typeof dep === 'string' ? dep : (dep.title || dep.modName || dep.technicalName || '');
         
         let depId = (typeof dep === 'object' && dep.modId) ? String(dep.modId).replace(/^0+/, '') : (resolvedObj && resolvedObj.modId ? String(resolvedObj.modId).replace(/^0+/, '') : null);
         let fallbackFileName = null;
@@ -230,8 +231,8 @@ export default function ModDetailPage() {
         if (depId && sessionInstalled[depId]) {
             isInstalled = true;
         } else {
-            const depClean = (fallbackFileName || depTitle).toLowerCase();
-            if (Object.values(sessionInstalled).some(val => val && val.toLowerCase() === depClean)) {
+            const depClean = (fallbackFileName || depTitle || '').toLowerCase();
+            if (depClean && Object.values(sessionInstalled).some(val => val && val.toLowerCase() === depClean)) {
                 isInstalled = true;
             }
         }

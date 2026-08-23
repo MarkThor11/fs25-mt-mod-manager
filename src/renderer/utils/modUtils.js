@@ -137,11 +137,6 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
     if (targetMod && targetMod.folder && targetMod.folder.toLowerCase() !== 'mods' && targetMod.folder.toLowerCase() !== '') {
       const folderLower = targetMod.folder.toLowerCase();
       mapSubfolderMods = subfolderModsMap.get(folderLower) || [];
-      for (const m of mapSubfolderMods) {
-        if (m.modName && m.modName.toLowerCase() !== targetModName.toLowerCase()) {
-          installed.add(m.modName);
-        }
-      }
     }
   }
 
@@ -192,7 +187,7 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
       match = mapSubfolderMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, false));
     }
     
-    const isSessionInstalledByName = Object.values(sessionInstalled).some(val => val && val.toLowerCase() === nameLower);
+    const isSessionInstalledByName = Boolean(nameLower) && Object.values(sessionInstalled).some(val => val && val.toLowerCase() === nameLower);
 
     if (match) {
       if (match.modName && match.modName.toLowerCase() !== targetModName.toLowerCase()) {
@@ -201,7 +196,7 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
       if (match.dependencies) {
         match.dependencies.forEach(dep => resolve(dep));
       }
-    } else if ((depId && sessionInstalled[depId]) || isSessionInstalledByName) {
+    } else if (nameLower && ((depId && sessionInstalled[depId]) || isSessionInstalledByName)) {
       installed.add(cleanedName);
     } else {
       missing.add(cleanedName);

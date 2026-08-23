@@ -394,9 +394,10 @@ export const useDownloadStore = create((set, get) => ({
 
   addSessionInstalled: (modId, title) => {
     if (!modId) return;
+    const normTitle = title ? title.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+    if (!normTitle || /^mod\d*$/i.test(normTitle)) return;
     set(state => {
       const next = { ...state.sessionInstalled };
-      const normTitle = title ? title.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
       next[String(modId)] = normTitle;
       return { sessionInstalled: next };
     });
@@ -515,6 +516,12 @@ if (window.api?.on) {
           }, 1500);
         } else if (status === 'error' || status === 'NOT_FOUND_ON_MODHUB') {
           useDownloadStore.getState().setStatus(strKey, 'error');
+          useDownloadStore.setState(state => {
+            const next = { ...state.sessionInstalled };
+            delete next[strKey];
+            if (targetKey) delete next[String(targetKey)];
+            return { sessionInstalled: next };
+          });
           const active = useDownloadStore.getState().activeDownloads[strKey] || useDownloadStore.getState().activeDownloads[targetKey];
           const resolvedTitle = resolveDownloadTitle(strKey, displayTitle || active?.title);
           const finalTitle = (resolvedTitle && !resolvedTitle.startsWith('Mod ')) ? resolvedTitle : (displayTitle || `Mod ${strKey}`);

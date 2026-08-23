@@ -4087,8 +4087,22 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 			break;
 		}
 
-		const modName = modObj.title || modObj.name || '';
-		let modUrl = modObj.url || modObj.downloadUrl || null;
+		const modObjNorm = typeof modObj === 'string' ? { title: modObj } : (modObj || {});
+		if (typeof modObj === 'string') {
+			if (modObj.startsWith('http://') || modObj.startsWith('https://')) {
+				modObjNorm.url = modObj;
+			} else if (modObj.toLowerCase().endsWith('.zip')) {
+				modObjNorm.fileName = modObj;
+			}
+		}
+
+		const modName = (modObjNorm.title || modObjNorm.modName || modObjNorm.name || modObjNorm.technicalName || modObjNorm.fileName || '').trim();
+		let modUrl = modObjNorm.url || modObjNorm.downloadUrl || null;
+
+		if (!modName && !modUrl && !modObjNorm.modId && !modObjNorm.fileName) {
+			console.warn(`[AUTO-INSTALL] Empty mod item encountered in autoInstallDependencies. Skipping.`);
+			continue;
+		}
 
 		// Match direct link from the map's live ModHub page if URL is missing
 		if (!modUrl && scrapedMapDeps.length > 0) {
@@ -4105,10 +4119,10 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 		}
 		
 		try {
-			let modId = modObj.modId || modObj.id || null;
-			let downloadUrl = modObj.downloadUrl || modObj.url || null;
-			let targetFileName = null;
-			let modTitle = modName;
+			let modId = modObjNorm.modId || modObjNorm.id || null;
+			let downloadUrl = modObjNorm.downloadUrl || modObjNorm.url || null;
+			let targetFileName = modObjNorm.fileName ? modObjNorm.fileName.replace(/\.zip$/i, '').toLowerCase() : null;
+			let modTitle = modObjNorm.title || modName;
 
 			// 0. Resolve ID & filename from URL if possible (High reliability)
 			if (modUrl) {
