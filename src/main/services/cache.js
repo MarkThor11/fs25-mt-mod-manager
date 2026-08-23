@@ -41,6 +41,9 @@ function init() {
     
     db = openDatabase(dbPath);
     db.pragma('journal_mode = WAL');
+    db.pragma('synchronous = NORMAL');
+    db.pragma('temp_store = MEMORY');
+    db.pragma('cache_size = -32000');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS cache (

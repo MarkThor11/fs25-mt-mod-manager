@@ -290,31 +290,56 @@ ipcMain.handle('images:proxy', async (_, url) => {
   const cached = cache.getRemoteImage(url);
   if (cached) return cached;
 
-  return new Promise((resolve, reject) => {
-    const request = net.request({ url, method: 'GET' });
-    request.setHeader('Referer', 'https://www.farming-simulator.com/');
-    request.on('response', (response) => {
-      if (response.statusCode >= 400) {
-        reject(new Error(`HTTP ${response.statusCode}`));
-        return;
-      }
-      const chunks = [];
-      response.on('data', (chunk) => chunks.push(chunk));
-      response.on('error', reject);
-      response.on('end', () => {
-        const buffer = Buffer.concat(chunks);
-        const type = response.headers['content-type'] || 'image/jpeg';
-        const base64 = `data:${type};base64,${buffer.toString('base64')}`;
-        
-        // 2. Save to Cache
-        cache.setRemoteImage(url, base64);
-        
-        resolve(base64);
+  const fetchImage = (targetUrl) => {
+    return new Promise((resolve) => {
+      let timeoutId = null;
+      let settled = false;
+
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        if (timeoutId) clearTimeout(timeoutId);
+        resolve(result);
+      };
+
+      timeoutId = setTimeout(() => {
+        try { request.abort(); } catch (_) {}
+        finish(targetUrl);
+      }, 5000);
+
+      const request = net.request({ url: targetUrl, method: 'GET' });
+      request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+      request.setHeader('Referer', 'https://www.farming-simulator.com/');
+      request.setHeader('Accept', 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8');
+
+      request.on('response', (response) => {
+        if (response.statusCode >= 400) {
+          finish(targetUrl);
+          return;
+        }
+        const chunks = [];
+        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('error', () => finish(targetUrl));
+        response.on('end', () => {
+          try {
+            const buffer = Buffer.concat(chunks);
+            const type = response.headers['content-type'] || 'image/jpeg';
+            const base64 = `data:${type};base64,${buffer.toString('base64')}`;
+            
+            // 2. Save to Cache
+            cache.setRemoteImage(targetUrl, base64);
+            finish(base64);
+          } catch (_) {
+            finish(targetUrl);
+          }
+        });
       });
+      request.on('error', () => finish(targetUrl));
+      request.end();
     });
-    request.on('error', reject);
-    request.end();
-  });
+  };
+
+  return await fetchImage(url);
 });
 
 // ── Categories ──
