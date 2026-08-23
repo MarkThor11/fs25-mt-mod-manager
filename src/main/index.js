@@ -789,6 +789,68 @@ ipcMain.handle('localMods:autoInstallDependencies', async (event, { mods, subFol
   }
 });
 
+ipcMain.handle('localMods:autoResolveMapDependencies', async (event, { mapId, targetFolder, mapTitle }) => {
+  try {
+    if (!mapId) return { success: false, error: 'No mapId provided' };
+    const scraper = require('./services/scraper');
+    const { mods } = await modManager.scanLocalMods();
+    
+    // 1. Fetch live ModHub details for the map
+    const detail = await scraper.fetchModDetail(mapId);
+    if (!detail || !Array.isArray(detail.dependencies) || detail.dependencies.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    // 2. Identify uninstalled dependencies
+    const missingList = [];
+    for (const dep of detail.dependencies) {
+      let depId = dep.modId ? String(dep.modId) : null;
+      if (dep.url) {
+        const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
+        if (idMatch) depId = parseInt(idMatch[1], 10).toString();
+      }
+
+      const depTitle = dep.title || '';
+      const normDep = modManager.ultraNormalize(depTitle);
+
+      const alreadyInstalled = mods.some(m => {
+        if (depId && m.modId && String(m.modId) === String(depId)) return true;
+        const mTitle = modManager.ultraNormalize(m.title || '');
+        const mName = modManager.ultraNormalize(m.modName || '');
+        const mFile = modManager.ultraNormalize(m.fileName || '');
+        return (normDep && (mTitle === normDep || mName === normDep || mFile === normDep));
+      });
+
+      if (!alreadyInstalled) {
+        missingList.push(dep);
+      }
+    }
+
+    if (missingList.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    console.log(`[AUTO-MAP-DEPS] Auto-downloading ${missingList.length} missing dependencies for map "${mapTitle || mapId}" into folder "${targetFolder || 'Root'}"...`);
+
+    const result = await modManager.autoInstallDependencies(missingList, (progress) => {
+      try {
+        if (event.sender && !event.sender.isDestroyed()) {
+          event.sender.send('dependency:progress', {
+            ...progress,
+            isBackground: true,
+            targetFolder
+          });
+        }
+      } catch (_) {}
+    }, targetFolder, mapId);
+
+    return { success: true, count: missingList.length, result };
+  } catch (err) {
+    console.error('[AUTO-MAP-DEPS] Error in autoResolveMapDependencies:', err);
+    return { success: false, error: err.message };
+  }
+});
+
 // Dedicated handler: install Store Deliveries mod directly from known CDN URL
 ipcMain.handle('savegames:downloadStoreDeliveries', async (event) => {
   try {

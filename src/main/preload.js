@@ -63,6 +63,7 @@ contextBridge.exposeInMainWorld('api', {
     updateMod: (params) => ipcRenderer.invoke('localMods:updateMod', params),
     restoreVersion: (params) => ipcRenderer.invoke('localMods:restoreVersion', params),
     autoInstallDependencies: (params) => ipcRenderer.invoke('localMods:autoInstallDependencies', params),
+    autoResolveMapDependencies: (params) => ipcRenderer.invoke('localMods:autoResolveMapDependencies', params),
     resumePending: () => ipcRenderer.invoke('mods:resumePending'),
     getPending: () => ipcRenderer.invoke('mods:getPending'),
   },

@@ -57,13 +57,13 @@ export default function SettingsPage() {
     autoStart, conflictSensitivity, cloudBackupPath,
     homeShowHero, homeShowStats, homeShowLatest, homeShowDownloaded, homeShowUpdates,
     appFullscreen, rememberModHubPage, modUpdateMode, skipDeleteConfirm, backupRetention,
-    badgeDuration, selectiveLoading,
+    badgeDuration, selectiveLoading, autoDownloadMapDeps,
     setTheme, setModsPath, addModsPath, removeModsPath, setGamePath, setAutoCheckUpdates, setLaunchPreference,
     setSavegameSlot, setEnableCheats, setSkipModDialog, setSkipIntro, toggleHiddenFolder,
     setHasSeenGuide, setAutoStart, setConflictSensitivity, setCloudBackupPath, setBackupRetention,
     setHomeShowHero, setHomeShowStats, setHomeShowLatest, setHomeShowDownloaded, setHomeShowUpdates,
     setAppFullscreen, setRememberModHubPage, setModUpdateMode, setSkipDeleteConfirm,
-    setBadgeDuration, setSelectiveLoading,
+    setBadgeDuration, setSelectiveLoading, setAutoDownloadMapDeps,
   } = useSettingsStore();
 
   const [detectedGamePath, setDetectedGamePath] = useState('');
@@ -606,6 +606,26 @@ export default function SettingsPage() {
               <option value="warn">Warn (Default)</option>
               <option value="auto-disable">Auto-Disable Conflicting</option>
             </select>
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <div>
+            <div className="settings-row__label">Auto-Download Required Map Mods (Recommended)</div>
+            <div className="settings-row__desc">
+              Automatically queue and download missing required mods from ModHub as soon as a map completes downloading.
+            </div>
+          </div>
+          <div className="settings-row__control">
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={autoDownloadMapDeps !== false}
+                onChange={(e) => setAutoDownloadMapDeps(e.target.checked)}
+              />
+              <div className="toggle__track" />
+              <div className="toggle__thumb" />
+            </label>
           </div>
         </div>
 

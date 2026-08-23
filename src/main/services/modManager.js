@@ -5109,4 +5109,5 @@ module.exports = {
 	prepareVirtualModsFolder,
 	deduplicateSubfolderMods,
 	syncMirrorLinks,
+	ultraNormalize,
 };

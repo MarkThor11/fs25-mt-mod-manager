@@ -43,6 +43,7 @@ export const useSettingsStore = create((set) => ({
   badgeDuration: '48h',
   expandedFolders: { '': true },
   selectiveLoading: true,
+  autoDownloadMapDeps: true,
   nickname: '',
 
   setIsOnline: (isOnline) => set({ isOnline }),
@@ -117,6 +118,7 @@ export const useSettingsStore = create((set) => ({
         badgeDuration: settings.badgeDuration || '48h',
         expandedFolders: settings.expandedFolders ? JSON.parse(settings.expandedFolders) : { '': true },
         selectiveLoading: settings.selectiveLoading !== 'false',
+        autoDownloadMapDeps: settings.autoDownloadMapDeps !== 'false',
         nickname: settings.nickname || '',
         isLoaded: true,
       });
@@ -124,6 +126,11 @@ export const useSettingsStore = create((set) => ({
       console.error('Failed to load settings:', err);
       set({ isLoaded: true });
     }
+  },
+
+  setAutoDownloadMapDeps: async (autoDownloadMapDeps) => {
+    set({ autoDownloadMapDeps });
+    if (window.api?.settings) await window.api.settings.set('autoDownloadMapDeps', String(autoDownloadMapDeps));
   },
 
   setTheme: async (theme) => {
