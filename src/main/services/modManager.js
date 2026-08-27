@@ -981,6 +981,11 @@ let lastScanResult = null;
 let lastScanTime = 0;
 const SCAN_CACHE_TTL = 15000; // 15s in-memory cache TTL for unforced scans
 
+function clearScanCache() {
+	lastScanResult = null;
+	lastScanTime = 0;
+}
+
 function getLastScanResult() {
 	return lastScanResult;
 }
@@ -990,12 +995,16 @@ function getLastScanResult() {
 */
 async function scanLocalMods(manualPaths = null, force = false) {
 	const now = Date.now();
+	if (force) {
+		clearScanCache();
+	}
+
 	if (!force && !manualPaths && lastScanResult && (now - lastScanTime < SCAN_CACHE_TTL)) {
 		debugLog('[SCAN] Returning cached scan result.');
 		return lastScanResult;
 	}
 
-	if (activeScanPromise) {
+	if (activeScanPromise && !force) {
 		debugLog('[SCAN] Scan already in progress, reusing active scan promise.');
 		return activeScanPromise;
 	}
@@ -2021,8 +2030,9 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 				
 				const fileName = item.getFilename() || `${modTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.zip`;
 				const savePath = path.join(targetDirPath, fileName);
+				const tempPath = `${savePath}.download`;
 				
-				item.setSavePath(savePath);
+				item.setSavePath(tempPath);
 				item.resume();
 
 				activeInstalls.set(String(modId), { 
@@ -2030,6 +2040,7 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 					window: hiddenWin,
 					item: item,
 					savePath,
+					tempPath,
 					targetDirPath,
 				});
 
@@ -2048,38 +2059,49 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 					}
 				});
 
-				item.once('done', (event, state) => {
+				item.once('done', async (event, state) => {
 					debugLog(`[INSTALL] Window download done for ${modId}. State: ${state}`);
 					if (state === 'completed') {
-						// Verify ZIP archive integrity
-						if (savePath.toLowerCase().endsWith('.zip')) {
+						// Verify ZIP archive integrity on tempPath
+						if (fileName.toLowerCase().endsWith('.zip')) {
 							try {
-								const fd = fs.openSync(savePath, 'r');
+								const fd = fs.openSync(tempPath, 'r');
 								const headerBuf = Buffer.alloc(4);
 								fs.readSync(fd, headerBuf, 0, 4, 0);
 								fs.closeSync(fd);
 
 								if (headerBuf[0] !== 0x50 || headerBuf[1] !== 0x4B) {
-									try { fs.unlinkSync(savePath); } catch (e) {}
+									try { fs.unlinkSync(tempPath); } catch (e) {}
 									activeInstalls.delete(String(modId));
 									wrappedReject(new Error('Downloaded file is not a valid ZIP archive (server returned HTML or invalid response)'));
 									return;
 								}
 
-								const testZip = new AdmZip(savePath);
+								const testZip = new AdmZip(tempPath);
 								const entries = testZip.getEntries();
 								if (!entries || entries.length === 0) {
-									try { fs.unlinkSync(savePath); } catch (e) {}
+									try { fs.unlinkSync(tempPath); } catch (e) {}
 									activeInstalls.delete(String(modId));
 									wrappedReject(new Error('Downloaded ZIP archive contains no entries'));
 									return;
 								}
 							} catch (zipErr) {
-								try { fs.unlinkSync(savePath); } catch (e) {}
+								try { fs.unlinkSync(tempPath); } catch (e) {}
 								activeInstalls.delete(String(modId));
 								wrappedReject(new Error(`Downloaded ZIP is corrupted: ${zipErr.message}`));
 								return;
 							}
+						}
+
+						// Atomically finalize file from .download to .zip
+						try {
+							if (fs.existsSync(savePath)) {
+								await safeRemove(savePath);
+							}
+							await fs.move(tempPath, savePath, { overwrite: true });
+						} catch (mvErr) {
+							wrappedReject(new Error(`Failed to finalize download: ${mvErr.message}`));
+							return;
 						}
 
 						try {
@@ -2140,11 +2162,17 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 	let existingFileName = pending?.file_name;
 	
 	if (pending && existingFileName) {
-		const partPath = path.join(modsPath, existingFileName);
+		const partPath = path.join(modsPath, `${existingFileName}.download`);
+		const legacyPartPath = path.join(modsPath, existingFileName);
 		if (fs.existsSync(partPath)) {
 			const stats = fs.statSync(partPath);
 			startByte = stats.size;
-			debugLog(`[HTTPS-DL] [RESUME] Found partial file: ${existingFileName} (${(startByte/1024/1024).toFixed(2)}MB)`);
+			debugLog(`[HTTPS-DL] [RESUME] Found partial file: ${existingFileName}.download (${(startByte/1024/1024).toFixed(2)}MB)`);
+		} else if (fs.existsSync(legacyPartPath)) {
+			const stats = fs.statSync(legacyPartPath);
+			startByte = stats.size;
+			try { fs.renameSync(legacyPartPath, partPath); } catch (e) {}
+			debugLog(`[HTTPS-DL] [RESUME] Migrated legacy partial file: ${existingFileName} (${(startByte/1024/1024).toFixed(2)}MB)`);
 		}
 	}
 
@@ -2219,6 +2247,10 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 			if (response.statusCode === 416) {
 				debugLog(`[HTTPS-DL] [RESUME] Server returned 416. Assuming file is complete.`);
 				const savePath = path.join(modsPath, existingFileName);
+				const tempPath = `${savePath}.download`;
+				if (fs.existsSync(tempPath)) {
+					try { fs.moveSync(tempPath, savePath, { overwrite: true }); } catch (e) {}
+				}
 				resolve({ success: true, fileName: existingFileName, filePath: savePath, size: startByte });
 				return;
 			}
@@ -2259,10 +2291,11 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 			}
 
 			const savePath = path.join(modsPath, fileName);
+			const tempPath = `${savePath}.download`;
 			const contentLength = parseInt(response.headers['content-length'] || '0', 10);
 			const totalBytes = isPartial ? contentLength + startByte : contentLength;
 			
-			debugLog(`[HTTPS-DL] Starting write to: ${savePath} (Mode: ${isPartial ? 'APPEND' : 'OVERWRITE'}, Size: ${(totalBytes/1024/1024).toFixed(2)}MB)`);
+			debugLog(`[HTTPS-DL] Starting write to: ${tempPath} (Mode: ${isPartial ? 'APPEND' : 'OVERWRITE'}, Size: ${(totalBytes/1024/1024).toFixed(2)}MB)`);
 
 			// Back up existing file ONLY IF NOT RESUMING
 			if (!isPartial && fs.existsSync(savePath)) {
@@ -2272,7 +2305,7 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 				fs.renameSync(savePath, bakPath);
 			}
 
-			const fileStream = fs.createWriteStream(savePath, { 
+			const fileStream = fs.createWriteStream(tempPath, { 
 				flags: isPartial ? 'a' : 'w',
 				highWaterMark: 2 * 1024 * 1024 // 2MB buffer to prevent constant stream pausing on fast connections
 			});
@@ -2295,7 +2328,7 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 				});
 			}
 
-			activeInstalls.set(String(modId), { type: 'https', request, fileStream, targetDirPath: modsPath, techData });
+			activeInstalls.set(String(modId), { type: 'https', request, fileStream, tempPath, savePath, targetDirPath: modsPath, techData });
 
 			let dlStallTimer = setInterval(() => {
 				const now = Date.now();
@@ -2341,13 +2374,12 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 				reject(err);
 			});
 
-			fileStream.on('finish', () => {
+			fileStream.on('finish', async () => {
 				clearInterval(dlStallTimer);
 
 				// 1. Verify byte count completeness
 				if (totalBytes > 0 && receivedBytes < totalBytes) {
 					debugLog(`[HTTPS-DL] Incomplete download for ${fileName}: received ${receivedBytes}/${totalBytes} bytes`);
-					try { fs.unlinkSync(savePath); } catch (e) {}
 					activeInstalls.delete(String(modId));
 					broadcastStatus?.(modId, 'error');
 					reject(new Error(`Download incomplete (${(receivedBytes/1024/1024).toFixed(1)}MB / ${(totalBytes/1024/1024).toFixed(1)}MB received)`));
@@ -2355,9 +2387,9 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 				}
 
 				// 2. Verify file header magic bytes if .zip
-				if (savePath.toLowerCase().endsWith('.zip')) {
+				if (fileName.toLowerCase().endsWith('.zip')) {
 					try {
-						const fd = fs.openSync(savePath, 'r');
+						const fd = fs.openSync(tempPath, 'r');
 						const headerBuf = Buffer.alloc(4);
 						fs.readSync(fd, headerBuf, 0, 4, 0);
 						fs.closeSync(fd);
@@ -2365,7 +2397,7 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 						// ZIP signature is PK (0x50 0x4B)
 						if (headerBuf[0] !== 0x50 || headerBuf[1] !== 0x4B) {
 							debugLog(`[HTTPS-DL] Invalid ZIP header for ${fileName}: magic bytes = ${headerBuf.toString('hex')}`);
-							try { fs.unlinkSync(savePath); } catch (e) {}
+							try { fs.unlinkSync(tempPath); } catch (e) {}
 							activeInstalls.delete(String(modId));
 							broadcastStatus?.(modId, 'error');
 							reject(new Error('Downloaded file is not a valid ZIP archive (server returned HTML or invalid response)'));
@@ -2373,11 +2405,11 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 						}
 
 						// 3. Verify ZIP CEN structure with AdmZip
-						const testZip = new AdmZip(savePath);
+						const testZip = new AdmZip(tempPath);
 						const entries = testZip.getEntries();
 						if (!entries || entries.length === 0) {
 							debugLog(`[HTTPS-DL] Empty ZIP archive for ${fileName}`);
-							try { fs.unlinkSync(savePath); } catch (e) {}
+							try { fs.unlinkSync(tempPath); } catch (e) {}
 							activeInstalls.delete(String(modId));
 							broadcastStatus?.(modId, 'error');
 							reject(new Error('Downloaded ZIP archive contains no entries'));
@@ -2385,12 +2417,23 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 						}
 					} catch (zipErr) {
 						debugLog(`[HTTPS-DL] ZIP verification error for ${fileName}: ${zipErr.message}`);
-						try { fs.unlinkSync(savePath); } catch (e) {}
 						activeInstalls.delete(String(modId));
 						broadcastStatus?.(modId, 'error');
 						reject(new Error(`Downloaded ZIP is corrupted: ${zipErr.message}`));
 						return;
 					}
+				}
+
+				// Atomically finalize file from .download to .zip
+				try {
+					if (fs.existsSync(savePath)) {
+						await safeRemove(savePath);
+					}
+					await fs.move(tempPath, savePath, { overwrite: true });
+				} catch (mvErr) {
+					debugLog(`[HTTPS-DL] Failed to finalize file ${fileName}: ${mvErr.message}`);
+					reject(new Error(`Failed to finalize download: ${mvErr.message}`));
+					return;
 				}
 
 				debugLog(`[HTTPS-DL] Success & Verified: ${fileName}`);
@@ -2443,20 +2486,35 @@ async function uninstallMod(modFileName, folder = null) {
 		console.log(`[UNINSTALL] Waiting for active scan to complete before deleting "${modFileName}"...`);
 		await activeScanPromise.catch(() => {});
 	}
-	const modsPath = getModsPath();
-	
-	// If modFileName is a relative path (e.g. "Maps/Mod.zip"), and folder is also "Maps",
-	// we need to avoid doubling up. 
-	let fullPath;
-	if (modFileName.includes('/') || modFileName.includes('\\')) {
-		// It's already relative, just join with root
-		fullPath = path.join(modsPath, modFileName);
-	} else {
-		fullPath = folder ? path.join(modsPath, folder, modFileName) : path.join(modsPath, modFileName);
+
+	const allPaths = getModsPaths();
+	const baseName = path.basename(modFileName);
+	let fullPath = null;
+
+	// 1. Check if modFileName is an absolute path or matches directly across all configured mod roots
+	for (const p of allPaths) {
+		const candidate1 = path.join(p, modFileName);
+		const candidate2 = folder ? path.join(p, folder, baseName) : candidate1;
+		if (fs.existsSync(candidate2)) {
+			fullPath = candidate2;
+			break;
+		}
+		if (fs.existsSync(candidate1)) {
+			fullPath = candidate1;
+			break;
+		}
 	}
-	
-	if (!fs.existsSync(fullPath)) {
-		return { success: false, error: 'File not found' };
+
+	if (!fullPath) {
+		fullPath = await findModPath(baseName);
+	}
+
+	if (!fullPath || !fs.existsSync(fullPath)) {
+		// Clean up DB cache even if file was already removed from disk
+		cache.removeModTrackingByFile(baseName);
+		if (folder) cache.removeModTrackingByFile(`${folder}/${baseName}`);
+		clearScanCache();
+		return { success: true, fileName: modFileName, note: 'File was already removed from disk' };
 	}
 
 	// 1. Check if game is running (Windows lock protection)
@@ -2467,11 +2525,12 @@ async function uninstallMod(modFileName, folder = null) {
 	try {
 		await safeRemove(fullPath);
 		
-		// 2. CLEANUP DB TRACKING (Prevent phantom 'already installed' states)
-		const fileName = path.basename(fullPath);
-		cache.removeModTrackingByFile(fileName);
+		// 2. CLEANUP DB TRACKING & CACHE
+		cache.removeModTrackingByFile(baseName);
+		if (folder) cache.removeModTrackingByFile(`${folder}/${baseName}`);
 		cache.removeLocalModCache(fullPath);
 		
+		clearScanCache();
 		return { success: true, fileName: modFileName };
 	} catch (err) {
 		console.error(`[UNINSTALL] Failed to delete ${modFileName}:`, err.message);
@@ -3116,55 +3175,87 @@ async function moveModsToFolder(fileNames, destinationFolder, targetRootPath = n
 	const errors = [];
 	const cacheUpdates = []; // { oldLoc, newLoc, oldRel, newRel }
 
-	if (total === 0) return { success: true, completed: 0, total: 0, errors: [] };
+	if (total === 0) return { success: false, completed: 0, total: 0, error: 'No files to move' };
 
-	// Process in chunks to handle concurrency without overloading disk I/O
-	const CHUNK_SIZE = 5;
-	for (let i = 0; i < total; i += CHUNK_SIZE) {
-		const chunk = fileNames.slice(i, i + CHUNK_SIZE);
-		
-		await Promise.all(chunk.map(async (fileName) => {
-			const lowerName = fileName.toLowerCase();
-			const currentLoc = locationIndex.get(lowerName);
-			
-			if (currentLoc) {
-				const baseName = path.basename(fileName);
-				const destPath = path.join(destDir, baseName);
-				
-				// Skip if already there (normalized)
-				if (currentLoc.toLowerCase() === destPath.toLowerCase()) {
-					completed++;
-					return;
-				}
+	// Initial broadcast
+	if (broadcastStatus) {
+		broadcastStatus('move:progress', {
+			current: 0,
+			total: total,
+			percent: 0,
+			status: 'starting'
+		});
+	}
 
-				// Calculate relative paths for tracking
-				const oldRelative = path.relative(modsPath, currentLoc).replace(/\\/g, '/');
-				const newRelative = destinationFolder === '' ? baseName : `${destinationFolder}/${baseName}`;
-				
+	for (let i = 0; i < total; i++) {
+		const fileName = fileNames[i];
+		const lowerName = fileName.toLowerCase();
+		const currentLoc = locationIndex.get(lowerName);
+
+		const fileIndex = i + 1;
+
+		// Broadcast progress when file starts moving
+		if (broadcastStatus) {
+			broadcastStatus('move:progress', {
+				current: i,
+				total: total,
+				fileIndex: fileIndex,
+				percent: Math.round((i / total) * 85),
+				currentFile: fileName,
+				status: 'copying',
+				label: `Transferring file ${fileIndex} of ${total}: "${fileName}"`
+			});
+		}
+
+		if (currentLoc) {
+			const baseName = path.basename(fileName);
+			const destPath = path.join(destDir, baseName);
+
+			// Skip if already at destination
+			if (currentLoc.toLowerCase() === destPath.toLowerCase()) {
+				completed++;
+			} else {
 				try {
-					// Move the file using safeMove with retries
+					await fs.ensureDir(path.dirname(destPath));
 					await safeMove(currentLoc, destPath, { overwrite: true });
-					
-					// Queue database update
+
+					const oldRelative = path.relative(modsPath, currentLoc).replace(/\\/g, '/');
+					const newRelative = destinationFolder === '' ? baseName : `${destinationFolder}/${baseName}`;
 					cacheUpdates.push({ currentLoc, destPath, oldRelative, newRelative });
 					completed++;
 				} catch (e) {
 					console.error(`[MOVE] Failed to move ${fileName}:`, e.message);
 					errors.push({ file: fileName, error: e.message });
 				}
-			} else {
-				errors.push({ file: fileName, error: 'Not found on disk (Verify file still exists)' });
 			}
-		}));
+		} else {
+			errors.push({ file: fileName, error: 'File not found on disk' });
+		}
 
-		// Progress broadcast after each chunk
+		// Broadcast progress after file completes
 		if (broadcastStatus) {
 			broadcastStatus('move:progress', {
-				current: Math.min(completed, total),
+				current: completed,
 				total: total,
-				percent: Math.round((completed / total) * 100)
+				fileIndex: fileIndex,
+				percent: Math.round((completed / total) * 85),
+				currentFile: fileName,
+				status: 'done',
+				label: `Copied file ${fileIndex} of ${total}: "${fileName}"`
 			});
 		}
+	}
+
+	// Broadcast finalizing status before database and mirror operations
+	if (broadcastStatus) {
+		broadcastStatus('move:progress', {
+			current: completed,
+			total: total,
+			percent: 92,
+			currentFile: null,
+			status: 'finalizing',
+			label: 'Finalizing database and re-indexing mods...'
+		});
 	}
 
 	// Apply batched cache updates
@@ -3176,7 +3267,7 @@ async function moveModsToFolder(fileNames, destinationFolder, targetRootPath = n
 	}
 
 	const finalResult = { 
-		success: errors.length < total, 
+		success: completed > 0 && errors.length === 0, 
 		completed, 
 		total, 
 		errors,
@@ -3185,8 +3276,22 @@ async function moveModsToFolder(fileNames, destinationFolder, targetRootPath = n
 
 	debugLog(`[MOVE] Finished. Completed: ${completed}, Errors: ${errors.length}, Total: ${total}`);
 
+	// Invalidate scan cache so subsequent scanLocalMods reflects new physical locations
+	clearScanCache();
+
 	// TRIGGER MIRROR SYNC (Async)
 	syncMirrorLinks(modsPath).catch(err => console.error('[MIRROR] Auto-sync failed:', err));
+
+	if (broadcastStatus) {
+		broadcastStatus('move:progress', {
+			current: completed,
+			total: total,
+			percent: 100,
+			currentFile: null,
+			status: 'complete',
+			label: 'Migration complete!'
+		});
+	}
 
 	return finalResult;
 }
@@ -3194,7 +3299,7 @@ async function moveModsToFolder(fileNames, destinationFolder, targetRootPath = n
 /**
  * Move all mods from a folder/subfolder to a specific target root/drive.
  */
-async function moveFolderToDrive(sourceFolderName, targetRootPath, targetFolderName = null) {
+async function moveFolderToDrive(sourceFolderName, targetRootPath, targetFolderName = null, explicitFileNames = null) {
 	if (sourceFolderName === undefined || sourceFolderName === null) {
 		return { success: false, error: 'Source folder name is required' };
 	}
@@ -3210,27 +3315,46 @@ async function moveFolderToDrive(sourceFolderName, targetRootPath, targetFolderN
 		return { success: false, error: 'Cannot move mods: Farming Simulator 25 is currently running. Please close the game first.' };
 	}
 
-	// Scan all configured mod paths for files belonging to this subfolder
-	const filesToMove = [];
-	for (const p of allPaths) {
-		const folderDir = sourceFolderName === '' ? p : path.join(p, sourceFolderName);
-		if (await fs.pathExists(folderDir)) {
-			try {
-				const entries = await fs.readdir(folderDir, { withFileTypes: true });
-				for (const entry of entries) {
-					if (entry.isFile() && entry.name.toLowerCase().endsWith('.zip')) {
-						filesToMove.push(entry.name);
-					} else if (entry.isDirectory() && await fs.pathExists(path.join(folderDir, entry.name, 'modDesc.xml'))) {
-						filesToMove.push(entry.name);
+	let uniqueFiles = [];
+	if (Array.isArray(explicitFileNames) && explicitFileNames.length > 0) {
+		uniqueFiles = [...new Set(explicitFileNames)];
+	} else {
+		// Scan all configured mod paths for files belonging to this subfolder
+		const filesToMove = [];
+		for (const p of allPaths) {
+			const folderDir = sourceFolderName === '' ? p : path.join(p, sourceFolderName);
+			if (await fs.pathExists(folderDir)) {
+				try {
+					const entries = await fs.readdir(folderDir, { withFileTypes: true });
+					for (const entry of entries) {
+						if (entry.isFile() && entry.name.toLowerCase().endsWith('.zip')) {
+							filesToMove.push(entry.name);
+						} else if (entry.isDirectory() && await fs.pathExists(path.join(folderDir, entry.name, 'modDesc.xml'))) {
+							filesToMove.push(entry.name);
+						}
 					}
-				}
-			} catch (e) {}
+				} catch (e) {}
+			}
 		}
+
+		// Also check cache for mods with this folder name or map title
+		const cachedMods = cache.getAllLocalModCache();
+		if (Array.isArray(cachedMods)) {
+			for (const mod of cachedMods) {
+				const base = path.basename(mod.file_path);
+				const modFolder = mod.folder || '';
+				const modTitle = (mod.title || '').replace(/\([^)]+\)/g, '').trim();
+				if (modFolder === sourceFolderName || (mod.is_map && modTitle === sourceFolderName)) {
+					filesToMove.push(base);
+				}
+			}
+		}
+
+		uniqueFiles = [...new Set(filesToMove)];
 	}
 
-	const uniqueFiles = [...new Set(filesToMove)];
 	if (uniqueFiles.length === 0) {
-		return { success: true, completed: 0, total: 0, message: 'No files found in folder' };
+		return { success: false, completed: 0, total: 0, error: `No physical mod files found for "${sourceFolderName || 'MAIN'}" to move.` };
 	}
 
 	const result = await moveModsToFolder(uniqueFiles, destFolderName, destRoot);
@@ -4576,49 +4700,68 @@ async function deleteFolder(folderName) {
 	}
 	
 	const allPaths = getModsPaths();
-	let folderPath = null;
+	const folderPaths = [];
 	
 	// Search in all mod locations for the folder
 	for (const p of allPaths) {
 		const target = path.join(p, folderName);
 		if (fs.existsSync(target)) {
-			folderPath = target;
-			break;
+			folderPaths.push(target);
 		}
 	}
 	
-	if (!folderPath) {
-		debugLog(`[DELETE] Folder "${folderName}" not found in any of: ${allPaths.join(', ')}`);
-		throw new Error('Folder not found in any mod location');
-	}
-
 	// 1. Check if game is running (Windows lock protection)
 	if (await gameLauncher.isGameRunning()) {
 		throw new Error('Cannot delete: Farming Simulator 25 is currently running. Please close the game first.');
 	}
-	
-	debugLog(`[DELETE] Permanently removing folder: ${folderPath}`);
-	
-	try {
-		// 1.5 FIND ALL MODS IN FOLDER FOR TRACKING CLEANUP
-		const files = await fs.promises.readdir(folderPath).catch(() => []);
-		for (const file of files) {
-			if (file.toLowerCase().endsWith('.zip')) {
-				const trackerName = `${folderName}/${file}`;
-				cache.removeModTrackingByFile(trackerName);
-				cache.removeModTrackingByFile(file); 
-				const fullFilePath = path.join(folderPath, file);
-				cache.removeLocalModCache(fullFilePath);
+
+	let deletedAny = false;
+
+	if (folderPaths.length > 0) {
+		for (const folderPath of folderPaths) {
+			debugLog(`[DELETE] Permanently removing folder: ${folderPath}`);
+			try {
+				const files = await fs.promises.readdir(folderPath).catch(() => []);
+				for (const file of files) {
+					if (file.toLowerCase().endsWith('.zip')) {
+						const trackerName = `${folderName}/${file}`;
+						cache.removeModTrackingByFile(trackerName);
+						cache.removeModTrackingByFile(file); 
+						const fullFilePath = path.join(folderPath, file);
+						cache.removeLocalModCache(fullFilePath);
+					}
+				}
+				await safeRemove(folderPath);
+				deletedAny = true;
+			} catch (err) {
+				console.error(`[DELETE-FOLDER] Failed to delete ${folderPath}:`, err.message);
 			}
 		}
-
-		await safeRemove(folderPath);
-		debugLog(`[DELETE] Success: "${folderName}" deleted.`);
-		return { success: true };
-	} catch (err) {
-		console.error(`[DELETE-FOLDER] Failed to delete ${folderName}:`, err.message);
-		throw new Error(`Failed to delete folder: ${err.message}`);
 	}
+
+	// Also check if any standalone mods in cache belong to this folder or map title
+	const cachedMods = cache.getAllLocalModCache();
+	if (Array.isArray(cachedMods)) {
+		for (const mod of cachedMods) {
+			const base = path.basename(mod.file_path);
+			const modFolder = mod.folder || '';
+			const modTitle = (mod.title || '').replace(/\([^)]+\)/g, '').trim();
+			if (modFolder === folderName || (mod.is_map && modTitle === folderName)) {
+				try {
+					if (fs.existsSync(mod.file_path)) {
+						await safeRemove(mod.file_path);
+						deletedAny = true;
+					}
+					cache.removeLocalModCache(mod.file_path);
+					cache.removeModTrackingByFile(base);
+				} catch (e) {}
+			}
+		}
+	}
+
+	clearScanCache();
+	debugLog(`[DELETE] Finished deleting folder "${folderName}". Deleted: ${deletedAny}`);
+	return { success: true };
 }
 
 let hasMigratedLegacyBackups = false;

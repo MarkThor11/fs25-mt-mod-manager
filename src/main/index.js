@@ -705,9 +705,9 @@ ipcMain.handle('mods:moveModsToFolder', async (_, args) => {
 });
 
 ipcMain.handle('mods:moveFolderToDrive', async (_, args) => {
-  const { sourceFolderName, targetRootPath, targetFolderName } = args || {};
-  console.log(`[IPC] mods:moveFolderToDrive: Moving folder "${sourceFolderName}" to target root "${targetRootPath}" as "${targetFolderName || sourceFolderName}"`);
-  return await modManager.moveFolderToDrive(sourceFolderName, targetRootPath, targetFolderName);
+  const { sourceFolderName, targetRootPath, targetFolderName, fileNames } = args || {};
+  console.log(`[IPC] mods:moveFolderToDrive: Moving folder "${sourceFolderName}" to target root "${targetRootPath}" as "${targetFolderName || sourceFolderName}" (${Array.isArray(fileNames) ? fileNames.length : 0} explicit files)`);
+  return await modManager.moveFolderToDrive(sourceFolderName, targetRootPath, targetFolderName, fileNames);
 });
 
 ipcMain.handle('mods:detectPath', async () => {

@@ -979,6 +979,13 @@ export default function InstalledModsPage() {
     const unsubMove = window.api.on.moveProgress((data) => {
         useToastStore.getState().info(`Moving mods: ${data.percent}% (${data.current}/${data.total})`, { id: 'move-progress' });
         setMigrationProgress(prev => ({ ...(prev || {}), ...data, active: true }));
+
+        if (data.status === 'complete' || data.percent === 100) {
+            setTimeout(() => {
+                setMigrationProgress(null);
+                setDriveMoveModal(null);
+            }, 800);
+        }
     });
 
     return () => {
@@ -1482,15 +1489,28 @@ export default function InstalledModsPage() {
       useToastStore.getState().warning("Please select a destination drive.");
       return;
     }
-    setMigrationProgress({ percent: 0, current: 0, total: 1, active: true, label: `Migrating "${folderName || 'MAIN'}"...` });
+
+    const folderMods = folders[folderName]?.mods || [];
+    const physicalFiles = folderMods.filter(m => !m.isVirtual).map(m => m.fileName);
+
+    if (physicalFiles.length === 0) {
+      useToastStore.getState().warning(`No physical mod files found in "${folderName || 'MAIN'}" to move.`);
+      setDriveMoveModal(null);
+      return;
+    }
+
+    setMigrationProgress({ percent: 0, current: 0, total: physicalFiles.length, active: true, label: `Migrating ${physicalFiles.length} files from "${folderName || 'MAIN'}"...` });
     useToastStore.getState().info(`Moving folder "${folderName || 'MAIN'}" to target drive...`, { id: 'move-folder' });
     try {
-      const result = await moveFolderToDrive(folderName, targetRootPath, targetFolderName || folderName);
-      if (result.success) {
+      const result = await moveFolderToDrive(folderName, targetRootPath, targetFolderName || folderName, physicalFiles);
+      if (result.success && result.completed > 0) {
         const driveLetter = getDriveLetter(targetRootPath);
-        useToastStore.getState().success(`Moved folder "${folderName || 'MAIN'}" to Drive ${driveLetter || targetRootPath}!`, { id: 'move-folder', duration: 3000 });
+        setMigrationProgress(prev => ({ ...(prev || {}), percent: 100, current: physicalFiles.length, fileIndex: physicalFiles.length, status: 'complete', label: 'Migration complete!' }));
+        useToastStore.getState().success(`Moved ${result.completed} mods from "${folderName || 'MAIN'}" to Drive ${driveLetter || targetRootPath}!`, { id: 'move-folder', duration: 3000 });
+        await new Promise(r => setTimeout(r, 600));
       } else {
-        useToastStore.getState().error(`Failed to move folder: ${result.error}`, { id: 'move-folder' });
+        const errMsg = result.errors?.[0]?.error || result.error || 'No files were moved.';
+        useToastStore.getState().error(`Failed to move folder: ${errMsg}`, { id: 'move-folder' });
       }
     } finally {
       setMigrationProgress(null);
@@ -1500,16 +1520,34 @@ export default function InstalledModsPage() {
 
   const handleBulkMoveFoldersToDrive = async (foldersToMove, targetRootPath) => {
     if (!foldersToMove || foldersToMove.length === 0 || !targetRootPath) return;
-    setMigrationProgress({ percent: 0, current: 0, total: foldersToMove.length, active: true, label: `Migrating ${foldersToMove.length} folders...` });
+
+    const folderMap = {};
+    let totalFiles = 0;
+    for (const f of foldersToMove) {
+      const fMods = (folders[f]?.mods || []).filter(m => !m.isVirtual).map(m => m.fileName);
+      folderMap[f] = fMods;
+      totalFiles += fMods.length;
+    }
+
+    if (totalFiles === 0) {
+      useToastStore.getState().warning("No physical mod files found in selected folders to move.");
+      setDriveMoveModal(null);
+      return;
+    }
+
+    setMigrationProgress({ percent: 0, current: 0, total: totalFiles, active: true, label: `Migrating ${foldersToMove.length} folders (${totalFiles} files)...` });
     useToastStore.getState().info(`Moving ${foldersToMove.length} folders to target drive...`, { id: 'bulk-folder-move' });
     try {
-      const result = await bulkMoveFoldersToDrive(foldersToMove, targetRootPath);
+      const result = await bulkMoveFoldersToDrive(foldersToMove, targetRootPath, folderMap);
       setSelectedFolders([]);
-      if (result.success) {
+      if (result.success && result.completed > 0) {
         const driveLetter = getDriveLetter(targetRootPath);
-        useToastStore.getState().success(`Successfully moved ${foldersToMove.length} folders to Drive ${driveLetter || targetRootPath}!`, { id: 'bulk-folder-move', duration: 3000 });
+        setMigrationProgress(prev => ({ ...(prev || {}), percent: 100, current: totalFiles, fileIndex: totalFiles, status: 'complete', label: 'Migration complete!' }));
+        useToastStore.getState().success(`Successfully moved ${result.completed} files across ${foldersToMove.length} folders to Drive ${driveLetter || targetRootPath}!`, { id: 'bulk-folder-move', duration: 3000 });
+        await new Promise(r => setTimeout(r, 600));
       } else {
-        useToastStore.getState().error(`Bulk folder move failed: ${result.errors?.[0]?.error || result.error || 'Unknown error'}`, { id: 'bulk-folder-move' });
+        const errMsg = result.errors?.[0]?.error || result.error || 'Bulk folder move failed.';
+        useToastStore.getState().error(`Bulk folder move failed: ${errMsg}`, { id: 'bulk-folder-move' });
       }
     } finally {
       setMigrationProgress(null);
@@ -2775,32 +2813,45 @@ export default function InstalledModsPage() {
           >
             {migrationProgress?.active ? (
               <div style={{ padding: '20px 0', textAlign: 'center' }}>
-                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: 'var(--accent)' }}>
-                  <Loader2 className="animate-spin" size={32} />
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: migrationProgress.percent === 100 ? 'rgba(74, 222, 128, 0.15)' : 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: migrationProgress.percent === 100 ? '#4ade80' : 'var(--accent)' }}>
+                  {migrationProgress.percent === 100 ? (
+                    <CheckCircle size={32} />
+                  ) : (
+                    <Loader2 className="animate-spin" size={32} />
+                  )}
                 </div>
                 <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, marginBottom: 6 }}>
-                  Migrating Files in Progress...
+                  {migrationProgress.percent === 100 
+                    ? 'Migration Complete!' 
+                    : (migrationProgress.status === 'finalizing' ? 'Finalizing Migration...' : 'Migrating Files in Progress...')}
                 </h3>
-                <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-secondary)', marginBottom: 20 }}>
+                <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-secondary)', marginBottom: 8 }}>
                   {migrationProgress.label || 'Transferring mods between storage drives. Please wait...'}
                 </p>
+                {migrationProgress.currentFile && migrationProgress.status === 'copying' && (
+                  <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent)', fontWeight: 700, marginBottom: 18, wordBreak: 'break-all' }}>
+                    Copying: {migrationProgress.currentFile}
+                  </p>
+                )}
 
                 {/* Progress Bar */}
-                <div style={{ width: '100%', height: 12, background: 'var(--bg-tertiary)', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)', marginBottom: 12 }}>
+                <div style={{ width: '100%', height: 12, background: 'var(--bg-tertiary)', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)', marginBottom: 12, position: 'relative' }}>
                   <div 
                     style={{ 
                       width: `${Math.max(migrationProgress.percent || 0, 5)}%`, 
                       height: '100%', 
-                      background: 'linear-gradient(90deg, var(--accent), #10b981)', 
+                      background: migrationProgress.percent === 100 
+                        ? 'linear-gradient(90deg, #10b981, #4ade80)' 
+                        : 'linear-gradient(90deg, var(--accent), #10b981)', 
                       borderRadius: 6,
-                      transition: 'width 0.25s ease-in-out'
+                      transition: 'width 0.3s ease-in-out'
                     }} 
                   />
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--fs-xs)', fontWeight: 800, color: 'var(--text-secondary)' }}>
                   <span>{migrationProgress.percent || 0}% COMPLETE</span>
-                  <span>{migrationProgress.current || 0} / {migrationProgress.total || 0} FILES</span>
+                  <span>{migrationProgress.fileIndex || migrationProgress.current || 0} / {migrationProgress.total || 0} FILES</span>
                 </div>
               </div>
             ) : (

@@ -83,8 +83,8 @@ export const useLocalModsStore = create((set, get) => ({
     const now = Date.now();
     const { isScanning, lastScanTime, mods: currentMods } = get();
 
-    // Prevent duplicate parallel scans if already scanning
-    if (isScanning) return;
+    // Prevent duplicate parallel scans if already scanning (unless forced)
+    if (isScanning && !force) return;
 
     // Cooldown check for unforced scans when we already have scanned mods
     if (!force && currentMods.length > 0 && lastScanTime > 0 && (now - lastScanTime < 300000)) return;
@@ -429,8 +429,8 @@ export const useLocalModsStore = create((set, get) => ({
       const result = await window.api.mods.moveModsToFolder({ fileNames, destinationFolder, targetRootPath });
       
       if (result.success) {
-        // Re-scan mods to ensure file paths and drive groupings update accurately
-        await get().scanMods(null, true);
+        // Re-scan mods in the background so file paths and drive groupings update seamlessly
+        get().scanMods(null, true).catch(console.error);
       }
       
       return result;
@@ -442,14 +442,14 @@ export const useLocalModsStore = create((set, get) => ({
     }
   },
 
-  moveFolderToDrive: async (sourceFolderName, targetRootPath, targetFolderName = null) => {
+  moveFolderToDrive: async (sourceFolderName, targetRootPath, targetFolderName = null, fileNames = null) => {
     set({ isLoading: true });
     try {
       if (!window.api?.mods?.moveFolderToDrive) return { success: false, error: 'Bridge not available' };
-      const result = await window.api.mods.moveFolderToDrive({ sourceFolderName, targetRootPath, targetFolderName });
+      const result = await window.api.mods.moveFolderToDrive({ sourceFolderName, targetRootPath, targetFolderName, fileNames });
       
-      if (result.success) {
-        await get().scanMods(null, true);
+      if (result.success && (result.completed > 0 || (Array.isArray(fileNames) && fileNames.length === 0))) {
+        get().scanMods(null, true).catch(console.error);
       }
       
       return result;
@@ -461,22 +461,25 @@ export const useLocalModsStore = create((set, get) => ({
     }
   },
 
-  bulkMoveFoldersToDrive: async (folderNames, targetRootPath) => {
+  bulkMoveFoldersToDrive: async (folderNames, targetRootPath, folderMap = null) => {
     if (!Array.isArray(folderNames) || folderNames.length === 0) return { success: true, completed: 0 };
     set({ isLoading: true });
     try {
       let totalMoved = 0;
       const errors = [];
       for (const folderName of folderNames) {
-        const res = await window.api.mods.moveFolderToDrive({ sourceFolderName: folderName, targetRootPath });
-        if (res.success) {
+        const fileNames = folderMap ? folderMap[folderName] : null;
+        const res = await window.api.mods.moveFolderToDrive({ sourceFolderName: folderName, targetRootPath, fileNames });
+        if (res.success && res.completed > 0) {
           totalMoved += (res.completed || 0);
-        } else {
+        } else if (!res.success) {
           errors.push({ folder: folderName, error: res.error });
         }
       }
-      await get().scanMods(null, true);
-      return { success: errors.length === 0, completed: totalMoved, errors };
+      if (totalMoved > 0) {
+        get().scanMods(null, true).catch(console.error);
+      }
+      return { success: errors.length === 0 && totalMoved > 0, completed: totalMoved, errors };
     } catch (err) {
       console.error('[STORE] Bulk move folders error:', err);
       return { success: false, error: err.message };
