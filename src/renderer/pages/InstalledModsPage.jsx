@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useMemo, useDeferredValue } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
-  RefreshCw, Download, Trash2, FolderOpen, Package, Lock,
+  RefreshCw, Download, Trash2, FolderOpen, Package, Lock, Loader2, Info,
   CheckCircle, Check, AlertTriangle, HardDrive, Search, List, LayoutGrid, ChevronDown, ChevronRight, ChevronsUp, ChevronsDown,
   Tag, Plus, X, Settings2, Folder, FolderPlus, FolderOutput, Eye, EyeOff, MoreVertical, Zap, Layers, RefreshCcw,
-  Heart, Star, Share2, Pencil, GripVertical, User, Pin
+  Heart, Star, Share2, Pencil, GripVertical, User, Pin, ArrowRightLeft, Move
 } from 'lucide-react';
 import { useLocalModsStore } from '../store/useLocalModsStore';
 import { useDownloadStore } from '../store/useDownloadStore';
@@ -14,7 +15,19 @@ import { useModHubStore } from '../store/useModHubStore';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 import { resolveRecursiveDependencies, matchModWithDependency, normalizeForMatching } from '../utils/modUtils';
 
+const getDriveLetter = (filePath) => {
+  if (!filePath) return '';
+  const match = filePath.match(/^([a-zA-Z]:)/);
+  return match ? match[1].toUpperCase() : '';
+};
 
+const getPathLabel = (rootPath) => {
+  if (!rootPath) return '';
+  const drive = getDriveLetter(rootPath);
+  const parts = rootPath.replace(/\\/g, '/').split('/').filter(Boolean);
+  const folderName = parts.length > 1 ? parts[parts.length - 1] : parts[0] || '';
+  return drive ? `${drive} (${folderName})` : folderName;
+};
 
 // --- GLOBAL VIRTUALIZATION OBSERVER ---
 const observerCallbacks = new Map();
@@ -403,15 +416,36 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
                 )}
                 
                 <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {!mod.isDLC && (
                             <>
                                 <span style={{ fontSize: 11, fontWeight: 800, color: status === 'update' ? 'var(--warning)' : 'var(--text-primary)' }}>
                                     {status === 'update' ? `v${mod.version} ➔ v${updateInfo.remoteVersion}` : `v${mod.version}`}
                                 </span>
-                                <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>
-                                    {formatSize(mod.size)}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                                        {formatSize(mod.size)}
+                                    </span>
+                                    {mod.filePath && getDriveLetter(mod.filePath) && (
+                                        <span 
+                                            style={{ 
+                                                fontSize: 9, 
+                                                fontWeight: 800, 
+                                                padding: '1px 5px', 
+                                                borderRadius: 4, 
+                                                background: 'rgba(255,255,255,0.07)', 
+                                                color: 'var(--text-secondary)', 
+                                                border: '1px solid var(--border)', 
+                                                display: 'inline-flex', 
+                                                alignItems: 'center', 
+                                                gap: 3 
+                                            }}
+                                            title={`Stored on Drive ${getDriveLetter(mod.filePath)}`}
+                                        >
+                                            <HardDrive size={9} /> {getDriveLetter(mod.filePath)}
+                                        </span>
+                                    )}
+                                </div>
                             </>
                         )}
                     </div>
@@ -795,8 +829,31 @@ const LazyModList = ({
                   ))}
               </div>
 
-              <div style={{ width: 100, textAlign: 'right', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                {!mod.isDLC && formatSize(mod.size)}
+              <div style={{ width: 110, textAlign: 'right', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                {!mod.isDLC && (
+                  <>
+                    <span>{formatSize(mod.size)}</span>
+                    {mod.filePath && getDriveLetter(mod.filePath) && (
+                      <span 
+                        style={{ 
+                          fontSize: 9, 
+                          fontWeight: 800, 
+                          padding: '1px 5px', 
+                          borderRadius: 4, 
+                          background: 'rgba(255,255,255,0.07)', 
+                          color: 'var(--text-secondary)', 
+                          border: '1px solid var(--border)', 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: 3 
+                        }}
+                        title={`Stored on Drive ${getDriveLetter(mod.filePath)}`}
+                      >
+                        <HardDrive size={9} /> {getDriveLetter(mod.filePath)}
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
 
               <div style={{ width: 100, display: 'flex', justifyContent: 'flex-end', gap: 8, marginLeft: 20 }} onClick={e => e.stopPropagation()}>
@@ -873,16 +930,16 @@ const LazyModList = ({
 
 export default function InstalledModsPage() {
   const {
-    mods: rawMods, allFolders, isLoading, isCheckingUpdates, updates, error,
+    mods: rawMods, allFolders, isLoading, isScanning, isCheckingUpdates, updates, error,
     isResolving, resolvingStatus, showOnlyUpdates, setShowOnlyUpdates,
     scanMods, checkUpdates, uninstallMod, updateMod, updateAllMods, initListeners, toggleAutoResolve,
-    createFolder, renameFolder, deleteFolder, moveModsToFolder, exportCollection
+    createFolder, renameFolder, deleteFolder, moveModsToFolder, moveFolderToDrive, bulkMoveFoldersToDrive, exportCollection
   } = useLocalModsStore();
 
   const { 
     hiddenFolders, toggleHiddenFolder, installedModsViewMode, setInstalledModsViewMode,
     folderOrder, setFolderOrder, folderZooms, setFolderZoom, isInternalDragging, setIsInternalDragging,
-    iconOnlyFolders, toggleIconOnlyFolder, isOnline, isLoaded, modUpdateMode
+    iconOnlyFolders, toggleIconOnlyFolder, isOnline, isLoaded, modUpdateMode, modsPaths, modsPath
   } = useSettingsStore();
   const { toggleFavoriteMod, toggleFavoriteAuthor, favoriteMods, favoriteAuthors } = useModHubStore();
   const sessionInstalled = useDownloadStore((s) => s.sessionInstalled);
@@ -901,6 +958,11 @@ export default function InstalledModsPage() {
   const [showTagBar, setShowTagBar] = useState(false);
   const [updatingMod, setUpdatingMod] = useState(null);
   const [autoResolveMode, setAutoResolveMode] = useState(false);
+  const [selectedDriveFilter, setSelectedDriveFilter] = useState('ALL');
+  const [selectedFolders, setSelectedFolders] = useState([]);
+  const [driveMoveModal, setDriveMoveModal] = useState(null);
+  const [selectedTargetDrive, setSelectedTargetDrive] = useState('');
+  const [migrationProgress, setMigrationProgress] = useState(null);
 
   useEffect(() => {
     if (isLoaded && rawMods.length === 0) scanMods();
@@ -916,6 +978,7 @@ export default function InstalledModsPage() {
 
     const unsubMove = window.api.on.moveProgress((data) => {
         useToastStore.getState().info(`Moving mods: ${data.percent}% (${data.current}/${data.total})`, { id: 'move-progress' });
+        setMigrationProgress(prev => ({ ...(prev || {}), ...data, active: true }));
     });
 
     return () => {
@@ -1038,15 +1101,57 @@ export default function InstalledModsPage() {
     return new Set(updates.map(u => u.fileName));
   }, [updates]);
 
+  const driveStats = useMemo(() => {
+    if (!modsPaths || modsPaths.length === 0) return [];
+    return modsPaths.map((rootPath, idx) => {
+      const rootNorm = rootPath.replace(/\\/g, '/').toLowerCase();
+      const rootWithSlash = rootNorm.endsWith('/') ? rootNorm : rootNorm + '/';
+      const driveLetter = getDriveLetter(rootPath);
+      const parts = rootPath.replace(/\\/g, '/').split('/').filter(Boolean);
+      const folderName = parts.length > 1 ? parts[parts.length - 1] : parts[0] || '';
+      const shortLabel = driveLetter ? `${driveLetter} (${folderName})` : folderName;
+      
+      let count = 0;
+      let size = 0;
+      
+      for (let i = 0; i < rawMods.length; i++) {
+        const m = rawMods[i];
+        if (m && !m.isDLC && m.filePath) {
+          const p = m.filePath.replace(/\\/g, '/').toLowerCase();
+          if (p.startsWith(rootWithSlash)) {
+            count++;
+            size += m.size || 0;
+          }
+        }
+      }
+      
+      return {
+        rootPath,
+        driveLetter: driveLetter || `Drive ${idx + 1}`,
+        folderName,
+        shortLabel,
+        isPrimary: idx === 0,
+        count,
+        size
+      };
+    });
+  }, [modsPaths, rawMods]);
+
   const filteredMods = useMemo(() => {
     const sLower = searchQuery.toLowerCase().trim();
 
-    if (!sLower && !showOnlyFavorites && selectedTags.length === 0 && !showOnlyUpdates) {
-      return mods;
-    }
-
     return mods.filter((m) => {
+      if (!m) return false;
       const isDLCItem = m.isDLC || m.folder === 'DLC';
+
+      // Drive filtering
+      if (selectedDriveFilter !== 'ALL') {
+        if (isDLCItem) return false;
+        const rootNorm = selectedDriveFilter.replace(/\\/g, '/').toLowerCase();
+        const rootWithSlash = rootNorm.endsWith('/') ? rootNorm : rootNorm + '/';
+        const p = (m.filePath || '').replace(/\\/g, '/').toLowerCase();
+        if (!p.startsWith(rootWithSlash)) return false;
+      }
 
       if (sLower) {
         const titleMatch = m.title && m.title.toLowerCase().includes(sLower);
@@ -1079,7 +1184,7 @@ export default function InstalledModsPage() {
 
       return true;
     });
-  }, [mods, searchQuery, showOnlyFavorites, favModIdsSet, favAuthorsSet, selectedTags, showOnlyUpdates, updateFileNamesSet]);
+  }, [mods, selectedDriveFilter, searchQuery, showOnlyFavorites, favModIdsSet, favAuthorsSet, selectedTags, showOnlyUpdates, updateFileNamesSet]);
 
   const modLookupIndex = useMemo(() => {
     const byId = new Map();
@@ -1195,17 +1300,25 @@ export default function InstalledModsPage() {
     });
 
 
-    // 4. Include empty folders from allFolders case-insensitively
-    (allFolders || []).forEach(f => {
+    // 4. Include empty folders from allFolders case-insensitively ONLY when viewing ALL drives
+    if (selectedDriveFilter === 'ALL') {
+      (allFolders || []).forEach(f => {
         const canonical = getCanonicalFolder(f);
         if (!groups[canonical]) groups[canonical] = [];
-    });
+      });
+    }
 
-    // 5. Strict Map Filtering: If "Maps" tag is active, hide folders that don't contain a map
+    // 5. Strict Map & Drive Filtering
     const showingOnlyMaps = selectedTags.includes('Maps');
     let finalKeys = Object.keys(groups);
+
+    // If filtering by a specific drive, only show folders that actually have mods on that drive
+    if (selectedDriveFilter !== 'ALL') {
+      finalKeys = finalKeys.filter(name => groups[name] && groups[name].length > 0);
+    }
+
     if (showingOnlyMaps) {
-        finalKeys = finalKeys.filter(name => groups[name].some(m => m.isMap));
+      finalKeys = finalKeys.filter(name => groups[name] && groups[name].some(m => m.isMap));
     }
 
     // 6. DLC folder first, then Root folder, then others alphabetically
@@ -1333,32 +1446,74 @@ export default function InstalledModsPage() {
     }
   };
 
-  const handleMoveTo = async (dest) => {
+  const handleMoveTo = async (dest, targetRoot = null) => {
     if (selectedMods.length === 0) return;
     
     const movableMods = selectedMods.filter(fileName => {
         const mod = mods.find(m => m.fileName === fileName);
-        return mod && !mod.isDLC;
+        return mod && !mod.isDLC && !mod.isVirtual;
     });
     
     if (movableMods.length === 0) {
-        useToastStore.getState().warning("DLCs cannot be moved.");
+        useToastStore.getState().warning("DLCs and shared mods cannot be moved.");
         setSelectedMods([]);
         return;
     }
 
-    const result = await moveModsToFolder(movableMods, dest);
+    const result = await moveModsToFolder(movableMods, dest, targetRoot);
     setSelectedMods([]);
     
     if (result.success) {
+      const destLabel = dest || 'MAIN';
+      const rootLabel = targetRoot ? ` [Drive ${getDriveLetter(targetRoot)}]` : '';
       const msg = result.errors && result.errors.length > 0 
-        ? `Moved ${result.completed}/${result.total} mods (some errors).`
-        : `Successfully moved ${result.completed} mods to ${dest || 'MAIN'}.`;
+        ? `Moved ${result.completed}/${result.total} mods to ${destLabel}${rootLabel} (some errors).`
+        : `Successfully moved ${result.completed} mods to ${destLabel}${rootLabel}.`;
       
-      useToastStore.getState().success(msg, { id: 'move-progress', duration: 2000 });
+      useToastStore.getState().success(msg, { id: 'move-progress', duration: 2500 });
     } else {
       const errorMsg = result.errors?.[0]?.error || result.error || 'Unknown error';
       useToastStore.getState().error(`Failed: ${errorMsg}`, { id: 'move-progress' });
+    }
+  };
+
+  const handleMoveFolderToDrive = async (folderName, targetRootPath, targetFolderName = null) => {
+    if (!targetRootPath) {
+      useToastStore.getState().warning("Please select a destination drive.");
+      return;
+    }
+    setMigrationProgress({ percent: 0, current: 0, total: 1, active: true, label: `Migrating "${folderName || 'MAIN'}"...` });
+    useToastStore.getState().info(`Moving folder "${folderName || 'MAIN'}" to target drive...`, { id: 'move-folder' });
+    try {
+      const result = await moveFolderToDrive(folderName, targetRootPath, targetFolderName || folderName);
+      if (result.success) {
+        const driveLetter = getDriveLetter(targetRootPath);
+        useToastStore.getState().success(`Moved folder "${folderName || 'MAIN'}" to Drive ${driveLetter || targetRootPath}!`, { id: 'move-folder', duration: 3000 });
+      } else {
+        useToastStore.getState().error(`Failed to move folder: ${result.error}`, { id: 'move-folder' });
+      }
+    } finally {
+      setMigrationProgress(null);
+      setDriveMoveModal(null);
+    }
+  };
+
+  const handleBulkMoveFoldersToDrive = async (foldersToMove, targetRootPath) => {
+    if (!foldersToMove || foldersToMove.length === 0 || !targetRootPath) return;
+    setMigrationProgress({ percent: 0, current: 0, total: foldersToMove.length, active: true, label: `Migrating ${foldersToMove.length} folders...` });
+    useToastStore.getState().info(`Moving ${foldersToMove.length} folders to target drive...`, { id: 'bulk-folder-move' });
+    try {
+      const result = await bulkMoveFoldersToDrive(foldersToMove, targetRootPath);
+      setSelectedFolders([]);
+      if (result.success) {
+        const driveLetter = getDriveLetter(targetRootPath);
+        useToastStore.getState().success(`Successfully moved ${foldersToMove.length} folders to Drive ${driveLetter || targetRootPath}!`, { id: 'bulk-folder-move', duration: 3000 });
+      } else {
+        useToastStore.getState().error(`Bulk folder move failed: ${result.errors?.[0]?.error || result.error || 'Unknown error'}`, { id: 'bulk-folder-move' });
+      }
+    } finally {
+      setMigrationProgress(null);
+      setDriveMoveModal(null);
     }
   };
 
@@ -1646,7 +1801,7 @@ export default function InstalledModsPage() {
           </h1>
           <div className="page__subtitle" style={{ fontSize: 'var(--fs-sm)', display: 'flex', alignItems: 'center', gap: 12 }}>
             <span>
-                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{mods.filter(m => !m.isVirtual && !m.isDLC && m.folder !== 'DLC' && !m.fileName?.toLowerCase().startsWith('pdlc_') && !m.fileName?.toLowerCase().endsWith('.dlc') && !hiddenFolders.includes(m.folder || '')).length}</span> mods • <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{Object.keys(folders).filter(f => f !== 'DLC').length}</span> folders visible
+                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{filteredMods.filter(m => !m.isVirtual && !m.isDLC && m.folder !== 'DLC' && !m.fileName?.toLowerCase().startsWith('pdlc_') && !m.fileName?.toLowerCase().endsWith('.dlc') && !hiddenFolders.includes(m.folder || '')).length}</span> mods • <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{Object.keys(folders).filter(f => f !== 'DLC').length}</span> folders visible
             </span>
             {hiddenFolders.length > 0 && (
                 <button 
@@ -1868,8 +2023,77 @@ export default function InstalledModsPage() {
           {Object.keys(folders).length > 0 && Object.keys(folders).every(f => expandedFolders[f] === false) ? "Expand All" : "Collapse All"}
         </button>
 
+        {/* Drive / Folder Location Filter Selector */}
+        {modsPaths && modsPaths.length > 1 && (
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <select
+              className="select-custom"
+              value={selectedDriveFilter}
+              onChange={(e) => setSelectedDriveFilter(e.target.value)}
+              style={{
+                height: 36,
+                background: selectedDriveFilter === 'ALL' ? 'var(--bg-tertiary)' : 'var(--accent)',
+                color: selectedDriveFilter === 'ALL' ? 'var(--text-primary)' : 'var(--bg-primary)',
+                border: selectedDriveFilter === 'ALL' ? '1px solid var(--border)' : '1px solid var(--accent)',
+                borderRadius: 'var(--radius-md)',
+                padding: '0 28px 0 12px',
+                fontSize: 'var(--fs-xs)',
+                fontWeight: 800,
+                cursor: 'pointer',
+                outline: 'none',
+                minWidth: 150,
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none'
+              }}
+              title="Filter library by storage folder / drive"
+            >
+              <option value="ALL">ALL LOCATIONS ({mods.length} MODS)</option>
+              {driveStats.map(ds => (
+                <option key={ds.rootPath} value={ds.rootPath}>
+                  {ds.shortLabel} {ds.isPrimary ? '[PRIMARY] ' : ''}({ds.count} MODS)
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} style={{ position: 'absolute', right: 10, pointerEvents: 'none', opacity: 0.7, color: selectedDriveFilter === 'ALL' ? 'var(--text-secondary)' : 'var(--bg-primary)' }} />
+          </div>
+        )}
 
+        {/* Bulk Folder Actions */}
+        {selectedFolders.length > 0 && (
+          <div className="animate-fade-in-down" style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 12, 
+            background: '#3b82f6', 
+            color: 'white',
+            padding: '4px 8px 4px 12px', 
+            borderRadius: 8,
+            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.05em' }}>{selectedFolders.length} FOLDERS SELECTED</span>
+            <button 
+              className="btn btn--sm"
+              onClick={() => setDriveMoveModal({
+                type: 'bulk_folders',
+                targetRootPath: modsPaths?.[0] || ''
+              })}
+              style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', height: 28, fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+            >
+              <HardDrive size={13} /> MIGRATE TO DRIVE...
+            </button>
+            <button 
+              className="btn btn--sm" 
+              onClick={() => setSelectedFolders([])} 
+              style={{ padding: 0, width: 24, height: 24, background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer' }}
+              title="Clear folder selection"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
 
+        {/* Bulk Mod Actions */}
         {selectedMods.length > 0 && (
           <div className="animate-fade-in-down" style={{ 
             display: 'flex', 
@@ -1892,7 +2116,7 @@ export default function InstalledModsPage() {
                         if (e.target.value === '__NEW__') {
                             setShowFolderInput(true);
                         } else {
-                            handleMoveTo(e.target.value);
+                            handleMoveTo(e.target.value, selectedTargetDrive || null);
                         }
                     }}
                     style={{ 
@@ -1919,6 +2143,39 @@ export default function InstalledModsPage() {
                   </select>
                   <ChevronDown size={12} style={{ position: 'absolute', right: 8, pointerEvents: 'none', opacity: 0.7 }} />
               </div>
+
+              {modsPaths && modsPaths.length > 1 && (
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <select
+                    className="select-custom"
+                    value={selectedTargetDrive}
+                    onChange={(e) => setSelectedTargetDrive(e.target.value)}
+                    style={{
+                      background: 'rgba(0,0,0,0.25)',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      color: 'white',
+                      padding: '0 24px 0 10px',
+                      height: 28,
+                      fontSize: 10,
+                      fontWeight: 800,
+                      borderRadius: 6,
+                      appearance: 'none',
+                      cursor: 'pointer',
+                      outline: 'none',
+                      minWidth: 120
+                    }}
+                    title="Choose target drive for move"
+                  >
+                    <option value="" style={{ background: '#0f172a', color: 'white' }}>LOCATION: PRIMARY</option>
+                    {driveStats.map(ds => (
+                      <option key={ds.rootPath} value={ds.rootPath} style={{ background: '#0f172a', color: 'white' }}>
+                        {ds.shortLabel} {ds.isPrimary ? '(PRIMARY)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={12} style={{ position: 'absolute', right: 8, pointerEvents: 'none', opacity: 0.7 }} />
+                </div>
+              )}
             </div>
             <button 
               className="btn btn--secondary btn--sm"
@@ -2166,7 +2423,7 @@ export default function InstalledModsPage() {
                            )}
                          </span>
                         {!isHidden && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)', fontWeight: 500 }}>
                               {(() => {
                                 if (folderName === 'DLC') {
@@ -2181,6 +2438,38 @@ export default function InstalledModsPage() {
                                 return `(${folderMods.length} mods)`;
                               })()}
                             </span>
+
+                            {/* Drive Location Badges */}
+                            {folderName !== 'DLC' && (() => {
+                              const folderDrives = {};
+                              for (let i = 0; i < folderMods.length; i++) {
+                                const m = folderMods[i];
+                                if (m && !m.isDLC && m.filePath) {
+                                  const dl = getDriveLetter(m.filePath) || 'Local';
+                                  folderDrives[dl] = (folderDrives[dl] || 0) + 1;
+                                }
+                              }
+                              return Object.entries(folderDrives).map(([dl, count]) => (
+                                <span 
+                                  key={dl} 
+                                  style={{ 
+                                    fontSize: 10, 
+                                    fontWeight: 800, 
+                                    padding: '2px 6px', 
+                                    borderRadius: 4, 
+                                    background: 'rgba(59, 130, 246, 0.12)', 
+                                    color: '#60a5fa', 
+                                    border: '1px solid rgba(59, 130, 246, 0.25)', 
+                                    display: 'inline-flex', 
+                                    alignItems: 'center', 
+                                    gap: 4 
+                                  }}
+                                  title={`${count} mods in this folder are stored on Drive ${dl}`}
+                                >
+                                  <HardDrive size={10} /> {dl} ({count})
+                                </span>
+                              ));
+                            })()}
                             
                             {/* Requirements Badge for Maps — computed lazily to keep initial render fast */}
                              <FolderRequirements
@@ -2201,6 +2490,53 @@ export default function InstalledModsPage() {
                   </div>
 
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} onDragStart={e => e.stopPropagation()}>
+                    {!isHidden && folderName !== 'DLC' && (
+                      <div 
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 6, 
+                          padding: '4px 8px', 
+                          borderRadius: 4, 
+                          background: selectedFolders.includes(folderName) ? 'var(--accent-dim)' : 'rgba(0,0,0,0.05)',
+                          cursor: 'pointer' 
+                        }}
+                        onClick={() => {
+                          setSelectedFolders(prev => 
+                            prev.includes(folderName) ? prev.filter(f => f !== folderName) : [...prev, folderName]
+                          );
+                        }}
+                        onMouseDown={e => e.stopPropagation()}
+                        onDragStart={e => e.stopPropagation()}
+                        title="Select subfolder for bulk actions / migration"
+                      >
+                        <input 
+                          type="checkbox" 
+                          readOnly 
+                          checked={selectedFolders.includes(folderName)}
+                          style={{ width: 14, height: 14, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}>Folder</span>
+                      </div>
+                    )}
+
+                    {!isHidden && folderName !== 'DLC' && folderMods.length > 0 && (
+                      <button 
+                        className="btn btn--secondary btn--sm"
+                        onClick={() => setDriveMoveModal({
+                          type: 'folder',
+                          folderName: folderName,
+                          targetRootPath: modsPaths?.[0] || '',
+                          targetFolderName: folderName
+                        })}
+                        style={{ height: 32, padding: '0 8px', display: 'flex', alignItems: 'center', gap: 5 }}
+                        title={`Move "${folderName || 'MAIN'}" to another drive`}
+                      >
+                        <HardDrive size={13} style={{ color: 'var(--accent)' }} />
+                        <span style={{ fontSize: 10, fontWeight: 800 }}>MOVE TO DRIVE</span>
+                      </button>
+                    )}
+
                     {!isHidden && folderName !== 'DLC' && folderMods.length > 1 && (
                       <div 
                         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 10px', borderRadius: 4, background: 'rgba(0,0,0,0.05)' }}
@@ -2383,11 +2719,19 @@ export default function InstalledModsPage() {
         })}
       </div>
 
-      {mods.length === 0 && !isLoading && !isScanning && (
+      {Object.keys(folders).length === 0 && !isLoading && !isScanning && (
         <div className="empty-state" style={{ padding: '80px 0' }}>
           <Package className="empty-state__icon" size={64} style={{ opacity: 0.3 }} />
-          <div className="empty-state__title">Library empty</div>
-          <div className="empty-state__desc">Install some mods from the ModHub to get started.</div>
+          <div className="empty-state__title">
+            {selectedDriveFilter !== 'ALL' 
+              ? `No mods in this location` 
+              : 'Library empty'}
+          </div>
+          <div className="empty-state__desc" style={{ maxWidth: 520, margin: '8px auto' }}>
+            {selectedDriveFilter !== 'ALL'
+              ? `"${getPathLabel(selectedDriveFilter)}" currently contains 0 mods. You can move mods or subfolders here using "MOVE TO DRIVE" or switch the location filter above to "ALL LOCATIONS".`
+              : 'Install some mods from the ModHub to get started.'}
+          </div>
         </div>
       )}
 
@@ -2397,6 +2741,241 @@ export default function InstalledModsPage() {
           <div className="empty-state__title">Scanning Mod Library</div>
           <div className="empty-state__desc">Indexing installed mods from disk... Please wait</div>
         </div>
+      )}
+
+      {/* -- Drive Move Modal -- */}
+      {driveMoveModal && createPortal(
+        <div 
+          className="modal-overlay animate-fade-in" 
+          style={{ 
+            position: 'fixed', 
+            inset: 0, 
+            zIndex: 99999, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            background: 'rgba(0, 0, 0, 0.75)', 
+            backdropFilter: 'blur(8px)',
+            padding: '20px'
+          }} 
+          onClick={() => setDriveMoveModal(null)}
+        >
+          <div 
+            className="modal-content animate-zoom-in" 
+            style={{ 
+              maxWidth: 540, 
+              width: '100%', 
+              padding: '24px', 
+              background: 'var(--bg-secondary)', 
+              borderRadius: 'var(--radius-lg)', 
+              border: '1px solid var(--border)', 
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.7)' 
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {migrationProgress?.active ? (
+              <div style={{ padding: '20px 0', textAlign: 'center' }}>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: 'var(--accent)' }}>
+                  <Loader2 className="animate-spin" size={32} />
+                </div>
+                <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, marginBottom: 6 }}>
+                  Migrating Files in Progress...
+                </h3>
+                <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-secondary)', marginBottom: 20 }}>
+                  {migrationProgress.label || 'Transferring mods between storage drives. Please wait...'}
+                </p>
+
+                {/* Progress Bar */}
+                <div style={{ width: '100%', height: 12, background: 'var(--bg-tertiary)', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)', marginBottom: 12 }}>
+                  <div 
+                    style={{ 
+                      width: `${Math.max(migrationProgress.percent || 0, 5)}%`, 
+                      height: '100%', 
+                      background: 'linear-gradient(90deg, var(--accent), #10b981)', 
+                      borderRadius: 6,
+                      transition: 'width 0.25s ease-in-out'
+                    }} 
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--fs-xs)', fontWeight: 800, color: 'var(--text-secondary)' }}>
+                  <span>{migrationProgress.percent || 0}% COMPLETE</span>
+                  <span>{migrationProgress.current || 0} / {migrationProgress.total || 0} FILES</span>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <HardDrive size={20} style={{ color: 'var(--accent)' }} />
+                    <h3 style={{ margin: 0, fontSize: 'var(--fs-lg)', fontWeight: 800 }}>
+                      {driveMoveModal.type === 'bulk_folders' 
+                        ? `Move ${selectedFolders.length} Folders to Storage Drive`
+                        : `Move "${driveMoveModal.folderName === '' ? 'MAIN' : driveMoveModal.folderName}" to Storage Drive`}
+                    </h3>
+                  </div>
+                  <button className="btn btn--ghost btn--icon" onClick={() => setDriveMoveModal(null)} style={{ padding: 4, cursor: 'pointer' }}>
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>
+                  {driveMoveModal.type === 'bulk_folders'
+                    ? `Select the target storage location / hard drive. All ${selectedFolders.length} selected folders and their mods will be transferred.`
+                    : `Select the destination hard drive / root folder to migrate all mods belonging to "${driveMoveModal.folderName === '' ? 'MAIN' : driveMoveModal.folderName}".`}
+                </p>
+
+                {/* Migration Content Breakdown Card */}
+                {(() => {
+                  let totalPhysical = 0;
+                  let totalVirtual = 0;
+                  let totalSize = 0;
+
+                  if (driveMoveModal.type === 'bulk_folders') {
+                    selectedFolders.forEach(f => {
+                      const fMods = folders[f]?.mods || [];
+                      totalPhysical += fMods.filter(m => !m.isVirtual).length;
+                      totalVirtual += fMods.filter(m => m.isVirtual).length;
+                      totalSize += fMods.filter(m => !m.isVirtual).reduce((sum, m) => sum + (m.size || 0), 0);
+                    });
+                  } else {
+                    const fMods = folders[driveMoveModal.folderName]?.mods || [];
+                    totalPhysical = fMods.filter(m => !m.isVirtual).length;
+                    totalVirtual = fMods.filter(m => m.isVirtual).length;
+                    totalSize += fMods.filter(m => !m.isVirtual).reduce((sum, m) => sum + (m.size || 0), 0);
+                  }
+
+                  return (
+                    <div style={{
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '12px 14px',
+                      marginBottom: 16,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: 'var(--text-secondary)' }}>
+                          FILES TO TRANSFER TO TARGET DRIVE:
+                        </span>
+                        <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 900, color: 'var(--accent)' }}>
+                          {totalPhysical} files ({formatSize(totalSize)})
+                        </span>
+                      </div>
+
+                      {totalVirtual > 0 && (
+                        <div style={{
+                          fontSize: 11,
+                          color: 'var(--text-muted)',
+                          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                          paddingTop: 6,
+                          marginTop: 2,
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 6,
+                          lineHeight: 1.4
+                        }}>
+                          <Info size={14} style={{ color: '#60a5fa', flexShrink: 0, marginTop: 1 }} />
+                          <span>
+                            <strong>{totalVirtual} shared / linked dependencies</strong> will remain in their current location so other maps and profiles continue working without missing files.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Target Drive Selector */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 'var(--fs-xs)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 8, color: 'var(--text-tertiary)' }}>
+                    Target Destination Drive
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 220, overflowY: 'auto' }}>
+                    {driveStats.map((ds) => (
+                      <div 
+                        key={ds.rootPath}
+                        onClick={() => setDriveMoveModal(prev => ({ ...prev, targetRootPath: ds.rootPath }))}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '12px 16px',
+                          borderRadius: 'var(--radius-md)',
+                          background: driveMoveModal.targetRootPath === ds.rootPath ? 'var(--accent-dim)' : 'var(--bg-tertiary)',
+                          border: driveMoveModal.targetRootPath === ds.rootPath ? '1px solid var(--accent)' : '1px solid var(--border)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                          <HardDrive size={18} style={{ color: driveMoveModal.targetRootPath === ds.rootPath ? 'var(--accent)' : 'var(--text-tertiary)', flexShrink: 0 }} />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 800, fontSize: 'var(--fs-sm)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span>{ds.shortLabel}</span>
+                              {ds.isPrimary && (
+                                <span style={{ fontSize: 9, background: 'var(--accent)', color: 'var(--bg-primary)', padding: '1px 5px', borderRadius: 4, fontWeight: 900 }}>
+                                  PRIMARY / DOWNLOADS
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {ds.rootPath}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700 }}>{ds.count} mods</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{formatSize(ds.size)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {driveMoveModal.type !== 'bulk_folders' && driveMoveModal.folderName !== '' && (
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', fontSize: 'var(--fs-xs)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 8, color: 'var(--text-tertiary)' }}>
+                      Subfolder Name on Destination Drive
+                    </label>
+                    <input 
+                      type="text" 
+                      className="search-input"
+                      value={driveMoveModal.targetFolderName !== undefined ? driveMoveModal.targetFolderName : driveMoveModal.folderName}
+                      onChange={(e) => setDriveMoveModal(prev => ({ ...prev, targetFolderName: e.target.value }))}
+                      style={{ width: '100%', height: 38, border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '0 12px' }}
+                      placeholder="Subfolder name on target drive"
+                    />
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+                  <button className="btn btn--ghost" onClick={() => setDriveMoveModal(null)}>Cancel</button>
+                  <button 
+                    className="btn btn--primary" 
+                    onClick={() => {
+                      if (driveMoveModal.type === 'bulk_folders') {
+                        handleBulkMoveFoldersToDrive(selectedFolders, driveMoveModal.targetRootPath);
+                      } else {
+                        handleMoveFolderToDrive(
+                          driveMoveModal.folderName,
+                          driveMoveModal.targetRootPath,
+                          driveMoveModal.targetFolderName
+                        );
+                      }
+                    }}
+                    disabled={!driveMoveModal.targetRootPath}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <ArrowRightLeft size={14} /> Start Migration
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* -- Dependency Auto-Downloader -- */}

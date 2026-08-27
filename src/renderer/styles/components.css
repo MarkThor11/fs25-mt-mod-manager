@@ -1553,7 +1553,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
-  z-index: var(--z-toast);
+  z-index: 2147483647;
   pointer-events: none;
 }
 .toast {

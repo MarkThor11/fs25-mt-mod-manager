@@ -693,15 +693,21 @@ ipcMain.handle('mods:deleteFolder', async (_, folderName) => {
 });
 
 ipcMain.handle('mods:moveModsToFolder', async (_, args) => {
-  const { fileNames, destinationFolder } = args || {};
-  console.log(`[IPC] mods:moveModsToFolder: Moving ${Array.isArray(fileNames) ? fileNames.length : 0} mods to "${destinationFolder}"`);
+  const { fileNames, destinationFolder, targetRootPath } = args || {};
+  console.log(`[IPC] mods:moveModsToFolder: Moving ${Array.isArray(fileNames) ? fileNames.length : 0} mods to "${destinationFolder}" (Root: ${targetRootPath || 'Primary'})`);
   
   if (!Array.isArray(fileNames)) {
     console.error('[IPC] mods:moveModsToFolder: TypeError - fileNames is not an array. Received:', typeof fileNames, args);
     return { success: false, error: 'Invalid file list: expected array' };
   }
   
-  return await modManager.moveModsToFolder(fileNames, destinationFolder);
+  return await modManager.moveModsToFolder(fileNames, destinationFolder, targetRootPath);
+});
+
+ipcMain.handle('mods:moveFolderToDrive', async (_, args) => {
+  const { sourceFolderName, targetRootPath, targetFolderName } = args || {};
+  console.log(`[IPC] mods:moveFolderToDrive: Moving folder "${sourceFolderName}" to target root "${targetRootPath}" as "${targetFolderName || sourceFolderName}"`);
+  return await modManager.moveFolderToDrive(sourceFolderName, targetRootPath, targetFolderName);
 });
 
 ipcMain.handle('mods:detectPath', async () => {

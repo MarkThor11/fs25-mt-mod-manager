@@ -45,6 +45,7 @@ contextBridge.exposeInMainWorld('api', {
     renameFolder: (oldName, newName) => ipcRenderer.invoke('mods:renameFolder', { oldName, newName }),
     deleteFolder: (folderName) => ipcRenderer.invoke('mods:deleteFolder', folderName),
     moveModsToFolder: (data) => ipcRenderer.invoke('mods:moveModsToFolder', data),
+    moveFolderToDrive: (data) => ipcRenderer.invoke('mods:moveFolderToDrive', data),
     detectPath: () => ipcRenderer.invoke('mods:detectPath'),
     detectAllPaths: () => ipcRenderer.invoke('mods:detectAllPaths'),
     installLocal: (filePaths) => ipcRenderer.invoke('mods:installLocal', filePaths),

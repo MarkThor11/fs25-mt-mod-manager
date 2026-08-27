@@ -422,32 +422,63 @@ export const useLocalModsStore = create((set, get) => ({
     }
   },
 
-  moveModsToFolder: async (fileNames, destinationFolder) => {
+  moveModsToFolder: async (fileNames, destinationFolder, targetRootPath = null) => {
     set({ isLoading: true });
     try {
       if (!window.api?.mods) return { success: false, error: 'Bridge not available' };
-      const result = await window.api.mods.moveModsToFolder({ fileNames, destinationFolder });
+      const result = await window.api.mods.moveModsToFolder({ fileNames, destinationFolder, targetRootPath });
       
-      if (result.success && (!result.errors || result.errors.length === 0)) {
-        // Optimistic update: Update local state instead of re-scanning everything
-        set(state => ({
-            mods: state.mods.map(m => {
-                if (fileNames.includes(m.fileName)) {
-                    const baseName = m.fileName.includes('/') ? m.fileName.split('/').pop() : m.fileName;
-                    const newFileName = destinationFolder ? `${destinationFolder}/${baseName}` : baseName;
-                    return { ...m, folder: destinationFolder, fileName: newFileName };
-                }
-                return m;
-            })
-        }));
-      } else {
-        // If there were partial errors, a full scan is safer to ensure UI consistency
+      if (result.success) {
+        // Re-scan mods to ensure file paths and drive groupings update accurately
         await get().scanMods(null, true);
       }
       
       return result;
     } catch (err) {
       console.error('[STORE] Move error:', err);
+      return { success: false, error: err.message };
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  moveFolderToDrive: async (sourceFolderName, targetRootPath, targetFolderName = null) => {
+    set({ isLoading: true });
+    try {
+      if (!window.api?.mods?.moveFolderToDrive) return { success: false, error: 'Bridge not available' };
+      const result = await window.api.mods.moveFolderToDrive({ sourceFolderName, targetRootPath, targetFolderName });
+      
+      if (result.success) {
+        await get().scanMods(null, true);
+      }
+      
+      return result;
+    } catch (err) {
+      console.error('[STORE] Move folder to drive error:', err);
+      return { success: false, error: err.message };
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  bulkMoveFoldersToDrive: async (folderNames, targetRootPath) => {
+    if (!Array.isArray(folderNames) || folderNames.length === 0) return { success: true, completed: 0 };
+    set({ isLoading: true });
+    try {
+      let totalMoved = 0;
+      const errors = [];
+      for (const folderName of folderNames) {
+        const res = await window.api.mods.moveFolderToDrive({ sourceFolderName: folderName, targetRootPath });
+        if (res.success) {
+          totalMoved += (res.completed || 0);
+        } else {
+          errors.push({ folder: folderName, error: res.error });
+        }
+      }
+      await get().scanMods(null, true);
+      return { success: errors.length === 0, completed: totalMoved, errors };
+    } catch (err) {
+      console.error('[STORE] Bulk move folders error:', err);
       return { success: false, error: err.message };
     } finally {
       set({ isLoading: false });

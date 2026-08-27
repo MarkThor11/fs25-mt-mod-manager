@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle, XCircle, Info, AlertTriangle, X } from 'lucide-react';
 import { useToastStore } from '../../store/useToastStore';
 
@@ -12,14 +13,24 @@ const ICONS = {
 export default function ToastContainer() {
   const { toasts, removeToast } = useToastStore();
 
-  return (
-    <div className="toast-container" style={{ zIndex: 99999 }}>
+  return createPortal(
+    <div 
+      className="toast-container" 
+      style={{ 
+        position: 'fixed',
+        bottom: 'var(--sp-6)',
+        left: 'var(--sp-6)',
+        zIndex: 2147483647,
+        pointerEvents: 'none'
+      }}
+    >
       {toasts.map((toast) => {
         const Icon = ICONS[toast.type] || Info;
         return (
           <div
             key={toast.id}
             className={`toast ${toast.exiting ? 'toast--exiting' : ''}`}
+            style={{ pointerEvents: 'all' }}
           >
             <Icon
               size={18}
@@ -35,6 +46,7 @@ export default function ToastContainer() {
           </div>
         );
       })}
-    </div>
+    </div>,
+    document.body
   );
 }

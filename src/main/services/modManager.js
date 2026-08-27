@@ -3007,14 +3007,14 @@ async function cancelInstall(modId) {
 /**
  * Move mods to a destination folder within the mods directory.
  */
-async function moveModsToFolder(fileNames, destinationFolder) {
+async function moveModsToFolder(fileNames, destinationFolder, targetRootPath = null) {
 	if (!Array.isArray(fileNames)) {
 		console.error('[MOVE] TypeError: fileNames is not an array. Received:', typeof fileNames, fileNames);
 		return { success: false, error: 'Invalid file list' };
 	}
 
 	const allModsPaths = getModsPaths();
-	const modsPath = allModsPaths[0]; // Primary
+	const modsPath = targetRootPath || allModsPaths[0]; // Target root or Primary
 	
 	if (!modsPath) {
 		console.error('[MOVE] No mod paths detected!');
@@ -3027,7 +3027,7 @@ async function moveModsToFolder(fileNames, destinationFolder) {
 	}
 
 	const destDir = destinationFolder === '' ? modsPath : path.join(modsPath, destinationFolder);
-	debugLog(`[MOVE] Moving ${fileNames.length} mods. Primary: ${modsPath}, Dest: ${destDir}`);
+	debugLog(`[MOVE] Moving ${fileNames.length} mods. Target Root: ${modsPath}, Dest: ${destDir}`);
 	
 	if (!await fs.pathExists(destDir)) {
 		await fs.ensureDir(destDir);
@@ -3189,6 +3189,70 @@ async function moveModsToFolder(fileNames, destinationFolder) {
 	syncMirrorLinks(modsPath).catch(err => console.error('[MIRROR] Auto-sync failed:', err));
 
 	return finalResult;
+}
+
+/**
+ * Move all mods from a folder/subfolder to a specific target root/drive.
+ */
+async function moveFolderToDrive(sourceFolderName, targetRootPath, targetFolderName = null) {
+	if (sourceFolderName === undefined || sourceFolderName === null) {
+		return { success: false, error: 'Source folder name is required' };
+	}
+
+	const allPaths = getModsPaths();
+	const destRoot = targetRootPath || allPaths[0];
+	if (!destRoot) {
+		return { success: false, error: 'Target root directory not found' };
+	}
+	const destFolderName = (targetFolderName !== null && targetFolderName !== undefined) ? targetFolderName : sourceFolderName;
+
+	if (await gameLauncher.isGameRunning()) {
+		return { success: false, error: 'Cannot move mods: Farming Simulator 25 is currently running. Please close the game first.' };
+	}
+
+	// Scan all configured mod paths for files belonging to this subfolder
+	const filesToMove = [];
+	for (const p of allPaths) {
+		const folderDir = sourceFolderName === '' ? p : path.join(p, sourceFolderName);
+		if (await fs.pathExists(folderDir)) {
+			try {
+				const entries = await fs.readdir(folderDir, { withFileTypes: true });
+				for (const entry of entries) {
+					if (entry.isFile() && entry.name.toLowerCase().endsWith('.zip')) {
+						filesToMove.push(entry.name);
+					} else if (entry.isDirectory() && await fs.pathExists(path.join(folderDir, entry.name, 'modDesc.xml'))) {
+						filesToMove.push(entry.name);
+					}
+				}
+			} catch (e) {}
+		}
+	}
+
+	const uniqueFiles = [...new Set(filesToMove)];
+	if (uniqueFiles.length === 0) {
+		return { success: true, completed: 0, total: 0, message: 'No files found in folder' };
+	}
+
+	const result = await moveModsToFolder(uniqueFiles, destFolderName, destRoot);
+
+	// Clean up empty directories on non-target roots if not moving root
+	if (sourceFolderName !== '') {
+		for (const p of allPaths) {
+			if (p.toLowerCase() !== destRoot.toLowerCase()) {
+				const sourceDir = path.join(p, sourceFolderName);
+				try {
+					if (await fs.pathExists(sourceDir)) {
+						const remaining = await fs.readdir(sourceDir);
+						if (remaining.length === 0) {
+							await fs.remove(sourceDir);
+						}
+					}
+				} catch (e) {}
+			}
+		}
+	}
+
+	return result;
 }
 
 async function findModPath(fileName) {
@@ -5094,6 +5158,7 @@ module.exports = {
 	renameFolder,
 	deleteFolder,
 	moveModsToFolder,
+	moveFolderToDrive,
 	flattenSubfolders,
 	getDefaultModsPath,
 	installLocalMods,
