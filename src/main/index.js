@@ -793,7 +793,6 @@ ipcMain.handle('localMods:autoResolveMapDependencies', async (event, { mapId, ta
   try {
     if (!mapId) return { success: false, error: 'No mapId provided' };
     const scraper = require('./services/scraper');
-    const { mods } = await modManager.scanLocalMods();
     
     // 1. Fetch live ModHub details for the map
     const detail = await scraper.fetchModDetail(mapId);
@@ -801,38 +800,9 @@ ipcMain.handle('localMods:autoResolveMapDependencies', async (event, { mapId, ta
       return { success: true, count: 0 };
     }
 
-    // 2. Identify uninstalled dependencies
-    const missingList = [];
-    for (const dep of detail.dependencies) {
-      let depId = dep.modId ? String(dep.modId) : null;
-      if (dep.url) {
-        const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
-        if (idMatch) depId = parseInt(idMatch[1], 10).toString();
-      }
+    console.log(`[AUTO-MAP-DEPS] Processing ${detail.dependencies.length} dependencies for map "${mapTitle || mapId}" into folder "${targetFolder || 'Root'}"...`);
 
-      const depTitle = dep.title || '';
-      const normDep = modManager.ultraNormalize(depTitle);
-
-      const alreadyInstalled = mods.some(m => {
-        if (depId && m.modId && String(m.modId) === String(depId)) return true;
-        const mTitle = modManager.ultraNormalize(m.title || '');
-        const mName = modManager.ultraNormalize(m.modName || '');
-        const mFile = modManager.ultraNormalize(m.fileName || '');
-        return (normDep && (mTitle === normDep || mName === normDep || mFile === normDep));
-      });
-
-      if (!alreadyInstalled) {
-        missingList.push(dep);
-      }
-    }
-
-    if (missingList.length === 0) {
-      return { success: true, count: 0 };
-    }
-
-    console.log(`[AUTO-MAP-DEPS] Auto-downloading ${missingList.length} missing dependencies for map "${mapTitle || mapId}" into folder "${targetFolder || 'Root'}"...`);
-
-    const result = await modManager.autoInstallDependencies(missingList, (progress) => {
+    const result = await modManager.autoInstallDependencies(detail.dependencies, (progress) => {
       try {
         if (event.sender && !event.sender.isDestroyed()) {
           event.sender.send('dependency:progress', {
@@ -844,7 +814,7 @@ ipcMain.handle('localMods:autoResolveMapDependencies', async (event, { mapId, ta
       } catch (_) {}
     }, targetFolder, mapId);
 
-    return { success: true, count: missingList.length, result };
+    return { success: true, count: detail.dependencies.length, result };
   } catch (err) {
     console.error('[AUTO-MAP-DEPS] Error in autoResolveMapDependencies:', err);
     return { success: false, error: err.message };
