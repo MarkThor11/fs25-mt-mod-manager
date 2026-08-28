@@ -1027,6 +1027,7 @@ export default function InstalledModsPage() {
   const [dropIndicator, setDropIndicator] = useState(null); // { folderName, position: 'top' | 'bottom' }
   const [dragOverFolder, setDragOverFolder] = useState(null);
   const [lastSelectedIndex, setLastSelectedIndex] = useState(null);
+  const [folderSortBy, setFolderSortBy] = useState('default'); // 'default' or 'size'
   
   // -- Dependency Fix State --
   const [depFixState, setDepFixState] = useState({ active: false, mapMod: null, missing: [], subFolder: '' });
@@ -1328,10 +1329,26 @@ export default function InstalledModsPage() {
       finalKeys = finalKeys.filter(name => groups[name] && groups[name].some(m => m.isMap));
     }
 
-    // 6. DLC folder first, then Root folder, then others alphabetically
+    // Pre-calculate total sizes once in O(N) for instant sorting and rendering
+    const folderSizeMap = new Map();
+    for (let i = 0; i < finalKeys.length; i++) {
+      const name = finalKeys[i];
+      const list = groups[name] || [];
+      let sum = 0;
+      for (let j = 0; j < list.length; j++) {
+        sum += (list[j].size || 0);
+      }
+      folderSizeMap.set(name, sum);
+    }
+
+    // 6. DLC folder first, then sort by Size or Alphabetical/Order
     const sortedKeys = finalKeys.sort((a,b) => {
         if (a === 'DLC') return -1;
         if (b === 'DLC') return 1;
+        if (folderSortBy === 'size') {
+            const diff = (folderSizeMap.get(b) || 0) - (folderSizeMap.get(a) || 0);
+            if (diff !== 0) return diff;
+        }
         const indexA = folderOrder.indexOf(a);
         const indexB = folderOrder.indexOf(b);
         if (indexA !== -1 && indexB !== -1) return indexA - indexB;
@@ -1365,14 +1382,15 @@ export default function InstalledModsPage() {
 
         acc[name] = {
             mods: uniqueModsInFolder,
+            totalSize: folderSizeMap.get(name) || 0,
             isHidden: hiddenFolders.includes(name),
             // Requirements are computed lazily per-folder to avoid blocking initial render.
             // resolveRecursiveDependencies on 3k mods × many map folders was the main perf bottleneck.
-            requirements: null,
+            requirements: null 
         };
         return acc;
     }, {});
-  }, [mods, filteredMods, allFolders, searchQuery, hiddenFolders, folderOrder, selectedTags, showOnlyFavorites]);
+  }, [mods, filteredMods, allFolders, searchQuery, hiddenFolders, folderOrder, selectedTags, showOnlyFavorites, folderSortBy]);
 
   const flatViewList = useMemo(() => {
     return Object.values(folders).flatMap(f => f.mods);
@@ -2061,6 +2079,16 @@ export default function InstalledModsPage() {
           {Object.keys(folders).length > 0 && Object.keys(folders).every(f => expandedFolders[f] === false) ? "Expand All" : "Collapse All"}
         </button>
 
+        <button 
+          className={`btn ${folderSortBy === 'size' ? 'btn--primary' : 'btn--secondary'} btn--sm`}
+          onClick={() => setFolderSortBy(folderSortBy === 'size' ? 'default' : 'size')}
+          style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
+          title={folderSortBy === 'size' ? "Sorted by largest total folder size. Click to reset." : "Sort folders by largest total size"}
+        >
+          <HardDrive size={14} />
+          {folderSortBy === 'size' ? 'Sorted: Size' : 'Sort: Size'}
+        </button>
+
         {/* Drive / Folder Location Filter Selector */}
         {modsPaths && modsPaths.length > 1 && (
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -2464,16 +2492,18 @@ export default function InstalledModsPage() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)', fontWeight: 500 }}>
                               {(() => {
+                                const totalBytes = folderData.totalSize ?? folderMods.reduce((acc, m) => acc + (m.size || 0), 0);
+                                const sizeStr = formatSize(totalBytes);
                                 if (folderName === 'DLC') {
-                                  return `(${folderMods.length} DLC${folderMods.length === 1 ? '' : 's'})`;
+                                  return `(${folderMods.length} DLC${folderMods.length === 1 ? '' : 's'} • ${sizeStr})`;
                                 }
                                 const hasMap = folderMods.some(m => m.isMap);
                                 if (hasMap) {
                                   const depCount = folderMods.length - 1;
-                                  if (depCount === 0) return '(Map only)';
-                                  return `(Map + ${depCount} mod${depCount === 1 ? '' : 's'})`;
+                                  if (depCount === 0) return `(Map only • ${sizeStr})`;
+                                  return `(Map + ${depCount} mod${depCount === 1 ? '' : 's'} • ${sizeStr})`;
                                 }
-                                return `(${folderMods.length} mods)`;
+                                return `(${folderMods.length} mods • ${sizeStr})`;
                               })()}
                             </span>
 

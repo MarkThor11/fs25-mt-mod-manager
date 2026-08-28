@@ -365,6 +365,20 @@ ipcMain.handle('system:setHighPerformancePlan', async () => {
   return await setHighPerformancePlan();
 });
 
+ipcMain.handle('system:getDiskSpace', async (_, targetPath) => {
+  try {
+    if (!targetPath || !fs.existsSync(targetPath)) return null;
+    const stats = fs.statfsSync(targetPath);
+    const totalBytes = Number(stats.blocks) * Number(stats.bsize);
+    const freeBytes = Number(stats.bfree) * Number(stats.bsize);
+    const usedBytes = totalBytes - freeBytes;
+    const percentUsed = totalBytes > 0 ? Math.round((usedBytes / totalBytes) * 100) : 0;
+    return { totalBytes, freeBytes, usedBytes, percentUsed };
+  } catch (err) {
+    return null;
+  }
+});
+
 // ── ModHub scraping ──
 ipcMain.handle('modhub:fetchMods', async (event, params) => {
   const { filter, page = 0 } = params || {};

@@ -980,6 +980,8 @@ function extractVehicleSpecs(modPath, xmlPath) {
 let lastScanResult = null;
 let lastScanTime = 0;
 const SCAN_CACHE_TTL = 15000; // 15s in-memory cache TTL for unforced scans
+let pendingScanQueue = [];
+let nextScanForced = false;
 
 function clearScanCache() {
 	lastScanResult = null;
@@ -1004,9 +1006,17 @@ async function scanLocalMods(manualPaths = null, force = false) {
 		return lastScanResult;
 	}
 
-	if (activeScanPromise && !force) {
-		debugLog('[SCAN] Scan already in progress, reusing active scan promise.');
-		return activeScanPromise;
+	if (activeScanPromise) {
+		if (force) {
+			nextScanForced = true;
+			debugLog('[SCAN] Scan already running, queuing forced follow-up scan.');
+			return new Promise((resolve, reject) => {
+				pendingScanQueue.push({ resolve, reject, manualPaths });
+			});
+		} else {
+			debugLog('[SCAN] Scan already in progress, reusing active scan promise.');
+			return activeScanPromise;
+		}
 	}
 
 	activeScanPromise = (async () => {
@@ -1017,6 +1027,19 @@ async function scanLocalMods(manualPaths = null, force = false) {
 			return result;
 		} finally {
 			activeScanPromise = null;
+
+			// Drain any pending queue in a single serialized follow-up
+			if (pendingScanQueue.length > 0) {
+				const queue = pendingScanQueue;
+				pendingScanQueue = [];
+				const wasForced = nextScanForced;
+				nextScanForced = false;
+
+				debugLog(`[SCAN] Draining ${queue.length} queued scan requests (Forced: ${wasForced})...`);
+				scanLocalMods(null, wasForced)
+					.then(freshResult => queue.forEach(q => q.resolve(freshResult)))
+					.catch(err => queue.forEach(q => q.reject(err)));
+			}
 		}
 	})();
 
@@ -1176,17 +1199,14 @@ async function performScan(manualPaths = null) {
 			const isModHub = !!(pool[fileId] || (modDesc?.modId && pool[String(modDesc.modId)]) || (modDesc?.mapId && pool[String(modDesc.mapId)]));
 			let isThirdParty = !isDlc && !isModHub;
 			
-			// If missing icon, or if it's a placeholder, force a re-extraction
-			// Also force re-parse for cached maps with no dependencies (stale cache from before dep-parsing was added)
-			const isPlaceholder = iconBase64 === 'CATEGORY:map' || iconBase64 === 'CATEGORY:generic';
-			const hasStaleDeps = modDesc?.isMap && (!modDesc.dependencies || modDesc.dependencies.length === 0);
 			// Skip zip parsing for files currently being downloaded by activeInstalls to prevent AdmZip crash
 			const isDownloadingFile = Array.from(activeInstalls.values()).some(inst => {
 				if (!inst || !inst.savePath) return false;
 				return path.basename(inst.savePath).toLowerCase() === entryName.toLowerCase() || inst.savePath === fullPath;
 			});
 
-			if (!modDesc || !iconBase64 || isPlaceholder || hasStaleDeps) {
+			// ONLY parse ZIP if modDesc is not cached (new or modified file)
+			if (!modDesc) {
 				try {
 					let zipInstance = null;
 					if (targetPath.toLowerCase().endsWith('.zip') && !isDownloadingFile) {
@@ -3092,79 +3112,58 @@ async function moveModsToFolder(fileNames, destinationFolder, targetRootPath = n
 		await fs.ensureDir(destDir);
 	}
 	
-	// ── ROBUST CASE-INSENSITIVE INDEXING (OPTIMIZED) ──
+	// ── ROBUST SOURCE FILE LOCATION INDEXING ──
 	const locationIndex = new Map(); // Lowercase Name -> Full Path
-	
-	// 1. Pre-fill from Cache (Instant)
-	const cachedMods = cache.getAllLocalModCache();
-	if (Array.isArray(cachedMods)) {
-		for (const entry of cachedMods) {
-			const name = path.basename(entry.file_path);
-			const lowerName = name.toLowerCase();
-			if (!locationIndex.has(lowerName)) {
-				// Only index if it actually exists on disk (stale cache prevention)
-				if (await fs.pathExists(entry.file_path)) {
-					locationIndex.set(lowerName, entry.file_path);
-				}
-			}
-		}
-	} else {
-		console.warn('[MOVE] cache.getAllLocalModCache() returned non-array:', typeof cachedMods);
-	}
+	const destDirNorm = path.normalize(destDir).toLowerCase();
 
-	// 2. For missing files, try targeted lookup across all mod paths
 	for (const fileName of fileNames) {
 		const lower = fileName.toLowerCase();
-		if (!locationIndex.has(lower)) {
-			// Try as relative path first
-			for (const p of allModsPaths) {
-				const full = path.join(p, fileName);
-				if (await fs.pathExists(full)) {
-					locationIndex.set(lower, full);
-					break;
-				}
-			}
+		const baseName = path.basename(fileName);
+		const destFileNorm = path.normalize(path.join(destDir, baseName)).toLowerCase();
+
+		let candidate = null;
+
+		// 1. Search all configured mod paths, prioritizing files outside of destDir (source files)
+		for (const p of allModsPaths) {
+			const candidate1 = path.join(p, fileName);
+			const candidate2 = destinationFolder ? path.join(p, destinationFolder, baseName) : candidate1;
+			const candidate3 = path.join(p, baseName);
 			
-			if (!locationIndex.has(lower)) {
-				const found = await findModPath(path.basename(fileName));
-				if (found) locationIndex.set(lower, found);
-			}
-		}
-	}
-
-	// 3. Fallback: Deep scan ONLY if we are still missing mods
-	const missingFromIndex = fileNames.filter(f => !locationIndex.has(f.toLowerCase()));
-	if (missingFromIndex.length > 0) {
-		debugLog(`[MOVE] Still missing ${missingFromIndex.length} mods after cache/find. Starting fallback scan...`);
-		
-		const scanFolder = async (dir) => {
-			try {
-				const entries = await fs.readdir(dir, { withFileTypes: true });
-				for (const entry of entries) {
-					const fullPath = path.join(dir, entry.name);
-					const lowerName = entry.name.toLowerCase();
-
-					if (entry.isFile() && lowerName.endsWith('.zip')) {
-						if (!locationIndex.has(lowerName)) {
-							locationIndex.set(lowerName, fullPath);
-						}
-					} else if (entry.isDirectory()) {
-						const isModDir = await fs.pathExists(path.join(fullPath, 'modDesc.xml'));
-						if (isModDir) {
-							if (!locationIndex.has(lowerName)) {
-								locationIndex.set(lowerName, fullPath);
-							}
-						} else {
-							const depth = (fullPath.split(path.sep).length - modsPath.split(path.sep).length);
-							if (depth <= 3) await scanFolder(fullPath);
+			for (const cand of [candidate1, candidate2, candidate3]) {
+				if (await fs.pathExists(cand)) {
+					const stats = await fs.lstat(cand).catch(() => null);
+					if (stats && !stats.isSymbolicLink()) {
+						const candNorm = path.normalize(cand).toLowerCase();
+						if (candNorm !== destFileNorm) {
+							candidate = cand;
+							break;
+						} else if (!candidate) {
+							candidate = cand;
 						}
 					}
 				}
-			} catch (e) {}
-		};
+			}
+			if (candidate && path.normalize(candidate).toLowerCase() !== destFileNorm) break;
+		}
 
-		for (const p of allModsPaths) {
-			await scanFolder(p);
+		// 2. Check cache if not found
+		if (!candidate) {
+			const cachedMods = cache.getAllLocalModCache();
+			if (Array.isArray(cachedMods)) {
+				const cached = cachedMods.find(m => path.basename(m.file_path).toLowerCase() === lower);
+				if (cached && await fs.pathExists(cached.file_path)) {
+					candidate = cached.file_path;
+				}
+			}
+		}
+
+		// 3. Fallback findModPath
+		if (!candidate) {
+			candidate = await findModPath(baseName);
+		}
+
+		if (candidate) {
+			locationIndex.set(lower, candidate);
 		}
 	}
 	
@@ -3359,16 +3358,37 @@ async function moveFolderToDrive(sourceFolderName, targetRootPath, targetFolderN
 
 	const result = await moveModsToFolder(uniqueFiles, destFolderName, destRoot);
 
-	// Clean up empty directories on non-target roots if not moving root
+	// Clean up duplicate source files and empty directories on non-target roots
 	if (sourceFolderName !== '') {
 		for (const p of allPaths) {
 			if (p.toLowerCase() !== destRoot.toLowerCase()) {
 				const sourceDir = path.join(p, sourceFolderName);
 				try {
 					if (await fs.pathExists(sourceDir)) {
+						for (const file of uniqueFiles) {
+							const fPath = path.join(sourceDir, file);
+							if (await fs.pathExists(fPath)) {
+								const stats = await fs.lstat(fPath).catch(() => null);
+								if (stats && !stats.isSymbolicLink()) {
+									await safeRemove(fPath);
+								}
+							}
+						}
 						const remaining = await fs.readdir(sourceDir);
-						if (remaining.length === 0) {
-							await fs.remove(sourceDir);
+						const validRemaining = remaining.filter(f => f !== 'backups');
+						if (validRemaining.length === 0) {
+							await safeRemove(sourceDir);
+						}
+					}
+
+					// Also check if any loose files were in the root of source drive
+					for (const file of uniqueFiles) {
+						const rootFilePath = path.join(p, file);
+						if (await fs.pathExists(rootFilePath)) {
+							const stats = await fs.lstat(rootFilePath).catch(() => null);
+							if (stats && !stats.isSymbolicLink()) {
+								await safeRemove(rootFilePath);
+							}
 						}
 					}
 				} catch (e) {}

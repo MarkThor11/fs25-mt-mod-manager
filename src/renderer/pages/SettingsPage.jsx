@@ -124,6 +124,23 @@ export default function SettingsPage() {
     return stats;
   }, [mods, modsPaths]);
 
+  const [diskSpace, setDiskSpace] = useState({});
+
+  useEffect(() => {
+    if (modsPaths && modsPaths.length > 0 && window.api?.system?.getDiskSpace) {
+      Promise.all(
+        modsPaths.map(async (p) => {
+          const info = await window.api.system.getDiskSpace(p).catch(() => null);
+          return { path: p, info };
+        })
+      ).then((results) => {
+        const map = {};
+        results.forEach(r => { if (r.info) map[r.path] = r.info; });
+        setDiskSpace(map);
+      });
+    }
+  }, [modsPaths]);
+
   const formatSize = (bytes) => {
     if (!bytes || bytes === 0) return '0 B';
     if (bytes < 1024) return `${bytes} B`;
@@ -368,9 +385,24 @@ export default function SettingsPage() {
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 4, display: 'flex', gap: 10 }}>
-                     <span><strong>{folderStats[path]?.count || 0}</strong> MODS</span>
-                     <span><strong>{formatSize(folderStats[path]?.size || 0)}</strong> USED</span>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: 5, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 12px' }}>
+                     <span><strong>{folderStats[path]?.count || 0}</strong> MODS (<strong>{formatSize(folderStats[path]?.size || 0)}</strong>)</span>
+                     {diskSpace[path] && (
+                       <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                         <span style={{ color: 'var(--border)' }}>•</span>
+                         <span>Drive <strong>{path[0].toUpperCase()}:</strong> <strong>{formatSize(diskSpace[path].freeBytes)} Free</strong> of {formatSize(diskSpace[path].totalBytes)}</span>
+                         <span style={{ 
+                           fontSize: '9px', 
+                           fontWeight: 800, 
+                           padding: '1px 6px', 
+                           borderRadius: 4, 
+                           background: diskSpace[path].percentUsed > 85 ? 'rgba(239, 68, 68, 0.15)' : diskSpace[path].percentUsed > 70 ? 'rgba(234, 179, 8, 0.15)' : 'rgba(74, 222, 128, 0.15)',
+                           color: diskSpace[path].percentUsed > 85 ? 'var(--danger)' : diskSpace[path].percentUsed > 70 ? '#eab308' : 'var(--accent)'
+                         }}>
+                           {diskSpace[path].percentUsed}% FULL
+                         </span>
+                       </span>
+                     )}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>

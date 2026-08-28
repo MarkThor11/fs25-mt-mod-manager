@@ -54,6 +54,8 @@ export default function MapsPage() {
     const sortedInstalled = [...filteredInstalled].sort((a, b) => {
         if (sortBy === 'alphabetical') {
             return a.title.localeCompare(b.title);
+        } else if (sortBy === 'size') {
+            return (b.size || 0) - (a.size || 0);
         } else {
             // Parse releasedDate (e.g. "18.02.2025") or fallback to title
             const parseDate = (dStr) => {
@@ -173,6 +175,28 @@ export default function MapsPage() {
                         <Calendar size={14} />
                         {activeTab === 'automated' ? 'Date Learned' : 'Released'}
                     </button>
+                    {activeTab === 'installed' && (
+                        <button
+                            onClick={() => setSortBy('size')}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '8px 12px',
+                                borderRadius: 'calc(var(--radius-md) - 2px)',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                background: sortBy === 'size' ? 'var(--bg-tertiary)' : 'transparent',
+                                color: sortBy === 'size' ? 'var(--accent)' : 'var(--text-secondary)',
+                                border: 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s'
+                            }}
+                        >
+                            <HardDrive size={14} />
+                            Size
+                        </button>
+                    )}
                 </div>
             </div>
 

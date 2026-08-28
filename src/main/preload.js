@@ -178,6 +178,7 @@ contextBridge.exposeInMainWorld('api', {
     optimizeGraphics: () => ipcRenderer.invoke('system:optimizeGraphics'),
     optimizeRevert: () => ipcRenderer.invoke('system:optimizeRevert'),
     setHighPerformancePlan: () => ipcRenderer.invoke('system:setHighPerformancePlan'),
+    getDiskSpace: (targetPath) => ipcRenderer.invoke('system:getDiskSpace', targetPath),
   },
 
   // Event listeners
