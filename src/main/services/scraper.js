@@ -318,13 +318,30 @@ async function fetchModList(filter, page = 0, bustCache = false) {
     }
 
     const totalPages = extractTotalPages($);
+    let totalMods = mods.length;
+    if (totalPages > 1) {
+      if (page === totalPages - 1) {
+        totalMods = ((totalPages - 1) * 24) + mods.length;
+      } else {
+        try {
+          const lastPageUrl = `${MODS_URL}?title=fs2025&filter=${f}&page=${totalPages - 1}`;
+          const lastPageHtml = await throttledFetch(lastPageUrl);
+          const $last = cheerio.load(lastPageHtml);
+          const lastModsCount = $last('.mod-item').length;
+          totalMods = ((totalPages - 1) * 24) + (lastModsCount || 24);
+        } catch (_) {
+          totalMods = ((totalPages - 1) * 24) + 24;
+        }
+      }
+    }
 
     return {
       mods,
       actualFilter, // Return what the server actually showed
       pagination: {
         current: page,
-        total: totalPages
+        total: totalPages,
+        totalMods
       }
     };
   } catch (err) {
@@ -352,12 +369,29 @@ async function fetchModsByAuthor(authorId, page = 0) {
   });
 
   const totalPages = extractTotalPages($);
+  let totalMods = mods.length;
+  if (totalPages > 1) {
+    if (page === totalPages - 1) {
+      totalMods = ((totalPages - 1) * 24) + mods.length;
+    } else {
+      try {
+        const lastUrl = `${MODS_URL}?title=fs2025&filter=org&org_id=${authorId}&page=${totalPages - 1}&lang=en&country=gb`;
+        const lastHtml = await throttledFetch(lastUrl);
+        const $last = cheerio.load(lastHtml);
+        const lastModsCount = $last('.mod-item').length;
+        totalMods = ((totalPages - 1) * 24) + (lastModsCount || 24);
+      } catch (_) {
+        totalMods = ((totalPages - 1) * 24) + 24;
+      }
+    }
+  }
 
   return {
     mods,
     pagination: {
       current: page,
-      total: totalPages
+      total: totalPages,
+      totalMods
     }
   };
 }
@@ -902,12 +936,29 @@ async function searchMods(query, page = 0, gameTitle = 'fs2025') {
   }
 
   const totalPages = extractTotalPages($);
+  let totalMods = mods.length;
+  if (totalPages > 1) {
+    if (page === totalPages - 1) {
+      totalMods = ((totalPages - 1) * 24) + mods.length;
+    } else {
+      try {
+        const lastUrl = `${MODS_URL}?title=${gameTitle}&searchMod=${encodeURIComponent(query)}&page=${totalPages - 1}&lang=en&country=gb`;
+        const lastHtml = await throttledFetch(lastUrl);
+        const $last = cheerio.load(lastHtml);
+        const lastModsCount = $last('.mod-item').length;
+        totalMods = ((totalPages - 1) * 24) + (lastModsCount || 24);
+      } catch (_) {
+        totalMods = ((totalPages - 1) * 24) + 24;
+      }
+    }
+  }
 
   return {
     mods,
     pagination: {
       current: page,
-      total: totalPages
+      total: totalPages,
+      totalMods
     }
   };
 }

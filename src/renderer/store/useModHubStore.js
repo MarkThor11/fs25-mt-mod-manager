@@ -41,6 +41,7 @@ export const useModHubStore = create((set, get) => ({
   favoriteMods: JSON.parse(localStorage.getItem('fav_mods') || '[]'),
   hiddenMods: JSON.parse(localStorage.getItem('hidden_mods') || '[]'),
   authorFilter: null, // { id: string, name: string }
+  categoryTotalMods: 0,
   selectedCompareIds: [],
   powerReference: null, // { modId, title, hp }
   isSmartMatchEnabled: localStorage.getItem('smart_match_enabled') === 'true',
@@ -564,7 +565,7 @@ export const useModHubStore = create((set, get) => ({
     const cached = modCache[cacheKey];
 
     localStorage.setItem('modhub_pagesize', size.toString());
-    set({ pageSize: size, currentPage: 0, mods: cached ? cached.mods : [], totalPages: cached?.totalPages || 1 });
+    set({ pageSize: size, currentPage: 0, mods: cached ? cached.mods : [], totalPages: cached?.totalPages || 1, categoryTotalMods: cached?.totalCategoryMods || get().categoryTotalMods });
     get().fetchMods();
   },
 
@@ -581,6 +582,7 @@ export const useModHubStore = create((set, get) => ({
       currentPage: 0, 
       mods: cached ? cached.mods : [],
       totalPages: cached?.totalPages || 1,
+      categoryTotalMods: cached?.totalCategoryMods || 0,
       error: null,
       searchQuery: '',
       authorFilter: null 
@@ -596,7 +598,7 @@ export const useModHubStore = create((set, get) => ({
     const cached = modCache[cacheKey];
 
     localStorage.setItem('modhub_page', page.toString());
-    set({ currentPage: page, mods: cached ? cached.mods : [], totalPages: cached?.totalPages || 1 });
+    set({ currentPage: page, mods: cached ? cached.mods : [], totalPages: cached?.totalPages || 1, categoryTotalMods: cached?.totalCategoryMods || get().categoryTotalMods });
     get().fetchMods();
   },
 
@@ -662,14 +664,16 @@ export const useModHubStore = create((set, get) => ({
 
   fetchMods: async (filter, page, isPrefetch = false) => {
     if (!window.api?.modhub) return [];
-    const { currentFilter, currentPage, authorFilter, pageSize, modCache, categories } = get();
+    const { currentFilter, currentPage, authorFilter, pageSize, modCache, categories, activeFilters } = get();
     
     // Determine target filter and page
     const f = filter !== undefined ? filter : currentFilter;
     const p = page !== undefined ? page : currentPage;
+    const isHideInstalled = !!activeFilters.hideInstalled;
     
     const searchPart = f === 'search' ? `_${get().searchQuery}` : '';
-    const cacheKey = `${f}_${p}_${authorFilter?.name || 'none'}_${pageSize}${searchPart}`;
+    const hidePart = isHideInstalled ? '_hideInst' : '';
+    const cacheKey = `${f}_${p}_${authorFilter?.name || 'none'}_${pageSize}${hidePart}${searchPart}`;
     const now = Date.now();
     const cached = modCache[cacheKey];
 
@@ -689,6 +693,7 @@ export const useModHubStore = create((set, get) => ({
       set({ 
         mods: cached.mods, 
         totalPages: cached.totalPages || 1,
+        categoryTotalMods: cached.totalCategoryMods || cached.mods.length,
         isLoading: false
       });
 
@@ -705,9 +710,6 @@ export const useModHubStore = create((set, get) => ({
     }
 
     try {
-      const { activeFilters } = get();
-      const isHideInstalled = activeFilters.hideInstalled;
-
       // Installed lookup sets for fast filtering during multi-page fetch
       let isModInstalled = () => false;
       if (isHideInstalled) {
@@ -729,84 +731,170 @@ export const useModHubStore = create((set, get) => ({
         } catch (_) {}
       }
 
-      // Calculate how many ModHub pages (at 24 each) we need to fulfill the requested pageSize
-      const fetchMultiplier = Math.ceil(pageSize / 24);
-      let pageOffset = 0;
-      let allMods = [];
-      let maxTotalPages = 1;
-      let iterations = 0;
-      const maxIterations = isHideInstalled ? 12 : fetchMultiplier;
-
-      while (allMods.length < pageSize && iterations < maxIterations) {
-        const pageToFetch = (p * fetchMultiplier) + pageOffset;
-        pageOffset++;
-        iterations++;
-        
-        let result;
-
+      // Helper function to fetch raw mods
+      const fetchRawModsForFilter = async (filterName, requestedPage = 0) => {
         if (authorFilter) {
           if (isNaN(authorFilter.id)) {
-            result = await window.api.modhub.search({ query: authorFilter.name, page: pageToFetch });
+            return await window.api.modhub.search({ query: authorFilter.name, page: requestedPage });
           } else {
-            result = await window.api.modhub.fetchByAuthor({
-              authorId: authorFilter.id,
-              page: pageToFetch
-            });
+            return await window.api.modhub.fetchByAuthor({ authorId: authorFilter.id, page: requestedPage });
           }
-        } else if (f.startsWith('aggregate:')) {
+        } else if (filterName === 'search') {
+          return await window.api.modhub.search({ query: get().searchQuery, page: requestedPage });
+        } else {
+          return await window.api.modhub.fetchMods({ filter: filterName, page: requestedPage });
+        }
+      };
+
+      let finalModsToDisplay = [];
+      let finalTotalPages = 1;
+      let totalModsForCategory = 0;
+
+      if (isHideInstalled) {
+        // ── FULL CATEGORY FILTERING & DENSE PACKING ──
+        let allCategoryMods = [];
+
+        if (f.startsWith('aggregate:')) {
           const catLabel = f.split(':')[1];
           const parentCat = (categories || []).find(c => c.label === catLabel);
-          if (parentCat && parentCat.children) {
-            const childFilters = parentCat.children.map(c => c.filter).filter(Boolean);
-            // Fetch first page for ALL children in parallel
-            const results = await Promise.all(childFilters.map(cf => 
-              window.api.modhub.fetchMods({ filter: cf, page: pageToFetch })
-            ));
-            
-            const rawMods = results.flatMap(r => r.mods || []);
-            const seenIds = new Set();
-            const uniqueMods = rawMods.filter(m => {
-              if (!m.modId) return false;
-              if (seenIds.has(m.modId)) return false;
-              seenIds.add(m.modId);
-              return true;
-            });
-            
-            result = {
-              mods: uniqueMods,
-              totalPages: Math.max(...results.map(r => r.pagination?.total || r.totalPages || 1))
-            };
-          } else {
-            result = { mods: [], totalPages: 1 };
-          }
-        } else if (f === 'search') {
-          // Handle global search pagination
-          result = await window.api.modhub.search({ query: get().searchQuery, page: pageToFetch });
-        } else {
-          result = await window.api.modhub.fetchMods({
-            filter: f,
-            page: pageToFetch,
+          const childFilters = parentCat?.children?.map(c => c.filter).filter(Boolean) || [];
+
+          const firstPageResults = await Promise.all(childFilters.map(cf => fetchRawModsForFilter(cf, 0)));
+          const extraPagePromises = [];
+
+          firstPageResults.forEach((r, idx) => {
+            if (r.mods) allCategoryMods.push(...r.mods);
+            const totalP = r.pagination?.total || r.totalPages || 1;
+            for (let pageNum = 1; pageNum < totalP; pageNum++) {
+              extraPagePromises.push(fetchRawModsForFilter(childFilters[idx], pageNum));
+            }
           });
+
+          if (extraPagePromises.length > 0) {
+            const extraResults = await Promise.all(extraPagePromises);
+            extraResults.forEach(r => {
+              if (r.mods) allCategoryMods.push(...r.mods);
+            });
+          }
+        } else {
+          const firstPage = await fetchRawModsForFilter(f, 0);
+          if (firstPage.mods) allCategoryMods.push(...firstPage.mods);
+          const totalP = firstPage.pagination?.total || firstPage.totalPages || 1;
+
+          if (totalP > 1) {
+            const extraPromises = [];
+            for (let pageNum = 1; pageNum < totalP; pageNum++) {
+              extraPromises.push(fetchRawModsForFilter(f, pageNum));
+            }
+            const extraResults = await Promise.all(extraPromises);
+            extraResults.forEach(r => {
+              if (r.mods) allCategoryMods.push(...r.mods);
+            });
+          }
         }
 
         if (get().lastRequestId !== requestId && !isPrefetch) return;
 
-        if (result.mods && result.mods.length > 0) {
-          const totalFromApi = result.pagination?.total || result.totalPages || 1;
-          maxTotalPages = Math.max(maxTotalPages, totalFromApi);
+        const seenMap = new Map();
+        allCategoryMods.forEach(m => {
+          if (m && m.modId && !seenMap.has(m.modId)) {
+            seenMap.set(m.modId, m);
+          }
+        });
+        const uniqueAllMods = Array.from(seenMap.values());
+        const uninstalledMods = uniqueAllMods.filter(m => !isModInstalled(m));
 
-          const validPageMods = isHideInstalled ? result.mods.filter(m => !isModInstalled(m)) : result.mods;
-          allMods = [...allMods, ...validPageMods];
+        totalModsForCategory = uninstalledMods.length;
+        finalTotalPages = Math.max(1, Math.ceil(uninstalledMods.length / pageSize));
 
-          if (pageToFetch >= maxTotalPages - 1) break;
+        const startIdx = p * pageSize;
+        finalModsToDisplay = uninstalledMods.slice(startIdx, startIdx + pageSize);
+
+      } else {
+        // ── STANDARD MODHUB BROWSING (Unfiltered) ──
+        if (f.startsWith('aggregate:')) {
+          const catLabel = f.split(':')[1];
+          const parentCat = (categories || []).find(c => c.label === catLabel);
+          const childFilters = parentCat?.children?.map(c => c.filter).filter(Boolean) || [];
+
+          const firstPageResults = await Promise.all(childFilters.map(cf => fetchRawModsForFilter(cf, 0)));
+          let allAggregateMods = [];
+          const extraPagePromises = [];
+
+          let aggregateTotal = 0;
+          firstPageResults.forEach((r, idx) => {
+            if (r.mods) allAggregateMods.push(...r.mods);
+            const totalP = r.pagination?.total || r.totalPages || 1;
+            const tCount = r.pagination?.totalMods || (totalP <= 1 ? (r.mods?.length || 0) : ((totalP - 1) * 24 + 24));
+            aggregateTotal += tCount;
+
+            for (let pageNum = 1; pageNum < totalP; pageNum++) {
+              extraPagePromises.push(fetchRawModsForFilter(childFilters[idx], pageNum));
+            }
+          });
+
+          if (extraPagePromises.length > 0) {
+            const extraResults = await Promise.all(extraPagePromises);
+            extraResults.forEach(r => {
+              if (r.mods) allAggregateMods.push(...r.mods);
+            });
+          }
+
+          if (get().lastRequestId !== requestId && !isPrefetch) return;
+
+          const seenMap = new Map();
+          allAggregateMods.forEach(m => {
+            if (m && m.modId && !seenMap.has(m.modId)) {
+              seenMap.set(m.modId, m);
+            }
+          });
+          const uniqueAllMods = Array.from(seenMap.values());
+
+          totalModsForCategory = uniqueAllMods.length || aggregateTotal;
+          finalTotalPages = Math.max(1, Math.ceil(uniqueAllMods.length / pageSize));
+
+          const startIdx = p * pageSize;
+          finalModsToDisplay = uniqueAllMods.slice(startIdx, startIdx + pageSize);
+
         } else {
-          break;
+          const fetchMultiplier = Math.ceil(pageSize / 24);
+          let pageOffset = 0;
+          let allMods = [];
+          let maxTotalPages = 1;
+          let categoryTotalCount = 0;
+
+          while (allMods.length < pageSize && pageOffset < fetchMultiplier) {
+            const pageToFetch = (p * fetchMultiplier) + pageOffset;
+            pageOffset++;
+
+            const result = await fetchRawModsForFilter(f, pageToFetch);
+
+            if (get().lastRequestId !== requestId && !isPrefetch) return;
+
+            if (result.pagination?.totalMods || result.totalMods) {
+              categoryTotalCount = result.pagination?.totalMods || result.totalMods;
+            }
+
+            if (result.mods && result.mods.length > 0) {
+              const totalFromApi = result.pagination?.total || result.totalPages || 1;
+              maxTotalPages = Math.max(maxTotalPages, totalFromApi);
+              allMods = [...allMods, ...result.mods];
+
+              if (pageToFetch >= maxTotalPages - 1) break;
+            } else {
+              break;
+            }
+          }
+
+          finalTotalPages = Math.ceil(maxTotalPages / fetchMultiplier);
+          totalModsForCategory = categoryTotalCount || (
+            maxTotalPages <= 1 
+              ? allMods.length 
+              : ((maxTotalPages - 1) * 24 + 24)
+          );
+          finalModsToDisplay = allMods.slice(0, pageSize);
         }
       }
-
-      if (get().lastRequestId !== requestId && !isPrefetch) return;
-
-      const finalTotalPages = Math.ceil(maxTotalPages / fetchMultiplier);
 
       // ── ENRICH WITH CENTRAL CACHE & BADGE DECAY ──
       const { badgeDuration } = useSettingsStore.getState();
@@ -821,7 +909,7 @@ export const useModHubStore = create((set, get) => ({
           }
       })();
 
-      const rawEnriched = allMods.map(mod => {
+      const rawEnriched = finalModsToDisplay.map(mod => {
           const cached = modCache[String(mod.modId)];
           let enriched = cached ? { ...mod, ...cached } : { ...mod };
 
@@ -864,6 +952,7 @@ export const useModHubStore = create((set, get) => ({
           [cacheKey]: {
             mods: enrichedMods,
             totalPages: finalTotalPages,
+            totalCategoryMods: totalModsForCategory,
             timestamp: now
           }
         };
@@ -886,6 +975,7 @@ export const useModHubStore = create((set, get) => ({
           ...(shouldUpdateUI ? {
             mods: enrichedMods,
             totalPages: finalTotalPages,
+            categoryTotalMods: totalModsForCategory,
             isLoading: false
           } : {})
         };

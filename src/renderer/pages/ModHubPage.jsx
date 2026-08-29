@@ -40,7 +40,8 @@ export default function ModHubPage() {
     fetchDetailsForCurrentPage, setFilters, resetFilters, setAuthorFilter,
     selectedCompareIds, clearCompare, pageSize, setPageSize,
     isSmartMatchEnabled, toggleSmartMatch, powerReference, setPowerReference,
-    selectedHP, setSelectedHP, hpMatchMode, setHpMatchMode
+    selectedHP, setSelectedHP, hpMatchMode, setHpMatchMode,
+    categoryTotalMods
   } = useModHubStore();
   
   const isOnline = useSettingsStore(s => s.isOnline);
@@ -423,7 +424,7 @@ export default function ModHubPage() {
                     transition: 'opacity 0.3s ease',
                     marginTop: 2
                   }}>
-                    <span style={{ color: 'var(--text-primary)', fontSize: '18px', opacity: 1 }}>{mods.length}</span> MODS FOUND
+                    <span style={{ color: 'var(--text-primary)', fontSize: '18px', opacity: 1 }}>{categoryTotalMods > 0 ? categoryTotalMods : mods.length}</span> MODS FOUND
                   </div>
                 </div>
               )}
