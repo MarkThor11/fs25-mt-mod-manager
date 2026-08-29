@@ -429,6 +429,77 @@ export const useLocalModsStore = create((set, get) => ({
       const result = await window.api.mods.moveModsToFolder({ fileNames, destinationFolder, targetRootPath });
       
       if (result.success) {
+        const lowerFileNames = new Set((fileNames || []).map(f => f.toLowerCase()));
+        const baseNames = new Set((fileNames || []).map(f => f.split(/[/\\]/).pop().toLowerCase()));
+        const destRoot = targetRootPath ? targetRootPath.replace(/[/\\]+$/, '') : '';
+
+        set(state => {
+          const nextMods = state.mods.map(m => {
+            const mBasename = m.fileName ? m.fileName.split(/[/\\]/).pop().toLowerCase() : '';
+            if (m.fileName && (lowerFileNames.has(m.fileName.toLowerCase()) || baseNames.has(mBasename))) {
+              const realBasename = m.fileName.split(/[/\\]/).pop();
+              const newFileName = destinationFolder ? `${destinationFolder}/${realBasename}` : realBasename;
+              let newFilePath = m.filePath;
+              if (destRoot) {
+                newFilePath = destinationFolder 
+                  ? `${destRoot}\\${destinationFolder}\\${realBasename}`
+                  : `${destRoot}\\${realBasename}`;
+              } else if (m.filePath) {
+                const parts = m.filePath.split(/[/\\]/);
+                parts.pop();
+                if (m.folder) parts.pop();
+                if (destinationFolder) parts.push(destinationFolder);
+                parts.push(realBasename);
+                newFilePath = parts.join('\\');
+              }
+              return {
+                ...m,
+                folder: destinationFolder,
+                fileName: newFileName,
+                filePath: newFilePath
+              };
+            }
+            return m;
+          });
+
+          const allFoldersSet = new Set(state.allFolders);
+          if (destinationFolder) allFoldersSet.add(destinationFolder);
+
+          return {
+            mods: nextMods,
+            allFolders: Array.from(allFoldersSet),
+            modCount: computeModCount(nextMods)
+          };
+        });
+
+        // Persist cache
+        try {
+          const { mods: freshMods, allFolders: freshFolders } = get();
+          window.api.settings.set('modCache', JSON.stringify({
+            mods: freshMods.map(m => ({
+              title: m.title,
+              author: m.author,
+              version: m.version,
+              category: m.category,
+              size: m.size,
+              fileName: m.fileName,
+              filePath: m.filePath,
+              folder: m.folder,
+              isDLC: m.isDLC,
+              isMap: m.isMap,
+              mapId: m.mapId,
+              mapTitle: m.mapTitle,
+              modName: m.modName,
+              technicalName: m.technicalName,
+              dependencies: m.dependencies,
+              modId: m.modId,
+              iconData: m.iconData,
+              tags: m.tags
+            })),
+            allFolders: freshFolders
+          })).catch(() => {});
+        } catch (_) {}
+
         // Re-scan mods in the background so file paths and drive groupings update seamlessly
         get().scanMods(null, true).catch(console.error);
       }
@@ -449,6 +520,77 @@ export const useLocalModsStore = create((set, get) => ({
       const result = await window.api.mods.moveFolderToDrive({ sourceFolderName, targetRootPath, targetFolderName, fileNames });
       
       if (result.success && (result.completed > 0 || (Array.isArray(fileNames) && fileNames.length === 0))) {
+        const destFolder = (targetFolderName !== null && targetFolderName !== undefined) ? targetFolderName : sourceFolderName;
+        const normalizedTargetRoot = targetRootPath ? targetRootPath.replace(/[/\\]+$/, '') : '';
+        const fileNamesSet = Array.isArray(fileNames) && fileNames.length > 0
+          ? new Set(fileNames.map(f => f.split(/[/\\]/).pop().toLowerCase()))
+          : null;
+
+        set(state => {
+          const nextMods = state.mods.map(m => {
+            const baseName = m.fileName ? m.fileName.split(/[/\\]/).pop() : (m.filePath ? m.filePath.split(/[/\\]/).pop() : '');
+            const lowerBase = baseName.toLowerCase();
+            const isMatch = fileNamesSet
+              ? fileNamesSet.has(lowerBase)
+              : ((m.folder || '') === sourceFolderName);
+
+            if (isMatch) {
+              const newFileName = destFolder === '' ? baseName : `${destFolder}/${baseName}`;
+              const newFilePath = destFolder === '' 
+                ? `${normalizedTargetRoot}\\${baseName}`
+                : `${normalizedTargetRoot}\\${destFolder}\\${baseName}`;
+              return {
+                ...m,
+                folder: destFolder,
+                fileName: newFileName,
+                filePath: newFilePath
+              };
+            }
+            return m;
+          });
+
+          const nextFolders = new Set(state.allFolders);
+          if (sourceFolderName && sourceFolderName !== destFolder) {
+            const remaining = nextMods.some(m => (m.folder || '') === sourceFolderName);
+            if (!remaining) nextFolders.delete(sourceFolderName);
+          }
+          if (destFolder) nextFolders.add(destFolder);
+
+          return {
+            mods: nextMods,
+            allFolders: Array.from(nextFolders),
+            modCount: computeModCount(nextMods)
+          };
+        });
+
+        // Persist quick cache to avoid rollback on refresh
+        try {
+          const { mods: freshMods, allFolders: freshFolders } = get();
+          window.api.settings.set('modCache', JSON.stringify({
+            mods: freshMods.map(m => ({
+              title: m.title,
+              author: m.author,
+              version: m.version,
+              category: m.category,
+              size: m.size,
+              fileName: m.fileName,
+              filePath: m.filePath,
+              folder: m.folder,
+              isDLC: m.isDLC,
+              isMap: m.isMap,
+              mapId: m.mapId,
+              mapTitle: m.mapTitle,
+              modName: m.modName,
+              technicalName: m.technicalName,
+              dependencies: m.dependencies,
+              modId: m.modId,
+              iconData: m.iconData,
+              tags: m.tags
+            })),
+            allFolders: freshFolders
+          })).catch(() => {});
+        } catch (_) {}
+
         get().scanMods(null, true).catch(console.error);
       }
       
@@ -477,6 +619,59 @@ export const useLocalModsStore = create((set, get) => ({
         }
       }
       if (totalMoved > 0) {
+        const folderSet = new Set(folderNames.map(f => (f || '').toLowerCase()));
+        const normalizedTargetRoot = targetRootPath ? targetRootPath.replace(/[/\\]+$/, '') : '';
+
+        set(state => {
+          const nextMods = state.mods.map(m => {
+            const modFolder = (m.folder || '').toLowerCase();
+            if (folderSet.has(modFolder)) {
+              const baseName = m.fileName ? m.fileName.split(/[/\\]/).pop() : (m.filePath ? m.filePath.split(/[/\\]/).pop() : '');
+              const realFolder = m.folder || '';
+              const newFilePath = realFolder
+                ? `${normalizedTargetRoot}\\${realFolder}\\${baseName}`
+                : `${normalizedTargetRoot}\\${baseName}`;
+              return {
+                ...m,
+                filePath: newFilePath
+              };
+            }
+            return m;
+          });
+          return {
+            mods: nextMods,
+            modCount: computeModCount(nextMods)
+          };
+        });
+
+        // Persist quick cache
+        try {
+          const { mods: freshMods, allFolders: freshFolders } = get();
+          window.api.settings.set('modCache', JSON.stringify({
+            mods: freshMods.map(m => ({
+              title: m.title,
+              author: m.author,
+              version: m.version,
+              category: m.category,
+              size: m.size,
+              fileName: m.fileName,
+              filePath: m.filePath,
+              folder: m.folder,
+              isDLC: m.isDLC,
+              isMap: m.isMap,
+              mapId: m.mapId,
+              mapTitle: m.mapTitle,
+              modName: m.modName,
+              technicalName: m.technicalName,
+              dependencies: m.dependencies,
+              modId: m.modId,
+              iconData: m.iconData,
+              tags: m.tags
+            })),
+            allFolders: freshFolders
+          })).catch(() => {});
+        } catch (_) {}
+
         get().scanMods(null, true).catch(console.error);
       }
       return { success: errors.length === 0 && totalMoved > 0, completed: totalMoved, errors };

@@ -979,13 +979,6 @@ export default function InstalledModsPage() {
     const unsubMove = window.api.on.moveProgress((data) => {
         useToastStore.getState().info(`Moving mods: ${data.percent}% (${data.current}/${data.total})`, { id: 'move-progress' });
         setMigrationProgress(prev => ({ ...(prev || {}), ...data, active: true }));
-
-        if (data.status === 'complete' || data.percent === 100) {
-            setTimeout(() => {
-                setMigrationProgress(null);
-                setDriveMoveModal(null);
-            }, 800);
-        }
     });
 
     return () => {
