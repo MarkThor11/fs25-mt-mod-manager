@@ -5167,22 +5167,17 @@ async function autoResolveMissingDependencies(mods, targetMapName = null) {
  */
 async function resumePendingDownloads(onProgress) {
 	const pending = cache.getPendingDownloads();
-	if (pending.length === 0) return { success: true, count: 0 };
+	if (!Array.isArray(pending) || pending.length === 0) return { success: true, count: 0 };
 	
 	console.log(`[RESUME] Found ${pending.length} pending download records in database.`);
 	const pool = cache.getModHubMetadataPool();
-	const now = Date.now();
 	const results = [];
 	
 	for (const item of pending) {
 		const strId = String(item.mod_id);
-		const age = now - (item.created_at || 0);
-		const received = item.received_bytes || 0;
-
-		// Purge unstarted phantom records (0 received bytes), stale records (>2 hours old), or missing download_url
-		if (!item.download_url || received <= 0 || (item.created_at && age > 2 * 60 * 60 * 1000)) {
-			console.log(`[RESUME] Purging unstarted/stale pending download record for mod: ${strId} (received: ${received}b)`);
-			try { cache.removePendingDownload(strId); } catch (_) {}
+		
+		// If already active or queued in memory, skip duplicate enqueue
+		if (activeInstalls.has(strId) || downloadQueue.some(t => String(t.modId) === strId)) {
 			continue;
 		}
 
@@ -5192,14 +5187,35 @@ async function resumePendingDownloads(onProgress) {
 			if (pool[strId]?.title) title = pool[strId].title;
 		}
 
+		// Calculate relative subfolder if target_dir was stored as absolute path
+		let subFolder = null;
+		if (item.target_dir) {
+			if (path.isAbsolute(item.target_dir)) {
+				const rel = path.relative(getModsPath(), item.target_dir);
+				if (rel && !rel.startsWith('..')) {
+					subFolder = rel;
+				}
+			} else {
+				subFolder = item.target_dir;
+			}
+		}
+
+		let techData = null;
+		if (item.tech_data) {
+			try { techData = JSON.parse(item.tech_data); } catch (_) {}
+		}
+
 		try {
+			console.log(`[RESUME] Re-queueing pending download: "${title || strId}" (ID: ${strId})`);
 			const promise = enqueueInstall(
 				strId, 
-				title, 
-				item.download_url, 
+				title || `Mod ${strId}`, 
+				item.download_url || null, 
 				(progress) => onProgress?.(strId, progress),
-				item.category,
-				item.target_dir
+				item.category || null,
+				subFolder,
+				null,
+				null
 			);
 			results.push(promise);
 		} catch (err) {
