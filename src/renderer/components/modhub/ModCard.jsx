@@ -246,12 +246,14 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
 
   const handleInstall = async (e) => {
     e.stopPropagation();
-    if (useDownloadStore.getState().activeDownloads[mod.modId]) return;
+    if (useDownloadStore.getState().activeDownloads[mod.modId] || installing) return;
 
     const modId = mod.modId;
     const modTitle = mod.title;
     const modCategory = mod.category || currentFilter || '';
     let installQueued = false;
+
+    setInstalling(true);
 
     try {
       let downloadUrl = mod.downloadUrl;
@@ -296,6 +298,8 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
         useToastStore.getState().error(`Install failed: ${err.message}`, { id: `dl-toast-${mod.modId}` });
         useDownloadStore.getState().removeDownload(mod.modId);
       }
+    } finally {
+      setInstalling(false);
     }
   };
 
