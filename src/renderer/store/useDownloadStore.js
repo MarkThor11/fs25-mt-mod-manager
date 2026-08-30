@@ -172,8 +172,14 @@ export const useDownloadStore = create((set, get) => ({
 
   setStatus: (targetKey, status) => {
     if (targetKey === undefined || targetKey === null) return;
-    const targetStr = String(targetKey);
+    const targetStr = String(targetKey).trim();
     const targetLower = targetStr.toLowerCase();
+    const cleanTargetStr = targetLower.replace(/^0+/, '');
+
+    if (status === 'cancelled') {
+      get().removeDownload(targetKey);
+      return;
+    }
 
     set((s) => {
       const next = { ...s.activeDownloads };
@@ -181,16 +187,24 @@ export const useDownloadStore = create((set, get) => ({
 
       Object.keys(next).forEach((key) => {
         const item = next[key];
-        if (!item) return;
+        if (!item) {
+          delete next[key];
+          changed = true;
+          return;
+        }
 
-        const keyStr = String(key).toLowerCase();
-        const modIdStr = String(item.modId || '').toLowerCase();
-        const titleStr = String(item.title || '').toLowerCase();
+        const keyStr = String(key).trim().toLowerCase();
+        const cleanKeyStr = keyStr.replace(/^0+/, '');
+        const modIdStr = String(item.modId || '').trim().toLowerCase();
+        const cleanModIdStr = modIdStr.replace(/^0+/, '');
+        const titleStr = String(item.title || '').trim().toLowerCase();
 
         if (
           key === targetKey ||
           keyStr === targetLower ||
+          (cleanTargetStr && cleanKeyStr === cleanTargetStr) ||
           modIdStr === targetLower ||
+          (cleanTargetStr && cleanModIdStr === cleanTargetStr) ||
           titleStr === targetLower
         ) {
           next[key] = { ...item, status };
@@ -214,8 +228,9 @@ export const useDownloadStore = create((set, get) => ({
 
   setProgress: (targetKey, progressData) => {
     if (targetKey === undefined || targetKey === null) return;
-    const targetStr = String(targetKey);
+    const targetStr = String(targetKey).trim();
     const targetLower = targetStr.toLowerCase();
+    const cleanTargetStr = targetLower.replace(/^0+/, '');
 
     set((s) => {
       const next = { ...s.activeDownloads };
@@ -223,16 +238,24 @@ export const useDownloadStore = create((set, get) => ({
 
       Object.keys(next).forEach((key) => {
         const item = next[key];
-        if (!item) return;
+        if (!item) {
+          delete next[key];
+          changed = true;
+          return;
+        }
 
-        const keyStr = String(key).toLowerCase();
-        const modIdStr = String(item.modId || '').toLowerCase();
-        const titleStr = String(item.title || '').toLowerCase();
+        const keyStr = String(key).trim().toLowerCase();
+        const cleanKeyStr = keyStr.replace(/^0+/, '');
+        const modIdStr = String(item.modId || '').trim().toLowerCase();
+        const cleanModIdStr = modIdStr.replace(/^0+/, '');
+        const titleStr = String(item.title || '').trim().toLowerCase();
 
         if (
           key === targetKey ||
           keyStr === targetLower ||
+          (cleanTargetStr && cleanKeyStr === cleanTargetStr) ||
           modIdStr === targetLower ||
+          (cleanTargetStr && cleanModIdStr === cleanTargetStr) ||
           titleStr === targetLower
         ) {
           // Do NOT revert completed/terminal statuses back to downloading!
@@ -241,25 +264,18 @@ export const useDownloadStore = create((set, get) => ({
             return;
           }
 
-          if (progressData && typeof progressData === 'object' && progressData.status) {
-            return;
-          }
-
           const progress = typeof progressData === 'object' ? progressData.percent : progressData;
           const receivedBytes = typeof progressData === 'object' ? progressData.receivedBytes : item.receivedBytes;
           const totalBytes = typeof progressData === 'object' ? progressData.totalBytes : item.totalBytes;
-
-          // Skip redundant state mutations if percentage, receivedBytes, and status haven't changed
-          if (item.progress === progress && item.receivedBytes === receivedBytes && item.status === 'downloading') {
-            return;
-          }
+          const downloadSpeed = typeof progressData === 'object' ? progressData.downloadSpeed : item.downloadSpeed;
 
           next[key] = {
             ...item,
+            status: 'downloading',
             progress: typeof progress === 'number' ? progress : item.progress,
-            receivedBytes,
-            totalBytes,
-            status: 'downloading'
+            receivedBytes: typeof receivedBytes === 'number' ? receivedBytes : item.receivedBytes,
+            totalBytes: typeof totalBytes === 'number' ? totalBytes : item.totalBytes,
+            downloadSpeed: downloadSpeed !== undefined ? downloadSpeed : item.downloadSpeed
           };
           changed = true;
         }
