@@ -943,7 +943,8 @@ export default function InstalledModsPage() {
   } = useSettingsStore();
   const { toggleFavoriteMod, toggleFavoriteAuthor, favoriteMods, favoriteAuthors } = useModHubStore();
   const sessionInstalled = useDownloadStore((s) => s.sessionInstalled);
-  const activeDownloadsKeys = useDownloadStore((s) => Object.keys(s.activeDownloads));
+  const activeDownloadsKeysStr = useDownloadStore((s) => Object.keys(s.activeDownloads || {}).sort().join(','));
+  const activeDownloadsKeys = useMemo(() => activeDownloadsKeysStr ? activeDownloadsKeysStr.split(',') : [], [activeDownloadsKeysStr]);
   const navigate = useNavigate();
 
   // useDeferredValue lets React prioritize urgent renders (user interactions) over

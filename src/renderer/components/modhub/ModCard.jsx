@@ -87,8 +87,26 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     );
     return fm?.isMustHave || false;
   }, [favoriteMods, mod.modId, mod.fileName]);
-  const { activeDownloads, batchProgress, addDownload, removeDownload, cancelDownload } = useDownloadStore();
-  const isDownloading = useMemo(() => activeDownloads[mod.modId], [activeDownloads, mod.modId]);
+  const addDownload = useDownloadStore((s) => s.addDownload);
+  const removeDownload = useDownloadStore((s) => s.removeDownload);
+  const cancelDownload = useDownloadStore((s) => s.cancelDownload);
+
+  const rawModId = mod?.modId;
+  const modIdStr = rawModId ? String(rawModId).replace(/^0+/, '') : null;
+
+  const progress = useDownloadStore((s) => {
+    if (!rawModId) return null;
+    const strId = String(rawModId);
+    const cleanId = strId.replace(/^0+/, '');
+    return s.activeDownloads[strId] || s.activeDownloads[cleanId] || s.activeDownloads[rawModId] || null;
+  });
+
+  const batch = useDownloadStore((s) => {
+    if (!rawModId) return null;
+    return s.batchProgress[rawModId] || s.batchProgress[String(rawModId)] || null;
+  });
+
+  const isDownloading = !!progress;
   const isHidden = hiddenMods.some(m => m.modId && mod.modId && String(m.modId) === String(mod.modId));
   const [imgSrc, setImgSrc] = useState(mod.image);
   const [imgError, setImgError] = useState(false);
@@ -110,7 +128,6 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     return isMapCat || (isMapTitle && isLarge);
   }, [mod]);
 
-  const modIdStr = mod.modId ? String(mod.modId).replace(/^0+/, '') : null;
   const isSessionInstalled = useDownloadStore(s => modIdStr ? !!s.sessionInstalled[modIdStr] : false);
 
   const installedVersion = useMemo(() => {
@@ -148,18 +165,6 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     return compareVersions(mod.version, installedVersion) > 0;
   }, [mod.isUpdate, isInstalled, mod.version, installedVersion]);
   const [candidateIdx, setCandidateIdx] = useState(0);
-  const progress = useMemo(() => {
-    if (!mod || !mod.modId) return null;
-    const strId = String(mod.modId);
-    const cleanId = strId.replace(/^0+/, '');
-    return (
-      activeDownloads[strId] ||
-      activeDownloads[cleanId] ||
-      activeDownloads[mod.modId] ||
-      null
-    );
-  }, [activeDownloads, mod]);
-  const batch = batchProgress[mod.modId] || (mod.modId ? batchProgress[String(mod.modId)] : null);
   const images = mod.candidates || [mod.image];
 
   const [isVisible, setIsVisible] = useState(false);

@@ -11,7 +11,6 @@ import { useDownloadStore } from '../store/useDownloadStore';
  */
 export function useInstalledLookup() {
   const localMods = useLocalModsStore((s) => s.mods);
-  const activeDownloads = useDownloadStore((s) => s.activeDownloads);
   const sessionInstalled = useDownloadStore((s) => s.sessionInstalled);
 
   const cleanStr = (s) => s ? String(s).trim().toLowerCase() : '';
@@ -40,20 +39,13 @@ export function useInstalledLookup() {
       }
     }
 
-    // 2. Overlay finished downloads
-    Object.values(activeDownloads).forEach(d => {
-      if (d.status === 'success' && d.modId) {
-        byModId.set(String(d.modId).replace(/^0+/, ''), 'Installed');
-      }
-    });
-
-    // 3. Overlay session installed mods
+    // 2. Overlay session installed mods
     Object.keys(sessionInstalled || {}).forEach((modId) => {
       if (modId) byModId.set(String(modId).replace(/^0+/, ''), 'Installed');
     });
 
     return { byModId, byExactTitle, byExactName };
-  }, [localMods, activeDownloads, sessionInstalled]);
+  }, [localMods, sessionInstalled]);
 
   return useMemo(() => {
     function getInstalledVersion(mod) {
