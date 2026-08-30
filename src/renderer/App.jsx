@@ -64,7 +64,7 @@ export default function App() {
         
         // Background sync to ensure physical disk files stay 100% in sync with cache
         setTimeout(() => {
-            useLocalModsStore.getState().scanMods(null, true);
+            useLocalModsStore.getState().scanMods(null, false);
             useMapStore.getState().fetchTemplates();
         }, 2000);
 

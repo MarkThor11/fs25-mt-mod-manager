@@ -448,8 +448,8 @@ if (window.api?.on) {
       if (status === 'success' || status === 'completed' || status === 'installed') {
         useDownloadStore.getState().addSessionInstalled(strId, resolvedTitle);
         
-        // 1. Index newly downloaded mod into library first
-        useLocalModsStore.getState().scanMods(null, true).then(async (scanRes) => {
+        // 1. Index newly downloaded mod into library first (incremental scan)
+        useLocalModsStore.getState().scanMods(null, false).then(async (scanRes) => {
           // 2. Resolve title from fresh indexed library state
           const displayTitle = resolveDownloadTitle(strId, incomingTitle || active?.title);
           // 3. Display success toast notification
