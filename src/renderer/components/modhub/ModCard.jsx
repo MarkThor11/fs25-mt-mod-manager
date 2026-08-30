@@ -141,6 +141,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     // remote (mod.version) > installed (installedVersion)
     return compareVersions(mod.version, installedVersion) > 0;
   }, [mod.isUpdate, isInstalled, mod.version, installedVersion]);
+  const [candidateIdx, setCandidateIdx] = useState(0);
   const progress = useMemo(() => {
     if (!mod) return null;
     const strId = mod.modId ? String(mod.modId) : null;
