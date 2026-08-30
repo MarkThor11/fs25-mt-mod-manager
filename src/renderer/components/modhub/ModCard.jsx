@@ -421,6 +421,8 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     if (!mod.dependencies || mod.dependencies.length === 0) return true;
     if (!localMods) return false;
 
+    const currentActiveDownloads = useDownloadStore.getState().activeDownloads || {};
+
     return mod.dependencies.every(dep => {
       const depId = typeof dep === 'object' && dep.url ? dep.url.match(/mod_id=(\d+)/)?.[1] : null;
 
@@ -433,11 +435,11 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
       if (depId && sessionInstalled[depId]) return true;
 
       // Check Active/Queued Downloads
-      if (depId && Object.values(activeDownloads).some(d => String(d.modId) === String(depId))) return true;
+      if (depId && Object.values(currentActiveDownloads).some(d => d && String(d.modId) === String(depId))) return true;
 
       return false;
     });
-  }, [mod.dependencies, localMods, activeDownloads, sessionInstalled]);
+  }, [mod.dependencies, localMods, sessionInstalled]);
 
   const handleSetReference = async (e) => {
     e.stopPropagation();
