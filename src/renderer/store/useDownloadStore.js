@@ -596,7 +596,7 @@ if (window.api?.on) {
           }, 15000);
         }
       } else if (type === 'PROGRESS') {
-        useDownloadStore.getState().setProgress(strKey, percent);
+        useDownloadStore.getState().setProgress(strKey, data);
       }
     });
   }
