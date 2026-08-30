@@ -559,30 +559,29 @@ export const useModHubStore = create((set, get) => ({
     if (shouldFetch) get().fetchMods();
   },
 
-  setPageSize: (size) => {
-    const { modCache, currentFilter, authorFilter } = get();
-    const cacheKey = `${currentFilter}_0_${authorFilter?.name || 'none'}_${size}`;
-    const cached = modCache[cacheKey];
+  setFilters: (filters) => {
+    set((state) => ({ 
+      activeFilters: { ...state.activeFilters, ...filters },
+      currentPage: 0
+    }));
+  },
 
+  setPageSize: (size) => {
     localStorage.setItem('modhub_pagesize', size.toString());
-    set({ pageSize: size, currentPage: 0, mods: cached ? cached.mods : [], totalPages: cached?.totalPages || 1, categoryTotalMods: cached?.totalCategoryMods || get().categoryTotalMods });
-    get().fetchMods();
+    set({ pageSize: size, currentPage: 0 });
   },
 
   setFilter: (filter) => {
-    const { modCache, authorFilter, pageSize } = get();
-    const cacheKey = `${filter}_0_${authorFilter?.name || 'none'}_${pageSize}`;
-    const cached = modCache[cacheKey];
-
     localStorage.setItem('modhub_filter', filter);
     localStorage.setItem('modhub_page', '0');
     
     set({ 
       currentFilter: filter, 
       currentPage: 0, 
-      mods: cached ? cached.mods : [],
-      totalPages: cached?.totalPages || 1,
-      categoryTotalMods: cached?.totalCategoryMods || 0,
+      categoryAllMods: [],
+      mods: [],
+      totalPages: 1,
+      categoryTotalMods: 0,
       error: null,
       searchQuery: '',
       authorFilter: null 
@@ -592,14 +591,8 @@ export const useModHubStore = create((set, get) => ({
   },
 
   setPage: (page) => {
-    if (get().currentPage === page) return;
-    const { modCache, currentFilter, authorFilter, pageSize } = get();
-    const cacheKey = `${currentFilter}_${page}_${authorFilter?.name || 'none'}_${pageSize}`;
-    const cached = modCache[cacheKey];
-
     localStorage.setItem('modhub_page', page.toString());
-    set({ currentPage: page, mods: cached ? cached.mods : [], totalPages: cached?.totalPages || 1, categoryTotalMods: cached?.totalCategoryMods || get().categoryTotalMods });
-    get().fetchMods();
+    set({ currentPage: page });
   },
 
   setSearchQuery: (query) => set({ searchQuery: query }),
@@ -664,16 +657,12 @@ export const useModHubStore = create((set, get) => ({
 
   fetchMods: async (filter, page, isPrefetch = false) => {
     if (!window.api?.modhub) return [];
-    const { currentFilter, currentPage, authorFilter, pageSize, modCache, categories, activeFilters } = get();
+    const { currentFilter, authorFilter, modCache, categories } = get();
     
-    // Determine target filter and page
+    // Determine target filter
     const f = filter !== undefined ? filter : currentFilter;
-    const p = page !== undefined ? page : currentPage;
-    const isHideInstalled = !!activeFilters.hideInstalled;
-    
     const searchPart = f === 'search' ? `_${get().searchQuery}` : '';
-    const hidePart = isHideInstalled ? '_hideInst' : '';
-    const cacheKey = `${f}_${p}_${authorFilter?.name || 'none'}_${pageSize}${hidePart}${searchPart}`;
+    const cacheKey = `${f}_${authorFilter?.name || 'none'}${searchPart}`;
     const now = Date.now();
     const cached = modCache[cacheKey];
 
@@ -691,210 +680,98 @@ export const useModHubStore = create((set, get) => ({
       const isStale = now - cached.timestamp > 300000; // 5 minutes stale for UI
       
       set({ 
-        mods: cached.mods, 
-        totalPages: cached.totalPages || 1,
-        categoryTotalMods: cached.totalCategoryMods || cached.mods.length,
+        categoryAllMods: cached.allMods || [],
+        mods: cached.allMods || [],
         isLoading: false
       });
 
       if (!isStale) {
         console.log(`[MODHUB] [CACHE HIT] ${cacheKey}`);
-        return;
+        return cached.allMods;
       }
       console.log(`[MODHUB] [STALE] Revalidating: ${cacheKey}`);
     }
 
     // Only show loader if we have nothing to show
     if (!cached && !isPrefetch) {
-      set({ isLoading: true, mods: [] });
+      set({ isLoading: true, categoryAllMods: [], mods: [] });
     }
 
     try {
-      // Installed lookup sets for fast filtering during multi-page fetch
-      let isModInstalled = () => false;
-      if (isHideInstalled) {
-        try {
-          const localMods = useLocalModsStore.getState().mods || [];
-          const installedIds = new Set(localMods.map(m => m.modId ? String(m.modId).replace(/^0+/, '') : null).filter(Boolean));
-          const installedTitles = new Set(localMods.map(m => m.title ? String(m.title).toLowerCase().trim() : null).filter(Boolean));
-          const installedNames = new Set(localMods.map(m => m.modName ? String(m.modName).toLowerCase().trim() : null).filter(Boolean));
-          const installedFiles = new Set(localMods.map(m => m.fileName ? String(m.fileName).toLowerCase().replace(/\.zip$/i, '').trim() : null).filter(Boolean));
-
-          isModInstalled = (m) => {
-            if (!m) return false;
-            if (m.modId && installedIds.has(String(m.modId).replace(/^0+/, ''))) return true;
-            if (m.title && installedTitles.has(String(m.title).toLowerCase().trim())) return true;
-            if (m.modName && installedNames.has(String(m.modName).toLowerCase().trim())) return true;
-            if (m.fileName && installedFiles.has(String(m.fileName).toLowerCase().replace(/\.zip$/i, '').trim())) return true;
-            return false;
-          };
-        } catch (_) {}
-      }
-
-      // Helper function to fetch raw mods
-      const fetchRawModsForFilter = async (filterName, requestedPage = 0) => {
+      // Helper function to fetch all pages for a given filter/child
+      const fetchAllPagesForFilter = async (filterName) => {
         if (authorFilter) {
           if (isNaN(authorFilter.id)) {
-            return await window.api.modhub.search({ query: authorFilter.name, page: requestedPage });
+            const first = await window.api.modhub.search({ query: authorFilter.name, page: 0 });
+            const total = first.pagination?.total || first.totalPages || 1;
+            const resMods = [...(first.mods || [])];
+            if (total > 1) {
+              const extra = await Promise.all(Array.from({ length: total - 1 }, (_, i) => 
+                window.api.modhub.search({ query: authorFilter.name, page: i + 1 })
+              ));
+              extra.forEach(r => { if (r.mods) resMods.push(...r.mods); });
+            }
+            return resMods;
           } else {
-            return await window.api.modhub.fetchByAuthor({ authorId: authorFilter.id, page: requestedPage });
+            const first = await window.api.modhub.fetchByAuthor({ authorId: authorFilter.id, page: 0 });
+            const total = first.pagination?.total || first.totalPages || 1;
+            const resMods = [...(first.mods || [])];
+            if (total > 1) {
+              const extra = await Promise.all(Array.from({ length: total - 1 }, (_, i) => 
+                window.api.modhub.fetchByAuthor({ authorId: authorFilter.id, page: i + 1 })
+              ));
+              extra.forEach(r => { if (r.mods) resMods.push(...r.mods); });
+            }
+            return resMods;
           }
         } else if (filterName === 'search') {
-          return await window.api.modhub.search({ query: get().searchQuery, page: requestedPage });
+          const first = await window.api.modhub.search({ query: get().searchQuery, page: 0 });
+          const total = first.pagination?.total || first.totalPages || 1;
+          const resMods = [...(first.mods || [])];
+          if (total > 1) {
+            const extra = await Promise.all(Array.from({ length: total - 1 }, (_, i) => 
+              window.api.modhub.search({ query: get().searchQuery, page: i + 1 })
+            ));
+            extra.forEach(r => { if (r.mods) resMods.push(...r.mods); });
+          }
+          return resMods;
         } else {
-          return await window.api.modhub.fetchMods({ filter: filterName, page: requestedPage });
+          const first = await window.api.modhub.fetchMods({ filter: filterName, page: 0 });
+          const total = first.pagination?.total || first.totalPages || 1;
+          const resMods = [...(first.mods || [])];
+          if (total > 1) {
+            const extra = await Promise.all(Array.from({ length: total - 1 }, (_, i) => 
+              window.api.modhub.fetchMods({ filter: filterName, page: i + 1 })
+            ));
+            extra.forEach(r => { if (r.mods) resMods.push(...r.mods); });
+          }
+          return resMods;
         }
       };
 
-      let finalModsToDisplay = [];
-      let finalTotalPages = 1;
-      let totalModsForCategory = 0;
+      let allRawMods = [];
 
-      if (isHideInstalled) {
-        // ── FULL CATEGORY FILTERING & DENSE PACKING ──
-        let allCategoryMods = [];
+      if (f.startsWith('aggregate:')) {
+        const catLabel = f.split(':')[1];
+        const parentCat = (categories || []).find(c => c.label === catLabel);
+        const childFilters = parentCat?.children?.map(c => c.filter).filter(Boolean) || [];
 
-        if (f.startsWith('aggregate:')) {
-          const catLabel = f.split(':')[1];
-          const parentCat = (categories || []).find(c => c.label === catLabel);
-          const childFilters = parentCat?.children?.map(c => c.filter).filter(Boolean) || [];
-
-          const firstPageResults = await Promise.all(childFilters.map(cf => fetchRawModsForFilter(cf, 0)));
-          const extraPagePromises = [];
-
-          firstPageResults.forEach((r, idx) => {
-            if (r.mods) allCategoryMods.push(...r.mods);
-            const totalP = r.pagination?.total || r.totalPages || 1;
-            for (let pageNum = 1; pageNum < totalP; pageNum++) {
-              extraPagePromises.push(fetchRawModsForFilter(childFilters[idx], pageNum));
-            }
-          });
-
-          if (extraPagePromises.length > 0) {
-            const extraResults = await Promise.all(extraPagePromises);
-            extraResults.forEach(r => {
-              if (r.mods) allCategoryMods.push(...r.mods);
-            });
-          }
-        } else {
-          const firstPage = await fetchRawModsForFilter(f, 0);
-          if (firstPage.mods) allCategoryMods.push(...firstPage.mods);
-          const totalP = firstPage.pagination?.total || firstPage.totalPages || 1;
-
-          if (totalP > 1) {
-            const extraPromises = [];
-            for (let pageNum = 1; pageNum < totalP; pageNum++) {
-              extraPromises.push(fetchRawModsForFilter(f, pageNum));
-            }
-            const extraResults = await Promise.all(extraPromises);
-            extraResults.forEach(r => {
-              if (r.mods) allCategoryMods.push(...r.mods);
-            });
-          }
-        }
-
-        if (get().lastRequestId !== requestId && !isPrefetch) return;
-
-        const seenMap = new Map();
-        allCategoryMods.forEach(m => {
-          if (m && m.modId && !seenMap.has(m.modId)) {
-            seenMap.set(m.modId, m);
-          }
-        });
-        const uniqueAllMods = Array.from(seenMap.values());
-        const uninstalledMods = uniqueAllMods.filter(m => !isModInstalled(m));
-
-        totalModsForCategory = uninstalledMods.length;
-        finalTotalPages = Math.max(1, Math.ceil(uninstalledMods.length / pageSize));
-
-        const startIdx = p * pageSize;
-        finalModsToDisplay = uninstalledMods.slice(startIdx, startIdx + pageSize);
-
+        const childResults = await Promise.all(childFilters.map(cf => fetchAllPagesForFilter(cf)));
+        allRawMods = childResults.flat();
       } else {
-        // ── STANDARD MODHUB BROWSING (Unfiltered) ──
-        if (f.startsWith('aggregate:')) {
-          const catLabel = f.split(':')[1];
-          const parentCat = (categories || []).find(c => c.label === catLabel);
-          const childFilters = parentCat?.children?.map(c => c.filter).filter(Boolean) || [];
-
-          const firstPageResults = await Promise.all(childFilters.map(cf => fetchRawModsForFilter(cf, 0)));
-          let allAggregateMods = [];
-          const extraPagePromises = [];
-
-          let aggregateTotal = 0;
-          firstPageResults.forEach((r, idx) => {
-            if (r.mods) allAggregateMods.push(...r.mods);
-            const totalP = r.pagination?.total || r.totalPages || 1;
-            const tCount = r.pagination?.totalMods || (totalP <= 1 ? (r.mods?.length || 0) : ((totalP - 1) * 24 + 24));
-            aggregateTotal += tCount;
-
-            for (let pageNum = 1; pageNum < totalP; pageNum++) {
-              extraPagePromises.push(fetchRawModsForFilter(childFilters[idx], pageNum));
-            }
-          });
-
-          if (extraPagePromises.length > 0) {
-            const extraResults = await Promise.all(extraPagePromises);
-            extraResults.forEach(r => {
-              if (r.mods) allAggregateMods.push(...r.mods);
-            });
-          }
-
-          if (get().lastRequestId !== requestId && !isPrefetch) return;
-
-          const seenMap = new Map();
-          allAggregateMods.forEach(m => {
-            if (m && m.modId && !seenMap.has(m.modId)) {
-              seenMap.set(m.modId, m);
-            }
-          });
-          const uniqueAllMods = Array.from(seenMap.values());
-
-          totalModsForCategory = uniqueAllMods.length || aggregateTotal;
-          finalTotalPages = Math.max(1, Math.ceil(uniqueAllMods.length / pageSize));
-
-          const startIdx = p * pageSize;
-          finalModsToDisplay = uniqueAllMods.slice(startIdx, startIdx + pageSize);
-
-        } else {
-          const fetchMultiplier = Math.ceil(pageSize / 24);
-          let pageOffset = 0;
-          let allMods = [];
-          let maxTotalPages = 1;
-          let categoryTotalCount = 0;
-
-          while (allMods.length < pageSize && pageOffset < fetchMultiplier) {
-            const pageToFetch = (p * fetchMultiplier) + pageOffset;
-            pageOffset++;
-
-            const result = await fetchRawModsForFilter(f, pageToFetch);
-
-            if (get().lastRequestId !== requestId && !isPrefetch) return;
-
-            if (result.pagination?.totalMods || result.totalMods) {
-              categoryTotalCount = result.pagination?.totalMods || result.totalMods;
-            }
-
-            if (result.mods && result.mods.length > 0) {
-              const totalFromApi = result.pagination?.total || result.totalPages || 1;
-              maxTotalPages = Math.max(maxTotalPages, totalFromApi);
-              allMods = [...allMods, ...result.mods];
-
-              if (pageToFetch >= maxTotalPages - 1) break;
-            } else {
-              break;
-            }
-          }
-
-          finalTotalPages = Math.ceil(maxTotalPages / fetchMultiplier);
-          totalModsForCategory = categoryTotalCount || (
-            maxTotalPages <= 1 
-              ? allMods.length 
-              : ((maxTotalPages - 1) * 24 + 24)
-          );
-          finalModsToDisplay = allMods.slice(0, pageSize);
-        }
+        allRawMods = await fetchAllPagesForFilter(f);
       }
+
+      if (get().lastRequestId !== requestId && !isPrefetch) return [];
+
+      // Deduplicate by modId
+      const seenMap = new Map();
+      allRawMods.forEach(m => {
+        if (m && m.modId && !seenMap.has(m.modId)) {
+          seenMap.set(m.modId, m);
+        }
+      });
+      const uniqueAllMods = Array.from(seenMap.values());
 
       // ── ENRICH WITH CENTRAL CACHE & BADGE DECAY ──
       const { badgeDuration } = useSettingsStore.getState();
@@ -909,16 +786,15 @@ export const useModHubStore = create((set, get) => ({
           }
       })();
 
-      const rawEnriched = finalModsToDisplay.map(mod => {
-          const cached = modCache[String(mod.modId)];
-          let enriched = cached ? { ...mod, ...cached } : { ...mod };
+      const enrichedMods = uniqueAllMods.map(mod => {
+          const cachedMod = modCache[String(mod.modId)];
+          let enriched = cachedMod ? { ...mod, ...cachedMod } : { ...mod };
 
           // Badge First-Seen Tracking
           if (enriched.isNew || enriched.isUpdate) {
               if (!enriched.badgeFirstSeen) {
                   enriched.badgeFirstSeen = Date.now();
               } else {
-                  // Decay logic: If we've seen it longer than the threshold, hide it locally
                   const age = now - enriched.badgeFirstSeen;
                   if (age > durationMs) {
                       enriched.isNew = false;
@@ -929,15 +805,6 @@ export const useModHubStore = create((set, get) => ({
 
           return enriched;
       });
-
-      // Final Uniqueness and pageSize enforcement
-      const seenEnrichedIds = new Set();
-      const enrichedMods = rawEnriched.filter(m => {
-        if (!m.modId) return false;
-        if (seenEnrichedIds.has(m.modId)) return false;
-        seenEnrichedIds.add(m.modId);
-        return true;
-      }).slice(0, pageSize); // STRICT ENFORCEMENT
 
       // ── UPDATE FRONTEND CACHE ──
       set(state => {
@@ -950,9 +817,7 @@ export const useModHubStore = create((set, get) => ({
           ...state.modCache,
           ...poolUpdate, 
           [cacheKey]: {
-            mods: enrichedMods,
-            totalPages: finalTotalPages,
-            totalCategoryMods: totalModsForCategory,
+            allMods: enrichedMods,
             timestamp: now
           }
         };
@@ -966,16 +831,14 @@ export const useModHubStore = create((set, get) => ({
         localStorage.setItem('modhub_cache_v2', JSON.stringify(prunedCache));
         window.api.modhub.setPersistentCache(prunedCache).catch(console.error);
 
-        const isStillValid = !isPrefetch && requestId === get().lastRequestId;
-        const isActuallyActive = f === get().currentFilter && p === get().currentPage && (authorFilter?.id === get().authorFilter?.id);
+        const isActuallyActive = f === get().currentFilter && (authorFilter?.id === get().authorFilter?.id);
         const shouldUpdateUI = isActuallyActive || (isPrefetch && isActuallyActive);
 
         return {
           modCache: prunedCache,
           ...(shouldUpdateUI ? {
+            categoryAllMods: enrichedMods,
             mods: enrichedMods,
-            totalPages: finalTotalPages,
-            categoryTotalMods: totalModsForCategory,
             isLoading: false
           } : {})
         };
@@ -984,7 +847,7 @@ export const useModHubStore = create((set, get) => ({
       if (isPrefetch) {
         console.log(`[MODHUB] [PREFETCHED] ${cacheKey}`);
       } else {
-        console.log(`[MODHUB] [FETCHED] ${cacheKey}`);
+        console.log(`[MODHUB] [FETCHED] ${cacheKey} (${enrichedMods.length} total mods)`);
       }
 
       return enrichedMods;

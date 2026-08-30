@@ -40,7 +40,7 @@ export default function ModHubPage() {
     selectedCompareIds, clearCompare, pageSize, setPageSize,
     isSmartMatchEnabled, toggleSmartMatch, powerReference, setPowerReference,
     selectedHP, setSelectedHP, hpMatchMode, setHpMatchMode,
-    categoryTotalMods
+    categoryTotalMods, categoryAllMods
   } = useModHubStore();
   
   const isOnline = useSettingsStore(s => s.isOnline);
@@ -121,9 +121,15 @@ export default function ModHubPage() {
     setSearchTimeout(timeout);
   }, [searchTimeout, searchMods, fetchMods]);
 
+  const sourceMods = useMemo(() => {
+    return (categoryAllMods && categoryAllMods.length > 0) ? categoryAllMods : (mods || []);
+  }, [categoryAllMods, mods]);
+
   // Filter mods based on active filters
   const filteredMods = useMemo(() => {
-    return mods.filter(mod => {
+    return sourceMods.filter(mod => {
+      if (!mod) return false;
+
       // Hidden mod filter — always exclude hidden mods from browsing
       const hiddenModIds = hiddenMods.map(m => m.modId);
       if (hiddenModIds.includes(mod.modId)) return false;
@@ -140,8 +146,6 @@ export default function ModHubPage() {
       }
 
       // SMART MATCH SAME-TYPE BYPASS
-      // If Smart Match is on and this mod is the same type as the reference (Tractor-Tractor or Tool-Tool),
-      // we bypass the technical power filters but keep the basic ones.
       const isSmartMatching = isSmartMatchEnabled && powerReference && mod.techData;
       const sameType = isSmartMatching && (!!mod.techData.hpIsRequirement === !!powerReference.techData?.hpIsRequirement);
 
@@ -157,75 +161,68 @@ export default function ModHubPage() {
         return false;
       }
 
-        // Smart Power Matching (Bi-directional Cross-Type only)
-        if (isSmartMatching && !sameType && (mod.techData.hpMin > 0 || mod.techData.hpMax > 0)) {
-          const modIsReq = !!mod.techData.hpIsRequirement;
-          const refIsReq = !!powerReference.techData?.hpIsRequirement;
-          const modIsDrivable = !!mod.techData.isDrivable;
-          const refIsDrivable = !!powerReference.techData?.isDrivable;
+      // Smart Power Matching (Bi-directional Cross-Type only)
+      if (isSmartMatching && !sameType && (mod.techData.hpMin > 0 || mod.techData.hpMax > 0)) {
+        const modIsReq = !!mod.techData.hpIsRequirement;
+        const refIsReq = !!powerReference.techData?.hpIsRequirement;
+        const modIsDrivable = !!mod.techData.isDrivable;
+        const refIsDrivable = !!powerReference.techData?.isDrivable;
 
-          // EXCLUSIVE PAIRING LOGIC:
-          // 1. If we selected a Tool/Implement, we ONLY highlight Drivables (Tractors/Trucks).
-          // 2. If we selected a Drivable, we ONLY highlight Tools/Implements.
-          const isTargetingDrivable = refIsReq && modIsDrivable;
-          const isTargetingTool = refIsDrivable && modIsReq;
-          
-          if (!isTargetingDrivable && !isTargetingTool) return true;
+        const isTargetingDrivable = refIsReq && modIsDrivable;
+        const isTargetingTool = refIsDrivable && modIsReq;
+        
+        if (!isTargetingDrivable && !isTargetingTool) return true;
 
-          const modHPMin = mod.techData.hpMin || mod.techData.hp || 0;
-          const modHPMax = mod.techData.hpMax || mod.techData.hp || 0;
-          let refHPMin = powerReference.techData?.hpMin || powerReference.techData?.hp || 0;
-          let refHPMax = powerReference.techData?.hpMax || powerReference.techData?.hp || 0;
+        const modHPMin = mod.techData.hpMin || mod.techData.hp || 0;
+        const modHPMax = mod.techData.hpMax || mod.techData.hp || 0;
+        let refHPMin = powerReference.techData?.hpMin || powerReference.techData?.hp || 0;
+        let refHPMax = powerReference.techData?.hpMax || powerReference.techData?.hp || 0;
 
-          // If a specific HP is selected (e.g. from a pack), use it for both min and max matching
-          if (selectedHP > 0) {
-            refHPMin = selectedHP;
-            refHPMax = selectedHP;
+        if (selectedHP > 0) {
+          refHPMin = selectedHP;
+          refHPMax = selectedHP;
+        }
+
+        if (!refIsReq) {
+          if (modIsReq) {
+            return modHPMin <= refHPMax;
           }
-
-          if (!refIsReq) {
-            // --- REFERENCE IS A PROVIDER (e.g. Tractor with 130-2500 range) ---
-            if (modIsReq) {
-              // Tool must be pullable by at least the maximum configuration of this provider
-              return modHPMin <= refHPMax;
-            }
-          } else {
-            // --- REFERENCE IS A REQUESTER (e.g. Implement needing 130-200) ---
-            if (!modIsReq) {
-              return modHPMax >= refHPMin;
-            }
+        } else {
+          if (!modIsReq) {
+            return modHPMax >= refHPMin;
           }
         }
+      }
 
-        if ((activeFilters.platforms?.length || 0) > 0) {
-          const metadata = mod.metadata || {};
-          const platformText = (metadata['Platform'] || metadata['platform'] || '').toLowerCase();
-          
-          const isCrossplay = platformText.includes('ps5') || platformText.includes('ps4') || platformText.includes('xbs') || platformText.includes('xb1');
-          const isPCOnly = platformText.includes('pc') && !isCrossplay;
+      if ((activeFilters.platforms?.length || 0) > 0) {
+        const metadata = mod.metadata || {};
+        const platformText = (metadata['Platform'] || metadata['platform'] || '').toLowerCase();
+        
+        const isCrossplay = platformText.includes('ps5') || platformText.includes('ps4') || platformText.includes('xbs') || platformText.includes('xb1');
+        const isPCOnly = platformText.includes('pc') && !isCrossplay;
 
-          if (activeFilters.platforms.includes('pc') && !isPCOnly) return false;
-          if (activeFilters.platforms.includes('crossplay') && !isCrossplay) return false;
-        }
+        if (activeFilters.platforms.includes('pc') && !isPCOnly) return false;
+        if (activeFilters.platforms.includes('crossplay') && !isCrossplay) return false;
+      }
 
-        // Requirement Filter
-        if (activeFilters.hideRequired && mod?.dependencies && mod.dependencies.length > 0) {
-          return false;
-        }
+      // Requirement Filter
+      if (activeFilters.hideRequired && mod?.dependencies && mod.dependencies.length > 0) {
+        return false;
+      }
 
-        // Installed Filter
-        if (activeFilters.hideInstalled && mod && getInstalledVersion(mod)) {
-          return false;
-        }
+      // Installed Filter
+      if (activeFilters.hideInstalled && mod && getInstalledVersion(mod)) {
+        return false;
+      }
 
       return true;
-    }).filter(Boolean); // Double safety against nulls
-  }, [mods, hiddenMods, activeFilters, authorFilter, isSmartMatchEnabled, powerReference, selectedHP, getInstalledVersion]);
+    }).filter(Boolean);
+  }, [sourceMods, hiddenMods, activeFilters, authorFilter, isSmartMatchEnabled, powerReference, selectedHP, getInstalledVersion]);
 
-  const brands = React.useMemo(() => {
-    const scannedBrands = mods.map(m => m.brand).filter(Boolean);
+  const brands = useMemo(() => {
+    const scannedBrands = sourceMods.map(m => m.brand).filter(Boolean);
     return Array.from(new Set([...hardcodedBrands, ...scannedBrands])).sort();
-  }, [mods, hardcodedBrands]);
+  }, [sourceMods, hardcodedBrands]);
 
   const handleBrandToggle = (brand) => {
     const newBrands = activeFilters.brands.includes(brand)
@@ -234,7 +231,7 @@ export default function ModHubPage() {
     setFilters({ brands: newBrands });
   };
 
-  const filteredAndSortedMods = React.useMemo(() => {
+  const filteredAndSortedMods = useMemo(() => {
     let result = [...filteredMods];
     
     if (sortOrder === 'downloads') {
@@ -257,9 +254,16 @@ export default function ModHubPage() {
       result.sort((a, b) => (b?.techData?.capacity || 0) - (a?.techData?.capacity || 0));
     }
     
-    return result.filter(m => m && (m.modId || m.title)); // Ensure we only render valid mod objects
+    return result.filter(m => m && (m.modId || m.title));
   }, [filteredMods, sortOrder]);
 
+  const totalFilteredCount = filteredAndSortedMods.length;
+  const computedTotalPages = Math.max(1, Math.ceil(totalFilteredCount / pageSize));
+  const safeCurrentPage = currentPage >= computedTotalPages ? 0 : currentPage;
+  const pagedMods = useMemo(() => {
+    const start = safeCurrentPage * pageSize;
+    return filteredAndSortedMods.slice(start, start + pageSize);
+  }, [filteredAndSortedMods, safeCurrentPage, pageSize]);
 
   const handleCategorySelect = (filter) => {
     setSearchInput('');
@@ -268,18 +272,18 @@ export default function ModHubPage() {
   };
 
   const renderPagination = () => {
-    if (totalPages <= 1) return null;
+    if (computedTotalPages <= 1) return null;
     const pages = [];
     const maxVisible = 7;
-    let start = Math.max(0, currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(totalPages, start + maxVisible);
+    let start = Math.max(0, safeCurrentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(computedTotalPages, start + maxVisible);
     if (end - start < maxVisible) start = Math.max(0, end - maxVisible);
 
     for (let i = start; i < end; i++) {
       pages.push(
         <button
           key={i}
-          className={`pagination__btn ${i === currentPage ? 'pagination__btn--active' : ''}`}
+          className={`pagination__btn ${i === safeCurrentPage ? 'pagination__btn--active' : ''}`}
           onClick={() => setPage(i)}
         >
           {i + 1}
@@ -291,16 +295,16 @@ export default function ModHubPage() {
       <div className="pagination">
         <button
           className="pagination__btn"
-          onClick={() => setPage(currentPage - 1)}
-          disabled={currentPage === 0}
+          onClick={() => setPage(safeCurrentPage - 1)}
+          disabled={safeCurrentPage === 0}
         >
           ‹
         </button>
         {pages}
         <button
           className="pagination__btn"
-          onClick={() => setPage(currentPage + 1)}
-          disabled={currentPage >= totalPages - 1}
+          onClick={() => setPage(safeCurrentPage + 1)}
+          disabled={safeCurrentPage >= computedTotalPages - 1}
         >
           ›
         </button>
@@ -422,7 +426,7 @@ export default function ModHubPage() {
                     transition: 'opacity 0.3s ease',
                     marginTop: 2
                   }}>
-                    <span style={{ color: 'var(--text-primary)', fontSize: '18px', opacity: 1 }}>{categoryTotalMods > 0 ? categoryTotalMods : mods.length}</span> MODS FOUND
+                    <span style={{ color: 'var(--text-primary)', fontSize: '18px', opacity: 1 }}>{totalFilteredCount}</span> MODS FOUND
                   </div>
                 </div>
               )}
@@ -1003,7 +1007,7 @@ export default function ModHubPage() {
         )}
 
         {/* Loading Skeletons */}
-        {isLoading && mods.length === 0 && (
+        {isLoading && sourceMods.length === 0 && (
           <div className="mod-grid">
             {Array.from({ length: 12 }).map((_, i) => (
               <div key={i} className="mod-card">
@@ -1019,7 +1023,7 @@ export default function ModHubPage() {
         )}
 
         {/* Mod Grid */}
-        {!isLoading && mods.length === 0 && !error && (
+        {!isLoading && sourceMods.length === 0 && !error && (
           <div className="empty-state">
             <SlidersHorizontal className="empty-state__icon" size={64} />
             <div className="empty-state__title">No mods found</div>
@@ -1029,19 +1033,19 @@ export default function ModHubPage() {
           </div>
         )}
 
-        {/* No mods found after filtering (but page had mods) */}
-        {!isLoading && mods.length > 0 && filteredAndSortedMods.length === 0 && !error && (
+        {/* No mods found after filtering (but category has mods) */}
+        {!isLoading && sourceMods.length > 0 && filteredAndSortedMods.length === 0 && !error && (
           <div className="empty-state">
             <Package className="empty-state__icon" size={64} opacity={0.2} />
-            <div className="empty-state__title">Page Filtered</div>
+            <div className="empty-state__title">Category Filtered</div>
             <div className="empty-state__desc">
-              All {mods.length} mods on this page are hidden by your current filters.
+              All {sourceMods.length} mods in this category are hidden by your current filters.
               {activeFilters.hideInstalled && " (Mostly likely already installed)"}
             </div>
           </div>
         )}
 
-        {filteredAndSortedMods.length > 0 && (
+        {pagedMods.length > 0 && (
           <>
             <div 
               className="mod-grid"
@@ -1049,7 +1053,7 @@ export default function ModHubPage() {
                 gridTemplateColumns: `repeat(auto-fill, minmax(${modHubZoom}px, 1fr))`
               }}
             >
-              {filteredAndSortedMods.map((mod, idx) => {
+              {pagedMods.map((mod, idx) => {
                 const f = currentFilter?.toLowerCase() || '';
                 const noCompareFilters = ['latest', 'gameplay', 'prefab', 'package', 'pallet', 'bigbag', 'ibc', 'object', 'handtool', 'misc', 'decoration', 'fences', 'trees', 'silos', 'sheds', 'farmhouses', 'animalpens', 'storages', 'containers', 'tanks', 'winter', 'bales', 'weigh', 'chainsaw', 'flashlight', 'production', 'selling', 'flood', 'beehive', 'garden', 'fillable', 'map', 'scenery'];
                 const noMatchFilters = ['latest', 'gameplay', 'prefab', 'package', 'pallet', 'bigbag', 'ibc', 'object', 'handtool', 'misc', 'decoration', 'fences', 'trees', 'silos', 'sheds', 'farmhouses', 'animalpens', 'storages', 'containers', 'tanks', 'weights', 'belts', 'winter', 'forestryplanters', 'sapling', 'bales', 'weigh', 'chainsaw', 'flashlight', 'production', 'selling', 'flood', 'beehive', 'garden', 'fillable', 'map', 'scenery'];
