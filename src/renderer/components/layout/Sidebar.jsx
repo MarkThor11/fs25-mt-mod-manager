@@ -112,7 +112,6 @@ export default function Sidebar() {
               }
               end={item.to === '/'}
               title={isCollapsed ? item.label : ''}
-              onClick={() => navigate(item.to)}
             >
               <Icon className="sidebar__link-icon" size={20} />
               <span>{item.label}</span>
