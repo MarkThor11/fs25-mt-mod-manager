@@ -2079,36 +2079,60 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 					}
 				});
 
+/**
+ * Safely verify ZIP archive integrity without buffering entire multi-gigabyte files into RAM.
+ * Checks both the start PK header and the End of Central Directory record at the end of the file.
+ */
+function verifyZipFileIntegrity(filePath) {
+	try {
+		if (!fs.existsSync(filePath)) return { ok: false, error: 'File does not exist' };
+		const stats = fs.statSync(filePath);
+		if (stats.size < 22) return { ok: false, error: 'ZIP file too small' };
+		const fd = fs.openSync(filePath, 'r');
+		
+		// 1. Check PK header at start (first 4 bytes)
+		const startBuf = Buffer.alloc(4);
+		fs.readSync(fd, startBuf, 0, 4, 0);
+		if (startBuf[0] !== 0x50 || startBuf[1] !== 0x4B) {
+			fs.closeSync(fd);
+			return { ok: false, error: 'Invalid ZIP start signature (not a ZIP archive)' };
+		}
+
+		// 2. Check End of Central Directory signature in last 1024 bytes (0x50 0x4B 0x05 0x06)
+		const readLen = Math.min(stats.size, 1024);
+		const endBuf = Buffer.alloc(readLen);
+		fs.readSync(fd, endBuf, 0, readLen, stats.size - readLen);
+		fs.closeSync(fd);
+
+		let hasEOCD = false;
+		for (let i = 0; i <= readLen - 4; i++) {
+			if (endBuf[i] === 0x50 && endBuf[i + 1] === 0x4B && endBuf[i + 2] === 0x05 && endBuf[i + 3] === 0x06) {
+				hasEOCD = true;
+				break;
+			}
+		}
+
+		if (!hasEOCD) {
+			return { ok: false, error: 'Incomplete or truncated ZIP archive (missing End of Central Directory)' };
+		}
+
+		return { ok: true };
+	} catch (err) {
+		return { ok: false, error: err.message };
+	}
+}
+
 				item.once('done', async (event, state) => {
 					debugLog(`[INSTALL] Window download done for ${modId}. State: ${state}`);
 					if (state === 'completed') {
-						// Verify ZIP archive integrity on tempPath
+						// Verify ZIP archive integrity on tempPath without loading gigabytes into RAM
 						if (fileName.toLowerCase().endsWith('.zip')) {
-							try {
-								const fd = fs.openSync(tempPath, 'r');
-								const headerBuf = Buffer.alloc(4);
-								fs.readSync(fd, headerBuf, 0, 4, 0);
-								fs.closeSync(fd);
-
-								if (headerBuf[0] !== 0x50 || headerBuf[1] !== 0x4B) {
-									try { fs.unlinkSync(tempPath); } catch (e) {}
-									activeInstalls.delete(String(modId));
-									wrappedReject(new Error('Downloaded file is not a valid ZIP archive (server returned HTML or invalid response)'));
-									return;
-								}
-
-								const testZip = new AdmZip(tempPath);
-								const entries = testZip.getEntries();
-								if (!entries || entries.length === 0) {
-									try { fs.unlinkSync(tempPath); } catch (e) {}
-									activeInstalls.delete(String(modId));
-									wrappedReject(new Error('Downloaded ZIP archive contains no entries'));
-									return;
-								}
-							} catch (zipErr) {
+							const zipCheck = verifyZipFileIntegrity(tempPath);
+							if (!zipCheck.ok) {
+								debugLog(`[INSTALL] ZIP verification failed for ${fileName}: ${zipCheck.error}`);
 								try { fs.unlinkSync(tempPath); } catch (e) {}
 								activeInstalls.delete(String(modId));
-								wrappedReject(new Error(`Downloaded ZIP is corrupted: ${zipErr.message}`));
+								wrappedReject(new Error(`Downloaded ZIP is corrupted or incomplete: ${zipCheck.error}`));
 								return;
 							}
 						}
@@ -2416,40 +2440,15 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 					return;
 				}
 
-				// 2. Verify file header magic bytes if .zip
+				// 2. Verify ZIP archive integrity without loading multi-gigabyte files into RAM
 				if (fileName.toLowerCase().endsWith('.zip')) {
-					try {
-						const fd = fs.openSync(tempPath, 'r');
-						const headerBuf = Buffer.alloc(4);
-						fs.readSync(fd, headerBuf, 0, 4, 0);
-						fs.closeSync(fd);
-
-						// ZIP signature is PK (0x50 0x4B)
-						if (headerBuf[0] !== 0x50 || headerBuf[1] !== 0x4B) {
-							debugLog(`[HTTPS-DL] Invalid ZIP header for ${fileName}: magic bytes = ${headerBuf.toString('hex')}`);
-							try { fs.unlinkSync(tempPath); } catch (e) {}
-							activeInstalls.delete(String(modId));
-							broadcastStatus?.(modId, 'error');
-							reject(new Error('Downloaded file is not a valid ZIP archive (server returned HTML or invalid response)'));
-							return;
-						}
-
-						// 3. Verify ZIP CEN structure with AdmZip
-						const testZip = new AdmZip(tempPath);
-						const entries = testZip.getEntries();
-						if (!entries || entries.length === 0) {
-							debugLog(`[HTTPS-DL] Empty ZIP archive for ${fileName}`);
-							try { fs.unlinkSync(tempPath); } catch (e) {}
-							activeInstalls.delete(String(modId));
-							broadcastStatus?.(modId, 'error');
-							reject(new Error('Downloaded ZIP archive contains no entries'));
-							return;
-						}
-					} catch (zipErr) {
-						debugLog(`[HTTPS-DL] ZIP verification error for ${fileName}: ${zipErr.message}`);
+					const zipCheck = verifyZipFileIntegrity(tempPath);
+					if (!zipCheck.ok) {
+						debugLog(`[HTTPS-DL] ZIP verification failed for ${fileName}: ${zipCheck.error}`);
+						try { fs.unlinkSync(tempPath); } catch (e) {}
 						activeInstalls.delete(String(modId));
 						broadcastStatus?.(modId, 'error');
-						reject(new Error(`Downloaded ZIP is corrupted: ${zipErr.message}`));
+						reject(new Error(`Downloaded ZIP is corrupted or incomplete: ${zipCheck.error}`));
 						return;
 					}
 				}
