@@ -4627,6 +4627,7 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 				if (installResult && installResult.success) {
 					results.installed++;
 					console.log(`[AUTO-INSTALL] Successfully installed ${modName}`);
+					onProgress?.({ type: 'STATUS', modId, modName, status: 'success', title: modTitle, parentId });
 				} else {
 					throw lastError || new Error('Install failed after 3 attempts');
 				}
