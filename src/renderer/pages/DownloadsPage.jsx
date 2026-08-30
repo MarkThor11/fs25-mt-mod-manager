@@ -1,36 +1,45 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useDownloadStore } from '../store/useDownloadStore';
 import { Download, CheckCircle, X, Package, Trash2, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function DownloadsPage() {
-  const { activeDownloads, removeDownload, cancelDownload, clearFinished } = useDownloadStore();
+  const activeDownloads = useDownloadStore((s) => s.activeDownloads || {});
+  const removeDownload = useDownloadStore((s) => s.removeDownload);
+  const cancelDownload = useDownloadStore((s) => s.cancelDownload);
+  const clearFinished = useDownloadStore((s) => s.clearFinished);
   const navigate = useNavigate();
 
   const isFinished = (dl) => {
-    if (!dl) return false;
-    const st = (dl.status || '').toLowerCase();
+    if (!dl) return true;
+    const st = String(dl.status || '').toLowerCase();
     const isDoneStatus = ['success', 'completed', 'done', 'finished', 'installed', 'error', 'failed', 'cancelled'].includes(st);
     const is100 = typeof dl.progress === 'number' && dl.progress >= 100;
-    const isNotActive = st !== 'downloading' && st !== 'waiting' && st !== 'queued' && st !== 'connecting';
-    return isDoneStatus || is100 || isNotActive;
+    return isDoneStatus || is100;
   };
 
-  const downloadsArray = Object.values(activeDownloads).sort((a, b) => {
-    const aDone = isFinished(a);
-    const bDone = isFinished(b);
-    if (aDone && !bDone) return -1;
-    if (bDone && !aDone) return 1;
-    return (b.progress || 0) - (a.progress || 0);
-  });
+  const downloadsArray = useMemo(() => {
+    return Object.values(activeDownloads || {})
+      .filter((dl) => dl && (dl.modId || dl.title))
+      .sort((a, b) => {
+        const aDone = isFinished(a);
+        const bDone = isFinished(b);
+        if (aDone && !bDone) return 1;
+        if (bDone && !aDone) return -1;
+        const progA = typeof a?.progress === 'number' ? a.progress : 0;
+        const progB = typeof b?.progress === 'number' ? b.progress : 0;
+        return progB - progA;
+      });
+  }, [activeDownloads]);
 
   const cancelAll = () => {
     if (window.confirm('Cancel all active downloads?')) {
-      downloadsArray.forEach(dl => {
+      downloadsArray.forEach((dl) => {
+        if (!dl) return;
         if (!isFinished(dl)) {
-          cancelDownload(dl.modId);
+          cancelDownload?.(dl.modId);
         } else {
-          removeDownload(dl.modId);
+          removeDownload?.(dl.modId);
         }
       });
     }
@@ -52,12 +61,12 @@ export default function DownloadsPage() {
         {downloadsArray.length > 0 && (
           <div style={{ display: 'flex', gap: 12 }}>
             {downloadsArray.some(isFinished) && (
-              <button className="btn btn--ghost btn--sm" onClick={clearFinished} style={{ gap: 8 }}>
+              <button className="btn btn--ghost btn--sm" onClick={() => clearFinished?.()} style={{ gap: 8 }}>
                 <CheckCircle size={14} />
                 Clear Completed
               </button>
             )}
-            {downloadsArray.some(dl => !isFinished(dl)) && (
+            {downloadsArray.some((dl) => !isFinished(dl)) && (
               <button className="btn btn--danger btn--sm" onClick={cancelAll} style={{ gap: 8 }}>
                 <Trash2 size={14} />
                 Cancel All
@@ -88,137 +97,145 @@ export default function DownloadsPage() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {downloadsArray.map((dl) => (
-            <div key={dl.modId} style={{ 
-              background: 'var(--bg-secondary)', 
-              borderRadius: '12px', 
-              padding: '20px',
-              border: '1px solid var(--border)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              {/* Progress Background Overlay */}
-              {dl.status !== 'success' && dl.progress < 100 && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0, left: 0, bottom: 0,
-                  width: `${dl.progress}%`,
-                  background: 'rgba(var(--accent-rgb), 0.03)',
-                  zIndex: 0,
-                  transition: 'width 0.3s ease-out'
-                }} />
-              )}
+          {downloadsArray.map((dl, idx) => {
+            const rawProg = typeof dl.progress === 'number' && !isNaN(dl.progress) ? dl.progress : 0;
+            const progressPercent = Math.max(0, Math.min(100, Math.round(rawProg)));
+            const isCompleted = dl.status === 'success' || progressPercent >= 100;
+            const isQueued = dl.status === 'waiting' || dl.status === 'queued';
+            const modId = dl.modId || `dl-${idx}`;
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <div style={{ 
-                    width: 48, height: 48, 
-                    borderRadius: 8, 
-                    background: 'rgba(0,0,0,0.2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                  }}>
-                    <Package size={24} color={dl.status === 'success' ? 'var(--success)' : 'var(--accent)'} />
-                  </div>
-                  <div>
-                    <h3 
-                      style={{ margin: 0, fontSize: 16, fontWeight: 700, cursor: 'pointer', transition: 'color 0.2s' }}
-                      onMouseEnter={e => e.target.style.color = 'var(--accent)'}
-                      onMouseLeave={e => e.target.style.color = 'var(--text-primary)'}
-                      onClick={() => navigate(`/modhub/mod/${dl.modId}`)}
-                      title="View Details"
-                    >
-                      {dl.title}
-                    </h3>
-                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {dl.status === 'success' || dl.progress >= 100 ? (
-                        <><CheckCircle size={12} color="var(--success)" /> Installed successfully</>
-                      ) : dl.status === 'waiting' || dl.status === 'queued' ? (
-                        <>Waiting in queue...</>
-                      ) : dl.status === 'connecting' ? (
-                        <>Connecting to ModHub...</>
-                      ) : dl.status === 'handshaking' ? (
-                        <>Establishing secure session...</>
-                      ) : dl.status === 'starting' ? (
-                        <>Finalizing handshake...</>
-                      ) : (
-                        <>Downloading... {typeof dl.receivedBytes === 'number' && typeof dl.totalBytes === 'number' && dl.totalBytes > 0 ? `(${(dl.receivedBytes / 1024 / 1024).toFixed(1)} MB / ${(dl.totalBytes / 1024 / 1024).toFixed(1)} MB)` : ''}</>
-                      )}
+            return (
+              <div key={modId} style={{ 
+                background: 'var(--bg-secondary)', 
+                borderRadius: '12px', 
+                padding: '20px',
+                border: '1px solid var(--border)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                {/* Progress Background Overlay */}
+                {!isCompleted && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 0, left: 0, bottom: 0,
+                    width: `${progressPercent}%`,
+                    background: 'rgba(var(--accent-rgb), 0.03)',
+                    zIndex: 0,
+                    transition: 'width 0.3s ease-out'
+                  }} />
+                )}
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ 
+                      width: 48, height: 48, 
+                      borderRadius: 8, 
+                      background: 'rgba(0,0,0,0.2)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      <Package size={24} color={isCompleted ? 'var(--success)' : 'var(--accent)'} />
+                    </div>
+                    <div>
+                      <h3 
+                        style={{ margin: 0, fontSize: 16, fontWeight: 700, cursor: dl.modId ? 'pointer' : 'default', transition: 'color 0.2s' }}
+                        onMouseEnter={(e) => { if (dl.modId) e.target.style.color = 'var(--accent)'; }}
+                        onMouseLeave={(e) => { if (dl.modId) e.target.style.color = 'var(--text-primary)'; }}
+                        onClick={() => { if (dl.modId) navigate(`/modhub/mod/${dl.modId}`); }}
+                        title={dl.modId ? "View Details" : ""}
+                      >
+                        {dl.title || `Mod ${modId}`}
+                      </h3>
+                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {isCompleted ? (
+                          <><CheckCircle size={12} color="var(--success)" /> Installed successfully</>
+                        ) : isQueued ? (
+                          <>Waiting in queue...</>
+                        ) : dl.status === 'connecting' ? (
+                          <>Connecting to ModHub...</>
+                        ) : dl.status === 'handshaking' ? (
+                          <>Establishing secure session...</>
+                        ) : dl.status === 'starting' ? (
+                          <>Finalizing handshake...</>
+                        ) : (
+                          <>Downloading... {typeof dl.receivedBytes === 'number' && typeof dl.totalBytes === 'number' && dl.totalBytes > 0 ? `(${(dl.receivedBytes / 1024 / 1024).toFixed(1)} MB / ${(dl.totalBytes / 1024 / 1024).toFixed(1)} MB)` : ''}</>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <div style={{ fontSize: 20, fontWeight: 900, color: dl.status === 'success' ? 'var(--success)' : 'var(--accent)', minWidth: '60px', textAlign: 'right' }}>
-                    {dl.status === 'success' ? 100 : Math.round(dl.progress || 0)}%
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: isCompleted ? 'var(--success)' : 'var(--accent)', minWidth: '60px', textAlign: 'right' }}>
+                      {isCompleted ? 100 : progressPercent}%
+                    </div>
+                    
+                    {!isFinished(dl) ? (
+                      <button 
+                        className="btn--cancel"
+                        onClick={() => cancelDownload?.(dl.modId)}
+                        style={{ 
+                          background: 'rgba(239, 68, 68, 0.1)', 
+                          color: 'var(--danger)', 
+                          border: 'none', 
+                          width: 36, height: 36, 
+                          borderRadius: 8,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', transition: 'background 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                        title="Cancel Download"
+                      >
+                        <X size={18} />
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => removeDownload?.(dl.modId)}
+                        style={{ 
+                          background: 'rgba(34, 197, 94, 0.1)', 
+                          color: 'var(--success)', 
+                          border: 'none', 
+                          width: 36, height: 36, 
+                          borderRadius: 8,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', transition: 'background 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(34, 197, 94, 0.2)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)'}
+                        title="Clear from list"
+                      >
+                        <CheckCircle size={18} />
+                      </button>
+                    )}
                   </div>
-                  
-                  {!isFinished(dl) ? (
-                    <button 
-                      className="btn--cancel"
-                      onClick={() => cancelDownload(dl.modId)}
-                      style={{ 
-                        background: 'rgba(239, 68, 68, 0.1)', 
-                        color: 'var(--danger)', 
-                        border: 'none', 
-                        width: 36, height: 36, 
-                        borderRadius: 8,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', transition: 'background 0.2s'
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
-                      title="Cancel Download"
-                    >
-                      <X size={18} />
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => removeDownload(dl.modId)}
-                      style={{ 
-                        background: 'rgba(34, 197, 94, 0.1)', 
-                        color: 'var(--success)', 
-                        border: 'none', 
-                        width: 36, height: 36, 
-                        borderRadius: 8,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', transition: 'background 0.2s'
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(34, 197, 94, 0.2)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)'}
-                      title="Clear from list"
-                    >
-                      <CheckCircle size={18} />
-                    </button>
-                  )}
                 </div>
-              </div>
 
-              <div style={{ width: '100%', height: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px', overflow: 'hidden', zIndex: 1, position: 'relative' }}>
-                <div style={{ 
-                  width: `${dl.status === 'success' ? 100 : dl.progress}%`, 
-                  height: '100%', 
-                  background: dl.status === 'success' || dl.progress >= 100 
-                    ? 'var(--success)' 
-                    : 'linear-gradient(90deg, var(--accent) 0%, #a855f7 100%)',
-                  transition: 'width 0.3s ease-out',
-                  position: 'relative'
-                }}>
-                   {/* Shimmer Effect */}
-                   {dl.status !== 'success' && dl.progress < 100 && (
-                     <div style={{
-                       position: 'absolute', top: 0, left: 0, bottom: 0, right: 0,
-                       background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-                       transform: 'translateX(-100%)',
-                       animation: 'shimmer 1.5s infinite'
-                     }} />
-                   )}
+                <div style={{ width: '100%', height: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px', overflow: 'hidden', zIndex: 1, position: 'relative' }}>
+                  <div style={{ 
+                    width: `${isCompleted ? 100 : progressPercent}%`, 
+                    height: '100%', 
+                    background: isCompleted 
+                      ? 'var(--success)' 
+                      : 'linear-gradient(90deg, var(--accent) 0%, #a855f7 100%)',
+                    transition: 'width 0.3s ease-out',
+                    position: 'relative'
+                  }}>
+                     {/* Shimmer Effect */}
+                     {!isCompleted && (
+                       <div style={{
+                         position: 'absolute', top: 0, left: 0, bottom: 0, right: 0,
+                         background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                         transform: 'translateX(-100%)',
+                         animation: 'shimmer 1.5s infinite'
+                       }} />
+                     )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       <style>{`
