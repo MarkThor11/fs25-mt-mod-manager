@@ -2332,6 +2332,9 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 			let receivedBytes = isPartial ? startByte : 0;
 			let lastUpdate = 0;
 			let lastDbUpdate = 0;
+			let lastSpeedBytes = receivedBytes;
+			let lastSpeedTime = Date.now();
+			let currentSpeed = 0;
 
 			// Initialize tracking in DB if not already present
 			if (!pending) {
@@ -2368,9 +2371,16 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 				}
 
 				const now = Date.now();
+				const speedElapsed = (now - lastSpeedTime) / 1000;
+				if (speedElapsed >= 1) {
+					currentSpeed = Math.round((receivedBytes - lastSpeedBytes) / speedElapsed);
+					lastSpeedBytes = receivedBytes;
+					lastSpeedTime = now;
+				}
+
 				if (totalBytes > 0 && now - lastUpdate > 200) {
 					const percent = Math.round((receivedBytes / totalBytes) * 100);
-					onProgress?.({ percent, receivedBytes, totalBytes, fileName });
+					onProgress?.({ percent, receivedBytes, totalBytes, fileName, downloadSpeed: currentSpeed });
 					lastUpdate = now;
 				}
 

@@ -160,7 +160,7 @@ export default function DownloadsPage() {
                         ) : dl.status === 'starting' ? (
                           <>Finalizing handshake...</>
                         ) : (
-                          <>Downloading... {typeof dl.receivedBytes === 'number' && typeof dl.totalBytes === 'number' && dl.totalBytes > 0 ? `(${(dl.receivedBytes / 1024 / 1024).toFixed(1)} MB / ${(dl.totalBytes / 1024 / 1024).toFixed(1)} MB)` : ''}</>
+                          <>Downloading... {typeof dl.receivedBytes === 'number' && typeof dl.totalBytes === 'number' && dl.totalBytes > 0 ? `${(dl.receivedBytes / 1024 / 1024).toFixed(1)} MB / ${(dl.totalBytes / 1024 / 1024).toFixed(1)} MB${dl.downloadSpeed > 0 ? ` • ${(dl.downloadSpeed / 1024 / 1024).toFixed(2)} MB/s` : ''}` : ''}</>
                         )}
                       </div>
                     </div>
