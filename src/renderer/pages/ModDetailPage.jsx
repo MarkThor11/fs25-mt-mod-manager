@@ -1011,7 +1011,7 @@ export default function ModDetailPage() {
                   )}
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {batchProgress[modId] ? 'Requirements...' : 
-                     activeDownloads[modId]?.status === 'waiting' ? 'Queued...' : 
+                     (activeDownloads[modId]?.status === 'waiting' || activeDownloads[modId]?.status === 'queued') ? 'Queued...' : 
                      (activeDownloads[modId]?.status === 'downloading' && downloadProgress === 0) ? 'Starting...' :
                      downloadProgress > 0 ? `${Math.round(downloadProgress)}%` : 'Connecting...'}
                   </span>

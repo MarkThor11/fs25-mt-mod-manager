@@ -798,7 +798,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           }}>
             {progress?.status === 'error' ? (
                 <ShieldAlert size={32} style={{ color: 'white', marginBottom: 12 }} />
-            ) : (progress?.status === 'waiting' || (!progress && batch)) ? (
+            ) : (progress?.status === 'waiting' || progress?.status === 'queued' || (!progress && batch)) ? (
               <Package size={32} style={{ color: 'var(--text-tertiary)', marginBottom: 12, opacity: 0.5 }} />
             ) : (
               <RefreshCw size={32} className="animate-spin" style={{ color: 'var(--accent)', marginBottom: 12 }} />
@@ -812,7 +812,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
                   <div>{batch.completed} / {batch.total}</div>
                 </div>
               ) : progress ? (
-                progress.status === 'waiting' ? 'QUEUED' : 
+                (progress.status === 'waiting' || progress.status === 'queued') ? 'QUEUED' : 
                 progress.status === 'success' ? 'DONE' :
                 (typeof progress.progress === 'number' && progress.progress > 0) ? 
                 (progress.progress === 100 ? 'SAVING...' : `${Math.round(progress.progress)}%`) 
@@ -1167,7 +1167,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
                 { isDownloading ? (
                     batch ? 'Requirements...' :
                     progress ? (
-                      progress.status === 'waiting' ? 'Queued...' :
+                      (progress.status === 'waiting' || progress.status === 'queued') ? 'Queued...' :
                       (progress.status === 'downloading' && progress.progress === 0) ? 'Starting...' :
                       (progress.progress === 100 ? 'Finishing...' : `${Math.round(progress.progress)}%`)
                     ) : 'Queued...'

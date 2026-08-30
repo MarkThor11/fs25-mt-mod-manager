@@ -113,7 +113,7 @@ export default function DownloadCenter() {
                    <Package size={10} /> {
                      dl.status === 'success' ? 'COMPLETED' :
                      dl.progress >= 100 ? 'Finalizing...' : 
-                     dl.status === 'waiting' ? 'Waiting in queue...' : 
+                     (dl.status === 'waiting' || dl.status === 'queued') ? 'Waiting in queue...' : 
                      'Downloading...'
                    }
                 </div>
