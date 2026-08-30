@@ -287,7 +287,8 @@ export const useDownloadStore = create((set, get) => ({
 
   removeDownload: (targetKey) => {
     if (targetKey === undefined || targetKey === null) return;
-    const targetStr = String(targetKey).toLowerCase();
+    const targetStr = String(targetKey).trim().toLowerCase();
+    const cleanTargetStr = targetStr.replace(/^0+/, '');
 
     set((s) => {
       const next = { ...s.activeDownloads };
@@ -295,16 +296,24 @@ export const useDownloadStore = create((set, get) => ({
 
       Object.keys(next).forEach((key) => {
         const item = next[key];
-        if (!item) return;
+        if (!item) {
+          delete next[key];
+          changed = true;
+          return;
+        }
 
-        const keyStr = String(key).toLowerCase();
-        const modIdStr = String(item.modId || '').toLowerCase();
-        const titleStr = String(item.title || '').toLowerCase();
+        const keyStr = String(key).trim().toLowerCase();
+        const cleanKeyStr = keyStr.replace(/^0+/, '');
+        const modIdStr = String(item.modId || '').trim().toLowerCase();
+        const cleanModIdStr = modIdStr.replace(/^0+/, '');
+        const titleStr = String(item.title || '').trim().toLowerCase();
 
         if (
           key === targetKey ||
           keyStr === targetStr ||
+          (cleanTargetStr && cleanKeyStr === cleanTargetStr) ||
           modIdStr === targetStr ||
+          (cleanTargetStr && cleanModIdStr === cleanTargetStr) ||
           titleStr === targetStr
         ) {
           delete next[key];
@@ -317,30 +326,34 @@ export const useDownloadStore = create((set, get) => ({
   },
 
   cancelDownload: async (modId) => {
-    try {
-      // 1. Recursive check: If this is a parent, cancel all children first
-      const batch = get().batchProgress[modId];
-      if (batch && batch.childIds) {
-        console.log(`[STORE] Cancelling batch ${modId} with ${batch.childIds.length} children`);
-        for (const childId of batch.childIds) {
-          if (get().activeDownloads[childId]) {
-            if (window.api?.mods?.cancelInstall) {
-               window.api.mods.cancelInstall({ modId: childId }).catch(() => {});
-            }
-            get().removeDownload(childId);
-          }
-        }
-        get().removeBatch(modId);
-      }
+    if (modId === undefined || modId === null) return;
+    const strModId = String(modId);
 
-      // 2. Main cancellation
+    // 1. Immediately purge from frontend state
+    get().removeDownload(modId);
+    get().removeDownload(strModId);
+    get().removeDownload(strModId.replace(/^0+/, ''));
+
+    // 2. Recursive check: If this is a parent, cancel all children first
+    const batch = get().batchProgress[modId] || get().batchProgress[strModId];
+    if (batch && batch.childIds) {
+      console.log(`[STORE] Cancelling batch ${modId} with ${batch.childIds.length} children`);
+      for (const childId of batch.childIds) {
+        get().removeDownload(childId);
+        if (window.api?.mods?.cancelInstall) {
+           window.api.mods.cancelInstall({ modId: childId }).catch(() => {});
+        }
+      }
+      get().removeBatch(modId);
+    }
+
+    // 3. Main cancellation
+    try {
       if (window.api?.mods?.cancelInstall) {
         await window.api.mods.cancelInstall({ modId });
       }
-      get().removeDownload(modId);
     } catch (err) {
       console.error('Failed to cancel download:', err);
-      get().removeDownload(modId);
     }
   },
 

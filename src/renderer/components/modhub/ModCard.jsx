@@ -141,9 +141,19 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     // remote (mod.version) > installed (installedVersion)
     return compareVersions(mod.version, installedVersion) > 0;
   }, [mod.isUpdate, isInstalled, mod.version, installedVersion]);
-  const [candidateIdx, setCandidateIdx] = useState(0);
-  const progress = activeDownloads[mod.modId];
-  const batch = batchProgress[mod.modId];
+  const progress = useMemo(() => {
+    if (!mod) return null;
+    const strId = mod.modId ? String(mod.modId) : null;
+    const cleanId = strId ? strId.replace(/^0+/, '') : null;
+    return (
+      (strId && activeDownloads[strId]) ||
+      (cleanId && activeDownloads[cleanId]) ||
+      (mod.modId && activeDownloads[mod.modId]) ||
+      (mod.title ? Object.values(activeDownloads).find(d => d?.title && d.title.toLowerCase().trim() === mod.title.toLowerCase().trim()) : null) ||
+      null
+    );
+  }, [activeDownloads, mod]);
+  const batch = batchProgress[mod.modId] || (mod.modId ? batchProgress[String(mod.modId)] : null);
   const images = mod.candidates || [mod.image];
 
   const [isVisible, setIsVisible] = useState(false);
@@ -831,12 +841,13 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
             <button 
               onClick={(e) => {
                 e.stopPropagation();
+                const targetId = mod.modId || progress?.modId;
                 if (progress?.status === 'error') {
                    // Retry: Remove and redo
-                   removeDownload(mod.modId);
+                   removeDownload(targetId);
                    (mod.onShowDependencies ? handleDownloadWithDependencies(e) : handleInstall(e));
                 } else {
-                   cancelDownload(mod.modId);
+                   cancelDownload(targetId);
                 }
               }}
               style={{

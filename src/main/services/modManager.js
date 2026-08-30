@@ -2974,42 +2974,57 @@ async function installMod(modId, modTitle, downloadUrl, onProgress, category, su
 */
 async function cancelInstall(modId) {
 	const strModId = String(modId);
+	const cleanModId = strModId.replace(/^0+/, '');
+
 	// Always remove from pending downloads table so it won't re-appear on next launch
-	try { cache.removePendingDownload(strModId); } catch (_) {}
+	try { 
+		cache.removePendingDownload(strModId); 
+		cache.removePendingDownload(cleanModId); 
+	} catch (_) {}
 
 	// 1. Check if it's in the queue but not yet active
-	const queueIdx = downloadQueue.findIndex(t => String(t.modId) === strModId);
+	const queueIdx = downloadQueue.findIndex(t => {
+		const tid = String(t.modId || '');
+		return tid === strModId || tid.replace(/^0+/, '') === cleanModId;
+	});
+
 	if (queueIdx !== -1) {
-		console.log(`[CANCEL] Removing from queue: ${modId}`);
-		downloadQueue.splice(queueIdx, 1);
+		const removedTask = downloadQueue.splice(queueIdx, 1)[0];
+		console.log(`[CANCEL] Removed from queue: ${removedTask.modTitle || modId}`);
 		broadcastStatus?.(modId, 'cancelled');
 		return { success: true };
 	}
 
-	const task = activeInstalls.get(String(modId));
-	
-	// Also check if this is a parentId for a batch
-	if (activeBatchTasks.has(modId)) {
+	// 2. Check active installs
+	let activeKey = null;
+	for (const key of activeInstalls.keys()) {
+		if (key === strModId || key.replace(/^0+/, '') === cleanModId) {
+			activeKey = key;
+			break;
+		}
+	}
+
+	if (activeBatchTasks.has(modId) || activeBatchTasks.has(cleanModId)) {
 		console.log(`[CANCEL] Terminating batch loop for parent: ${modId}`);
 		activeBatchTasks.delete(modId);
-		// Note: The loop itself checks this Set before each step
+		activeBatchTasks.delete(cleanModId);
 	}
 
-	if (!task) {
-		// Just in case it's finishing up or already gone, return success to avoid blocking UI
+	if (!activeKey) {
+		console.log(`[CANCEL] Task not found in active or queue for ${modId}, confirming cancellation.`);
 		broadcastStatus?.(modId, 'cancelled');
 		return { success: true };
 	}
 
-	console.log(`[CANCEL] Cancelling download for mod: ${modId}`);
+	const task = activeInstalls.get(activeKey);
+	console.log(`[CANCEL] Cancelling download for mod: ${modId} (Key: ${activeKey})`);
 
 	try {
 		if (task.type === 'window') {
 			try {
-				if (task.item && !task.item.isPaused()) task.item.pause(); // Pause before cancelling to stop data flow
+				if (task.item && !task.item.isPaused()) task.item.pause();
 				if (task.item) task.item.cancel();
 				if (task.window && !task.window.isDestroyed()) {
-					// Give Electron a tick to detach before closing
 					setImmediate(() => {
 						if (!task.window.isDestroyed()) task.window.close();
 					});
@@ -3019,15 +3034,18 @@ async function cancelInstall(modId) {
 			}
 		} else if (task.type === 'net' || task.type === 'https') {
 			try {
-				if (task.request) task.request.abort();
-				if (task.response) task.response.destroy();
-				if (task.fileStream) task.fileStream.destroy();
+				if (task.request) {
+					if (typeof task.request.destroy === 'function') task.request.destroy();
+					else if (typeof task.request.abort === 'function') task.request.abort();
+				}
+				if (task.response && typeof task.response.destroy === 'function') task.response.destroy();
+				if (task.fileStream && typeof task.fileStream.destroy === 'function') task.fileStream.destroy();
 			} catch (e) {
 				console.warn('[CANCEL] Net cleanup warning:', e.message);
 			}
 		}
 
-		activeInstalls.delete(String(modId));
+		activeInstalls.delete(activeKey);
 		broadcastStatus?.(modId, 'cancelled');
 
 		// Clean up partial file
