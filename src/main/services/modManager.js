@@ -23,7 +23,7 @@ const pathProvider = require('./pathProvider');
 const activeInstalls = new Map();
 const downloadQueue = [];
 let activeCount = 0;
-const MAX_CONCURRENT_INSTALLS = 2;
+const MAX_CONCURRENT_INSTALLS = 1;
 const activeBatchTasks = new Set();
 const DLC_MAPPING = {
   'macDonPack.dlc': { 
