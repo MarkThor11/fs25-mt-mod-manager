@@ -112,22 +112,23 @@ export default function Sidebar() {
               }
               end={item.to === '/'}
               title={isCollapsed ? item.label : ''}
+              onClick={() => navigate(item.to)}
             >
               <Icon className="sidebar__link-icon" size={20} />
               <span>{item.label}</span>
               {item.to === '/installed' && modCount > 0 && (
-                <span className="sidebar__link-badge">{modCount}</span>
+                <span className="sidebar__link-badge" style={{ pointerEvents: 'none' }}>{modCount}</span>
               )}
               {item.to === '/downloads' && downloadCount > 0 && (
-                <span className="sidebar__link-badge" style={{ background: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="sidebar__link-badge" style={{ background: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4, pointerEvents: 'none' }}>
                   <RefreshCw size={10} className="animate-spin" /> {downloadCount}
                 </span>
               )}
               {item.to === '/favourites' && favCount > 0 && (
-                <span className="sidebar__link-badge">{favCount}</span>
+                <span className="sidebar__link-badge" style={{ pointerEvents: 'none' }}>{favCount}</span>
               )}
               {item.to === '/hidden' && hiddenCount > 0 && (
-                <span className="sidebar__link-badge">{hiddenCount}</span>
+                <span className="sidebar__link-badge" style={{ pointerEvents: 'none' }}>{hiddenCount}</span>
               )}
 
             </NavLink>

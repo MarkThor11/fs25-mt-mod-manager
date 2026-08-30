@@ -4,7 +4,7 @@ import { Download, CheckCircle, X, Package, Trash2, ArrowRight } from 'lucide-re
 import { useNavigate } from 'react-router-dom';
 
 export default function DownloadsPage() {
-  const activeDownloads = useDownloadStore((s) => s.activeDownloads || {});
+  const activeDownloads = useDownloadStore((s) => s.activeDownloads);
   const removeDownload = useDownloadStore((s) => s.removeDownload);
   const cancelDownload = useDownloadStore((s) => s.cancelDownload);
   const clearFinished = useDownloadStore((s) => s.clearFinished);
@@ -19,7 +19,8 @@ export default function DownloadsPage() {
   };
 
   const downloadsArray = useMemo(() => {
-    return Object.values(activeDownloads || {})
+    const raw = activeDownloads || {};
+    return Object.values(raw)
       .filter((dl) => dl && (dl.modId || dl.title))
       .sort((a, b) => {
         const aDone = isFinished(a);
