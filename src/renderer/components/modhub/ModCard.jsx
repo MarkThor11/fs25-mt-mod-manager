@@ -122,7 +122,13 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     // Fallback for callers that don't provide the lookup
     if (!localMods) return null;
     const match = localMods.find(lm => {
-      if (mod.modId && lm.modId && String(lm.modId).replace(/^0+/, '') === String(mod.modId).replace(/^0+/, '')) return true;
+      if (mod.modId && lm.modId) {
+        return String(lm.modId).replace(/^0+/, '') === String(mod.modId).replace(/^0+/, '');
+      }
+      if (mod.modId) {
+        // Mod has an official ModHub ID; do not falsely match sibling PC/Crossplay versions by title
+        return false;
+      }
       const remoteTitle = (mod.title || '').trim().toLowerCase();
       const localTitle = (lm.title || '').trim().toLowerCase();
       const localName = (lm.modName || '').trim().toLowerCase();
@@ -143,14 +149,13 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
   }, [mod.isUpdate, isInstalled, mod.version, installedVersion]);
   const [candidateIdx, setCandidateIdx] = useState(0);
   const progress = useMemo(() => {
-    if (!mod) return null;
-    const strId = mod.modId ? String(mod.modId) : null;
-    const cleanId = strId ? strId.replace(/^0+/, '') : null;
+    if (!mod || !mod.modId) return null;
+    const strId = String(mod.modId);
+    const cleanId = strId.replace(/^0+/, '');
     return (
-      (strId && activeDownloads[strId]) ||
-      (cleanId && activeDownloads[cleanId]) ||
-      (mod.modId && activeDownloads[mod.modId]) ||
-      (mod.title ? Object.values(activeDownloads).find(d => d?.title && d.title.toLowerCase().trim() === mod.title.toLowerCase().trim()) : null) ||
+      activeDownloads[strId] ||
+      activeDownloads[cleanId] ||
+      activeDownloads[mod.modId] ||
       null
     );
   }, [activeDownloads, mod]);

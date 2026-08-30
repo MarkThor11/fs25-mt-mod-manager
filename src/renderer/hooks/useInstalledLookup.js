@@ -42,22 +42,14 @@ export function useInstalledLookup() {
 
     // 2. Overlay finished downloads
     Object.values(activeDownloads).forEach(d => {
-      if (d.status === 'success') {
-        if (d.modId) byModId.set(String(d.modId).replace(/^0+/, ''), 'Installed');
-        if (d.title) {
-          const norm = cleanStr(d.title);
-          if (norm) byExactTitle.set(norm, 'Installed');
-        }
+      if (d.status === 'success' && d.modId) {
+        byModId.set(String(d.modId).replace(/^0+/, ''), 'Installed');
       }
     });
 
     // 3. Overlay session installed mods
-    Object.entries(sessionInstalled || {}).forEach(([modId, normTitle]) => {
+    Object.keys(sessionInstalled || {}).forEach((modId) => {
       if (modId) byModId.set(String(modId).replace(/^0+/, ''), 'Installed');
-      if (normTitle) {
-        const norm = cleanStr(normTitle);
-        if (norm) byExactTitle.set(norm, 'Installed');
-      }
     });
 
     return { byModId, byExactTitle, byExactName };
@@ -70,6 +62,8 @@ export function useInstalledLookup() {
       if (mod.modId) {
         const cleanId = String(mod.modId).replace(/^0+/, '');
         if (lookupIndex.byModId.has(cleanId)) return lookupIndex.byModId.get(cleanId);
+        // ModHub mod with official modId: Do not fall back to title matching (prevents PC / Crossplay collisions)
+        return null;
       }
 
       if (mod.title) {

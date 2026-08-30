@@ -197,15 +197,13 @@ export const useDownloadStore = create((set, get) => ({
         const cleanKeyStr = keyStr.replace(/^0+/, '');
         const modIdStr = String(item.modId || '').trim().toLowerCase();
         const cleanModIdStr = modIdStr.replace(/^0+/, '');
-        const titleStr = String(item.title || '').trim().toLowerCase();
 
         if (
           key === targetKey ||
           keyStr === targetLower ||
           (cleanTargetStr && cleanKeyStr === cleanTargetStr) ||
           modIdStr === targetLower ||
-          (cleanTargetStr && cleanModIdStr === cleanTargetStr) ||
-          titleStr === targetLower
+          (cleanTargetStr && cleanModIdStr === cleanTargetStr)
         ) {
           next[key] = { ...item, status };
           changed = true;
@@ -248,15 +246,13 @@ export const useDownloadStore = create((set, get) => ({
         const cleanKeyStr = keyStr.replace(/^0+/, '');
         const modIdStr = String(item.modId || '').trim().toLowerCase();
         const cleanModIdStr = modIdStr.replace(/^0+/, '');
-        const titleStr = String(item.title || '').trim().toLowerCase();
 
         if (
           key === targetKey ||
           keyStr === targetLower ||
           (cleanTargetStr && cleanKeyStr === cleanTargetStr) ||
           modIdStr === targetLower ||
-          (cleanTargetStr && cleanModIdStr === cleanTargetStr) ||
-          titleStr === targetLower
+          (cleanTargetStr && cleanModIdStr === cleanTargetStr)
         ) {
           // Do NOT revert completed/terminal statuses back to downloading!
           const currentStatus = (item.status || '').toLowerCase();
@@ -322,15 +318,13 @@ export const useDownloadStore = create((set, get) => ({
         const cleanKeyStr = keyStr.replace(/^0+/, '');
         const modIdStr = String(item.modId || '').trim().toLowerCase();
         const cleanModIdStr = modIdStr.replace(/^0+/, '');
-        const titleStr = String(item.title || '').trim().toLowerCase();
 
         if (
           key === targetKey ||
           keyStr === targetStr ||
           (cleanTargetStr && cleanKeyStr === cleanTargetStr) ||
           modIdStr === targetStr ||
-          (cleanTargetStr && cleanModIdStr === cleanTargetStr) ||
-          titleStr === targetStr
+          (cleanTargetStr && cleanModIdStr === cleanTargetStr)
         ) {
           delete next[key];
           changed = true;
