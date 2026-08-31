@@ -1975,6 +1975,181 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 			downloadUrl.includes('download.php')
 		) && !downloadUrl.includes('mod.php?');
 
+		const triggerScrapeFallback = () => {
+			debugLog(`[SCRAPE-FALLBACK] Fetching fresh mod page link for ${modId}...`);
+			broadcastStatus?.(modId, 'handshaking');
+			
+			scraper.fetchModDetail(modId).then((details) => {
+				if (details && details.downloadUrl && (details.downloadUrl.endsWith('.zip') || details.downloadUrl.includes('storage/'))) {
+					debugLog(`[INSTALL] Scraper found direct link: ${details.downloadUrl}`);
+					broadcastStatus?.(modId, 'starting');
+					onProgress?.({ percent: 0, receivedBytes: 0, totalBytes: 0, fileName: 'Initializing...' });
+					
+					downloadWithNet(modId, details.downloadUrl, targetDirPath, modTitle, onProgress, category, 0, details.techData || techData, modUrl, scraper.getPHPSESSID?.())
+						.then(wrappedResolve)
+						.catch(wrappedReject);
+					return;
+				}
+				
+				// If details were found but didn't have a download URL, proceed to last resort
+				throw new Error('Could not find a valid download link on mod page');
+			}).catch((err) => {
+				// ── Step 2: Fallback to BrowserWindow probe (Last resort) ──
+				debugLog(`[FALLBACK] Scraper failed for ${modId} (${err.message}). Launching off-screen browser...`);
+				broadcastStatus?.(modId, 'handshaking');
+				
+				hiddenWin = new BrowserWindow({
+					show: false,
+					width: 100,
+					height: 100,
+					x: -2000,
+					y: -2000,
+					webPreferences: {
+						partition: 'persist:modhub_install',
+						nodeIntegration: false,
+						contextIsolation: true,
+						sandbox: true
+					},
+				});
+				
+				const ses = hiddenWin.webContents.session;
+				ses.setSafeBrowsingEnabled(false);
+				
+				const chromeUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
+				ses.webRequest.onBeforeSendHeaders({ urls: ['https://*.farming-simulator.com/*', 'https://*.giants-software.com/*'] }, (details, callback) => {
+					const headers = details.requestHeaders;
+					headers['User-Agent'] = chromeUA;
+					headers['Referer'] = modUrl;
+					headers['sec-ch-ua'] = '"Google Chrome";v="123", "Chromium";v="123", "Not A(Brand";v="24"';
+					headers['sec-ch-ua-mobile'] = '?0';
+					headers['sec-ch-ua-platform'] = '"Windows"';
+					headers['sec-fetch-dest'] = 'document';
+					headers['sec-fetch-mode'] = 'navigate';
+					headers['sec-fetch-site'] = 'cross-site';
+					headers['sec-fetch-user'] = '?1';
+					headers['Upgrade-Insecure-Requests'] = '1';
+					callback({ cancel: false, requestHeaders: headers });
+				});
+
+				ses.setUserAgent(chromeUA);
+
+				let resolved = false;
+				let didDownload = false;
+				let timeout = null;
+
+				const cleanupInternal = () => {
+					if (timeout) clearTimeout(timeout);
+					if (hiddenWin && !hiddenWin.isDestroyed()) {
+						hiddenWin.destroy();
+					}
+					hiddenWin = null;
+				};
+
+				ses.on('will-download', (event, item, webContents) => {
+					if (webContents.id !== hiddenWin?.webContents?.id) return;
+					didDownload = true;
+					if (timeout) clearTimeout(timeout);
+					
+					const fileName = item.getFilename() || `${modTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.zip`;
+					const savePath = path.join(targetDirPath, fileName);
+					const tempPath = `${savePath}.download`;
+					
+					item.setSavePath(tempPath);
+					item.resume();
+
+					activeInstalls.set(String(modId), { 
+						type: 'window',
+						window: hiddenWin,
+						item: item,
+						savePath,
+						tempPath,
+						targetDirPath,
+					});
+
+					const totalBytes = item.getTotalBytes();
+					item.on('updated', (event, state) => {
+						if (state === 'progressing') {
+							const receivedBytes = item.getReceivedBytes();
+							onProgress?.({
+								percent: totalBytes > 0 ? Math.round((receivedBytes / totalBytes) * 100) : 0,
+								receivedBytes,
+								totalBytes,
+								fileName
+							});
+						}
+					});
+
+					item.once('done', async (event, state) => {
+						debugLog(`[INSTALL] Window download done for ${modId}. State: ${state}`);
+						if (state === 'completed') {
+							// Verify ZIP archive integrity on tempPath without loading gigabytes into RAM
+							if (fileName.toLowerCase().endsWith('.zip')) {
+								const zipCheck = verifyZipFileIntegrity(tempPath);
+								if (!zipCheck.ok) {
+									debugLog(`[INSTALL] ZIP verification failed for ${fileName}: ${zipCheck.error}`);
+									try { fs.unlinkSync(tempPath); } catch (e) {}
+									activeInstalls.delete(String(modId));
+									wrappedReject(new Error(`Downloaded ZIP is corrupted or incomplete: ${zipCheck.error}`));
+									return;
+								}
+							}
+
+							// Atomically finalize file from .download to .zip
+							try {
+								if (fs.existsSync(savePath)) {
+									await safeRemove(savePath);
+								}
+								await fs.move(tempPath, savePath, { overwrite: true });
+							} catch (mvErr) {
+								wrappedReject(new Error(`Failed to finalize download: ${mvErr.message}`));
+								return;
+							}
+
+							debugLog(`[INSTALL] Finalized file moved to: ${savePath}`);
+							const relativePath = path.relative(getModsPath(), savePath);
+							cache.setModTracking(modId, {
+								localFileName: relativePath,
+								modhubTitle: modTitle,
+								category: category,
+								techData: techData
+							});
+							cache.removePendingDownload(String(modId));
+							activeInstalls.delete(String(modId));
+							cleanupInternal();
+							wrappedResolve({ success: true, fileName, filePath: savePath });
+						} else {
+							activeInstalls.delete(String(modId));
+							cleanupInternal();
+							wrappedReject(new Error(`Download ${state}`));
+						}
+					});
+				});
+
+				hiddenWin.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+					if (errorCode === -3) return; // ABORTED is normal when download starts
+					if (resolved) return;
+					resolved = true;
+					cleanupInternal();
+					wrappedReject(new Error(`Page load failed: ${errorDescription}`));
+				});
+
+				timeout = setTimeout(() => {
+					if (resolved || didDownload) return;
+					resolved = true;
+					cleanupInternal();
+					wrappedReject(new Error('Download timeout - no download started'));
+				}, 60000);
+
+				hiddenWin.loadURL(modUrl).catch((err) => {
+					if (!resolved && !didDownload) {
+						resolved = true;
+						cleanupInternal();
+						wrappedReject(err);
+					}
+				});
+			});
+		};
+
 		if (isDirectZipLink) {
 			debugLog(`[INSTALL] Direct Hand-off for ${modId} (URL: ${downloadUrl})`);
 			broadcastStatus?.(modId, 'starting');
@@ -1982,102 +2157,17 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 			
 			downloadWithNet(modId, downloadUrl, targetDirPath, modTitle, onProgress, category, 0, techData, modUrl, scraper.getPHPSESSID?.())
 				.then(wrappedResolve)
-				.catch(wrappedReject);
+				.catch((directErr) => {
+					debugLog(`[INSTALL] Direct URL download failed (${directErr.message}). Refreshing link from ModHub...`);
+					triggerScrapeFallback();
+				});
 			return;
 		}
 
-		// ── Step 1: Scrape for Direct ZIP link (If URL is missing) ──
-		debugLog(`[SCRAPE-FALLBACK] URL missing for ${modId}. Fetching mod page...`);
-		broadcastStatus?.(modId, 'handshaking');
-		
-		scraper.fetchModDetail(modId).then((details) => {
-			if (details && details.downloadUrl && (details.downloadUrl.endsWith('.zip') || details.downloadUrl.includes('storage/'))) {
-				debugLog(`[INSTALL] Scraper found direct link: ${details.downloadUrl}`);
-				broadcastStatus?.(modId, 'starting');
-				onProgress?.({ percent: 0, receivedBytes: 0, totalBytes: 0, fileName: 'Initializing...' });
-				
-				downloadWithNet(modId, details.downloadUrl, targetDirPath, modTitle, onProgress, category, 0, details.techData || techData, modUrl, scraper.getPHPSESSID?.())
-					.then(wrappedResolve)
-					.catch(wrappedReject);
-				return;
-			}
-			
-			// If details were found but didn't have a download URL, proceed to last resort
-			throw new Error('Could not find a valid download link on mod page');
-		}).catch((err) => {
-			// ── Step 2: Fallback to BrowserWindow probe (Last resort) ──
-			debugLog(`[FALLBACK] Scraper failed for ${modId} (${err.message}). Launching off-screen browser...`);
-			broadcastStatus?.(modId, 'handshaking');
-			
-			hiddenWin = new BrowserWindow({
-				show: false,
-				width: 100,
-				height: 100,
-				x: -2000,
-				y: -2000,
-				webPreferences: {
-					partition: 'persist:modhub_install',
-					nodeIntegration: false,
-					contextIsolation: true,
-					sandbox: true
-				},
-			});
-			
-			const ses = hiddenWin.webContents.session;
-			ses.setSafeBrowsingEnabled(false);
-			
-			const chromeUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
-			ses.webRequest.onBeforeSendHeaders({ urls: ['https://*.farming-simulator.com/*', 'https://*.giants-software.com/*'] }, (details, callback) => {
-				const headers = details.requestHeaders;
-				headers['User-Agent'] = chromeUA;
-				headers['Referer'] = modUrl;
-				headers['sec-ch-ua'] = '"Google Chrome";v="123", "Chromium";v="123", "Not A(Brand";v="24"';
-				headers['sec-ch-ua-mobile'] = '?0';
-				headers['sec-ch-ua-platform'] = '"Windows"';
-				headers['sec-fetch-dest'] = 'document';
-				headers['sec-fetch-mode'] = 'navigate';
-				headers['sec-fetch-site'] = 'cross-site';
-				headers['sec-fetch-user'] = '?1';
-				headers['upgrade-insecure-requests'] = '1';
-				callback({ cancel: false, requestHeaders: headers });
-			});
-
-			let downloadStarted = false;
-			ses.on('will-download', (event, item) => {
-				if (downloadStarted) return;
-				downloadStarted = true;
-				debugLog(`[INSTALL] Window intercepted ZIP: ${item.getFilename()}`);
-				
-				const fileName = item.getFilename() || `${modTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}.zip`;
-				const savePath = path.join(targetDirPath, fileName);
-				const tempPath = `${savePath}.download`;
-				
-				item.setSavePath(tempPath);
-				item.resume();
-
-				activeInstalls.set(String(modId), { 
-					type: 'window',
-					window: hiddenWin,
-					item: item,
-					savePath,
-					tempPath,
-					targetDirPath,
-				});
-
-				const totalBytes = item.getTotalBytes();
-				item.on('updated', (event, state) => {
-					if (state === 'progressing') {
-						const receivedBytes = item.getReceivedBytes();
-						onProgress?.({
-							percent: totalBytes > 0 ? Math.round((receivedBytes / totalBytes) * 100) : 0,
-							receivedBytes,
-							totalBytes,
-							fileName
-						});
-					} else if (state === 'interrupted') {
-						wrappedReject(new Error('Download interrupted.'));
-					}
-				});
+		// URL missing -> trigger scrape fallback
+		triggerScrapeFallback();
+	});
+}
 
 /**
  * Safely verify ZIP archive integrity without buffering entire multi-gigabyte files into RAM.
