@@ -95,7 +95,7 @@ export default function ModDetailPage() {
   const [proxiedImages, setProxiedImages] = useState({});
   
   // DRIVER: useDownloadStore handles the global "background" state
-  const { activeDownloads, batchProgress, addDownload, removeDownload, cancelDownload } = useDownloadStore();
+  const { activeDownloads, batchProgress, addDownload, removeDownload, cancelDownload, sessionInstalled } = useDownloadStore();
   const { mods: localMods } = useLocalModsStore();
   const { favoriteMods, toggleFavoriteMod, toggleMustHaveMod } = useModHubStore();
   
@@ -148,7 +148,7 @@ export default function ModDetailPage() {
   const cleanTargetId = rawTargetId ? String(rawTargetId).replace(/^0+/, '') : null;
   const currentDownload = activeDownloads[rawTargetId] || (cleanTargetId ? activeDownloads[cleanTargetId] : null);
   const isCurrentlyInstalling = !!currentDownload && currentDownload.status !== 'success';
-  const isSessionInstalled = (cleanTargetId && sessionInstalled[cleanTargetId]) || (mod?.title && Object.values(sessionInstalled).some(v => v && v.toLowerCase() === mod.title.toLowerCase()));
+  const isSessionInstalled = (cleanTargetId && sessionInstalled?.[cleanTargetId]) || (mod?.title && sessionInstalled && Object.values(sessionInstalled).some(v => v && v.toLowerCase() === mod.title.toLowerCase()));
   const showAsInstalled = !!localMod || currentDownload?.status === 'success' || !!isSessionInstalled;
   const downloadProgress = currentDownload?.progress || 0;
 
@@ -178,7 +178,6 @@ export default function ModDetailPage() {
   const [showDepModal, setShowDepModal] = useState(false);
 
   // ── Dependency Management ──
-  const sessionInstalled = useDownloadStore(s => s.sessionInstalled);
 
   const uniqueDependencies = useMemo(() => {
     if (!mod || !mod.dependencies) return [];
