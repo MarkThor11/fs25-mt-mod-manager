@@ -1314,6 +1314,8 @@ async function performScan(manualPaths = null) {
 				if (title === entryName.replace('.zip', '') && remoteMod.title) title = remoteMod.title;
 			}
 
+			const isCrossplay = isCrossplayMod(title, calculatedModId, remoteMod);
+
 			mods.push({
 				title,
 				author,
@@ -1325,6 +1327,7 @@ async function performScan(manualPaths = null) {
 				folder: subFolder, 
 				isDLC: isDlc || subFolder === 'DLC' || entryName.toLowerCase().startsWith('pdlc_'),
 				isMap: modDesc?.isMap || false,
+				isCrossplay: !!isCrossplay,
 				mapId: modDesc?.mapId || null,
 				mapTitle: modDesc?.mapTitle || null,
 				modName: modDesc?.techName || entryName.replace(/\.zip$/i, '').replace(/[_\\-]v\d+([_\\.]\d+)*$/i, ''),
@@ -4570,7 +4573,24 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 										 downloadQueue.some(q => (modId && q.modId === modId) || (targetFileName && q.fileName && q.fileName.replace(/\.zip$/i, '').toLowerCase() === targetFileName));
 			
 			if (isCurrentlyInstalling) {
-				console.log(`[AUTO-INSTALL] Skipping ${modName} - Already in download queue/active installs.`);
+				console.log(`[AUTO-INSTALL] Mod "${modName}" is already active/queued. Awaiting completion...`);
+				onProgress?.({ type: 'STATUS', modId, modName, status: 'DOWNLOADING', title: modName, parentId });
+				
+				await new Promise((resolve) => {
+					const startWait = Date.now();
+					const checkInterval = setInterval(() => {
+						const stillActive = (modId && activeInstalls.has(modId)) || 
+							downloadQueue.some(q => (modId && q.modId === modId) || (targetFileName && q.fileName && q.fileName.replace(/\.zip$/i, '').toLowerCase() === targetFileName));
+						if (!stillActive || Date.now() - startWait > 600000) {
+							clearInterval(checkInterval);
+							resolve();
+						}
+					}, 500);
+				});
+
+				results.installed++;
+				console.log(`[AUTO-INSTALL] Active/queued install finished for "${modName}".`);
+				onProgress?.({ type: 'STATUS', modId, modName, status: 'success', title: modName, parentId });
 				continue;
 			}
 

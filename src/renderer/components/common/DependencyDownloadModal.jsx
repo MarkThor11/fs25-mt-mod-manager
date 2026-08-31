@@ -67,7 +67,7 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
 
     useEffect(() => {
         if (!window.api?.on) return;
-        const removeListener = window.api.on.dependencyProgress((data) => {
+        const removeDepListener = window.api.on.dependencyProgress?.((data) => {
             const { type, modName, status, percent, title, modId } = data;
             const targetModIdStr = modId ? String(modId).replace(/^0+/, '') : null;
             const cleanIncomingTitle = (title || modName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -109,7 +109,42 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
             });
         });
 
-        return () => removeListener();
+        const removeDlListener = window.api.on.downloadProgress?.((data) => {
+            const { modId, status, progress, title, fileName } = data || {};
+            const targetModIdStr = modId ? String(modId).replace(/^0+/, '') : null;
+            const cleanIncomingTitle = (title || fileName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+            setModStatuses(prev => {
+                let matchedKey = null;
+                if (targetModIdStr) {
+                    matchedKey = Object.keys(prev).find(k => k === `id_${targetModIdStr}` || k === targetModIdStr);
+                }
+                if (!matchedKey && cleanIncomingTitle) {
+                    matchedKey = Object.keys(prev).find(k => {
+                        const item = prev[k];
+                        const itemTitle = (item.title || k).toLowerCase().replace(/[^a-z0-9]/g, '');
+                        return itemTitle && (itemTitle === cleanIncomingTitle || itemTitle.includes(cleanIncomingTitle) || cleanIncomingTitle.includes(itemTitle));
+                    });
+                }
+                if (!matchedKey) return prev;
+
+                const current = prev[matchedKey];
+                const nextItem = { ...current };
+                if (status === 'success' || status === 'installed') {
+                    nextItem.status = 'success';
+                    nextItem.progress = 100;
+                } else if (status === 'downloading' || status === 'DOWNLOADING') {
+                    nextItem.status = 'downloading';
+                    if (typeof progress === 'number') nextItem.progress = progress;
+                }
+                return { ...prev, [matchedKey]: nextItem };
+            });
+        });
+
+        return () => {
+            removeDepListener?.();
+            removeDlListener?.();
+        };
     }, []);
 
     const processingRef = React.useRef(false);
@@ -129,19 +164,6 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
                 subFolder,
                 parentId
             });
-            
-            // Mark remaining pending/searching mods as error if backend completed without installing them
-            setModStatuses(prev => {
-                const next = { ...prev };
-                uniqueMods.forEach(m => {
-                    const key = getModKey(m);
-                    const currentSt = (next[key]?.status || '').toLowerCase();
-                    if (!currentSt || currentSt === 'pending' || currentSt === 'searching') {
-                        next[key] = { ...(next[key] || {}), status: 'error', progress: 0, title: typeof m === 'string' ? m : (m.title || m.modName || key) };
-                    }
-                });
-                return next;
-            });
 
             // Refresh library
             try {
@@ -157,7 +179,7 @@ export default function DependencyDownloadModal({ missingMods, onComplete, onCan
             processingRef.current = false;
             setIsProcessing(false);
         }
-    }, [parentId, registerBatch, subFolder, uniqueMods]);
+    }, [parentId, registerBatch, subFolder]);
 
     const handleConfirm = async () => {
         setStatus('processing');

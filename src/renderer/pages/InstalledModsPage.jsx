@@ -2196,9 +2196,14 @@ export default function InstalledModsPage() {
                   >
                     <option value="" disabled hidden>SELECT DESTINATION...</option>
                     <option value="" style={{ background: '#0f172a', color: 'white' }}>MAIN LIBRARY</option>
-                    {allFolders.filter(f => f !== '' && f !== 'DLC' && !hiddenFolders.includes(f)).map(f => (
-                        <option key={f} value={f} style={{ background: '#0f172a', color: 'white' }}>{f.toUpperCase()}</option>
-                    ))}
+                    {allFolders.filter(f => f !== '' && f !== 'DLC' && !hiddenFolders.includes(f)).map(f => {
+                        const fMods = mods.filter(m => (m.folder || '').toLowerCase() === f.toLowerCase());
+                        const hasCPMap = fMods.some(m => m.isMap && (m.isCrossplay || m.title?.toLowerCase().includes('crossplay') || m.title?.toLowerCase().includes('(cp)')));
+                        const label = (hasCPMap && !f.toUpperCase().endsWith('(CP)') && !f.toUpperCase().endsWith('[CP]')) ? `${f.toUpperCase()} (CP)` : f.toUpperCase();
+                        return (
+                            <option key={f} value={f} style={{ background: '#0f172a', color: 'white' }}>{label}</option>
+                        );
+                    })}
                     <option value="__NEW__" style={{ background: '#0f172a', color: 'var(--accent)', fontWeight: 900 }}>+ NEW FOLDER...</option>
                   </select>
                   <ChevronDown size={12} style={{ position: 'absolute', right: 8, pointerEvents: 'none', opacity: 0.7 }} />
@@ -2474,7 +2479,17 @@ export default function InstalledModsPage() {
                            }}
                            title={folderName === 'DLC' ? "" : "Click to rename folder"}
                          >
-                           {folderName === '' ? 'MAIN' : folderName.toUpperCase()}
+                           {(() => {
+                             if (folderName === '') return 'MAIN';
+                             const hasMap = folderMods.some(m => m.isMap);
+                             const mapMod = folderMods.find(m => m.isMap);
+                             const isCP = (mapMod && (mapMod.isCrossplay || mapMod.title?.toLowerCase().includes('crossplay') || mapMod.title?.toLowerCase().includes('(cp)'))) || folderName.toLowerCase().includes('crossplay') || folderName.toLowerCase().includes('(cp)');
+                             const disp = folderName.toUpperCase();
+                             if (hasMap && isCP && !disp.endsWith('(CP)') && !disp.endsWith('[CP]')) {
+                               return `${disp} (CP)`;
+                             }
+                             return disp;
+                           })()}
                            {folderName === 'DLC' && (
                              <Lock size={12} style={{ marginLeft: 6, opacity: 0.7, color: '#3b82f6' }} title="System-Managed Official DLC Folder (Locked)" />
                            )}
@@ -2482,6 +2497,18 @@ export default function InstalledModsPage() {
                              <Pencil size={12} className="editable-label__icon" style={{ marginLeft: 8 }} />
                            )}
                          </span>
+                         {(() => {
+                           const mapMod = folderMods.find(m => m.isMap);
+                           const isCP = (mapMod && (mapMod.isCrossplay || mapMod.title?.toLowerCase().includes('crossplay') || mapMod.title?.toLowerCase().includes('(cp)'))) || folderName.toLowerCase().includes('crossplay') || folderName.toLowerCase().includes('(cp)');
+                           if (isCP && !isHidden) {
+                             return (
+                               <span style={{ background: '#3b82f6', color: 'white', fontSize: 10, fontWeight: 900, padding: '1px 6px', borderRadius: 4 }}>
+                                 CP
+                               </span>
+                             );
+                           }
+                           return null;
+                         })()}
                         {!isHidden && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)', fontWeight: 500 }}>

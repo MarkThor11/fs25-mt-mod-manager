@@ -28,6 +28,27 @@ export default function MapsPage() {
         }
     };
 
+    const isCrossplay = (title, modObj) => {
+        if (!title && !modObj) return false;
+        const t = (title || modObj?.title || '').toLowerCase();
+        if (t.includes('crossplay') || t.includes('(cp)') || t.includes('[cp]')) return true;
+        if (modObj?.isCrossplay) return true;
+        const plat = (modObj?.platform || modObj?.metadata?.Platform || '').toLowerCase();
+        if (plat.includes('ps5') || plat.includes('ps4') || plat.includes('xbs') || plat.includes('xb1') || plat.includes('console') || plat.includes('crossplay')) return true;
+        return false;
+    };
+
+    const formatMapTitle = (title, modObj) => {
+        if (!title) return '';
+        const clean = title.trim();
+        if (isCrossplay(clean, modObj)) {
+            if (!/\((?:cp|crossplay)\)$/i.test(clean) && !/\[(?:cp|crossplay)\]$/i.test(clean)) {
+                return `${clean} (CP)`;
+            }
+        }
+        return clean;
+    };
+
     const installedMaps = mods.filter(m => m.isMap);
 
     const filteredTemplates = templates.filter(t => 
@@ -238,9 +259,13 @@ export default function MapsPage() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)', marginBottom: 'var(--sp-3)', zIndex: 1, position: 'relative' }}>
                                     <div style={{ width: 44, height: 44, background: 'var(--accent-dim)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                                         <Map size={24} />
-                                    </div>
-                                    <div style={{ flex: 1, overflow: 'hidden' }}>
-                                        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.6)' }}>{template.title}</h3>
+                                    </div>                                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.6)' }}>{formatMapTitle(template.title, template)}</h3>
+                                            {isCrossplay(template.title, template) && (
+                                                <span style={{ background: '#3b82f6', color: 'white', fontSize: 10, fontWeight: 900, padding: '1px 6px', borderRadius: 4, flexShrink: 0 }}>CP</span>
+                                            )}
+                                        </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                             <div style={{ fontSize: 10, color: 'var(--text-accent)', opacity: 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220, fontWeight: 600 }} title={template.id}>ID: <span style={{ color: 'white' }}>{template.id}</span></div>
                                             {template.author && (
@@ -304,6 +329,7 @@ export default function MapsPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: 'var(--sp-4)' }}>
                         {sortedInstalled.map(mod => {
                             const hasAutomated = templates.some(t => t.mapId === mod.mapId || t.title === mod.title);
+                            const modIsCP = isCrossplay(mod.title, mod);
                             return (
                                 <div key={mod.fileName} className="save-card" style={{ padding: 'var(--sp-4)', position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 180, overflow: 'hidden' }}>
                                     {/* Map Preview Background */}
@@ -314,7 +340,7 @@ export default function MapsPage() {
                                         width: '100%', 
                                         height: '100%', 
                                         opacity: 0.15, 
-                                        zIndex: 0,
+                                        zIndex: 0, 
                                         pointerEvents: 'none',
                                         maskImage: 'linear-gradient(to bottom, black, transparent)',
                                         WebkitMaskImage: 'linear-gradient(to bottom, black, transparent)'
@@ -333,7 +359,12 @@ export default function MapsPage() {
                                             <Map size={24} />
                                         </div>
                                         <div style={{ flex: 1, overflow: 'hidden' }}>
-                                            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white' }}>{mod.title}</h3>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white' }}>{formatMapTitle(mod.title, mod)}</h3>
+                                                {modIsCP && (
+                                                    <span style={{ background: '#3b82f6', color: 'white', fontSize: 10, fontWeight: 900, padding: '1px 6px', borderRadius: 4, flexShrink: 0 }}>CP</span>
+                                                )}
+                                            </div>
                                             <div style={{ fontSize: 10, color: 'var(--text-secondary)', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220, fontWeight: 700 }} title={mod.author}>BY: <span style={{ color: 'var(--text-primary)' }}>{mod.author}</span></div>
                                         </div>
                                     </div>

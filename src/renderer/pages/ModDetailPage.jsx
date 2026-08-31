@@ -1321,25 +1321,32 @@ export default function ModDetailPage() {
         </div>
       </div>
 
-      {showDepModal && (dependencyStatus.missingList?.length > 0) && (
-        <DependencyDownloadModal
-          missingMods={dependencyStatus.missingList}
-          subFolder={parentFolder || (mod?.isMap || mod?.category?.toUpperCase().includes('MAP') ? (mod.title || '').replace(/[\\/:*?"<>|]/g, '_').trim() : null)}
-          parentId={mod?.modId}
-          mainTask={!showAsInstalled ? {
-            modId: mod.modId,
-            modTitle: mod.title,
-            downloadUrl: mod.downloadUrl || '',
-            category: mod.category || '',
-            subFolder: parentFolder || (mod?.isMap || mod?.category?.toUpperCase().includes('MAP') ? (mod.title || '').replace(/[\\/:*?"<>|]/g, '_').trim() : null)
-          } : null}
-          onComplete={() => {
-            setShowDepModal(false);
-            scanMods(null, true);
-          }}
-          onCancel={() => setShowDepModal(false)}
-        />
-      )}
+      {showDepModal && (dependencyStatus.missingList?.length > 0) && (() => {
+        const isCP = (mod?.metadata?.Platform && /ps5|ps4|xbs|xb1|console|crossplay/i.test(mod.metadata.Platform)) || /crossplay|\(cp\)|\[cp\]/i.test(mod?.title || '');
+        const cleanTitle = (mod?.title || '').replace(/[\\/:*?"<>|]/g, '_').trim();
+        const targetMapFolder = (mod?.isMap || mod?.category?.toUpperCase().includes('MAP')) ? (cleanTitle + (isCP && !/\((?:cp|crossplay)\)$/i.test(cleanTitle) && !/\[(?:cp|crossplay)\]$/i.test(cleanTitle) ? ' (CP)' : '')) : null;
+        const assignedSubFolder = parentFolder || targetMapFolder;
+
+        return (
+          <DependencyDownloadModal
+            missingMods={dependencyStatus.missingList}
+            subFolder={assignedSubFolder}
+            parentId={mod?.modId}
+            mainTask={!showAsInstalled ? {
+              modId: mod.modId,
+              modTitle: mod.title,
+              downloadUrl: mod.downloadUrl || '',
+              category: mod.category || '',
+              subFolder: assignedSubFolder
+            } : null}
+            onComplete={() => {
+              setShowDepModal(false);
+              scanMods(null, true);
+            }}
+            onCancel={() => setShowDepModal(false)}
+          />
+        );
+      })()}
       </div>
     );
   }
