@@ -260,12 +260,7 @@ export default function MapsPage() {
                                     <div style={{ width: 44, height: 44, background: 'var(--accent-dim)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                                         <Map size={24} />
                                     </div>                                    <div style={{ flex: 1, overflow: 'hidden' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.6)' }}>{formatMapTitle(template.title, template)}</h3>
-                                            {isCrossplay(template.title, template) && (
-                                                <span style={{ background: '#3b82f6', color: 'white', fontSize: 10, fontWeight: 900, padding: '1px 6px', borderRadius: 4, flexShrink: 0 }}>CP</span>
-                                            )}
-                                        </div>
+                                        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.6)' }}>{formatMapTitle(template.title, template)}</h3>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                             <div style={{ fontSize: 10, color: 'var(--text-accent)', opacity: 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220, fontWeight: 600 }} title={template.id}>ID: <span style={{ color: 'white' }}>{template.id}</span></div>
                                             {template.author && (
@@ -359,12 +354,7 @@ export default function MapsPage() {
                                             <Map size={24} />
                                         </div>
                                         <div style={{ flex: 1, overflow: 'hidden' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white' }}>{formatMapTitle(mod.title, mod)}</h3>
-                                                {modIsCP && (
-                                                    <span style={{ background: '#3b82f6', color: 'white', fontSize: 10, fontWeight: 900, padding: '1px 6px', borderRadius: 4, flexShrink: 0 }}>CP</span>
-                                                )}
-                                            </div>
+                                            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'white' }}>{formatMapTitle(mod.title, mod)}</h3>
                                             <div style={{ fontSize: 10, color: 'var(--text-secondary)', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220, fontWeight: 700 }} title={mod.author}>BY: <span style={{ color: 'var(--text-primary)' }}>{mod.author}</span></div>
                                         </div>
                                     </div>

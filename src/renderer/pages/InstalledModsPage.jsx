@@ -2497,18 +2497,6 @@ export default function InstalledModsPage() {
                              <Pencil size={12} className="editable-label__icon" style={{ marginLeft: 8 }} />
                            )}
                          </span>
-                         {(() => {
-                           const mapMod = folderMods.find(m => m.isMap);
-                           const isCP = (mapMod && (mapMod.isCrossplay || mapMod.title?.toLowerCase().includes('crossplay') || mapMod.title?.toLowerCase().includes('(cp)'))) || folderName.toLowerCase().includes('crossplay') || folderName.toLowerCase().includes('(cp)');
-                           if (isCP && !isHidden) {
-                             return (
-                               <span style={{ background: '#3b82f6', color: 'white', fontSize: 10, fontWeight: 900, padding: '1px 6px', borderRadius: 4 }}>
-                                 CP
-                               </span>
-                             );
-                           }
-                           return null;
-                         })()}
                         {!isHidden && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)', fontWeight: 500 }}>
