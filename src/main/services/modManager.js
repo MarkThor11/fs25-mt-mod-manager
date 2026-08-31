@@ -1920,13 +1920,12 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 		}
 	}
 
-	let techData = null;
 	let dependencies = null;
 	if (!downloadUrl || !category || !resolvedTitle || resolvedTitle.startsWith('Mod ')) {
 		try {
 			debugLog(`[QUEUE] Fetching/Completing metadata for ${modId}...`);
 			const detail = await scraper.fetchModDetail(modId);
-			if (!techData) techData = detail?.techData;
+			if (!techData && detail?.techData) techData = detail.techData;
 			if (!downloadUrl && detail?.downloadUrl) downloadUrl = detail.downloadUrl;
 			if (!category && detail?.category) category = detail.category;
 			if (detail?.dependencies) dependencies = detail.dependencies;
