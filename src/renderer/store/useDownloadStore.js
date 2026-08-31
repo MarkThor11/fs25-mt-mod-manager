@@ -330,13 +330,15 @@ export const useDownloadStore = create((set, get) => ({
         const cleanKeyStr = keyStr.replace(/^0+/, '');
         const modIdStr = String(item.modId || '').trim().toLowerCase();
         const cleanModIdStr = modIdStr.replace(/^0+/, '');
+        const titleStr = String(item.title || '').trim().toLowerCase();
 
         if (
           key === targetKey ||
           keyStr === targetStr ||
           (cleanTargetStr && cleanKeyStr === cleanTargetStr) ||
           modIdStr === targetStr ||
-          (cleanTargetStr && cleanModIdStr === cleanTargetStr)
+          (cleanTargetStr && cleanModIdStr === cleanTargetStr) ||
+          (targetStr.length > 2 && (titleStr === targetStr || keyStr.includes(targetStr) || targetStr.includes(keyStr)))
         ) {
           delete next[key];
           changed = true;
@@ -428,12 +430,12 @@ export const useDownloadStore = create((set, get) => ({
   },
 
   addSessionInstalled: (modId, title) => {
-    if (!modId) return;
-    const normTitle = title ? title.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
-    if (!normTitle || /^mod\d*$/i.test(normTitle)) return;
+    if (!modId || !title) return;
+    const trimmed = String(title).trim();
+    if (/^mod\s*\d*$/i.test(trimmed) || /^\d+$/.test(trimmed)) return;
     set(state => {
       const next = { ...state.sessionInstalled };
-      next[String(modId)] = normTitle;
+      next[String(modId)] = trimmed;
       return { sessionInstalled: next };
     });
   },

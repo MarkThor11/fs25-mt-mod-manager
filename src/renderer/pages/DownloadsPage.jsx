@@ -193,7 +193,10 @@ export default function DownloadsPage() {
                       </button>
                     ) : (
                       <button 
-                        onClick={() => removeDownload?.(dl.modId)}
+                        onClick={() => {
+                          if (dl.modId) removeDownload?.(dl.modId);
+                          if (dl.title) removeDownload?.(dl.title);
+                        }}
                         style={{ 
                           background: 'rgba(34, 197, 94, 0.1)', 
                           color: 'var(--success)', 
