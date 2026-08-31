@@ -101,30 +101,42 @@ export default function ModDetailPage() {
   
   const localMod = useMemo(() => {
     if (!mod) return null;
-    // 1. Try exact ID match first
-    const idMatch = localMods.find(lm => lm.modId && String(lm.modId) === String(mod.modId));
-    if (idMatch) return idMatch;
+    const targetCleanId = (modId || mod.modId) ? String(modId || mod.modId).replace(/^0+/, '') : null;
 
-    // 2. Try strict fileName match first (stripping FS25 prefix)
-    if (mod.fileName || mod.downloadUrl) {
-      const getBaseName = (str) => {
-        if (!str) return '';
-        const match = str.match(/([^/\\]+)\.zip$/i) || [null, str];
-        return match[1].replace(/^(?:fs25|fs22|pdlc)_/i, '').toLowerCase();
-      };
-      
-      const remoteFileName = getBaseName(mod.fileName || mod.downloadUrl);
-      if (remoteFileName) {
-        const fileMatch = localMods.find(lm => {
-           if (!lm.fileName) return false;
-           return getBaseName(lm.fileName) === remoteFileName;
-        });
-        if (fileMatch) return fileMatch;
-      }
+    // 1. Try exact ID match (with leading zero normalization)
+    if (targetCleanId) {
+      const idMatch = localMods.find(lm => lm.modId && String(lm.modId).replace(/^0+/, '') === targetCleanId);
+      if (idMatch) return idMatch;
+    }
+
+    // 2. Try fileName match (stripping FS25/FS22 prefix)
+    const getBaseName = (str) => {
+      if (!str) return '';
+      const match = str.match(/([^/\\]+)\.zip$/i) || [null, str];
+      return match[1].replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+    };
+    
+    const remoteFileName = getBaseName(mod.fileName || mod.downloadUrl);
+    if (remoteFileName) {
+      const fileMatch = localMods.find(lm => {
+         if (!lm.fileName) return false;
+         return getBaseName(lm.fileName) === remoteFileName;
+      });
+      if (fileMatch) return fileMatch;
+    }
+
+    // 3. Try clean alphanumeric title match
+    const cleanModTitle = (mod.title || '').replace(/\([^)]+\)/g, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+    if (cleanModTitle) {
+      const titleMatch = localMods.find(lm => {
+        const cleanLmTitle = (lm.title || '').replace(/\([^)]+\)/g, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+        return cleanLmTitle && cleanLmTitle === cleanModTitle;
+      });
+      if (titleMatch) return titleMatch;
     }
 
     return null;
-  }, [mod, localMods]);
+  }, [mod, modId, localMods]);
 
   const hasUpdate = useMemo(() => {
     if (!mod || !localMod) return false;
@@ -132,9 +144,12 @@ export default function ModDetailPage() {
     return compareVersions(mod.version, localMod.version) > 0;
   }, [mod, localMod]);
 
-  const currentDownload = activeDownloads[modId || mod?.modId];
+  const rawTargetId = modId || mod?.modId;
+  const cleanTargetId = rawTargetId ? String(rawTargetId).replace(/^0+/, '') : null;
+  const currentDownload = activeDownloads[rawTargetId] || (cleanTargetId ? activeDownloads[cleanTargetId] : null);
   const isCurrentlyInstalling = !!currentDownload && currentDownload.status !== 'success';
-  const showAsInstalled = !!localMod || currentDownload?.status === 'success';
+  const isSessionInstalled = (cleanTargetId && sessionInstalled[cleanTargetId]) || (mod?.title && Object.values(sessionInstalled).some(v => v && v.toLowerCase() === mod.title.toLowerCase()));
+  const showAsInstalled = !!localMod || currentDownload?.status === 'success' || !!isSessionInstalled;
   const downloadProgress = currentDownload?.progress || 0;
 
   const isModFav = useMemo(() => {

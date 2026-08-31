@@ -209,11 +209,53 @@ function getModHubMetadataPool() {
   const pool = {};
   const poolByCleanTitle = {};
 
+  const addToPool = (rawKey, item) => {
+    if (!rawKey || !item) return;
+    const strKey = String(rawKey).trim();
+    if (!strKey) return;
+    if (!pool[strKey]) pool[strKey] = item;
+    
+    // Numeric ID variants (raw, stripped of leading zeroes, padded to 8 digits)
+    if (/^\d+$/.test(strKey)) {
+      const cleanId = strKey.replace(/^0+/, '');
+      if (cleanId) {
+        const paddedId = cleanId.padStart(8, '0');
+        if (!pool[cleanId]) pool[cleanId] = item;
+        if (!pool[paddedId]) pool[paddedId] = item;
+        if (!pool[`id_${cleanId}`]) pool[`id_${cleanId}`] = item;
+        if (!pool[`id_${paddedId}`]) pool[`id_${paddedId}`] = item;
+      }
+    }
+  };
+
+  const addFilenameToPool = (filename, item) => {
+    if (!filename || !item) return;
+    const base = path.basename(filename).toLowerCase();
+    const noZip = base.replace(/\.zip$/i, '');
+    const noPrefix = noZip.replace(/^(?:fs25|fs22|pdlc)_/i, '');
+    const cleanAlphanum = noPrefix.replace(/[^a-z0-9]/g, '');
+
+    addToPool(base, item);
+    addToPool(noZip, item);
+    addToPool(noPrefix, item);
+    if (cleanAlphanum) addToPool(cleanAlphanum, item);
+    addToPool(`file_${base}`, item);
+    addToPool(`file_${noZip}`, item);
+  };
+
   const addToTitleIndex = (item) => {
-    if (item && item.title) {
-      const cleanTitle = item.title.replace(/\s+/g, '').replace(/_/g, '').toLowerCase();
-      if (cleanTitle && !poolByCleanTitle[cleanTitle]) {
-        poolByCleanTitle[cleanTitle] = item;
+    if (!item) return;
+    const title = item.title || item.modhub_title || item.name;
+    if (title) {
+      const cleanTitle = title.replace(/\s+/g, '').replace(/_/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (cleanTitle) {
+        if (!poolByCleanTitle[cleanTitle]) poolByCleanTitle[cleanTitle] = item;
+        addToPool(cleanTitle, item);
+        addToPool(`title_${cleanTitle}`, item);
+      }
+      const rawTitleLower = title.toLowerCase().trim();
+      if (rawTitleLower) {
+        addToPool(rawTitleLower, item);
       }
     }
   };
@@ -227,14 +269,19 @@ function getModHubMetadataPool() {
         const data = JSON.parse(row.value);
         if (row.key.startsWith('modDetail_')) {
           if (data && data.modId) {
-            pool[String(data.modId)] = { ...data, timestamp: now };
-            addToTitleIndex(data);
+            const item = { ...data, timestamp: now };
+            addToPool(data.modId, item);
+            if (data.fileName) addFilenameToPool(data.fileName, item);
+            if (data.downloadUrl) addFilenameToPool(data.downloadUrl, item);
+            addToTitleIndex(item);
           }
         } else if (data && Array.isArray(data.mods)) {
           for (const m of data.mods) {
             if (m.modId) {
-              pool[String(m.modId)] = { ...m, timestamp: now };
-              addToTitleIndex(m);
+              const item = { ...m, timestamp: now };
+              addToPool(m.modId, item);
+              if (m.fileName) addFilenameToPool(m.fileName, item);
+              addToTitleIndex(item);
             }
           }
         }
@@ -245,36 +292,23 @@ function getModHubMetadataPool() {
     const tracks = db.prepare("SELECT mod_id, local_file_name, local_version, modhub_title, category, hp, price, technical_data FROM mod_tracking").all();
     for (const t of tracks) {
       if (!t.mod_id && !t.local_file_name) continue;
-      const id = String(t.mod_id || t.local_file_name); // Fallback to fileName as ID for pool if no modId
-      
       let techData = null;
       try { techData = t.technical_data ? JSON.parse(t.technical_data) : null; } catch (e) {}
 
-      if (!pool[id]) {
-        pool[id] = { 
-          modId: t.mod_id, 
-          title: t.modhub_title, 
-          category: t.category, 
-          fileName: t.local_file_name, 
-          version: t.local_version,
-          techData: techData || (t.hp ? { hp: t.hp, price: t.price } : null),
-          timestamp: now 
-        };
-      } else {
-        // Enrich existing cache entry with the local filename/version if missing
-        pool[id].fileName = t.local_file_name || pool[id].fileName;
-        pool[id].version = t.local_version || pool[id].version;
-        if (!pool[id].techData && (t.hp || techData)) {
-            pool[id].techData = techData || { hp: t.hp, price: t.price };
-        }
-      }
-      addToTitleIndex(pool[id]);
+      const item = { 
+        modId: t.mod_id ? String(t.mod_id).replace(/^0+/, '') : null, 
+        rawModId: t.mod_id,
+        title: t.modhub_title, 
+        category: t.category, 
+        fileName: t.local_file_name, 
+        version: t.local_version,
+        techData: techData || (t.hp ? { hp: t.hp, price: t.price } : null),
+        timestamp: now 
+      };
 
-      // Also index by fileName for easier matching by title-less local mods
-      if (t.local_file_name) {
-          const fileId = `file_${t.local_file_name.toLowerCase()}`;
-          if (!pool[fileId]) pool[fileId] = { ...pool[id], timestamp: now };
-      }
+      if (t.mod_id) addToPool(t.mod_id, item);
+      if (t.local_file_name) addFilenameToPool(t.local_file_name, item);
+      addToTitleIndex(item);
     }
 
   } catch (err) {
@@ -285,8 +319,6 @@ function getModHubMetadataPool() {
   try {
     if (!cachedBundledData) {
       const fs = require('fs-extra');
-      const path = require('path');
-      const { app } = require('electron');
       const bundledPath = path.join(app.getAppPath(), 'src/main/resources/bundled_cache.json');
       if (fs.existsSync(bundledPath)) {
         cachedBundledData = fs.readJsonSync(bundledPath);
@@ -295,8 +327,12 @@ function getModHubMetadataPool() {
       }
     }
     for (const [k, v] of Object.entries(cachedBundledData)) {
-      if (!pool[k]) pool[k] = v;
-      addToTitleIndex(v);
+      if (v) {
+        addToPool(k, v);
+        if (v.modId) addToPool(v.modId, v);
+        if (v.fileName) addFilenameToPool(v.fileName, v);
+        addToTitleIndex(v);
+      }
     }
   } catch (err) {
     // Ignore if not present

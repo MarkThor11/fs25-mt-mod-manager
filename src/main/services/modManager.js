@@ -1286,22 +1286,26 @@ async function performScan(manualPaths = null) {
 				}
 			}
 
-			let remoteMod = pool[fileId] || (calculatedModId ? pool[String(calculatedModId)] : null);
+			const cleanFileId = entryName.toLowerCase().replace('.zip', '');
+			const cleanPrefix = cleanFileId.replace(/^(?:fs25|fs22|pdlc)_/i, '');
+			const cleanAlphanum = cleanPrefix.replace(/[^a-z0-9]/g, '');
 
-            // Fallback for manually downloaded mods: fuzzy match title against pool (O(1) lookup!)
-            if (!remoteMod) {
-                const cleanName = entryName.replace('.zip', '').replace(/^fs25_/i, '').replace(/_/g, '').toLowerCase();
-                remoteMod = poolByCleanTitle[cleanName] || null;
-            }
+			let remoteMod = pool[fileId] || pool[cleanFileId] || pool[cleanPrefix] || (cleanAlphanum ? pool[cleanAlphanum] : null) || (calculatedModId ? pool[String(calculatedModId)] : null);
+
+			// Fallback for manually downloaded mods: match clean title / alphanum against pool
+			if (!remoteMod) {
+				const cleanTitleKey = (title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+				remoteMod = poolByCleanTitle[cleanAlphanum] || poolByCleanTitle[cleanTitleKey] || pool[cleanTitleKey] || null;
+			}
 
 			if (remoteMod) {
-				if (!calculatedModId && (remoteMod.modId || remoteMod.id)) {
-					calculatedModId = remoteMod.modId || remoteMod.id;
+				if (!calculatedModId && (remoteMod.modId || remoteMod.id || remoteMod.rawModId)) {
+					calculatedModId = String(remoteMod.modId || remoteMod.id || remoteMod.rawModId).replace(/^0+/, '');
 				}
 				// Concentrate solely on dependencies listed on the ModHub website.
 				dependencies = remoteMod.dependencies || [];
 
-                // Enrich missing metadata
+				// Enrich missing metadata
 				if (author === 'Unknown' && remoteMod.author) author = remoteMod.author;
 				if (author === 'Unknown' && remoteMod.title && remoteMod.title.includes('by ')) {
 					author = remoteMod.title.split('by ')[1].trim();

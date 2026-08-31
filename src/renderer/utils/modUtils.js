@@ -76,8 +76,13 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
   // 2. Identity 2: ZIP Filename / Technical Mod Name Match
   if (depFileName) {
     const normDepFile = normalizeForMatching(depFileName);
+    const cleanDepAlphanum = normDepFile.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
     if (m.fileName && normalizeForMatching(m.fileName) === normDepFile) return true;
     if (m.modName && normalizeForMatching(m.modName) === normDepFile) return true;
+    if (cleanDepAlphanum) {
+      if (m.fileName && normalizeForMatching(m.fileName).replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '') === cleanDepAlphanum) return true;
+      if (m.modName && normalizeForMatching(m.modName).replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '') === cleanDepAlphanum) return true;
+    }
   }
 
   if (strict) return false;
@@ -85,9 +90,15 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
   // 3. Identity 3: Internal modDesc.xml Mod Title Match
   if (depTitle) {
     const cleanDepTitle = cleanModName(depTitle).toLowerCase();
+    const ultraCleanDep = cleanDepTitle.replace(/[^a-z0-9]/g, '');
     if (m.title && cleanModName(m.title).toLowerCase() === cleanDepTitle) return true;
     if (m.modName && cleanModName(m.modName).toLowerCase() === cleanDepTitle) return true;
     if (m.fileName && normalizeForMatching(m.fileName) === normalizeForMatching(cleanDepTitle)) return true;
+    if (ultraCleanDep) {
+      if (m.title && m.title.toLowerCase().replace(/[^a-z0-9]/g, '') === ultraCleanDep) return true;
+      if (m.fileName && m.fileName.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/zip$/, '') === ultraCleanDep) return true;
+      if (m.modName && m.modName.toLowerCase().replace(/[^a-z0-9]/g, '') === ultraCleanDep) return true;
+    }
   }
 
   return false;
