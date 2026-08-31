@@ -1266,7 +1266,7 @@ export default function InstalledModsPage() {
     const groups = filteredMods.reduce((acc, mod) => {
       let folder = mod.folder || '';
       if (mod.isMap && !folder) {
-        folder = mod.title.replace(/\([^)]+\)/g, '').trim() || 'Custom Maps';
+        folder = (mod.title || '').replace(/[\\/:*?"<>|]/g, '_').trim() || 'Custom Maps';
       }
       const canonical = getCanonicalFolder(folder);
       if (!acc[canonical]) acc[canonical] = [];

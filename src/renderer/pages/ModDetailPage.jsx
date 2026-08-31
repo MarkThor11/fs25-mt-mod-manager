@@ -885,7 +885,7 @@ export default function ModDetailPage() {
                                textDecoration: 'none'
                              }}
                              className="hover-underline"
-                             onClick={() => navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? mod.title.replace(/\([^)]+\)/g, '').trim() : parentFolder } })}
+                             onClick={() => navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? (mod.title || '').replace(/[\\/:*?"<>|]/g, '_').trim() : parentFolder } })}
                            >
                              {displayLabel}
                            </span>
@@ -924,7 +924,7 @@ export default function ModDetailPage() {
                       {depId ? (
                         <button 
                           className="btn btn--secondary btn--xs"
-                          onClick={() => navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? mod.title.replace(/\([^)]+\)/g, '').trim() : parentFolder } })}
+                          onClick={() => navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? (mod.title || '').replace(/[\\/:*?"<>|]/g, '_').trim() : parentFolder } })}
                         >
                           {isInstalled ? 'View Mod' : 'View on ModHub'}
                         </button>
@@ -1310,14 +1310,14 @@ export default function ModDetailPage() {
       {showDepModal && (dependencyStatus.missingList?.length > 0) && (
         <DependencyDownloadModal
           missingMods={dependencyStatus.missingList}
-          subFolder={parentFolder || (mod?.isMap || mod?.category?.toUpperCase().includes('MAP') ? mod.title.replace(/\([^)]+\)/g, '').trim() : null)}
+          subFolder={parentFolder || (mod?.isMap || mod?.category?.toUpperCase().includes('MAP') ? (mod.title || '').replace(/[\\/:*?"<>|]/g, '_').trim() : null)}
           parentId={mod?.modId}
           mainTask={!showAsInstalled ? {
             modId: mod.modId,
             modTitle: mod.title,
             downloadUrl: mod.downloadUrl || '',
             category: mod.category || '',
-            subFolder: parentFolder || (mod?.isMap || mod?.category?.toUpperCase().includes('MAP') ? mod.title.replace(/\([^)]+\)/g, '').trim() : null)
+            subFolder: parentFolder || (mod?.isMap || mod?.category?.toUpperCase().includes('MAP') ? (mod.title || '').replace(/[\\/:*?"<>|]/g, '_').trim() : null)
           } : null}
           onComplete={() => {
             setShowDepModal(false);

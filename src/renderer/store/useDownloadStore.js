@@ -497,7 +497,7 @@ if (window.api?.on) {
               const isMapCategory = (active?.category && active.category.toUpperCase().includes('MAP')) || (targetMod?.category && targetMod.category.toUpperCase().includes('MAP')) || (targetMod?.isMap);
               
               if (targetMod || isMapCategory) {
-                const targetFolder = targetMod?.folder || active?.subFolder || (targetMod?.title ? targetMod.title.replace(/\([^)]+\)/g, '').trim() : null);
+                const targetFolder = targetMod?.folder || active?.subFolder || (targetMod?.title ? targetMod.title.replace(/[\\/:*?"<>|]/g, '_').trim() : null);
                 const mapDisplayTitle = targetMod?.title || displayTitle || resolvedTitle;
                 console.log(`[AUTO-MAP-DEPS] Map "${mapDisplayTitle}" installed. Auto-resolving missing dependencies into "${targetFolder || 'Root'}"...`);
                 
