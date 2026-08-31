@@ -485,20 +485,29 @@ if (window.api?.on) {
             
             if (autoDownloadEnabled && window.api?.localMods?.autoResolveMapDependencies) {
               const allMods = scanRes?.mods || useLocalModsStore.getState().mods || [];
-              const targetMod = allMods.find(m => String(m.modId) === strId || m.fileName === fileName || m.title === resolvedTitle);
-              const isMapCategory = (active?.category && active.category.toUpperCase().includes('MAP')) || (targetMod?.category && targetMod.category.toUpperCase().includes('MAP'));
+              const targetMod = allMods.find(m => {
+                if (!m) return false;
+                if (strId && m.modId && String(m.modId) === strId) return true;
+                if (fileName && (m.fileName === fileName || m.fileName?.endsWith(fileName))) return true;
+                const cleanMTitle = (m.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                const cleanTarget = (resolvedTitle || displayTitle || incomingTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (cleanMTitle && cleanTarget && (cleanMTitle === cleanTarget || cleanMTitle.includes(cleanTarget) || cleanTarget.includes(cleanMTitle))) return true;
+                return false;
+              });
+              const isMapCategory = (active?.category && active.category.toUpperCase().includes('MAP')) || (targetMod?.category && targetMod.category.toUpperCase().includes('MAP')) || (targetMod?.isMap);
               
-              if (targetMod && (targetMod.isMap || isMapCategory)) {
-                const targetFolder = targetMod.folder || active?.subFolder || (targetMod.title ? targetMod.title.replace(/\([^)]+\)/g, '').trim() : null);
-                console.log(`[AUTO-MAP-DEPS] Map "${targetMod.title}" installed. Auto-resolving missing dependencies into "${targetFolder || 'Root'}"...`);
+              if (targetMod || isMapCategory) {
+                const targetFolder = targetMod?.folder || active?.subFolder || (targetMod?.title ? targetMod.title.replace(/\([^)]+\)/g, '').trim() : null);
+                const mapDisplayTitle = targetMod?.title || displayTitle || resolvedTitle;
+                console.log(`[AUTO-MAP-DEPS] Map "${mapDisplayTitle}" installed. Auto-resolving missing dependencies into "${targetFolder || 'Root'}"...`);
                 
                 window.api.localMods.autoResolveMapDependencies({
                   mapId: strId,
                   targetFolder,
-                  mapTitle: targetMod.title || displayTitle
+                  mapTitle: mapDisplayTitle
                 }).then(res => {
                   if (res && res.count > 0) {
-                    useToastStore.getState().info(`Auto-downloading ${res.count} required mod${res.count > 1 ? 's' : ''} for ${displayTitle}...`);
+                    useToastStore.getState().info(`Auto-downloading ${res.count} required mod${res.count > 1 ? 's' : ''} for ${mapDisplayTitle}...`);
                   }
                 }).catch(err => {
                   console.error('[AUTO-MAP-DEPS] Error during autoResolveMapDependencies:', err);

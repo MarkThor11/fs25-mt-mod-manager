@@ -813,16 +813,59 @@ ipcMain.handle('localMods:autoResolveMapDependencies', async (event, { mapId, ta
   try {
     if (!mapId) return { success: false, error: 'No mapId provided' };
     const scraper = require('./services/scraper');
+    const cache = require('./services/cache');
     
     // 1. Fetch live ModHub details for the map
-    const detail = await scraper.fetchModDetail(mapId);
-    if (!detail || !Array.isArray(detail.dependencies) || detail.dependencies.length === 0) {
+    let webDeps = [];
+    try {
+      const detail = await scraper.fetchModDetail(mapId);
+      if (detail && Array.isArray(detail.dependencies)) {
+        webDeps = detail.dependencies;
+      }
+    } catch (_) {}
+
+    // 2. Fetch local modDesc dependencies from disk cache
+    let localDeps = [];
+    try {
+      const allLocal = cache.getAllLocalModCache() || [];
+      const localMap = allLocal.find(m => {
+        if (!m) return false;
+        if (m.mod_id && String(m.mod_id) === String(mapId)) return true;
+        const cleanTitle = (m.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanMapTitle = (mapTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        return cleanTitle && cleanMapTitle && (cleanTitle === cleanMapTitle || cleanTitle.includes(cleanMapTitle) || cleanMapTitle.includes(cleanTitle));
+      });
+      if (localMap && localMap.dependencies) {
+        try {
+          const parsed = typeof localMap.dependencies === 'string' ? JSON.parse(localMap.dependencies) : localMap.dependencies;
+          if (Array.isArray(parsed)) localDeps = parsed;
+        } catch (_) {}
+      }
+    } catch (_) {}
+
+    // 3. Combine both sources with deduplication
+    const combinedDeps = [...webDeps];
+    for (const lDep of localDeps) {
+      const lTitle = typeof lDep === 'string' ? lDep : (lDep.title || lDep.modName);
+      if (!lTitle) continue;
+      const cleanL = lTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const exists = combinedDeps.some(d => {
+        const dTitle = typeof d === 'string' ? d : (d.title || d.modName);
+        const cleanD = (dTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        return cleanD && cleanL && (cleanD === cleanL || cleanD.includes(cleanL) || cleanL.includes(cleanD));
+      });
+      if (!exists) {
+        combinedDeps.push(lDep);
+      }
+    }
+
+    if (combinedDeps.length === 0) {
       return { success: true, count: 0 };
     }
 
-    console.log(`[AUTO-MAP-DEPS] Processing ${detail.dependencies.length} dependencies for map "${mapTitle || mapId}" into folder "${targetFolder || 'Root'}"...`);
+    console.log(`[AUTO-MAP-DEPS] Processing ${combinedDeps.length} dependencies (${webDeps.length} web, ${localDeps.length} modDesc) for map "${mapTitle || mapId}" into folder "${targetFolder || 'Root'}"...`);
 
-    const result = await modManager.autoInstallDependencies(detail.dependencies, (progress) => {
+    const result = await modManager.autoInstallDependencies(combinedDeps, (progress) => {
       try {
         if (event.sender && !event.sender.isDestroyed()) {
           event.sender.send('dependency:progress', {
@@ -834,7 +877,7 @@ ipcMain.handle('localMods:autoResolveMapDependencies', async (event, { mapId, ta
       } catch (_) {}
     }, targetFolder, mapId);
 
-    return { success: true, count: detail.dependencies.length, result };
+    return { success: true, count: combinedDeps.length, result };
   } catch (err) {
     console.error('[AUTO-MAP-DEPS] Error in autoResolveMapDependencies:', err);
     return { success: false, error: err.message };

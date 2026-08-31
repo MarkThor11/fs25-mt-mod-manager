@@ -1772,8 +1772,8 @@ async function runInstallTask(task) {
 			}
 		}
 
-		broadcastStatus?.(modId, 'success', { title: modTitle, modTitle });
-		onProgress?.({ status: 'success', title: modTitle, modTitle });
+		broadcastStatus?.(modId, 'success', { title: modTitle, modTitle, fileName: result?.fileName, filePath: result?.filePath, subFolder });
+		onProgress?.({ status: 'success', title: modTitle, modTitle, fileName: result?.fileName, filePath: result?.filePath, subFolder });
 		return result;
 	} catch (err) {
 		console.error(`[QUEUE] Task failed for ${modTitle}:`, err);
