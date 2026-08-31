@@ -1859,7 +1859,7 @@ async function runInstallTask(task) {
 		}
 
 		// ── ERROR RECOVERY ──
-		if (recoveryPath && fs.existsSync(recoveryPath) && oldPath) {
+		if (typeof recoveryPath === 'string' && typeof oldPath === 'string' && fs.existsSync(recoveryPath) && oldPath) {
 			console.log(`[UPDATE] Installation failed. Restoring backup for: ${modTitle}`);
 			try {
 				await fs.ensureDir(path.dirname(oldPath));
@@ -1897,7 +1897,7 @@ async function processQueue() {
 /**
 	* Entry point for the frontend to queue a download.
 	*/
-async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category, subFolder = null, oldPath = null, recoveryPath = null) {
+async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category, subFolder = null, techData = null, oldPath = null, recoveryPath = null) {
 	// Check if already in queue or active
 	if (activeInstalls.has(modId) || downloadQueue.some(t => t.modId === modId)) {
 		return { success: false, error: 'Already in progress or queued' };
@@ -5385,6 +5385,7 @@ async function resumePendingDownloads(onProgress) {
 				(progress) => onProgress?.(strId, progress),
 				item.category || null,
 				subFolder,
+				techData,
 				null,
 				null
 			);
