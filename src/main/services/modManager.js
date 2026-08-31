@@ -1295,6 +1295,9 @@ async function performScan(manualPaths = null) {
             }
 
 			if (remoteMod) {
+				if (!calculatedModId && (remoteMod.modId || remoteMod.id)) {
+					calculatedModId = remoteMod.modId || remoteMod.id;
+				}
 				// Concentrate solely on dependencies listed on the ModHub website.
 				dependencies = remoteMod.dependencies || [];
 
@@ -1540,17 +1543,33 @@ function getTemplatesPath() {
 	finalMods.sort((a, b) => a.title.localeCompare(b.title));
 	const conflicts = detectConflicts(finalMods);
 	
-	// Identify missing dependencies (checking Mod ID, ZIP filename, technical name, and title)
+	// Identify missing dependencies (checking Mod ID, ZIP filename, technical name, title, and ultra-normalized matches)
 	const installedIds = new Set();
 	const installedFileNames = new Set();
 	const installedModNames = new Set();
 	const installedTitles = new Set();
+	const installedUltraTitles = new Set();
+	const installedUltraFiles = new Set();
+	const installedUltraNames = new Set();
 
 	for (const m of finalMods) {
 		if (m.modId) installedIds.add(String(m.modId).replace(/^0+/, ''));
-		if (m.fileName) installedFileNames.add(m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase());
-		if (m.modName) installedModNames.add(m.modName.toLowerCase());
-		if (m.title) installedTitles.add(m.title.toLowerCase());
+		if (m.fileName) {
+			const cleanF = m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
+			installedFileNames.add(cleanF);
+			const uF = ultraNormalize(cleanF);
+			if (uF) installedUltraFiles.add(uF);
+		}
+		if (m.modName) {
+			installedModNames.add(m.modName.toLowerCase());
+			const uM = ultraNormalize(m.modName);
+			if (uM) installedUltraNames.add(uM);
+		}
+		if (m.title) {
+			installedTitles.add(m.title.toLowerCase());
+			const uT = ultraNormalize(m.title);
+			if (uT) installedUltraTitles.add(uT);
+		}
 	}
 
 	const missingDependencies = [];
@@ -1579,13 +1598,61 @@ function getTemplatesPath() {
 				if (installedIds.has(cleanId)) isInstalled = true;
 			}
 
-			// 3. Try filename / modName / title
-			if (!isInstalled) {
-				const depStr = typeof dep === 'string' ? dep : (dep.fileName || dep.modName || dep.technicalName || dep.title || '');
-				if (depStr) {
-					const norm = depStr.replace(/\.zip$/i, '').toLowerCase();
-					if (installedFileNames.has(norm) || installedModNames.has(norm) || installedTitles.has(norm)) {
-						isInstalled = true;
+			// 3. Try filename / modName / title exact match
+			const depStr = typeof dep === 'string' ? dep : (dep.fileName || dep.modName || dep.technicalName || dep.title || '');
+			if (!isInstalled && depStr) {
+				const norm = depStr.replace(/\.zip$/i, '').toLowerCase();
+				if (installedFileNames.has(norm) || installedModNames.has(norm) || installedTitles.has(norm)) {
+					isInstalled = true;
+				}
+			}
+
+			// 4. Smart Ultra-Normalized, ModHub Pool & Fuzzy Overlap Matching
+			if (!isInstalled && depStr) {
+				const uDep = ultraNormalize(depStr);
+
+				// 4a. Direct ultra-normalized match against installed titles, files, or technical names
+				if (uDep && (installedUltraTitles.has(uDep) || installedUltraFiles.has(uDep) || installedUltraNames.has(uDep))) {
+					isInstalled = true;
+				}
+
+				// 4b. Pool match: check if the dependency string matches a ModHub entry whose modId is installed
+				if (!isInstalled && uDep) {
+					const poolMod = poolByCleanTitle[uDep] || Object.values(pool).find(pm => {
+						if (!pm) return false;
+						const pmTitle = ultraNormalize(pm.title || '');
+						const pmFile = ultraNormalize(pm.fileName || '');
+						return pmTitle === uDep || pmFile === uDep;
+					});
+					if (poolMod && (poolMod.modId || poolMod.id)) {
+						const cleanPoolId = String(poolMod.modId || poolMod.id).replace(/^0+/, '');
+						if (installedIds.has(cleanPoolId)) {
+							isInstalled = true;
+						}
+					}
+				}
+
+				// 4c. Word/Substring Containment Overlap for longer names
+				if (!isInstalled && uDep.length >= 6) {
+					for (const uTitle of installedUltraTitles) {
+						if (uTitle.length >= 6 && (uTitle.includes(uDep) || uDep.includes(uTitle))) {
+							const ratio = Math.min(uTitle.length, uDep.length) / Math.max(uTitle.length, uDep.length);
+							if (ratio > 0.65) {
+								isInstalled = true;
+								break;
+							}
+						}
+					}
+					if (!isInstalled) {
+						for (const uFile of installedUltraFiles) {
+							if (uFile.length >= 6 && (uFile.includes(uDep) || uDep.includes(uFile))) {
+								const ratio = Math.min(uFile.length, uDep.length) / Math.max(uFile.length, uDep.length);
+								if (ratio > 0.65) {
+									isInstalled = true;
+									break;
+								}
+							}
+						}
 					}
 				}
 			}
@@ -4439,21 +4506,45 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 			}
 
 			// 1. SMART CHECK: Is this mod already installed anywhere?
+			const localScanMods = lastScanResult?.mods || [];
 			const currentLocalPool = cache.getModHubMetadataPool();
 			let alreadyInstalled = false;
 			let localMod = null;
 
-			if (modId && currentLocalPool[modId]) {
+			// Check scanned local mods first
+			if (modId) {
+				const cleanId = String(modId).replace(/^0+/, '');
+				localMod = localScanMods.find(m => m.modId && String(m.modId).replace(/^0+/, '') === cleanId);
+			}
+			if (!localMod && targetFileName) {
+				const uTargetFile = ultraNormalize(targetFileName);
+				localMod = localScanMods.find(m => {
+					const lName = m.modName ? m.modName.toLowerCase() : (m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '');
+					return lName && (lName === targetFileName || ultraNormalize(lName) === uTargetFile);
+				});
+			}
+			if (!localMod && modName) {
+				const uTarget = ultraNormalize(modName);
+				if (uTarget) {
+					localMod = localScanMods.find(m => {
+						return (m.title && ultraNormalize(m.title) === uTarget) ||
+						       (m.modName && ultraNormalize(m.modName) === uTarget) ||
+						       (m.fileName && ultraNormalize(m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '')) === uTarget);
+					});
+				}
+			}
+
+			// Fallback to tracking pool
+			if (!localMod && modId && currentLocalPool[modId]) {
 				localMod = currentLocalPool[modId];
-				alreadyInstalled = true;
-			} else if (targetFileName) {
-				// Exact match by technical filename / modName
+			} else if (!localMod && targetFileName) {
 				localMod = Object.values(currentLocalPool).find(m => {
 					const lName = m.modName ? m.modName.toLowerCase() : (m.fileName ? m.fileName.replace(/\.zip$/i, '').toLowerCase() : '');
 					return lName && lName === targetFileName;
 				});
-				if (localMod) alreadyInstalled = true;
 			}
+
+			if (localMod) alreadyInstalled = true;
 
 			// 1.5 VERIFY FILE EXISTS (Safety check against stale tracking)
 			if (alreadyInstalled && localMod) {
