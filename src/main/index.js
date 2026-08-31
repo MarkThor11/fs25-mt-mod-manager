@@ -149,9 +149,11 @@ app.commandLine.appendSwitch('bypass-app-block-list');
 // ── Stability Handlers ──
 process.on('uncaughtException', (error) => {
   console.error('CRITICAL: Uncaught Exception:', error);
-  try {
-    dialog.showErrorBox('Critical Startup Error', `The application encountered a fatal error and could not start:\n\n${error.stack || error.message}`);
-  } catch (e) {}
+  if (!mainWindow && app && !app.isReady()) {
+    try {
+      dialog.showErrorBox('Critical Startup Error', `The application encountered a fatal error and could not start:\n\n${error?.stack || error?.message || error}`);
+    } catch (e) {}
+  }
 });
 
 process.on('unhandledRejection', (reason, promise) => {

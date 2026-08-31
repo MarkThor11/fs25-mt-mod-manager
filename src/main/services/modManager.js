@@ -2352,17 +2352,17 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
  * Checks both the start PK header and the End of Central Directory record at the end of the file.
  */
 function verifyZipFileIntegrity(filePath) {
+	let fd = null;
 	try {
 		if (!fs.existsSync(filePath)) return { ok: false, error: 'File does not exist' };
 		const stats = fs.statSync(filePath);
 		if (stats.size < 22) return { ok: false, error: 'ZIP file too small' };
-		const fd = fs.openSync(filePath, 'r');
+		fd = fs.openSync(filePath, 'r');
 		
 		// 1. Check PK header at start (first 4 bytes)
 		const startBuf = Buffer.alloc(4);
 		fs.readSync(fd, startBuf, 0, 4, 0);
 		if (startBuf[0] !== 0x50 || startBuf[1] !== 0x4B) {
-			fs.closeSync(fd);
 			return { ok: false, error: 'Invalid ZIP start signature (not a ZIP archive)' };
 		}
 
@@ -2370,7 +2370,6 @@ function verifyZipFileIntegrity(filePath) {
 		const readLen = Math.min(stats.size, 1024);
 		const endBuf = Buffer.alloc(readLen);
 		fs.readSync(fd, endBuf, 0, readLen, stats.size - readLen);
-		fs.closeSync(fd);
 
 		let hasEOCD = false;
 		for (let i = 0; i <= readLen - 4; i++) {
@@ -2387,6 +2386,10 @@ function verifyZipFileIntegrity(filePath) {
 		return { ok: true };
 	} catch (err) {
 		return { ok: false, error: err.message };
+	} finally {
+		if (fd !== null) {
+			try { fs.closeSync(fd); } catch (_) {}
+		}
 	}
 }
 
@@ -2421,7 +2424,14 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 	return new Promise((resolve, reject) => {
 		debugLog(`[HTTPS-DL] Initializing: ${modTitle} (${modId}) ${startByte > 0 ? '[RESUMING]' : ''}`);
 		
-		const parsedUrl = new URL(url);
+		let parsedUrl;
+		try {
+			parsedUrl = new URL(url);
+		} catch (urlErr) {
+			debugLog(`[HTTPS-DL] Invalid URL for ${modId}: ${url}`);
+			return reject(new Error(`Invalid download URL: ${url}`));
+		}
+
 		const options = {
 			hostname: parsedUrl.hostname,
 			path: parsedUrl.pathname + parsedUrl.search,
@@ -2442,265 +2452,292 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 			options.headers['Cookie'] = cookieStr;
 		}
 
-		const request = https.get(options, (response) => {
-			// Set socket timeout to prevent hanging on silent connections
-			request.setTimeout(45000, () => {
-				debugLog(`[HTTPS-DL] Request timed out for ${modId}`);
-				request.destroy(new Error('Request timed out'));
-			});
-
-			// Handle Redirects
-			if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-				const redirectUrl = response.headers.location;
-				const absoluteUrl = redirectUrl.startsWith('http') ? redirectUrl : new URL(redirectUrl, url).toString();
-				
-				let nextCookies = cookies;
-				if (response.headers['set-cookie']) {
-					const newCookies = response.headers['set-cookie'].map(c => c.split(';')[0]).join('; ');
-					nextCookies = cookies ? `${cookies}; ${newCookies}` : newCookies;
-				}
-
-				debugLog(`[HTTPS-DL] Redirecting (${response.statusCode}) -> ${absoluteUrl}`);
-				downloadWithNet(modId, absoluteUrl, modsPath, modTitle, onProgress, category, redirectCount + 1, techData, url, nextCookies)
-					.then(resolve)
-					.catch(reject);
-				return;
-			}
-
-			// Handle Expired or Unauthorized download links (HTTP 403 / 404)
-			if ((response.statusCode === 403 || response.statusCode === 404) && redirectCount === 0) {
-				debugLog(`[HTTPS-DL] Direct link expired (${response.statusCode}). Attempting re-scrape for ${modId}...`);
-				return scraper.fetchModDetail(modId).then(details => {
-					if (details && details.downloadUrl && details.downloadUrl !== url) {
-						return downloadWithNet(modId, details.downloadUrl, modsPath, modTitle, onProgress, category, redirectCount + 1, techData, refererUrl, cookies)
-							.then(resolve).catch(reject);
-					}
-					reject(new Error(`HTTP ${response.statusCode}`));
-				}).catch(reject);
-			}
-
-			if (response.statusCode >= 400 && response.statusCode !== 416) {
-				debugLog(`[HTTPS-DL] Server error: ${response.statusCode}`);
-				reject(new Error(`HTTP ${response.statusCode}`));
-				return;
-			}
-
-			// Handle 416 Range Not Satisfiable (maybe file is already complete?)
-			if (response.statusCode === 416) {
-				debugLog(`[HTTPS-DL] [RESUME] Server returned 416. Assuming file is complete.`);
-				const savePath = path.join(modsPath, existingFileName);
-				const tempPath = `${savePath}.download`;
-				if (fs.existsSync(tempPath)) {
-					try { fs.moveSync(tempPath, savePath, { overwrite: true }); } catch (e) {}
-				}
-				resolve({ success: true, fileName: existingFileName, filePath: savePath, size: startByte });
-				return;
-			}
-
-			const isPartial = response.statusCode === 206;
-			const disposition = response.headers['content-disposition'];
-			let fileName = existingFileName;
-			if (!fileName) {
-				// 1. Try to extract from download URL first (ModHub URLs contain the exact filename)
-				if (url && url.toLowerCase().includes('.zip')) {
-					const urlName = url.split('/').pop().split('?')[0];
-					if (urlName && urlName.toLowerCase().endsWith('.zip')) {
-						fileName = urlName;
-					}
-				}
-
-				// 2. Fallback to sanitized title if URL didn't have a filename
-				if (!fileName) {
-					let sanitized = modTitle.replace(/[^a-zA-Z0-9_]/g, '_');
-					// Ensure it doesn't start with a digit (required by GIANTS engine)
-					if (/^[0-9]/.test(sanitized)) {
-						sanitized = `FS25_${sanitized}`;
-					}
-					fileName = `${sanitized}.zip`;
-				}
-			}
-			
-			if (disposition && !existingFileName) {
-				const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-				if (match) {
-					let serverFileName = match[1].replace(/['"]/g, '');
-					// Also sanitize server-provided filename if it starts with a digit
-					if (/^[0-9]/.test(serverFileName)) {
-						serverFileName = `FS25_${serverFileName}`;
-					}
-					fileName = serverFileName;
-				}
-			}
-
-			const savePath = path.join(modsPath, fileName);
-			const tempPath = `${savePath}.download`;
-			const contentLength = parseInt(response.headers['content-length'] || '0', 10);
-			const totalBytes = isPartial ? contentLength + startByte : contentLength;
-			
-			debugLog(`[HTTPS-DL] Starting write to: ${tempPath} (Mode: ${isPartial ? 'APPEND' : 'OVERWRITE'}, Size: ${(totalBytes/1024/1024).toFixed(2)}MB)`);
-
-			// Back up existing file ONLY IF NOT RESUMING
-			if (!isPartial && fs.existsSync(savePath)) {
-				const bakPath = path.join(modsPath, 'backups', `${fileName}.bak`);
-				fs.ensureDirSync(path.join(modsPath, 'backups'));
-				if (fs.existsSync(bakPath)) fs.unlinkSync(bakPath);
-				fs.renameSync(savePath, bakPath);
-			}
-
-			const fileStream = fs.createWriteStream(tempPath, { 
-				flags: isPartial ? 'a' : 'w',
-				highWaterMark: 2 * 1024 * 1024 // 2MB buffer to prevent constant stream pausing on fast connections
-			});
-			let receivedBytes = isPartial ? startByte : 0;
-			let lastUpdate = 0;
-			let lastDbUpdate = 0;
-			let lastSpeedBytes = receivedBytes;
-			let lastSpeedTime = Date.now();
-			let currentSpeed = 0;
-
-			// Initialize tracking in DB if not already present
-			if (!pending) {
-				cache.savePendingDownload({
-					mod_id: String(modId),
-					mod_title: modTitle,
-					download_url: url,
-					target_dir: modsPath,
-					file_name: fileName,
-					total_bytes: totalBytes,
-					received_bytes: 0,
-					category: category,
-					tech_data: techData ? JSON.stringify(techData) : null
+		let request;
+		try {
+			request = https.get(options, (response) => {
+				// Set socket timeout to prevent hanging on silent connections
+				request.setTimeout(45000, () => {
+					debugLog(`[HTTPS-DL] Request timed out for ${modId}`);
+					try { request.destroy(new Error('Request timed out')); } catch (_) {}
 				});
-			}
 
-			activeInstalls.set(String(modId), { type: 'https', request, fileStream, tempPath, savePath, targetDirPath: modsPath, techData });
+				// Handle Redirects
+				if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+					const redirectUrl = response.headers.location;
+					const absoluteUrl = redirectUrl.startsWith('http') ? redirectUrl : new URL(redirectUrl, url).toString();
+					
+					let nextCookies = cookies;
+					if (response.headers['set-cookie']) {
+						const newCookies = response.headers['set-cookie'].map(c => c.split(';')[0]).join('; ');
+						nextCookies = cookies ? `${cookies}; ${newCookies}` : newCookies;
+					}
 
-			let dlStallTimer = setInterval(() => {
-				const now = Date.now();
-				if (lastUpdate && now - lastUpdate > 30000 && receivedBytes < totalBytes) {
-					// 30 seconds no data
-					clearInterval(dlStallTimer);
-					fileStream.destroy();
-					request.destroy(new Error('Download stalled for 30s'));
-				}
-			}, 5000);
-
-			response.on('data', (chunk) => {
-				receivedBytes += chunk.length;
-				if (!fileStream.write(chunk)) {
-					response.pause();
-					fileStream.once('drain', () => response.resume());
-				}
-
-				const now = Date.now();
-				const speedElapsed = (now - lastSpeedTime) / 1000;
-				if (speedElapsed >= 1) {
-					currentSpeed = Math.round((receivedBytes - lastSpeedBytes) / speedElapsed);
-					lastSpeedBytes = receivedBytes;
-					lastSpeedTime = now;
-				}
-
-				if (totalBytes > 0 && now - lastUpdate > 200) {
-					const percent = Math.round((receivedBytes / totalBytes) * 100);
-					onProgress?.({ percent, receivedBytes, totalBytes, fileName, downloadSpeed: currentSpeed });
-					lastUpdate = now;
-				}
-
-				// Throttled DB update (every 5 seconds or so)
-				if (now - lastDbUpdate > 5000) {
-					cache.updateDownloadProgress(String(modId), receivedBytes);
-					lastDbUpdate = now;
-				}
-			});
-
-			response.on('end', () => {
-				fileStream.end();
-			});
-
-			response.on('error', (err) => {
-				clearInterval(dlStallTimer);
-				debugLog(`[HTTPS-DL] Response Stream Error: ${err.message}`);
-				fileStream.destroy();
-				activeInstalls.delete(String(modId));
-				broadcastStatus?.(modId, 'error');
-				reject(err);
-			});
-
-			fileStream.on('finish', async () => {
-				clearInterval(dlStallTimer);
-
-				// 1. Verify byte count completeness
-				if (totalBytes > 0 && receivedBytes < totalBytes) {
-					debugLog(`[HTTPS-DL] Incomplete download for ${fileName}: received ${receivedBytes}/${totalBytes} bytes`);
-					activeInstalls.delete(String(modId));
-					broadcastStatus?.(modId, 'error');
-					reject(new Error(`Download incomplete (${(receivedBytes/1024/1024).toFixed(1)}MB / ${(totalBytes/1024/1024).toFixed(1)}MB received)`));
+					debugLog(`[HTTPS-DL] Redirecting (${response.statusCode}) -> ${absoluteUrl}`);
+					downloadWithNet(modId, absoluteUrl, modsPath, modTitle, onProgress, category, redirectCount + 1, techData, url, nextCookies)
+						.then(resolve)
+						.catch(reject);
 					return;
 				}
 
-				// 2. Verify ZIP archive integrity without loading multi-gigabyte files into RAM
-				if (fileName.toLowerCase().endsWith('.zip')) {
-					const zipCheck = verifyZipFileIntegrity(tempPath);
-					if (!zipCheck.ok) {
-						debugLog(`[HTTPS-DL] ZIP verification failed for ${fileName}: ${zipCheck.error}`);
-						try { fs.unlinkSync(tempPath); } catch (e) {}
-						activeInstalls.delete(String(modId));
-						broadcastStatus?.(modId, 'error');
-						reject(new Error(`Downloaded ZIP is corrupted or incomplete: ${zipCheck.error}`));
+				// Handle Expired or Unauthorized download links (HTTP 403 / 404)
+				if ((response.statusCode === 403 || response.statusCode === 404) && redirectCount === 0) {
+					debugLog(`[HTTPS-DL] Direct link expired (${response.statusCode}). Attempting re-scrape for ${modId}...`);
+					return scraper.fetchModDetail(modId).then(details => {
+						if (details && details.downloadUrl && details.downloadUrl !== url) {
+							return downloadWithNet(modId, details.downloadUrl, modsPath, modTitle, onProgress, category, redirectCount + 1, techData, refererUrl, cookies)
+								.then(resolve).catch(reject);
+						}
+						reject(new Error(`HTTP ${response.statusCode}`));
+					}).catch(reject);
+				}
+
+				if (response.statusCode >= 400 && response.statusCode !== 416) {
+					debugLog(`[HTTPS-DL] Server error: ${response.statusCode}`);
+					reject(new Error(`HTTP ${response.statusCode}`));
+					return;
+				}
+
+				// Handle 416 Range Not Satisfiable (maybe file is already complete?)
+				if (response.statusCode === 416) {
+					debugLog(`[HTTPS-DL] [RESUME] Server returned 416. Assuming file is complete.`);
+					const savePath = path.join(modsPath, existingFileName);
+					const tempPath = `${savePath}.download`;
+					if (fs.existsSync(tempPath)) {
+						try { fs.moveSync(tempPath, savePath, { overwrite: true }); } catch (e) {}
+					}
+					resolve({ success: true, fileName: existingFileName, filePath: savePath, size: startByte });
+					return;
+				}
+
+				const isPartial = response.statusCode === 206;
+				const disposition = response.headers['content-disposition'];
+				let fileName = existingFileName;
+				if (!fileName) {
+					// 1. Try to extract from download URL first (ModHub URLs contain the exact filename)
+					if (url && url.toLowerCase().includes('.zip')) {
+						const urlName = url.split('/').pop().split('?')[0];
+						if (urlName && urlName.toLowerCase().endsWith('.zip')) {
+							fileName = urlName;
+						}
+					}
+
+					// 2. Fallback to sanitized title if URL didn't have a filename
+					if (!fileName) {
+						let sanitized = modTitle.replace(/[^a-zA-Z0-9_]/g, '_');
+						// Ensure it doesn't start with a digit (required by GIANTS engine)
+						if (/^[0-9]/.test(sanitized)) {
+							sanitized = `FS25_${sanitized}`;
+						}
+						fileName = `${sanitized}.zip`;
+					}
+				}
+				
+				if (disposition && !existingFileName) {
+					const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+					if (match) {
+						let serverFileName = match[1].replace(/['"]/g, '');
+						// Also sanitize server-provided filename if it starts with a digit
+						if (/^[0-9]/.test(serverFileName)) {
+							serverFileName = `FS25_${serverFileName}`;
+						}
+						fileName = serverFileName;
+					}
+				}
+
+				const savePath = path.join(modsPath, fileName);
+				const tempPath = `${savePath}.download`;
+				const contentLength = parseInt(response.headers['content-length'] || '0', 10);
+				const totalBytes = isPartial ? contentLength + startByte : contentLength;
+				
+				debugLog(`[HTTPS-DL] Starting write to: ${tempPath} (Mode: ${isPartial ? 'APPEND' : 'OVERWRITE'}, Size: ${(totalBytes/1024/1024).toFixed(2)}MB)`);
+
+				// Back up existing file ONLY IF NOT RESUMING
+				if (!isPartial && fs.existsSync(savePath)) {
+					const bakPath = path.join(modsPath, 'backups', `${fileName}.bak`);
+					try {
+						fs.ensureDirSync(path.join(modsPath, 'backups'));
+						if (fs.existsSync(bakPath)) fs.unlinkSync(bakPath);
+						fs.renameSync(savePath, bakPath);
+					} catch (_) {}
+				}
+
+				const fileStream = fs.createWriteStream(tempPath, { 
+					flags: isPartial ? 'a' : 'w',
+					highWaterMark: 2 * 1024 * 1024 // 2MB buffer to prevent constant stream pausing on fast connections
+				});
+				let receivedBytes = isPartial ? startByte : 0;
+				let lastUpdate = 0;
+				let lastDbUpdate = 0;
+				let lastSpeedBytes = receivedBytes;
+				let lastSpeedTime = Date.now();
+				let currentSpeed = 0;
+
+				// Initialize tracking in DB if not already present
+				if (!pending) {
+					try {
+						cache.savePendingDownload({
+							mod_id: String(modId),
+							mod_title: modTitle,
+							download_url: url,
+							target_dir: modsPath,
+							file_name: fileName,
+							total_bytes: totalBytes,
+							received_bytes: 0,
+							category: category,
+							tech_data: techData ? JSON.stringify(techData) : null
+						});
+					} catch (_) {}
+				}
+
+				activeInstalls.set(String(modId), { type: 'https', request, fileStream, tempPath, savePath, targetDirPath: modsPath, techData });
+
+				let dlStallTimer = setInterval(() => {
+					const now = Date.now();
+					if (lastUpdate && now - lastUpdate > 30000 && receivedBytes < totalBytes) {
+						// 30 seconds no data
+						clearInterval(dlStallTimer);
+						try { if (!fileStream.destroyed) fileStream.destroy(); } catch (_) {}
+						try { if (!request.destroyed) request.destroy(new Error('Download stalled for 30s')); } catch (_) {}
+					}
+				}, 5000);
+
+				response.on('data', (chunk) => {
+					if (!fileStream || fileStream.destroyed) return;
+					receivedBytes += chunk.length;
+					try {
+						if (!fileStream.write(chunk)) {
+							if (!response.destroyed) response.pause();
+							fileStream.once('drain', () => {
+								if (!response.destroyed) response.resume();
+							});
+						}
+					} catch (wErr) {
+						debugLog(`[HTTPS-DL] Write Error: ${wErr.message}`);
 						return;
 					}
-				}
 
-				// Atomically finalize file from .download to .zip
-				try {
-					if (fs.existsSync(savePath)) {
-						await safeRemove(savePath);
+					const now = Date.now();
+					const speedElapsed = (now - lastSpeedTime) / 1000;
+					if (speedElapsed >= 1) {
+						currentSpeed = Math.round((receivedBytes - lastSpeedBytes) / speedElapsed);
+						lastSpeedBytes = receivedBytes;
+						lastSpeedTime = now;
 					}
-					await fs.move(tempPath, savePath, { overwrite: true });
-				} catch (mvErr) {
-					debugLog(`[HTTPS-DL] Failed to finalize file ${fileName}: ${mvErr.message}`);
-					reject(new Error(`Failed to finalize download: ${mvErr.message}`));
-					return;
-				}
 
-				debugLog(`[HTTPS-DL] Success & Verified: ${fileName}`);
-				
-				// Final Tracking
-				const relativePath = path.relative(getModsPath(), savePath);
-				cache.setModTracking(modId, { 
-					localFileName: relativePath,
-					modhubTitle: modTitle,
-					category: category,
-					techData: techData
+					if (totalBytes > 0 && now - lastUpdate > 200) {
+						const percent = Math.round((receivedBytes / totalBytes) * 100);
+						try {
+							onProgress?.({ percent, receivedBytes, totalBytes, fileName, downloadSpeed: currentSpeed });
+						} catch (_) {}
+						lastUpdate = now;
+					}
+
+					// Throttled DB update (every 5 seconds or so)
+					if (now - lastDbUpdate > 5000) {
+						try {
+							cache.updateDownloadProgress(String(modId), receivedBytes);
+						} catch (_) {}
+						lastDbUpdate = now;
+					}
 				});
 
-				// Remove from pending
-				cache.removePendingDownload(String(modId));
-				activeInstalls.delete(String(modId));
-				resolve({ success: true, fileName, filePath: savePath, size: receivedBytes });
+				response.on('end', () => {
+					try { if (!fileStream.destroyed) fileStream.end(); } catch (_) {}
+				});
+
+				response.on('error', (err) => {
+					clearInterval(dlStallTimer);
+					debugLog(`[HTTPS-DL] Response Stream Error: ${err.message}`);
+					try { if (fileStream && !fileStream.destroyed) fileStream.destroy(); } catch (_) {}
+					activeInstalls.delete(String(modId));
+					broadcastStatus?.(modId, 'error');
+					reject(err);
+				});
+
+				fileStream.on('finish', async () => {
+					clearInterval(dlStallTimer);
+
+					// 1. Verify byte count completeness
+					if (totalBytes > 0 && receivedBytes < totalBytes) {
+						debugLog(`[HTTPS-DL] Incomplete download for ${fileName}: received ${receivedBytes}/${totalBytes} bytes`);
+						activeInstalls.delete(String(modId));
+						broadcastStatus?.(modId, 'error');
+						reject(new Error(`Download incomplete (${(receivedBytes/1024/1024).toFixed(1)}MB / ${(totalBytes/1024/1024).toFixed(1)}MB received)`));
+						return;
+					}
+
+					// 2. Verify ZIP archive integrity without loading multi-gigabyte files into RAM
+					if (fileName.toLowerCase().endsWith('.zip')) {
+						const zipCheck = verifyZipFileIntegrity(tempPath);
+						if (!zipCheck.ok) {
+							debugLog(`[HTTPS-DL] ZIP verification failed for ${fileName}: ${zipCheck.error}`);
+							try { fs.unlinkSync(tempPath); } catch (e) {}
+							activeInstalls.delete(String(modId));
+							broadcastStatus?.(modId, 'error');
+							reject(new Error(`Downloaded ZIP is corrupted or incomplete: ${zipCheck.error}`));
+							return;
+						}
+					}
+
+					// Atomically finalize file from .download to .zip
+					try {
+						if (fs.existsSync(savePath)) {
+							await safeRemove(savePath);
+						}
+						await fs.move(tempPath, savePath, { overwrite: true });
+					} catch (mvErr) {
+						debugLog(`[HTTPS-DL] Failed to finalize file ${fileName}: ${mvErr.message}`);
+						reject(new Error(`Failed to finalize download: ${mvErr.message}`));
+						return;
+					}
+
+					debugLog(`[HTTPS-DL] Success & Verified: ${fileName}`);
+					
+					// Final Tracking
+					const relativePath = path.relative(getModsPath(), savePath);
+					try {
+						cache.setModTracking(modId, { 
+							localFileName: relativePath,
+							modhubTitle: modTitle,
+							category: category,
+							techData: techData
+						});
+					} catch (_) {}
+
+					// Remove from pending
+					try { cache.removePendingDownload(String(modId)); } catch (_) {}
+					activeInstalls.delete(String(modId));
+					resolve({ success: true, fileName, filePath: savePath, size: receivedBytes });
+				});
+
+				fileStream.on('error', (err) => {
+					clearInterval(dlStallTimer);
+					debugLog(`[HTTPS-DL] Stream Error: ${err.message}`);
+					try { if (response && !response.destroyed) response.destroy(); } catch (_) {}
+					try { if (!fileStream.destroyed) fileStream.destroy(); } catch (_) {}
+					activeInstalls.delete(String(modId));
+					broadcastStatus?.(modId, 'error');
+					reject(err);
+				});
 			});
 
-			fileStream.on('error', (err) => {
-				clearInterval(dlStallTimer);
-				debugLog(`[HTTPS-DL] Stream Error: ${err.message}`);
-				fileStream.destroy();
+			request.on('error', (err) => {
+				debugLog(`[HTTPS-DL] Request Error: ${err.message}`);
 				activeInstalls.delete(String(modId));
 				broadcastStatus?.(modId, 'error');
 				reject(err);
 			});
-		});
 
-		request.on('error', (err) => {
-			debugLog(`[HTTPS-DL] Request Error: ${err.message}`);
+			request.setTimeout(60000, () => {
+				debugLog(`[HTTPS-DL] Socket timeout for ${modTitle} (${modId})`);
+				try { request.destroy(new Error('Connection timeout. Please try again later.')); } catch (_) {}
+			});
+		} catch (reqErr) {
+			debugLog(`[HTTPS-DL] Request initialization error: ${reqErr.message}`);
 			activeInstalls.delete(String(modId));
 			broadcastStatus?.(modId, 'error');
-			reject(err);
-		});
-
-		request.setTimeout(60000, () => {
-			debugLog(`[HTTPS-DL] Socket timeout for ${modTitle} (${modId})`);
-			request.destroy(new Error('Connection timeout. Please try again later.'));
-		});
+			reject(reqErr);
+		}
 	});
 }
 
@@ -4594,13 +4631,12 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 				continue;
 			}
 
-			// 1. SMART CHECK: Is this mod already installed anywhere?
+			// 1. SMART CHECK: Is this mod already installed and physically present on disk?
 			const localScanMods = lastScanResult?.mods || [];
-			const currentLocalPool = cache.getModHubMetadataPool();
 			let alreadyInstalled = false;
 			let localMod = null;
 
-			// Check scanned local mods first
+			// Check scanned local mods on disk
 			if (modId) {
 				const cleanId = String(modId).replace(/^0+/, '');
 				localMod = localScanMods.find(m => m.modId && String(m.modId).replace(/^0+/, '') === cleanId);
@@ -4623,31 +4659,17 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 				}
 			}
 
-			// Fallback to tracking pool
-			if (!localMod && modId && currentLocalPool[modId]) {
-				localMod = currentLocalPool[modId];
-			} else if (!localMod && targetFileName) {
-				localMod = Object.values(currentLocalPool).find(m => {
-					const lName = m.modName ? m.modName.toLowerCase() : (m.fileName ? m.fileName.replace(/\.zip$/i, '').toLowerCase() : '');
-					return lName && lName === targetFileName;
-				});
-			}
-
-			if (localMod) alreadyInstalled = true;
-
-			// 1.5 VERIFY FILE EXISTS (Safety check against stale tracking)
-			if (alreadyInstalled && localMod) {
+			if (localMod) {
 				let filePath = localMod.filePath;
 				if (!filePath && localMod.fileName) {
 					filePath = path.join(getModsPath(), localMod.fileName);
 				}
-				
-				if (filePath && !nodeFs.existsSync(filePath)) {
-					console.warn(`[AUTO-INSTALL] SmartCheck hit stale entry for ${modName}. File missing at ${filePath}. Proceeding with fresh download.`);
+				if (filePath && fs.existsSync(filePath)) {
+					alreadyInstalled = true;
+				} else {
+					console.warn(`[AUTO-INSTALL] Scanned mod entry for ${modName} missing from disk at ${filePath}. Triggering fresh download.`);
 					alreadyInstalled = false;
-					// Cleanup stale tracking while we are here
-					if (modId) cache.removeModTracking(modId);
-					if (localMod.fileName) cache.removeModTrackingByFile(localMod.fileName);
+					localMod = null;
 				}
 			}
 

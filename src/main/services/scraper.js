@@ -84,14 +84,29 @@ async function throttledFetch(url) {
       const contentEncoding = res.headers['content-encoding'];
       let bodyStream = res;
 
+      res.on('error', (err) => {
+        console.warn(`[SCRAPER] Response stream error for ${url}: ${err.message}`);
+        reject(err);
+      });
+
       if (res.statusCode !== 200) {
         return reject(new Error(`HTTP ${res.statusCode}: ${url}`));
       }
 
       if (contentEncoding === 'gzip') {
-        bodyStream = res.pipe(zlib.createGunzip());
+        const gunzip = zlib.createGunzip();
+        gunzip.on('error', (err) => {
+          console.warn(`[SCRAPER] Gunzip error for ${url}: ${err.message}`);
+          reject(err);
+        });
+        bodyStream = res.pipe(gunzip);
       } else if (contentEncoding === 'deflate') {
-        bodyStream = res.pipe(zlib.createInflate());
+        const inflate = zlib.createInflate();
+        inflate.on('error', (err) => {
+          console.warn(`[SCRAPER] Inflate error for ${url}: ${err.message}`);
+          reject(err);
+        });
+        bodyStream = res.pipe(inflate);
       }
 
       let data = '';
