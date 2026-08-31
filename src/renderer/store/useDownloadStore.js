@@ -170,7 +170,7 @@ export const useDownloadStore = create((set, get) => ({
     });
   },
 
-  setStatus: (targetKey, status) => {
+  setStatus: (targetKey, status, extraData) => {
     if (targetKey === undefined || targetKey === null) return;
     const targetStr = String(targetKey).trim();
     const targetLower = targetStr.toLowerCase();
@@ -205,17 +205,29 @@ export const useDownloadStore = create((set, get) => ({
           modIdStr === targetLower ||
           (cleanTargetStr && cleanModIdStr === cleanTargetStr)
         ) {
-          next[key] = { ...item, status };
+          const updatedTitle = (extraData?.title && !extraData.title.startsWith('Mod '))
+            ? extraData.title
+            : (item.title && !item.title.startsWith('Mod ') ? item.title : resolveDownloadTitle(targetStr, extraData?.title || item.title));
+          next[key] = { 
+            ...item, 
+            status,
+            title: updatedTitle || item.title,
+            category: extraData?.category || item.category || null
+          };
           changed = true;
         }
       });
 
       if (!changed && !['success', 'completed', 'cancelled'].includes(status)) {
+        const initialTitle = (extraData?.title && !extraData.title.startsWith('Mod '))
+          ? extraData.title
+          : resolveDownloadTitle(targetStr, extraData?.title || `Mod ${targetStr}`);
         next[targetStr] = {
           modId: targetStr,
-          title: `Mod ${targetStr}`,
+          title: initialTitle || `Mod ${targetStr}`,
           progress: 0,
-          status
+          status,
+          category: extraData?.category || null
         };
         changed = true;
       }
@@ -451,21 +463,21 @@ if (window.api?.on) {
       if (!modId) return;
       const strId = String(modId);
       
+      const active = useDownloadStore.getState().activeDownloads[strId] || useDownloadStore.getState().activeDownloads[modId];
+      const incomingTitle = title || modTitle || fileName;
+      const resolvedTitle = resolveDownloadTitle(strId, incomingTitle || active?.title);
+
       if (status === 'cancelled') {
         useDownloadStore.getState().removeDownload(strId);
         return;
       }
-      
+
       if (status === 'queued') {
-        useDownloadStore.getState().setStatus(strId, 'queued');
+        useDownloadStore.getState().setStatus(strId, 'queued', { title: resolvedTitle || incomingTitle, category: data.category });
         return;
       }
 
-      useDownloadStore.getState().setStatus(strId, status);
-
-      const active = useDownloadStore.getState().activeDownloads[strId] || useDownloadStore.getState().activeDownloads[modId];
-      const incomingTitle = title || modTitle || fileName;
-      const resolvedTitle = resolveDownloadTitle(strId, incomingTitle || active?.title);
+      useDownloadStore.getState().setStatus(strId, status, { title: resolvedTitle || incomingTitle, category: data.category });
 
       // Complete flow: Download -> Index Library -> Display Toast
       if (status === 'success' || status === 'completed' || status === 'installed') {

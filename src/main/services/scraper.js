@@ -778,23 +778,39 @@ async function fetchModDetail(modId) {
           break;
         }
         sibling.find('a').each((_, el) => {
-          const rawTitle = $(el).text().trim();
+          let rawTitle = $(el).text().trim();
+          if (!rawTitle) {
+            rawTitle = $(el).attr('title') || $(el).find('img').attr('alt') || $(el).find('span').text().trim() || '';
+          }
           const dHref = $(el).attr('href') || '';
           
-          if (rawTitle && dHref && rawTitle.length > 2) {
-            if (dHref.includes('mod.php') || dHref.startsWith('/') || dHref.includes('farming-simulator.com') || dHref.includes('giants-software.com')) {
-              const resolved = resolveUrl(dHref);
-              if (!depSeenUrls.has(resolved)) {
-                const cleanTitle = rawTitle
-                  .replace(/^[\s\-\*\•\–\—]+/, '')
-                  .replace(/\s*(?:\(|\[)?by:?[\s\S]*$/i, '')
-                  .replace(/\s*\[[^\]]*\]/g, '')
-                  .trim();
-                const dTitle = cleanTitle || rawTitle;
-                dependencies.push({ title: dTitle, url: resolved });
-                depSeenUrls.add(resolved);
-                seenTitles.add(dTitle.toLowerCase());
+          if (dHref && (dHref.includes('mod.php') || dHref.startsWith('/') || dHref.includes('farming-simulator.com') || dHref.includes('giants-software.com'))) {
+            const resolved = resolveUrl(dHref);
+            if (!depSeenUrls.has(resolved)) {
+              let cleanTitle = rawTitle
+                ? rawTitle
+                    .replace(/^[\s\-\*\•\–\—]+/, '')
+                    .replace(/\s*(?:\(|\[)?by:?[\s\S]*$/i, '')
+                    .replace(/\s*\[[^\]]*\]/g, '')
+                    .trim()
+                : '';
+
+              // If title is missing or generic, resolve from cache metadata pool
+              if (!cleanTitle || /^mod\s*\d+$/i.test(cleanTitle)) {
+                const idMatch = resolved.match(/mod_id=(\d+)/i) || resolved.match(/storage\/(\d+)\//i);
+                if (idMatch && idMatch[1]) {
+                  const cleanId = idMatch[1].replace(/^0+/, '');
+                  const pool = cache.getModHubMetadataPool();
+                  if (pool[cleanId]?.title) {
+                    cleanTitle = pool[cleanId].title;
+                  }
+                }
               }
+
+              const dTitle = cleanTitle || rawTitle;
+              dependencies.push({ title: dTitle, url: resolved });
+              depSeenUrls.add(resolved);
+              if (dTitle) seenTitles.add(dTitle.toLowerCase());
             }
           }
         });
