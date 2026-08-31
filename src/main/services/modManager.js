@@ -1845,18 +1845,41 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 	}
 
 	let techData = null;
-	if (!downloadUrl) {
+	let dependencies = null;
+	if (!downloadUrl || !category) {
 		try {
 			debugLog(`[QUEUE] Fetching/Completing metadata for ${modId}...`);
 			const detail = await scraper.fetchModDetail(modId);
 			if (!techData) techData = detail?.techData;
 			if (!downloadUrl && detail?.downloadUrl) downloadUrl = detail.downloadUrl;
 			if (!category && detail?.category) category = detail.category;
+			if (detail?.dependencies) dependencies = detail.dependencies;
 		} catch (e) {
 			debugLog(`[QUEUE] Scraper failed for ${modId}: ${e.message}`);
 		}
 	} else {
-		scraper.fetchModDetail(modId).then(detail => { techData = detail?.techData || null; }).catch(() => {});
+		scraper.fetchModDetail(modId).then(detail => { 
+			techData = detail?.techData || null; 
+			if (detail?.dependencies && detail.dependencies.length > 0) {
+				const isMapCategory = (category && category.toUpperCase().includes('MAP')) || (modTitle && /\bmap\b/i.test(modTitle));
+				if (isMapCategory) {
+					const targetSubFolder = subFolder || (resolvedTitle ? resolvedTitle.replace(/\([^)]+\)/g, '').trim() : null);
+					for (const dep of detail.dependencies) {
+						const depTitle = typeof dep === 'string' ? dep : (dep.title || dep.modName);
+						const depUrl = typeof dep === 'object' ? dep.url : null;
+						let depId = typeof dep === 'object' && dep.modId ? String(dep.modId) : null;
+						if (!depId && depUrl) {
+							const idMatch = depUrl.match(/mod_id=(\d+)/i) || depUrl.match(/storage\/(\d+)\//i);
+							if (idMatch) depId = idMatch[1].replace(/^0+/, '');
+						}
+						if (depId && !activeInstalls.has(depId) && !downloadQueue.some(t => String(t.modId) === depId)) {
+							console.log(`[QUEUE] Auto-queueing linked ModHub dependency "${depTitle}" (ID: ${depId}) for map "${resolvedTitle}"`);
+							enqueueInstall(depId, depTitle, depUrl, onProgress, null, targetSubFolder).catch(() => {});
+						}
+					}
+				}
+			}
+		}).catch(() => {});
 	}
 
 	// Enrich human-readable title if generic or missing
@@ -1887,6 +1910,25 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 		});
 	} catch (e) {
 		console.warn(`[QUEUE] Failed to save pending download state for ${modId}:`, e.message);
+	}
+
+	// Auto-queue required dependencies if available from the initial fetch
+	const isMapCategory = (category && category.toUpperCase().includes('MAP')) || (modTitle && /\bmap\b/i.test(modTitle));
+	if (isMapCategory && Array.isArray(dependencies) && dependencies.length > 0) {
+		const targetSubFolder = subFolder || (resolvedTitle ? resolvedTitle.replace(/\([^)]+\)/g, '').trim() : null);
+		for (const dep of dependencies) {
+			const depTitle = typeof dep === 'string' ? dep : (dep.title || dep.modName);
+			const depUrl = typeof dep === 'object' ? dep.url : null;
+			let depId = typeof dep === 'object' && dep.modId ? String(dep.modId) : null;
+			if (!depId && depUrl) {
+				const idMatch = depUrl.match(/mod_id=(\d+)/i) || depUrl.match(/storage\/(\d+)\//i);
+				if (idMatch) depId = idMatch[1].replace(/^0+/, '');
+			}
+			if (depId && !activeInstalls.has(depId) && !downloadQueue.some(t => String(t.modId) === depId)) {
+				console.log(`[QUEUE] Auto-queueing linked ModHub dependency "${depTitle}" (ID: ${depId}) for map "${resolvedTitle}"`);
+				enqueueInstall(depId, depTitle, depUrl, onProgress, null, targetSubFolder).catch(() => {});
+			}
+		}
 	}
 
 	broadcastStatus?.(modId, 'queued');
