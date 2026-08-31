@@ -1946,7 +1946,7 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 				const isMapCategory = (category && category.toUpperCase().includes('MAP')) || (modTitle && /\bmap\b/i.test(modTitle));
 				if (isMapCategory) {
 					const pool = cache.getModHubMetadataPool();
-					const targetSubFolder = subFolder || (resolvedTitle ? resolvedTitle.replace(/[\\/:*?"<>|]/g, '_').trim() : null);
+					const targetSubFolder = subFolder || getMapSubfolderName(resolvedTitle || modTitle, modId, detail);
 					for (const dep of detail.dependencies) {
 						let depTitle = typeof dep === 'string' ? dep : (dep.title || dep.modName);
 						const depUrl = typeof dep === 'object' ? dep.url : null;
@@ -1999,7 +1999,7 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 	const isMapCategory = (category && category.toUpperCase().includes('MAP')) || (modTitle && /\bmap\b/i.test(modTitle));
 	if (isMapCategory && Array.isArray(dependencies) && dependencies.length > 0) {
 		const pool = cache.getModHubMetadataPool();
-		const targetSubFolder = subFolder || (resolvedTitle ? resolvedTitle.replace(/[\\/:*?"<>|]/g, '_').trim() : null);
+		const targetSubFolder = subFolder || getMapSubfolderName(resolvedTitle || modTitle, modId);
 		for (const dep of dependencies) {
 			let depTitle = typeof dep === 'string' ? dep : (dep.title || dep.modName);
 			const depUrl = typeof dep === 'object' ? dep.url : null;
@@ -2026,6 +2026,52 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 
 
 /**
+ * Detects if a mod/map is Crossplay compatible.
+ */
+function isCrossplayMod(modTitle, modId = null, remoteModOrDetail = null) {
+	const title = (modTitle || '').toLowerCase();
+	if (title.includes('crossplay') || title.includes('(cp)') || title.includes('[cp]')) {
+		return true;
+	}
+
+	let target = remoteModOrDetail;
+	if (!target && modId) {
+		const pool = cache.getModHubMetadataPool();
+		const cleanId = String(modId).replace(/^0+/, '');
+		target = pool[cleanId] || pool[String(modId)] || null;
+	}
+
+	if (target) {
+		const targetTitle = (target.title || target.modhub_title || '').toLowerCase();
+		if (targetTitle.includes('crossplay') || targetTitle.includes('(cp)') || targetTitle.includes('[cp]')) {
+			return true;
+		}
+		const plat = (target.platform || target.metadata?.Platform || target.metadata?.platform || '').toLowerCase();
+		if (plat.includes('ps5') || plat.includes('ps4') || plat.includes('xbs') || plat.includes('xb1') || plat.includes('console') || plat.includes('crossplay')) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Returns clean subfolder name for a mod map, appending ' (CP)' if the map is Crossplay compatible.
+ */
+function getMapSubfolderName(modTitle, modId = null, remoteModOrDetail = null) {
+	let cleanMapFolder = (modTitle || '').replace(/[\\/:*?"<>|]/g, '_').trim();
+	if (!cleanMapFolder) return cleanMapFolder;
+
+	const isCrossplay = isCrossplayMod(modTitle, modId, remoteModOrDetail);
+	if (isCrossplay) {
+		if (!/\((?:cp|crossplay)\)$/i.test(cleanMapFolder) && !/\[(?:cp|crossplay)\]$/i.test(cleanMapFolder)) {
+			cleanMapFolder = `${cleanMapFolder} (CP)`.trim();
+		}
+	}
+	return cleanMapFolder;
+}
+
+/**
 	* We intercept the download event from the session.
 	*/
 async function installModInternal(modId, modTitle, downloadUrl, onProgress, category, subFolder = null, techData = null) {
@@ -2036,7 +2082,7 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 	const isModMap = !isBaseMap && ((category && category.toUpperCase().includes('MAP')) || (modTitle && /\bmap\b/i.test(modTitle)));
 
 	if (isModMap) {
-		const cleanMapFolder = (modTitle || '').replace(/[\\/:*?"<>|]/g, '_').trim();
+		const cleanMapFolder = getMapSubfolderName(modTitle, modId);
 		if (!subFolder) {
 			subFolder = cleanMapFolder;
 			console.log(`[INSTALL] Custom Mod Map detected ("${cleanMapFolder}"). Auto-assigned to dedicated subfolder: ${subFolder}`);
@@ -4434,6 +4480,9 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 			if (parentMod && parentMod.folder) {
 				subFolder = parentMod.folder;
 				console.log(`[AUTO-INSTALL] Resolved subfolder "${subFolder}" from cached parent mod ${parentId}`);
+			} else if (parentMod && parentMod.title) {
+				subFolder = getMapSubfolderName(parentMod.title, parentId, parentMod);
+				console.log(`[AUTO-INSTALL] Resolved subfolder "${subFolder}" from map title ${parentMod.title}`);
 			}
 		}
 	}
@@ -5556,4 +5605,6 @@ module.exports = {
 	deduplicateSubfolderMods,
 	syncMirrorLinks,
 	ultraNormalize,
+	getMapSubfolderName,
+	isCrossplayMod,
 };
