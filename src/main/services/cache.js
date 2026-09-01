@@ -504,9 +504,8 @@ function getLocalModCache(filePath) {
 
 function getAllLocalModCache() {
   if (!db) return [];
-  // The database is now kept small by aggressive 256x256 downscaling in getModIcon,
-  // so we can safely load the full cache into memory without V8 crashing.
-  return db.prepare('SELECT * FROM local_mod_cache').all();
+  // Exclude heavy icon_base64 and store_base64 columns to keep memory usage at ~2MB instead of 1.6GB
+  return db.prepare('SELECT file_path, mtime, size, json_data, file_hash FROM local_mod_cache').all();
 }
 
 function setLocalModCache(filePath, mtime, size, data, iconBase64 = null, fileHash = null, storeBase64 = null) {
