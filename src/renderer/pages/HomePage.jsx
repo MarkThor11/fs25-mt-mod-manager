@@ -169,7 +169,7 @@ export default function HomePage() {
               <div className="stat-card__label">Your Updates</div>
             </div>
           </div>
-           <div className="stat-card">
+           <div className="stat-card" title="Total downloadable community mods available on ModHub">
             <div className="stat-card__icon stat-card__icon--blue">
               <Globe size={22} />
             </div>

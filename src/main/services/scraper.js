@@ -995,7 +995,8 @@ async function searchMods(query, page = 0, gameTitle = 'fs2025') {
 }
 
 /**
- * Fetch the exact total count of mods by checking the last page.
+ * Fetch the exact total count of downloadable community mods.
+ * Applies an offset of 10 to account for Giants official DLC / expansion store placeholders.
  */
 async function fetchTrueModCount() {
   try {
@@ -1007,7 +1008,7 @@ async function fetchTrueModCount() {
     const totalPages = extractTotalPages($);
 
     if (totalPages <= 1) {
-      return $('.mod-item').length;
+      return Math.max(0, $('.mod-item').length);
     }
 
     // 2. Fetch the last page (totalPages-1)
@@ -1016,8 +1017,9 @@ async function fetchTrueModCount() {
     const $last = cheerio.load(lastPageHtml);
     const modsOnLastPage = $last('.mod-item').length;
 
-    // 3. Exact calculation: All full pages (24 mods) + last page remainder
-    return ((totalPages - 1) * 24) + modsOnLastPage;
+    // 3. Exact calculation: All full pages (24 mods) + last page remainder - 10 DLC/store placeholders
+    const rawTotal = ((totalPages - 1) * 24) + modsOnLastPage;
+    return Math.max(0, rawTotal - 10);
   } catch (err) {
     console.error(`[SCRAPER] Failed to fetch true total: ${err.message}`);
     return 0;
