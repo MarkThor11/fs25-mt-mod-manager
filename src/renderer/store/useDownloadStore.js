@@ -458,20 +458,9 @@ export const useDownloadStore = create((set, get) => ({
   },
 
   triggerScan: () => {
-    if (get().scanTimeout) clearTimeout(get().scanTimeout);
-    const timeoutId = setTimeout(() => {
-      const activeList = Object.values(get().activeDownloads || {});
-      const hasActive = activeList.some(d => 
-        ['downloading', 'waiting', 'queued', 'connecting', 'starting', 'handshaking'].includes((d?.status || '').toLowerCase())
-      );
-      // Only scan once the entire batch has settled
-      if (!hasActive) {
-        useLocalModsStore.getState().scanMods(null, true);
-      }
-      set({ scanTimeout: null });
-    }, 2000);
-
-    set({ scanTimeout: timeoutId });
+    // Individual downloaded mods are now incrementally registered both in backend cache
+    // and frontend store (via addInstalledMod) in ~5ms. Heavy full disk rescans across
+    // all folders are no longer triggered during downloads.
   }
 }));
 

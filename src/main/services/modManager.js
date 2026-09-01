@@ -2647,6 +2647,69 @@ function verifyZipFileIntegrity(filePath) {
 }
 
 /**
+ * Incrementally registers and caches a single downloaded mod without triggering a heavy full disk rescan.
+ */
+async function registerDownloadedFile(savePath, modId, modTitle, category, techData) {
+	try {
+		if (!nodeFs.existsSync(savePath)) return null;
+		const stats = nodeFs.statSync(savePath);
+		const modDesc = parseModDesc(savePath) || { title: modTitle || path.basename(savePath, '.zip'), version: '1.0.0.0' };
+		const iconBase64 = await getModIcon(savePath, modDesc.iconFile, modDesc, null, false).catch(() => 'CATEGORY:generic');
+		const relativePath = path.relative(getModsPath(), savePath);
+		const folder = path.dirname(relativePath) === '.' ? '' : path.dirname(relativePath);
+		const cleanFileName = path.basename(savePath);
+
+		// Cache single mod entry
+		cache.setLocalModCache(savePath, stats.mtimeMs, stats.size, modDesc, iconBase64, null, 'CATEGORY:skipped');
+		cache.setModTracking(modId, {
+			localFileName: relativePath,
+			modhubTitle: modTitle,
+			category: category,
+			techData: techData
+		});
+
+		// Incrementally update lastScanResult.mods in memory
+		if (lastScanResult && Array.isArray(lastScanResult.mods)) {
+			const modObj = {
+				title: modDesc.title || modTitle || cleanFileName.replace('.zip', ''),
+				modName: modDesc.modName || cleanFileName.replace('.zip', ''),
+				technicalName: modDesc.techName || '',
+				author: modDesc.author || 'Unknown',
+				version: modDesc.version || '1.0.0.0',
+				descVersion: modDesc.descVersion || '90',
+				category: category || (modDesc.isMap ? 'CATEGORY:map' : 'CATEGORY:generic'),
+				folder: folder,
+				fileName: cleanFileName,
+				filePath: savePath,
+				size: stats.size,
+				mtime: stats.mtimeMs,
+				isDLC: false,
+				isMap: !!modDesc.isMap,
+				mapId: modDesc.mapId || null,
+				mapTitle: modDesc.mapTitle || null,
+				modId: modId ? String(modId).replace(/^0+/, '') : null,
+				dependencies: modDesc.dependencies || [],
+				iconData: iconBase64 && iconBase64.startsWith('CATEGORY:') ? iconBase64 : null
+			};
+			const existingIdx = lastScanResult.mods.findIndex(m => 
+				(modId && m.modId && String(m.modId).replace(/^0+/, '') === String(modId).replace(/^0+/, '')) ||
+				(m.fileName && m.fileName.toLowerCase() === cleanFileName.toLowerCase() && (m.folder || '') === folder)
+			);
+			if (existingIdx !== -1) {
+				lastScanResult.mods[existingIdx] = modObj;
+			} else {
+				lastScanResult.mods.push(modObj);
+			}
+			console.log(`[INCREMENTAL] Registered "${modObj.title}" in memory without full scan.`);
+			return modObj;
+		}
+	} catch (e) {
+		console.warn('[INCREMENTAL] Failed to register mod:', e.message);
+	}
+	return null;
+}
+
+/**
 	* Download a file directly using Electron's net module.
 */
 function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, redirectCount = 0, techData = null, refererUrl = null, cookies = null) {
@@ -2954,15 +3017,9 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 
 					debugLog(`[HTTPS-DL] Success & Verified: ${fileName}`);
 					
-					// Final Tracking
-					const relativePath = path.relative(getModsPath(), savePath);
+					// Final Tracking and Incremental Ingestion
 					try {
-						cache.setModTracking(modId, { 
-							localFileName: relativePath,
-							modhubTitle: modTitle,
-							category: category,
-							techData: techData
-						});
+						await registerDownloadedFile(savePath, modId, modTitle, category, techData);
 					} catch (_) {}
 
 					// Remove from pending
