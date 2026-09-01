@@ -262,11 +262,15 @@ function createWindow() {
 
   // Set up download status broadcaster
   modManager.setBroadcastStatus((modId, status, extraData) => {
-    if (typeof modId === 'string' && (modId === 'dependency:progress' || modId === 'move:progress')) {
-      mainWindow?.webContents.send(modId, status);
-    } else {
-      mainWindow?.webContents.send('download:status', { modId, status, ...(typeof extraData === 'object' ? extraData : {}) });
-    }
+    try {
+      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+        if (typeof modId === 'string' && (modId === 'dependency:progress' || modId === 'move:progress')) {
+          mainWindow.webContents.send(modId, status);
+        } else {
+          mainWindow.webContents.send('download:status', { modId, status, ...(typeof extraData === 'object' ? extraData : {}) });
+        }
+      }
+    } catch (_) {}
   });
 
   // Initialize App Auto-Updater (Production only)
