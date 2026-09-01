@@ -250,6 +250,16 @@ function createWindow() {
     mainWindow = null;
   });
 
+  mainWindow.webContents.on('render-process-gone', (event, details) => {
+    console.error('CRITICAL: Renderer process terminated:', details);
+    debugLog(`[CRASH] Renderer process gone: ${details.reason} (exitCode: ${details.exitCode})`);
+  });
+
+  app.on('child-process-gone', (event, details) => {
+    console.error('CRITICAL: Child process terminated:', details);
+    debugLog(`[CRASH] Child process gone: ${details.type} - ${details.reason} (exitCode: ${details.exitCode})`);
+  });
+
   // Set up download status broadcaster
   modManager.setBroadcastStatus((modId, status, extraData) => {
     if (typeof modId === 'string' && (modId === 'dependency:progress' || modId === 'move:progress')) {

@@ -903,20 +903,19 @@ function parseModDesc(modPath, zipInstance = null) {
 
 		if (modPath.toLowerCase().endsWith('.zip')) {
 			try {
-				const buf = readEntryFromZip(modPath, 'modDesc.xml');
+				let buf = readEntryFromZip(modPath, 'modDesc.xml');
+				if (!buf) {
+					const entries = listZipEntries(modPath);
+					const target = entries.find(e =>
+						e.entryName.toLowerCase() === 'moddesc.xml' ||
+						e.entryName.toLowerCase().endsWith('/moddesc.xml')
+					);
+					if (target) {
+						buf = readEntryFromZip(modPath, target.entryName);
+					}
+				}
 				if (buf) {
 					xmlContent = decodeBuffer(buf);
-				} else {
-					// Fallback to adm-zip only for small files (< 300MB) if streaming reader didn't find it
-					const stats = nodeFs.statSync(modPath);
-					if (stats.size < 300 * 1024 * 1024) {
-						const zip = zipInstance || new AdmZip(modPath);
-						const modDescEntry = zip.getEntries().find(e =>
-							e.entryName.toLowerCase() === 'moddesc.xml' ||
-							e.entryName.toLowerCase().endsWith('/moddesc.xml')
-						);
-						if (modDescEntry) xmlContent = decodeBuffer(modDescEntry.getData());
-					}
 				}
 			} catch (zipErr) {
 				debugLog(`[PARSE ERROR] Zip parsing failed: ${path.basename(modPath)} - ${zipErr.message}`);
@@ -2622,14 +2621,15 @@ function verifyZipFileIntegrity(filePath) {
 			return { ok: false, error: 'Invalid ZIP start signature (not a ZIP archive)' };
 		}
 
-		// 2. Check End of Central Directory signature in last 1024 bytes (0x50 0x4B 0x05 0x06)
-		const readLen = Math.min(stats.size, 1024);
+		// 2. Check End of Central Directory signature in last 65KB (Standard 0x06054b50 or Zip64 0x06064b50)
+		const readLen = Math.min(stats.size, 65536 + 22);
 		const endBuf = Buffer.alloc(readLen);
 		fs.readSync(fd, endBuf, 0, readLen, stats.size - readLen);
 
 		let hasEOCD = false;
 		for (let i = 0; i <= readLen - 4; i++) {
-			if (endBuf[i] === 0x50 && endBuf[i + 1] === 0x4B && endBuf[i + 2] === 0x05 && endBuf[i + 3] === 0x06) {
+			if (endBuf[i] === 0x50 && endBuf[i + 1] === 0x4B && 
+			   ((endBuf[i + 2] === 0x05 && endBuf[i + 3] === 0x06) || (endBuf[i + 2] === 0x06 && endBuf[i + 3] === 0x06))) {
 				hasEOCD = true;
 				break;
 			}
@@ -2656,6 +2656,10 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 	if (redirectCount > 10) {
 		return Promise.reject(new Error('Too many redirects.'));
 	}
+
+	try {
+		fs.ensureDirSync(modsPath);
+	} catch (_) {}
 
 	// ── CHECK FOR RESUMPTION ──
 	const pending = cache.getPendingDownloads().find(d => d.mod_id === String(modId));
