@@ -1718,12 +1718,9 @@ async function performScan(manualPaths = null) {
 		const chunk = allEntries.slice(i, i + limit);
 		
 		try {
-			cache.beginTransaction();
 			await Promise.all(chunk.map(e => processEntry(e.root, e.name, e.sub)));
-			cache.commitTransaction();
 		} catch (e) {
-			console.error('[SCAN] Transaction failed, trying to commit partial:', e.message);
-			try { cache.commitTransaction(); } catch (e2) {}
+			console.error('[SCAN] Chunk processing error:', e.message);
 		}
 
 		// Yield event loop after every batch so V8 Garbage Collector can instantly reclaim uncompressed ZIP heap memory
@@ -2861,14 +2858,16 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 					}
 				}, 5000);
 
+				let isSettled = false;
+
 				response.on('data', (chunk) => {
-					if (!fileStream || fileStream.destroyed) return;
+					if (isSettled || !fileStream || fileStream.destroyed || fileStream.writableEnded) return;
 					receivedBytes += chunk.length;
 					try {
 						if (!fileStream.write(chunk)) {
 							if (!response.destroyed) response.pause();
 							fileStream.once('drain', () => {
-								if (!response.destroyed) response.resume();
+								if (!response.destroyed && !fileStream.destroyed && !isSettled) response.resume();
 							});
 						}
 					} catch (wErr) {
@@ -2902,10 +2901,12 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 				});
 
 				response.on('end', () => {
-					try { if (!fileStream.destroyed) fileStream.end(); } catch (_) {}
+					try { if (fileStream && !fileStream.destroyed && !fileStream.writableEnded) fileStream.end(); } catch (_) {}
 				});
 
 				response.on('error', (err) => {
+					if (isSettled) return;
+					isSettled = true;
 					clearInterval(dlStallTimer);
 					debugLog(`[HTTPS-DL] Response Stream Error: ${err.message}`);
 					try { if (fileStream && !fileStream.destroyed) fileStream.destroy(); } catch (_) {}

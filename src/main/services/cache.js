@@ -388,49 +388,57 @@ function getModTracking(modId) {
 
 function setModTracking(modId, data) {
   if (!db) return;
-  db.prepare(`
-    INSERT INTO mod_tracking (
-      mod_id, local_file_name, local_version, remote_version, 
-      last_checked, modhub_title, category, hp, price, technical_data
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(mod_id) DO UPDATE SET
-      local_file_name = COALESCE(excluded.local_file_name, local_file_name),
-      local_version = COALESCE(excluded.local_version, local_version),
-      remote_version = COALESCE(excluded.remote_version, remote_version),
-      last_checked = excluded.last_checked,
-      modhub_title = COALESCE(excluded.modhub_title, modhub_title),
-      hp = COALESCE(excluded.hp, hp),
-      price = COALESCE(excluded.price, price),
-      technical_data = COALESCE(excluded.technical_data, technical_data),
-      category = CASE 
-        WHEN excluded.category IS NOT NULL AND excluded.category != '' THEN excluded.category 
-        ELSE category 
-      END
-  `).run(
-    modId, 
-    data.localFileName || null, 
-    data.localVersion || null, 
-    data.remoteVersion || null, 
-    Date.now(), 
-    data.modhubTitle || null, 
-    data.category || null,
-    data.techData?.hp || null,
-    data.techData?.price || null,
-    data.techData ? JSON.stringify(data.techData) : null
-  );
+  try {
+    db.prepare(`
+      INSERT INTO mod_tracking (
+        mod_id, local_file_name, local_version, remote_version, 
+        last_checked, modhub_title, category, hp, price, technical_data
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(mod_id) DO UPDATE SET
+        local_file_name = COALESCE(excluded.local_file_name, local_file_name),
+        local_version = COALESCE(excluded.local_version, local_version),
+        remote_version = COALESCE(excluded.remote_version, remote_version),
+        last_checked = excluded.last_checked,
+        modhub_title = COALESCE(excluded.modhub_title, modhub_title),
+        hp = COALESCE(excluded.hp, hp),
+        price = COALESCE(excluded.price, price),
+        technical_data = COALESCE(excluded.technical_data, technical_data),
+        category = CASE 
+          WHEN excluded.category IS NOT NULL AND excluded.category != '' THEN excluded.category 
+          ELSE category 
+        END
+    `).run(
+      modId, 
+      data.localFileName || null, 
+      data.localVersion || null, 
+      data.remoteVersion || null, 
+      Date.now(), 
+      data.modhubTitle || null, 
+      data.category || null,
+      data.techData?.hp || null,
+      data.techData?.price || null,
+      data.techData ? JSON.stringify(data.techData) : null
+    );
+  } catch (e) {
+    console.error('[CACHE] setModTracking error:', e.message);
+  }
 }
 
 function removeModTracking(modId) {
   if (!db) return;
-  db.prepare('DELETE FROM mod_tracking WHERE mod_id = ?').run(modId);
+  try {
+    db.prepare('DELETE FROM mod_tracking WHERE mod_id = ?').run(modId);
+  } catch (e) {}
 }
 
 function removeModTrackingByFile(identifier) {
   if (!db) return;
-  db.prepare(`
-    DELETE FROM mod_tracking WHERE mod_id = ? OR LOWER(local_file_name) = LOWER(?)
-  `).run(identifier, String(identifier));
+  try {
+    db.prepare(`
+      DELETE FROM mod_tracking WHERE mod_id = ? OR LOWER(local_file_name) = LOWER(?)
+    `).run(identifier, String(identifier));
+  } catch (e) {}
 }
 
 function setCustomCategory(identifier, customCategory) {
@@ -503,10 +511,14 @@ function getAllLocalModCache() {
 
 function setLocalModCache(filePath, mtime, size, data, iconBase64 = null, fileHash = null, storeBase64 = null) {
   if (!db) return;
-  db.prepare(`
-    INSERT OR REPLACE INTO local_mod_cache (file_path, mtime, size, json_data, icon_base64, file_hash, store_base64)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(filePath, Math.floor(mtime), size, JSON.stringify(data), iconBase64, fileHash, storeBase64);
+  try {
+    db.prepare(`
+      INSERT OR REPLACE INTO local_mod_cache (file_path, mtime, size, json_data, icon_base64, file_hash, store_base64)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(filePath, Math.floor(mtime), size, JSON.stringify(data), iconBase64, fileHash, storeBase64);
+  } catch (e) {
+    console.error('[CACHE] setLocalModCache error:', e.message);
+  }
 }
 
 function updateLocalModIcon(filePath, iconBase64) {
@@ -520,27 +532,35 @@ function updateLocalModIcon(filePath, iconBase64) {
 
 function removeLocalModCache(filePath) {
   if (!db) return;
-  db.prepare('DELETE FROM local_mod_cache WHERE file_path = ?').run(filePath);
+  try {
+    db.prepare('DELETE FROM local_mod_cache WHERE file_path = ?').run(filePath);
+  } catch (e) {}
 }
 
 function clearLocalModCache() {
   if (!db) return;
-  db.prepare('DELETE FROM local_mod_cache').run();
+  try {
+    db.prepare('DELETE FROM local_mod_cache').run();
+  } catch (e) {}
 }
 
 function updateLocalModCachePath(oldPath, newPath) {
   if (!db) return;
-  db.prepare(`
-    UPDATE local_mod_cache SET file_path = ? WHERE file_path = ?
-  `).run(newPath, oldPath);
+  try {
+    db.prepare(`
+      UPDATE local_mod_cache SET file_path = ? WHERE file_path = ?
+    `).run(newPath, oldPath);
+  } catch (e) {}
 }
 
 function updateModTrackingFileInfo(oldFileName, newFileName) {
   if (!db) return;
-  // This updates based on the exact local file name (which might include a folder prefix)
-  db.prepare(`
-    UPDATE mod_tracking SET local_file_name = ? WHERE local_file_name = ?
-  `).run(newFileName, oldFileName);
+  try {
+    // This updates based on the exact local file name (which might include a folder prefix)
+    db.prepare(`
+      UPDATE mod_tracking SET local_file_name = ? WHERE local_file_name = ?
+    `).run(newFileName, oldFileName);
+  } catch (e) {}
 }
 
 function setModLocation(oldLoc, newLoc, oldRelative, newRelative) {
@@ -611,20 +631,28 @@ module.exports = {
   },
   savePendingDownload: (data) => {
     if (!db) return;
-    const { mod_id, mod_title, download_url, target_dir, file_name, total_bytes, received_bytes, category, tech_data } = data;
-    db.prepare(`
-      INSERT OR REPLACE INTO pending_downloads 
-      (mod_id, mod_title, download_url, target_dir, file_name, total_bytes, received_bytes, category, tech_data, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(mod_id, mod_title, download_url, target_dir, file_name, total_bytes, received_bytes, category, tech_data, Date.now());
+    try {
+      const { mod_id, mod_title, download_url, target_dir, file_name, total_bytes, received_bytes, category, tech_data } = data;
+      db.prepare(`
+        INSERT OR REPLACE INTO pending_downloads 
+        (mod_id, mod_title, download_url, target_dir, file_name, total_bytes, received_bytes, category, tech_data, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(mod_id, mod_title, download_url, target_dir, file_name, total_bytes, received_bytes, category, tech_data, Date.now());
+    } catch (e) {
+      console.error('[CACHE] savePendingDownload error:', e.message);
+    }
   },
   updateDownloadProgress: (modId, received) => {
     if (!db) return;
-    db.prepare('UPDATE pending_downloads SET received_bytes = ? WHERE mod_id = ?').run(received, modId);
+    try {
+      db.prepare('UPDATE pending_downloads SET received_bytes = ? WHERE mod_id = ?').run(received, modId);
+    } catch (e) {}
   },
   removePendingDownload: (modId) => {
     if (!db) return;
-    db.prepare('DELETE FROM pending_downloads WHERE mod_id = ?').run(modId);
+    try {
+      db.prepare('DELETE FROM pending_downloads WHERE mod_id = ?').run(modId);
+    } catch (e) {}
   },
   close,
   beginTransaction: () => {
