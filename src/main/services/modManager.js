@@ -559,9 +559,9 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 					const careerPath = path.join(savePath, 'careerSavegame.xml');
 					if (fs.existsSync(careerPath)) {
 						const xml = await fs.readFile(careerPath, 'utf8');
-						const mapMatch = xml.match(/mapId="([^"]+)"/);
+						const mapMatch = xml.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xml.match(/mapId="([^"]+)"/i);
 						if (mapMatch && mapMatch[1] && !['MapUS', 'MapEU', 'MapAS', 'HighlandsFishingMap'].includes(mapMatch[1])) {
-							// It's likely a mod map (e.g. FS25_Riverview.TemplateMap)
+							// It's likely a mod map (e.g. FS25_Mecklenburg_Lake_District_crossplay.SampleModMap)
 							mapModName = mapMatch[1].split('.')[0].toLowerCase();
 							activeModNames.add(mapModName);
 						}

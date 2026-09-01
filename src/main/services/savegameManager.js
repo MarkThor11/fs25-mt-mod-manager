@@ -524,12 +524,25 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     let modZipPath = null;
-    if (mapModName) {
-        const mapModObjInAll = allMods.find(m => m.modName === mapModName);
-        if (mapModObjInAll && mapModObjInAll.filePath && mapModObjInAll.filePath.toLowerCase().endsWith('.zip')) {
-            modZipPath = mapModObjInAll.filePath;
+    const findMapZip = (name, title, id) => {
+        const nLow = (name || '').toLowerCase();
+        const tLow = (title || '').toLowerCase();
+        const idLow = (id || '').toLowerCase();
+        
+        for (const m of allMods) {
+            if (!m.filePath || !m.filePath.toLowerCase().endsWith('.zip')) continue;
+            const mNameLow = (m.modName || '').toLowerCase();
+            const mFileBase = path.basename(m.filePath, '.zip').toLowerCase();
+            const mTitleLow = (m.title || '').toLowerCase();
+            const mMapIdLow = (m.mapId || '').toLowerCase();
+            
+            if (nLow && (mNameLow === nLow || mFileBase === nLow)) return m.filePath;
+            if (tLow && mTitleLow === tLow) return m.filePath;
+            if (idLow && (mMapIdLow === idLow || mNameLow === idLow)) return m.filePath;
         }
-    }
+        return null;
+    };
+    modZipPath = findMapZip(mapModName, mapTitle, mapId);
 
     // 2. Identify and Copy Template
     const resolvedFolder = await resolveTemplateFolder(mapId, mapModName, mapTitle);
@@ -783,12 +796,30 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             if (fs.existsSync(modZipPath)) {
                 const stats = fs.statSync(modZipPath);
                 if (stats.isFile()) {
+                    const AdmZip = require('adm-zip');
                     const zip = new AdmZip(modZipPath);
-                    
+
+                    const xmlMap = {
+                        'environment.xml': 'environment.xml',
+                        'farmlands.xml': 'farmland.xml',
+                        'farmland.xml': 'farmland.xml',
+                        'fields.xml': 'fields.xml',
+                        'items.xml': 'items.xml',
+                        'placeables.xml': 'placeables.xml',
+                        'vehicles.xml': 'vehicles.xml',
+                        'collectibles.xml': 'collectibles.xml',
+                        'handtools.xml': 'handTools.xml',
+                        'splitshapes.gmss': 'splitShapes.gmss'
+                    };
+
+                    let extractedTerrain = false;
+
                     // Extract infoLayer grle files, heightmaps, density maps, and terrain cache files
                     for (const entry of zip.getEntries()) {
-                        const baseName = path.basename(entry.entryName);
+                        const entryName = entry.entryName.replace(/\\/g, '/');
+                        const baseName = path.basename(entryName);
                         const lowerBase = baseName.toLowerCase();
+
                         if (lowerBase.startsWith('infolayer_') && lowerBase.endsWith('.grle')) {
                             const targetPath = path.join(slotPath, baseName);
                             if (!fs.existsSync(targetPath)) {
@@ -806,6 +837,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             const targetPath = path.join(slotPath, 'terrain.heightmap.png');
                             if (!fs.existsSync(targetPath)) {
                                 await fs.writeFile(targetPath, entry.getData());
+                                extractedTerrain = true;
                                 console.log(`[CREATE] Extracted heightmap ${baseName} -> terrain.heightmap.png`);
                             }
                         }
@@ -828,8 +860,21 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                                 await fs.writeFile(targetPath, entry.getData());
                             }
                         }
+
+                        // Map default savegame XML templates
+                        if (xmlMap[lowerBase]) {
+                            const destName = xmlMap[lowerBase];
+                            const targetPath = path.join(slotPath, destName);
+                            if (!fs.existsSync(targetPath)) {
+                                await fs.writeFile(targetPath, entry.getData());
+                                console.log(`[CREATE] Extracted initial save file: ${destName}`);
+                            }
+                        }
                     }
                     console.log(`[CREATE] Extracted ${extractedGrles} infoLayer GRLE files and terrain assets from map zip.`);
+                    if (extractedTerrain) {
+                        requiresEngineInit = false;
+                    }
                 }
             }
         } catch (err) {
@@ -850,6 +895,20 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     </farm>
 </farms>`;
         await fs.writeFile(farmsPath, farmsXml);
+    }
+
+    const envPath = path.join(slotPath, 'environment.xml');
+    if (!fs.existsSync(envPath)) {
+        const envXml = `<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<environment>
+    <currentPeriod>${startMonth || 1}</currentPeriod>
+    <daysPerPeriod>${fixedSeasonLength || 1}</daysPerPeriod>
+    <currentDay>1</currentDay>
+    <currentMonotonicDay>1</currentMonotonicDay>
+    <realHourTimer>0.000000</realHourTimer>
+    <time>480.000000</time>
+</environment>`;
+        await fs.writeFile(envPath, envXml);
     }
 
     return { success: true, path: slotPath, requiresEngineInit, mapId };
