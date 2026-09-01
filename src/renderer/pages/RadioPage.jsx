@@ -144,13 +144,24 @@ const RadioPage = () => {
         toast.success('All custom stations cleared');
     };
 
-    const handleOpenSpotifyApp = () => {
+    const handleOpenSpotifyApp = async () => {
         try {
             if (window.api?.shell?.openExternal) {
-                window.api.shell.openExternal('spotify://');
-                toast.success('Opening Spotify App...');
-            } else window.open('https://open.spotify.com', '_blank');
-        } catch (e) { window.open('https://open.spotify.com', '_blank'); }
+                try {
+                    await window.api.shell.openExternal('spotify://');
+                    toast.success('Opening Spotify App...');
+                    return;
+                } catch (appErr) {
+                    console.warn('Spotify protocol failed, falling back to web:', appErr);
+                    await window.api.shell.openExternal('https://open.spotify.com');
+                    toast.info('Spotify desktop app not found. Opened Spotify in browser.');
+                    return;
+                }
+            }
+            window.open('https://open.spotify.com', '_blank');
+        } catch (e) {
+            window.open('https://open.spotify.com', '_blank');
+        }
     };
 
     const handleOpenSpotifyWeb = () => {
@@ -193,28 +204,9 @@ const RadioPage = () => {
                             gap: '8px', 
                             boxShadow: '0 4px 14px rgba(29, 185, 84, 0.3)' 
                         }} 
-                        title="Open external Spotify Desktop App"
+                        title="Open Spotify Desktop App (falls back to web if not installed)"
                     >
                         <Disc size={18} /> Launch Spotify App
-                    </button>
-                    <button 
-                        onClick={handleOpenSpotifyWeb} 
-                        style={{ 
-                            padding: '10px 14px', 
-                            background: 'var(--bg-tertiary)', 
-                            color: 'var(--text-primary)', 
-                            border: '1px solid var(--border)', 
-                            borderRadius: '10px', 
-                            fontWeight: '600', 
-                            fontSize: '13px', 
-                            cursor: 'pointer', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '6px' 
-                        }} 
-                        title="Open Spotify Web in Browser"
-                    >
-                        <LogIn size={16} /> Sign In to Spotify
                     </button>
                 </div>
             </div>
@@ -287,9 +279,6 @@ const RadioPage = () => {
                             </a>
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
-                            <button onClick={handleOpenSpotifyApp} style={{ padding: '6px 12px', background: '#1DB954', color: 'white', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <ExternalLink size={14} /> Open External App
-                            </button>
                             <button onClick={clearSpotifyAccount} style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <X size={14} /> Unlink
                             </button>
