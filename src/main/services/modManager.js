@@ -2197,29 +2197,6 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 	} else {
 		scraper.fetchModDetail(modId).then(detail => { 
 			techData = detail?.techData || null; 
-			if (detail?.dependencies && detail.dependencies.length > 0) {
-				const isMapCategory = (category && category.toUpperCase().includes('MAP')) || (modTitle && /\bmap\b/i.test(modTitle));
-				if (isMapCategory) {
-					const pool = cache.getModHubMetadataPool();
-					const targetSubFolder = subFolder || getMapSubfolderName(resolvedTitle || modTitle, modId, detail);
-					for (const dep of detail.dependencies) {
-						let depTitle = typeof dep === 'string' ? dep : (dep.title || dep.modName);
-						const depUrl = typeof dep === 'object' ? dep.url : null;
-						let depId = typeof dep === 'object' && dep.modId ? String(dep.modId) : null;
-						if (!depId && depUrl) {
-							const idMatch = depUrl.match(/mod_id=(\d+)/i) || depUrl.match(/storage\/(\d+)\//i);
-							if (idMatch) depId = idMatch[1].replace(/^0+/, '');
-						}
-						if ((!depTitle || depTitle.startsWith('Mod ')) && depId && pool[depId]?.title) {
-							depTitle = pool[depId].title;
-						}
-						if (depId && !activeInstalls.has(depId) && !downloadQueue.some(t => String(t.modId) === depId)) {
-							console.log(`[QUEUE] Auto-queueing linked ModHub dependency "${depTitle || `Mod ${depId}`}" (ID: ${depId}) for map "${resolvedTitle}"`);
-							enqueueInstall(depId, depTitle, depUrl, onProgress, null, targetSubFolder).catch(() => {});
-						}
-					}
-				}
-			}
 		}).catch(() => {});
 	}
 
