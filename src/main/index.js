@@ -395,55 +395,7 @@ ipcMain.handle('system:getDiskSpace', async (_, targetPath) => {
   }
 });
 
-ipcMain.handle('system:getFolderStats', async (_, folderPath) => {
-  if (!folderPath || !fs.existsSync(folderPath)) return { count: 0, size: 0, physicalCount: 0, linkCount: 0 };
-  let physicalCount = 0;
-  let linkCount = 0;
-  let physicalBytes = 0;
 
-  async function walk(dir) {
-    try {
-      const entries = await fs.promises.readdir(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.name.startsWith('.') || entry.name.toLowerCase() === 'backups') continue;
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          const isModDir = fs.existsSync(path.join(fullPath, 'modDesc.xml'));
-          if (isModDir) {
-            physicalCount++;
-            try {
-              const subFiles = await fs.promises.readdir(fullPath);
-              for (const sf of subFiles) {
-                const sStats = await fs.promises.stat(path.join(fullPath, sf)).catch(() => null);
-                if (sStats && sStats.isFile()) physicalBytes += sStats.size;
-              }
-            } catch (e) {}
-          } else {
-            await walk(fullPath);
-          }
-        } else if (entry.isSymbolicLink()) {
-          if (entry.name.toLowerCase().endsWith('.zip')) {
-            linkCount++;
-          }
-        } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.zip')) {
-          physicalCount++;
-          try {
-            const stats = await fs.promises.lstat(fullPath);
-            physicalBytes += stats.size;
-          } catch (e) {}
-        }
-      }
-    } catch (err) {}
-  }
-
-  await walk(folderPath);
-  return { 
-    count: physicalCount + linkCount, 
-    size: physicalBytes, 
-    physicalCount, 
-    linkCount 
-  };
-});
 
 // ── ModHub scraping ──
 ipcMain.handle('modhub:fetchMods', async (event, params) => {
