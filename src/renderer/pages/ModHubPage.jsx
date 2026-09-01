@@ -34,7 +34,7 @@ export default function ModHubPage() {
   const {
     mods, currentFilter, currentPage, totalPages,
     isLoading, error, categories, isDeepScanning,
-    activeFilters, favoriteAuthors, authorFilter, hardcodedBrands, hiddenMods,
+    activeFilters, favoriteAuthors, authorFilter, authorFilterSource, previousFilter, hardcodedBrands, hiddenMods,
     setFilter, setPage, fetchMods, fetchCategories, searchMods,
     fetchDetailsForCurrentPage, setFilters, resetFilters, setAuthorFilter,
     selectedCompareIds, clearCompare, pageSize, setPageSize,
@@ -85,6 +85,7 @@ export default function ModHubPage() {
   }, [categories]);
 
   const breadcrumb = React.useMemo(() => {
+    if (authorFilter) return `Author: ${authorFilter.name}`;
     if (currentFilter === 'search') return `Search: ${searchInput || 'Results'}`;
     if (!categories || categories.length === 0) return null;
     if (currentFilter === 'latest') return 'Latest';
@@ -101,7 +102,7 @@ export default function ModHubPage() {
       }
     }
     return null;
-  }, [categories, currentFilter, searchInput]);
+  }, [categories, currentFilter, searchInput, authorFilter]);
 
   useEffect(() => {
     // Trigger deep scan to discover technical data and dependencies for all visible mods
@@ -465,16 +466,28 @@ export default function ModHubPage() {
                   <span className="sort-bar__author-label" style={{ margin: 0 }}>
                     by {authorFilter.name}
                   </span>
-                  <button 
-                    className="btn btn--secondary btn--sm" 
-                    style={{ padding: '2px 8px', fontSize: '11px', height: 'auto', minHeight: 0 }}
-                    onClick={() => {
-                      setAuthorFilter(null);
-                      navigate('/favourites');
-                    }}
-                  >
-                    <ArrowLeft size={12} style={{ marginRight: 4 }} /> Back to Favourites
-                  </button>
+                  {authorFilterSource === 'favourites' ? (
+                    <button 
+                      className="btn btn--secondary btn--sm" 
+                      style={{ padding: '2px 8px', fontSize: '11px', height: 'auto', minHeight: 0 }}
+                      onClick={() => {
+                        setAuthorFilter(null);
+                        navigate('/favourites');
+                      }}
+                    >
+                      <ArrowLeft size={12} style={{ marginRight: 4 }} /> Back to Favourites
+                    </button>
+                  ) : (
+                    <button 
+                      className="btn btn--secondary btn--sm" 
+                      style={{ padding: '2px 8px', fontSize: '11px', height: 'auto', minHeight: 0 }}
+                      onClick={() => {
+                        setAuthorFilter(null);
+                      }}
+                    >
+                      <ArrowLeft size={12} style={{ marginRight: 4 }} /> Back to Category
+                    </button>
+                  )}
                 </div>
               )}
             </div>

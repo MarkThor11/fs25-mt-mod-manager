@@ -29,7 +29,7 @@ export default function FavouritesPage() {
   }, []);
 
   const handleAuthorClick = (author) => {
-    setAuthorFilter(author);
+    setAuthorFilter(author, true, 'favourites');
     navigate('/modhub');
   };
   

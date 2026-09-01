@@ -1029,7 +1029,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
             className="mod-card-author" 
             onClick={(e) => {
               e.stopPropagation();
-              setAuthorFilter({ id: mod.authorId || mod.author, name: mod.author });
+              setAuthorFilter({ id: mod.authorId || mod.author, name: mod.author }, true, 'card');
               navigate('/modhub');
             }}
             style={{ color: isFavorite ? 'var(--danger)' : undefined, fontWeight: isFavorite ? 800 : undefined }}

@@ -41,6 +41,8 @@ export const useModHubStore = create((set, get) => ({
   favoriteMods: JSON.parse(localStorage.getItem('fav_mods') || '[]'),
   hiddenMods: JSON.parse(localStorage.getItem('hidden_mods') || '[]'),
   authorFilter: null, // { id: string, name: string }
+  authorFilterSource: null, // 'favourites' | 'card' | 'category'
+  previousFilter: null, // Preserved category filter when viewing an author
   categoryTotalMods: 0,
   selectedCompareIds: [],
   powerReference: null, // { modId, title, hp }
@@ -234,6 +236,8 @@ export const useModHubStore = create((set, get) => ({
     localStorage.removeItem('modhub_page');
     // Also clear persistent cache
     await window.api.modhub.setPersistentCache({});
+    const state = get();
+    const restoredFilter = state.authorFilter ? (state.previousFilter || state.currentFilter) : state.currentFilter;
     set({
       activeFilters: {
         brands: [],
@@ -244,10 +248,13 @@ export const useModHubStore = create((set, get) => ({
         hideRequired: false,
         hideInstalled: false
       },
-      // Note: We intentionally DO NOT reset currentFilter or searchQuery here
-      // so that "Reset All" in the filter panel stays on the current page/search results.
+      authorFilter: null,
+      authorFilterSource: null,
+      previousFilter: null,
+      currentFilter: restoredFilter,
       isPrefetching: false
     });
+    get().fetchMods();
   },
 
   prefetchCategories: async () => {
@@ -547,15 +554,31 @@ export const useModHubStore = create((set, get) => ({
   },
 
 
-  setAuthorFilter: (author, shouldFetch = true) => {
-    // Only reset currentFilter to 'latest' if we are actually SETTING an author
-    // If clearing (author === null), we leave currentFilter alone
-    set((state) => ({ 
-      authorFilter: author, 
-      currentFilter: author ? 'latest' : state.currentFilter, 
-      mods: [], 
-      currentPage: 0 
-    }));
+  setAuthorFilter: (author, shouldFetch = true, source = null) => {
+    if (author) {
+      const state = get();
+      const prevFilter = state.authorFilter ? state.previousFilter : state.currentFilter;
+      set({
+        authorFilter: author,
+        authorFilterSource: source || (state.authorFilter ? state.authorFilterSource : 'category'),
+        previousFilter: prevFilter,
+        mods: [],
+        categoryAllMods: [],
+        currentPage: 0
+      });
+    } else {
+      const state = get();
+      const restoredFilter = state.previousFilter || state.currentFilter || 'latest';
+      set({
+        authorFilter: null,
+        authorFilterSource: null,
+        previousFilter: null,
+        currentFilter: restoredFilter,
+        mods: [],
+        categoryAllMods: [],
+        currentPage: 0
+      });
+    }
     if (shouldFetch) get().fetchMods();
   },
 
@@ -584,7 +607,9 @@ export const useModHubStore = create((set, get) => ({
       categoryTotalMods: 0,
       error: null,
       searchQuery: '',
-      authorFilter: null 
+      authorFilter: null,
+      authorFilterSource: null,
+      previousFilter: null
     });
     
     get().fetchMods(filter);
