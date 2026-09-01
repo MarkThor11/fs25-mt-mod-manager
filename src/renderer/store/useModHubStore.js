@@ -676,7 +676,10 @@ export const useModHubStore = create((set, get) => ({
     const requestId = get().lastRequestId;
 
     // ── INSTANT RENDER FROM CACHE ──
-    if (cached && !isPrefetch) {
+    const isGlobalFeed = ['latest', 'downloads', 'mostdownloaded', 'best', 'rating'].includes(f.toLowerCase());
+    const isOverpopulatedGlobalFeed = isGlobalFeed && (cached?.allMods?.length || 0) > 72;
+
+    if (cached && !isPrefetch && !isOverpopulatedGlobalFeed) {
       const isStale = now - cached.timestamp > 300000; // 5 minutes stale for UI
       
       set({ 
@@ -737,7 +740,12 @@ export const useModHubStore = create((set, get) => ({
           return resMods;
         } else {
           const first = await window.api.modhub.fetchMods({ filter: filterName, page: 0 });
-          const total = first.pagination?.total || first.totalPages || 1;
+          let total = first.pagination?.total || first.totalPages || 1;
+          
+          if (['latest', 'downloads', 'mostdownloaded', 'best', 'rating'].includes(filterName.toLowerCase())) {
+            total = Math.min(total, 2); // Cap global feeds to 2 pages (48 mods)
+          }
+
           const resMods = [...(first.mods || [])];
           if (total > 1) {
             const extra = await Promise.all(Array.from({ length: total - 1 }, (_, i) => 
