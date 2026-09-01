@@ -4974,8 +4974,7 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 
 				results.installed++;
 				console.log(`[AUTO-INSTALL] Mod ${modName} is already available.`);
-				onProgress?.({ type: 'STATUS', modId: modId || 'Local', modName, status: 'success', title: modName, parentId });
-				continue; // Skip download
+				continue; // Skip download without polluting active download queue
 			}
 
 

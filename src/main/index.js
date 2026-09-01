@@ -845,7 +845,7 @@ ipcMain.handle('localMods:autoResolveMapDependencies', async (event, { mapId, ta
         if (m.mod_id && String(m.mod_id) === String(mapId)) return true;
         const cleanTitle = (m.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         const cleanMapTitle = (mapTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        return cleanTitle && cleanMapTitle && (cleanTitle === cleanMapTitle || cleanTitle.includes(cleanMapTitle) || cleanMapTitle.includes(cleanTitle));
+        return cleanTitle && cleanMapTitle && cleanTitle === cleanMapTitle;
       });
       if (localMap && localMap.dependencies) {
         try {
