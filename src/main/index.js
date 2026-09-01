@@ -396,9 +396,10 @@ ipcMain.handle('system:getDiskSpace', async (_, targetPath) => {
 });
 
 ipcMain.handle('system:getFolderStats', async (_, folderPath) => {
-  if (!folderPath || !fs.existsSync(folderPath)) return { count: 0, size: 0 };
-  let count = 0;
-  let totalBytes = 0;
+  if (!folderPath || !fs.existsSync(folderPath)) return { count: 0, size: 0, physicalCount: 0, linkCount: 0 };
+  let physicalCount = 0;
+  let linkCount = 0;
+  let physicalBytes = 0;
 
   async function walk(dir) {
     try {
@@ -409,22 +410,26 @@ ipcMain.handle('system:getFolderStats', async (_, folderPath) => {
         if (entry.isDirectory()) {
           const isModDir = fs.existsSync(path.join(fullPath, 'modDesc.xml'));
           if (isModDir) {
-            count++;
+            physicalCount++;
             try {
               const subFiles = await fs.promises.readdir(fullPath);
               for (const sf of subFiles) {
                 const sStats = await fs.promises.stat(path.join(fullPath, sf)).catch(() => null);
-                if (sStats && sStats.isFile()) totalBytes += sStats.size;
+                if (sStats && sStats.isFile()) physicalBytes += sStats.size;
               }
             } catch (e) {}
           } else {
             await walk(fullPath);
           }
+        } else if (entry.isSymbolicLink()) {
+          if (entry.name.toLowerCase().endsWith('.zip')) {
+            linkCount++;
+          }
         } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.zip')) {
+          physicalCount++;
           try {
-            const stats = await fs.promises.stat(fullPath);
-            count++;
-            totalBytes += stats.size;
+            const stats = await fs.promises.lstat(fullPath);
+            physicalBytes += stats.size;
           } catch (e) {}
         }
       }
@@ -432,7 +437,12 @@ ipcMain.handle('system:getFolderStats', async (_, folderPath) => {
   }
 
   await walk(folderPath);
-  return { count, size: totalBytes };
+  return { 
+    count: physicalCount + linkCount, 
+    size: physicalBytes, 
+    physicalCount, 
+    linkCount 
+  };
 });
 
 // ── ModHub scraping ──
