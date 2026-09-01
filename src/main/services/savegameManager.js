@@ -2186,7 +2186,8 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true) {
 
         // Fallback: parse map mod zip itself!
         if (mapModName) {
-            const modManager = require('./modMa            const modsDir = modManager.getModsPath();
+            const modManager = require('./modManager');
+            const modsDir = modManager.getModsPath();
             const modZip = path.join(modsDir, `${mapModName}.zip`);
             if (fs.existsSync(modZip)) {
                 // Let's first search in modDesc.xml maps config
