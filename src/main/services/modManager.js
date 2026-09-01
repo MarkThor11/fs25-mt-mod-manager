@@ -3486,25 +3486,32 @@ async function cancelInstall(modId) {
 		cache.removePendingDownload(cleanModId); 
 	} catch (_) {}
 
-	// 1. Check if it's in the queue but not yet active
-	const queueIdx = downloadQueue.findIndex(t => {
+	// 1. Check if it's in the queue but not yet active (or any child tasks spawned by this parent)
+	for (let i = downloadQueue.length - 1; i >= 0; i--) {
+		const t = downloadQueue[i];
 		const tid = String(t.modId || '');
-		return tid === strModId || tid.replace(/^0+/, '') === cleanModId;
-	});
-
-	if (queueIdx !== -1) {
-		const removedTask = downloadQueue.splice(queueIdx, 1)[0];
-		console.log(`[CANCEL] Removed from queue: ${removedTask.modTitle || modId}`);
-		broadcastStatus?.(modId, 'cancelled');
-		return { success: true };
+		const pid = String(t.parentId || '');
+		if (tid === strModId || tid.replace(/^0+/, '') === cleanModId || pid === strModId || pid === cleanModId) {
+			const removed = downloadQueue.splice(i, 1)[0];
+			console.log(`[CANCEL] Removed from queue: ${removed.modTitle || removed.modId}`);
+			broadcastStatus?.(removed.modId, 'cancelled');
+		}
 	}
 
 	// 2. Check active installs
 	let activeKey = null;
-	for (const key of activeInstalls.keys()) {
+	for (const [key, val] of activeInstalls.entries()) {
 		if (key === strModId || key.replace(/^0+/, '') === cleanModId) {
 			activeKey = key;
-			break;
+		} else if (val && (String(val.parentId) === strModId || String(val.parentId) === cleanModId)) {
+			// Cancel child active install
+			try {
+				if (val.type === 'window' && val.item) val.item.cancel();
+				if (val.fileStream && !val.fileStream.destroyed) val.fileStream.destroy();
+				if (val.request && !val.request.destroyed) val.request.destroy();
+			} catch (_) {}
+			activeInstalls.delete(key);
+			broadcastStatus?.(key, 'cancelled');
 		}
 	}
 
@@ -4895,14 +4902,16 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 			}
 
 			// 1. SMART CHECK: Is this mod already installed and physically present on disk?
-			const localScanMods = lastScanResult?.mods || [];
+			const localScanMods = (lastScanResult?.mods && lastScanResult.mods.length > 0) 
+				? lastScanResult.mods 
+				: (cache.getAllLocalModCache() || []);
 			let alreadyInstalled = false;
 			let localMod = null;
 
 			// Check scanned local mods on disk
 			if (modId) {
 				const cleanId = String(modId).replace(/^0+/, '');
-				localMod = localScanMods.find(m => m.modId && String(m.modId).replace(/^0+/, '') === cleanId);
+				localMod = localScanMods.find(m => (m.modId && String(m.modId).replace(/^0+/, '') === cleanId) || (m.mod_id && String(m.mod_id).replace(/^0+/, '') === cleanId));
 			}
 			if (!localMod && targetFileName) {
 				const uTargetFile = ultraNormalize(targetFileName);
@@ -4922,6 +4931,7 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 				}
 			}
 
+			// Check physical presence across all configured mod directories
 			if (localMod) {
 				let filePath = localMod.filePath;
 				if (!filePath && localMod.fileName) {
@@ -4929,10 +4939,22 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 				}
 				if (filePath && fs.existsSync(filePath)) {
 					alreadyInstalled = true;
-				} else {
-					console.warn(`[AUTO-INSTALL] Scanned mod entry for ${modName} missing from disk at ${filePath}. Triggering fresh download.`);
-					alreadyInstalled = false;
-					localMod = null;
+				}
+			}
+			if (!alreadyInstalled) {
+				const allModDirs = getModsPaths();
+				for (const dir of allModDirs) {
+					if (targetFileName && fs.existsSync(path.join(dir, `${targetFileName}.zip`))) {
+						alreadyInstalled = true;
+						break;
+					}
+					if (modName) {
+						const candidateZip = path.join(dir, `${modName.replace(/[^a-zA-Z0-9_-]/g, '_')}.zip`);
+						if (fs.existsSync(candidateZip)) {
+							alreadyInstalled = true;
+							break;
+						}
+					}
 				}
 			}
 

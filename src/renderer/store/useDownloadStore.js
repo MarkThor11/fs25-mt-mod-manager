@@ -352,26 +352,43 @@ export const useDownloadStore = create((set, get) => ({
   cancelDownload: async (modId) => {
     if (modId === undefined || modId === null) return;
     const strModId = String(modId);
+    const cleanId = strModId.replace(/^0+/, '');
 
-    // 1. Immediately purge from frontend state
-    get().removeDownload(modId);
-    get().removeDownload(strModId);
-    get().removeDownload(strModId.replace(/^0+/, ''));
+    // 1. Collect all related item keys (direct + children linked by parentId)
+    const activeObj = get().activeDownloads || {};
+    const keysToRemove = new Set([modId, strModId, cleanId]);
 
-    // 2. Recursive check: If this is a parent, cancel all children first
-    const batch = get().batchProgress[modId] || get().batchProgress[strModId];
-    if (batch && batch.childIds) {
-      console.log(`[STORE] Cancelling batch ${modId} with ${batch.childIds.length} children`);
-      for (const childId of batch.childIds) {
-        get().removeDownload(childId);
-        if (window.api?.mods?.cancelInstall) {
-           window.api.mods.cancelInstall({ modId: childId }).catch(() => {});
-        }
+    Object.keys(activeObj).forEach(k => {
+      const item = activeObj[k];
+      if (item?.parentId && (String(item.parentId) === strModId || String(item.parentId) === cleanId)) {
+        keysToRemove.add(k);
+        if (item.modId) keysToRemove.add(String(item.modId));
       }
-      get().removeBatch(modId);
+    });
+
+    const batch = get().batchProgress[modId] || get().batchProgress[strModId] || get().batchProgress[cleanId];
+    if (batch && batch.childIds) {
+      batch.childIds.forEach(id => {
+        keysToRemove.add(id);
+        keysToRemove.add(String(id));
+      });
     }
 
-    // 3. Main cancellation
+    // 2. Immediately purge all related downloads from frontend state
+    keysToRemove.forEach(k => {
+      get().removeDownload(k);
+      if (window.api?.mods?.cancelInstall) {
+        window.api.mods.cancelInstall({ modId: k }).catch(() => {});
+      }
+    });
+
+    if (batch) {
+      get().removeBatch(modId);
+      get().removeBatch(strModId);
+      get().removeBatch(cleanId);
+    }
+
+    // 3. Backend cancellation for parent
     try {
       if (window.api?.mods?.cancelInstall) {
         await window.api.mods.cancelInstall({ modId });
