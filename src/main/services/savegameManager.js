@@ -253,9 +253,17 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
     const targetModNorm = ultraNorm(mapModName);
     const targetTitleNorm = ultraNorm(mapTitle);
 
+    const GENERIC_MAP_IDS = new Set([
+        'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
+        'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
+        'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek'
+    ]);
+
+    const isGenericMapId = GENERIC_MAP_IDS.has(targetMapIdNorm);
+
     const folders = await fs.readdir(templatesDir);
 
-    // 1. Direct folder check (requires exact normalized match for mod name, mapId, or title)
+    // 1. Direct folder check
     for (const folder of folders) {
         const folderPath = path.join(templatesDir, folder);
         const stat = await fs.stat(folderPath).catch(() => null);
@@ -265,11 +273,12 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
 
         const fNorm = ultraNorm(folder);
         if (targetModNorm && fNorm === targetModNorm) return folder;
-        if (targetMapIdNorm && fNorm === targetMapIdNorm) return folder;
+        if (targetModNorm && fNorm.startsWith(targetModNorm)) return folder;
         if (targetTitleNorm && fNorm === targetTitleNorm) return folder;
+        if (!isGenericMapId && targetMapIdNorm && fNorm === targetMapIdNorm) return folder;
     }
 
-    // 2. XML Deep Scan check inside templates (exact match only)
+    // 2. XML Deep Scan check inside templates
     for (const folder of folders) {
         const folderPath = path.join(templatesDir, folder);
         const careerPath = path.join(folderPath, 'careerSavegame.xml');
@@ -278,10 +287,17 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
                 const xml = await fs.readFile(careerPath, 'utf8');
                 const internalId = getElementText(xml, 'mapId');
                 const internalTitle = getElementText(xml, 'mapTitle');
-                if (internalId && ultraNorm(internalId) === targetMapIdNorm) {
+                
+                if (internalTitle && targetTitleNorm && ultraNorm(internalTitle) === targetTitleNorm) {
                     return folder;
                 }
-                if (internalTitle && targetTitleNorm && ultraNorm(internalTitle) === targetTitleNorm) {
+                if (internalId && targetModNorm) {
+                    const internalModPart = ultraNorm(internalId.split('.')[0]);
+                    if (internalModPart === targetModNorm) {
+                        return folder;
+                    }
+                }
+                if (!isGenericMapId && internalId && ultraNorm(internalId) === targetMapIdNorm) {
                     return folder;
                 }
             } catch (e) {}
