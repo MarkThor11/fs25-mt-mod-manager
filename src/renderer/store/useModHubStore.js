@@ -814,6 +814,12 @@ export const useModHubStore = create((set, get) => ({
           return enriched;
       });
 
+      let displayMods = enrichedMods;
+      if (f === 'latest') {
+        const recentMods = enrichedMods.filter(m => m.isNew || m.isUpdate);
+        displayMods = recentMods.length > 0 ? recentMods : enrichedMods.slice(0, 24);
+      }
+
       // ── UPDATE FRONTEND CACHE ──
       set(state => {
         const poolUpdate = {};
@@ -825,7 +831,7 @@ export const useModHubStore = create((set, get) => ({
           ...state.modCache,
           ...poolUpdate, 
           [cacheKey]: {
-            allMods: enrichedMods,
+            allMods: displayMods,
             timestamp: now
           }
         };
@@ -845,8 +851,8 @@ export const useModHubStore = create((set, get) => ({
         return {
           modCache: prunedCache,
           ...(shouldUpdateUI ? {
-            categoryAllMods: enrichedMods,
-            mods: enrichedMods,
+            categoryAllMods: displayMods,
+            mods: displayMods,
             isLoading: false
           } : {})
         };
