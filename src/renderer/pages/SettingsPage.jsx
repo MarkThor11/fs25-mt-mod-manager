@@ -97,32 +97,25 @@ export default function SettingsPage() {
 
   const { mods } = useLocalModsStore();
 
-  const folderStats = React.useMemo(() => {
-    if (!mods || mods.length === 0 || !modsPaths || modsPaths.length === 0) return {};
-    
-    const normalizedMods = mods.map(m => ({
-      path: (m.filePath || '').replace(/\\/g, '/').toLowerCase(),
-      size: m.size || 0
-    }));
+  const [folderStats, setFolderStats] = useState({});
 
-    const stats = {};
-    for (let pIdx = 0; pIdx < modsPaths.length; pIdx++) {
-      const p = modsPaths[pIdx];
-      const pPath = p.replace(/\\/g, '/').toLowerCase();
-      const pPathWithSlash = pPath.endsWith('/') ? pPath : pPath + '/';
-      
-      let count = 0;
-      let size = 0;
-      for (let mIdx = 0; mIdx < normalizedMods.length; mIdx++) {
-        if (normalizedMods[mIdx].path.startsWith(pPathWithSlash)) {
-          count++;
-          size += normalizedMods[mIdx].size;
-        }
-      }
-      stats[p] = { count, size };
+  useEffect(() => {
+    let isMounted = true;
+    if (modsPaths && modsPaths.length > 0 && window.api?.system?.getFolderStats) {
+      Promise.all(
+        modsPaths.map(async (p) => {
+          const stats = await window.api.system.getFolderStats(p).catch(() => null);
+          return { path: p, stats: stats || { count: 0, size: 0 } };
+        })
+      ).then((results) => {
+        if (!isMounted) return;
+        const map = {};
+        results.forEach(r => { map[r.path] = r.stats; });
+        setFolderStats(map);
+      });
     }
-    return stats;
-  }, [mods, modsPaths]);
+    return () => { isMounted = false; };
+  }, [modsPaths, mods]);
 
   const [diskSpace, setDiskSpace] = useState({});
 

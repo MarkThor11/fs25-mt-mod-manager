@@ -395,6 +395,46 @@ ipcMain.handle('system:getDiskSpace', async (_, targetPath) => {
   }
 });
 
+ipcMain.handle('system:getFolderStats', async (_, folderPath) => {
+  if (!folderPath || !fs.existsSync(folderPath)) return { count: 0, size: 0 };
+  let count = 0;
+  let totalBytes = 0;
+
+  async function walk(dir) {
+    try {
+      const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.name.startsWith('.') || entry.name.toLowerCase() === 'backups') continue;
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          const isModDir = fs.existsSync(path.join(fullPath, 'modDesc.xml'));
+          if (isModDir) {
+            count++;
+            try {
+              const subFiles = await fs.promises.readdir(fullPath);
+              for (const sf of subFiles) {
+                const sStats = await fs.promises.stat(path.join(fullPath, sf)).catch(() => null);
+                if (sStats && sStats.isFile()) totalBytes += sStats.size;
+              }
+            } catch (e) {}
+          } else {
+            await walk(fullPath);
+          }
+        } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.zip')) {
+          try {
+            const stats = await fs.promises.stat(fullPath);
+            count++;
+            totalBytes += stats.size;
+          } catch (e) {}
+        }
+      }
+    } catch (err) {}
+  }
+
+  await walk(folderPath);
+  return { count, size: totalBytes };
+});
+
 // ── ModHub scraping ──
 ipcMain.handle('modhub:fetchMods', async (event, params) => {
   const { filter, page = 0 } = params || {};

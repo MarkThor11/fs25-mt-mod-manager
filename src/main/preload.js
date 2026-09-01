@@ -181,6 +181,7 @@ contextBridge.exposeInMainWorld('api', {
     optimizeRevert: () => ipcRenderer.invoke('system:optimizeRevert'),
     setHighPerformancePlan: () => ipcRenderer.invoke('system:setHighPerformancePlan'),
     getDiskSpace: (targetPath) => ipcRenderer.invoke('system:getDiskSpace', targetPath),
+    getFolderStats: (folderPath) => ipcRenderer.invoke('system:getFolderStats', folderPath),
   },
 
   // Event listeners
