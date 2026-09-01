@@ -4756,6 +4756,143 @@ async function createFolder(folderName) {
 	return { success: true };
 }
 
+function getAllInstalledModsList() {
+	if (lastScanResult?.mods && lastScanResult.mods.length > 0) {
+		return lastScanResult.mods;
+	}
+	const rows = cache.getAllLocalModCache() || [];
+	const trackingMap = cache.getAllModTrackingMap();
+	const list = [];
+	for (const r of rows) {
+		try {
+			let data = {};
+			if (r.json_data) {
+				try { data = typeof r.json_data === 'string' ? JSON.parse(r.json_data) : r.json_data; } catch (_) {}
+			}
+			const baseName = path.basename(r.file_path);
+			const cleanBase = baseName.replace(/\.zip$/i, '');
+			let modId = data.modId || null;
+			if (!modId) {
+				const tr = trackingMap.get(`FILE_${baseName.toLowerCase()}`) || trackingMap.get(`FILE_${r.file_path.toLowerCase()}`);
+				if (tr?.mod_id) modId = String(tr.mod_id).replace(/^0+/, '');
+			}
+			list.push({
+				filePath: r.file_path,
+				fileName: baseName,
+				title: data.title || cleanBase,
+				modName: data.techName || data.modName || cleanBase,
+				version: data.version || '1.0.0.0',
+				modId: modId ? String(modId).replace(/^0+/, '') : null,
+				isMap: data.isMap || false,
+				dependencies: data.dependencies || []
+			});
+		} catch (_) {}
+	}
+	return list;
+}
+
+function checkModInstalled(dep, localMods) {
+	if (!dep) return { installed: false, localMod: null };
+
+	let depId = null;
+	let depFileName = null;
+	let depTitle = null;
+
+	if (typeof dep === 'string') {
+		if (dep.includes('http')) {
+			const idMatch = dep.match(/mod_id=(\d+)/i) || dep.match(/storage\/(\d+)\//i);
+			if (idMatch) depId = parseInt(idMatch[1], 10).toString();
+			const fileMatch = dep.match(/\/([^\/]+\.zip)$/i);
+			if (fileMatch) depFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
+		} else {
+			depTitle = dep.replace(/^[\s\-\*\•\–\—]+/, '').replace(/\s*(?:\(|\[)?by:?[\s\S]*$/i, '').replace(/\s*\(v?\d+\.\d+.*?\)/i, '').replace(/\s*\[[^\]]*\]/g, '').replace(/\s*\([^)]*\)/g, '').trim();
+			depFileName = dep.replace(/\.zip$/i, '').trim().toLowerCase();
+		}
+	} else if (typeof dep === 'object') {
+		if (dep.modId || dep.id) depId = String(dep.modId || dep.id).replace(/^0+/, '');
+		if (dep.url) {
+			const idMatch = dep.url.match(/mod_id=(\d+)/i) || dep.url.match(/storage\/(\d+)\//i);
+			if (idMatch && !depId) depId = parseInt(idMatch[1], 10).toString();
+			const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
+			if (fileMatch && !depFileName) depFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
+		}
+		if (!depFileName) {
+			const fn = dep.fileName || dep.modName || dep.technicalName;
+			if (fn) depFileName = fn.replace(/\.zip$/i, '').toLowerCase();
+		}
+		if (dep.title) {
+			depTitle = dep.title.replace(/^[\s\-\*\•\–\—]+/, '').replace(/\s*(?:\(|\[)?by:?[\s\S]*$/i, '').replace(/\s*\(v?\d+\.\d+.*?\)/i, '').replace(/\s*\[[^\]]*\]/g, '').replace(/\s*\([^)]*\)/g, '').trim();
+		}
+	}
+
+	const normDepFile = depFileName ? depFileName.replace(/\.zip$/i, '').toLowerCase().trim() : null;
+	const cleanDepAlphanum = normDepFile ? normDepFile.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '') : null;
+	const uDepTitle = depTitle ? ultraNormalize(depTitle) : null;
+	const uCleanDep = depTitle ? depTitle.toLowerCase().replace(/[^a-z0-9]/g, '') : null;
+
+	// 1. Check local scanned / cached mods list
+	for (const m of localMods) {
+		// 1a. ModHub ID Match
+		if (depId && m.modId && String(m.modId).replace(/^0+/, '') === depId) {
+			return { installed: true, localMod: m };
+		}
+		// 1b. ZIP Filename / Technical Name Match
+		if (normDepFile) {
+			const mFile = m.fileName ? path.basename(m.fileName).replace(/\.zip$/i, '').toLowerCase().trim() : '';
+			const mTech = m.modName ? m.modName.replace(/\.zip$/i, '').toLowerCase().trim() : '';
+			if (mFile === normDepFile || mTech === normDepFile) return { installed: true, localMod: m };
+			if (cleanDepAlphanum) {
+				const mFileAlpha = mFile.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+				const mTechAlpha = mTech.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+				if (mFileAlpha === cleanDepAlphanum || mTechAlpha === cleanDepAlphanum) return { installed: true, localMod: m };
+			}
+		}
+		// 1c. Mod Title Match
+		if (uDepTitle || uCleanDep) {
+			const mTitle = m.title ? m.title.trim() : '';
+			const uMTitle = ultraNormalize(mTitle);
+			const cleanMTitle = mTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+			if (uDepTitle && uMTitle === uDepTitle) return { installed: true, localMod: m };
+			if (uCleanDep && cleanMTitle === uCleanDep) return { installed: true, localMod: m };
+
+			// Also check title vs technical name/filename
+			const mTech = m.modName ? m.modName.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+			const mFile = m.fileName ? path.basename(m.fileName).replace(/\.zip$/i, '').toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+			if (uCleanDep && (mTech === uCleanDep || mFile === uCleanDep)) return { installed: true, localMod: m };
+		}
+	}
+
+	// 2. Physical disk scan across ALL directories and subfolders
+	const allDirs = getModsPaths();
+	for (const dir of allDirs) {
+		if (!fs.existsSync(dir)) continue;
+		try {
+			// Check root of folder
+			if (normDepFile && fs.existsSync(path.join(dir, `${normDepFile}.zip`))) {
+				return { installed: true, localMod: { filePath: path.join(dir, `${normDepFile}.zip`), fileName: `${normDepFile}.zip` } };
+			}
+			if (depTitle) {
+				const safe = depTitle.replace(/[^a-zA-Z0-9_-]/g, '_');
+				if (fs.existsSync(path.join(dir, `${safe}.zip`))) {
+					return { installed: true, localMod: { filePath: path.join(dir, `${safe}.zip`), fileName: `${safe}.zip` } };
+				}
+			}
+			// Check one level of subfolders
+			const subEntries = fs.readdirSync(dir, { withFileTypes: true });
+			for (const sub of subEntries) {
+				if (sub.isDirectory()) {
+					const subPath = path.join(dir, sub.name);
+					if (normDepFile && fs.existsSync(path.join(subPath, `${normDepFile}.zip`))) {
+						return { installed: true, localMod: { filePath: path.join(subPath, `${normDepFile}.zip`), fileName: `${normDepFile}.zip`, folder: sub.name } };
+					}
+				}
+			}
+		} catch (_) {}
+	}
+
+	return { installed: false, localMod: null };
+}
+
 /**
  * Automate the search and installation of missing dependencies from ModHub.
  * @param {Array} modNames - Names of mods to search and install.
@@ -4903,64 +5040,13 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 			}
 
 			// 1. SMART CHECK: Is this mod already installed and physically present on disk?
-			const localScanMods = (lastScanResult?.mods && lastScanResult.mods.length > 0) 
-				? lastScanResult.mods 
-				: (cache.getAllLocalModCache() || []);
-			let alreadyInstalled = false;
-			let localMod = null;
-
-			// Check scanned local mods on disk
-			if (modId) {
-				const cleanId = String(modId).replace(/^0+/, '');
-				localMod = localScanMods.find(m => (m.modId && String(m.modId).replace(/^0+/, '') === cleanId) || (m.mod_id && String(m.mod_id).replace(/^0+/, '') === cleanId));
-			}
-			if (!localMod && targetFileName) {
-				const uTargetFile = ultraNormalize(targetFileName);
-				localMod = localScanMods.find(m => {
-					const lName = m.modName ? m.modName.toLowerCase() : (m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '');
-					return lName && (lName === targetFileName || ultraNormalize(lName) === uTargetFile);
-				});
-			}
-			if (!localMod && modName) {
-				const uTarget = ultraNormalize(modName);
-				if (uTarget) {
-					localMod = localScanMods.find(m => {
-						return (m.title && ultraNormalize(m.title) === uTarget) ||
-						       (m.modName && ultraNormalize(m.modName) === uTarget) ||
-						       (m.fileName && ultraNormalize(m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '')) === uTarget);
-					});
-				}
-			}
-
-			// Check physical presence across all configured mod directories
-			if (localMod) {
-				let filePath = localMod.filePath;
-				if (!filePath && localMod.fileName) {
-					filePath = path.join(getModsPath(), localMod.fileName);
-				}
-				if (filePath && fs.existsSync(filePath)) {
-					alreadyInstalled = true;
-				}
-			}
-			if (!alreadyInstalled) {
-				const allModDirs = getModsPaths();
-				for (const dir of allModDirs) {
-					if (targetFileName && fs.existsSync(path.join(dir, `${targetFileName}.zip`))) {
-						alreadyInstalled = true;
-						break;
-					}
-					if (modName) {
-						const candidateZip = path.join(dir, `${modName.replace(/[^a-zA-Z0-9_-]/g, '_')}.zip`);
-						if (fs.existsSync(candidateZip)) {
-							alreadyInstalled = true;
-							break;
-						}
-					}
-				}
-			}
+			const localScanMods = getAllInstalledModsList();
+			const checkResult = checkModInstalled(modObjNorm, localScanMods);
+			let alreadyInstalled = checkResult.installed;
+			let localMod = checkResult.localMod;
 
 			// Version Contingency: If we have a required version, check if local meets it
-			if (alreadyInstalled && localMod && modObj.version) {
+			if (alreadyInstalled && localMod && modObj.version && localMod.version) {
 				const vComp = compareVersions(localMod.version, modObj.version);
 				if (vComp < 0) {
 					console.log(`[AUTO-INSTALL] Version mismatch for ${modName}: Local ${localMod.version} < Required ${modObj.version}. Triggering upgrade.`);
@@ -4996,7 +5082,7 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 				}
 
 				results.installed++;
-				console.log(`[AUTO-INSTALL] Mod ${modName} is already available.`);
+				console.log(`[AUTO-INSTALL] Mod "${modName}" is already installed and verified on disk. Skipping download.`);
 				continue; // Skip download without polluting active download queue
 			}
 
@@ -5654,19 +5740,12 @@ async function autoResolveMissingDependencies(mods, targetMapName = null) {
         }
         
 		for (const dep of mapDeps) {
-			const depTitle = typeof dep === 'string' ? dep : dep.title;
+			const depTitle = typeof dep === 'string' ? dep : (dep.title || dep.modName || dep.fileName);
 			const depId = typeof dep === 'object' && dep.url ? (dep.url.match(/mod_id=(\d+)/)?.[1] || dep.url.match(/storage\/(\d+)\//)?.[1]) : null;
-			const normalizedDep = ultraNormalize(depTitle);
 
-			const found = mods.some(lm => {
-				if (depId && lm.modId && String(lm.modId) === String(depId)) return true;
-				const localUltraTitle = ultraNormalize(lm.title || '');
-				const localUltraName = ultraNormalize(lm.modName || '');
-				const localUltraFile = ultraNormalize(lm.fileName || '');
-				return localUltraTitle === normalizedDep || localUltraName === normalizedDep || localUltraFile === normalizedDep;
-			});
+			const { installed: isInstalled } = checkModInstalled(dep, mods);
 
-			if (!found) {
+			if (!isInstalled) {
 				const depObj = typeof dep === 'object' ? dep : { title: depTitle, url: null };
 				const depKey = depId || depTitle;
 				if (depKey && failedAutoResolves.has(depKey)) {
@@ -5674,7 +5753,7 @@ async function autoResolveMissingDependencies(mods, targetMapName = null) {
 					continue;
 				}
 
-				const alreadyQueued = allMissing.some(d => d.title === depTitle);
+				const alreadyQueued = allMissing.some(d => (d.title && d.title === depTitle) || (d.url && d.url === depObj.url));
 				if (!alreadyQueued) {
 					allMissing.push(depObj);
 					mapToFolderMap[depTitle] = (map.folder || '');

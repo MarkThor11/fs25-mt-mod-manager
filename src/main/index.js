@@ -840,18 +840,24 @@ ipcMain.handle('localMods:autoResolveMapDependencies', async (event, { mapId, ta
     let localDeps = [];
     try {
       const allLocal = cache.getAllLocalModCache() || [];
-      const localMap = allLocal.find(m => {
-        if (!m) return false;
-        if (m.mod_id && String(m.mod_id) === String(mapId)) return true;
-        const cleanTitle = (m.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      for (const m of allLocal) {
+        if (!m) continue;
+        let data = {};
+        try { data = typeof m.json_data === 'string' ? JSON.parse(m.json_data) : (m.json_data || {}); } catch (_) {}
+        const cleanTitle = (data.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         const cleanMapTitle = (mapTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        return cleanTitle && cleanMapTitle && cleanTitle === cleanMapTitle;
-      });
-      if (localMap && localMap.dependencies) {
-        try {
-          const parsed = typeof localMap.dependencies === 'string' ? JSON.parse(localMap.dependencies) : localMap.dependencies;
-          if (Array.isArray(parsed)) localDeps = parsed;
-        } catch (_) {}
+        const isMatch = (data.modId && String(data.modId) === String(mapId)) || 
+                        (m.mod_id && String(m.mod_id) === String(mapId)) ||
+                        (cleanTitle && cleanMapTitle && cleanTitle === cleanMapTitle);
+        if (isMatch && data.dependencies) {
+          try {
+            const parsed = typeof data.dependencies === 'string' ? JSON.parse(data.dependencies) : data.dependencies;
+            if (Array.isArray(parsed)) {
+              localDeps = parsed;
+              break;
+            }
+          } catch (_) {}
+        }
       }
     } catch (_) {}
 
