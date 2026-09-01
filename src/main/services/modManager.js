@@ -1885,12 +1885,7 @@ function getTemplatesPath() {
 
 				// 4b. Pool match: check if the dependency string matches a ModHub entry whose modId is installed
 				if (!isInstalled && uDep) {
-					const poolMod = poolByCleanTitle[uDep] || Object.values(pool).find(pm => {
-						if (!pm) return false;
-						const pmTitle = ultraNormalize(pm.title || '');
-						const pmFile = ultraNormalize(pm.fileName || '');
-						return pmTitle === uDep || pmFile === uDep;
-					});
+					const poolMod = poolByCleanTitle[uDep] || pool[uDep] || pool[`file_${uDep}`] || null;
 					if (poolMod && (poolMod.modId || poolMod.id)) {
 						const cleanPoolId = String(poolMod.modId || poolMod.id).replace(/^0+/, '');
 						if (installedIds.has(cleanPoolId)) {
@@ -4998,13 +4993,9 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 			// 2.5 LOCAL METADATA POOL CHECK (O(1) Instant Lookup before HTTP search)
 			if (!modId) {
 				const pool = cache.getModHubMetadataPool();
-				const poolMatch = Object.values(pool).find(m => {
-					if (!m) return false;
-					const mTitle = (m.title || '').toLowerCase();
-					const mName = (m.modName || m.fileName || '').toLowerCase();
-					const target = modName.toLowerCase();
-					return mTitle === target || mName === target || (target.length > 5 && (mTitle.includes(target) || target.includes(mTitle)));
-				});
+				const poolByCleanTitle = pool._byCleanTitle || {};
+				const uModName = ultraNormalize(modName);
+				const poolMatch = poolByCleanTitle[uModName] || pool[uModName] || pool[`file_${uModName}`] || pool[modName.toLowerCase()];
 				if (poolMatch) {
 					modId = String(poolMatch.modId || poolMatch.id);
 					modTitle = poolMatch.title || modName;
