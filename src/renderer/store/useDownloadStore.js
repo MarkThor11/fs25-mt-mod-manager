@@ -443,9 +443,16 @@ export const useDownloadStore = create((set, get) => ({
   triggerScan: () => {
     if (get().scanTimeout) clearTimeout(get().scanTimeout);
     const timeoutId = setTimeout(() => {
-      useLocalModsStore.getState().scanMods(null, true);
+      const activeList = Object.values(get().activeDownloads || {});
+      const hasActive = activeList.some(d => 
+        ['downloading', 'waiting', 'queued', 'connecting', 'starting', 'handshaking'].includes((d?.status || '').toLowerCase())
+      );
+      // Only scan once the entire batch has settled
+      if (!hasActive) {
+        useLocalModsStore.getState().scanMods(null, false);
+      }
       set({ scanTimeout: null });
-    }, 500);
+    }, 2500);
 
     set({ scanTimeout: timeoutId });
   }
@@ -485,56 +492,33 @@ if (window.api?.on) {
       if (status === 'success' || status === 'completed' || status === 'installed') {
         useDownloadStore.getState().addSessionInstalled(strId, resolvedTitle);
         
-        // 1. Index newly downloaded mod into library first (incremental scan)
-        useLocalModsStore.getState().scanMods(null, false).then(async (scanRes) => {
-          // 2. Resolve title from fresh indexed library state
-          const displayTitle = resolveDownloadTitle(strId, incomingTitle || active?.title);
-          // 3. Display success toast notification
-          useToastStore.getState().success(`${displayTitle} installed successfully!`, { id: `dl-toast-${strId}` });
+        const displayTitle = resolveDownloadTitle(strId, incomingTitle || active?.title);
+        useToastStore.getState().success(`${displayTitle} installed successfully!`, { id: `dl-toast-${strId}` });
 
-          // 4. Auto-download missing map dependencies
+        // Trigger debounced scan so we do not freeze disk if multiple downloads finish
+        useDownloadStore.getState().triggerScan();
+
+        // Auto-download missing map dependencies if applicable
+        (async () => {
           try {
             const { useSettingsStore } = await import('./useSettingsStore');
             const autoDownloadEnabled = useSettingsStore.getState().autoDownloadMapDeps !== false;
+            const isMap = (active?.category && active.category.toUpperCase().includes('MAP')) || (incomingTitle && incomingTitle.toLowerCase().includes('map'));
             
-            if (autoDownloadEnabled && window.api?.localMods?.autoResolveMapDependencies) {
-              const allMods = scanRes?.mods || useLocalModsStore.getState().mods || [];
-              const targetMod = allMods.find(m => {
-                if (!m) return false;
-                if (strId && m.modId && String(m.modId) === strId) return true;
-                if (fileName && (m.fileName === fileName || m.fileName?.endsWith(fileName))) return true;
-                const cleanMTitle = (m.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-                const cleanTarget = (resolvedTitle || displayTitle || incomingTitle || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-                if (cleanMTitle && cleanTarget && (cleanMTitle === cleanTarget || cleanMTitle.includes(cleanTarget) || cleanTarget.includes(cleanMTitle))) return true;
-                return false;
-              });
-              const isMapCategory = (active?.category && active.category.toUpperCase().includes('MAP')) || (targetMod?.category && targetMod.category.toUpperCase().includes('MAP')) || (targetMod?.isMap);
-              
-              if (targetMod || isMapCategory) {
-                const targetFolder = targetMod?.folder || active?.subFolder || (targetMod?.title ? targetMod.title.replace(/[\\/:*?"<>|]/g, '_').trim() : null);
-                const mapDisplayTitle = targetMod?.title || displayTitle || resolvedTitle;
-                console.log(`[AUTO-MAP-DEPS] Map "${mapDisplayTitle}" installed. Auto-resolving missing dependencies into "${targetFolder || 'Root'}"...`);
-                
-                window.api.localMods.autoResolveMapDependencies({
-                  mapId: strId,
-                  targetFolder,
-                  mapTitle: mapDisplayTitle
-                }).then(res => {
-                  if (res && res.count > 0) {
-                    useToastStore.getState().info(`Auto-downloading ${res.count} required mod${res.count > 1 ? 's' : ''} for ${mapDisplayTitle}...`);
-                  }
-                }).catch(err => {
-                  console.error('[AUTO-MAP-DEPS] Error during autoResolveMapDependencies:', err);
-                });
-              }
+            if (autoDownloadEnabled && isMap && window.api?.localMods?.autoResolveMapDependencies) {
+              const targetFolder = active?.subFolder || (displayTitle ? displayTitle.replace(/[\\/:*?"<>|]/g, '_').trim() : null);
+              window.api.localMods.autoResolveMapDependencies({
+                mapId: strId,
+                targetFolder,
+                mapTitle: displayTitle
+              }).then(res => {
+                if (res && res.count > 0) {
+                  useToastStore.getState().info(`Auto-downloading ${res.count} required mod${res.count > 1 ? 's' : ''} for ${displayTitle}...`);
+                }
+              }).catch(() => {});
             }
-          } catch (autoErr) {
-            console.error('[AUTO-MAP-DEPS] Error checking auto map dependencies:', autoErr);
-          }
-        }).catch(() => {
-          const displayTitle = (resolvedTitle && !resolvedTitle.startsWith('Mod ')) ? resolvedTitle : (active?.title || incomingTitle || `Mod ${strId}`);
-          useToastStore.getState().success(`${displayTitle} installed successfully!`, { id: `dl-toast-${strId}` });
-        });
+          } catch (_) {}
+        })();
 
         setTimeout(() => {
           useDownloadStore.getState().removeDownload(strId);

@@ -1670,7 +1670,7 @@ async function performScan(manualPaths = null) {
 			
 			for (const entry of entries) {
 				const entryName = entry.name;
-				if (entryName.startsWith('.') || entryName.toLowerCase() === 'backups') continue;
+				if (entryName.startsWith('.') || entryName.toLowerCase() === 'backups' || entry.isSymbolicLink()) continue;
 
 				if (entry.isDirectory()) {
 					const subPath = path.join(modsPath, entryName);
@@ -1684,6 +1684,7 @@ async function performScan(manualPaths = null) {
 						const subEntries = await fs.readdir(subPath, { withFileTypes: true }).catch(() => []);
 						
 						for (const sub of subEntries) {
+							if (sub.isSymbolicLink()) continue;
 							if (sub.name.toLowerCase().endsWith('.zip')) {
 								folderEntries.push({ root: modsPath, name: sub.name, sub: entryName });
 								subfolderModNames.add(sub.name.toLowerCase());
@@ -1697,7 +1698,7 @@ async function performScan(manualPaths = null) {
 						}
 						allFolders.push(entryName);
 					}
-				} else if ((entry.isFile() || entry.isSymbolicLink()) && entryName.toLowerCase().endsWith('.zip')) {
+				} else if (entry.isFile() && entryName.toLowerCase().endsWith('.zip')) {
 					potentialRootEntries.push({ root: modsPath, name: entryName, sub: '' });
 				}
 			}
