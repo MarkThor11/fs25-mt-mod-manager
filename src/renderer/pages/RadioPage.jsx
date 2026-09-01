@@ -146,20 +146,24 @@ const RadioPage = () => {
 
     const handleOpenSpotifyApp = async () => {
         try {
-            if (window.api?.shell?.openExternal) {
-                try {
-                    await window.api.shell.openExternal('spotify://');
-                    toast.success('Opening Spotify App...');
-                    return;
-                } catch (appErr) {
-                    console.warn('Spotify protocol failed, falling back to web:', appErr);
-                    await window.api.shell.openExternal('https://open.spotify.com');
-                    toast.info('Spotify desktop app not found. Opened Spotify in browser.');
+            if (window.api?.radio?.launchSpotify) {
+                const res = await window.api.radio.launchSpotify();
+                if (res?.success) {
+                    if (res.method === 'app') {
+                        toast.success('Opening Spotify App...');
+                    } else {
+                        toast.info('Spotify desktop app not found. Opened Spotify in browser.');
+                    }
                     return;
                 }
             }
-            window.open('https://open.spotify.com', '_blank');
+            if (window.api?.shell?.openExternal) {
+                await window.api.shell.openExternal('https://open.spotify.com');
+            } else {
+                window.open('https://open.spotify.com', '_blank');
+            }
         } catch (e) {
+            console.error('Failed to launch Spotify:', e);
             window.open('https://open.spotify.com', '_blank');
         }
     };

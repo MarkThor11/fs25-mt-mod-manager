@@ -1041,6 +1041,37 @@ ipcMain.handle('radio:getRadios', async () => radioManager.getRadios());
 ipcMain.handle('radio:add', async (_, station) => radioManager.addRadio(station));
 ipcMain.handle('radio:remove', async (_, url) => radioManager.removeRadio(url));
 ipcMain.handle('radio:search', async (_, query) => radioManager.searchStations(query));
+ipcMain.handle('radio:launchSpotify', async () => {
+  const { exec } = require('child_process');
+  return new Promise((resolve) => {
+    if (process.platform === 'win32') {
+      exec('start spotify:', (err) => {
+        if (!err) {
+          return resolve({ success: true, method: 'app' });
+        }
+        shell.openExternal('spotify:').then(() => {
+          resolve({ success: true, method: 'app' });
+        }).catch(() => {
+          shell.openExternal('https://open.spotify.com').then(() => {
+            resolve({ success: true, method: 'web' });
+          }).catch((webErr) => {
+            resolve({ success: false, error: webErr.message });
+          });
+        });
+      });
+    } else {
+      shell.openExternal('spotify:').then(() => {
+        resolve({ success: true, method: 'app' });
+      }).catch(() => {
+        shell.openExternal('https://open.spotify.com').then(() => {
+          resolve({ success: true, method: 'web' });
+        }).catch((webErr) => {
+          resolve({ success: false, error: webErr.message });
+        });
+      });
+    }
+  });
+});
 
 // ── Mod management ──
 ipcMain.handle('savegames:getMods', async (_, { savegamePath }) => {
