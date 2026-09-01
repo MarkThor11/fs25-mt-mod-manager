@@ -4002,7 +4002,12 @@ function getImageDimensions(buffer) {
 	* Minimal DXT1/DXT5 decoder to translate binary DDS data to raw RGBA.
 */
 function decodeDDS(buffer, width, height, format, dataOffset = 128) {
-    const rgba = Buffer.alloc(width * height * 4);
+    if (!buffer || !Buffer.isBuffer(buffer) || width <= 0 || height <= 0 || width > 4096 || height > 4096) {
+        return null;
+    }
+    const safeWidth = Math.min(width, 2048);
+    const safeHeight = Math.min(height, 2048);
+    const rgba = Buffer.alloc(safeWidth * safeHeight * 4);
     let offset = dataOffset;
 	
     const decode565 = (val) => {
@@ -4012,8 +4017,14 @@ function decodeDDS(buffer, width, height, format, dataOffset = 128) {
         return [(r << 3) | (r >> 2), (g << 2) | (g >> 4), (b << 3) | (b >> 2)];
 	};
 	
-    for (let y = 0; y < height; y += 4) {
-        for (let x = 0; x < width; x += 4) {
+    const blockSize = (format === 'dxt5' ? 16 : 8);
+
+    for (let y = 0; y < safeHeight; y += 4) {
+        for (let x = 0; x < safeWidth; x += 4) {
+            if (offset + blockSize > buffer.length) {
+                return rgba;
+            }
+
             let colors = [];
             let alphaBlocks = null;
 			
@@ -4025,7 +4036,7 @@ function decodeDDS(buffer, width, height, format, dataOffset = 128) {
             const c0 = buffer.readUInt16LE(offset);
             const c1 = buffer.readUInt16LE(offset + 2);
             const lookup = buffer.readUInt32LE(offset + 4);
-            offset += 8; // CRITICAL FIX: color block is 8 bytes in total (2x16bit + 32bit)
+            offset += 8;
 			
             const rgb0 = decode565(c0);
             const rgb1 = decode565(c1);
@@ -4060,7 +4071,7 @@ function decodeDDS(buffer, width, height, format, dataOffset = 128) {
                     const idx = (lookup >> (2 * (j * 4 + i))) & 0x03;
                     let pixel = colors[idx];
                     
-                    if (format === 'dxt5' && alphaBlocks) {
+                    if (format === 'dxt5' && alphaBlocks && alphaBlocks.length >= 8) {
                         const a0 = alphaBlocks[0];
                         const a1 = alphaBlocks[1];
                         const aLookup = (BigInt(alphaBlocks.readUInt32LE(2)) | (BigInt(alphaBlocks.readUInt16LE(6)) << 32n));
@@ -4076,10 +4087,10 @@ function decodeDDS(buffer, width, height, format, dataOffset = 128) {
 					}
 					
                     const px = x + i;
-                    const py = y + j; // Removed Y-flip to fix inverted mod icons
+                    const py = y + j;
                     
-                    if (px < width && py >= 0 && py < height) {
-						const rgbaIdx = (py * width + px) * 4;
+                    if (px < safeWidth && py >= 0 && py < safeHeight) {
+						const rgbaIdx = (py * safeWidth + px) * 4;
 						rgba[rgbaIdx]     = pixel[2]; // Blue (Standard raw windows bitmap choice)
 						rgba[rgbaIdx + 1] = pixel[1]; // Green
 						rgba[rgbaIdx + 2] = pixel[0]; // Red
@@ -4291,21 +4302,21 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 
 				if (info && info.type === 'dds' && (info.format === 'dxt1' || info.format === 'dxt5') && nativeImage) {
 					try {
-						// DECODE DDS AND CONVERT TO PNG Base64
-						const rgba = decodeDDS(buffer, info.width, info.height, info.format, info.dataOffset);
-						let img = nativeImage.createFromBitmap(rgba, { width: info.width, height: info.height });
-						
-						// ── AGGRESSIVE DOWNSCALING ──
-						// Map previews can be 2048x2048, which creates massive base64 strings.
-						// We resize to 512x512 max to keep the IPC payload and cache light.
-						const size = img.getSize();
-						if (size.width > 512 || size.height > 512) {
-							img = img.resize({ width: 512, height: 512, quality: 'good' });
+						const safeWidth = Math.min(info.width, 2048);
+						const safeHeight = Math.min(info.height, 2048);
+						const rgba = decodeDDS(buffer, safeWidth, safeHeight, info.format, info.dataOffset);
+						if (rgba && Buffer.isBuffer(rgba) && rgba.length === safeWidth * safeHeight * 4) {
+							let img = nativeImage.createFromBitmap(rgba, { width: safeWidth, height: safeHeight });
+							if (img && !img.isEmpty()) {
+								const size = img.getSize();
+								if (size.width > 512 || size.height > 512) {
+									img = img.resize({ width: 512, height: 512, quality: 'good' });
+								}
+								return img.toDataURL();
+							}
 						}
-						
-						return img.toDataURL();
 					} catch (e) {
-						console.error('[DDS] Render failed:', e);
+						console.error('[DDS] Render failed:', e.message);
 					}
 				}
 				
@@ -4322,11 +4333,13 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 							if (altBuffer) {
 								if (nativeImage) {
 									let img = nativeImage.createFromBuffer(altBuffer);
-									const size = img.getSize();
-									if (size.width > 512 || size.height > 512) {
-										img = img.resize({ width: 512, height: 512, quality: 'good' });
+									if (img && !img.isEmpty()) {
+										const size = img.getSize();
+										if (size.width > 512 || size.height > 512) {
+											img = img.resize({ width: 512, height: 512, quality: 'good' });
+										}
+										return img.toDataURL();
 									}
-									return img.toDataURL();
 								}
 								const altExt = path.extname(altPng.entryName).replace('.', '').toLowerCase() || 'png';
 								return `data:image/${altExt === 'jpg' ? 'jpeg' : altExt};base64,${altBuffer.toString('base64')}`;
@@ -4341,11 +4354,13 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 				try {
 					if (nativeImage) {
 						let img = nativeImage.createFromBuffer(buffer);
-						const size = img.getSize();
-						if (size.width > 512 || size.height > 512) {
-							img = img.resize({ width: 512, height: 512, quality: 'good' });
+						if (img && !img.isEmpty()) {
+							const size = img.getSize();
+							if (size.width > 512 || size.height > 512) {
+								img = img.resize({ width: 512, height: 512, quality: 'good' });
+							}
+							return img.toDataURL();
 						}
-						return img.toDataURL();
 					}
 					return `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${buffer.toString('base64')}`;
 				} catch (e) {
