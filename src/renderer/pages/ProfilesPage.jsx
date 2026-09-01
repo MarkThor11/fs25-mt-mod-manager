@@ -706,8 +706,20 @@ export default function ProfilesPage() {
                               {installedMods.some(m => m.isMap) && (
                                 <optgroup label="Modded Maps">
                                   {installedMods.filter(m => m.isMap).map(m => {
+                                    const isCP = (
+                                      m.isCrossplay || 
+                                      /crossplay|\(cp\)|\[cp\]/i.test(m.title || '') ||
+                                      /crossplay|\(cp\)|\[cp\]/i.test(m.modName || '') ||
+                                      /crossplay|\(cp\)|\[cp\]/i.test(m.fileName || '') ||
+                                      /crossplay|\(cp\)|\[cp\]/i.test(m.filePath || '') ||
+                                      /crossplay|\(cp\)|\[cp\]/i.test(m.folder || '') ||
+                                      /ps5|ps4|xbs|xb1|console|crossplay/i.test(m.platform || m.metadata?.Platform || '')
+                                    );
+                                    const displayTitle = isCP && !/\((?:cp|crossplay)\)$/i.test(m.title || '') && !/\[(?:cp|crossplay)\]$/i.test(m.title || '')
+                                      ? `${m.title} (CP)`
+                                      : m.title;
                                     const compoundValue = `${m.mapId}|${m.title}|${m.modName}`;
-                                    return (<option key={compoundValue} value={compoundValue}>{m.title}</option>);
+                                    return (<option key={compoundValue} value={compoundValue}>{displayTitle}</option>);
                                   })}
                                 </optgroup>
                               )}

@@ -2456,9 +2456,24 @@ export default function SavegamesPage() {
                                         
                                         {mods.filter(m => m.isMap).length > 0 && (
                                             <optgroup label="Modded Maps">
-                                                {mods.filter(m => m.isMap).map(m => (
-                                                    <option key={m.modName} value={`${m.mapId || m.modName}|${m.title}|${m.modName}|${m.iconData || ''}|${m.filePath || ''}`}>{m.title}</option>
-                                                ))}
+                                                {mods.filter(m => m.isMap).map(m => {
+                                                    const isCP = (
+                                                        m.isCrossplay || 
+                                                        /crossplay|\(cp\)|\[cp\]/i.test(m.title || '') ||
+                                                        /crossplay|\(cp\)|\[cp\]/i.test(m.modName || '') ||
+                                                        /crossplay|\(cp\)|\[cp\]/i.test(m.fileName || '') ||
+                                                        /crossplay|\(cp\)|\[cp\]/i.test(m.filePath || '') ||
+                                                        /crossplay|\(cp\)|\[cp\]/i.test(m.folder || '') ||
+                                                        /ps5|ps4|xbs|xb1|console|crossplay/i.test(m.platform || m.metadata?.Platform || '')
+                                                    );
+                                                    const displayTitle = isCP && !/\((?:cp|crossplay)\)$/i.test(m.title || '') && !/\[(?:cp|crossplay)\]$/i.test(m.title || '')
+                                                        ? `${m.title} (CP)`
+                                                        : m.title;
+
+                                                    return (
+                                                        <option key={m.modName} value={`${m.mapId || m.modName}|${m.title}|${m.modName}|${m.iconData || ''}|${m.filePath || ''}`}>{displayTitle}</option>
+                                                    );
+                                                })}
                                             </optgroup>
                                         )}
                                     </select>
@@ -2499,7 +2514,25 @@ export default function SavegamesPage() {
                                          return <MapImage mapTitle={title} mapId={mapId} mods={mods} />;
                                      })()}
                                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, background: 'linear-gradient(transparent, rgba(0,0,0,0.8))', color: 'white' }}>
-                                         <div style={{ fontWeight: 800, fontSize: 18 }}>{createMap.split('|')[1]}</div>
+                                         <div style={{ fontWeight: 800, fontSize: 18 }}>
+                                             {(() => {
+                                                 const [, title, modName] = createMap.split('|');
+                                                 const mapMod = mods.find(m => m.modName === modName || m.title === title);
+                                                 const isCP = mapMod && (
+                                                     mapMod.isCrossplay || 
+                                                     /crossplay|\(cp\)|\[cp\]/i.test(mapMod.title || '') ||
+                                                     /crossplay|\(cp\)|\[cp\]/i.test(mapMod.modName || '') ||
+                                                     /crossplay|\(cp\)|\[cp\]/i.test(mapMod.fileName || '') ||
+                                                     /crossplay|\(cp\)|\[cp\]/i.test(mapMod.filePath || '') ||
+                                                     /crossplay|\(cp\)|\[cp\]/i.test(mapMod.folder || '') ||
+                                                     /ps5|ps4|xbs|xb1|console|crossplay/i.test(mapMod.platform || mapMod.metadata?.Platform || '')
+                                                 );
+                                                 if (isCP && title && !/\((?:cp|crossplay)\)$/i.test(title) && !/\[(?:cp|crossplay)\]$/i.test(title)) {
+                                                     return `${title} (CP)`;
+                                                 }
+                                                 return title;
+                                             })()}
+                                         </div>
                                          <div style={{ fontSize: 12, opacity: 0.8 }}>{createMap.split('|')[0]}</div>
                                      </div>
                                  </div>
