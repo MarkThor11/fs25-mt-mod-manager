@@ -2000,22 +2000,19 @@ async function getFleetPositions(savePath, mapModName) {
         if (mapModName) {
             const modManager = require('./modManager');
             const modsDir = modManager.getModsPath();
-            const AdmZip = require('adm-zip');
             
             const modZip = path.join(modsDir, `${mapModName}.zip`);
             if (fs.existsSync(modZip)) {
-                const zip = new AdmZip(modZip);
-                
                 // Parse modDesc.xml to find defaultVehiclesXMLFilename
-                const modDescEntry = zip.getEntry('modDesc.xml');
-                if (modDescEntry) {
-                    const modDescXml = modDescEntry.getData().toString('utf8');
+                const modDescBuf = modManager.readEntryFromZip(modZip, 'modDesc.xml');
+                if (modDescBuf) {
+                    const modDescXml = modDescBuf.toString('utf8');
                     const match = modDescXml.match(/defaultVehiclesXMLFilename=["']([^"']+)["']/);
                     if (match && match[1]) {
                         const defaultVehiclesPath = match[1];
-                        const vehiclesEntry = zip.getEntry(defaultVehiclesPath);
-                        if (vehiclesEntry) {
-                            const xml = vehiclesEntry.getData().toString('utf8');
+                        const vehiclesBuf = modManager.readEntryFromZip(modZip, defaultVehiclesPath);
+                        if (vehiclesBuf) {
+                            const xml = vehiclesBuf.toString('utf8');
                             return { items: parseVehicleXml(xml, true), source: 'map_defaults' };
                         }
                     }
@@ -2189,25 +2186,21 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true) {
 
         // Fallback: parse map mod zip itself!
         if (mapModName) {
-            const modManager = require('./modManager');
-            const modsDir = modManager.getModsPath();
-            const AdmZip = require('adm-zip');
+            const modManager = require('./modMa            const modsDir = modManager.getModsPath();
             const modZip = path.join(modsDir, `${mapModName}.zip`);
             if (fs.existsSync(modZip)) {
-                const zip = new AdmZip(modZip);
-                
                 // Let's first search in modDesc.xml maps config
-                const modDescEntry = zip.getEntry('modDesc.xml');
-                if (modDescEntry) {
-                    const modDescXml = modDescEntry.getData().toString('utf8');
+                const modDescBuf = modManager.readEntryFromZip(modZip, 'modDesc.xml');
+                if (modDescBuf) {
+                    const modDescXml = modDescBuf.toString('utf8');
                     const mdObj = parser.parse(modDescXml);
                     if (mdObj && mdObj.modDesc && mdObj.modDesc.maps && mdObj.modDesc.maps.map) {
                         const mNode = Array.isArray(mdObj.modDesc.maps.map) ? mdObj.modDesc.maps.map[0] : mdObj.modDesc.maps.map;
                         const configFilename = mNode['@_configFilename'];
                         if (configFilename) {
-                            const mapXmlEntry = zip.getEntry(configFilename);
-                            if (mapXmlEntry) {
-                                const mapXml = mapXmlEntry.getData().toString('utf8');
+                            const mapXmlBuf = modManager.readEntryFromZip(modZip, configFilename);
+                            if (mapXmlBuf) {
+                                const mapXml = mapXmlBuf.toString('utf8');
                                 const mapObj = parser.parse(mapXml);
                                 if (mapObj && mapObj.map && mapObj.map.playerStart) {
                                     const pStart = mapObj.map.playerStart;
@@ -2224,31 +2217,37 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true) {
                 }
                 
                 // Fallback search: look for any map.xml in zip
-                let mapXmlEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('map.xml'));
+                const zipEntries = modManager.listZipEntries(modZip);
+                const mapXmlEntry = zipEntries.find(e => e.entryName.toLowerCase().endsWith('map.xml'));
                 if (mapXmlEntry) {
-                    const mapXml = mapXmlEntry.getData().toString('utf8');
-                    const mapObj = parser.parse(mapXml);
-                    if (mapObj && mapObj.map && mapObj.map.playerStart) {
-                        const pStart = mapObj.map.playerStart;
-                        if (pStart['@_position']) {
-                            const coords = pStart['@_position'].split(' ').map(parseFloat);
-                            if (coords.length >= 3) {
-                                return { x: coords[0], y: coords[1], z: coords[2] };
+                    const mapXmlBuf = modManager.readEntryFromZip(modZip, mapXmlEntry.entryName);
+                    if (mapXmlBuf) {
+                        const mapXml = mapXmlBuf.toString('utf8');
+                        const mapObj = parser.parse(mapXml);
+                        if (mapObj && mapObj.map && mapObj.map.playerStart) {
+                            const pStart = mapObj.map.playerStart;
+                            if (pStart['@_position']) {
+                                const coords = pStart['@_position'].split(' ').map(parseFloat);
+                                if (coords.length >= 3) {
+                                    return { x: coords[0], y: coords[1], z: coords[2] };
+                                }
                             }
                         }
                     }
                 }
-                
-                const i3dEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('map.i3d'));
-                if (i3dEntry) {
-                    const i3dText = i3dEntry.getData().toString('utf8');
-                    const match = i3dText.match(/<TransformGroup\s+[^>]*name="[^"]*(?:careerStartPoint|playerStart)[^"]*"[^>]*translation="([^"]+)"/i) ||
-                                  i3dText.match(/name="[^"]*(?:careerStartPoint|playerStart)[^"]*"[^>]*translation="([^"]+)"/i) ||
-                                  i3dText.match(/translation="([^"]+)"[^>]*name="[^"]*(?:careerStartPoint|playerStart)[^"]*"/i);
-                    if (match && match[1]) {
-                        const coords = match[1].split(' ').map(parseFloat);
-                        if (coords.length >= 3 && !isNaN(coords[0])) {
-                            return { x: coords[0], y: coords[1], z: coords[2] };
+                const i3dEntry = zipEntries.find(e => e.entryName.toLowerCase().endsWith('map.i3d'));
+                if (i3dEntry && i3dEntry.uncompSize < 15 * 1024 * 1024) {
+                    const i3dBuf = modManager.readEntryFromZip(modZip, i3dEntry.entryName);
+                    if (i3dBuf) {
+                        const i3dText = i3dBuf.toString('utf8');
+                        const match = i3dText.match(/<TransformGroup\s+[^>]*name="[^"]*(?:careerStartPoint|playerStart)[^"]*"[^>]*translation="([^"]+)"/i) ||
+                                      i3dText.match(/name="[^"]*(?:careerStartPoint|playerStart)[^"]*"[^>]*translation="([^"]+)"/i) ||
+                                      i3dText.match(/translation="([^"]+)"[^>]*name="[^"]*(?:careerStartPoint|playerStart)[^"]*"/i);
+                        if (match && match[1]) {
+                            const coords = match[1].split(' ').map(parseFloat);
+                            if (coords.length >= 3 && !isNaN(coords[0])) {
+                                return { x: coords[0], y: coords[1], z: coords[2] };
+                            }
                         }
                     }
                 }
@@ -2402,88 +2401,94 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
         if (mapModName) {
             const modManager = require('./modManager');
             const modsDir = modManager.getModsPath();
-            const AdmZip = require('adm-zip');
             const modZip = path.join(modsDir, `${mapModName}.zip`);
             if (fs.existsSync(modZip)) {
-                const zip = new AdmZip(modZip);
+                const zipEntries = modManager.listZipEntries(modZip);
 
                 // Check zip entries for explicit shop XML files (e.g. sellingStationVehicles.xml)
-                let shopXmlEntry = zip.getEntries().find(e => {
+                let shopXmlEntry = zipEntries.find(e => {
                     const n = e.entryName.toLowerCase();
                     return n.endsWith('.xml') && (n.includes('sellingstationvehicles') || n.includes('vehicletrader') || n.includes('vehicleshop') || n.includes('sellingstationstore'));
                 });
                 
                 if (shopXmlEntry) {
-                    const xmlText = shopXmlEntry.getData().toString('utf8');
-                    const hotspotMatch = xmlText.match(/teleportWorldPosition="([^"]+)"/i) ||
-                                         xmlText.match(/teleportPosition="([^"]+)"/i);
-                    if (hotspotMatch && hotspotMatch[1]) {
-                        const coords = hotspotMatch[1].trim().split(/\s+/).map(parseFloat);
-                        if (coords.length >= 3 && !isNaN(coords[0])) {
-                            return { x: coords[0], y: coords[1], z: coords[2] };
+                    const xmlBuf = modManager.readEntryFromZip(modZip, shopXmlEntry.entryName);
+                    if (xmlBuf) {
+                        const xmlText = xmlBuf.toString('utf8');
+                        const hotspotMatch = xmlText.match(/teleportWorldPosition="([^"]+)"/i) ||
+                                             xmlText.match(/teleportPosition="([^"]+)"/i);
+                        if (hotspotMatch && hotspotMatch[1]) {
+                            const coords = hotspotMatch[1].trim().split(/\s+/).map(parseFloat);
+                            if (coords.length >= 3 && !isNaN(coords[0])) {
+                                return { x: coords[0], y: coords[1], z: coords[2] };
+                            }
                         }
                     }
                 }
 
                 let placeablesFilename = 'maps/placeables.xml'; // default guess
-                let mapXmlEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('map.xml'));
+                let mapXmlEntry = zipEntries.find(e => e.entryName.toLowerCase().endsWith('map.xml'));
                 if (mapXmlEntry) {
-                    const mapXml = mapXmlEntry.getData().toString('utf8');
+                    const mapXmlBuf = modManager.readEntryFromZip(modZip, mapXmlEntry.entryName);
+                    if (mapXmlBuf) {
+                        const mapXml = mapXmlBuf.toString('utf8');
 
-                    // Check if map.xml specifies a shop hotspot teleport position
-                    const mapHotspotMatch = mapXml.match(/<hotspot[^>]*type="SHOP"[^>]*teleportWorldPosition="([^"]+)"/i) ||
-                                            mapXml.match(/teleportWorldPosition="([^"]+)"/i);
-                    if (mapHotspotMatch && mapHotspotMatch[1]) {
-                        const coords = mapHotspotMatch[1].trim().split(/\s+/).map(parseFloat);
-                        if (coords.length >= 3 && !isNaN(coords[0])) {
-                            return { x: coords[0], y: coords[1], z: coords[2] };
+                        // Check if map.xml specifies a shop hotspot teleport position
+                        const mapHotspotMatch = mapXml.match(/<hotspot[^>]*type="SHOP"[^>]*teleportWorldPosition="([^"]+)"/i) ||
+                                                mapXml.match(/teleportWorldPosition="([^"]+)"/i);
+                        if (mapHotspotMatch && mapHotspotMatch[1]) {
+                            const coords = mapHotspotMatch[1].trim().split(/\s+/).map(parseFloat);
+                            if (coords.length >= 3 && !isNaN(coords[0])) {
+                                return { x: coords[0], y: coords[1], z: coords[2] };
+                            }
                         }
-                    }
 
-                    const mapObj = parser.parse(mapXml);
-                    if (mapObj && mapObj.map && mapObj.map.placeables && mapObj.map.placeables['@_filename']) {
-                        placeablesFilename = mapObj.map.placeables['@_filename'];
+                        const mapObj = parser.parse(mapXml);
+                        if (mapObj && mapObj.map && mapObj.map.placeables && mapObj.map.placeables['@_filename']) {
+                            placeablesFilename = mapObj.map.placeables['@_filename'];
+                        }
                     }
                 }
                 
-                let placeablesEntry = zip.getEntry(placeablesFilename);
-                if (!placeablesEntry) {
-                    placeablesEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('placeables.xml'));
-                }
+                let placeablesEntry = zipEntries.find(e => e.entryName.toLowerCase() === placeablesFilename.toLowerCase()) ||
+                                      zipEntries.find(e => e.entryName.toLowerCase().endsWith('placeables.xml'));
                 
                 let foundPos = null;
                 if (placeablesEntry) {
-                    const xml = placeablesEntry.getData().toString('utf8');
-                    
-                    const pHotspotMatch = xml.match(/teleportWorldPosition="([^"]+)"/i) || xml.match(/teleportPosition="([^"]+)"/i);
-                    if (pHotspotMatch && pHotspotMatch[1]) {
-                        const coords = pHotspotMatch[1].trim().split(/\s+/).map(parseFloat);
-                        if (coords.length >= 3 && !isNaN(coords[0])) {
-                            return { x: coords[0], y: coords[1], z: coords[2] };
-                        }
-                    }
-
-                    const pObj = parser.parse(xml);
-                    if (pObj && pObj.placeables && pObj.placeables.placeable) {
-                        const placeables = Array.isArray(pObj.placeables.placeable) ? pObj.placeables.placeable : [pObj.placeables.placeable];
-                        const shopPlaceable = placeables.find(p => {
-                            const filename = String(p['@_filename'] || '').toLowerCase();
-                            const uniqueId = String(p['@_uniqueId'] || '').toLowerCase();
-                            return (
-                                filename.includes('sellingstationvehicles') || 
-                                filename.includes('vehicletrader') || 
-                                filename.includes('vehicleshop') || 
-                                filename.includes('sellingstationstore') ||
-                                uniqueId.includes('sellingstationvehicles') || 
-                                uniqueId.includes('vehicletrader') ||
-                                uniqueId.includes('vehicleshop')
-                            );
-                        });
+                    const placeablesBuf = modManager.readEntryFromZip(modZip, placeablesEntry.entryName);
+                    if (placeablesBuf) {
+                        const xml = placeablesBuf.toString('utf8');
                         
-                        if (shopPlaceable && shopPlaceable['@_position']) {
-                            const coords = shopPlaceable['@_position'].split(' ').map(parseFloat);
+                        const pHotspotMatch = xml.match(/teleportWorldPosition="([^"]+)"/i) || xml.match(/teleportPosition="([^"]+)"/i);
+                        if (pHotspotMatch && pHotspotMatch[1]) {
+                            const coords = pHotspotMatch[1].trim().split(/\s+/).map(parseFloat);
                             if (coords.length >= 3 && !isNaN(coords[0])) {
-                                foundPos = { x: coords[0], y: coords[1], z: coords[2] };
+                                return { x: coords[0], y: coords[1], z: coords[2] };
+                            }
+                        }
+
+                        const pObj = parser.parse(xml);
+                        if (pObj && pObj.placeables && pObj.placeables.placeable) {
+                            const placeables = Array.isArray(pObj.placeables.placeable) ? pObj.placeables.placeable : [pObj.placeables.placeable];
+                            const shopPlaceable = placeables.find(p => {
+                                const filename = String(p['@_filename'] || '').toLowerCase();
+                                const uniqueId = String(p['@_uniqueId'] || '').toLowerCase();
+                                return (
+                                    filename.includes('sellingstationvehicles') || 
+                                    filename.includes('vehicletrader') || 
+                                    filename.includes('vehicleshop') || 
+                                    filename.includes('sellingstationstore') ||
+                                    uniqueId.includes('sellingstationvehicles') || 
+                                    uniqueId.includes('vehicletrader') ||
+                                    uniqueId.includes('vehicleshop')
+                                );
+                            });
+                            
+                            if (shopPlaceable && shopPlaceable['@_position']) {
+                                const coords = shopPlaceable['@_position'].split(' ').map(parseFloat);
+                                if (coords.length >= 3 && !isNaN(coords[0])) {
+                                    foundPos = { x: coords[0], y: coords[1], z: coords[2] };
+                                }
                             }
                         }
                     }
@@ -2492,11 +2497,14 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
                 if (foundPos) return foundPos;
                 
                 // If not found or lacks position (e.g. preplaced in I3D), try to find it in map.i3d from the zip
-                const i3dEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('map.i3d'));
-                if (i3dEntry) {
-                    const i3dText = i3dEntry.getData().toString('utf8');
-                    const i3dPos = parseShopFromI3d(i3dText);
-                    if (i3dPos) return i3dPos;
+                const i3dEntry = zipEntries.find(e => e.entryName.toLowerCase().endsWith('map.i3d'));
+                if (i3dEntry && i3dEntry.uncompSize < 15 * 1024 * 1024) {
+                    const i3dBuf = modManager.readEntryFromZip(modZip, i3dEntry.entryName);
+                    if (i3dBuf) {
+                        const i3dText = i3dBuf.toString('utf8');
+                        const i3dPos = parseShopFromI3d(i3dText);
+                        if (i3dPos) return i3dPos;
+                    }
                 }
             }
         }

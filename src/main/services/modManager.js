@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs-extra');
 const nodeFs = require('fs');
+const zlib = require('zlib');
 const AdmZip = require('adm-zip');
 const { app, BrowserWindow, ipcMain, shell, session, dialog, net } = require('electron');
 const https = require('https');
@@ -220,6 +221,270 @@ function compareVersions(v1, v2) {
 		if (p1 < p2) return -1;
 	}
 	return 0;
+}
+
+/**
+ * High-performance, streaming zero-memory ZIP entry reader with full Zip64 and standard ZIP support.
+ * Extracts specific files (like modDesc.xml or icon.dds) without loading multi-gigabyte archives into RAM.
+ */
+function readEntryFromZip(zipPath, targetEntryName) {
+	let fd = null;
+	try {
+		if (!nodeFs.existsSync(zipPath)) return null;
+		const stats = nodeFs.statSync(zipPath);
+		if (stats.size < 22) return null;
+		fd = nodeFs.openSync(zipPath, 'r');
+
+		// 1. Find EOCD (End of Central Directory Record) in last 65KB
+		const searchLen = Math.min(stats.size, 65536 + 22);
+		const endBuf = Buffer.alloc(searchLen);
+		nodeFs.readSync(fd, endBuf, 0, searchLen, stats.size - searchLen);
+
+		let eocdOffsetInBuf = -1;
+		for (let i = searchLen - 22; i >= 0; i--) {
+			if (endBuf[i] === 0x50 && endBuf[i+1] === 0x4b && endBuf[i+2] === 0x05 && endBuf[i+3] === 0x06) {
+				eocdOffsetInBuf = i;
+				break;
+			}
+		}
+
+		if (eocdOffsetInBuf === -1) {
+			return null;
+		}
+
+		let cdSize = endBuf.readUInt32LE(eocdOffsetInBuf + 12);
+		let cdOffset = endBuf.readUInt32LE(eocdOffsetInBuf + 16);
+
+		// Check for Zip64 Locator (20 bytes before EOCD)
+		if (cdSize === 0xFFFFFFFF || cdOffset === 0xFFFFFFFF || eocdOffsetInBuf >= 20) {
+			const locatorOffset = eocdOffsetInBuf - 20;
+			if (locatorOffset >= 0 && endBuf[locatorOffset] === 0x50 && endBuf[locatorOffset+1] === 0x4b && endBuf[locatorOffset+2] === 0x06 && endBuf[locatorOffset+3] === 0x07) {
+				const zip64EOCDOffset = Number(endBuf.readBigUInt64LE(locatorOffset + 8));
+				if (zip64EOCDOffset < stats.size) {
+					const zip64Header = Buffer.alloc(56);
+					nodeFs.readSync(fd, zip64Header, 0, 56, zip64EOCDOffset);
+					if (zip64Header.readUInt32LE(0) === 0x06064b50) {
+						cdSize = Number(zip64Header.readBigUInt64LE(40));
+						cdOffset = Number(zip64Header.readBigUInt64LE(48));
+					}
+				}
+			}
+		}
+
+		if (cdSize > 100 * 1024 * 1024 || cdOffset + cdSize > stats.size) {
+			return null;
+		}
+
+		// 2. Read Central Directory
+		const cdBuf = Buffer.alloc(cdSize);
+		nodeFs.readSync(fd, cdBuf, 0, cdSize, cdOffset);
+
+		const targetLower = targetEntryName.toLowerCase();
+		let cdPos = 0;
+		let targetEntry = null;
+
+		while (cdPos <= cdSize - 46) {
+			const sig = cdBuf.readUInt32LE(cdPos);
+			if (sig !== 0x02014b50) break;
+
+			const method = cdBuf.readUInt16LE(cdPos + 10);
+			let compSize = cdBuf.readUInt32LE(cdPos + 20);
+			let uncompSize = cdBuf.readUInt32LE(cdPos + 24);
+			const nameLen = cdBuf.readUInt16LE(cdPos + 28);
+			const extraLen = cdBuf.readUInt16LE(cdPos + 30);
+			const commentLen = cdBuf.readUInt16LE(cdPos + 32);
+			let localOffset = cdBuf.readUInt32LE(cdPos + 42);
+
+			const entryName = cdBuf.toString('utf8', cdPos + 46, cdPos + 46 + nameLen);
+			const entryNameLower = entryName.toLowerCase();
+
+			// Check for Zip64 extra field if sizes or offset are 0xFFFFFFFF
+			if (extraLen > 0 && (compSize === 0xFFFFFFFF || uncompSize === 0xFFFFFFFF || localOffset === 0xFFFFFFFF)) {
+				let extraPos = cdPos + 46 + nameLen;
+				const extraEnd = extraPos + extraLen;
+				while (extraPos <= extraEnd - 4) {
+					const headerId = cdBuf.readUInt16LE(extraPos);
+					const dataSize = cdBuf.readUInt16LE(extraPos + 2);
+					if (headerId === 0x0001) {
+						let offsetInExtra = extraPos + 4;
+						if (uncompSize === 0xFFFFFFFF && offsetInExtra + 8 <= extraEnd) {
+							uncompSize = Number(cdBuf.readBigUInt64LE(offsetInExtra));
+							offsetInExtra += 8;
+						}
+						if (compSize === 0xFFFFFFFF && offsetInExtra + 8 <= extraEnd) {
+							compSize = Number(cdBuf.readBigUInt64LE(offsetInExtra));
+							offsetInExtra += 8;
+						}
+						if (localOffset === 0xFFFFFFFF && offsetInExtra + 8 <= extraEnd) {
+							localOffset = Number(cdBuf.readBigUInt64LE(offsetInExtra));
+							offsetInExtra += 8;
+						}
+						break;
+					}
+					extraPos += 4 + dataSize;
+				}
+			}
+
+			if (entryNameLower === targetLower || entryNameLower === `/${targetLower}` || entryNameLower.endsWith(`/${targetLower}`)) {
+				targetEntry = {
+					entryName,
+					method,
+					compSize,
+					uncompSize,
+					localOffset
+				};
+				break;
+			}
+
+			cdPos += 46 + nameLen + extraLen + commentLen;
+		}
+
+		if (!targetEntry || targetEntry.uncompSize > 25 * 1024 * 1024) {
+			return null;
+		}
+
+		// 3. Read Local Header to find exact data offset
+		const localHeader = Buffer.alloc(30);
+		nodeFs.readSync(fd, localHeader, 0, 30, targetEntry.localOffset);
+		if (localHeader.readUInt32LE(0) !== 0x04034b50) {
+			return null;
+		}
+		const localNameLen = localHeader.readUInt16LE(26);
+		const localExtraLen = localHeader.readUInt16LE(28);
+		const dataOffset = targetEntry.localOffset + 30 + localNameLen + localExtraLen;
+
+		// 4. Read compressed data
+		const compData = Buffer.alloc(targetEntry.compSize);
+		nodeFs.readSync(fd, compData, 0, targetEntry.compSize, dataOffset);
+
+		if (targetEntry.method === 0) {
+			return compData;
+		} else if (targetEntry.method === 8) {
+			return zlib.inflateRawSync(compData);
+		}
+	} catch (err) {
+		return null;
+	} finally {
+		if (fd !== null) {
+			try { nodeFs.closeSync(fd); } catch (_) {}
+		}
+	}
+	return null;
+}
+
+/**
+ * Lists all file entries in a ZIP archive by reading only the central directory (< 500KB total).
+ */
+function listZipEntries(zipPath) {
+	let fd = null;
+	try {
+		if (!nodeFs.existsSync(zipPath)) return [];
+		const stats = nodeFs.statSync(zipPath);
+		if (stats.size < 22) return [];
+		fd = nodeFs.openSync(zipPath, 'r');
+
+		// 1. Find EOCD
+		const searchLen = Math.min(stats.size, 65536 + 22);
+		const endBuf = Buffer.alloc(searchLen);
+		nodeFs.readSync(fd, endBuf, 0, searchLen, stats.size - searchLen);
+
+		let eocdOffsetInBuf = -1;
+		for (let i = searchLen - 22; i >= 0; i--) {
+			if (endBuf[i] === 0x50 && endBuf[i+1] === 0x4b && endBuf[i+2] === 0x05 && endBuf[i+3] === 0x06) {
+				eocdOffsetInBuf = i;
+				break;
+			}
+		}
+
+		if (eocdOffsetInBuf === -1) return [];
+
+		let cdSize = endBuf.readUInt32LE(eocdOffsetInBuf + 12);
+		let cdOffset = endBuf.readUInt32LE(eocdOffsetInBuf + 16);
+
+		// Check for Zip64 Locator
+		if (cdSize === 0xFFFFFFFF || cdOffset === 0xFFFFFFFF || eocdOffsetInBuf >= 20) {
+			const locatorOffset = eocdOffsetInBuf - 20;
+			if (locatorOffset >= 0 && endBuf[locatorOffset] === 0x50 && endBuf[locatorOffset+1] === 0x4b && endBuf[locatorOffset+2] === 0x06 && endBuf[locatorOffset+3] === 0x07) {
+				const zip64EOCDOffset = Number(endBuf.readBigUInt64LE(locatorOffset + 8));
+				if (zip64EOCDOffset < stats.size) {
+					const zip64Header = Buffer.alloc(56);
+					nodeFs.readSync(fd, zip64Header, 0, 56, zip64EOCDOffset);
+					if (zip64Header.readUInt32LE(0) === 0x06064b50) {
+						cdSize = Number(zip64Header.readBigUInt64LE(40));
+						cdOffset = Number(zip64Header.readBigUInt64LE(48));
+					}
+				}
+			}
+		}
+
+		if (cdSize > 100 * 1024 * 1024 || cdOffset + cdSize > stats.size) return [];
+
+		// 2. Read Central Directory
+		const cdBuf = Buffer.alloc(cdSize);
+		nodeFs.readSync(fd, cdBuf, 0, cdSize, cdOffset);
+
+		const entries = [];
+		let cdPos = 0;
+
+		while (cdPos <= cdSize - 46) {
+			const sig = cdBuf.readUInt32LE(cdPos);
+			if (sig !== 0x02014b50) break;
+
+			const method = cdBuf.readUInt16LE(cdPos + 10);
+			let compSize = cdBuf.readUInt32LE(cdPos + 20);
+			let uncompSize = cdBuf.readUInt32LE(cdPos + 24);
+			const nameLen = cdBuf.readUInt16LE(cdPos + 28);
+			const extraLen = cdBuf.readUInt16LE(cdPos + 30);
+			const commentLen = cdBuf.readUInt16LE(cdPos + 32);
+			let localOffset = cdBuf.readUInt32LE(cdPos + 42);
+
+			const entryName = cdBuf.toString('utf8', cdPos + 46, cdPos + 46 + nameLen);
+
+			if (extraLen > 0 && (compSize === 0xFFFFFFFF || uncompSize === 0xFFFFFFFF || localOffset === 0xFFFFFFFF)) {
+				let extraPos = cdPos + 46 + nameLen;
+				const extraEnd = extraPos + extraLen;
+				while (extraPos <= extraEnd - 4) {
+					const headerId = cdBuf.readUInt16LE(extraPos);
+					const dataSize = cdBuf.readUInt16LE(extraPos + 2);
+					if (headerId === 0x0001) {
+						let offsetInExtra = extraPos + 4;
+						if (uncompSize === 0xFFFFFFFF && offsetInExtra + 8 <= extraEnd) {
+							uncompSize = Number(cdBuf.readBigUInt64LE(offsetInExtra));
+							offsetInExtra += 8;
+						}
+						if (compSize === 0xFFFFFFFF && offsetInExtra + 8 <= extraEnd) {
+							compSize = Number(cdBuf.readBigUInt64LE(offsetInExtra));
+							offsetInExtra += 8;
+						}
+						if (localOffset === 0xFFFFFFFF && offsetInExtra + 8 <= extraEnd) {
+							localOffset = Number(cdBuf.readBigUInt64LE(offsetInExtra));
+							offsetInExtra += 8;
+						}
+						break;
+					}
+					extraPos += 4 + dataSize;
+				}
+			}
+
+			entries.push({
+				entryName,
+				method,
+				compSize,
+				uncompSize,
+				localOffset
+			});
+
+			cdPos += 46 + nameLen + extraLen + commentLen;
+		}
+
+		return entries;
+	} catch (err) {
+		return [];
+	} finally {
+		if (fd !== null) {
+			try { nodeFs.closeSync(fd); } catch (_) {}
+		}
+	}
 }
 
 /**
@@ -638,19 +903,23 @@ function parseModDesc(modPath, zipInstance = null) {
 
 		if (modPath.toLowerCase().endsWith('.zip')) {
 			try {
-				const zip = zipInstance || new AdmZip(modPath);
-				const entries = zip.getEntries();
-				const modDescEntry = entries.find(e =>
-					e.entryName.toLowerCase() === 'moddesc.xml' ||
-					e.entryName.toLowerCase().endsWith('/moddesc.xml')
-				);
-				if (modDescEntry) {
-					xmlContent = decodeBuffer(modDescEntry.getData());
+				const buf = readEntryFromZip(modPath, 'modDesc.xml');
+				if (buf) {
+					xmlContent = decodeBuffer(buf);
 				} else {
-					debugLog(`[PARSE ERROR] No modDesc.xml in ${path.basename(modPath)}`);
+					// Fallback to adm-zip only for small files (< 300MB) if streaming reader didn't find it
+					const stats = nodeFs.statSync(modPath);
+					if (stats.size < 300 * 1024 * 1024) {
+						const zip = zipInstance || new AdmZip(modPath);
+						const modDescEntry = zip.getEntries().find(e =>
+							e.entryName.toLowerCase() === 'moddesc.xml' ||
+							e.entryName.toLowerCase().endsWith('/moddesc.xml')
+						);
+						if (modDescEntry) xmlContent = decodeBuffer(modDescEntry.getData());
+					}
 				}
 			} catch (zipErr) {
-				debugLog(`[PARSE ERROR] Zip corrupt or inaccessible: ${path.basename(modPath)} - ${zipErr.message}`);
+				debugLog(`[PARSE ERROR] Zip parsing failed: ${path.basename(modPath)} - ${zipErr.message}`);
 			}
 		} else if (nodeFs.existsSync(modPath) && nodeFs.statSync(modPath).isDirectory()) {
 			const modDescPath = path.join(modPath, 'modDesc.xml');
@@ -927,14 +1196,9 @@ function extractVehicleSpecs(modPath, xmlPath) {
 
 		if (modPath.toLowerCase().endsWith('.zip')) {
 			try {
-				const zip = new AdmZip(modPath);
 				const normalizedPath = xmlPath.replace(/\\/g, '/');
-				let entry = zip.getEntry(normalizedPath);
-				if (!entry) {
-					// Case-insensitive search
-					entry = zip.getEntries().find(e => e.entryName.toLowerCase() === normalizedPath.toLowerCase());
-				}
-				if (entry) xmlContent = decodeBuffer(entry.getData());
+				const buf = readEntryFromZip(modPath, normalizedPath);
+				if (buf) xmlContent = decodeBuffer(buf);
 			} catch (e) {}
 		} else {
 			const fullPath = path.join(modPath, xmlPath);
@@ -1208,16 +1472,12 @@ async function performScan(manualPaths = null) {
 			// ONLY parse ZIP if modDesc is not cached (new or modified file)
 			if (!modDesc) {
 				try {
-					let zipInstance = null;
-					if (targetPath.toLowerCase().endsWith('.zip') && !isDownloadingFile) {
-						try { 
-							zipInstance = new AdmZip(targetPath); 
-						} catch (e) { 
-							console.warn(`[SCAN] Could not parse Zip (file locked or downloading): ${entryName}`); 
-						}
+					if (targetPath.toLowerCase().endsWith('.zip') && isDownloadingFile) {
+						// Skip parsing while actively downloading to avoid file contention
+						return;
 					}
 
-					const modDescResult = parseModDesc(targetPath, zipInstance);
+					const modDescResult = parseModDesc(targetPath);
 					if (modDescResult) {
 						modDesc = modDescResult;
 						
@@ -1228,7 +1488,7 @@ async function performScan(manualPaths = null) {
 
 						// Extract images for new/changed mods
 						try {
-							const newIcon = await getModIcon(targetPath, modDesc.iconFile, modDesc, zipInstance, false);
+							const newIcon = await getModIcon(targetPath, modDesc.iconFile, modDesc, null, false);
 							if (newIcon && newIcon !== 'CATEGORY:generic' && newIcon !== 'CATEGORY:map') {
 								iconBase64 = newIcon;
 							} else if (!iconBase64) {
@@ -1237,7 +1497,7 @@ async function performScan(manualPaths = null) {
 							
 							// Only extract store icon for third-party mods/maps (saves heavy zip decompression/resizing)
 							if (isThirdParty) {
-								const newStore = await getModIcon(fullPath, modDesc.iconFile, modDesc, zipInstance, true);
+								const newStore = await getModIcon(fullPath, modDesc.iconFile, modDesc, null, true);
 								if (newStore && newStore !== 'CATEGORY:generic' && newStore !== 'CATEGORY:map') {
 									storeBase64 = newStore;
 								} else if (!storeBase64) {
@@ -3851,9 +4111,8 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 			try {
 				let xmlStr = null;
 				if (filePath.endsWith('.zip')) {
-					const zip = zipInstance || new AdmZip(filePath);
-					const modDescEntry = zip.getEntries().find(e => e.entryName.toLowerCase() === 'moddesc.xml');
-					if (modDescEntry) xmlStr = modDescEntry.getData().toString('utf8');
+					const buf = readEntryFromZip(filePath, 'modDesc.xml');
+					if (buf) xmlStr = buf.toString('utf8');
 				} else {
 					const xmlPath = path.join(filePath, 'modDesc.xml');
 					if (fs.existsSync(xmlPath)) xmlStr = fs.readFileSync(xmlPath, 'utf8');
@@ -3890,8 +4149,7 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 		};
 
 		if (filePath.endsWith('.zip')) {
-			const zip = zipInstance || new AdmZip(filePath);
-			const entries = zip.getEntries();
+			const entries = listZipEntries(filePath);
 			let entry = null;
 
 			// 1. Primary: Search for exact filename of normalizedIcon
@@ -3988,20 +4246,22 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 				if (candidates.length > 0) {
 					// Priority 1: Check for 512x512 resolution (User's specific request)
 					let bestMatch = null;
-					for (const cand of candidates) {
+					for (const cand of candidates.slice(0, 5)) {
 						try {
-							const buffer = cand.getData();
-							const dims = getImageDimensions(buffer);
-							if (dims && dims.width === 512 && dims.height === 512) {
-								bestMatch = cand;
-								break;
+							const buffer = readEntryFromZip(filePath, cand.entryName);
+							if (buffer) {
+								const dims = getImageDimensions(buffer);
+								if (dims && dims.width === 512 && dims.height === 512) {
+									bestMatch = cand;
+									break;
+								}
 							}
 						} catch (e) {}
 					}
 					
 					if (bestMatch) {
 						entry = bestMatch;
-						} else {
+					} else {
 						// Fallback to "store" or "brand" names, then first candidate
 						entry = candidates.find(e => e.entryName.toLowerCase().includes('store') || e.entryName.toLowerCase().includes('brand') || e.entryName.toLowerCase().includes('logo')) 
 						|| candidates[0];
@@ -4010,7 +4270,8 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 			}
 			
 			if (entry) {
-				const buffer = entry.getData();
+				const buffer = readEntryFromZip(filePath, entry.entryName);
+				if (!buffer) return getCategoryFallback(entries);
 				const info = getImageDimensions(buffer);
 				let nativeImage = null;
 				try {
@@ -4049,17 +4310,19 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 					});
 					if (altPng) {
 						try {
-							const altBuffer = altPng.getData();
-							if (nativeImage) {
-								let img = nativeImage.createFromBuffer(altBuffer);
-								const size = img.getSize();
-								if (size.width > 512 || size.height > 512) {
-									img = img.resize({ width: 512, height: 512, quality: 'good' });
+							const altBuffer = readEntryFromZip(filePath, altPng.entryName);
+							if (altBuffer) {
+								if (nativeImage) {
+									let img = nativeImage.createFromBuffer(altBuffer);
+									const size = img.getSize();
+									if (size.width > 512 || size.height > 512) {
+										img = img.resize({ width: 512, height: 512, quality: 'good' });
+									}
+									return img.toDataURL();
 								}
-								return img.toDataURL();
+								const altExt = path.extname(altPng.entryName).replace('.', '').toLowerCase() || 'png';
+								return `data:image/${altExt === 'jpg' ? 'jpeg' : altExt};base64,${altBuffer.toString('base64')}`;
 							}
-							const altExt = path.extname(altPng.entryName).replace('.', '').toLowerCase() || 'png';
-							return `data:image/${altExt === 'jpg' ? 'jpeg' : altExt};base64,${altBuffer.toString('base64')}`;
 						} catch (e) {}
 					}
 					return getCategoryFallback(entries);
@@ -5649,4 +5912,6 @@ module.exports = {
 	ultraNormalize,
 	getMapSubfolderName,
 	isCrossplayMod,
+	readEntryFromZip,
+	listZipEntries,
 };
