@@ -525,8 +525,8 @@ async function getFolderSize(folderPath) {
 }
 
 async function prepareVirtualModsFolder(savegameIndex = null) {
-	const allPaths = getModsPaths();
-	const virtualPath = path.join(app.getPath('userData'), savegameIndex ? `VirtualActiveMods_Savegame${savegameIndex}` : 'VirtualActiveMods');
+	const userDataDir = (app && app.getPath) ? app.getPath('userData') : path.join(process.env.APPDATA, 'fs25-mt-mod-manager');
+	const virtualPath = path.join(userDataDir, savegameIndex ? `VirtualActiveMods_Savegame${savegameIndex}` : 'VirtualActiveMods');
 	
 	debugLog(`[VIRTUAL] Preparing ${savegameIndex ? `Selective (Savegame ${savegameIndex})` : 'Global'} synthesis in: ${virtualPath}`);
 	
@@ -578,14 +578,18 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
         // Fetch all authoritative mods
         const { mods } = await scanLocalMods();
 
-        // If mapModName is active, find its folder and auto-add sibling mods from the same subfolder
+        // If mapModName is active, find its folder and auto-add non-map sibling mods from the same subfolder
         if (mapModName && activeModNames) {
             const mapModObj = mods.find(m => m.modName && m.modName.toLowerCase() === mapModName);
             if (mapModObj && mapModObj.folder && mapModObj.folder.toLowerCase() !== 'mods' && mapModObj.folder.toLowerCase() !== '') {
                 const folderLower = mapModObj.folder.toLowerCase();
-                debugLog(`[VIRTUAL] Map '${mapModName}' resides in subfolder '${mapModObj.folder}'. Auto-activating all sibling mods from that folder.`);
+                debugLog(`[VIRTUAL] Map '${mapModName}' resides in subfolder '${mapModObj.folder}'. Auto-activating non-map sibling mods from that folder.`);
                 mods.forEach(m => {
                     if (m.folder && m.folder.toLowerCase() === folderLower && m.modName) {
+                        // DO NOT auto-add conflicting alternate map versions (e.g. crossplay vs non-crossplay in same folder)
+                        if (m.isMap && m.modName.toLowerCase() !== mapModName) {
+                            return;
+                        }
                         activeModNames.add(m.modName.toLowerCase());
                     }
                 });

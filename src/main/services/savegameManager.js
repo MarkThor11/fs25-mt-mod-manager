@@ -594,13 +594,15 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     // --- AUTO-INJECT DEPENDENCIES FOR ALL SELECTED MODS ---
     // If we don't do this, the FS25 engine pauses the launch and prompts: "Do you want to select all required mods?"
     try {
-        
         let addedNewDep = true;
         while(addedNewDep) {
             addedNewDep = false;
             const currentMods = [...finalMods];
             for (const selMod of currentMods) {
-                const fullMod = allMods.find(m => m.modName === selMod.modName);
+                const fullMod = allMods.find(m => 
+                    (m.modName && m.modName.toLowerCase() === (selMod.modName || '').toLowerCase()) ||
+                    (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === (selMod.modName || '').toLowerCase())
+                );
                 if (fullMod && fullMod.dependencies && fullMod.dependencies.length > 0) {
                     for (const dep of fullMod.dependencies) {
                         let installedDep = null;
@@ -614,16 +616,19 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             }
                         }
 
-                        // 2. Resolve exact literal match from the dependency name string
+                        // 2. Resolve match from the dependency name string
                         if (!installedDep) {
-                            const depStr = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
+                            const depStr = (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '')).toLowerCase();
                             if (!depStr) continue;
                             
-                            // Spelling, casing, spacing, and underscores must match exactly
-                            installedDep = allMods.find(m => m.modName === depStr);
+                            installedDep = allMods.find(m => 
+                                (m.modName && m.modName.toLowerCase() === depStr) ||
+                                (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === depStr) ||
+                                (m.title && m.title.toLowerCase() === depStr)
+                            );
                         }
 
-                        if (installedDep && installedDep.modName !== mapModName && !finalMods.some(m => m.modName === installedDep.modName)) {
+                        if (installedDep && installedDep.modName !== mapModName && !finalMods.some(m => m.modName.toLowerCase() === installedDep.modName.toLowerCase())) {
                             console.log(`[CREATE] Auto-injecting dependency: ${installedDep.title} (required by ${selMod.title || selMod.modName})`);
                             finalMods.push({
                                 modName: installedDep.modName,
@@ -634,7 +639,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             });
                             addedNewDep = true;
                         } else if (installedDep) {
-                            const alreadySelected = finalMods.find(m => m.modName === installedDep.modName);
+                            const alreadySelected = finalMods.find(m => m.modName.toLowerCase() === installedDep.modName.toLowerCase());
                             if (alreadySelected) {
                                 alreadySelected.required = true;
                             }
@@ -696,7 +701,30 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             if (!savegameData.careerSavegame.statistics) savegameData.careerSavegame.statistics = {};
             savegameData.careerSavegame.statistics.money = String(money);
             
-            // Overwrite mods with the new selection
+            // Preserve any essential mods / dependencies that were pre-configured in the template
+            if (savegameData.careerSavegame.mod) {
+                const templateMods = Array.isArray(savegameData.careerSavegame.mod)
+                    ? savegameData.careerSavegame.mod
+                    : [savegameData.careerSavegame.mod];
+                
+                const existingNames = new Set(modData.map(m => (m['@_modName'] || '').toLowerCase()));
+                for (const tMod of templateMods) {
+                    const tName = tMod['@_modName'];
+                    if (tName && !existingNames.has(tName.toLowerCase())) {
+                        modData.push({
+                            '@_modName': tName,
+                            '@_title': tMod['@_title'] || tName,
+                            '@_version': tMod['@_version'] || '1.0.0.0',
+                            '@_required': tMod['@_required'] === 'true' ? 'true' : 'false',
+                            '@_fileHash': tMod['@_fileHash'] || ''
+                        });
+                        existingNames.add(tName.toLowerCase());
+                        console.log(`[CREATE] Preserved template mod: ${tName}`);
+                    }
+                }
+            }
+
+            // Update careerSavegame mods list
             savegameData.careerSavegame.mod = modData;
 
             // If start farm is disabled by user, strip starting farm vehicles from vehicles.xml
@@ -724,7 +752,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         const targetFarm = Array.isArray(farmsData.farms.farm) ? farmsData.farms.farm[0] : farmsData.farms.farm;
                         if (targetFarm) {
                             targetFarm['@_money'] = String(money);
-                            const userId = await getUserUniqueId();
+                            const fs25Path = pathProvider.getFS25DataRoot();
+                            const userId = await getPersistentUniqueUserId(fs25Path);
                             if (targetFarm.players && targetFarm.players.player) {
                                 const playerObj = Array.isArray(targetFarm.players.player) ? targetFarm.players.player[0] : targetFarm.players.player;
                                 if (playerObj) {

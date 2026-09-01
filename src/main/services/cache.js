@@ -7,13 +7,14 @@ const pathProvider = require('./pathProvider');
 let db = null;
 
 function getDbPath() {
-  const userDataPath = app.getPath('userData');
+  const userDataPath = (app && app.getPath) ? app.getPath('userData') : path.join(process.env.APPDATA, 'fs25-mt-mod-manager');
   return path.join(userDataPath, 'modhub-cache.db');
 }
 
 function debugLog(msg) {
   try {
-    const logPath = path.join(app.getPath('userData'), 'detection_log.txt');
+    const userDataPath = (app && app.getPath) ? app.getPath('userData') : path.join(process.env.APPDATA, 'fs25-mt-mod-manager');
+    const logPath = path.join(userDataPath, 'detection_log.txt');
     fs.appendFile(logPath, `[${new Date().toISOString()}] [CACHE] ${msg}\n`, 'utf8', () => {});
   } catch (e) {}
 }
