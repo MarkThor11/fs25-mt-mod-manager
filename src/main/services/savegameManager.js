@@ -1606,6 +1606,42 @@ async function getInstalledMods() {
 }
 
 /**
+ * Checks if a given file or directory is an FS25 savegame (folder or ZIP containing careerSavegame.xml).
+ */
+async function isSavegame(sourcePath) {
+    if (!sourcePath || typeof sourcePath !== 'string') return false;
+    try {
+        if (!fs.existsSync(sourcePath)) return false;
+        const stats = fs.statSync(sourcePath);
+        
+        if (stats.isDirectory()) {
+            if (fs.existsSync(path.join(sourcePath, 'careerSavegame.xml'))) return true;
+            if (fs.existsSync(path.join(sourcePath, 'farms.xml')) && fs.existsSync(path.join(sourcePath, 'vehicles.xml'))) return true;
+            try {
+                const subfiles = fs.readdirSync(sourcePath);
+                const hasSubCareer = subfiles.some(f => {
+                    try {
+                        const subPath = path.join(sourcePath, f);
+                        return fs.statSync(subPath).isDirectory() && fs.existsSync(path.join(subPath, 'careerSavegame.xml'));
+                    } catch (_) { return false; }
+                });
+                if (hasSubCareer) return true;
+            } catch (_) {}
+        } else if (sourcePath.toLowerCase().endsWith('.zip')) {
+            const modManager = require('./modManager');
+            if (modManager && typeof modManager.listZipEntries === 'function') {
+                const entries = modManager.listZipEntries(sourcePath);
+                return entries.some(e => {
+                    const name = (e.entryName || '').toLowerCase();
+                    return name.endsWith('careersavegame.xml') || name === 'careersavegame.xml' || (name.endsWith('farms.xml') && !name.includes('mod'));
+                });
+            }
+        }
+    } catch (_) {}
+    return false;
+}
+
+/**
  * Archive management (stubs for functionality)
  */
 async function importSavegame(sourcePath, targetIndex) {
@@ -3142,6 +3178,7 @@ module.exports = {
     setSavegameMods,
     createSavegameWithMods,
     importSavegame,
+    isSavegame,
     renameSavegame,
     deleteSavegame,
     getInstalledMods,

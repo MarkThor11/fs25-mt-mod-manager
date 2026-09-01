@@ -38,10 +38,10 @@ export default function DropOverlay({ isDragging }) {
           <UploadCloud size={64} />
         </div>
         <h2 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 'var(--sp-2)' }}>
-          Ready to Install!
+          Ready to Import!
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-sm)' }}>
-          Drop your mod .ZIP files here
+          Drop mod .ZIPs or savegame folders / ZIPs anywhere
         </p>
       </div>
       
@@ -57,7 +57,7 @@ export default function DropOverlay({ isDragging }) {
         boxShadow: 'var(--shadow-lg)'
       }}>
         <Package size={18} className="text-accent" />
-        <span style={{ fontWeight: 600, fontSize: 'var(--fs-sm)' }}>Mod Manager V1.0 Batch Importer</span>
+        <span style={{ fontWeight: 600, fontSize: 'var(--fs-sm)' }}>Smart Mod & Savegame Batch Importer</span>
       </div>
     </div>
   );

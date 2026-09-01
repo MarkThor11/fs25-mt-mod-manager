@@ -1187,6 +1187,10 @@ ipcMain.handle('savegames:import', async (_, { sourcePath, targetIndex }) => {
   return await savegameManager.importSavegame(sourcePath, targetIndex);
 });
 
+ipcMain.handle('savegames:isSavegame', async (_, filePath) => {
+  return await savegameManager.isSavegame(filePath);
+});
+
 ipcMain.handle('savegames:renameArchive', async (_, { archivedFolderName, newName }) => {
   try {
     return await savegameManager.renameArchivedSavegame(archivedFolderName, newName);

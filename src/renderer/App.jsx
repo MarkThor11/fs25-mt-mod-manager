@@ -134,31 +134,87 @@ export default function App() {
         setIsDragging(false);
 
         const files = Array.from(e.dataTransfer.files);
-
         if (files.length === 0) return;
 
         const toast = useToastStore.getState();
-        toast.info(`Scanning and installing dropped item${files.length > 1 ? 's' : ''}...`);
 
-        try {
-            const paths = files.map(f => f.path);
-            const result = await useLocalModsStore.getState().installLocalMods(paths);
+        const modPaths = [];
+        const savegamePaths = [];
 
-            if (result.success.length > 0) {
-                if (result.success.length === 1) {
-                    toast.success(`Successfully installed: ${result.success[0].title}`);
+        for (const f of files) {
+            const p = f.path;
+            if (!p) continue;
+            let isSave = false;
+            try {
+                if (window.api?.savegames?.isSavegame) {
+                    isSave = await window.api.savegames.isSavegame(p);
                 } else {
-                    toast.success(`Successfully installed ${result.success.length} mods!`);
+                    const name = (f.name || '').toLowerCase();
+                    isSave = name.startsWith('savegame') || name.includes('savegame');
                 }
-            }
+            } catch (_) {}
 
-            if (result.failed.length > 0 && result.success.length === 0) {
-                toast.error(`Import failed: No valid .ZIP files or mod folders found.`);
-            } else if (result.failed.length > 0) {
-                toast.warning(`Skipped ${result.failed.length} invalid or incompatible items.`);
+            if (isSave) {
+                savegamePaths.push(p);
+            } else {
+                modPaths.push(p);
             }
-        } catch (err) {
-            toast.error(`Import failed: ${err.message}`);
+        }
+
+        // 1. Process Savegame Imports
+        if (savegamePaths.length > 0) {
+            toast.info(`Importing ${savegamePaths.length} savegame${savegamePaths.length > 1 ? 's' : ''}...`);
+            try {
+                const allSaves = (await window.api?.savegames?.getAll?.()) || [];
+                const occupiedIndices = new Set(allSaves.filter(s => s.modCount > 0 || (s.farmName && !s.farmName.startsWith('Empty'))).map(s => s.index));
+                
+                for (const sPath of savegamePaths) {
+                    let freeSlot = null;
+                    for (let i = 1; i <= 20; i++) {
+                        if (!occupiedIndices.has(i)) {
+                            freeSlot = i;
+                            break;
+                        }
+                    }
+                    if (!freeSlot) {
+                        toast.error("All 20 savegame slots are occupied. Open the Savegames page to choose a slot to overwrite.");
+                        break;
+                    }
+                    occupiedIndices.add(freeSlot);
+                    const res = await window.api.savegames.import({ sourcePath: sPath, targetIndex: freeSlot });
+                    if (res && res.success) {
+                        toast.success(`Successfully imported savegame into Slot ${freeSlot}!`);
+                    } else {
+                        toast.error(`Savegame import failed: ${res?.error || 'Unknown error'}`);
+                    }
+                }
+            } catch (err) {
+                toast.error(`Savegame import failed: ${err.message}`);
+            }
+        }
+
+        // 2. Process Mod Installs
+        if (modPaths.length > 0) {
+            toast.info(`Scanning and installing dropped mod${modPaths.length > 1 ? 's' : ''}...`);
+            try {
+                const result = await useLocalModsStore.getState().installLocalMods(modPaths);
+
+                if (result.success.length > 0) {
+                    if (result.success.length === 1) {
+                        toast.success(`Successfully installed: ${result.success[0].title}`);
+                    } else {
+                        toast.success(`Successfully installed ${result.success.length} mods!`);
+                    }
+                }
+
+                if (result.failed.length > 0 && result.success.length === 0) {
+                    toast.error(`Import failed: No valid .ZIP files or mod folders found.`);
+                } else if (result.failed.length > 0) {
+                    toast.warning(`Skipped ${result.failed.length} invalid or incompatible items.`);
+                }
+            } catch (err) {
+                toast.error(`Mod import failed: ${err.message}`);
+            }
         }
     };
 
