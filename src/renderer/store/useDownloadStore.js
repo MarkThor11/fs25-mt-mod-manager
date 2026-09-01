@@ -449,10 +449,10 @@ export const useDownloadStore = create((set, get) => ({
       );
       // Only scan once the entire batch has settled
       if (!hasActive) {
-        useLocalModsStore.getState().scanMods(null, false);
+        useLocalModsStore.getState().scanMods(null, true);
       }
       set({ scanTimeout: null });
-    }, 2500);
+    }, 2000);
 
     set({ scanTimeout: timeoutId });
   }
@@ -494,6 +494,16 @@ if (window.api?.on) {
         
         const displayTitle = resolveDownloadTitle(strId, incomingTitle || active?.title);
         useToastStore.getState().success(`${displayTitle} installed successfully!`, { id: `dl-toast-${strId}` });
+
+        // Instantly register mod and update badge counter in UI
+        useLocalModsStore.getState().addInstalledMod({
+          modId: strId,
+          title: displayTitle,
+          fileName: fileName || active?.fileName || `${strId}.zip`,
+          folder: active?.subFolder || '',
+          category: data?.category || active?.category || null,
+          isMap: (active?.category && active.category.toUpperCase().includes('MAP')) || (displayTitle && displayTitle.toLowerCase().includes('map'))
+        });
 
         // Trigger debounced scan so we do not freeze disk if multiple downloads finish
         useDownloadStore.getState().triggerScan();
@@ -558,6 +568,15 @@ if (window.api?.on) {
           const finalTitle = (resolvedTitle && !resolvedTitle.startsWith('Mod ')) ? resolvedTitle : (displayTitle || `Mod ${strKey}`);
 
           useDownloadStore.getState().addSessionInstalled(strKey, finalTitle);
+
+          // Instantly register mod and update badge counter in UI
+          useLocalModsStore.getState().addInstalledMod({
+            modId: modId || strKey,
+            title: finalTitle,
+            fileName: `${modName || strKey}.zip`,
+            folder: parentId || '',
+            category: null
+          });
           
           if (parentId) {
             const batch = useDownloadStore.getState().batchProgress[parentId];

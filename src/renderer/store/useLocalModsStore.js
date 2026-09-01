@@ -79,6 +79,46 @@ export const useLocalModsStore = create((set, get) => ({
     }
   },
 
+  addInstalledMod: (modInfo) => {
+    if (!modInfo) return;
+    set((s) => {
+      const idStr = modInfo.modId ? String(modInfo.modId).replace(/^0+/, '') : null;
+      const fileLower = (modInfo.fileName || '').toLowerCase();
+      const existing = s.mods.some(m => {
+        const mId = m.modId ? String(m.modId).replace(/^0+/, '') : null;
+        if (idStr && mId && idStr === mId) return true;
+        if (fileLower && m.fileName && m.fileName.toLowerCase() === fileLower) return true;
+        return false;
+      });
+      if (existing) return s;
+
+      const newMod = {
+        title: modInfo.title || `Mod ${modInfo.modId || ''}`,
+        author: modInfo.author || 'Unknown',
+        version: modInfo.version || '1.0.0.0',
+        category: modInfo.category || null,
+        size: modInfo.size || 0,
+        fileName: modInfo.fileName || `${modInfo.modId || 'mod'}.zip`,
+        filePath: modInfo.filePath || '',
+        folder: modInfo.folder || '',
+        isDLC: false,
+        isMap: !!modInfo.isMap,
+        mapId: modInfo.mapId || null,
+        mapTitle: modInfo.mapTitle || null,
+        modName: modInfo.modName || '',
+        technicalName: modInfo.technicalName || '',
+        dependencies: modInfo.dependencies || [],
+        modId: modInfo.modId || null,
+        tags: modInfo.tags || []
+      };
+      const nextMods = [...s.mods, newMod];
+      return {
+        mods: nextMods,
+        modCount: computeModCount(nextMods)
+      };
+    });
+  },
+
   scanMods: async (manualPaths = null, force = false) => {
     const now = Date.now();
     const { isScanning, lastScanTime, mods: currentMods } = get();
@@ -86,8 +126,8 @@ export const useLocalModsStore = create((set, get) => ({
     // Prevent duplicate parallel scans if already scanning (unless forced)
     if (isScanning && !force) return;
 
-    // Cooldown check for unforced scans when we already have scanned mods
-    if (!force && currentMods.length > 0 && lastScanTime > 0 && (now - lastScanTime < 300000)) return;
+    // Short cooldown (2 seconds) to avoid spamming scans
+    if (!force && currentMods.length > 0 && lastScanTime > 0 && (now - lastScanTime < 2000)) return;
 
     set({ isScanning: true, isLoading: currentMods.length === 0, error: null });
 
