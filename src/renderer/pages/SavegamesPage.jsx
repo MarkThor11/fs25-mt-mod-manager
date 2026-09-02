@@ -1844,7 +1844,7 @@ export default function SavegamesPage() {
     setCreateName('New Farming Career');
     
     // Reset map to default so the useEffect always re-fires when user picks a map
-    setCreateMap('MapUS|Riverbend Springs|');
+    setCreateMap('MapUS|Riverbend Springs|||');
     setModalSelectedMods(new Set());
     setShowCreateModal(true);
   };

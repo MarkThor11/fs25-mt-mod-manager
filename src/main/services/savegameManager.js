@@ -583,12 +583,19 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     const finalMods = selectedMods.filter(m => m.modName !== 'FS25_rememberPositions');
     // Add map mod if not already there
-    let mapModObj = finalMods.find(m => m.modName === mapModName);
+    const matchedMapMod = allMods.find(m => (m.modName || '').toLowerCase() === (mapModName || '').toLowerCase());
+    let mapModObj = finalMods.find(m => (m.modName || '').toLowerCase() === (mapModName || '').toLowerCase());
     if (mapModName && !mapModObj) {
-        mapModObj = { modName: mapModName, title: mapTitle, version: '1.0.0.0', required: true };
+        mapModObj = { 
+            modName: mapModName, 
+            title: mapTitle || matchedMapMod?.title || mapModName, 
+            version: matchedMapMod?.version || '1.0.0.0', 
+            required: true 
+        };
         finalMods.unshift(mapModObj);
     } else if (mapModObj) {
         mapModObj.required = true;
+        if (matchedMapMod?.version) mapModObj.version = matchedMapMod.version;
     }
 
     // --- AUTO-INJECT DEPENDENCIES FOR ALL SELECTED MODS ---
@@ -652,13 +659,35 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         console.error('[CREATE] Failed to auto-inject dependencies:', err);
     }
 
+    // Extract true map id from the mod's modDesc.xml if available
+    let internalMapId = mapId;
+    if (modZipPath && fs.existsSync(modZipPath)) {
+        try {
+            const AdmZip = require('adm-zip');
+            const zip = new AdmZip(modZipPath);
+            const entry = zip.getEntry('modDesc.xml');
+            if (entry) {
+                const xml = entry.getData().toString('utf8');
+                const mMatch = xml.match(/<map\s+[^>]*id=["']([^"']+)["']/i);
+                if (mMatch && mMatch[1]) {
+                    internalMapId = mMatch[1];
+                    console.log(`[CREATE] Extracted real internal mapId "${internalMapId}" from ${path.basename(modZipPath)}`);
+                }
+            }
+        } catch (e) {
+            console.warn(`[CREATE] Could not read mapId from zip: ${e.message}`);
+        }
+    }
+
     // FS25 engine requires mod maps to have their mapId prefixed with the mod name (e.g. FS25_MapMod.MapId)
     // If we don't do this, the engine can't find the map, marking the save as corrupted and greying out the Continue button.
-    let engineMapId = mapId;
+    let engineMapId = internalMapId || mapId;
     if (engineMapId.toLowerCase().includes('highlandsfishing') || mapModName === 'pdlc_highlandsFishingPack') {
         engineMapId = 'pdlc_highlandsFishingPack.HighlandsFishingMap';
-    } else if (mapModName && !engineMapId.startsWith(mapModName + '.') && !['MapUS', 'MapEU', 'MapAS'].includes(engineMapId)) {
-        engineMapId = `${mapModName}.${engineMapId}`;
+    } else if (mapModName && !['MapUS', 'MapEU', 'MapAS'].includes(engineMapId)) {
+        if (!engineMapId.startsWith(mapModName + '.')) {
+            engineMapId = `${mapModName}.${engineMapId}`;
+        }
     }
 
     const modData = finalMods.map(mod => {
