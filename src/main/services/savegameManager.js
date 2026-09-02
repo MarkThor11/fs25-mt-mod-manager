@@ -737,7 +737,11 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     // FS25 engine requires mod maps to have their mapId prefixed with the mod name (e.g. FS25_MapMod.MapId)
     // If we don't do this, the engine can't find the map, marking the save as corrupted and greying out the Continue button.
     let engineMapId = internalMapId || mapId;
-    if (engineMapId.toLowerCase().includes('highlandsfishing') || mapModName === 'pdlc_highlandsFishingPack') {
+    const lowEngineId = (engineMapId || '').toLowerCase();
+    if (lowEngineId === 'mapus') engineMapId = 'MapUS';
+    else if (lowEngineId === 'mapeu') engineMapId = 'MapEU';
+    else if (lowEngineId === 'mapas') engineMapId = 'MapAS';
+    else if (lowEngineId.includes('highlandsfishing') || mapModName === 'pdlc_highlandsFishingPack') {
         engineMapId = 'pdlc_highlandsFishingPack.HighlandsFishingMap';
     } else if (mapModName && !['MapUS', 'MapEU', 'MapAS'].includes(engineMapId)) {
         if (!engineMapId.startsWith(mapModName + '.')) {
@@ -811,16 +815,32 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             // Update careerSavegame mods list
             savegameData.careerSavegame.mod = modData;
 
-            // Strip any hardcoded/stale player spawn coordinates so the game engine natively
-            // spawns the player at the map's designated starting spawn point (e.g. farmhouse)
-            if (savegameData.careerSavegame.player) {
+            // Configure player spawn: official maps receive canonical farmhouse coordinates,
+            // while mod maps have coordinates cleared so the engine uses the author's designated spawn
+            if (!savegameData.careerSavegame.player) {
+                savegameData.careerSavegame.player = {};
+            }
+            if (engineMapId === 'MapUS') {
+                savegameData.careerSavegame.player['@_spawnPositionX'] = '-128.000';
+                savegameData.careerSavegame.player['@_spawnPositionY'] = '49.200';
+                savegameData.careerSavegame.player['@_spawnPositionZ'] = '-162.000';
+            } else if (engineMapId === 'MapEU') {
+                savegameData.careerSavegame.player['@_spawnPositionX'] = '-263.000';
+                savegameData.careerSavegame.player['@_spawnPositionY'] = '60.000';
+                savegameData.careerSavegame.player['@_spawnPositionZ'] = '44.000';
+            } else if (engineMapId === 'MapAS') {
+                savegameData.careerSavegame.player['@_spawnPositionX'] = '-528.800';
+                savegameData.careerSavegame.player['@_spawnPositionY'] = '19.800';
+                savegameData.careerSavegame.player['@_spawnPositionZ'] = '-61.100';
+            } else {
                 delete savegameData.careerSavegame.player['@_spawnPositionX'];
                 delete savegameData.careerSavegame.player['@_spawnPositionY'];
                 delete savegameData.careerSavegame.player['@_spawnPositionZ'];
-                delete savegameData.careerSavegame.player['@_spawnYaw'];
-                delete savegameData.careerSavegame.player['@_vehicleId'];
-                delete savegameData.careerSavegame.player['@_vehicleFilename'];
             }
+            // Always ensure the player does NOT spawn inside a vehicle or car
+            delete savegameData.careerSavegame.player['@_spawnYaw'];
+            delete savegameData.careerSavegame.player['@_vehicleId'];
+            delete savegameData.careerSavegame.player['@_vehicleFilename'];
 
             // Strip any lingering player spawn coordinates in players.xml
             const playersPath = path.join(slotPath, 'players.xml');
