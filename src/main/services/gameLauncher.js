@@ -365,10 +365,17 @@ function monitorGameExitAndRestore() {
 
   console.log('[LAUNCH] Started monitoring game process exit to restore global gameSettings.xml...');
 
+  let hasSeenGameRunning = false;
+  let checksCount = 0;
+
   const interval = setInterval(async () => {
     try {
       const running = await isGameRunning();
-      if (!running) {
+      checksCount++;
+
+      if (running) {
+        hasSeenGameRunning = true;
+      } else if (hasSeenGameRunning || checksCount > 15) {
         clearInterval(interval);
         isMonitoringExit = false;
         console.log('[LAUNCH] Game process exit detected. Restoring global gameSettings.xml in 2 seconds...');
@@ -390,16 +397,13 @@ async function isGameRunning() {
   const util = require('util');
   const execAsync = util.promisify(exec);
 
-  const exeName = 'FarmingSimulator2025.exe';
-  const processName = 'Farming Simulator 2025';
-
   try {
     if (process.platform === 'win32') {
-      const { stdout } = await execAsync('tasklist /FI "IMAGENAME eq FarmingSimulator2025.exe" /NH');
-      return stdout.includes(exeName);
+      const { stdout } = await execAsync('tasklist /NH');
+      return /FarmingSimulator2025(?:Game)?\.exe/i.test(stdout);
     } else {
-      const { stdout } = await execAsync(`pgrep -f "${processName}"`);
-      return stdout.length > 0;
+      const { stdout } = await execAsync('pgrep -f "FarmingSimulator2025"');
+      return stdout.trim().length > 0;
     }
   } catch (e) {
     return false;

@@ -936,6 +936,43 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                                 await fs.writeFile(targetPath, entry.getData());
                             }
                         }
+                        if (lowerBase === 'dem.png' || lowerBase === 'terrain.heightmap.png' || lowerBase.endsWith('_dem.png')) {
+                            const targetPath = path.join(slotPath, 'terrain.heightmap.png');
+                            if (!fs.existsSync(targetPath)) {
+                                await fs.writeFile(targetPath, entry.getData());
+                                extractedTerrain = true;
+                                console.log(`[CREATE] Extracted heightmap ${baseName} -> terrain.heightmap.png`);
+                            }
+                        }
+                        if (lowerBase.endsWith('.terrain.occluders.cache') || lowerBase === 'terrain.occluders.cache') {
+                            const targetPath = path.join(slotPath, 'terrain.occluders.cache');
+                            if (!fs.existsSync(targetPath)) {
+                                await fs.writeFile(targetPath, entry.getData());
+                                console.log(`[CREATE] Extracted ${baseName} -> terrain.occluders.cache`);
+                            }
+                        }
+                        if (lowerBase.endsWith('.terrain.nmap.cache') || lowerBase === 'terrain.nmap.cache') {
+                            const targetPath = path.join(slotPath, 'terrain.nmap.cache');
+                            if (!fs.existsSync(targetPath)) {
+                                await fs.writeFile(targetPath, entry.getData());
+                            }
+                        }
+                        if (lowerBase.endsWith('.terrain.lod.type.cache') || lowerBase === 'terrain.lod.type.cache') {
+                            const targetPath = path.join(slotPath, 'terrain.lod.type.cache');
+                            if (!fs.existsSync(targetPath)) {
+                                await fs.writeFile(targetPath, entry.getData());
+                            }
+                        }
+
+                        // Map default savegame XML templates
+                        if (xmlMap[lowerBase]) {
+                            const destName = xmlMap[lowerBase];
+                            const targetPath = path.join(slotPath, destName);
+                            if (!fs.existsSync(targetPath)) {
+                                await fs.writeFile(targetPath, entry.getData());
+                                console.log(`[CREATE] Extracted initial save file: ${destName}`);
+                            }
+                        }
                     }
                     console.log(`[CREATE] Extracted ${extractedGrles} infoLayer GRLE files and terrain assets from map zip.`);
                 }
