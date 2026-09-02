@@ -525,8 +525,35 @@ async function getFolderSize(folderPath) {
 }
 
 async function prepareVirtualModsFolder(savegameIndex = null) {
-	const userDataDir = (app && app.getPath) ? app.getPath('userData') : path.join(process.env.APPDATA, 'fs25-mt-mod-manager');
-	const virtualPath = path.join(userDataDir, savegameIndex ? `VirtualActiveMods_Savegame${savegameIndex}` : 'VirtualActiveMods');
+	let virtualBaseDir = (app && app.getPath) ? app.getPath('userData') : path.join(process.env.APPDATA, 'fs25-mt-mod-manager');
+	
+	try {
+		const allPaths = getModsPaths();
+		if (allPaths && allPaths.length > 0) {
+			let bestPath = allPaths[0];
+			let maxFree = 0;
+			for (const p of allPaths) {
+				try {
+					if (fs.existsSync(p)) {
+						const stats = fs.statfsSync(p);
+						const free = Number(stats.bfree) * Number(stats.bsize);
+						if (free > maxFree) {
+							maxFree = free;
+							bestPath = p;
+						}
+					}
+				} catch (e) {}
+			}
+			if (bestPath) {
+				const driveRoot = path.parse(bestPath).root || path.dirname(bestPath);
+				virtualBaseDir = path.join(driveRoot, '.fs25_virtual_mods');
+			}
+		}
+	} catch (err) {
+		console.warn('[VIRTUAL] Failed to resolve dynamic drive for virtual mods, falling back to userData:', err.message);
+	}
+
+	const virtualPath = path.join(virtualBaseDir, savegameIndex ? `VirtualActiveMods_Savegame${savegameIndex}` : 'VirtualActiveMods');
 	
 	debugLog(`[VIRTUAL] Preparing ${savegameIndex ? `Selective (Savegame ${savegameIndex})` : 'Global'} synthesis in: ${virtualPath}`);
 	
