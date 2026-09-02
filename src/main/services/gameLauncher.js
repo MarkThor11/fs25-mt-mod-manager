@@ -236,7 +236,7 @@ async function launch(options = {}) {
     const gameSettingsPath = path.join(fs25DataRoot, 'gameSettings.xml');
     if (fs.existsSync(gameSettingsPath)) {
       let settingsXml = fs.readFileSync(gameSettingsPath, 'utf8');
-      settingsXml = settingsXml.replace(/(<modsDirectoryOverride\s+active=)["']true["']/ig, `$1"false"`);
+      settingsXml = settingsXml.replace(/<modsDirectoryOverride[^>]*\/>/ig, '<modsDirectoryOverride active="false" directory=""/>');
       fs.writeFileSync(gameSettingsPath, settingsXml, 'utf8');
       console.log('[LAUNCH] Disabled modsDirectoryOverride in gameSettings.xml');
     }
@@ -335,8 +335,8 @@ function disableModsDirectoryOverride() {
 
     if (fs.existsSync(gameSettingsPath)) {
       let settingsXml = fs.readFileSync(gameSettingsPath, 'utf8');
-      if (/<modsDirectoryOverride\s+active=["']true["']/i.test(settingsXml)) {
-        settingsXml = settingsXml.replace(/(<modsDirectoryOverride\s+active=)["']true["']/ig, `$1"false"`);
+      if (/<modsDirectoryOverride\s+active=["']true["']/i.test(settingsXml) || /<modsDirectoryOverride[^>]*directory=["'][^"']+["']/i.test(settingsXml)) {
+        settingsXml = settingsXml.replace(/<modsDirectoryOverride[^>]*\/>/ig, '<modsDirectoryOverride active="false" directory=""/>');
         fs.writeFileSync(gameSettingsPath, settingsXml, 'utf8');
         console.log('[LAUNCH] Disabled modsDirectoryOverride in gameSettings.xml (standalone launch ready)');
       }
