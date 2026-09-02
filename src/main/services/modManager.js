@@ -3240,38 +3240,11 @@ async function syncLibraryMetadata() {
 */
 async function checkForUpdates() {
 	try {
-		const { mods: localMods } = await scanLocalMods();
-		if (localMods.length === 0) return { updates: [] };
-		
-		// Fetch the latest page from ModHub to detect new versions
-		const latestResult = await scraper.fetchModList('latest', 0);
-		const latestMods = latestResult.mods || [];
-		
-		const updates = [];
-		
-		for (const localMod of localMods) {
-			// Try to find a matching mod in the latest list by fuzzy name match
-			const match = latestMods.find(remote => {
-				if (remote.modId && localMod.modId && String(remote.modId).replace(/^0+/, '') === String(localMod.modId).replace(/^0+/, '')) return true;
-				const localTitle = (localMod.title || '').trim().toLowerCase();
-				const remoteTitle = (remote.title || '').trim().toLowerCase();
-				const localModName = (localMod.modName || '').trim().toLowerCase();
-				return (localTitle && (localTitle === remoteTitle || localModName === remoteTitle));
-			});
-			
-			if (match) {
-				// We found a potentially updated mod
-				updates.push({
-					localMod,
-					remoteMod: match,
-					hasUpdate: true, // Could be refined with version comparison
-				});
-			}
-		}
-		
-		return { updates };
-		} catch (err) {
-		console.error('Update check failed:', err);
+		const versionManager = require('./versionManager');
+		const updates = await versionManager.checkAllUpdates();
+		return { updates: updates || [] };
+	} catch (err) {
+		console.error('[UPDATES] Version check failed:', err);
 		return { updates: [], error: err.message };
 	}
 }
