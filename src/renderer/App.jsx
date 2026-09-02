@@ -237,9 +237,12 @@ export default function App() {
     };
   }, []);
 
-  // ── Background Update Manager ──
+  // ── Background Update Manager & Stats ──
   useEffect(() => {
     if (!isLoaded) return;
+
+    // Fetch initial ModHub stats on startup
+    useModHubStore.getState().fetchStats();
 
     const { modUpdateMode } = useSettingsStore.getState();
     const { updates, triggerAutoUpdateIfNeeded } = useLocalModsStore.getState();

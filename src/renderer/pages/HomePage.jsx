@@ -42,6 +42,7 @@ export default function HomePage() {
 
   useEffect(() => {
     fetchSavegames();
+    fetchStats();
     // Only fetch live network items if local cache is empty
     if (homeShowLatest && homeFeatured.length === 0) loadFeaturedMods();
     if (homeShowDownloaded && homeTopDownloaded.length === 0) loadTopDownloadedMods();
