@@ -1302,20 +1302,22 @@ export default function InstalledModsPage() {
     });
 
 
-    // 4. Include empty folders from allFolders case-insensitively ONLY when viewing ALL drives
-    if (selectedDriveFilter === 'ALL') {
+    // 4. Include empty folders from allFolders case-insensitively ONLY when viewing ALL drives AND no filter is active
+    const isFilteringActive = showOnlyUpdates || showOnlyFavorites || Boolean((searchQuery || '').trim()) || (selectedTags && selectedTags.length > 0) || selectedDriveFilter !== 'ALL';
+
+    if (selectedDriveFilter === 'ALL' && !isFilteringActive) {
       (allFolders || []).forEach(f => {
         const canonical = getCanonicalFolder(f);
         if (!groups[canonical]) groups[canonical] = [];
       });
     }
 
-    // 5. Strict Map & Drive Filtering
+    // 5. Strict Map & Filter Pruning
     const showingOnlyMaps = selectedTags.includes('Maps');
     let finalKeys = Object.keys(groups);
 
-    // If filtering by a specific drive, only show folders that actually have mods on that drive
-    if (selectedDriveFilter !== 'ALL') {
+    // When any filter is active, hide empty folders so matching mods are immediately obvious
+    if (isFilteringActive) {
       finalKeys = finalKeys.filter(name => groups[name] && groups[name].length > 0);
     }
 
@@ -1384,7 +1386,7 @@ export default function InstalledModsPage() {
         };
         return acc;
     }, {});
-  }, [mods, filteredMods, allFolders, searchQuery, hiddenFolders, folderOrder, selectedTags, showOnlyFavorites, folderSortBy]);
+  }, [mods, filteredMods, allFolders, searchQuery, hiddenFolders, folderOrder, selectedTags, showOnlyFavorites, showOnlyUpdates, selectedDriveFilter, folderSortBy]);
 
   const flatViewList = useMemo(() => {
     return Object.values(folders).flatMap(f => f.mods);
@@ -1988,42 +1990,39 @@ export default function InstalledModsPage() {
           <Heart size={14} fill={showOnlyFavorites ? 'currentColor' : 'none'} /> Favorites
         </button>
 
-        {modUpdateMode !== 'auto' && (
-          <>
-            <button 
-              className={`btn ${showOnlyUpdates ? 'btn--primary' : 'btn--secondary'} btn--sm`}
-              onClick={() => setShowOnlyUpdates(!showOnlyUpdates)}
-              style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
-              title={updates.length === 0 ? "No updates detected. Run 'Check for Updates' first." : "Filter by mods needing updates"}
-            >
-              <RefreshCw size={14} className={showOnlyUpdates ? 'animate-pulse' : ''} /> Updates
-              {updates.length > 0 && (
-                <span style={{ 
-                    background: showOnlyUpdates ? 'white' : 'var(--accent)', 
-                    color: showOnlyUpdates ? 'var(--accent)' : 'white', 
-                    borderRadius: 10, 
-                    padding: '1px 6px', 
-                    fontSize: 10,
-                    fontWeight: 900,
-                    minWidth: 18,
-                    textAlign: 'center'
-                }}>
-                    {updates.length}
-                </span>
-              )}
-            </button>
-            {updates.length > 0 && (
-              <button
-                className="btn btn--primary btn--sm animate-fade-in"
-                onClick={() => updateAllMods()}
-                style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)' }}
-                title="Download and install all available mod updates concurrently"
-              >
-                <Download size={14} /> Update All ({updates.length})
-              </button>
-            )}
-          </>
+        <button 
+          className={`btn ${showOnlyUpdates ? 'btn--primary' : 'btn--secondary'} btn--sm`}
+          onClick={() => setShowOnlyUpdates(!showOnlyUpdates)}
+          style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
+          title={updates.length === 0 ? "No updates detected. Run 'Check for Updates' first." : "Filter by mods needing updates"}
+        >
+          <RefreshCw size={14} className={showOnlyUpdates ? 'animate-pulse' : ''} /> Updates
+          {updates.length > 0 && (
+            <span style={{ 
+                background: showOnlyUpdates ? 'white' : 'var(--accent)', 
+                color: showOnlyUpdates ? 'var(--accent)' : 'white', 
+                borderRadius: 10, 
+                padding: '1px 6px', 
+                fontSize: 10,
+                fontWeight: 900,
+                minWidth: 18,
+                textAlign: 'center'
+            }}>
+                {updates.length}
+            </span>
+          )}
+        </button>
+        {updates.length > 0 && (
+          <button
+            className="btn btn--primary btn--sm animate-fade-in"
+            onClick={() => updateAllMods()}
+            style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)' }}
+            title="Download and install all available mod updates concurrently"
+          >
+            <Download size={14} /> Update All ({updates.length})
+          </button>
         )}
+
         <button 
           className={`btn ${showTagBar || selectedTags.length > 0 ? 'btn--primary' : 'btn--secondary'} btn--sm`}
           onClick={() => {
@@ -2353,6 +2352,65 @@ export default function InstalledModsPage() {
               <button className="btn btn--primary" onClick={handleCreateFolder} style={{ height: 40 }}>Create</button>
               <button className="btn btn--ghost" onClick={() => setShowFolderInput(false)} style={{ height: 40 }}>Cancel</button>
           </div>
+      )}
+
+      {/* Active Filter Banners */}
+      {showOnlyUpdates && (
+        <div className="filter-banner animate-fade-in" style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 18px',
+          marginBottom: 16,
+          background: 'rgba(234, 179, 8, 0.12)',
+          border: '1px solid rgba(234, 179, 8, 0.35)',
+          borderRadius: 'var(--radius-lg)',
+          color: 'var(--text-primary)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: 'rgba(234, 179, 8, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#eab308'
+            }}>
+              <Download size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14 }}>
+                Filtered by: Available Updates ({filteredMods.length} mod{filteredMods.length === 1 ? '' : 's'})
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                Only installed mods that have a newer version available on ModHub are shown.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {filteredMods.length > 0 && (
+              <button 
+                className="btn btn--primary btn--sm" 
+                onClick={() => updateAllMods(filteredMods)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
+                title="Download and install all pending updates"
+              >
+                <Download size={14} /> Update All Now ({filteredMods.length})
+              </button>
+            )}
+            <button 
+              className="btn btn--secondary btn--sm" 
+              onClick={() => setShowOnlyUpdates(false)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              title="Exit updates filter and view all your installed mods"
+            >
+              <X size={14} /> Clear Filter (View All Mods)
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Grouped Folders */}

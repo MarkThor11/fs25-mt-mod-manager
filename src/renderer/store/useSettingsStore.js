@@ -20,7 +20,7 @@ export const useSettingsStore = create((set) => ({
   homeShowLatest: true,
   homeShowDownloaded: true,
   homeShowUpdates: true,
-  modUpdateMode: 'manual', // 'manual' or 'auto'
+  modUpdateMode: 'auto', // 'auto' or 'manual'
   lastUpdateCheck: 0,
   lastGlobalWarming: 0,
   conflictSensitivity: 'warn',
@@ -98,7 +98,7 @@ export const useSettingsStore = create((set) => ({
         homeShowLatest: settings.homeShowLatest !== 'false',
         homeShowDownloaded: settings.homeShowDownloaded !== 'false',
         homeShowUpdates: settings.homeShowUpdates !== 'false',
-        modUpdateMode: settings.modUpdateMode || 'manual',
+        modUpdateMode: settings.modUpdateMode || 'auto',
         lastUpdateCheck: parseInt(settings.lastUpdateCheck || '0'),
         lastGlobalWarming: parseInt(settings.lastGlobalWarming || '0'),
         conflictSensitivity: settings.conflictSensitivity || 'warn',
@@ -289,6 +289,11 @@ export const useSettingsStore = create((set) => ({
   setModUpdateMode: async (mode) => {
     set({ modUpdateMode: mode });
     if (window.api?.settings) await window.api.settings.set('modUpdateMode', mode);
+    if (mode === 'auto') {
+      import('./useLocalModsStore').then(s => {
+        s.useLocalModsStore.getState().triggerAutoUpdateIfNeeded();
+      }).catch(console.error);
+    }
   },
 
   setLastUpdateCheck: async (timestamp) => {
