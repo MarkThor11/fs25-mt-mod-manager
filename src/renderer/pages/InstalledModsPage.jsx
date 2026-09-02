@@ -1990,37 +1990,41 @@ export default function InstalledModsPage() {
           <Heart size={14} fill={showOnlyFavorites ? 'currentColor' : 'none'} /> Favorites
         </button>
 
-        <button 
-          className={`btn ${showOnlyUpdates ? 'btn--primary' : 'btn--secondary'} btn--sm`}
-          onClick={() => setShowOnlyUpdates(!showOnlyUpdates)}
-          style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
-          title={updates.length === 0 ? "No updates detected. Run 'Check for Updates' first." : "Filter by mods needing updates"}
-        >
-          <RefreshCw size={14} className={showOnlyUpdates ? 'animate-pulse' : ''} /> Updates
-          {updates.length > 0 && (
-            <span style={{ 
-                background: showOnlyUpdates ? 'white' : 'var(--accent)', 
-                color: showOnlyUpdates ? 'var(--accent)' : 'white', 
-                borderRadius: 10, 
-                padding: '1px 6px', 
-                fontSize: 10,
-                fontWeight: 900,
-                minWidth: 18,
-                textAlign: 'center'
-            }}>
-                {updates.length}
-            </span>
-          )}
-        </button>
-        {updates.length > 0 && (
-          <button
-            className="btn btn--primary btn--sm animate-fade-in"
-            onClick={() => updateAllMods()}
-            style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)' }}
-            title="Download and install all available mod updates concurrently"
-          >
-            <Download size={14} /> Update All ({updates.length})
-          </button>
+        {modUpdateMode !== 'auto' && (
+          <>
+            <button 
+              className={`btn ${showOnlyUpdates ? 'btn--primary' : 'btn--secondary'} btn--sm`}
+              onClick={() => setShowOnlyUpdates(!showOnlyUpdates)}
+              style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
+              title={updates.length === 0 ? "No updates detected. Run 'Check for Updates' first." : "Filter by mods needing updates"}
+            >
+              <RefreshCw size={14} className={showOnlyUpdates ? 'animate-pulse' : ''} /> Updates
+              {updates.length > 0 && (
+                <span style={{ 
+                    background: showOnlyUpdates ? 'white' : 'var(--accent)', 
+                    color: showOnlyUpdates ? 'var(--accent)' : 'white', 
+                    borderRadius: 10, 
+                    padding: '1px 6px', 
+                    fontSize: 10, 
+                    fontWeight: 900, 
+                    minWidth: 18, 
+                    textAlign: 'center' 
+                }}>
+                    {updates.length}
+                </span>
+              )}
+            </button>
+            {updates.length > 0 && (
+              <button 
+                className="btn btn--primary btn--sm animate-fade-in"
+                onClick={() => updateAllMods()}
+                style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--accent)' }}
+                title="Download and install all available mod updates concurrently"
+              >
+                <Download size={14} /> Update All ({updates.length})
+              </button>
+            )}
+          </>
         )}
 
         <button 
@@ -2385,13 +2389,15 @@ export default function InstalledModsPage() {
                 Filtered by: Available Updates ({filteredMods.length} mod{filteredMods.length === 1 ? '' : 's'})
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                Only installed mods that have a newer version available on ModHub are shown.
+                {modUpdateMode === 'auto'
+                  ? 'Updates download automatically in the background. Showing installed mods with pending updates.'
+                  : 'Only installed mods that have a newer version available on ModHub are shown.'}
               </div>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {filteredMods.length > 0 && (
+            {modUpdateMode !== 'auto' && filteredMods.length > 0 && (
               <button 
                 className="btn btn--primary btn--sm" 
                 onClick={() => updateAllMods(filteredMods)}
