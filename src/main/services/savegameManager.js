@@ -263,18 +263,33 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
 
     const folders = await fs.readdir(templatesDir);
 
+    // Helper: Verify template is complete (not a corrupt/dummy 9-file unlaunched folder)
+    const isCompleteTemplate = async (fPath) => {
+        if (!fs.existsSync(path.join(fPath, 'terrain.heightmap.png'))) return false;
+        // Must have real engine-generated files or substantial file count
+        const hasGdm = fs.existsSync(path.join(fPath, 'densityMap_fruits.gdm'));
+        const hasEconomy = fs.existsSync(path.join(fPath, 'economy.xml'));
+        if (hasGdm || hasEconomy) return true;
+        const count = await fs.readdir(fPath).then(files => files.length).catch(() => 0);
+        return count >= 25;
+    };
+
     // 1. Direct folder check
     for (const folder of folders) {
         const folderPath = path.join(templatesDir, folder);
         const stat = await fs.stat(folderPath).catch(() => null);
         if (!stat || !stat.isDirectory()) continue;
 
-        if (!fs.existsSync(path.join(folderPath, 'terrain.heightmap.png'))) continue;
+        if (!(await isCompleteTemplate(folderPath))) continue;
 
         const fNorm = ultraNorm(folder);
+        // Exact normalized modName match (e.g. "birgland" === "birgland")
         if (targetModNorm && fNorm === targetModNorm) return folder;
-        if (targetModNorm && fNorm.startsWith(targetModNorm)) return folder;
+        // Template named with pattern: {modName}_{mapId} or {modName}_{modName}_{mapId}
+        if (targetModNorm && targetMapIdNorm && (fNorm === `${targetModNorm}${targetMapIdNorm}` || fNorm === `${targetModNorm}${targetModNorm}${targetMapIdNorm}`)) return folder;
+        // Exact normalized title match
         if (targetTitleNorm && fNorm === targetTitleNorm) return folder;
+        // Non-generic mapId match
         if (!isGenericMapId && targetMapIdNorm && fNorm === targetMapIdNorm) return folder;
     }
 
@@ -282,18 +297,23 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
     for (const folder of folders) {
         const folderPath = path.join(templatesDir, folder);
         const careerPath = path.join(folderPath, 'careerSavegame.xml');
-        if (fs.existsSync(careerPath) && fs.existsSync(path.join(folderPath, 'terrain.heightmap.png'))) {
+        if (fs.existsSync(careerPath) && (await isCompleteTemplate(folderPath))) {
             try {
                 const xml = await fs.readFile(careerPath, 'utf8');
                 const internalId = getElementText(xml, 'mapId');
                 const internalTitle = getElementText(xml, 'mapTitle');
                 
-                if (internalTitle && targetTitleNorm && ultraNorm(internalTitle) === targetTitleNorm) {
-                    return folder;
-                }
                 if (internalId && targetModNorm) {
                     const internalModPart = ultraNorm(internalId.split('.')[0]);
                     if (internalModPart === targetModNorm) {
+                        return folder;
+                    }
+                }
+                if (internalTitle && targetTitleNorm && ultraNorm(internalTitle) === targetTitleNorm) {
+                    if (targetModNorm) {
+                        const internalModPart = ultraNorm((internalId || '').split('.')[0]);
+                        if (internalModPart && internalModPart === targetModNorm) return folder;
+                    } else {
                         return folder;
                     }
                 }
@@ -531,6 +551,15 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     // Scan mods first so we can resolve the correct path of the map mod (even if in a subfolder)
     const modManager = require('./modManager');
+    try {
+        const defaultMods = modManager.getDefaultModsPath();
+        if (defaultMods) {
+            await modManager.syncMirrorLinks(defaultMods);
+        }
+    } catch (mErr) {
+        console.warn('[CREATE] Warning: failed to sync mirror links:', mErr.message);
+    }
+
     let allMods = [];
     try {
         const scanRes = await modManager.scanLocalMods();
@@ -907,48 +936,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                                 await fs.writeFile(targetPath, entry.getData());
                             }
                         }
-                        if (lowerBase === 'dem.png' || lowerBase === 'terrain.heightmap.png' || lowerBase.endsWith('_dem.png')) {
-                            const targetPath = path.join(slotPath, 'terrain.heightmap.png');
-                            if (!fs.existsSync(targetPath)) {
-                                await fs.writeFile(targetPath, entry.getData());
-                                extractedTerrain = true;
-                                console.log(`[CREATE] Extracted heightmap ${baseName} -> terrain.heightmap.png`);
-                            }
-                        }
-                        if (lowerBase.endsWith('.terrain.occluders.cache') || lowerBase === 'terrain.occluders.cache') {
-                            const targetPath = path.join(slotPath, 'terrain.occluders.cache');
-                            if (!fs.existsSync(targetPath)) {
-                                await fs.writeFile(targetPath, entry.getData());
-                                console.log(`[CREATE] Extracted ${baseName} -> terrain.occluders.cache`);
-                            }
-                        }
-                        if (lowerBase.endsWith('.terrain.nmap.cache') || lowerBase === 'terrain.nmap.cache') {
-                            const targetPath = path.join(slotPath, 'terrain.nmap.cache');
-                            if (!fs.existsSync(targetPath)) {
-                                await fs.writeFile(targetPath, entry.getData());
-                            }
-                        }
-                        if (lowerBase.endsWith('.terrain.lod.type.cache') || lowerBase === 'terrain.lod.type.cache') {
-                            const targetPath = path.join(slotPath, 'terrain.lod.type.cache');
-                            if (!fs.existsSync(targetPath)) {
-                                await fs.writeFile(targetPath, entry.getData());
-                            }
-                        }
-
-                        // Map default savegame XML templates
-                        if (xmlMap[lowerBase]) {
-                            const destName = xmlMap[lowerBase];
-                            const targetPath = path.join(slotPath, destName);
-                            if (!fs.existsSync(targetPath)) {
-                                await fs.writeFile(targetPath, entry.getData());
-                                console.log(`[CREATE] Extracted initial save file: ${destName}`);
-                            }
-                        }
                     }
                     console.log(`[CREATE] Extracted ${extractedGrles} infoLayer GRLE files and terrain assets from map zip.`);
-                    if (extractedTerrain) {
-                        requiresEngineInit = false;
-                    }
                 }
             }
         } catch (err) {
@@ -1104,12 +1093,19 @@ async function getAllSavegames() {
             const farmsFile = path.join(savePath, 'farms.xml');
             const initFile = path.join(savePath, 'terrain.heightmap.png');
             const placeablesFile = path.join(savePath, 'placeables.xml');
-            const isInitialized = fs.existsSync(farmsFile) && fs.existsSync(initFile) && fs.existsSync(placeablesFile);
+            const playTime = parseFloat(stats?.['@_playTime'] || stats?.playTime || 0);
+
+            // A savegame is ONLY truly initialized if the game engine has actually generated and saved it:
+            // Must have core files AND genuine engine data (economy.xml, guidedTour.xml, or densityMap_fruits.gdm with playTime > 0)
+            const hasEngineData = fs.existsSync(path.join(savePath, 'economy.xml')) ||
+                                  fs.existsSync(path.join(savePath, 'guidedTour.xml')) ||
+                                  (fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm')) && playTime > 0);
+            const isInitialized = fs.existsSync(farmsFile) && fs.existsSync(initFile) && fs.existsSync(placeablesFile) && hasEngineData;
 
             let hasTemplate = false;
             try {
                 hasTemplate = await hasMapTemplate(mapId, mapTitle, mapModName);
-                if (isInitialized && !hasTemplate && mapId && !isOfficialMap(mapId)) {
+                if (isInitialized && !hasTemplate && mapId && !isOfficialMap(mapId) && hasEngineData) {
                     console.log(`[AUTO-HARVEST] Automatically learning master template for map ${mapId} from savegame slot ${i}...`);
                     const harvestResult = await adoptSaveAsTemplate(i);
                     if (harvestResult && harvestResult.success) {
@@ -3168,7 +3164,7 @@ async function syncSubfolderMapDependencies(savePath) {
         if (!obj || !obj.careerSavegame) return;
 
         // Try to identify the map mod
-        const mapMatch = xmlData.match(/mapId="([^"]+)"/);
+        const mapMatch = xmlData.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xmlData.match(/mapId="([^"]+)"/i);
         if (!mapMatch || !mapMatch[1]) return;
         const mapId = mapMatch[1].split('.')[0];
         

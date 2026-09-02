@@ -1348,6 +1348,14 @@ app.whenReady().then(() => {
     }
   }).catch(() => {});
 
+  // Ensure all mods stored in dedicated map/category subfolders are mirrored to the primary mods directory
+  try {
+    const defaultMods = modManager.getDefaultModsPath();
+    if (defaultMods) {
+      modManager.syncMirrorLinks(defaultMods).catch(err => console.warn('[STARTUP] Subfolder mirror sync warning:', err.message));
+    }
+  } catch (e) {}
+
   // APP STARTUP
   // (Removed automated ingestion for native 20-slot system)
   // ── Security Hardening ──
