@@ -157,7 +157,8 @@ async function getMapTemplates() {
             if (!stats.isDirectory()) return null;
 
             const heightmap = path.join(folderPath, 'terrain.heightmap.png');
-            if (!fs.existsSync(heightmap)) return null;
+            const economyFile = path.join(folderPath, 'economy.xml');
+            if (!fs.existsSync(heightmap) || !fs.existsSync(economyFile)) return null;
 
             // Try to find names in careerSavegame.xml if present
             let mapTitle = folder;
