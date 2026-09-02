@@ -608,6 +608,16 @@ function setRemoteImage(url, base64) {
   db.prepare('INSERT OR REPLACE INTO image_cache (url, base64, created_at) VALUES (?, ?, ?)').run(url, base64, Date.now());
 }
 
+function getModHubTotalCount() {
+  if (!db) return 0;
+  try {
+    const row = db.prepare("SELECT COUNT(DISTINCT mod_id) as cnt FROM mod_tracking WHERE mod_id IS NOT NULL AND mod_id != '' AND mod_id NOT LIKE '177%'").get();
+    return row?.cnt || 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
 function close() {
   if (db) {
     db.close();
@@ -619,6 +629,7 @@ module.exports = {
   init, get, set, clearAll,
   getSetting, setSetting, getAllSettings,
   getModTracking, setModTracking, removeModTracking, removeModTrackingByFile, getAllModTracking, getModTrackingByFile, getModTrackingByBaseName, getAllModTrackingMap,
+  getModHubTotalCount,
   setModTags, setModLocation,
   getLocalModCache, getAllLocalModCache, setLocalModCache, removeLocalModCache, clearLocalModCache, updateLocalModIcon,
   updateLocalModCachePath, updateModTrackingFileInfo,

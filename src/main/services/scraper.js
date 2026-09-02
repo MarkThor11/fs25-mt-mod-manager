@@ -1000,6 +1000,10 @@ async function searchMods(query, page = 0, gameTitle = 'fs2025') {
  */
 async function fetchTrueModCount() {
   try {
+    const cache = require('./cache');
+    const trackedCount = cache.getModHubTotalCount();
+    if (trackedCount > 0) return trackedCount;
+
     // 1. Get total pages from page 0
     const firstPageUrl = `${MODS_URL}?title=fs2025&filter=latest&page=0`;
     const firstPageHtml = await throttledFetch(firstPageUrl);
