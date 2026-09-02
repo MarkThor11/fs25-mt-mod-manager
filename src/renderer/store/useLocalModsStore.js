@@ -19,9 +19,15 @@ function reconcileUpdates(currentUpdates, localMods) {
   if (!Array.isArray(localMods) || localMods.length === 0) return currentUpdates;
 
   return currentUpdates.filter(u => {
+    if (!u) return false;
+    const isPrefab = (u.title || '').includes('(Prefab*)') || 
+                     (u.modhubTitle || '').includes('(Prefab*)') ||
+                     (u.fileName || '').toLowerCase().includes('prefab');
+    if (isPrefab) return false;
+
     const local = localMods.find(m => m.fileName === u.fileName || (m.modId && String(m.modId) === String(u.modId)));
-    if (!local) return true;
-    if (!u.remoteVersion || !local.version) return true;
+    if (!local) return false; // If not installed locally, it's not a local update
+    if (!u.remoteVersion || !local.version || local.version === 'Unknown' || local.version === 'Invalid') return false;
 
     const parts1 = String(local.version).split(/[.-]/).map(p => parseInt(p, 10) || 0);
     const parts2 = String(u.remoteVersion).split(/[.-]/).map(p => parseInt(p, 10) || 0);

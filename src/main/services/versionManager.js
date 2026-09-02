@@ -75,7 +75,8 @@ async function checkAllUpdates() {
     // Prefabs do not contain modDesc.xml and cannot be version-compared via modDesc
     const isPrefab = (localMod.title || '').includes('(Prefab*)') || 
                      (tracked?.category || '').toLowerCase() === 'prefab' ||
-                     (localMod.category || '').toLowerCase() === 'prefab';
+                     (localMod.category || '').toLowerCase() === 'prefab' ||
+                     cleanFileName.includes('prefab');
     if (isPrefab) continue;
 
     const hasUpdate = compareVersions(localVersion, remoteVersion) > 0;
