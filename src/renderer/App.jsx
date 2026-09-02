@@ -258,10 +258,8 @@ export default function App() {
     const CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
 
     const runAutoUpdateCheck = async () => {
-      const { autoCheckUpdates, lastUpdateCheck, setLastUpdateCheck } = useSettingsStore.getState();
+      const { lastUpdateCheck, setLastUpdateCheck } = useSettingsStore.getState();
       const { checkUpdates, triggerAutoUpdateIfNeeded } = useLocalModsStore.getState();
-
-      if (!autoCheckUpdates) return;
 
       const now = Date.now();
       if (now - lastUpdateCheck < CHECK_INTERVAL) {

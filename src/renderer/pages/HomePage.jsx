@@ -21,7 +21,6 @@ export default function HomePage() {
   } = useModHubStore();
 
   const { 
-    autoCheckUpdates, 
     homeShowHero, 
     homeShowStats, 
     homeShowLatest, 

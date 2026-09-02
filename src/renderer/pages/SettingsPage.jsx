@@ -52,13 +52,13 @@ const CollapsibleSection = ({ title, icon: Icon, children, color, defaultOpen = 
 export default function SettingsPage() {
   const navigate = useNavigate();
   const {
-    theme, modsPath, modsPaths, gamePath, autoCheckUpdates, launchPreference,
+    theme, modsPath, modsPaths, gamePath, launchPreference,
     savegameSlot, enableCheats, skipModDialog, skipIntro, hiddenFolders,
     autoStart, conflictSensitivity, cloudBackupPath,
     homeShowHero, homeShowStats, homeShowLatest, homeShowDownloaded, homeShowUpdates,
     appFullscreen, rememberModHubPage, modUpdateMode, skipDeleteConfirm, backupRetention,
     badgeDuration, selectiveLoading, autoDownloadMapDeps,
-    setTheme, setModsPath, addModsPath, removeModsPath, setGamePath, setAutoCheckUpdates, setLaunchPreference,
+    setTheme, setModsPath, addModsPath, removeModsPath, setGamePath, setLaunchPreference,
     setSavegameSlot, setEnableCheats, setSkipModDialog, setSkipIntro, toggleHiddenFolder,
     setHasSeenGuide, setAutoStart, setConflictSensitivity, setCloudBackupPath, setBackupRetention,
     setHomeShowHero, setHomeShowStats, setHomeShowLatest, setHomeShowDownloaded, setHomeShowUpdates,
@@ -1191,26 +1191,12 @@ export default function SettingsPage() {
 
         <div className="settings-row">
           <div>
-            <div className="settings-row__label">Auto-check for mod updates</div>
-            <div className="settings-row__desc">Check for updates on startup and periodically in the background</div>
-          </div>
-          <div className="settings-row__control">
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={autoCheckUpdates}
-                onChange={(e) => setAutoCheckUpdates(e.target.checked)}
-              />
-              <div className="toggle__track" />
-              <div className="toggle__thumb" />
-            </label>
-          </div>
-        </div>
-
-        <div className="settings-row">
-          <div>
             <div className="settings-row__label">Mod Update Mode</div>
-            <div className="settings-row__desc">Choose if updates should be manual or automatic</div>
+            <div className="settings-row__desc">
+              {modUpdateMode === 'auto' 
+                ? 'Updates are automatically downloaded and installed in the background' 
+                : 'Updates are detected and reported on the dashboard for you to review'}
+            </div>
           </div>
           <div className="settings-row__control" style={{ display: 'flex', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '2px' }}>
             <button 
@@ -1230,7 +1216,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {modUpdateMode === 'auto' && (
+        {modUpdateMode === 'auto' ? (
           <div className="animate-fade-in" style={{ 
             marginTop: '8px', 
             padding: '12px', 
@@ -1244,7 +1230,23 @@ export default function SettingsPage() {
               <ShieldAlert size={14} style={{ color: 'var(--accent)' }} />
               <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>AUTO-UPDATE ACTIVE</span>
             </div>
-            Updates will be checked every hour and installed automatically if the game is not running.
+            Updates will be checked periodically and installed automatically in the background when the game is not running.
+          </div>
+        ) : (
+          <div className="animate-fade-in" style={{ 
+            marginTop: '8px', 
+            padding: '12px', 
+            background: 'rgba(234, 179, 8, 0.05)', 
+            borderRadius: 'var(--radius-md)', 
+            borderLeft: '3px solid #eab308',
+            fontSize: 'var(--fs-xs)',
+            color: 'var(--text-secondary)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <RefreshCw size={14} style={{ color: '#eab308' }} />
+              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>MANUAL MODE ACTIVE</span>
+            </div>
+            Updates will be detected and reported on your dashboard. You can review and update mods manually from the Installed Mods view.
           </div>
         )}
       </CollapsibleSection>
