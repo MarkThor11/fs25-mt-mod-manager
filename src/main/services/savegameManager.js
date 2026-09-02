@@ -569,26 +569,51 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         console.error('[CREATE] Failed to scan local mods:', err);
     }
 
+    const GENERIC_MAP_IDS = new Set([
+        'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
+        'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
+        'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek'
+    ]);
+
     let modZipPath = null;
-    const findMapZip = (name, title, id) => {
+    const findMapZip = (name, title, id, directFilePath) => {
+        if (directFilePath && fs.existsSync(directFilePath)) return directFilePath;
+
         const nLow = (name || '').toLowerCase();
         const tLow = (title || '').toLowerCase();
         const idLow = (id || '').toLowerCase();
         
-        for (const m of allMods) {
-            if (!m.filePath || !m.filePath.toLowerCase().endsWith('.zip')) continue;
-            const mNameLow = (m.modName || '').toLowerCase();
-            const mFileBase = path.basename(m.filePath, '.zip').toLowerCase();
-            const mTitleLow = (m.title || '').toLowerCase();
-            const mMapIdLow = (m.mapId || '').toLowerCase();
-            
-            if (nLow && (mNameLow === nLow || mFileBase === nLow)) return m.filePath;
-            if (tLow && mTitleLow === tLow) return m.filePath;
-            if (idLow && (mMapIdLow === idLow || mNameLow === idLow)) return m.filePath;
+        // Pass 1: Match by exact mod name or file basename
+        if (nLow) {
+            for (const m of allMods) {
+                if (!m.filePath || !m.filePath.toLowerCase().endsWith('.zip')) continue;
+                const mNameLow = (m.modName || '').toLowerCase();
+                const mFileBase = path.basename(m.filePath, '.zip').toLowerCase();
+                if (mNameLow === nLow || mFileBase === nLow) return m.filePath;
+            }
         }
+
+        // Pass 2: Match by exact title
+        if (tLow) {
+            for (const m of allMods) {
+                if (!m.filePath || !m.filePath.toLowerCase().endsWith('.zip')) continue;
+                const mTitleLow = (m.title || '').toLowerCase();
+                if (mTitleLow === tLow) return m.filePath;
+            }
+        }
+
+        // Pass 3: Match by unique mapId (NEVER match generic placeholder map IDs like SampleModMap!)
+        if (idLow && !GENERIC_MAP_IDS.has(idLow)) {
+            for (const m of allMods) {
+                if (!m.filePath || !m.filePath.toLowerCase().endsWith('.zip')) continue;
+                const mMapIdLow = (m.mapId || '').toLowerCase();
+                if (mMapIdLow === idLow) return m.filePath;
+            }
+        }
+
         return null;
     };
-    modZipPath = findMapZip(mapModName, mapTitle, mapId);
+    modZipPath = findMapZip(mapModName, mapTitle, mapId, opts.mapFilePath);
 
     // 2. Identify and Copy Template
     const resolvedFolder = await resolveTemplateFolder(mapId, mapModName, mapTitle);
@@ -786,6 +811,55 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             // Update careerSavegame mods list
             savegameData.careerSavegame.mod = modData;
 
+            // Strip any hardcoded/stale player spawn coordinates so the game engine natively
+            // spawns the player at the map's designated starting spawn point (e.g. farmhouse)
+            if (savegameData.careerSavegame.player) {
+                delete savegameData.careerSavegame.player['@_spawnPositionX'];
+                delete savegameData.careerSavegame.player['@_spawnPositionY'];
+                delete savegameData.careerSavegame.player['@_spawnPositionZ'];
+                delete savegameData.careerSavegame.player['@_spawnYaw'];
+                delete savegameData.careerSavegame.player['@_vehicleId'];
+                delete savegameData.careerSavegame.player['@_vehicleFilename'];
+            }
+
+            // Strip any lingering player spawn coordinates in players.xml
+            const playersPath = path.join(slotPath, 'players.xml');
+            if (fs.existsSync(playersPath)) {
+                try {
+                    const pXml = await fs.readFile(playersPath, 'utf8');
+                    const pData = parser.parse(pXml);
+                    if (pData?.players?.player) {
+                        const plist = Array.isArray(pData.players.player) ? pData.players.player : [pData.players.player];
+                        for (const p of plist) {
+                            if (p.spawn) delete p.spawn;
+                        }
+                        await fs.writeFile(playersPath, builder.build(pData));
+                    }
+                } catch (e) {}
+            }
+
+            // Reset template environment.xml to clean runtime Day 1 and strip stale forecast
+            const envTemplatePath = path.join(slotPath, 'environment.xml');
+            if (fs.existsSync(envTemplatePath)) {
+                try {
+                    const eXml = await fs.readFile(envTemplatePath, 'utf8');
+                    const eData = parser.parse(eXml);
+                    if (eData?.environment) {
+                        eData.environment.currentPeriod = String(startMonth || 1);
+                        eData.environment.daysPerPeriod = String(fixedSeasonLength || 1);
+                        eData.environment.currentDay = '1';
+                        eData.environment.currentMonotonicDay = '1';
+                        eData.environment.realHourTimer = '0.000000';
+                        eData.environment.dayTime = '480.000000';
+                        eData.environment.time = '480.000000';
+                        if (eData.environment.weather?.forecast) {
+                            delete eData.environment.weather.forecast;
+                        }
+                        await fs.writeFile(envTemplatePath, builder.build(eData));
+                    }
+                } catch (e) {}
+            }
+
             // If start farm is disabled by user, strip starting farm vehicles from vehicles.xml
             if (!includeStartFarm) {
                 const vehiclesPath = path.join(slotPath, 'vehicles.xml');
@@ -903,22 +977,97 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     const AdmZip = require('adm-zip');
                     const zip = new AdmZip(modZipPath);
 
-                    const xmlMap = {
-                        'environment.xml': 'environment.xml',
-                        'farmlands.xml': 'farmland.xml',
-                        'farmland.xml': 'farmland.xml',
-                        'fields.xml': 'fields.xml',
-                        'items.xml': 'items.xml',
-                        'placeables.xml': 'placeables.xml',
-                        'vehicles.xml': 'vehicles.xml',
-                        'collectibles.xml': 'collectibles.xml',
-                        'handtools.xml': 'handTools.xml',
-                        'splitshapes.gmss': 'splitShapes.gmss'
+                    // 1. Read modDesc.xml to identify author-configured default asset paths
+                    let defaultVehiclesFile = null;
+                    let defaultPlaceablesFile = null;
+                    let defaultItemsFile = null;
+                    let defaultHandToolsFile = null;
+                    let mapConfigFile = null;
+
+                    try {
+                        const mdEntry = zip.getEntry('modDesc.xml');
+                        if (mdEntry) {
+                            const mdXml = mdEntry.getData().toString('utf8');
+                            const mapMatch = mdXml.match(/<map\s+([^>]+)>/i);
+                            if (mapMatch) {
+                                const attrRegex = /(\w+)=["']([^"']*)["']/g;
+                                let aMatch;
+                                const mapAttrs = {};
+                                while ((aMatch = attrRegex.exec(mapMatch[1])) !== null) {
+                                    mapAttrs[aMatch[1]] = aMatch[2];
+                                }
+                                defaultVehiclesFile = mapAttrs.defaultVehiclesXMLFilename;
+                                defaultPlaceablesFile = mapAttrs.defaultPlaceablesXMLFilename;
+                                defaultItemsFile = mapAttrs.defaultItemsXMLFilename;
+                                defaultHandToolsFile = mapAttrs.defaultHandToolsXMLFilename;
+                                mapConfigFile = mapAttrs.configFilename;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[CREATE] Could not parse map modDesc.xml:', e.message);
+                    }
+
+                    // 2. Read map.xml to identify farmlands and fields paths
+                    let farmlandsFile = null;
+                    let fieldsFile = null;
+                    if (mapConfigFile && !mapConfigFile.startsWith('$data')) {
+                        try {
+                            const cfgEntry = zip.getEntry(mapConfigFile) || zip.getEntry(mapConfigFile.replace(/\\/g, '/'));
+                            if (cfgEntry) {
+                                const cfgXml = cfgEntry.getData().toString('utf8');
+                                const flMatch = cfgXml.match(/<farmlands\s+[^>]*filename=["']([^"']+)["']/i);
+                                if (flMatch) farmlandsFile = flMatch[1];
+                                const fMatch = cfgXml.match(/<fields\s+[^>]*filename=["']([^"']+)["']/i);
+                                if (fMatch) fieldsFile = fMatch[1];
+                            }
+                        } catch (e) {
+                            console.warn('[CREATE] Could not parse map config XML:', e.message);
+                        }
+                    }
+
+                    // Helper to extract a specific entry from zip to destination file in slotPath
+                    const extractExactZipFile = async (relPath, destFilename) => {
+                        if (!relPath || relPath.startsWith('$data')) return false;
+                        const normPath = relPath.replace(/\\/g, '/').toLowerCase();
+                        const entry = zip.getEntries().find(e => e.entryName.replace(/\\/g, '/').toLowerCase() === normPath);
+                        if (entry) {
+                            const targetPath = path.join(slotPath, destFilename);
+                            if (!fs.existsSync(targetPath)) {
+                                await fs.writeFile(targetPath, entry.getData());
+                                console.log(`[CREATE] Extracted author-configured ${entry.entryName} -> ${destFilename}`);
+                                return true;
+                            }
+                        }
+                        return false;
                     };
+
+                    // Extract exact starting files designated by the map author
+                    if (defaultVehiclesFile) await extractExactZipFile(defaultVehiclesFile, 'vehicles.xml');
+                    if (defaultPlaceablesFile) await extractExactZipFile(defaultPlaceablesFile, 'placeables.xml');
+                    if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
+                    if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
+                    if (farmlandsFile) await extractExactZipFile(farmlandsFile, 'farmland.xml');
+                    if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
+
+                    // If starting farm is disabled, strip farm 1 vehicles
+                    if (!includeStartFarm) {
+                        const vehiclesPath = path.join(slotPath, 'vehicles.xml');
+                        if (fs.existsSync(vehiclesPath)) {
+                            try {
+                                let vXml = await fs.readFile(vehiclesPath, 'utf8');
+                                vXml = vXml.replace(/<vehicle\s+[^>]*farmId="1"[^>]*>[\s\S]*?<\/vehicle>/gi, '');
+                                vXml = vXml.replace(/<vehicle\s+[^>]*farmId="1"[^>]*\/>/gi, '');
+                                await fs.writeFile(vehiclesPath, vXml);
+                                console.log('[CREATE] Stripped starting farm vehicles because includeStartFarm is false.');
+                            } catch (e) {}
+                        }
+                    }
 
                     let extractedTerrain = false;
 
-                    // Extract infoLayer grle files, heightmaps, density maps, and terrain cache files
+                    // Extract terrain assets: info layers, heightmaps, density maps, and terrain caches
+                    // NOTE: Notice environment.xml is deliberately EXCLUDED! A map mod's environment.xml is a map lighting/weather
+                    // configuration, NOT a savegame state. Copying it to the savegame breaks native ambient sounds and weather.
                     for (const entry of zip.getEntries()) {
                         const entryName = entry.entryName.replace(/\\/g, '/');
                         const baseName = path.basename(entryName);
@@ -949,7 +1098,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             const targetPath = path.join(slotPath, 'terrain.occluders.cache');
                             if (!fs.existsSync(targetPath)) {
                                 await fs.writeFile(targetPath, entry.getData());
-                                console.log(`[CREATE] Extracted ${baseName} -> terrain.occluders.cache`);
                             }
                         }
                         if (lowerBase.endsWith('.terrain.nmap.cache') || lowerBase === 'terrain.nmap.cache') {
@@ -964,18 +1112,28 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                                 await fs.writeFile(targetPath, entry.getData());
                             }
                         }
-
-                        // Map default savegame XML templates
-                        if (xmlMap[lowerBase]) {
-                            const destName = xmlMap[lowerBase];
-                            const targetPath = path.join(slotPath, destName);
+                        if (lowerBase === 'splitshapes.gmss') {
+                            const targetPath = path.join(slotPath, 'splitShapes.gmss');
                             if (!fs.existsSync(targetPath)) {
                                 await fs.writeFile(targetPath, entry.getData());
-                                console.log(`[CREATE] Extracted initial save file: ${destName}`);
                             }
                         }
+
+                        // Fallback extraction for maps that didn't have standard modDesc default attributes
+                        if (!fs.existsSync(path.join(slotPath, 'vehicles.xml')) && lowerBase === 'vehicles.xml') {
+                            await fs.writeFile(path.join(slotPath, 'vehicles.xml'), entry.getData());
+                        }
+                        if (!fs.existsSync(path.join(slotPath, 'placeables.xml')) && lowerBase === 'placeables.xml') {
+                            await fs.writeFile(path.join(slotPath, 'placeables.xml'), entry.getData());
+                        }
+                        if (!fs.existsSync(path.join(slotPath, 'items.xml')) && lowerBase === 'items.xml') {
+                            await fs.writeFile(path.join(slotPath, 'items.xml'), entry.getData());
+                        }
+                        if (!fs.existsSync(path.join(slotPath, 'farmland.xml')) && (lowerBase === 'farmlands.xml' || lowerBase === 'farmland.xml')) {
+                            await fs.writeFile(path.join(slotPath, 'farmland.xml'), entry.getData());
+                        }
                     }
-                    console.log(`[CREATE] Extracted ${extractedGrles} infoLayer GRLE files and terrain assets from map zip.`);
+                    console.log(`[CREATE] Extracted ${extractedGrles} infoLayer GRLE files and terrain assets from map zip: ${path.basename(modZipPath)}.`);
                 }
             }
         } catch (err) {
@@ -999,7 +1157,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     const envPath = path.join(slotPath, 'environment.xml');
-    if (!fs.existsSync(envPath)) {
+    if (requiresEngineInit || !fs.existsSync(envPath)) {
         const envXml = `<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <environment>
     <currentPeriod>${startMonth || 1}</currentPeriod>
@@ -2546,6 +2704,45 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
             return { x: -204.544, y: 82.996, z: -300.276 };
         }
         
+        // Check savegame's own placeables.xml first
+        const savePlaceablesPath = path.join(savePath, 'placeables.xml');
+        if (fs.existsSync(savePlaceablesPath)) {
+            try {
+                const sPlaceablesXml = fs.readFileSync(savePlaceablesPath, 'utf8');
+                const hotspotMatch = sPlaceablesXml.match(/teleportWorldPosition="([^"]+)"/i) ||
+                                     sPlaceablesXml.match(/teleportPosition="([^"]+)"/i);
+                if (hotspotMatch && hotspotMatch[1]) {
+                    const coords = hotspotMatch[1].trim().split(/\s+/).map(parseFloat);
+                    if (coords.length >= 3 && !isNaN(coords[0])) {
+                        return { x: coords[0], y: coords[1], z: coords[2] };
+                    }
+                }
+                const pParsed = parser.parse(sPlaceablesXml);
+                if (pParsed?.placeables?.placeable) {
+                    const plist = Array.isArray(pParsed.placeables.placeable) ? pParsed.placeables.placeable : [pParsed.placeables.placeable];
+                    const shopPlaceable = plist.find(p => {
+                        const filename = String(p['@_filename'] || '').toLowerCase();
+                        const uniqueId = String(p['@_uniqueId'] || '').toLowerCase();
+                        return (
+                            filename.includes('sellingstationvehicles') || 
+                            filename.includes('vehicletrader') || 
+                            filename.includes('vehicleshop') || 
+                            filename.includes('sellingstationstore') ||
+                            uniqueId.includes('sellingstationvehicles') || 
+                            uniqueId.includes('vehicletrader') ||
+                            uniqueId.includes('vehicleshop')
+                        );
+                    });
+                    if (shopPlaceable && shopPlaceable['@_position']) {
+                        const coords = shopPlaceable['@_position'].split(' ').map(parseFloat);
+                        if (coords.length >= 3 && !isNaN(coords[0])) {
+                            return { x: coords[0], y: coords[1], z: coords[2] };
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
+
         const templateFolder = await resolveTemplateFolder(mapId, mapModName, mapTitle);
         const templatesDir = getTemplatesPath();
         

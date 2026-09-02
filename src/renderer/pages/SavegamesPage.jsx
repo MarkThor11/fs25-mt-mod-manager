@@ -1914,7 +1914,7 @@ export default function SavegamesPage() {
       }
 
       const modsToAdd = mods.filter(m => finalModNames.has(m.modName));
-      const [mapId, mapTitle, mapModName] = createMap.split('|');
+      const [mapId, mapTitle, mapModName, , filePath] = createMap.split('|');
       
       // Confirm overwrite if manually selected an occupied slot
       if (createSlot !== 'auto') {
@@ -1924,6 +1924,14 @@ export default function SavegamesPage() {
         }
       }
 
+      // Clear any previous spawn preset on this slot so fresh save uses map's native start point
+      try {
+        const slotSave = savegames.find(s => s.index === slotIndex);
+        if (slotSave?.path) {
+          localStorage.removeItem(`selected_spawn_${slotSave.path}`);
+        }
+      } catch (e) {}
+
       const result = await window.api.savegames.create({
         savegameIndex: slotIndex,
         savegameName: createName.trim(),
@@ -1931,6 +1939,7 @@ export default function SavegamesPage() {
         mapId: mapId,
         mapTitle: mapTitle,
         mapModName: mapModName,
+        mapFilePath: filePath || null,
         difficulty: createDifficulty,
         economicDifficulty: createEconomy,
         initialMoney: createMoney,
@@ -1942,6 +1951,9 @@ export default function SavegamesPage() {
       });
 
       if (result.success) {
+        if (result.path) {
+          try { localStorage.removeItem(`selected_spawn_${result.path}`); } catch (e) {}
+        }
         if (result.requiresEngineInit) {
           useToastStore.getState().success(`Map needs engine initialization. Launching Slot ${slotIndex} to build world...`);
           setShowCreateModal(false);
