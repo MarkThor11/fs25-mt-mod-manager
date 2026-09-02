@@ -1015,6 +1015,8 @@ async function fetchTrueModCount() {
     const lastPageUrl = `${MODS_URL}?title=fs2025&filter=latest&page=${totalPages - 1}`;
     const lastPageHtml = await throttledFetch(lastPageUrl);
     const $last = cheerio.load(lastPageHtml);
+    const modsOnLastPage = $last('.mod-item').length;
+
     // 3. Raw total from all pages
     const rawTotal = ((totalPages - 1) * 24) + modsOnLastPage;
 

@@ -22,57 +22,23 @@ async function syncAndGetStats() {
     }
 
     try {
-        // 3. Fetch current status (First 2 pages cover most daily activity)
+        // 3. Fetch latest page from ModHub
         const page0 = await scraper.fetchModList('latest', 0);
-        const page1 = await scraper.fetchModList('latest', 1);
-        const currentMods = [...(page0.mods || []), ...(page1.mods || [])];
+        const latestMods = page0.mods || [];
         
-        // Get true total mod count (calculates based on last page)
+        // Get true total player mod count (excluding official DLCs)
         const totalMods = await scraper.fetchTrueModCount();
 
-        let changed = false;
-
-        // 4. Identity new discoveries
-        for (const mod of currentMods) {
-            const id = String(mod.modId);
-            const status = knownStatus[id];
-
-            if (mod.isNew && status !== 'new') {
-                stats.newCount++;
-                knownStatus[id] = 'new';
-                changed = true;
-                console.log(`[DISCOVERY] Found NEW mod: ${mod.title} (${id})`);
-            } else if (mod.isUpdate && status !== 'update') {
-                stats.updateCount++;
-                knownStatus[id] = 'update';
-                changed = true;
-                console.log(`[DISCOVERY] Found UPDATE for mod: ${mod.title} (${id})`);
-            } else if (!mod.isNew && !mod.isUpdate && !status) {
-                // Mod found with no badge, mark as seen so we don't treat it as new later
-                knownStatus[id] = 'seen';
-                changed = true;
-            }
-        }
-
-        // 5. Persist if state changed
-        if (changed || stats.date !== todayStr) {
-            // Prune knownStatus to keep DB size manageable (keep most recent 500)
-            const entries = Object.entries(knownStatus);
-            if (entries.length > 500) {
-                // In a real app we'd use timestamps, but for now we'll just slice
-                knownStatus = Object.fromEntries(entries.slice(-500));
-            }
-
-            cache.set('modhub_discovery_stats', stats, 48 * 60 * 60 * 1000); // 2 days
-            cache.set('modhub_known_status', knownStatus, 60 * 24 * 60 * 60 * 1000); // 60 days
-        }
+        // Accurately count badges directly from latest feed
+        const newCount = latestMods.filter(m => m.isNew).length;
+        const updateCount = latestMods.filter(m => m.isUpdate).length;
 
         return {
             success: true,
             totalMods,
-            newCount: stats.newCount,
-            updateCount: stats.updateCount,
-            latestCount: (page0.mods || []).length
+            newCount,
+            updateCount,
+            latestCount: latestMods.length
         };
 
     } catch (err) {
