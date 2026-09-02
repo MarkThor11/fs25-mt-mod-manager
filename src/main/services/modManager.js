@@ -694,18 +694,28 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                 if (fs.existsSync(destPath)) await fs.remove(destPath);
                 
                 if (isZip) {
-                    // Try Hardlink first (requires no admin privileges on Windows!)
+                    // Try Hardlink first (requires no admin privileges on Windows when on same drive)
                     try {
                         await fs.link(m.filePath, destPath);
                     } catch (hErr) {
-                        await fs.symlink(m.filePath, destPath, 'file');
+                        try {
+                            await fs.symlink(m.filePath, destPath, 'file');
+                        } catch (sErr) {
+                            // Fallback to direct copy if symlink fails across drives (e.g. without dev mode / admin permissions)
+                            await fs.copyFile(m.filePath, destPath);
+                        }
                     }
                 } else {
-                    await fs.symlink(m.filePath, destPath, 'junction');
+                    try {
+                        await fs.symlink(m.filePath, destPath, 'junction');
+                    } catch (jErr) {
+                        await fs.copy(m.filePath, destPath);
+                    }
                 }
                 linkedCount++;
                 seenFiles.add(m.modName.toLowerCase());
             } catch (e) {
+                console.error(`[VIRTUAL] Failed to stage mod ${m.modName} in virtual folder:`, e.message);
                 debugLog(`[VIRTUAL] Link failed for ${m.modName}: ${e.message}`);
             }
         }
