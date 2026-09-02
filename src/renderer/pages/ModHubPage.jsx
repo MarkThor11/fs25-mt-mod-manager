@@ -492,8 +492,8 @@ export default function ModHubPage() {
               )}
             </div>
 
-            <div className="sort-bar__search" style={{ marginLeft: 'auto', width: '30%', maxWidth: 400 }}>
-              <div className="search-wrap">
+            <div className="sort-bar__search" style={{ marginLeft: 'auto', width: '30%', maxWidth: 400, display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div className="search-wrap" style={{ flex: 1 }}>
                 <Search className="search-wrap__icon" />
                 <input
                   className="search-input"
@@ -512,6 +512,14 @@ export default function ModHubPage() {
                   />
                 )}
               </div>
+              <button
+                className="btn btn--secondary btn--sm"
+                onClick={() => fetchMods(currentFilter, 0, false, true)}
+                title="Refresh ModHub feed"
+                style={{ height: 38, width: 38, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              >
+                <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+              </button>
             </div>
           </div>
 

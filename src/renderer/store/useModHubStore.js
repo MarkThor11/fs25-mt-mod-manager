@@ -640,6 +640,8 @@ export const useModHubStore = create((set, get) => ({
     try {
       const result = await window.api.modhub.getStats();
       if (result.success) {
+        const prevNew = get().newCount;
+        const prevTotal = get().totalMods;
         const statsObj = { 
           totalMods: result.totalMods, 
           latestCount: result.latestCount,
@@ -650,6 +652,12 @@ export const useModHubStore = create((set, get) => ({
         try {
           localStorage.setItem('modhub_stats', JSON.stringify(statsObj));
         } catch (_) {}
+
+        // If new mods are detected or total changed, bust latest cache and fetch fresh
+        if (result.newCount > 0 && (result.newCount !== prevNew || result.totalMods !== prevTotal)) {
+          console.log('[MODHUB] Stats change detected! Automatically refreshing latest feed...');
+          get().fetchMods('latest', 0, false, true);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch ModHub stats:', err);
@@ -680,7 +688,7 @@ export const useModHubStore = create((set, get) => ({
     }
   },
 
-  fetchMods: async (filter, page, isPrefetch = false) => {
+  fetchMods: async (filter, page, isPrefetch = false, bustCache = false) => {
     if (!window.api?.modhub) return [];
     const { currentFilter, authorFilter, modCache, categories } = get();
     
@@ -704,8 +712,8 @@ export const useModHubStore = create((set, get) => ({
     const isGlobalFeed = ['latest', 'downloads', 'mostdownloaded', 'best', 'rating'].includes(f.toLowerCase());
     const isOverpopulatedGlobalFeed = isGlobalFeed && (cached?.allMods?.length || 0) > 72;
 
-    if (cached && !isPrefetch && !isOverpopulatedGlobalFeed) {
-      const isStale = now - cached.timestamp > 300000; // 5 minutes stale for UI
+    if (cached && !isPrefetch && !isOverpopulatedGlobalFeed && !bustCache) {
+      const isStale = now - cached.timestamp > 180000; // 3 minutes stale for UI
       
       set({ 
         categoryAllMods: cached.allMods || [],
@@ -764,7 +772,7 @@ export const useModHubStore = create((set, get) => ({
           }
           return resMods;
         } else {
-          const first = await window.api.modhub.fetchMods({ filter: filterName, page: 0 });
+          const first = await window.api.modhub.fetchMods({ filter: filterName, page: 0, bustCache });
           let total = first.pagination?.total || first.totalPages || 1;
           
           if (['latest', 'downloads', 'mostdownloaded', 'best', 'rating'].includes(filterName.toLowerCase())) {
@@ -774,7 +782,7 @@ export const useModHubStore = create((set, get) => ({
           const resMods = [...(first.mods || [])];
           if (total > 1) {
             const extra = await Promise.all(Array.from({ length: total - 1 }, (_, i) => 
-              window.api.modhub.fetchMods({ filter: filterName, page: i + 1 })
+              window.api.modhub.fetchMods({ filter: filterName, page: i + 1, bustCache })
             ));
             extra.forEach(r => { if (r.mods) resMods.push(...r.mods); });
           }

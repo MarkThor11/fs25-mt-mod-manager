@@ -399,18 +399,20 @@ ipcMain.handle('system:getDiskSpace', async (_, targetPath) => {
 
 // ── ModHub scraping ──
 ipcMain.handle('modhub:fetchMods', async (event, params) => {
-  const { filter, page = 0 } = params || {};
+  const { filter, page = 0, bustCache = false } = params || {};
   const f = filter || 'latest';
-  console.log(`[IPC] ModHub request received: FILTER=${f}, PAGE=${page}`);
+  console.log(`[IPC] ModHub request received: FILTER=${f}, PAGE=${page}, bustCache=${bustCache}`);
   try {
     const cacheKey = `mods_${f}_${page}`;
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      console.log(`[IPC] ModHub list served from cache: filter=${f}, page=${page}`);
-      return cached;
+    if (!bustCache) {
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        console.log(`[IPC] ModHub list served from cache: filter=${f}, page=${page}`);
+        return cached;
+      }
     }
 
-    const result = await scraper.fetchModList(f, page);
+    const result = await scraper.fetchModList(f, page, bustCache);
     
     // ── INSTANT ENRICHMENT ──
     // Look up each mod in the persistent cache to provide dependencies/techData immediately
@@ -426,7 +428,16 @@ ipcMain.handle('modhub:fetchMods', async (event, params) => {
       });
     }
 
-    cache.set(cacheKey, result, 24 * 60 * 60 * 1000); // 24hr TTL
+    // Dynamic TTL:
+    // Feeds (latest, downloads, rating) update frequently; page 0/1 should never be locked for 24 hours.
+    let ttl = 15 * 60 * 1000; // 15 mins default
+    if (f === 'latest') {
+      ttl = (page === 0) ? 3 * 60 * 1000 : (page === 1 ? 5 * 60 * 1000 : 15 * 60 * 1000);
+    } else if (page === 0) {
+      ttl = 5 * 60 * 1000;
+    }
+
+    cache.set(cacheKey, result, ttl);
     return result;
   } catch (err) {
     console.error('Failed to fetch mods:', err);

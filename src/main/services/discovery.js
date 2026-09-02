@@ -33,6 +33,9 @@ async function syncAndGetStats() {
         const newCount = latestMods.filter(m => m.isNew).length;
         const updateCount = latestMods.filter(m => m.isUpdate).length;
 
+        // Keep mods_latest_0 hot in cache with fresh page data
+        cache.set('mods_latest_0', page0, 3 * 60 * 1000);
+
         return {
             success: true,
             totalMods,
