@@ -1017,9 +1017,9 @@ async function fetchTrueModCount() {
     const $last = cheerio.load(lastPageHtml);
     const modsOnLastPage = $last('.mod-item').length;
 
-    // 3. Exact calculation: All full pages (24 mods) + last page remainder - 10 DLC/store placeholders
+    // 3. Exact calculation: All full pages (24 mods) + last page remainder
     const rawTotal = ((totalPages - 1) * 24) + modsOnLastPage;
-    return Math.max(0, rawTotal - 10);
+    return Math.max(0, rawTotal);
   } catch (err) {
     console.error(`[SCRAPER] Failed to fetch true total: ${err.message}`);
     return 0;
