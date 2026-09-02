@@ -1576,14 +1576,20 @@ async function performScan(manualPaths = null) {
 			const relativePath = subFolder ? `${subFolder}/${entryName}` : entryName;
 			
 			let calculatedModId = modDesc?.modId || null;
+			let tracked = null;
 			if (!calculatedModId) {
-				const tracked = trackingFileMap.get(relativePath) || trackingFileMap.get(entryName) || trackingFileMap.get(entryName.toLowerCase());
+				tracked = trackingFileMap.get(relativePath) || trackingFileMap.get(entryName) || trackingFileMap.get(entryName.toLowerCase());
 				if (tracked?.mod_id) {
 					calculatedModId = tracked.mod_id;
 				} else {
 					const trackedBase = trackingBaseNameMap.get(entryName.toLowerCase());
-					if (trackedBase?.mod_id) calculatedModId = trackedBase.mod_id;
+					if (trackedBase?.mod_id) {
+						calculatedModId = trackedBase.mod_id;
+						tracked = trackedBase;
+					}
 				}
+			} else {
+				tracked = trackingFileMap.get(relativePath) || trackingFileMap.get(entryName) || trackingFileMap.get(entryName.toLowerCase());
 			}
 
 			const cleanFileId = entryName.toLowerCase().replace('.zip', '');
@@ -1610,8 +1616,14 @@ async function performScan(manualPaths = null) {
 				if (author === 'Unknown' && remoteMod.title && remoteMod.title.includes('by ')) {
 					author = remoteMod.title.split('by ')[1].trim();
 				}
-				if (version === 'Unknown' && remoteMod.version) version = remoteMod.version;
+				if ((version === 'Unknown' || version === 'Invalid' || !modDesc?.version) && remoteMod.version) {
+					version = remoteMod.version;
+				}
 				if (title === entryName.replace('.zip', '') && remoteMod.title) title = remoteMod.title;
+			}
+
+			if ((version === 'Unknown' || version === 'Invalid') && (tracked?.remote_version || tracked?.local_version)) {
+				version = tracked.remote_version || tracked.local_version;
 			}
 
 			const isCrossplay = isCrossplayMod(title, calculatedModId, remoteMod);
