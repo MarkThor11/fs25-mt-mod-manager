@@ -70,7 +70,13 @@ async function checkAllUpdates() {
 
     // Physical version on disk (from modDesc.xml) takes absolute precedence over stale tracking entries
     const localVersion = localMod.version || tracked?.local_version;
-    if (!localVersion) continue;
+    if (!localVersion || localVersion === 'Unknown' || localVersion === 'Invalid') continue;
+
+    // Prefabs do not contain modDesc.xml and cannot be version-compared via modDesc
+    const isPrefab = (localMod.title || '').includes('(Prefab*)') || 
+                     (tracked?.category || '').toLowerCase() === 'prefab' ||
+                     (localMod.category || '').toLowerCase() === 'prefab';
+    if (isPrefab) continue;
 
     const hasUpdate = compareVersions(localVersion, remoteVersion) > 0;
     const title = tracked?.modhub_title || poolItem?.title || localMod.title;
