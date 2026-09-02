@@ -2679,11 +2679,26 @@ function verifyZipFileIntegrity(filePath) {
 /**
  * Incrementally registers and caches a single downloaded mod without triggering a heavy full disk rescan.
  */
-async function registerDownloadedFile(savePath, modId, modTitle, category, techData) {
+async function registerDownloadedFile(savePath, modId, modTitle, category, techData, modVersion) {
 	try {
 		if (!nodeFs.existsSync(savePath)) return null;
 		const stats = nodeFs.statSync(savePath);
-		const modDesc = parseModDesc(savePath) || { title: modTitle || path.basename(savePath, '.zip'), version: '1.0.0.0' };
+		let modDesc = parseModDesc(savePath);
+		
+		const pool = cache.getModHubMetadataPool();
+		const poolItem = modId ? pool[String(modId)] : null;
+		const resolvedVersion = modDesc?.version || modVersion || poolItem?.version || '1.0.0.0';
+		
+		if (!modDesc) {
+			modDesc = { 
+				title: modTitle || poolItem?.title || path.basename(savePath, '.zip'), 
+				version: resolvedVersion,
+				author: poolItem?.author || 'Unknown'
+			};
+		} else if (!modDesc.version || modDesc.version === '1.0.0.0' || modDesc.version === 'Unknown') {
+			modDesc.version = resolvedVersion;
+		}
+
 		const iconBase64 = await getModIcon(savePath, modDesc.iconFile, modDesc, null, false).catch(() => 'CATEGORY:generic');
 		const relativePath = path.relative(getModsPath(), savePath);
 		const folder = path.dirname(relativePath) === '.' ? '' : path.dirname(relativePath);
@@ -2693,9 +2708,11 @@ async function registerDownloadedFile(savePath, modId, modTitle, category, techD
 		cache.setLocalModCache(savePath, stats.mtimeMs, stats.size, modDesc, iconBase64, null, 'CATEGORY:skipped');
 		cache.setModTracking(modId, {
 			localFileName: relativePath,
-			modhubTitle: modTitle,
-			category: category,
-			techData: techData
+			modhubTitle: modTitle || poolItem?.title || modDesc.title,
+			category: category || poolItem?.category,
+			techData: techData,
+			localVersion: resolvedVersion,
+			remoteVersion: poolItem?.version || resolvedVersion
 		});
 
 		// Incrementally update lastScanResult.mods in memory
@@ -2705,7 +2722,7 @@ async function registerDownloadedFile(savePath, modId, modTitle, category, techD
 				modName: modDesc.modName || cleanFileName.replace('.zip', ''),
 				technicalName: modDesc.techName || '',
 				author: modDesc.author || 'Unknown',
-				version: modDesc.version || '1.0.0.0',
+				version: resolvedVersion,
 				descVersion: modDesc.descVersion || '90',
 				category: category || (modDesc.isMap ? 'CATEGORY:map' : 'CATEGORY:generic'),
 				folder: folder,
