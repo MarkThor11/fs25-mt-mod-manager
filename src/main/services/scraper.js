@@ -1015,11 +1015,13 @@ async function fetchTrueModCount() {
     const lastPageUrl = `${MODS_URL}?title=fs2025&filter=latest&page=${totalPages - 1}`;
     const lastPageHtml = await throttledFetch(lastPageUrl);
     const $last = cheerio.load(lastPageHtml);
-    const modsOnLastPage = $last('.mod-item').length;
-
-    // 3. Exact calculation: All full pages (24 mods) + last page remainder
+    // 3. Raw total from all pages
     const rawTotal = ((totalPages - 1) * 24) + modsOnLastPage;
-    return Math.max(0, rawTotal);
+
+    // 4. Official DLC packs are official game expansions, NOT player mods.
+    // Exclude the 9 official DLC listings so this counter strictly represents player mods.
+    const OFFICIAL_DLC_COUNT = 9;
+    return Math.max(0, rawTotal - OFFICIAL_DLC_COUNT);
   } catch (err) {
     console.error(`[SCRAPER] Failed to fetch true total: ${err.message}`);
     return 0;
