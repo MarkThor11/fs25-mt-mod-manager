@@ -410,9 +410,11 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
     // Auto-save the mod list change surgically
     if (!window.api?.savegames) return;
     const modsToApply = installedMods.filter(m => nextSelected.has(m.modName));
-    const result = await window.api.savegames.setSavegameMods(save.path, modsToApply);
-    if (!result.success) {
-      useToastStore.getState().error(`Failed to update mod list: ${result.error}`);
+    const result = window.api.savegames.setSavegameMods
+      ? await window.api.savegames.setSavegameMods(save.path, modsToApply)
+      : await window.api.savegames.setMods({ savegamePath: save.path, mods: modsToApply });
+    if (!result?.success) {
+      useToastStore.getState().error(`Failed to update mod list: ${result?.error || 'Unknown error'}`);
     }
   };
 
@@ -1248,6 +1250,14 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                     });
                     if (added > 0) {
                       setSelectedMods(nextSelected);
+                      if (window.api?.savegames) {
+                        const modsToApply = installedMods.filter(m => nextSelected.has(m.modName));
+                        if (window.api.savegames.setSavegameMods) {
+                          window.api.savegames.setSavegameMods(save.path, modsToApply);
+                        } else if (window.api.savegames.setMods) {
+                          window.api.savegames.setMods({ savegamePath: save.path, mods: modsToApply });
+                        }
+                      }
                       useToastStore.getState().success(`Adopted ${added} Must-Have mods!`);
                     } else {
                       useToastStore.getState().info("All Must-Haves already present or not installed.");
