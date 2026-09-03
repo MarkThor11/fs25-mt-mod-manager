@@ -168,8 +168,10 @@ async function getMapTemplates() {
             let xmlContent = null;
             if (fs.existsSync(careerPath)) {
                 xmlContent = await fs.readFile(careerPath, 'utf8');
-                mapTitle = getElementText(xmlContent, 'mapTitle') || folder;
-                mapId = getElementText(xmlContent, 'mapId') || folder;
+                const tMatch = xmlContent.match(/<mapTitle[^>]*>([^<]+)<\/mapTitle>/i) || xmlContent.match(/mapTitle=["']([^"']+)["']/i);
+                const iMatch = xmlContent.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xmlContent.match(/mapId=["']([^"']+)["']/i);
+                mapTitle = tMatch ? tMatch[1] : folder;
+                mapId = iMatch ? iMatch[1] : folder;
             }
 
             // Attempt a "Rich Match" using installed mods or DLCs
