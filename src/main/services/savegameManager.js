@@ -1188,9 +1188,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     const envPath = path.join(slotPath, 'environment.xml');
-    // If this map requires engine init, do NOT generate a synthetic environment.xml.
-    // The engine will read the map's native weather, lighting, and ambient sound files directly from the map mod!
-    if (!requiresEngineInit && !fs.existsSync(envPath)) {
+    if (!fs.existsSync(envPath)) {
         const envXml = `<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <environment>
     <currentPeriod>${startMonth || 1}</currentPeriod>

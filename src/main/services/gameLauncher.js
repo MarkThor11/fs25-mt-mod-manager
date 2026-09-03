@@ -250,19 +250,13 @@ async function launch(options = {}) {
       const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
       const farmsFile = path.join(savePath, 'farms.xml');
       const careerFile = path.join(savePath, 'careerSavegame.xml');
-      const economyFile = path.join(savePath, 'economy.xml');
-      const envFile = path.join(savePath, 'environment.xml');
-
-      // A savegame is ONLY ready for direct auto-start if it has been engine-initialized (or created from a complete master template)
-      const isEngineInitialized = fs.existsSync(economyFile) || fs.existsSync(envFile);
-      const requiresInit = options.requiresEngineInit === true || !isEngineInitialized;
-      let isValidSavegame = fs.existsSync(farmsFile) && fs.existsSync(careerFile) && !requiresInit;
+      let isValidSavegame = fs.existsSync(farmsFile) && fs.existsSync(careerFile);
       
       if (!isValidSavegame) {
-        console.log(`[LAUNCH] Savegame ${options.savegameIndex} requires initial engine setup. Bypassing autoStart so player can load via Career menu.`);
+        console.log(`[LAUNCH] Savegame ${options.savegameIndex} does not have valid savegame XML files. Bypassing autoStart.`);
         needsManualInit = true;
       } else {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is valid and initialized. Enabling Auto-Start into map.`);
+        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is valid. Enabling Auto-Start into map.`);
         args.push('-autoStartSavegameId', String(options.savegameIndex));
         args.push('-autoStart');
 
