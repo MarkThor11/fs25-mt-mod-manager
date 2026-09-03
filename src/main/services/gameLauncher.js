@@ -257,9 +257,20 @@ async function launch(options = {}) {
         console.log(`[LAUNCH] Savegame ${options.savegameIndex} does not have valid savegame XML files. Bypassing autoStart.`);
         needsManualInit = true;
       } else {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is valid. Enabling Auto-Start into map.`);
-        args.push('-autoStartSavegameId', String(options.savegameIndex));
-        args.push('-autoStart');
+        const cache = require('./cache');
+        const autoStartSetting = cache.getSetting('autoStart');
+        const shouldAutoStart = options.autoStart !== undefined ? options.autoStart : (autoStartSetting !== 'false');
+
+        if (shouldAutoStart) {
+          console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is valid. Loading savegame via -autoStartSavegameId.`);
+          args.push('-autoStartSavegameId', String(options.savegameIndex));
+          // NOTE: We intentionally do NOT pass bare '-autoStart' here.
+          // Bare '-autoStart' forces GIANTS engine to prematurely unpause the world simulation
+          // and start playing in-game ambient sound (traffic drive-bys and nature) while the loading screen
+          // is still active before the map is visible.
+        } else {
+          console.log(`[LAUNCH] Auto-start is disabled in settings. Launching to Main Menu.`);
+        }
       }
     }
 
