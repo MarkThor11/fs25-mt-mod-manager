@@ -17,6 +17,7 @@ import { useDownloadStore } from '../store/useDownloadStore';
 import MapImage, { MAP_PREVIEWS } from '../components/common/MapImage';
 import { resolveRecursiveDependencies } from '../utils/modUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
+import MapSelectDropdown from '../components/common/MapSelectDropdown';
 import { COMBINE_HARVESTER_ICON } from '../assets/combineIconData';
 
 const getLocalizedString = (val, defaultVal = 'Unknown') => {
@@ -2468,36 +2469,12 @@ export default function SavegamesPage() {
                                     <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>
                                         SELECT MAP {mapHasTemplate && <span style={{ color: 'var(--accent)', marginLeft: 8 }}><Zap size={10} fill="var(--accent)" /> AUTOMATED</span>}
                                     </label>
-                                    <select value={createMap} onChange={e => setCreateMap(e.target.value)} style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: mapHasTemplate ? '1px solid var(--accent)' : '1px solid var(--border)', borderRadius: 8 }}>
-                                        <optgroup label="Official Maps">
-                                            <option value="MapUS|Riverbend Springs|||">Riverbend Springs (US)</option>
-                                            <option value="MapAS|Hutan Pantai|||">Hutan Pantai (Asia)</option>
-                                            <option value="MapEU|Zielonka|||">Zielonka (Europe)</option>
-                                            <option value="HighlandsFishingMap|Kinlaig|pdlc_highlandsFishingPack||">Kinlaig (DLC)</option>
-                                        </optgroup>
-                                        
-                                        {mods.filter(m => m.isMap).length > 0 && (
-                                            <optgroup label="Modded Maps">
-                                                {mods.filter(m => m.isMap).map(m => {
-                                                    const isCP = (
-                                                        m.isCrossplay || 
-                                                        /crossplay|\(cp\)|\[cp\]/i.test(m.title || '') ||
-                                                        /crossplay|\(cp\)|\[cp\]/i.test(m.modName || '') ||
-                                                        /crossplay|\(cp\)|\[cp\]/i.test(m.fileName || '') ||
-                                                        /crossplay|\(cp\)|\[cp\]/i.test(m.filePath || '') ||
-                                                        /crossplay|\(cp\)|\[cp\]/i.test(m.folder || '')
-                                                    );
-                                                    const displayTitle = isCP && !/\((?:cp|crossplay)\)$/i.test(m.title || '') && !/\[(?:cp|crossplay)\]$/i.test(m.title || '')
-                                                        ? `${m.title} (CP)`
-                                                        : m.title;
-
-                                                    return (
-                                                        <option key={m.modName} value={`${m.mapId || m.modName}|${m.title}|${m.modName}|${m.iconData || ''}|${m.filePath || ''}`}>{displayTitle}</option>
-                                                    );
-                                                })}
-                                            </optgroup>
-                                        )}
-                                    </select>
+                                    <MapSelectDropdown 
+                                        value={createMap} 
+                                        onChange={val => setCreateMap(val)} 
+                                        mods={mods} 
+                                        mapHasTemplate={mapHasTemplate} 
+                                    />
                                     
                                     {localMissingDeps.length > 0 && (
                                         <div style={{ marginTop: 12, padding: '12px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8, color: '#f87171', fontSize: 13 }} className="animate-fade-in">
