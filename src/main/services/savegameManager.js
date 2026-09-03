@@ -128,6 +128,43 @@ let cachedMapMods = null;
 let lastModsScan = 0;
 
 /**
+ * Read text file from a template (either .zip archive or directory)
+ */
+function readTemplateEntryText(templateItem, relPath) {
+    if (!templateItem) return null;
+    const templatesDir = getTemplatesPath();
+    const tPath = path.join(templatesDir, templateItem);
+    if (!fs.existsSync(tPath)) {
+        // Also check if .zip extension was omitted
+        const zipAlt = tPath.endsWith('.zip') ? tPath : `${tPath}.zip`;
+        if (fs.existsSync(zipAlt)) {
+            try {
+                const AdmZip = require('adm-zip');
+                const zip = new AdmZip(zipAlt);
+                const entry = zip.getEntry(relPath.replace(/\\/g, '/'));
+                if (entry) return entry.getData().toString('utf8');
+            } catch (e) {}
+        }
+        return null;
+    }
+    const stat = fs.statSync(tPath);
+    if (stat.isFile() && templateItem.toLowerCase().endsWith('.zip')) {
+        try {
+            const AdmZip = require('adm-zip');
+            const zip = new AdmZip(tPath);
+            const entry = zip.getEntry(relPath.replace(/\\/g, '/'));
+            if (entry) return entry.getData().toString('utf8');
+        } catch (e) {}
+        return null;
+    }
+    const fullPath = path.join(tPath, relPath);
+    if (fs.existsSync(fullPath)) {
+        return fs.readFileSync(fullPath, 'utf8');
+    }
+    return null;
+}
+
+/**
  * Get all available map templates.
  */
 async function getMapTemplates() {
@@ -148,30 +185,51 @@ async function getMapTemplates() {
     const mapMods = cachedMapMods;
     const dlcMappings = modManager.DLC_MAPPING || {};
 
-    console.log(`[MAPS] Scanning ${folders.length} folders in ${templatesDir} (Parallel)`);
+    console.log(`[MAPS] Scanning ${folders.length} items in ${templatesDir} (Parallel)`);
 
     const templatePromises = folders.map(async (folder) => {
         const folderPath = path.join(templatesDir, folder);
         try {
             const stats = await fs.stat(folderPath);
-            if (!stats.isDirectory()) return null;
+            const isZip = stats.isFile() && folder.toLowerCase().endsWith('.zip');
+            if (!stats.isDirectory() && !isZip) return null;
 
-            const heightmap = path.join(folderPath, 'terrain.heightmap.png');
-            const economyFile = path.join(folderPath, 'economy.xml');
-            if (!fs.existsSync(heightmap) || !fs.existsSync(economyFile)) return null;
+            const baseName = folder.replace(/\.zip$/i, '');
+            let mapTitle = baseName;
+            let mapId = baseName;
+            let filesCount = 0;
 
-            // Try to find names in careerSavegame.xml if present
-            let mapTitle = folder;
-            let mapId = folder;
-            const careerPath = path.join(folderPath, 'careerSavegame.xml');
-            
-            let xmlContent = null;
-            if (fs.existsSync(careerPath)) {
-                xmlContent = await fs.readFile(careerPath, 'utf8');
-                const tMatch = xmlContent.match(/<mapTitle[^>]*>([^<]+)<\/mapTitle>/i) || xmlContent.match(/mapTitle=["']([^"']+)["']/i);
-                const iMatch = xmlContent.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xmlContent.match(/mapId=["']([^"']+)["']/i);
-                mapTitle = tMatch ? tMatch[1] : folder;
-                mapId = iMatch ? iMatch[1] : folder;
+            if (isZip) {
+                const AdmZip = require('adm-zip');
+                const zip = new AdmZip(folderPath);
+                const heightmap = zip.getEntry('terrain.heightmap.png');
+                const economyFile = zip.getEntry('economy.xml');
+                if (!heightmap || !economyFile) return null;
+
+                const careerEntry = zip.getEntry('careerSavegame.xml');
+                if (careerEntry) {
+                    const xmlContent = careerEntry.getData().toString('utf8');
+                    const tMatch = xmlContent.match(/<mapTitle[^>]*>([^<]+)<\/mapTitle>/i) || xmlContent.match(/mapTitle=["']([^"']+)["']/i);
+                    const iMatch = xmlContent.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xmlContent.match(/mapId=["']([^"']+)["']/i);
+                    mapTitle = tMatch ? tMatch[1] : mapTitle;
+                    mapId = iMatch ? iMatch[1] : mapId;
+                }
+                filesCount = zip.getEntries().length;
+            } else {
+                const heightmap = path.join(folderPath, 'terrain.heightmap.png');
+                const economyFile = path.join(folderPath, 'economy.xml');
+                if (!fs.existsSync(heightmap) || !fs.existsSync(economyFile)) return null;
+
+                const careerPath = path.join(folderPath, 'careerSavegame.xml');
+                if (fs.existsSync(careerPath)) {
+                    const xmlContent = await fs.readFile(careerPath, 'utf8');
+                    const tMatch = xmlContent.match(/<mapTitle[^>]*>([^<]+)<\/mapTitle>/i) || xmlContent.match(/mapTitle=["']([^"']+)["']/i);
+                    const iMatch = xmlContent.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xmlContent.match(/mapId=["']([^"']+)["']/i);
+                    mapTitle = tMatch ? tMatch[1] : folder;
+                    mapId = iMatch ? iMatch[1] : folder;
+                }
+                const files = await fs.readdir(folderPath);
+                filesCount = files.length;
             }
 
             // Attempt a "Rich Match" using installed mods or DLCs
@@ -179,12 +237,12 @@ async function getMapTemplates() {
                 const mId = m.mapId;
                 const mTitle = m.title;
                 const mName = m.modName;
-                const fLower = folder.toLowerCase();
+                const fLower = baseName.toLowerCase();
 
                 if (mId && mId === mapId) return true;
                 if (mTitle && mTitle === mapTitle) return true;
-                if (mName && mName === folder) return true;
-                if (mId && mId.replace(/[^a-z0-9]/gi, '_') === folder) return true;
+                if (mName && mName === baseName) return true;
+                if (mId && mId.replace(/[^a-z0-9]/gi, '_') === baseName) return true;
                 
                 if (mName && mId) {
                     const cleanMName = mName.toLowerCase().replace('pdlc_', '').replace(/[^a-z0-9]/gi, '_');
@@ -197,15 +255,12 @@ async function getMapTemplates() {
             let dlcInfo = null;
             if (!matchedMod) {
                 for (const info of Object.values(dlcMappings)) {
-                    if (folder.toLowerCase().includes(info.dlcId?.toLowerCase())) {
+                    if (baseName.toLowerCase().includes(info.dlcId?.toLowerCase())) {
                         dlcInfo = info;
                         break;
                     }
                 }
             }
-
-            // Count files efficiently
-            const files = await fs.readdir(folderPath);
 
             return {
                 id: folder,
@@ -215,9 +270,10 @@ async function getMapTemplates() {
                 isModMap: !isOfficialMap(mapId),
                 path: folderPath,
                 created: stats.birthtime.toISOString(),
-                filesCount: files.length,
+                filesCount: filesCount,
                 author: matchedMod ? matchedMod.author : (dlcInfo ? dlcInfo.author : (isOfficialMap(mapId) ? 'GIANTS Software' : 'Unknown')),
-                version: matchedMod ? matchedMod.version : (dlcInfo ? dlcInfo.version : null)
+                version: matchedMod ? matchedMod.version : (dlcInfo ? dlcInfo.version : null),
+                isCompressed: isZip
             };
         } catch (err) {
             console.error(`[TEMPLATES] Skipping ${folder}: ${err.message}`);
@@ -234,12 +290,19 @@ async function getMapTemplates() {
  */
 async function deleteMapTemplate(folderName) {
     const templatesDir = getTemplatesPath();
-    const target = path.join(templatesDir, folderName);
-    if (fs.existsSync(target)) {
-        await fs.remove(target);
-        return { success: true };
+    const cleanName = folderName.replace(/\.zip$/i, '');
+    const targetDir = path.join(templatesDir, cleanName);
+    const targetZip = path.join(templatesDir, `${cleanName}.zip`);
+    let deleted = false;
+    if (fs.existsSync(targetZip)) {
+        await fs.remove(targetZip);
+        deleted = true;
     }
-    return { success: false, error: 'Template not found' };
+    if (fs.existsSync(targetDir)) {
+        await fs.remove(targetDir);
+        deleted = true;
+    }
+    return { success: deleted };
 }
 
 async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) {
@@ -267,7 +330,16 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
     const folders = await fs.readdir(templatesDir);
 
     // Helper: Verify template is complete (not a corrupt/dummy 9-file unlaunched folder)
-    const isCompleteTemplate = async (fPath) => {
+    const isCompleteTemplate = async (fPath, isZip = false) => {
+        if (isZip) {
+            try {
+                const AdmZip = require('adm-zip');
+                const zip = new AdmZip(fPath);
+                return !!zip.getEntry('terrain.heightmap.png') && (!!zip.getEntry('densityMap_fruits.gdm') || !!zip.getEntry('economy.xml') || zip.getEntries().length >= 25);
+            } catch (e) {
+                return false;
+            }
+        }
         if (!fs.existsSync(path.join(fPath, 'terrain.heightmap.png'))) return false;
         // Must have real engine-generated files or substantial file count
         const hasGdm = fs.existsSync(path.join(fPath, 'densityMap_fruits.gdm'));
@@ -277,15 +349,18 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         return count >= 25;
     };
 
-    // 1. Direct folder check
+    // 1. Direct folder/zip check
     for (const folder of folders) {
         const folderPath = path.join(templatesDir, folder);
         const stat = await fs.stat(folderPath).catch(() => null);
-        if (!stat || !stat.isDirectory()) continue;
+        if (!stat) continue;
+        const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
+        if (!stat.isDirectory() && !isZip) continue;
 
-        if (!(await isCompleteTemplate(folderPath))) continue;
+        if (!(await isCompleteTemplate(folderPath, isZip))) continue;
 
-        const fNorm = ultraNorm(folder);
+        const cleanFolder = folder.replace(/\.zip$/i, '');
+        const fNorm = ultraNorm(cleanFolder);
         // Exact normalized modName match (e.g. "birgland" === "birgland")
         if (targetModNorm && fNorm === targetModNorm) return folder;
         // Template named with pattern: {modName}_{mapId} or {modName}_{modName}_{mapId}
@@ -299,31 +374,49 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
     // 2. XML Deep Scan check inside templates
     for (const folder of folders) {
         const folderPath = path.join(templatesDir, folder);
-        const careerPath = path.join(folderPath, 'careerSavegame.xml');
-        if (fs.existsSync(careerPath) && (await isCompleteTemplate(folderPath))) {
+        const stat = await fs.stat(folderPath).catch(() => null);
+        if (!stat) continue;
+        const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
+        if (!stat.isDirectory() && !isZip) continue;
+
+        if (await isCompleteTemplate(folderPath, isZip)) {
             try {
-                const xml = await fs.readFile(careerPath, 'utf8');
-                const idMatch = xml.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xml.match(/mapId=["']([^"']+)["']/i);
-                const titleMatch = xml.match(/<mapTitle[^>]*>([^<]+)<\/mapTitle>/i) || xml.match(/mapTitle=["']([^"']+)["']/i);
-                const internalId = idMatch ? idMatch[1] : null;
-                const internalTitle = titleMatch ? titleMatch[1] : null;
-                
-                if (internalId && targetModNorm) {
-                    const internalModPart = ultraNorm(internalId.split('.')[0]);
-                    if (internalModPart === targetModNorm) {
-                        return folder;
+                let xml = null;
+                if (isZip) {
+                    const AdmZip = require('adm-zip');
+                    const zip = new AdmZip(folderPath);
+                    const careerEntry = zip.getEntry('careerSavegame.xml');
+                    if (careerEntry) xml = careerEntry.getData().toString('utf8');
+                } else {
+                    const careerPath = path.join(folderPath, 'careerSavegame.xml');
+                    if (fs.existsSync(careerPath)) {
+                        xml = await fs.readFile(careerPath, 'utf8');
                     }
                 }
-                if (internalTitle && targetTitleNorm && ultraNorm(internalTitle) === targetTitleNorm) {
-                    if (targetModNorm) {
-                        const internalModPart = ultraNorm((internalId || '').split('.')[0]);
-                        if (internalModPart && internalModPart === targetModNorm) return folder;
-                    } else {
+
+                if (xml) {
+                    const idMatch = xml.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xml.match(/mapId=["']([^"']+)["']/i);
+                    const titleMatch = xml.match(/<mapTitle[^>]*>([^<]+)<\/mapTitle>/i) || xml.match(/mapTitle=["']([^"']+)["']/i);
+                    const internalId = idMatch ? idMatch[1] : null;
+                    const internalTitle = titleMatch ? titleMatch[1] : null;
+                    
+                    if (internalId && targetModNorm) {
+                        const internalModPart = ultraNorm(internalId.split('.')[0]);
+                        if (internalModPart === targetModNorm) {
+                            return folder;
+                        }
+                    }
+                    if (internalTitle && targetTitleNorm && ultraNorm(internalTitle) === targetTitleNorm) {
+                        if (targetModNorm) {
+                            const internalModPart = ultraNorm((internalId || '').split('.')[0]);
+                            if (internalModPart && internalModPart === targetModNorm) return folder;
+                        } else {
+                            return folder;
+                        }
+                    }
+                    if (!isGenericMapId && internalId && ultraNorm(internalId) === targetMapIdNorm) {
                         return folder;
                     }
-                }
-                if (!isGenericMapId && internalId && ultraNorm(internalId) === targetMapIdNorm) {
-                    return folder;
                 }
             } catch (e) {}
         }
@@ -625,9 +718,18 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     if (resolvedFolder) {
         const templatePath = path.join(templatesDir, resolvedFolder);
         if (fs.existsSync(templatePath)) {
-            console.log(`[CREATE] Copying master template from ${resolvedFolder}`);
-            await fs.copy(templatePath, slotPath);
-            copiedTemplate = true;
+            const stat = await fs.stat(templatePath);
+            if (stat.isFile() && templatePath.toLowerCase().endsWith('.zip')) {
+                console.log(`[CREATE] Extracting compressed master template from ${resolvedFolder}`);
+                const AdmZip = require('adm-zip');
+                const zip = new AdmZip(templatePath);
+                zip.extractAllTo(slotPath, true);
+                copiedTemplate = true;
+            } else if (stat.isDirectory()) {
+                console.log(`[CREATE] Copying master template from ${resolvedFolder}`);
+                await fs.copy(templatePath, slotPath);
+                copiedTemplate = true;
+            }
         }
     }
 
@@ -2551,22 +2653,22 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true) {
         const templatesDir = getTemplatesPath();
         
         if (templateFolder) {
-            const tCareerPath = path.join(templatesDir, templateFolder, 'careerSavegame.xml');
-            const tCareerXml = fs.readFileSync(tCareerPath, 'utf8');
-            const tObj = parser.parse(tCareerXml);
-            if (tObj && tObj.careerSavegame && tObj.careerSavegame.player) {
-                const pTag = tObj.careerSavegame.player;
-                if (pTag['@_spawnPositionX'] !== undefined) {
-                    return {
-                        x: parseFloat(pTag['@_spawnPositionX']),
-                        y: parseFloat(pTag['@_spawnPositionY']),
-                        z: parseFloat(pTag['@_spawnPositionZ'])
-                    };
+            const tCareerXml = readTemplateEntryText(templateFolder, 'careerSavegame.xml');
+            if (tCareerXml) {
+                const tObj = parser.parse(tCareerXml);
+                if (tObj && tObj.careerSavegame && tObj.careerSavegame.player) {
+                    const pTag = tObj.careerSavegame.player;
+                    if (pTag['@_spawnPositionX'] !== undefined) {
+                        return {
+                            x: parseFloat(pTag['@_spawnPositionX']),
+                            y: parseFloat(pTag['@_spawnPositionY']),
+                            z: parseFloat(pTag['@_spawnPositionZ'])
+                        };
+                    }
                 }
             }
-            const tPlayersPath = path.join(templatesDir, templateFolder, 'players.xml');
-            if (fs.existsSync(tPlayersPath)) {
-                const tPlayersXml = fs.readFileSync(tPlayersPath, 'utf8');
+            const tPlayersXml = readTemplateEntryText(templateFolder, 'players.xml');
+            if (tPlayersXml) {
                 const pObj = parser.parse(tPlayersXml);
                 if (pObj && pObj.players && pObj.players.player) {
                     const player = Array.isArray(pObj.players.player) ? pObj.players.player[0] : pObj.players.player;
@@ -2782,20 +2884,18 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
         const templatesDir = getTemplatesPath();
         
         if (templateFolder) {
-            const sJsonPath = path.join(templatesDir, templateFolder, 'shopPos.json');
-            if (fs.existsSync(sJsonPath)) {
+            const sJsonText = readTemplateEntryText(templateFolder, 'shopPos.json');
+            if (sJsonText) {
                 try {
-                    const shopData = fs.readJsonSync(sJsonPath);
+                    const shopData = JSON.parse(sJsonText);
                     if (shopData && shopData.x !== undefined && shopData.y !== undefined && shopData.z !== undefined) {
                         return { x: parseFloat(shopData.x), y: parseFloat(shopData.y), z: parseFloat(shopData.z) };
                     }
                 } catch (e) {}
             }
 
-            const tPlaceablesPath = path.join(templatesDir, templateFolder, 'placeables.xml');
-            if (fs.existsSync(tPlaceablesPath)) {
-                const tPlaceablesXml = fs.readFileSync(tPlaceablesPath, 'utf8');
-
+            const tPlaceablesXml = readTemplateEntryText(templateFolder, 'placeables.xml');
+            if (tPlaceablesXml) {
                 // Check for inline hotspot teleport position in placeables.xml
                 const hotspotMatch = tPlaceablesXml.match(/teleportWorldPosition="([^"]+)"/i) ||
                                      tPlaceablesXml.match(/teleportPosition="([^"]+)"/i);
@@ -3545,6 +3645,20 @@ async function adoptSaveAsTemplate(saveIndex) {
             if (fs.existsSync(p)) {
                 await fs.remove(p);
             }
+        }
+        // Auto-compress harvested template into a lightweight .zip archive
+        const zipPath = path.join(templatesDir, `${templateFolder}.zip`);
+        try {
+            const AdmZip = require('adm-zip');
+            const zip = new AdmZip();
+            zip.addLocalFolder(destPath);
+            zip.writeZip(zipPath);
+            const zipStats = fs.statSync(zipPath);
+            console.log(`[HARVEST] Auto-compressed template "${templateFolder}" to ${path.basename(zipPath)} (${(zipStats.size / (1024 * 1024)).toFixed(2)} MB)`);
+            // Clean up uncompressed folder to save disk space
+            await fs.remove(destPath);
+        } catch (zErr) {
+            console.warn(`[HARVEST] Could not compress template to .zip, keeping uncompressed folder:`, zErr.message);
         }
         
         return { success: true };
