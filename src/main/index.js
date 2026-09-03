@@ -1307,6 +1307,10 @@ ipcMain.handle('game:isRunning', async () => {
   return await gameLauncher.isGameRunning();
 });
 
+ipcMain.handle('game:getStatus', async () => {
+  return await gameLauncher.getGameStatus();
+});
+
 ipcMain.handle('game:detectPath', async () => {
   try {
     return await gameLauncher.detectGamePath();

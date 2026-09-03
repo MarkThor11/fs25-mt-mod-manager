@@ -1425,7 +1425,8 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                     minHeight: 180, 
                     padding: 'var(--sp-4)', 
                     position: 'relative', 
-                    border: isDragOver ? '2px solid var(--accent)' : (isSelected ? '1px solid var(--accent)' : (save.hasTemplate ? '1px solid var(--accent-dim)' : '1px solid transparent')), 
+                    border: isPlaying ? '1px solid #22c55e' : (isDragOver ? '2px solid var(--accent)' : (isSelected ? '1px solid var(--accent)' : (save.hasTemplate ? '1px solid var(--accent-dim)' : '1px solid transparent'))), 
+                    boxShadow: isPlaying ? '0 0 20px rgba(34, 197, 94, 0.25)' : (isSelected ? '0 0 15px rgba(var(--accent-rgb), 0.2)' : 'none'),
                     background: isDragOver ? 'rgba(var(--accent-rgb), 0.1)' : (isSelected ? 'var(--bg-tertiary)' : ''),
                     transition: 'all 0.2s ease'
                 }}
@@ -1462,6 +1463,29 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 boxShadow: '0 0 10px var(--accent)'
               }}>
                 READY FOR FIRST LAUNCH
+              </div>
+            )}
+            {isPlaying && (
+              <div style={{ 
+                position: 'absolute', 
+                top: 8, 
+                right: (save.hasTemplate || save.isGhost) ? 96 : 8, 
+                background: 'rgba(34, 197, 94, 0.25)', 
+                border: '1px solid #22c55e', 
+                color: '#4ade80', 
+                fontSize: 8, 
+                fontWeight: 900, 
+                padding: '2px 8px', 
+                borderRadius: 4,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                boxShadow: '0 0 12px rgba(34, 197, 94, 0.6)',
+                letterSpacing: 0.5,
+                zIndex: 5
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 6px #22c55e' }} />
+                ACTIVE IN-GAME
               </div>
             )}
             {save.hasTemplate && !save.isGhost && (
@@ -1535,21 +1559,23 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                   className={`btn btn--sm ${isPlaying ? 'btn--primary' : 'btn--ghost'}`} 
                   onClick={onPlay} 
                   disabled={isGameRunning && !isPlaying}
-                  title={isPlaying ? "Game is Running" : (isGameRunning ? "Another slot is running" : "Play Now")} 
+                  title={isPlaying ? "Active In-Game (Currently Running)" : (isGameRunning ? "Another slot is running" : "Play Now")} 
                   style={{ 
-                    color: 'white', 
+                    color: '#ffffff', 
                     ...(isPlaying ? { 
-                      background: 'var(--success)', 
-                      borderColor: 'var(--success)',
-                      boxShadow: '0 0 12px var(--success)', 
-                      animation: 'pulse 2s infinite' 
+                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', 
+                      borderColor: '#4ade80',
+                      boxShadow: '0 0 15px rgba(74, 222, 128, 0.95), 0 0 30px rgba(34, 197, 94, 0.65), inset 0 0 8px rgba(255, 255, 255, 0.6)', 
+                      animation: 'playGlowPulse 1.8s ease-in-out infinite',
+                      transformOrigin: 'center center',
+                      zIndex: 2
                     } : (isGameRunning ? { 
-                      opacity: 0.4, 
+                      opacity: 0.35, 
                       cursor: 'not-allowed' 
                     } : {})) 
                   }}
                 >
-                  <Play size={16} />
+                  <Play size={16} fill={isPlaying ? "currentColor" : "none"} />
                 </button>
                 {!save.isGhost && (
                   <>
@@ -1761,7 +1787,9 @@ export default function SavegamesPage() {
         ...extraOptions
     });
     
-    useSavegameStore.setState({ playingSlot: slotIndex });
+    const numericSlot = parseInt(slotIndex, 10);
+    useSavegameStore.setState({ isGameRunning: true, playingSlot: numericSlot });
+    useSettingsStore.getState().setSavegameSlot(numericSlot);
     
     if (result.success) {
       if (result.needsManualInit) {
@@ -2253,7 +2281,7 @@ export default function SavegamesPage() {
                     }
                 }}
                 editingName={editingName}
-                isPlaying={isGameRunning && playingSlot === save.index}
+                isPlaying={isGameRunning && Number(playingSlot) === Number(save.index)}
                 isGameRunning={isGameRunning}
                 newName={newName}
                 setNewName={setNewName}

@@ -64,6 +64,7 @@ export default function Sidebar() {
       
       const result = await window.api.game.launch(options);
       if (result.success) {
+        if (savegameSlot) useSavegameStore.setState({ isGameRunning: true, playingSlot: parseInt(savegameSlot, 10) });
         if (result.needsManualInit) {
           useToastStore.getState().info(`GHOST SLOT: Slot ${savegameSlot} is preparing for first-time load. Once the map loads, SAVE ONCE in-game to initialize.`, { duration: 10000 });
         } else {

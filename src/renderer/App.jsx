@@ -290,14 +290,16 @@ export default function App() {
     
     const pollGameState = async () => {
       try {
-        const isRunning = await window.api.game.isRunning();
+        const status = window.api.game.getStatus ? await window.api.game.getStatus() : { isRunning: await window.api.game.isRunning(), playingSlot: null };
         const { isGameRunning, playingSlot } = useSavegameStore.getState();
         
-        if (isRunning !== isGameRunning) {
-          useSavegameStore.setState({ isGameRunning: isRunning });
+        const isRunning = !!status.isRunning;
+        const currentSlot = status.playingSlot !== null && status.playingSlot !== undefined ? status.playingSlot : (isRunning ? playingSlot : null);
+
+        if (isRunning !== isGameRunning || currentSlot !== playingSlot) {
+          useSavegameStore.setState({ isGameRunning: isRunning, playingSlot: currentSlot });
           // If the game just stopped, clear the playing slot and refresh saves to trigger auto-harvesting
           if (!isRunning && playingSlot !== null) {
-            useSavegameStore.setState({ playingSlot: null });
             useSavegameStore.getState().fetchSavegames();
             useMapStore.getState().fetchTemplates();
           }

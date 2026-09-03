@@ -5,6 +5,8 @@ const { app } = require('electron');
 const pathProvider = require('./pathProvider');
 const systemOptimizer = require('./systemOptimizer');
 
+let activePlayingSlot = null;
+
 /**
  * Common Farming Simulator 25 install paths.
  */
@@ -246,6 +248,7 @@ async function launch(options = {}) {
   // Check if this savegame is "Officialized" (initialized by the engine)
   let needsManualInit = false;
     if (options.savegameIndex !== undefined) {
+      activePlayingSlot = parseInt(options.savegameIndex, 10) || null;
       const fs25Path = pathProvider.getFS25DataRoot();
       const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
       const farmsFile = path.join(savePath, 'farms.xml');
@@ -428,7 +431,51 @@ async function isGameRunning() {
   }
 }
 
-module.exports = { detectGamePath, launch, isGameRunning, restoreGlobalGameSettings, disableModsDirectoryOverride };
+/**
+ * Detect active savegame slot from gameSettings.xml override or log.txt
+ */
+function detectActiveSlotFromGame() {
+  try {
+    const settingsPath = pathProvider.getGameSettingsPath();
+    if (fs.existsSync(settingsPath)) {
+      const xml = fs.readFileSync(settingsPath, 'utf8');
+      const match = xml.match(/VirtualActiveMods_Savegame(\d+)/i);
+      if (match && match[1]) {
+        return parseInt(match[1], 10);
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const fs25Root = pathProvider.getFS25DataRoot();
+    const logPath = path.join(fs25Root, 'log.txt');
+    if (fs.existsSync(logPath)) {
+      const content = fs.readFileSync(logPath, 'utf8');
+      const matches = [...content.matchAll(/savegame(\d+)/gi)];
+      if (matches.length > 0) {
+        return parseInt(matches[matches.length - 1][1], 10);
+      }
+    }
+  } catch (e) {}
+
+  return null;
+}
+
+/**
+ * Get comprehensive game status including which save slot is actively running
+ */
+async function getGameStatus() {
+  const isRunning = await isGameRunning();
+  let slot = null;
+  if (isRunning) {
+    slot = activePlayingSlot || detectActiveSlotFromGame();
+  } else {
+    activePlayingSlot = null;
+  }
+  return { isRunning, playingSlot: slot };
+}
+
+module.exports = { detectGamePath, launch, isGameRunning, getGameStatus, restoreGlobalGameSettings, disableModsDirectoryOverride };
 
 
 

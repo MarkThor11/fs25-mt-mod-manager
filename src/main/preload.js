@@ -138,6 +138,7 @@ contextBridge.exposeInMainWorld('api', {
     launch: (options) => ipcRenderer.invoke('game:launch', options),
     detectPath: () => ipcRenderer.invoke('game:detectPath'),
     isRunning: () => ipcRenderer.invoke('game:isRunning'),
+    getStatus: () => ipcRenderer.invoke('game:getStatus'),
   },
 
   // Maps
