@@ -301,8 +301,10 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         if (fs.existsSync(careerPath) && (await isCompleteTemplate(folderPath))) {
             try {
                 const xml = await fs.readFile(careerPath, 'utf8');
-                const internalId = getElementText(xml, 'mapId');
-                const internalTitle = getElementText(xml, 'mapTitle');
+                const idMatch = xml.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xml.match(/mapId=["']([^"']+)["']/i);
+                const titleMatch = xml.match(/<mapTitle[^>]*>([^<]+)<\/mapTitle>/i) || xml.match(/mapTitle=["']([^"']+)["']/i);
+                const internalId = idMatch ? idMatch[1] : null;
+                const internalTitle = titleMatch ? titleMatch[1] : null;
                 
                 if (internalId && targetModNorm) {
                     const internalModPart = ultraNorm(internalId.split('.')[0]);
