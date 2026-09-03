@@ -2339,8 +2339,8 @@ function isCrossplayMod(modTitle, modId = null, remoteModOrDetail = null) {
 		if (targetTitle.includes('crossplay') || targetTitle.includes('(cp)') || targetTitle.includes('[cp]')) {
 			return true;
 		}
-		const plat = (target.platform || target.metadata?.Platform || target.metadata?.platform || '').toLowerCase();
-		if (plat.includes('ps5') || plat.includes('ps4') || plat.includes('xbs') || plat.includes('xb1') || plat.includes('console') || plat.includes('crossplay')) {
+		const fileName = (target.fileName || target.localFileName || target.file_path || '').toLowerCase();
+		if (fileName.includes('crossplay') || fileName.includes('(cp)') || fileName.includes('[cp]')) {
 			return true;
 		}
 	}
@@ -2584,7 +2584,8 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 							cache.removePendingDownload(String(modId));
 							activeInstalls.delete(String(modId));
 							cleanupInternal();
-							wrappedResolve({ success: true, fileName, filePath: savePath });
+							const relFolder = path.relative(getModsPath(), targetDirPath);
+							wrappedResolve({ success: true, fileName, filePath: savePath, subFolder: relFolder });
 						} else {
 							activeInstalls.delete(String(modId));
 							cleanupInternal();
@@ -3080,7 +3081,8 @@ function downloadWithNet(modId, url, modsPath, modTitle, onProgress, category, r
 					// Remove from pending
 					try { cache.removePendingDownload(String(modId)); } catch (_) {}
 					activeInstalls.delete(String(modId));
-					resolve({ success: true, fileName, filePath: savePath, size: receivedBytes });
+					const relFolder = path.relative(getModsPath(), modsPath);
+					resolve({ success: true, fileName, filePath: savePath, size: receivedBytes, subFolder: relFolder });
 				});
 
 				fileStream.on('error', (err) => {

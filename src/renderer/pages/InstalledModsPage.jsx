@@ -2200,11 +2200,8 @@ export default function InstalledModsPage() {
                     <option value="" disabled hidden>SELECT DESTINATION...</option>
                     <option value="" style={{ background: '#0f172a', color: 'white' }}>MAIN LIBRARY</option>
                     {allFolders.filter(f => f !== '' && f !== 'DLC' && !hiddenFolders.includes(f)).map(f => {
-                        const fMods = mods.filter(m => (m.folder || '').toLowerCase() === f.toLowerCase());
-                        const hasCPMap = fMods.some(m => m.isMap && (m.isCrossplay || m.title?.toLowerCase().includes('crossplay') || m.title?.toLowerCase().includes('(cp)')));
-                        const label = (hasCPMap && !f.toUpperCase().endsWith('(CP)') && !f.toUpperCase().endsWith('[CP]')) ? `${f.toUpperCase()} (CP)` : f.toUpperCase();
                         return (
-                            <option key={f} value={f} style={{ background: '#0f172a', color: 'white' }}>{label}</option>
+                            <option key={f} value={f} style={{ background: '#0f172a', color: 'white' }}>{f.toUpperCase()}</option>
                         );
                     })}
                     <option value="__NEW__" style={{ background: '#0f172a', color: 'var(--accent)', fontWeight: 900 }}>+ NEW FOLDER...</option>
@@ -2543,17 +2540,7 @@ export default function InstalledModsPage() {
                            }}
                            title={folderName === 'DLC' ? "" : "Click to rename folder"}
                          >
-                           {(() => {
-                             if (folderName === '') return 'MAIN';
-                             const hasMap = folderMods.some(m => m.isMap);
-                             const mapMod = folderMods.find(m => m.isMap);
-                             const isCP = (mapMod && (mapMod.isCrossplay || mapMod.title?.toLowerCase().includes('crossplay') || mapMod.title?.toLowerCase().includes('(cp)'))) || folderName.toLowerCase().includes('crossplay') || folderName.toLowerCase().includes('(cp)');
-                             const disp = folderName.toUpperCase();
-                             if (hasMap && isCP && !disp.endsWith('(CP)') && !disp.endsWith('[CP]')) {
-                               return `${disp} (CP)`;
-                             }
-                             return disp;
-                           })()}
+                           {folderName === '' ? 'MAIN' : folderName.toUpperCase()}
                            {folderName === 'DLC' && (
                              <Lock size={12} style={{ marginLeft: 6, opacity: 0.7, color: '#3b82f6' }} title="System-Managed Official DLC Folder (Locked)" />
                            )}

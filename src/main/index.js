@@ -577,7 +577,12 @@ ipcMain.handle('mods:install', async (event, { modId, modTitle, downloadUrl, cat
     
     // Clear download state completely to trigger full refresh on client ONLY if not queued
     if (result && result.success && !result.queued) {
-      mainWindow?.webContents.send('download:status', { modId, status: 'success' });
+      mainWindow?.webContents.send('download:status', { 
+        modId, 
+        status: 'success',
+        fileName: result.fileName,
+        subFolder: result.subFolder
+      });
       // Tell renderer to rescan
       setTimeout(() => mainWindow?.webContents.send('scanner:complete'), 1000);
     }

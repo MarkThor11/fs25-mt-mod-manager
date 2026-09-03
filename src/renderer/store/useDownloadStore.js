@@ -506,7 +506,7 @@ if (window.api?.on) {
           modId: strId,
           title: displayTitle,
           fileName: fileName || active?.fileName || `${strId}.zip`,
-          folder: active?.subFolder || '',
+          folder: data?.subFolder || active?.subFolder || '',
           category: data?.category || active?.category || null,
           isMap: (active?.category && active.category.toUpperCase().includes('MAP')) || (displayTitle && displayTitle.toLowerCase().includes('map'))
         });
@@ -522,7 +522,7 @@ if (window.api?.on) {
             const isMap = (active?.category && active.category.toUpperCase().includes('MAP')) || (incomingTitle && incomingTitle.toLowerCase().includes('map'));
             
             if (autoDownloadEnabled && isMap && window.api?.localMods?.autoResolveMapDependencies) {
-              const targetFolder = active?.subFolder || (displayTitle ? displayTitle.replace(/[\\/:*?"<>|]/g, '_').trim() : null);
+              const targetFolder = data?.subFolder || active?.subFolder || (displayTitle ? displayTitle.replace(/[\\/:*?"<>|]/g, '_').trim() : null);
               window.api.localMods.autoResolveMapDependencies({
                 mapId: strId,
                 targetFolder,

@@ -1320,9 +1320,8 @@ export default function ModDetailPage() {
           )}
         </div>
       </div>
-
       {showDepModal && (dependencyStatus.missingList?.length > 0) && (() => {
-        const isCP = (mod?.metadata?.Platform && /ps5|ps4|xbs|xb1|console|crossplay/i.test(mod.metadata.Platform)) || /crossplay|\(cp\)|\[cp\]/i.test(mod?.title || '');
+        const isCP = /crossplay|\(cp\)|\[cp\]/i.test(mod?.title || '') || /crossplay|\(cp\)|\[cp\]/i.test(mod?.fileName || '');
         const cleanTitle = (mod?.title || '').replace(/[\\/:*?"<>|]/g, '_').trim();
         const targetMapFolder = (mod?.isMap || mod?.category?.toUpperCase().includes('MAP')) ? (cleanTitle + (isCP && !/\((?:cp|crossplay)\)$/i.test(cleanTitle) && !/\[(?:cp|crossplay)\]$/i.test(cleanTitle) ? ' (CP)' : '')) : null;
         const assignedSubFolder = parentFolder || targetMapFolder;

@@ -32,9 +32,10 @@ export default function MapsPage() {
         if (!title && !modObj) return false;
         const t = (title || modObj?.title || '').toLowerCase();
         if (t.includes('crossplay') || t.includes('(cp)') || t.includes('[cp]')) return true;
-        if (modObj?.isCrossplay) return true;
-        const plat = (modObj?.platform || modObj?.metadata?.Platform || '').toLowerCase();
-        if (plat.includes('ps5') || plat.includes('ps4') || plat.includes('xbs') || plat.includes('xb1') || plat.includes('console') || plat.includes('crossplay')) return true;
+        const f = (modObj?.fileName || modObj?.filePath || '').toLowerCase();
+        if (f.includes('crossplay') || f.includes('(cp)') || f.includes('[cp]')) return true;
+        const folder = (modObj?.folder || '').toLowerCase();
+        if (folder.includes('(cp)') || folder.includes('[cp]')) return true;
         return false;
     };
 

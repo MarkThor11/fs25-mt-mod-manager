@@ -2485,8 +2485,7 @@ export default function SavegamesPage() {
                                                         /crossplay|\(cp\)|\[cp\]/i.test(m.modName || '') ||
                                                         /crossplay|\(cp\)|\[cp\]/i.test(m.fileName || '') ||
                                                         /crossplay|\(cp\)|\[cp\]/i.test(m.filePath || '') ||
-                                                        /crossplay|\(cp\)|\[cp\]/i.test(m.folder || '') ||
-                                                        /ps5|ps4|xbs|xb1|console|crossplay/i.test(m.platform || m.metadata?.Platform || '')
+                                                        /crossplay|\(cp\)|\[cp\]/i.test(m.folder || '')
                                                     );
                                                     const displayTitle = isCP && !/\((?:cp|crossplay)\)$/i.test(m.title || '') && !/\[(?:cp|crossplay)\]$/i.test(m.title || '')
                                                         ? `${m.title} (CP)`
@@ -2546,8 +2545,7 @@ export default function SavegamesPage() {
                                                      /crossplay|\(cp\)|\[cp\]/i.test(mapMod.modName || '') ||
                                                      /crossplay|\(cp\)|\[cp\]/i.test(mapMod.fileName || '') ||
                                                      /crossplay|\(cp\)|\[cp\]/i.test(mapMod.filePath || '') ||
-                                                     /crossplay|\(cp\)|\[cp\]/i.test(mapMod.folder || '') ||
-                                                     /ps5|ps4|xbs|xb1|console|crossplay/i.test(mapMod.platform || mapMod.metadata?.Platform || '')
+                                                     /crossplay|\(cp\)|\[cp\]/i.test(mapMod.folder || '')
                                                  );
                                                  if (isCP && title && !/\((?:cp|crossplay)\)$/i.test(title) && !/\[(?:cp|crossplay)\]$/i.test(title)) {
                                                      return `${title} (CP)`;

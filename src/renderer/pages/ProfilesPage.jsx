@@ -712,8 +712,7 @@ export default function ProfilesPage() {
                                       /crossplay|\(cp\)|\[cp\]/i.test(m.modName || '') ||
                                       /crossplay|\(cp\)|\[cp\]/i.test(m.fileName || '') ||
                                       /crossplay|\(cp\)|\[cp\]/i.test(m.filePath || '') ||
-                                      /crossplay|\(cp\)|\[cp\]/i.test(m.folder || '') ||
-                                      /ps5|ps4|xbs|xb1|console|crossplay/i.test(m.platform || m.metadata?.Platform || '')
+                                      /crossplay|\(cp\)|\[cp\]/i.test(m.folder || '')
                                     );
                                     const displayTitle = isCP && !/\((?:cp|crossplay)\)$/i.test(m.title || '') && !/\[(?:cp|crossplay)\]$/i.test(m.title || '')
                                       ? `${m.title} (CP)`
