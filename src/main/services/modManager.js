@@ -978,6 +978,9 @@ function parseModDesc(modPath, zipInstance = null) {
 		
 		if (!xmlContent) return null;
 		
+		// Strip XML comments so commented-out tags (like old versions) are never extracted
+		xmlContent = xmlContent.replace(/<!--[\s\S]*?-->/g, '');
+		
 		// Simple XML parsing without full parser - extract key fields
 		const getTag = (xml, tag) => {
 			const regex = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i');

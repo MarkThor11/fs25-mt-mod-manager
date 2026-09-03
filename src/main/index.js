@@ -814,12 +814,19 @@ ipcMain.handle('localMods:checkUpdates', async () => {
 
 ipcMain.handle('localMods:updateMod', async (_, { modFileName, modId }) => {
   try {
-    return await modManager.updateMod(modFileName, modId, (progress) => {
+    const result = await modManager.updateMod(modFileName, modId, (progress) => {
       const progressObj = typeof progress === 'object' ? progress : { percent: progress };
       mainWindow?.webContents.send('download:progress', { modId, progress: progressObj });
     });
+    if (result && result.success) {
+      mainWindow?.webContents.send('download:status', { modId, status: 'success', fileName: modFileName });
+    } else {
+      mainWindow?.webContents.send('download:status', { modId, status: 'error', error: result?.error || 'Update failed' });
+    }
+    return result;
   } catch (err) {
     console.error(`[UPDATE] Error updating ${modFileName}:`, err);
+    mainWindow?.webContents.send('download:status', { modId, status: 'error', error: err.message });
     return { success: false, error: err.message };
   }
 });
