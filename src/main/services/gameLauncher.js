@@ -260,6 +260,18 @@ async function launch(options = {}) {
         console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is valid. Enabling Auto-Start into map.`);
         args.push('-autoStartSavegameId', String(options.savegameIndex));
         args.push('-autoStart');
+
+        // Automatically activate QuietLoadingScreen helper mod so loading screens are completely silent
+        try {
+          let careerXml = fs.readFileSync(careerFile, 'utf8');
+          if (!careerXml.includes('FS25_QuietLoadingScreen')) {
+            careerXml = careerXml.replace('</careerSavegame>', '  <mod modName="FS25_QuietLoadingScreen" title="Quiet Loading Screen" version="1.0.0.0" required="false" fileHash=""/>\n</careerSavegame>');
+            fs.writeFileSync(careerFile, careerXml, 'utf8');
+            console.log('[LAUNCH] Activated FS25_QuietLoadingScreen in careerSavegame.xml');
+          }
+        } catch (e) {
+          console.warn('[LAUNCH] Could not ensure QuietLoadingScreen in careerSavegame:', e.message);
+        }
       }
     }
 

@@ -747,9 +747,17 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
             }
         }
 
-		// Inject internal bridge mods directly if requested by the savegame
-		if (activeModNames) {
-			// Removed bridge mod symlink logic as it is now handled via pdlc
+		// Inject internal QuietLoadingScreen helper mod to guarantee silent loading screens
+		try {
+			const internalQuietMod = path.join(__dirname, '..', 'resources', 'internalMods', 'FS25_QuietLoadingScreen.zip');
+			if (fs.existsSync(internalQuietMod)) {
+				const destQuietPath = path.join(virtualPath, 'FS25_QuietLoadingScreen.zip');
+				if (fs.existsSync(destQuietPath)) await fs.remove(destQuietPath);
+				await fs.copyFile(internalQuietMod, destQuietPath);
+				debugLog('[VIRTUAL] Injected internal helper mod: FS25_QuietLoadingScreen.zip');
+			}
+		} catch (qErr) {
+			console.warn('[VIRTUAL] Could not inject FS25_QuietLoadingScreen:', qErr.message);
 		}
 
 		debugLog(`[VIRTUAL] Successfully synthesized ${linkedCount} mods for launch.`);
