@@ -250,14 +250,19 @@ async function launch(options = {}) {
       const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
       const farmsFile = path.join(savePath, 'farms.xml');
       const careerFile = path.join(savePath, 'careerSavegame.xml');
-      
-      let isValidSavegame = fs.existsSync(farmsFile) && fs.existsSync(careerFile);
+      const economyFile = path.join(savePath, 'economy.xml');
+      const envFile = path.join(savePath, 'environment.xml');
+
+      // A savegame is ONLY ready for direct auto-start if it has been engine-initialized (or created from a complete master template)
+      const isEngineInitialized = fs.existsSync(economyFile) || fs.existsSync(envFile);
+      const requiresInit = options.requiresEngineInit === true || !isEngineInitialized;
+      let isValidSavegame = fs.existsSync(farmsFile) && fs.existsSync(careerFile) && !requiresInit;
       
       if (!isValidSavegame) {
-        console.log(`[LAUNCH] Savegame ${options.savegameIndex} does not have valid savegame XML files. Bypassing autoStart.`);
+        console.log(`[LAUNCH] Savegame ${options.savegameIndex} requires initial engine setup. Bypassing autoStart so player can load via Career menu.`);
         needsManualInit = true;
       } else {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is valid. Enabling Auto-Start into map.`);
+        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is valid and initialized. Enabling Auto-Start into map.`);
         args.push('-autoStartSavegameId', String(options.savegameIndex));
         args.push('-autoStart');
 
@@ -387,13 +392,20 @@ function monitorGameExitAndRestore() {
 
       if (running) {
         hasSeenGameRunning = true;
-      } else if (hasSeenGameRunning || checksCount > 15) {
+      } else if (hasSeenGameRunning) {
+        // Game was running and now exited
         clearInterval(interval);
         isMonitoringExit = false;
         console.log('[LAUNCH] Game process exit detected. Restoring global gameSettings.xml in 2 seconds...');
         setTimeout(() => {
           restoreGlobalGameSettings();
         }, 2000);
+      } else if (checksCount > 60) {
+        // Fallback: 4 minutes elapsed without detecting the game running (e.g. cancelled launch)
+        clearInterval(interval);
+        isMonitoringExit = false;
+        console.log('[LAUNCH] Game did not launch within 4 minutes. Restoring global gameSettings.xml...');
+        restoreGlobalGameSettings();
       }
     } catch (e) {
       console.error('[LAUNCH] Error monitoring game exit:', e.message);
