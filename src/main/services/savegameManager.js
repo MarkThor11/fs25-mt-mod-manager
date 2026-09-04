@@ -2489,6 +2489,141 @@ async function swapArchiveToSlot(archivedFolderName, slotIndex) {
 
 async function renameArchivedSavegame() { return { success: true }; }
 
+function formatBrandName(brand) {
+    if (!brand) return 'Unknown';
+    let b = String(brand).trim();
+    const brandMap = {
+        'JOHNDEERE': 'John Deere',
+        'MASSEYFERGUSON': 'Massey Ferguson',
+        'NEWHOLLAND': 'New Holland',
+        'CASEIH': 'Case IH',
+        'DEUTZFAHR': 'Deutz-Fahr',
+        'GREATPLAINS': 'Great Plains',
+        'RUDOLPHSOHN': 'Rudolph & Sohn',
+        'POETTINGER': 'Pöttinger',
+        'INTERNATIONAL': 'International',
+        'AGCO': 'AGCO',
+        'FENDT': 'Fendt',
+        'CLAAS': 'Claas',
+        'VALTRA': 'Valtra',
+        'KUBOTA': 'Kubota',
+        'ZETOR': 'Zetor',
+        'STEYR': 'Steyr',
+        'MCCORMICK': 'McCormick',
+        'CHALLENGER': 'Challenger',
+        'JCB': 'JCB',
+        'KRONE': 'Krone',
+        'AMAZONE': 'Amazone',
+        'LEMKEN': 'Lemken',
+        'HORSCH': 'Horsch',
+        'KVERNELAND': 'Kverneland',
+        'SAMPO': 'Sampo Rosenlew',
+        'ROSTSELMASH': 'Rostselmash',
+        'VERSATILE': 'Versatile',
+        'MANITOU': 'Manitou',
+        'MERLO': 'Merlo',
+        'SCHAFFER': 'Schäffer',
+        'WEIDEMANN': 'Weidemann'
+    };
+    const upper = b.toUpperCase().replace(/[\s_\-&]+/g, '');
+    if (brandMap[upper]) return brandMap[upper];
+    b = b.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+    return b.trim();
+}
+
+function extractXmlString(val) {
+    if (!val) return '';
+    if (typeof val === 'string') return val.trim();
+    if (typeof val === 'object') {
+        return (val.en || val['#text'] || Object.values(val)[0] || '').toString().trim();
+    }
+    return String(val).trim();
+}
+
+function readModVehicleXml(modName, targetPath) {
+    if (!modName || !targetPath) return null;
+    try {
+        const modManager = require('./modManager');
+        const allPaths = modManager.getModsPaths();
+        const cleanModName = modName.replace(/\.zip$/i, '');
+        const cleanRelPath = targetPath.replace(/\\/g, '/').replace(/^\/+/, '');
+
+        for (const p of allPaths) {
+            if (!p || !fs.existsSync(p)) continue;
+
+            // 1. Direct zip in mods folder
+            const zipFile = path.join(p, cleanModName + '.zip');
+            if (fs.existsSync(zipFile)) {
+                const buf = modManager.readEntryFromZip(zipFile, cleanRelPath);
+                if (buf) return buf.toString('utf8');
+            }
+
+            // 2. Unpacked folder in mods folder
+            const dir = path.join(p, cleanModName);
+            if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+                const filePath = path.join(dir, cleanRelPath);
+                if (fs.existsSync(filePath)) {
+                    try {
+                        return fs.readFileSync(filePath, 'utf8');
+                    } catch (e) {}
+                }
+            }
+
+            // 3. Subdirectories (organized categories like Maps, Tractors)
+            try {
+                const subs = fs.readdirSync(p, { withFileTypes: true });
+                for (const sub of subs) {
+                    if (sub.isDirectory()) {
+                        const subZip = path.join(p, sub.name, cleanModName + '.zip');
+                        if (fs.existsSync(subZip)) {
+                            const buf = modManager.readEntryFromZip(subZip, cleanRelPath);
+                            if (buf) return buf.toString('utf8');
+                        }
+                        const subDir = path.join(p, sub.name, cleanModName);
+                        if (fs.existsSync(subDir) && fs.statSync(subDir).isDirectory()) {
+                            const subFilePath = path.join(subDir, cleanRelPath);
+                            if (fs.existsSync(subFilePath)) {
+                                try {
+                                    return fs.readFileSync(subFilePath, 'utf8');
+                                } catch (e) {}
+                            }
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
+    } catch (err) {}
+    return null;
+}
+
+function resolveL10n(str, modName) {
+    if (!str || typeof str !== 'string') return '';
+    if (!str.startsWith('$l10n_')) return str;
+    const key = str.replace(/^\$l10n_/, '');
+    if (modName) {
+        try {
+            const modDescStr = readModVehicleXml(modName, 'modDesc.xml');
+            if (modDescStr) {
+                const descParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+                const desc = descParser.parse(modDescStr);
+                const texts = desc?.modDesc?.l10n?.text;
+                if (texts) {
+                    const textArr = Array.isArray(texts) ? texts : [texts];
+                    const match = textArr.find(t => t['@_name'] === key);
+                    if (match) {
+                        const val = match.en || match['#text'] || Object.values(match).find(v => typeof v === 'string');
+                        if (val) return val;
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+    return key.replace(/^(shopItem_|storeItem_|vehicle_)/i, '')
+              .replace(/([a-z])([A-Z])/g, '$1 $2')
+              .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+              .trim();
+}
+
 async function getFleetPositions(savePath, mapModName) {
     const fs = require('fs');
     const path = require('path');
@@ -2502,7 +2637,7 @@ async function getFleetPositions(savePath, mapModName) {
         'kaercher', 'karcher', 'washer', 'pressurewasher', 'hds9184'
     ];
     
-    const parseVehicleXml = (xml, isDefault = false) => {
+    const parseVehicleXml = async (xml, isDefault = false) => {
         const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
         const data = parser.parse(xml);
         const fleet = [];
@@ -2521,6 +2656,8 @@ async function getFleetPositions(savePath, mapModName) {
                 let baseType = null;
                 let baseCategory = null;
                 let staticDisplayType = null;
+                let resolvedBrand = null;
+                let resolvedName = null;
                 try {
                     const baseGameDb = require('../resources/data/baseGameVehicles.json');
                     const fnKey = (filename || '').toLowerCase().replace(/\\/g, '/');
@@ -2529,8 +2666,46 @@ async function getFleetPositions(savePath, mapModName) {
                         staticDisplayType = dbMatch.displayType;
                         baseType = dbMatch.type;
                         baseCategory = dbMatch.category;
+                        if (dbMatch.brand) resolvedBrand = dbMatch.brand;
+                        if (dbMatch.name) resolvedName = dbMatch.name;
                     }
                 } catch(err) {}
+
+                // If mod vehicle, resolve from mod archive/directory
+                let modName = v['@_modName'];
+                let relPath = null;
+                if (filename.includes('$moddir$')) {
+                    const m = filename.match(/\$moddir\$([^\\/]+)[\\/](.*)/i);
+                    if (m) {
+                        if (!modName) modName = m[1];
+                        relPath = m[2];
+                    }
+                }
+
+                if (modName && (!resolvedBrand || !resolvedName)) {
+                    try {
+                        const modXml = readModVehicleXml(modName, relPath || filename);
+                        if (modXml) {
+                            const parsedMod = parser.parse(modXml);
+                            const vRoot = parsedMod.vehicle || parsedMod;
+                            if (vRoot.storeData) {
+                                if (vRoot.storeData.name && !resolvedName) resolvedName = resolveL10n(extractXmlString(vRoot.storeData.name), modName);
+                                if (vRoot.storeData.brand && !resolvedBrand) resolvedBrand = extractXmlString(vRoot.storeData.brand);
+                                if (vRoot.storeData.category && !baseCategory) baseCategory = extractXmlString(vRoot.storeData.category);
+                            }
+                            if (vRoot.parentFile && vRoot.parentFile.attributes && vRoot.parentFile.attributes.set) {
+                                const sets = Array.isArray(vRoot.parentFile.attributes.set) ? vRoot.parentFile.attributes.set : [vRoot.parentFile.attributes.set];
+                                for (const s of sets) {
+                                    const p = s['@_path'];
+                                    const val = s['@_value'];
+                                    if (p === 'vehicle.storeData.name' && !resolvedName) resolvedName = resolveL10n(val, modName);
+                                    if (p === 'vehicle.storeData.brand' && !resolvedBrand) resolvedBrand = val;
+                                    if (p === 'vehicle.storeData.category' && !baseCategory) baseCategory = val;
+                                }
+                            }
+                        }
+                    } catch (e) {}
+                }
 
                 const deriveVehicleType = (fn, rawType, bType, bCat, sDisplay) => {
                     if (sDisplay) return sDisplay;
@@ -2593,19 +2768,37 @@ async function getFleetPositions(savePath, mapModName) {
                     coords = [parseFloat(v['@_xPosition'] || 0), parseFloat(v['@_yOffset'] || 0), parseFloat(v['@_zPosition'] || 0)];
                 }
                 
-                const base = path.basename(filename, '.xml');
-                let name = base.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').replace(/([a-zA-Z])([0-9])/g, '$1 $2').replace(/([0-9])([a-zA-Z])/g, '$1 $2').trim().toUpperCase();
-                let brand = 'Unknown';
-                const parts = filename.split('/');
-                if (parts.length > 2 && (parts[0] === 'data' || parts[0].includes('$pdlcdir$'))) {
-                    brand = parts[2].replace(/([a-z])([A-Z])/g, '$1 $2').trim().toUpperCase();
-                } else if (v['@_modName'] && !v['@_modName'].toLowerCase().startsWith('pdlc_')) {
-                    brand = v['@_modName'].replace(/^FS\d+_/i, '').toUpperCase();
+                let brand = resolvedBrand || 'Unknown';
+                let name = resolvedName || '';
+
+                // Clean brand
+                brand = formatBrandName(brand);
+
+                // Fallback brand from filename or modName if still Unknown
+                if (brand === 'Unknown') {
+                    const parts = filename.split('/');
+                    if (parts.length > 2 && (parts[0] === 'data' || parts[0].includes('$pdlcdir$'))) {
+                        brand = parts[2].replace(/([a-z])([A-Z])/g, '$1 $2').trim();
+                    } else if (v['@_modName'] && !v['@_modName'].toLowerCase().startsWith('pdlc_')) {
+                        brand = v['@_modName'].replace(/^FS\d+_/i, '').replace(/_/g, ' ');
+                    }
                 }
-                
+
+                // Fallback name if still empty
+                if (!name) {
+                    const base = path.basename(filename, '.xml');
+                    name = base.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').replace(/([a-zA-Z])([0-9])/g, '$1 $2').replace(/([0-9])([a-zA-Z])/g, '$1 $2').trim();
+                }
+
+                // Clean up: avoid duplicate brand in name
+                if (name.toUpperCase().startsWith(brand.toUpperCase() + ' ')) {
+                    name = name.slice(brand.length).trim();
+                }
+
                 // Remove word "Tractor" (case-insensitive) from brand and name
-                brand = brand.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim() || 'Unknown';
-                name = name.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim();
+                brand = brand.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim().toUpperCase() || 'UNKNOWN';
+                name = name.replace(/\bTRACTOR\b/gi, '').replace(/\s+/g, ' ').trim().toUpperCase();
+                if (!name) name = path.basename(filename, '.xml').toUpperCase();
                 
                 fleet.push({ 
                     id: gameAssignedId, 
@@ -2630,7 +2823,7 @@ async function getFleetPositions(savePath, mapModName) {
         const xmlPath = path.join(savePath, 'vehicles.xml');
         if (fs.existsSync(xmlPath)) {
             const xml = fs.readFileSync(xmlPath, 'utf8');
-            return { items: parseVehicleXml(xml, false), source: 'savegame' };
+            return { items: await parseVehicleXml(xml, false), source: 'savegame' };
         }
         
         // 2. Fallback: read default vehicles from the map mod's modDesc.xml
@@ -2650,7 +2843,7 @@ async function getFleetPositions(savePath, mapModName) {
                         const vehiclesBuf = modManager.readEntryFromZip(modZip, defaultVehiclesPath);
                         if (vehiclesBuf) {
                             const xml = vehiclesBuf.toString('utf8');
-                            return { items: parseVehicleXml(xml, true), source: 'map_defaults' };
+                            return { items: await parseVehicleXml(xml, true), source: 'map_defaults' };
                         }
                     }
                 }
