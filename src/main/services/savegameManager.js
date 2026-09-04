@@ -3136,6 +3136,141 @@ function parseShopFromI3d(i3dText) {
     return null;
 }
 
+function getGameDataDir() {
+    const candidates = [
+        'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Farming Simulator 25',
+        'C:\\Program Files\\Steam\\steamapps\\common\\Farming Simulator 25',
+        'D:\\SteamLibrary\\steamapps\\common\\Farming Simulator 25',
+        'E:\\SteamLibrary\\steamapps\\common\\Farming Simulator 25',
+        'C:\\Program Files (x86)\\Farming Simulator 2025',
+        'C:\\Program Files\\Farming Simulator 2025'
+    ];
+    for (const c of candidates) {
+        const d = path.join(c, 'data');
+        if (fs.existsSync(d)) return d;
+    }
+    return null;
+}
+
+function readPlaceableXmlFile(filename, mapModName) {
+    if (!filename) return null;
+    const gameDataDir = getGameDataDir();
+    
+    if (filename.startsWith('data/') || filename.startsWith('data\\') || filename.startsWith('$data/') || filename.startsWith('$data\\')) {
+        if (gameDataDir) {
+            const cleanRel = filename.replace(/^\$?data[\\/]/i, '');
+            const target = path.join(gameDataDir, cleanRel);
+            if (fs.existsSync(target)) {
+                try { return fs.readFileSync(target, 'utf8'); } catch (e) {}
+            }
+        }
+    }
+    
+    const modManager = require('./modManager');
+    const allPaths = modManager.getModsPaths();
+    let modName = mapModName;
+    let relPath = filename;
+    
+    if (filename.includes('$moddir$')) {
+        const m = filename.match(/\$moddir\$([^\\/]+)[\\/](.*)/i);
+        if (m) {
+            modName = m[1];
+            relPath = m[2];
+        }
+    } else if (filename.startsWith('$mapdir$')) {
+        relPath = filename.replace(/^\$mapdir\$[\\/]?/i, '');
+    }
+    
+    if (modName) {
+        const cleanMod = modName.replace(/\.zip$/i, '');
+        const cleanRel = relPath.replace(/\\/g, '/').replace(/^\/+/, '');
+        for (const p of allPaths) {
+            const zipFile = path.join(p, cleanMod + '.zip');
+            if (fs.existsSync(zipFile)) {
+                const buf = modManager.readEntryFromZip(zipFile, cleanRel);
+                if (buf) return buf.toString('utf8');
+            }
+            const dir = path.join(p, cleanMod);
+            if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+                const filePath = path.join(dir, cleanRel);
+                if (fs.existsSync(filePath)) {
+                    try { return fs.readFileSync(filePath, 'utf8'); } catch (e) {}
+                }
+            }
+        }
+    }
+    return null;
+}
+
+function resolveShopHotspotCoords(shopPlaceable, mapModName) {
+    if (!shopPlaceable) return null;
+    const placeableFn = shopPlaceable['@_filename'];
+    const placeablePos = (shopPlaceable['@_position'] || '').split(' ').map(parseFloat);
+    const placeableRot = (shopPlaceable['@_rotation'] || '0 0 0').split(' ').map(parseFloat);
+
+    // 1. Try reading the placeable XML definition
+    if (placeableFn) {
+        const defXml = readPlaceableXmlFile(placeableFn, mapModName);
+        if (defXml) {
+            // Check for shop hotspot teleportWorldPosition
+            const shopHotspotMatch = defXml.match(/<hotspot[^>]*type="SHOP"[^>]*teleportWorldPosition="([^"]+)"/i) ||
+                                     defXml.match(/teleportWorldPosition="([^"]+)"/i);
+            if (shopHotspotMatch && shopHotspotMatch[1]) {
+                const coords = shopHotspotMatch[1].trim().split(/\s+/).map(parseFloat);
+                if (coords.length >= 3 && !isNaN(coords[0])) {
+                    return { x: coords[0], y: coords[1], z: coords[2] };
+                }
+            }
+
+            // Check for teleportNode translation in base i3d
+            const baseI3dMatch = defXml.match(/<base>[\s\S]*?<filename>(.*?)<\/filename>[\s\S]*?<\/base>/i);
+            if (baseI3dMatch && baseI3dMatch[1] && placeablePos.length >= 3 && !isNaN(placeablePos[0])) {
+                let rawI3d = baseI3dMatch[1].trim();
+                const candidates = [rawI3d];
+                if (rawI3d.startsWith('$data/')) candidates.push(rawI3d.replace('$data/', 'data/'));
+                if (!rawI3d.startsWith('$') && placeableFn) {
+                    candidates.push(path.posix.join(path.posix.dirname(placeableFn), rawI3d));
+                }
+                
+                for (const cPath of candidates) {
+                    const i3dText = readPlaceableXmlFile(cPath, mapModName);
+                    if (i3dText) {
+                        const teleNodeMatch = i3dText.match(/<TransformGroup[^>]+name="teleportNode"[^>]+translation="([^"]+)"/i) ||
+                                              i3dText.match(/<Shape[^>]+name="playerInteractionTrigger"[^>]+translation="([^"]+)"/i);
+                        if (teleNodeMatch && teleNodeMatch[1]) {
+                            const tParts = teleNodeMatch[1].trim().split(/\s+/).map(parseFloat);
+                            if (tParts.length >= 3 && !isNaN(tParts[0])) {
+                                const ry = placeableRot[1] || 0;
+                                const rad = ry * Math.PI / 180;
+                                const cos = Math.cos(rad);
+                                const sin = Math.sin(rad);
+                                const wx = placeablePos[0] + (tParts[0] * cos + tParts[2] * sin);
+                                const wy = placeablePos[1] + tParts[1];
+                                const wz = placeablePos[2] + (-tParts[0] * sin + tParts[2] * cos);
+                                return { x: parseFloat(wx.toFixed(3)), y: parseFloat(wy.toFixed(3)), z: parseFloat(wz.toFixed(3)) };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Check for known preplaced shop uniqueIds
+    const uid = String(shopPlaceable['@_uniqueId'] || '').toLowerCase();
+    if (uid.includes('sellingstationvehicles_62b6b2c8')) {
+        return { x: -128.0, y: 49.2, z: -162.0 }; // MapUS
+    } else if (uid.includes('sellingstationvehicles_7075ad77')) {
+        return { x: -528.8, y: 19.8, z: -61.1 }; // MapAS
+    }
+
+    // 3. Fallback: placeable spawn point position
+    if (placeablePos.length >= 3 && !isNaN(placeablePos[0])) {
+        return { x: placeablePos[0], y: placeablePos[1], z: placeablePos[2] };
+    }
+    return null;
+}
+
 async function getMapShopCoordinates(savePath, allowFallback = true) {
     try {
         const fs = require('fs-extra');
@@ -3197,16 +3332,16 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
                             filename.includes('vehicletrader') || 
                             filename.includes('vehicleshop') || 
                             filename.includes('sellingstationstore') ||
+                            filename.includes('workshopservice') ||
                             uniqueId.includes('sellingstationvehicles') || 
                             uniqueId.includes('vehicletrader') ||
-                            uniqueId.includes('vehicleshop')
+                            uniqueId.includes('vehicleshop') ||
+                            uniqueId.includes('workshopservice')
                         );
                     });
-                    if (shopPlaceable && shopPlaceable['@_position']) {
-                        const coords = shopPlaceable['@_position'].split(' ').map(parseFloat);
-                        if (coords.length >= 3 && !isNaN(coords[0])) {
-                            return { x: coords[0], y: coords[1], z: coords[2] };
-                        }
+                    if (shopPlaceable) {
+                        const shopCoords = resolveShopHotspotCoords(shopPlaceable, mapModName);
+                        if (shopCoords) return shopCoords;
                     }
                 }
             } catch (e) {}
@@ -3249,17 +3384,17 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
                             filename.includes('vehicletrader') || 
                             filename.includes('vehicleshop') || 
                             filename.includes('sellingstationstore') ||
+                            filename.includes('workshopservice') ||
                             uniqueId.includes('sellingstationvehicles') || 
                             uniqueId.includes('vehicletrader') ||
-                            uniqueId.includes('vehicleshop')
+                            uniqueId.includes('vehicleshop') ||
+                            uniqueId.includes('workshopservice')
                         );
                     });
                     
-                    if (shopPlaceable && shopPlaceable['@_position']) {
-                        const coords = shopPlaceable['@_position'].split(' ').map(parseFloat);
-                        if (coords.length >= 3 && !isNaN(coords[0])) {
-                            return { x: coords[0], y: coords[1], z: coords[2] };
-                        }
+                    if (shopPlaceable) {
+                        const shopCoords = resolveShopHotspotCoords(shopPlaceable, mapModName);
+                        if (shopCoords) return shopCoords;
                     }
                 }
             }
@@ -3346,17 +3481,17 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
                                     filename.includes('vehicletrader') || 
                                     filename.includes('vehicleshop') || 
                                     filename.includes('sellingstationstore') ||
+                                    filename.includes('workshopservice') ||
                                     uniqueId.includes('sellingstationvehicles') || 
                                     uniqueId.includes('vehicletrader') ||
-                                    uniqueId.includes('vehicleshop')
+                                    uniqueId.includes('vehicleshop') ||
+                                    uniqueId.includes('workshopservice')
                                 );
                             });
                             
-                            if (shopPlaceable && shopPlaceable['@_position']) {
-                                const coords = shopPlaceable['@_position'].split(' ').map(parseFloat);
-                                if (coords.length >= 3 && !isNaN(coords[0])) {
-                                    foundPos = { x: coords[0], y: coords[1], z: coords[2] };
-                                }
+                            if (shopPlaceable) {
+                                const shopCoords = resolveShopHotspotCoords(shopPlaceable, mapModName);
+                                if (shopCoords) foundPos = shopCoords;
                             }
                         }
                     }
