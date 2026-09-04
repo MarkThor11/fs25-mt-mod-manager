@@ -620,6 +620,142 @@ async function getPersistentUniqueUserId(fs25Path) {
 }
 
 /**
+ * Configure farmland ownership in savegame farmland.xml based on game mode and map definitions.
+ */
+async function setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm) {
+    const farmlandPath = path.join(slotPath, 'farmland.xml');
+    
+    // 1. Determine official map starting farmlands
+    const defaultFarmIds = new Set();
+    const allFarmlandIds = [];
+
+    const OFFICIAL_DEFAULTS = {
+        mapus: ['1', '2', '3', '4', '5'],
+        mapeu: ['45', '46'],
+        mapas: ['27', '28', '30', '31'],
+        pdlc_highlandsfishingpack: ['20', '22', '23', '35', '49', '50']
+    };
+
+    const lowId = (engineMapId || '').toLowerCase();
+    for (const [key, ids] of Object.entries(OFFICIAL_DEFAULTS)) {
+        if (lowId.includes(key)) {
+            ids.forEach(id => defaultFarmIds.add(id));
+            break;
+        }
+    }
+
+    // 2. If mod map, resolve zip and read author-configured farmlands XML
+    let zipPath = modZipPath;
+    if (!zipPath && mapModName) {
+        const modManager = require('./modManager');
+        const paths = modManager.getModsPaths();
+        for (const p of paths) {
+            const candidate = path.join(p, `${mapModName}.zip`);
+            if (fs.existsSync(candidate)) {
+                zipPath = candidate;
+                break;
+            }
+        }
+    }
+
+    if (zipPath && fs.existsSync(zipPath)) {
+        try {
+            const AdmZip = require('adm-zip');
+            const zip = new AdmZip(zipPath);
+
+            let farmlandsXml = null;
+            // A. Check via configFilename in modDesc.xml
+            const mdEntry = zip.getEntry('modDesc.xml');
+            if (mdEntry) {
+                const mdXml = mdEntry.getData().toString('utf8');
+                const cfgMatch = mdXml.match(/configFilename=["']([^"']+)["']/i);
+                if (cfgMatch) {
+                    const cfgEntry = zip.getEntry(cfgMatch[1]) || zip.getEntry(cfgMatch[1].replace(/\\/g, '/'));
+                    if (cfgEntry) {
+                        const cfgXml = cfgEntry.getData().toString('utf8');
+                        const flMatch = cfgXml.match(/<farmlands\s+[^>]*filename=["']([^"']+)["']/i);
+                        if (flMatch) {
+                            const flEntry = zip.getEntry(flMatch[1]) || zip.getEntry(flMatch[1].replace(/\\/g, '/'));
+                            if (flEntry) {
+                                farmlandsXml = flEntry.getData().toString('utf8');
+                            }
+                        }
+                    }
+                }
+            }
+
+            // B. Fallback: search for farmlands.xml in zip entries
+            if (!farmlandsXml) {
+                const flEntry = zip.getEntries().find(e => /farmlands?\.xml$/i.test(e.entryName));
+                if (flEntry) farmlandsXml = flEntry.getData().toString('utf8');
+            }
+
+            if (farmlandsXml) {
+                const flRegex = /<farmland\s+([^>]+)>/gi;
+                let match;
+                while ((match = flRegex.exec(farmlandsXml)) !== null) {
+                    const attrs = match[1];
+                    const idM = attrs.match(/id=["']([^"']+)["']/i);
+                    if (idM) {
+                        const id = idM[1];
+                        allFarmlandIds.push(id);
+                        if (/defaultFarmProperty=["']true["']/i.test(attrs)) {
+                            defaultFarmIds.add(id);
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[CREATE] Could not parse default farmlands from mod zip:', e.message);
+        }
+    }
+
+    console.log(`[CREATE] Configured ${defaultFarmIds.size} starting farmlands for ${engineMapId}: [${Array.from(defaultFarmIds).join(', ')}]`);
+
+    // 3. Update or generate slotPath/farmland.xml in compliant FS25 savegame format
+    try {
+        let existingXml = fs.existsSync(farmlandPath) ? await fs.readFile(farmlandPath, 'utf8') : null;
+        const isRawMapConfig = existingXml && (existingXml.includes('<map') || existingXml.includes('pricePerHa=') || existingXml.includes('priceScale='));
+
+        if (!existingXml || isRawMapConfig) {
+            // Missing or raw map configuration XML -> generate compliant savegame format
+            const idsToUse = allFarmlandIds.length > 0 ? allFarmlandIds : Array.from({ length: 255 }, (_, i) => String(i + 1));
+            let outXml = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<farmlands>\n';
+            for (const id of idsToUse) {
+                const isOwned = includeStartFarm && defaultFarmIds.has(id);
+                outXml += `    <farmland id="${id}" farmId="${isOwned ? '1' : '0'}"/>\n`;
+            }
+            outXml += '</farmlands>\n';
+            await fs.writeFile(farmlandPath, outXml, 'utf8');
+            console.log(`[CREATE] Generated clean savegame farmland.xml with ${includeStartFarm ? defaultFarmIds.size : 0} owned farmlands.`);
+        } else {
+            // Valid savegame format exists (<farmlands><farmland id="..." farmId="..."/></farmlands>)
+            if (!includeStartFarm) {
+                existingXml = existingXml.replace(/farmId="1"/g, 'farmId="0"');
+                await fs.writeFile(farmlandPath, existingXml, 'utf8');
+                console.log('[CREATE] Set all farmlands to farmId="0" (includeStartFarm is false).');
+            } else if (defaultFarmIds.size > 0) {
+                for (const id of defaultFarmIds) {
+                    const reg = new RegExp(`(<farmland\\s+[^>]*id=["']${id}["'][^>]*farmId=["'])[0-9]+(["'])`, 'i');
+                    if (reg.test(existingXml)) {
+                        existingXml = existingXml.replace(reg, '$11$2');
+                    } else {
+                        const regNoFarmId = new RegExp(`(<farmland\\s+[^>]*id=["']${id}["'])([^>]*\/?>)`, 'i');
+                        if (regNoFarmId.test(existingXml)) {
+                            existingXml = existingXml.replace(regNoFarmId, '$1 farmId="1"$2');
+                        }
+                    }
+                }
+                await fs.writeFile(farmlandPath, existingXml, 'utf8');
+                console.log(`[CREATE] Assigned ${defaultFarmIds.size} starting farmlands to farmId="1" in farmland.xml.`);
+            }
+        }
+    } catch (err) {
+        console.error('[CREATE] Failed to configure farmland.xml:', err);
+    }
+}
+
+/**
  * Create a new savegame from a template.
  */
 async function createSavegameWithMods(savegameIndex, savegameName, selectedMods, opts = {}) {
@@ -1187,7 +1323,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     if (defaultPlaceablesFile) await extractExactZipFile(defaultPlaceablesFile, 'placeables.xml');
                     if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
                     if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
-                    if (farmlandsFile) await extractExactZipFile(farmlandsFile, 'farmland.xml');
                     if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
 
                     // If starting farm is disabled, strip farm 1 vehicles
@@ -1270,9 +1405,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         if (!fs.existsSync(path.join(slotPath, 'items.xml')) && lowerBase === 'items.xml') {
                             await fs.writeFile(path.join(slotPath, 'items.xml'), entry.getData());
                         }
-                        if (!fs.existsSync(path.join(slotPath, 'farmland.xml')) && (lowerBase === 'farmlands.xml' || lowerBase === 'farmland.xml')) {
-                            await fs.writeFile(path.join(slotPath, 'farmland.xml'), entry.getData());
-                        }
                     }
                     console.log(`[CREATE] Extracted ${extractedGrles} infoLayer GRLE files and terrain assets from map zip: ${path.basename(modZipPath)}.`);
                 }
@@ -1281,6 +1413,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             console.error(`[CREATE] Failed to extract map files from zip:`, err);
         }
     }
+
+    // Configure starting farmlands accurately based on game mode and map definitions
+    await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
 
     if (requiresEngineInit || !fs.existsSync(path.join(slotPath, 'farms.xml'))) {
         const realUserId = await getPersistentUniqueUserId(fs25Path);
