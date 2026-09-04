@@ -3279,7 +3279,8 @@ function resolveTeleportFromPlaceable(shopPlaceable, mapModName) {
             }
 
             // If i3d didn't have teleportNode, check defXml for teleportWorldPosition
-            const shopHotspotMatch = defXml.match(/<hotspot[^>]*type="SHOP"[^>]*teleportWorldPosition="([^"]+)"/i);
+            const shopHotspotMatch = defXml.match(/<hotspot[^>]*type="SHOP"[^>]*teleportWorldPosition="([^"]+)"/i) ||
+                                     defXml.match(/teleportWorldPosition="([^"]+)"/i);
             if (shopHotspotMatch && shopHotspotMatch[1]) {
                 const coords = shopHotspotMatch[1].trim().split(/\s+/).map(parseFloat);
                 if (coords.length >= 3 && !isNaN(coords[0])) {
@@ -3289,15 +3290,7 @@ function resolveTeleportFromPlaceable(shopPlaceable, mapModName) {
         }
     }
 
-    // 2. Known preplaced uniqueId signatures (official maps)
-    const uid = String(shopPlaceable['@_uniqueId'] || '').toLowerCase();
-    if (uid.includes('62b6b2c8')) {
-        return { x: -128.0, y: 49.2, z: -162.0 }; // MapUS preplaced shop
-    } else if (uid.includes('7075ad77')) {
-        return { x: -528.8, y: 19.8, z: -61.1 }; // MapAS preplaced shop
-    }
-
-    // 3. Fallback to placeablePos (vehicle spawn/delivery area)
+    // Fallback to placeablePos (vehicle spawn/delivery area)
     if (placeablePos.length >= 3 && !isNaN(placeablePos[0])) {
         return { x: placeablePos[0], y: placeablePos[1], z: placeablePos[2] };
     }
@@ -3317,7 +3310,27 @@ function resolvePreplacedShopFromMod(mapModName, shopPlaceable) {
         if (!fs.existsSync(zipFile)) continue;
         const entries = modManager.listZipEntries(zipFile);
 
-        // Check i3d files in the mod
+        // 1. Check if the mod has an explicit shop xml in config/ or placeables/ (e.g. config/sellingStationVehicles.xml)
+        const shopXmlEntry = entries.find(e => {
+            const n = e.entryName.toLowerCase();
+            return n.endsWith('.xml') && (n.includes('sellingstationvehicles') || n.includes('vehicletrader') || n.includes('vehicleshop') || n.includes('sellingstationstore'));
+        });
+        if (shopXmlEntry) {
+            const buf = modManager.readEntryFromZip(zipFile, shopXmlEntry.entryName);
+            if (buf) {
+                const text = buf.toString('utf8');
+                const hotspotMatch = text.match(/<hotspot[^>]*type="SHOP"[^>]*teleportWorldPosition="([^"]+)"/i) ||
+                                     text.match(/teleportWorldPosition="([^"]+)"/i);
+                if (hotspotMatch && hotspotMatch[1]) {
+                    const coords = hotspotMatch[1].trim().split(/\s+/).map(parseFloat);
+                    if (coords.length >= 3 && !isNaN(coords[0])) {
+                        return { x: coords[0], y: coords[1], z: coords[2] };
+                    }
+                }
+            }
+        }
+
+        // 2. Check i3d files in the mod
         const i3dEntries = entries.filter(e => e.entryName.toLowerCase().endsWith('.i3d'));
         for (const i3dEntry of i3dEntries) {
             if (i3dEntry.uncompSize > 25 * 1024 * 1024) continue;
@@ -3357,12 +3370,33 @@ function resolvePreplacedShopFromMod(mapModName, shopPlaceable) {
                     xmlFilename = (subAround.match(/<Attribute\s+name="xmlFilename"[^>]+value="([^"]+)"/i) || [])[1];
                 }
 
+                // If xmlFilename was found, check if that xml defines teleportWorldPosition directly
+                if (xmlFilename) {
+                    let rel = xmlFilename.replace(/\\/g, '/').replace(/^\/+/, '');
+                    const xmlBuf = modManager.readEntryFromZip(zipFile, rel);
+                    if (xmlBuf) {
+                        const xmlText = xmlBuf.toString('utf8');
+                        const hotspotMatch = xmlText.match(/<hotspot[^>]*type="SHOP"[^>]*teleportWorldPosition="([^"]+)"/i) ||
+                                             xmlText.match(/teleportWorldPosition="([^"]+)"/i);
+                        if (hotspotMatch && hotspotMatch[1]) {
+                            const coords = hotspotMatch[1].trim().split(/\s+/).map(parseFloat);
+                            if (coords.length >= 3 && !isNaN(coords[0])) {
+                                return { x: coords[0], y: coords[1], z: coords[2] };
+                            }
+                        }
+                    }
+                }
+
                 // Locate the TransformGroup
                 let tgChunk = null;
+                let tgIndex = -1;
                 if (targetNodeId) {
                     const tgRegex = new RegExp(`<TransformGroup[^>]+nodeId="${targetNodeId}"[^>]*>`, 'i');
                     const tgM = text.match(tgRegex);
-                    if (tgM) tgChunk = tgM[0];
+                    if (tgM) {
+                        tgChunk = tgM[0];
+                        tgIndex = tgM.index;
+                    }
                 }
 
                 if (!tgChunk) {
@@ -3370,7 +3404,10 @@ function resolvePreplacedShopFromMod(mapModName, shopPlaceable) {
                     const chunk = text.substring(startSearch, matchIndex + 1000);
                     const tgM = chunk.match(/<TransformGroup[^>]+name="[^"]*(?:sellingStationVehicles|vehicleShop|shop)[^"]*"[^>]*>/i) ||
                                 chunk.match(/<TransformGroup[^>]*translation="([^"]+)"[^>]*>/i);
-                    if (tgM) tgChunk = tgM[0];
+                    if (tgM) {
+                        tgChunk = tgM[0];
+                        tgIndex = startSearch + tgM.index;
+                    }
                 }
 
                 if (tgChunk) {
@@ -3380,7 +3417,7 @@ function resolvePreplacedShopFromMod(mapModName, shopPlaceable) {
                         const parentPos = transMatch[1].trim().split(/\s+/).map(parseFloat);
                         const parentRot = rotMatch ? rotMatch[1].trim().split(/\s+/).map(parseFloat) : [0, 0, 0];
 
-                        // If xmlFilename was found, resolve via resolveTeleportFromPlaceable
+                        // If xmlFilename was found, try resolving via resolveTeleportFromPlaceable
                         if (xmlFilename) {
                             const resolved = resolveTeleportFromPlaceable({
                                 '@_filename': xmlFilename,
@@ -3390,9 +3427,10 @@ function resolvePreplacedShopFromMod(mapModName, shopPlaceable) {
                             if (resolved) return resolved;
                         }
 
-                        // Check if this chunk references an external i3d
+                        // Search children of this TransformGroup for ReferenceNode
                         let childTeleport = null;
-                        const refMatch = tgChunk.match(/<ReferenceNode[^>]+referenceId="(\d+)"/i);
+                        const childBlock = tgIndex !== -1 ? text.substring(tgIndex, tgIndex + 2000) : tgChunk;
+                        const refMatch = childBlock.match(/<ReferenceNode[^>]+referenceId="(\d+)"/i);
                         if (refMatch) {
                             const refId = refMatch[1];
                             const fileMatch = text.match(new RegExp(`<File[^>]+fileId="${refId}"[^>]+filename="([^"]+)"`, 'i'));
@@ -3408,7 +3446,7 @@ function resolvePreplacedShopFromMod(mapModName, shopPlaceable) {
                         }
 
                         if (!childTeleport) {
-                            childTeleport = extractTeleportFromI3d(text.substring(Math.max(0, matchIndex - 1000), matchIndex + 1000));
+                            childTeleport = extractTeleportFromI3d(childBlock);
                         }
 
                         const local = childTeleport || [0, 0, 0];
