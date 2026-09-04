@@ -294,7 +294,11 @@ export default function App() {
         const { isGameRunning, playingSlot } = useSavegameStore.getState();
         
         const isRunning = !!status.isRunning;
-        const currentSlot = status.playingSlot !== null && status.playingSlot !== undefined ? status.playingSlot : (isRunning ? playingSlot : null);
+        // Prioritize the existing playingSlot while the game is running so the highlighted slot never flickers or switches
+        let currentSlot = null;
+        if (isRunning) {
+          currentSlot = playingSlot || status.playingSlot || null;
+        }
 
         if (isRunning !== isGameRunning || currentSlot !== playingSlot) {
           useSavegameStore.setState({ isGameRunning: isRunning, playingSlot: currentSlot });

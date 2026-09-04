@@ -445,6 +445,7 @@ async function isGameRunning() {
  * Detect active savegame slot from gameSettings.xml override or log.txt
  */
 function detectActiveSlotFromGame() {
+  // 1. First check gameSettings.xml for active virtual mods override
   try {
     const settingsPath = pathProvider.getGameSettingsPath();
     if (fs.existsSync(settingsPath)) {
@@ -456,14 +457,24 @@ function detectActiveSlotFromGame() {
     }
   } catch (e) {}
 
+  // 2. Check log.txt for explicit savegame start / densityMap / load markers
   try {
     const fs25Root = pathProvider.getFS25DataRoot();
     const logPath = path.join(fs25Root, 'log.txt');
     if (fs.existsSync(logPath)) {
       const content = fs.readFileSync(logPath, 'utf8');
-      const matches = [...content.matchAll(/savegame(\d+)/gi)];
-      if (matches.length > 0) {
-        return parseInt(matches[matches.length - 1][1], 10);
+      
+      // Check start parameter or autoStart message: e.g. "Auto start local savegame (Id: 5)" or "autoStartSavegameId 5"
+      const autoStartMatch = content.match(/Auto start local savegame\s*\(Id:\s*(\d+)\)/i) ||
+                             content.match(/autoStartSavegameId\s+(\d+)/i);
+      if (autoStartMatch && autoStartMatch[1]) {
+        return parseInt(autoStartMatch[1], 10);
+      }
+
+      // Check for loaded density maps or savegame files: e.g. ".../savegame5/densityMap..."
+      const saveFileMatches = [...content.matchAll(/savegame(\d+)[\\/](?:densityMap|farms|careerSavegame|vehicles|placeables)\./gi)];
+      if (saveFileMatches.length > 0) {
+        return parseInt(saveFileMatches[saveFileMatches.length - 1][1], 10);
       }
     }
   } catch (e) {}
@@ -478,7 +489,11 @@ async function getGameStatus() {
   const isRunning = await isGameRunning();
   let slot = null;
   if (isRunning) {
+    // If we launched a specific slot, stick firmly to that slot while the game is running
     slot = activePlayingSlot || detectActiveSlotFromGame();
+    if (slot && !activePlayingSlot) {
+      activePlayingSlot = slot;
+    }
   } else {
     activePlayingSlot = null;
   }
