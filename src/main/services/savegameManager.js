@@ -241,8 +241,12 @@ async function getMapTemplates() {
 
                 if (mId && mId === mapId) return true;
                 if (mTitle && mTitle === mapTitle) return true;
+                if (mTitle && mapTitle && mTitle.toLowerCase().trim() === mapTitle.toLowerCase().trim()) return true;
                 if (mName && mName === baseName) return true;
                 if (mId && mId.replace(/[^a-z0-9]/gi, '_') === baseName) return true;
+                if (mapId && mName && mapId.toLowerCase().startsWith(mName.toLowerCase() + '.')) return true;
+                if (mapId && mId && mapId.toLowerCase().endsWith('.' + mId.toLowerCase())) return true;
+                if (mName && fLower.includes(mName.toLowerCase())) return true;
                 
                 if (mName && mId) {
                     const cleanMName = mName.toLowerCase().replace('pdlc_', '').replace(/[^a-z0-9]/gi, '_');

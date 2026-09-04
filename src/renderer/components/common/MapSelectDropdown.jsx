@@ -19,10 +19,14 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
   const { templates, fetchTemplates } = useMapStore();
 
   useEffect(() => {
-    if (!templates || templates.length === 0) {
+    fetchTemplates?.();
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
       fetchTemplates?.();
     }
-  }, []);
+  }, [isOpen]);
 
   // Close on outside click
   useEffect(() => {
@@ -64,21 +68,53 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
   // Check if a mod map has an automation template
   const checkModHasTemplate = useMemo(() => {
     const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const ultraNorm = (s) => norm(s).replace(/^(?:fs\d{2}|pdlc)/, '');
+
     return (mod) => {
       if (!templates || templates.length === 0) return false;
       const mTitle = norm(mod.title);
       const mName = norm(mod.modName);
       const mMapId = norm(mod.mapId);
+      const uName = ultraNorm(mod.modName);
+      const uTitle = ultraNorm(mod.title);
+      const uMapId = ultraNorm(mod.mapId);
 
       return templates.some((t) => {
+        // 1. Direct match
         if (t.mapId && mod.mapId && t.mapId === mod.mapId) return true;
         if (t.title && mod.title && t.title.toLowerCase() === mod.title.toLowerCase()) return true;
         if (t.modName && mod.modName && t.modName.toLowerCase() === mod.modName.toLowerCase()) return true;
         if (t.id && mod.modName && t.id.toLowerCase() === mod.modName.toLowerCase()) return true;
+
+        // 2. Normalized Title match
         const tTitle = norm(t.title);
-        if (tTitle && (tTitle === mTitle || tTitle === mName)) return true;
+        const utTitle = ultraNorm(t.title);
+        if (tTitle && (tTitle === mTitle || tTitle === mName || utTitle === uTitle || utTitle === uName)) return true;
+
+        // 3. Normalized Mod Name match
+        const tMod = norm(t.modName);
+        const utMod = ultraNorm(t.modName);
+        if (tMod && (tMod === mName || utMod === uName)) return true;
+
+        // 4. Map ID matching (handling {modName}.{mapId} format from careerSavegame.xml)
+        const tMapId = norm(t.mapId);
+        if (tMapId) {
+          if (mMapId && (tMapId === mMapId || tMapId.endsWith(mMapId) || mMapId.endsWith(tMapId))) return true;
+          if (mName && (tMapId.startsWith(mName) || tMapId.includes(mName))) return true;
+          if (uMapId && ultraNorm(tMapId).endsWith(uMapId)) return true;
+          if (uName && ultraNorm(tMapId).startsWith(uName)) return true;
+        }
+
+        // 5. Template ID / filename matching (e.g. FS25_BackRoadsCounty4x_...zip)
         const tId = norm(t.id);
-        if (tId && (tId === mName || tId === mMapId || tId === `${mName}${mMapId}`)) return true;
+        const utId = ultraNorm(t.id);
+        if (tId) {
+          if (mName && (tId === mName || tId.includes(mName))) return true;
+          if (uName && utId.includes(uName)) return true;
+          if (mMapId && (tId === mMapId || tId.includes(mMapId))) return true;
+          if (uMapId && utId.includes(uMapId)) return true;
+        }
+
         return false;
       });
     };
