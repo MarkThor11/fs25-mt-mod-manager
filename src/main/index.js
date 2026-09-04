@@ -1264,8 +1264,31 @@ ipcMain.handle('profiles:import', async () => {
 // ── Game Launch ──
 ipcMain.handle('game:launch', async (_, options) => {
   try {
+    let exitHandled = false;
+    const handleGameExit = async (code = 0) => {
+      if (exitHandled) return;
+      exitHandled = true;
+      console.log(`[LAUNCH] Game exit verified (code ${code}). Running post-game checks...`);
+
+      if (options.savegameIndex) {
+        try {
+          // Trigger auto-harvesting immediately inside the main process
+          await savegameManager.getAllSavegames();
+        } catch (harvestErr) {
+          console.error('[LAUNCH] Auto-harvesting failed on game exit:', harvestErr);
+        }
+      }
+
+      // Notify the frontend instantly
+      mainWindow?.webContents.send('game:exited', { 
+        savegameIndex: options.savegameIndex,
+        exitCode: code 
+      });
+    };
+
     const launchOptions = {
-        ...options
+        ...options,
+        onGameExit: () => handleGameExit(0)
     };
     
     console.log(`[LAUNCH] Launching game with mods folder: ${launchOptions.modsPath}`);
@@ -1273,22 +1296,17 @@ ipcMain.handle('game:launch', async (_, options) => {
     
     if (result.success && result.child) {
       result.child.on('close', async (code) => {
-        console.log(`[LAUNCH] Game process exited with code ${code}. Running post-game checks...`);
-        
-        if (options.savegameIndex) {
-          try {
-            // Trigger auto-harvesting immediately inside the main process
-            await savegameManager.getAllSavegames();
-          } catch (harvestErr) {
-            console.error('[LAUNCH] Auto-harvesting failed on game exit:', harvestErr);
-          }
+        // Steam DRM / Detached process guard:
+        // When launched via Steam, the initial spawned child often exits immediately (code 0)
+        // after delegating to the running Steam client / game instance.
+        // Wait briefly and verify whether the game is actually running before declaring exit.
+        await new Promise(res => setTimeout(res, 2500));
+        const stillRunning = await gameLauncher.isGameRunning();
+        if (stillRunning) {
+          console.log('[LAUNCH] Initial process detached to background game instance. Deferring exit handling.');
+          return;
         }
-        
-        // Notify the frontend instantly
-        mainWindow?.webContents.send('game:exited', { 
-          savegameIndex: options.savegameIndex,
-          exitCode: code 
-        });
+        await handleGameExit(code);
       });
     }
     

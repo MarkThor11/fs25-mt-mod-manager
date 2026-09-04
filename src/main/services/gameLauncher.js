@@ -323,7 +323,7 @@ async function launch(options = {}) {
     if (child && child.unref) child.unref();
 
     // Start background exit monitor to restore gameSettings.xml when player quits game
-    monitorGameExitAndRestore();
+    monitorGameExitAndRestore(options.onGameExit);
 
     return { 
       success: true, 
@@ -373,7 +373,7 @@ let isMonitoringExit = false;
 /**
  * Monitors the FS25 process and resets modsDirectoryOverride to Global Synthesis when game exits.
  */
-function monitorGameExitAndRestore() {
+function monitorGameExitAndRestore(onExitCallback = null) {
   if (isMonitoringExit) return;
   isMonitoringExit = true;
 
@@ -381,6 +381,7 @@ function monitorGameExitAndRestore() {
 
   let hasSeenGameRunning = false;
   let checksCount = 0;
+  let consecutiveNotRunning = 0;
 
   const interval = setInterval(async () => {
     try {
@@ -389,19 +390,26 @@ function monitorGameExitAndRestore() {
 
       if (running) {
         hasSeenGameRunning = true;
+        consecutiveNotRunning = 0;
       } else if (hasSeenGameRunning) {
-        // Game was running and now exited
+        consecutiveNotRunning++;
+        // Require at least 2 consecutive checks (8 seconds) of not running to prevent false triggers during process handoff
+        if (consecutiveNotRunning >= 2) {
+          clearInterval(interval);
+          isMonitoringExit = false;
+          console.log('[LAUNCH] Game process exit detected. Restoring global gameSettings.xml in 2 seconds...');
+          if (typeof onExitCallback === 'function') {
+            try { onExitCallback(); } catch (e) {}
+          }
+          setTimeout(() => {
+            restoreGlobalGameSettings();
+          }, 2000);
+        }
+      } else if (checksCount > 90) {
+        // Fallback: 6 minutes elapsed without detecting the game running (e.g. cancelled launch)
         clearInterval(interval);
         isMonitoringExit = false;
-        console.log('[LAUNCH] Game process exit detected. Restoring global gameSettings.xml in 2 seconds...');
-        setTimeout(() => {
-          restoreGlobalGameSettings();
-        }, 2000);
-      } else if (checksCount > 60) {
-        // Fallback: 4 minutes elapsed without detecting the game running (e.g. cancelled launch)
-        clearInterval(interval);
-        isMonitoringExit = false;
-        console.log('[LAUNCH] Game did not launch within 4 minutes. Restoring global gameSettings.xml...');
+        console.log('[LAUNCH] Game did not launch within 6 minutes. Restoring global gameSettings.xml...');
         restoreGlobalGameSettings();
       }
     } catch (e) {
@@ -421,7 +429,9 @@ async function isGameRunning() {
   try {
     if (process.platform === 'win32') {
       const { stdout } = await execAsync('tasklist /NH');
-      return /FarmingSimulator2025(?:Game)?\.exe/i.test(stdout);
+      // On Windows, tasklist /NH truncates image names longer than 25 chars (e.g. FarmingSimulator2025Game.)
+      // Regex matches lines starting with FarmingSimulator2025 to cover both launcher and game exe
+      return /^\s*FarmingSimulator2025/im.test(stdout);
     } else {
       const { stdout } = await execAsync('pgrep -f "FarmingSimulator2025"');
       return stdout.trim().length > 0;
