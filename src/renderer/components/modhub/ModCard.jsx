@@ -6,7 +6,7 @@ import { useToastStore } from '../../store/useToastStore';
 import { useModHubStore } from '../../store/useModHubStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useLocalModsStore } from '../../store/useLocalModsStore';
-import { compareVersions, matchModWithDependency } from '../../utils/modUtils';
+import { compareVersions, matchModWithDependency, isMapCategory } from '../../utils/modUtils';
 
 const CategoryPlaceholder = ({ category, size = 100, hideZap = false }) => {
   const Icon = useMemo(() => {
@@ -117,15 +117,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
   const isPowerReference = powerReference?.modId === mod.modId;
   const isModMap = useMemo(() => {
     if (mod.isMap) return true;
-    const cat = (mod.category || '').toLowerCase();
-    const title = (mod.title || '').toLowerCase();
-    const isMapCat = cat.includes('map') || cat.includes('terrain') || cat.includes('landscape');
-    const isMapTitle = title.includes('map') || title.includes('terrain') || title.includes('land') || title.includes('valley') || title.includes('farm');
-    
-    // Size check is also a good indicator for maps in FS25
-    const isLarge = mod.size > 80 * 1024 * 1024;
-    
-    return isMapCat || (isMapTitle && isLarge);
+    return isMapCategory(mod.category);
   }, [mod]);
 
   const isSessionInstalled = useDownloadStore(s => modIdStr ? !!s.sessionInstalled[modIdStr] : false);
@@ -356,7 +348,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
   }, [mod.category, mod.techData]);
 
   const hideHP = useMemo(() => {
-    if (isModPack || mod.isMap || mod.category?.toLowerCase().includes('map')) return true;
+    if (isModPack || mod.isMap || isMapCategory(mod.category)) return true;
     // Show HP if it's a tractor/truck or explicitly marked as a drivable
     if (isTractorOrTruck || mod.techData?.isDrivable) return false;
     // Hide HP for self-propelled tools (like sprayers) if it's the engine specs and not a requirement
@@ -365,14 +357,14 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
   }, [isModPack, mod.isMap, mod.category, isSelfPropelled, isTractorOrTruck, mod.techData]);
 
   const hideCapacity = useMemo(() => {
-    if (isModPack || mod.isMap || mod.category?.toLowerCase().includes('map')) return true;
+    if (isModPack || mod.isMap || isMapCategory(mod.category)) return true;
     return false;
   }, [isModPack, mod.isMap, mod.category]);
 
   const isMatchable = useMemo(() => {
     const titleLow = (mod.title || '').toLowerCase();
     const cat = (mod.category || '').toLowerCase();
-    if (mod.isMap || cat.includes('map')) return false;
+    if (mod.isMap || isMapCategory(cat)) return false;
 
     // 1. Explicit Exclusions by Category (Static/Non-Machinery)
     const excludeCats = [

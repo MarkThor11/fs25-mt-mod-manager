@@ -44,6 +44,43 @@ async function ensureSession() {
 }
 
 /**
+ * Accurately determines if a category string belongs to a map category.
+ * Non-map categories like Gameplay, Prefab, Package, Objects, etc. are strictly false.
+ */
+function isMapCategory(category) {
+  if (!category || typeof category !== 'string') return false;
+  const c = category.trim().toLowerCase();
+  // Any explicit non-map category is strictly false
+  if (
+    c.includes('gameplay') ||
+    c.includes('prefab') ||
+    c.includes('package') ||
+    c.includes('object') ||
+    c.includes('placeable') ||
+    c.includes('drivable') ||
+    c.includes('trailer') ||
+    c.includes('tool') ||
+    c.includes('animal') ||
+    c.includes('baling') ||
+    c.includes('harvest') ||
+    c.includes('forestry') ||
+    c.includes('grassland') ||
+    c.includes('grape') ||
+    c.includes('loader') ||
+    c.includes('rootcrop') ||
+    c.includes('seeding') ||
+    c.includes('cultivation') ||
+    c.includes('crop') ||
+    c.includes('vegetable') ||
+    c.includes('yield') ||
+    c.includes('misc')
+  ) {
+    return false;
+  }
+  return /\bmaps?\b/i.test(c);
+}
+
+/**
  * Returns current session cookie if available.
  */
 function getPHPSESSID() {
@@ -769,7 +806,7 @@ async function fetchModDetail(modId) {
   // ── Category ──
   // ── Category & Type Flags ──
   const category = (metadata['Category'] || metadata['category'] || '').trim();
-  const isMap = category.toLowerCase().includes('map') || title.toLowerCase().includes('map');
+  const isMap = isMapCategory(category);
   const isPack = category.toLowerCase().includes('package') || title.toLowerCase().includes('pack');
 
   // ── Dependencies (Required Mods) ──
@@ -903,7 +940,7 @@ async function fetchModDetail(modId) {
     techData,
     releasedDate,
     dependencies: dedupedDependencies,
-    isMap: category.toUpperCase().includes('MAP') || category.toUpperCase().includes('TERRAIN') || title.toUpperCase().includes('MAP') || (fileSize && fileSize.includes('GB')),
+    isMap: isMapCategory(category),
     category
   };
 }

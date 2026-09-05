@@ -1670,11 +1670,10 @@ async function performScan(manualPaths = null) {
 
 			// ── CONSOLIDATED MOD METADATA REFINEMENT ──
 			const modObj = mods[mods.length - 1];
-			const category = (modObj.category || '').toUpperCase();
-			const isMapViaCategory = category.includes('MAP');
+			const isMapViaCategory = isMapCategory(modObj.category);
             
-            // Ensure category is set for local maps if we detected it via icon/heuristic
-            if (!modObj.category && iconBase64 === 'CATEGORY:map') {
+            // Ensure category is set for local maps if we detected it via icon/heuristic and it is indeed a map
+            if (!modObj.category && iconBase64 === 'CATEGORY:map' && modObj.isMap) {
                 modObj.category = 'CATEGORY:map';
             }
 			
@@ -2030,7 +2029,7 @@ function detectConflicts(mods) {
 	const specMap = new Map();   // specName -> [{ modTitle, isMap, folder }]
 
 	for (const mod of (mods || [])) {
-		const isMapMod = !!(mod.isMap || (mod.category && mod.category.toUpperCase().includes('MAP')));
+		const isMapMod = !!(mod.isMap || (mod.category && isMapCategory(mod.category)));
 		// 1. Script Conflicts (extraSourceFiles)
 		for (const scriptPath of (mod.scripts || [])) {
 			const scriptName = path.basename(scriptPath).toLowerCase();
@@ -2298,8 +2297,8 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 	}
 
 	// Auto-queue required dependencies if available from the initial fetch
-	const isMapCategory = (category && category.toUpperCase().includes('MAP')) || (modTitle && /\bmap\b/i.test(modTitle));
-	if (isMapCategory && Array.isArray(dependencies) && dependencies.length > 0) {
+	const isMapCat = isMapCategory(category);
+	if (isMapCat && Array.isArray(dependencies) && dependencies.length > 0) {
 		const pool = cache.getModHubMetadataPool();
 		const targetSubFolder = subFolder || getMapSubfolderName(resolvedTitle || modTitle, modId);
 		for (const dep of dependencies) {
@@ -2326,6 +2325,43 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 	return { success: true, queued: true };
 }
 
+
+/**
+ * Accurately determines if a category string belongs to a map category.
+ * Non-map categories like Gameplay, Prefab, Package, Objects, etc. are strictly false.
+ */
+function isMapCategory(category) {
+	if (!category || typeof category !== 'string') return false;
+	const c = category.trim().toLowerCase();
+	// Any explicit non-map category is strictly false
+	if (
+		c.includes('gameplay') ||
+		c.includes('prefab') ||
+		c.includes('package') ||
+		c.includes('object') ||
+		c.includes('placeable') ||
+		c.includes('drivable') ||
+		c.includes('trailer') ||
+		c.includes('tool') ||
+		c.includes('animal') ||
+		c.includes('baling') ||
+		c.includes('harvest') ||
+		c.includes('forestry') ||
+		c.includes('grassland') ||
+		c.includes('grape') ||
+		c.includes('loader') ||
+		c.includes('rootcrop') ||
+		c.includes('seeding') ||
+		c.includes('cultivation') ||
+		c.includes('crop') ||
+		c.includes('vegetable') ||
+		c.includes('yield') ||
+		c.includes('misc')
+	) {
+		return false;
+	}
+	return /\bmaps?\b/i.test(c);
+}
 
 /**
  * Detects if a mod/map is Crossplay compatible.
@@ -2382,8 +2418,15 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 	// Only custom Mod Maps get dedicated subfolders. Base maps and regular mods go to main root mods folder.
 	const titleClean = (modTitle || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
 	// FS25 Official Base Maps: MapUS (Riverbend Springs), MapEU (Zielonka), MapAS (Hutan Pantai), Kinlaig (Highlands DLC), pdlc
-	const isBaseMap = titleClean.startsWith('mapus') || titleClean.startsWith('mapeu') || titleClean.startsWith('mapas') || titleClean.startsWith('riverbend') || titleClean.startsWith('hutan') || titleClean.startsWith('kinlaig') || titleClean.startsWith('zielonka') || titleClean.startsWith('pdlc');
-	const isModMap = !isBaseMap && ((category && category.toUpperCase().includes('MAP')) || (modTitle && /\bmap\b/i.test(modTitle)));
+	let isModMap = !isBaseMap && isMapCategory(category);
+	if (!isModMap && !category && modId) {
+		const pool = cache.getModHubMetadataPool();
+		const cleanId = String(modId).replace(/^0+/, '');
+		const target = pool[cleanId] || pool[String(modId)];
+		if (target && (isMapCategory(target.category) || target.isMap)) {
+			isModMap = !isBaseMap;
+		}
+	}
 
 	if (isModMap) {
 		const cleanMapFolder = getMapSubfolderName(modTitle, modId);
@@ -3258,8 +3301,7 @@ async function syncLibraryMetadata() {
 				}
 
 				let modhubTitle = detail?.title || mod.title;
-				const targetCategory = (detail?.category || '').toUpperCase();
-				const isMapResult = targetCategory.includes('MAP');
+				const isMapResult = isMapCategory(detail?.category);
 
 				modhubTitle = cleanModTitle(modhubTitle, mod.modName, mod.fileName, isMapResult);
 
@@ -4283,7 +4325,6 @@ async function getModIcon(filePath, iconFile, modDesc = null, zipInstance = null
 			if (hintSource.includes('tractor') || hintSource.includes('vehicle') || hintSource.includes('truck') || hintSource.includes('car') || hintSource.includes('harvester') || hintSource.includes('combine') || hintSource.includes('series') || hintSource.includes('deutz') || hintSource.includes('johndeere') || hintSource.includes('fendt')) return 'CATEGORY:vehicle';
 			if (hintSource.includes('trailer') || hintSource.includes('implement') || hintSource.includes('plow') || hintSource.includes('plough') || hintSource.includes('mower') || hintSource.includes('header') || hintSource.includes('tank')) return 'CATEGORY:tool';
 			if (hintSource.includes('pack')) return 'CATEGORY:pack';
-			if (hintSource.includes('map') || hintSource.includes('village') || hintSource.includes('farm')) return 'CATEGORY:map';
 			return 'CATEGORY:generic';
 		};
 

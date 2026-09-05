@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { useLocalModsStore } from './useLocalModsStore';
 import { useModHubStore } from './useModHubStore';
 import { useToastStore } from './useToastStore';
+import { isMapCategory } from '../utils/modUtils';
 
 function resolveDownloadTitle(modIdStr, defaultTitle) {
   const strVal = modIdStr ? String(modIdStr).trim() : '';
@@ -508,7 +509,7 @@ if (window.api?.on) {
           fileName: fileName || active?.fileName || `${strId}.zip`,
           folder: data?.subFolder || active?.subFolder || '',
           category: data?.category || active?.category || null,
-          isMap: (active?.category && active.category.toUpperCase().includes('MAP')) || (displayTitle && displayTitle.toLowerCase().includes('map'))
+          isMap: isMapCategory(data?.category || active?.category) || (!active?.category && !data?.category && !!active?.isMap)
         });
 
         // Trigger debounced scan so we do not freeze disk if multiple downloads finish
@@ -519,7 +520,7 @@ if (window.api?.on) {
           try {
             const { useSettingsStore } = await import('./useSettingsStore');
             const autoDownloadEnabled = useSettingsStore.getState().autoDownloadMapDeps !== false;
-            const isMap = (active?.category && active.category.toUpperCase().includes('MAP')) || (incomingTitle && incomingTitle.toLowerCase().includes('map'));
+            const isMap = isMapCategory(data?.category || active?.category) || (!active?.category && !data?.category && !!active?.isMap);
             
             if (autoDownloadEnabled && isMap && window.api?.localMods?.autoResolveMapDependencies) {
               const targetFolder = data?.subFolder || active?.subFolder || (displayTitle ? displayTitle.replace(/[\\/:*?"<>|]/g, '_').trim() : null);

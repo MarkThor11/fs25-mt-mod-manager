@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useModHubStore } from '../store/useModHubStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { compareVersions, resolveRecursiveDependencies, matchModWithDependency } from '../utils/modUtils';
+import { compareVersions, resolveRecursiveDependencies, matchModWithDependency, isMapCategory } from '../utils/modUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 
 
@@ -581,7 +581,7 @@ export default function ModDetailPage() {
     addDownload(mod.modId, mod.title, mod.images?.[0]);
 
     try {
-      const isMap = mod.isMap || mod.category?.toUpperCase().includes('MAP') || (localMod && localMod.isMap);
+      const isMap = mod.isMap || isMapCategory(mod.category) || (localMod && localMod.isMap);
       const cleanTitle = mod.title.replace(/\([^)]+\)/g, '').trim();
       const subFolder = parentFolder || null;
 
@@ -899,7 +899,7 @@ export default function ModDetailPage() {
                                textDecoration: 'none'
                              }}
                              className="hover-underline"
-                             onClick={() => navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? (mod.title || '').replace(/[\\/:*?"<>|]/g, '_').trim() : parentFolder } })}
+                             onClick={() => navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || isMapCategory(mod.category)) ? (mod.title || '').replace(/[\\/:*?"<>|]/g, '_').trim() : parentFolder } })}
                            >
                              {displayLabel}
                            </span>
@@ -938,7 +938,7 @@ export default function ModDetailPage() {
                       {depId ? (
                         <button 
                           className="btn btn--secondary btn--xs"
-                          onClick={() => navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || mod.category?.toUpperCase().includes('MAP')) ? (mod.title || '').replace(/[\\/:*?"<>|]/g, '_').trim() : parentFolder } })}
+                          onClick={() => navigate(`/modhub/mod/${depId}`, { state: { parentFolder: (mod.isMap || isMapCategory(mod.category)) ? (mod.title || '').replace(/[\\/:*?"<>|]/g, '_').trim() : parentFolder } })}
                         >
                           {isInstalled ? 'View Mod' : 'View on ModHub'}
                         </button>
@@ -1152,7 +1152,7 @@ export default function ModDetailPage() {
               <ExternalLink size={16} /> View on Website
             </button>
 
-            {!(mod?.isMap || mod?.category?.toUpperCase().includes('MAP') || (localMod && localMod.isMap)) && (
+            {!(mod?.isMap || isMapCategory(mod?.category) || (localMod && localMod.isMap)) && (
               <button 
                 className={`btn btn--full ${isModFav ? 'btn--accent' : 'btn--secondary'}`}
                 onClick={() => toggleFavoriteMod(mod)}
@@ -1172,7 +1172,7 @@ export default function ModDetailPage() {
               {useModHubStore.getState().favoriteAuthors.some(f => f.name.toLowerCase() === (mod.author || '').toLowerCase()) ? 'Favourite Author' : 'Follow Author'}
             </button>
 
-            {!(mod?.isMap || mod?.category?.toUpperCase().includes('MAP') || (localMod && localMod.isMap)) && (
+            {!(mod?.isMap || isMapCategory(mod?.category) || (localMod && localMod.isMap)) && (
               <button 
                 className={`btn btn--full ${isMustHave ? 'btn--accent' : 'btn--secondary'}`}
                 onClick={() => toggleMustHaveMod(mod)}
@@ -1329,7 +1329,7 @@ export default function ModDetailPage() {
                                  .replace(/\s+cp\s*$/i, '')
                                  .trim();
         }
-        const targetMapFolder = (mod?.isMap || mod?.category?.toUpperCase().includes('MAP')) ? (cleanTitle + (isCP ? ' (CP)' : '')) : null;
+        const targetMapFolder = (mod?.isMap || isMapCategory(mod?.category)) ? (cleanTitle + (isCP ? ' (CP)' : '')) : null;
         const assignedSubFolder = parentFolder || targetMapFolder;
 
         return (
