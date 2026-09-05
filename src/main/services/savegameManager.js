@@ -4326,6 +4326,124 @@ async function syncSubfolderMapDependencies(savePath) {
     }
 }
 
+/**
+ * Scans a savegame to identify all mods actively in use (placed vehicles, implements, buildings, items, map, and dependencies).
+ */
+async function getUsedModsInSavegame(savePath) {
+    try {
+        const usedModsMap = new Map(); // lowercase -> originalName
+
+        if (!fs.existsSync(savePath)) {
+            return { usedModNames: [], mapModName: null };
+        }
+
+        // 1. Map mod from careerSavegame.xml
+        let mapModName = null;
+        const careerPath = path.join(savePath, 'careerSavegame.xml');
+        if (fs.existsSync(careerPath)) {
+            const xml = await fs.readFile(careerPath, 'utf8');
+            const mapMatch = xml.match(/<mapId>([^<]+)<\/mapId>/i);
+            if (mapMatch) {
+                const mapId = mapMatch[1].trim();
+                if (mapId.includes('.')) {
+                    mapModName = mapId.split('.')[0];
+                    usedModsMap.set(mapModName.toLowerCase(), mapModName);
+                } else if (!['MapUS', 'MapEU', 'MapAS'].includes(mapId)) {
+                    mapModName = mapId;
+                    usedModsMap.set(mapModName.toLowerCase(), mapModName);
+                }
+            }
+        }
+
+        // Helper regex to extract $moddir$MODNAME or filename="...MODNAME/..."
+        const extractModsFromXml = async (filePath) => {
+            if (!fs.existsSync(filePath)) return;
+            try {
+                const content = await fs.readFile(filePath, 'utf8');
+                
+                // Pattern 1: $moddir$MODNAME/
+                const modDirMatches = content.match(/\$moddir\$([^\/\\]+)/gi) || [];
+                for (const m of modDirMatches) {
+                    const modName = m.replace(/^\$moddir\$/i, '').trim();
+                    if (modName) usedModsMap.set(modName.toLowerCase(), modName);
+                }
+
+                // Pattern 2: filename=".../mods/MODNAME/..."
+                const genericMatches = content.match(/filename=["'][^"']*?mods\/([^\/\\]+)/gi) || [];
+                for (const m of genericMatches) {
+                    const modName = m.replace(/filename=["'][^"']*?mods\//i, '').trim();
+                    if (modName) usedModsMap.set(modName.toLowerCase(), modName);
+                }
+            } catch (err) {}
+        };
+
+        // 2. Scan standard savegame XMLs for placed/bought assets
+        await extractModsFromXml(path.join(savePath, 'vehicles.xml'));
+        await extractModsFromXml(path.join(savePath, 'placeables.xml'));
+        await extractModsFromXml(path.join(savePath, 'items.xml'));
+        await extractModsFromXml(path.join(savePath, 'animatedObjects.xml'));
+        await extractModsFromXml(path.join(savePath, 'farms.xml'));
+
+        // 3. Check script mod config files present in save directory
+        try {
+            const saveFiles = await fs.readdir(savePath);
+            for (const f of saveFiles) {
+                const fLow = f.toLowerCase();
+                if (fLow === 'storedeliveries.xml') usedModsMap.set('fs25_storedeliveries', 'FS25_storeDeliveries');
+                if (fLow === 'courseplay.xml') usedModsMap.set('fs25_courseplay', 'FS25_Courseplay');
+                if (fLow === 'autodrive_config.xml' || fLow === 'autodrive.xml') usedModsMap.set('fs25_autodrive', 'FS25_AutoDrive');
+                if (fLow === 'enhancedvehicle.xml') usedModsMap.set('fs25_enhancedvehicle', 'FS25_EnhancedVehicle');
+                if (fLow === 'guidancesteering.xml') usedModsMap.set('fs25_guidancesteering', 'FS25_GuidanceSteering');
+                if (fLow === 'gps.xml') usedModsMap.set('fs25_guidancesteering', 'FS25_GuidanceSteering');
+                if (fLow === 'proseed.xml') usedModsMap.set('fs25_proseed', 'FS25_proSeed');
+            }
+        } catch (e) {}
+
+        // Always preserve core helper mod if present
+        usedModsMap.set('fs25_quietloadingscreen', 'FS25_QuietLoadingScreen');
+
+        // 4. Resolve dependencies of used mods so required vehicle/script packs aren't broken
+        try {
+            const modManager = require('./modManager');
+            const scanRes = await modManager.scanLocalMods();
+            const allMods = scanRes.mods || [];
+
+            let addedNew = true;
+            while (addedNew) {
+                addedNew = false;
+                const currentUsed = Array.from(usedModsMap.keys());
+                for (const uName of currentUsed) {
+                    const fullMod = allMods.find(m => (m.modName || '').toLowerCase() === uName);
+                    if (fullMod && fullMod.dependencies && fullMod.dependencies.length > 0) {
+                        for (const dep of fullMod.dependencies) {
+                            const depStr = (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '')).toLowerCase();
+                            if (!depStr) continue;
+                            const matchedDep = allMods.find(m => 
+                                (m.modName && m.modName.toLowerCase() === depStr) ||
+                                (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === depStr)
+                            );
+                            if (matchedDep && !usedModsMap.has(matchedDep.modName.toLowerCase())) {
+                                usedModsMap.set(matchedDep.modName.toLowerCase(), matchedDep.modName);
+                                addedNew = true;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[USED_MODS] Failed to resolve dependencies:', e.message);
+        }
+
+        return {
+            usedModNames: Array.from(usedModsMap.values()),
+            mapModName
+        };
+    } catch (err) {
+        console.error('[USED_MODS] Error detecting used mods:', err);
+        return { usedModNames: [], mapModName: null };
+    }
+}
+
 async function adoptSaveAsTemplate(saveIndex) {
     try {
         const fs25Path = getFs25Path();
@@ -4429,6 +4547,7 @@ module.exports = {
     hasMapTemplate,
     getSavegameMods,
     setSavegameMods,
+    getUsedModsInSavegame,
     createSavegameWithMods,
     importSavegame,
     isSavegame,

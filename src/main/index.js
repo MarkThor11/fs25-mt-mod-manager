@@ -1135,6 +1135,14 @@ ipcMain.handle('savegames:setMods', async (_, { savegamePath, mods }) => {
   }
 });
 
+ipcMain.handle('savegames:getUsedMods', async (_, savePath) => {
+  try {
+    return await savegameManager.getUsedModsInSavegame(savePath);
+  } catch (err) {
+    return { usedModNames: [], mapModName: null, error: err.message };
+  }
+});
+
 ipcMain.handle('savegames:create', async (_, params) => {
   try {
     const { savegameIndex, savegameName, selectedMods, ...opts } = params;

@@ -296,6 +296,18 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
   const [fleetCleanPct, setFleetCleanPct] = useState(100);
   const [fleetRepairPct, setFleetRepairPct] = useState(100);
   const [fleetPaintPct, setFleetPaintPct] = useState(100);
+  const [usedMods, setUsedMods] = useState(new Set());
+  const [showOnlyUsed, setShowOnlyUsed] = useState(false);
+  const [isDeselectingUnused, setIsDeselectingUnused] = useState(false);
+
+  useEffect(() => {
+    if (!window.api?.savegames?.getUsedMods || !save?.path) return;
+    window.api.savegames.getUsedMods(save.path).then(res => {
+      if (res && res.usedModNames) {
+        setUsedMods(new Set(res.usedModNames.map(m => m.toLowerCase())));
+      }
+    }).catch(err => console.warn('[USED_MODS] Failed to fetch used mods:', err));
+  }, [save?.path]);
 
   // Spawn & Persistence State
   const [isPersistenceActive, setIsPersistenceActive] = useState(false);
@@ -1223,14 +1235,102 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
 
           {activeTab === 'mods' && (
             <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)', flex: 1, minHeight: 0 }}>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <div className="search-input-wrapper" style={{ flex: 1, position: 'relative' }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="search-input-wrapper" style={{ flex: 1, minWidth: 200, position: 'relative' }}>
                   <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
                   <input type="text" placeholder="Search installed mods..." value={modSearchQuery} onChange={e => setModSearchQuery(e.target.value)} style={{ width: '100%', paddingLeft: 32 }} />
                 </div>
                 <div style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', background: 'var(--bg-tertiary)', borderRadius: 100, border: '1px solid var(--border)' }}>
                   {selectedMods.size} Selected
                 </div>
+                <label 
+                  style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: 6, 
+                    fontSize: 12, 
+                    fontWeight: 600, 
+                    cursor: 'pointer', 
+                    userSelect: 'none',
+                    padding: '4px 10px',
+                    borderRadius: 8,
+                    border: `1px solid ${showOnlyUsed ? 'var(--accent)' : 'var(--border)'}`,
+                    background: showOnlyUsed ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg-tertiary)',
+                    color: showOnlyUsed ? 'var(--accent)' : 'var(--text-secondary)',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <input 
+                    type="checkbox" 
+                    checked={showOnlyUsed} 
+                    onChange={e => setShowOnlyUsed(e.target.checked)} 
+                    style={{ cursor: 'pointer', accentColor: 'var(--accent)' }} 
+                  />
+                  <span>Show Used Only ({usedMods.size})</span>
+                </label>
+                <button 
+                  className="btn btn--secondary btn--sm" 
+                  style={{ 
+                    gap: 6, 
+                    padding: '0 14px', 
+                    height: 32,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: 'var(--text-primary)',
+                    background: 'rgba(239, 68, 68, 0.08)'
+                  }}
+                  disabled={isDeselectingUnused}
+                  onClick={async () => {
+                    setIsDeselectingUnused(true);
+                    try {
+                      let currentUsed = usedMods;
+                      if (window.api?.savegames?.getUsedMods) {
+                        const res = await window.api.savegames.getUsedMods(save.path);
+                        if (res && res.usedModNames) {
+                          currentUsed = new Set(res.usedModNames.map(m => m.toLowerCase()));
+                          setUsedMods(currentUsed);
+                        }
+                      }
+
+                      const nextSelected = new Set();
+                      let deselectedCount = 0;
+                      for (const modName of selectedMods) {
+                        if (currentUsed.has(modName.toLowerCase()) || modName.toLowerCase() === 'fs25_quietloadingscreen') {
+                          nextSelected.add(modName);
+                        } else {
+                          deselectedCount++;
+                        }
+                      }
+
+                      if (deselectedCount === 0) {
+                        useToastStore.getState().info("All selected mods are already in use on this save.");
+                        setIsDeselectingUnused(false);
+                        return;
+                      }
+
+                      setSelectedMods(nextSelected);
+
+                      const modsToApply = installedMods.filter(m => nextSelected.has(m.modName));
+                      const saveRes = window.api.savegames.setSavegameMods
+                        ? await window.api.savegames.setSavegameMods(save.path, modsToApply)
+                        : await window.api.savegames.setMods({ savegamePath: save.path, mods: modsToApply });
+
+                      if (saveRes?.success !== false) {
+                        useToastStore.getState().success(`Deselected ${deselectedCount} unused mods (${nextSelected.size} used mods kept active)`);
+                      } else {
+                        useToastStore.getState().error(`Failed to save: ${saveRes?.error || 'Unknown error'}`);
+                      }
+                    } catch (err) {
+                      console.error('Error deselecting unused mods:', err);
+                      useToastStore.getState().error('Failed to deselect unused mods');
+                    } finally {
+                      setIsDeselectingUnused(false);
+                    }
+                  }}
+                >
+                  <Trash2 size={13} style={{ color: 'var(--danger, #ef4444)' }} /> DESELECT UNUSED MODS
+                </button>
                 <button 
                   className="btn btn--primary btn--sm" 
                   style={{ gap: 6, padding: '0 16px', height: 32 }}
@@ -1272,6 +1372,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
               <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 8, border: '1px solid var(--border)' }}>
                 {Object.keys(groupedMods).sort().map(folderName => {
                   const items = groupedMods[folderName].filter(m => {
+                    if (showOnlyUsed && !usedMods.has(m.modName.toLowerCase())) return false;
                     if (!modSearchQuery) return true;
                     return m.title?.toLowerCase().includes(modSearchQuery.toLowerCase()) || m.modName.toLowerCase().includes(modSearchQuery.toLowerCase());
                   });
@@ -1320,6 +1421,20 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: selectedMods.has(m.modName) ? 'white' : 'inherit', flex: 1 }}>
                                 {m.title || m.modName}
                               </span>
+                              {usedMods.has(m.modName.toLowerCase()) && (
+                                <span style={{ 
+                                  fontSize: 9, 
+                                  fontWeight: 800, 
+                                  color: 'var(--accent)', 
+                                  background: 'rgba(var(--accent-rgb), 0.18)', 
+                                  padding: '1px 5px', 
+                                  borderRadius: 4, 
+                                  letterSpacing: 0.5,
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  IN USE
+                                </span>
+                              )}
                               {useModHubStore.getState().favoriteMods.find(f => (f.modId && m.modId && String(f.modId) === String(m.modId)) || (f.fileName && m.fileName && f.fileName === m.fileName))?.isMustHave && (
                                 <Pin size={10} fill="var(--accent)" style={{ opacity: 0.8 }} />
                               )}
