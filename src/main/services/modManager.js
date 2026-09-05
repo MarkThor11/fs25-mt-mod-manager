@@ -1746,20 +1746,25 @@ async function performScan(manualPaths = null) {
 						// Treat as organizational folder
 						const subEntries = await fs.readdir(subPath, { withFileTypes: true }).catch(() => []);
 						
+						let folderHasMods = false;
 						for (const sub of subEntries) {
 							if (sub.isSymbolicLink()) continue;
 							if (sub.name.toLowerCase().endsWith('.zip')) {
 								folderEntries.push({ root: modsPath, name: sub.name, sub: entryName });
 								subfolderModNames.add(sub.name.toLowerCase());
+								folderHasMods = true;
 							} else if (sub.isDirectory()) {
 								const hasModDesc = await fs.pathExists(path.join(subPath, sub.name, 'modDesc.xml'));
 								if (hasModDesc) {
 									folderEntries.push({ root: modsPath, name: sub.name, sub: entryName });
 									subfolderModNames.add(sub.name.toLowerCase());
+									folderHasMods = true;
 								}
 							}
 						}
-						allFolders.push(entryName);
+						if (folderHasMods) {
+							allFolders.push(entryName);
+						}
 					}
 				} else if (entry.isFile() && entryName.toLowerCase().endsWith('.zip')) {
 					potentialRootEntries.push({ root: modsPath, name: entryName, sub: '' });
@@ -1806,8 +1811,9 @@ async function performScan(manualPaths = null) {
 	});
 
 	for (const m of sortedForDedupe) {
-		const idKey = m.modId ? `ID_${m.modId}` : null;
-		const fileKey = `FILE_${path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '')}`;
+		const folderKey = (m.folder || '').toLowerCase();
+		const idKey = m.modId ? `ID_${folderKey}_${m.modId}` : null;
+		const fileKey = `FILE_${folderKey}_${path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '')}`;
 
 		const keys = [idKey, fileKey].filter(Boolean);
 		let alreadySeen = false;
@@ -3806,6 +3812,7 @@ async function moveModsToFolder(fileNames, destinationFolder, targetRootPath = n
 		});
 	}
 
+	const modifiedSourceDirs = new Set();
 	for (let i = 0; i < total; i++) {
 		const fileName = fileNames[i];
 		const lowerName = fileName.toLowerCase();
@@ -3837,6 +3844,7 @@ async function moveModsToFolder(fileNames, destinationFolder, targetRootPath = n
 				try {
 					await fs.ensureDir(path.dirname(destPath));
 					await safeMove(currentLoc, destPath, { overwrite: true });
+					modifiedSourceDirs.add(path.dirname(currentLoc));
 
 					const oldRelative = path.relative(modsPath, currentLoc).replace(/\\/g, '/');
 					const newRelative = destinationFolder === '' ? baseName : `${destinationFolder}/${baseName}`;
@@ -3882,6 +3890,26 @@ async function moveModsToFolder(fileNames, destinationFolder, targetRootPath = n
 		debugLog(`[MOVE] Applying ${cacheUpdates.length} database updates...`);
 		for (const update of cacheUpdates) {
 			cache.setModLocation(update.currentLoc, update.destPath, update.oldRelative, update.newRelative);
+		}
+	}
+
+	// Clean up abandoned empty source directories left after moving mods
+	for (const srcDir of modifiedSourceDirs) {
+		try {
+			const isRoot = allModsPaths.some(p => p.toLowerCase() === srcDir.toLowerCase());
+			if (!isRoot && await fs.pathExists(srcDir)) {
+				const entries = await fs.readdir(srcDir, { withFileTypes: true });
+				const hasMods = entries.some(e => 
+					(!e.isSymbolicLink() && e.isFile() && e.name.toLowerCase().endsWith('.zip')) ||
+					(e.isDirectory() && e.name.toLowerCase() !== 'backups' && !e.name.startsWith('.'))
+				);
+				if (!hasMods) {
+					await safeRemove(srcDir);
+					debugLog(`[MOVE] Cleaned up abandoned empty source directory: ${srcDir}`);
+				}
+			}
+		} catch (e) {
+			console.warn(`[MOVE] Failed to clean up empty source directory ${srcDir}:`, e.message);
 		}
 	}
 
@@ -5606,6 +5634,7 @@ async function migrateLegacyBakFiles() {
  */
 async function pruneBackups() {
 	await migrateLegacyBakFiles().catch(e => console.warn('[MIGRATION] Migration error:', e.message));
+	await pruneAbandonedEmptyFolders().catch(e => console.warn('[CLEANUP] Prune empty folders error:', e.message));
 
 	const policy = cache.getSetting('backupRetention') || '1w';
 	if (policy === 'forever') return;
@@ -5645,6 +5674,32 @@ async function pruneBackups() {
 		}
 	} catch (e) {
 		console.error('[CLEANUP] Backup pruning failed:', e.message);
+	}
+}
+
+/**
+ * Prune abandoned empty mod folder shells (e.g. leftover from moves) across all configured paths.
+ */
+async function pruneAbandonedEmptyFolders() {
+	const allPaths = getModsPaths();
+	for (const root of allPaths) {
+		if (!await fs.pathExists(root)) continue;
+		try {
+			const entries = await fs.readdir(root, { withFileTypes: true });
+			for (const entry of entries) {
+				if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name.toLowerCase() === 'backups' || entry.isSymbolicLink()) continue;
+				const subPath = path.join(root, entry.name);
+				try {
+					const files = await fs.readdir(subPath);
+					const validFiles = files.filter(f => !f.startsWith('.') && f.toLowerCase() !== 'backups' && !f.endsWith('.bak') && !f.endsWith('.download'));
+					if (validFiles.length === 0) {
+						// Folder contains no active mods or files; clean up leftover shell
+						await safeRemove(subPath);
+						debugLog(`[CLEANUP] Pruned abandoned empty mod folder: ${subPath}`);
+					}
+				} catch (_) {}
+			}
+		} catch (_) {}
 	}
 }
 
