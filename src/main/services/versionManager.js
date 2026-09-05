@@ -72,6 +72,12 @@ async function checkAllUpdates() {
     const localVersion = localMod.version || tracked?.local_version;
     if (!localVersion || localVersion === 'Unknown' || localVersion === 'Invalid') continue;
 
+    // If tracking records that this exact remoteVersion (or higher) was already installed,
+    // skip it to prevent infinite update loops when mod authors forget to bump <version> in modDesc.xml
+    if (tracked?.local_version && compareVersions(tracked.local_version, remoteVersion) <= 0) {
+      continue;
+    }
+
     // Prefabs do not contain modDesc.xml and cannot be version-compared via modDesc
     const isPrefab = (localMod.title || '').includes('(Prefab*)') || 
                      (tracked?.category || '').toLowerCase() === 'prefab' ||
