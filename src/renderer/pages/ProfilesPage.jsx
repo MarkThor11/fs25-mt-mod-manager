@@ -714,9 +714,11 @@ export default function ProfilesPage() {
                                       /crossplay|\(cp\)|\[cp\]/i.test(m.filePath || '') ||
                                       /crossplay|\(cp\)|\[cp\]/i.test(m.folder || '')
                                     );
-                                    const displayTitle = isCP && !/\((?:cp|crossplay)\)$/i.test(m.title || '') && !/\[(?:cp|crossplay)\]$/i.test(m.title || '')
-                                      ? `${m.title} (CP)`
-                                      : m.title;
+                                     let baseTitle = (m.title || '').replace(/\s*[\(\[]\s*(?:crossplay|cp)\s*[\)\]]\s*$/i, '')
+                                                                    .replace(/\s+crossplay\s*$/i, '')
+                                                                    .replace(/\s+cp\s*$/i, '')
+                                                                    .trim();
+                                     const displayTitle = isCP ? `${baseTitle} (CP)` : baseTitle;
                                     const compoundValue = `${m.mapId}|${m.title}|${m.modName}`;
                                     return (<option key={compoundValue} value={compoundValue}>{displayTitle}</option>);
                                   })}

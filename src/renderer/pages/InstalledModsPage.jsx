@@ -1266,7 +1266,19 @@ export default function InstalledModsPage() {
     const groups = filteredMods.reduce((acc, mod) => {
       let folder = mod.folder || '';
       if (mod.isMap && !folder) {
-        folder = (mod.title || '').replace(/[\\/:*?"<>|]/g, '_').trim() || 'Custom Maps';
+        let cleanTitle = (mod.title || '').trim();
+        const isCP = mod.isCrossplay || 
+                     /crossplay|\(cp\)|\[cp\]/i.test(cleanTitle) || 
+                     /crossplay|\(cp\)|\[cp\]/i.test(mod.fileName || '') || 
+                     /crossplay|\(cp\)|\[cp\]/i.test(mod.modName || '');
+        if (isCP) {
+          cleanTitle = cleanTitle.replace(/\s*[\(\[]\s*(?:crossplay|cp)\s*[\)\]]\s*$/i, '')
+                                 .replace(/\s+crossplay\s*$/i, '')
+                                 .replace(/\s+cp\s*$/i, '')
+                                 .trim();
+          cleanTitle = `${cleanTitle} (CP)`;
+        }
+        folder = cleanTitle.replace(/[\\/:*?"<>|]/g, '_').trim() || 'Custom Maps';
       }
       const canonical = getCanonicalFolder(folder);
       if (!acc[canonical]) acc[canonical] = [];

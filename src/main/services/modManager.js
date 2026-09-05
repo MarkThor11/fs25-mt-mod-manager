@@ -2366,9 +2366,11 @@ function getMapSubfolderName(modTitle, modId = null, remoteModOrDetail = null) {
 
 	const isCrossplay = isCrossplayMod(modTitle, modId, remoteModOrDetail);
 	if (isCrossplay) {
-		if (!/\((?:cp|crossplay)\)$/i.test(cleanMapFolder) && !/\[(?:cp|crossplay)\]$/i.test(cleanMapFolder)) {
-			cleanMapFolder = `${cleanMapFolder} (CP)`.trim();
-		}
+		cleanMapFolder = cleanMapFolder.replace(/\s*[\(\[]\s*(?:crossplay|cp)\s*[\)\]]\s*$/i, '')
+		                               .replace(/\s+crossplay\s*$/i, '')
+		                               .replace(/\s+cp\s*$/i, '')
+		                               .trim();
+		cleanMapFolder = `${cleanMapFolder} (CP)`.trim();
 	}
 	return cleanMapFolder;
 }
@@ -5804,6 +5806,20 @@ function cleanModTitle(title, modName, fileName, isMap = false) {
                 clean = outer;
                 changed = true;
             }
+        }
+    }
+
+    if (isMap) {
+        // Strip any trailing or parenthetical "Crossplay" / "CP" and normalize to standard suffix " (CP)"
+        const isCP = /\bcrossplay\b|\(cp\)|\bcp\b/i.test(clean) || 
+                     /\bcrossplay\b|\(cp\)|\bcp\b/i.test(fileName || '') || 
+                     /\bcrossplay\b|\(cp\)|\bcp\b/i.test(modName || '');
+        if (isCP) {
+            clean = clean.replace(/\s*[\(\[]\s*(?:crossplay|cp)\s*[\)\]]\s*$/i, '')
+                         .replace(/\s+crossplay\s*$/i, '')
+                         .replace(/\s+cp\s*$/i, '')
+                         .trim();
+            clean = `${clean} (CP)`;
         }
     }
 

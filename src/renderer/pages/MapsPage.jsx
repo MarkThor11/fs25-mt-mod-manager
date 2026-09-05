@@ -41,11 +41,13 @@ export default function MapsPage() {
 
     const formatMapTitle = (title, modObj) => {
         if (!title) return '';
-        const clean = title.trim();
+        let clean = title.trim();
         if (isCrossplay(clean, modObj)) {
-            if (!/\((?:cp|crossplay)\)$/i.test(clean) && !/\[(?:cp|crossplay)\]$/i.test(clean)) {
-                return `${clean} (CP)`;
-            }
+            clean = clean.replace(/\s*[\(\[]\s*(?:crossplay|cp)\s*[\)\]]\s*$/i, '')
+                         .replace(/\s+crossplay\s*$/i, '')
+                         .replace(/\s+cp\s*$/i, '')
+                         .trim();
+            return `${clean} (CP)`;
         }
         return clean;
     };

@@ -133,10 +133,11 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
           /crossplay|\(cp\)|\[cp\]/i.test(m.filePath || '') ||
           /crossplay|\(cp\)|\[cp\]/i.test(m.folder || '');
 
-        const displayTitle =
-          isCP && !/\((?:cp|crossplay)\)$/i.test(m.title || '') && !/\[(?:cp|crossplay)\]$/i.test(m.title || '')
-            ? `${m.title} (CP)`
-            : m.title;
+        let baseTitle = (m.title || '').replace(/\s*[\(\[]\s*(?:crossplay|cp)\s*[\)\]]\s*$/i, '')
+                                       .replace(/\s+crossplay\s*$/i, '')
+                                       .replace(/\s+cp\s*$/i, '')
+                                       .trim();
+        const displayTitle = isCP ? `${baseTitle} (CP)` : baseTitle;
 
         const val = `${m.mapId || m.modName}|${m.title}|${m.modName}|${m.iconData || ''}|${m.filePath || ''}`;
         const hasTemplate = checkModHasTemplate(m);

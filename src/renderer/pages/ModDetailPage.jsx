@@ -1322,8 +1322,14 @@ export default function ModDetailPage() {
       </div>
       {showDepModal && (dependencyStatus.missingList?.length > 0) && (() => {
         const isCP = /crossplay|\(cp\)|\[cp\]/i.test(mod?.title || '') || /crossplay|\(cp\)|\[cp\]/i.test(mod?.fileName || '');
-        const cleanTitle = (mod?.title || '').replace(/[\\/:*?"<>|]/g, '_').trim();
-        const targetMapFolder = (mod?.isMap || mod?.category?.toUpperCase().includes('MAP')) ? (cleanTitle + (isCP && !/\((?:cp|crossplay)\)$/i.test(cleanTitle) && !/\[(?:cp|crossplay)\]$/i.test(cleanTitle) ? ' (CP)' : '')) : null;
+        let cleanTitle = (mod?.title || '').replace(/[\\/:*?"<>|]/g, '_').trim();
+        if (isCP) {
+          cleanTitle = cleanTitle.replace(/\s*[\(\[]\s*(?:crossplay|cp)\s*[\)\]]\s*$/i, '')
+                                 .replace(/\s+crossplay\s*$/i, '')
+                                 .replace(/\s+cp\s*$/i, '')
+                                 .trim();
+        }
+        const targetMapFolder = (mod?.isMap || mod?.category?.toUpperCase().includes('MAP')) ? (cleanTitle + (isCP ? ' (CP)' : '')) : null;
         const assignedSubFolder = parentFolder || targetMapFolder;
 
         return (

@@ -2715,10 +2715,14 @@ export default function SavegamesPage() {
                                                      /crossplay|\(cp\)|\[cp\]/i.test(mapMod.filePath || '') ||
                                                      /crossplay|\(cp\)|\[cp\]/i.test(mapMod.folder || '')
                                                  );
-                                                 if (isCP && title && !/\((?:cp|crossplay)\)$/i.test(title) && !/\[(?:cp|crossplay)\]$/i.test(title)) {
-                                                     return `${title} (CP)`;
-                                                 }
-                                                 return title;
+                                                  if (isCP && title) {
+                                                      let baseTitle = title.replace(/\s*[\(\[]\s*(?:crossplay|cp)\s*[\)\]]\s*$/i, '')
+                                                                           .replace(/\s+crossplay\s*$/i, '')
+                                                                           .replace(/\s+cp\s*$/i, '')
+                                                                           .trim();
+                                                      return `${baseTitle} (CP)`;
+                                                  }
+                                                  return title;
                                              })()}
                                          </div>
                                          <div style={{ fontSize: 12, opacity: 0.8 }}>{createMap.split('|')[0]}</div>
