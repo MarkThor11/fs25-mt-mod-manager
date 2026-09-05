@@ -1836,9 +1836,8 @@ async function performScan(manualPaths = null) {
 	});
 
 	for (const m of sortedForDedupe) {
-		const folderKey = (m.folder || '').toLowerCase();
-		const idKey = m.modId ? `ID_${folderKey}_${m.modId}` : null;
-		const fileKey = `FILE_${folderKey}_${path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '')}`;
+		const idKey = m.modId ? `ID_${m.modId}` : null;
+		const fileKey = `FILE_${path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '')}`;
 
 		const keys = [idKey, fileKey].filter(Boolean);
 		let alreadySeen = false;
