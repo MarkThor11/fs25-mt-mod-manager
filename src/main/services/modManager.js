@@ -339,7 +339,7 @@ function readEntryFromZip(zipPath, targetEntryName) {
 			cdPos += 46 + nameLen + extraLen + commentLen;
 		}
 
-		if (!targetEntry || targetEntry.uncompSize > 25 * 1024 * 1024) {
+		if (!targetEntry || targetEntry.uncompSize > 100 * 1024 * 1024) {
 			return null;
 		}
 

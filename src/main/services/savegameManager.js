@@ -3238,14 +3238,114 @@ function localToWorld(localPos, parentPos, parentRotDeg) {
 function extractTeleportFromI3d(i3dText) {
     if (!i3dText) return null;
     const teleMatch = i3dText.match(/<TransformGroup[^>]+name="teleportNode"[^>]+translation="([^"]+)"/i) ||
-                      i3dText.match(/<TransformGroup[^>]+translation="([^"]+)"[^>]+name="teleportNode"/i) ||
-                      i3dText.match(/<Shape[^>]+name="playerInteractionTrigger"[^>]+translation="([^"]+)"/i) ||
-                      i3dText.match(/<Shape[^>]+translation="([^"]+)"[^>]+name="playerInteractionTrigger"/i);
+                      i3dText.match(/<TransformGroup[^>]+translation="([^"]+)"[^>]+name="teleportNode"/i);
     if (teleMatch && teleMatch[1]) {
         const parts = teleMatch[1].trim().split(/\s+/).map(parseFloat);
         if (parts.length >= 3 && !isNaN(parts[0])) {
             return parts;
         }
+    }
+    return null;
+}
+
+function extractHotspotNodeFromI3d(i3dText) {
+    if (!i3dText) return null;
+    const hsMatch = i3dText.match(/<TransformGroup[^>]+name="hotspotNode"[^>]+translation="([^"]+)"/i) ||
+                    i3dText.match(/<TransformGroup[^>]+translation="([^"]+)"[^>]+name="hotspotNode"/i);
+    if (hsMatch && hsMatch[1]) {
+        const parts = hsMatch[1].trim().split(/\s+/).map(parseFloat);
+        if (parts.length >= 3 && !isNaN(parts[0])) {
+            return parts;
+        }
+    }
+    return null;
+}
+
+function resolveVehicleShopFromMapI3d(mapModName) {
+    if (!mapModName) return null;
+    try {
+        const modManager = require('./modManager');
+        const allPaths = modManager.getModsPaths();
+        const cleanMod = mapModName.replace(/\.zip$/i, '');
+
+        for (const p of allPaths) {
+            const zipFile = path.join(p, cleanMod + '.zip');
+            if (!fs.existsSync(zipFile)) continue;
+            const entries = modManager.listZipEntries(zipFile);
+
+            let targetI3dFilenames = [];
+            const mapXmlEntry = entries.find(e => e.entryName.toLowerCase().endsWith('map.xml'));
+            if (mapXmlEntry) {
+                const buf = modManager.readEntryFromZip(zipFile, mapXmlEntry.entryName);
+                if (buf) {
+                    const txt = buf.toString('utf8');
+                    const fnM = txt.match(/<filename>(.*?)<\/filename>/i);
+                    if (fnM && fnM[1]) {
+                        targetI3dFilenames.push(fnM[1].trim().replace(/\\/g, '/').toLowerCase());
+                    }
+                }
+            }
+
+            const i3dEntries = entries.filter(e => {
+                const n = e.entryName.toLowerCase();
+                return n.endsWith('.i3d') && !n.includes('tree') && !n.includes('sound') && !n.includes('foliage') && !n.includes('character');
+            });
+
+            i3dEntries.sort((a, b) => {
+                const aName = a.entryName.toLowerCase();
+                const bName = b.entryName.toLowerCase();
+                const aMatch = targetI3dFilenames.some(t => aName.endsWith(t));
+                const bMatch = targetI3dFilenames.some(t => bName.endsWith(t));
+                if (aMatch && !bMatch) return -1;
+                if (!aMatch && bMatch) return 1;
+                return b.uncompSize - a.uncompSize;
+            });
+
+            for (const i3dEntry of i3dEntries) {
+                if (i3dEntry.uncompSize < 50000 || i3dEntry.uncompSize > 100 * 1024 * 1024) continue;
+                const buf = modManager.readEntryFromZip(zipFile, i3dEntry.entryName);
+                if (!buf) continue;
+                const text = buf.toString('utf8');
+
+                const spawnIdx = text.search(/<TransformGroup[^>]+name="vehicleShopPlayerSpawn"[^>]*>/i);
+                if (spawnIdx !== -1) {
+                    const spawnChunk = text.substring(spawnIdx, spawnIdx + 500);
+                    const spawnTag = (spawnChunk.match(/<TransformGroup[^>]+name="vehicleShopPlayerSpawn"[^>]*>/i) || [])[0];
+                    const sTransM = spawnTag ? spawnTag.match(/translation="([^"]+)"/i) : null;
+                    const sTrans = sTransM ? sTransM[1].trim().split(/\s+/).map(parseFloat) : [0, 0, 0];
+
+                    const beforeText = text.substring(Math.max(0, spawnIdx - 4000), spawnIdx);
+
+                    let trigPos = [0, 0, 0];
+                    let trigRot = [0, 0, 0];
+                    const trigMatch = beforeText.match(/<Shape[^>]+name="vehicleShopTrigger"[^>]*>/i);
+                    if (trigMatch) {
+                        const tM = trigMatch[0].match(/translation="([^"]+)"/i);
+                        const rM = trigMatch[0].match(/rotation="([^"]+)"/i);
+                        if (tM) trigPos = tM[1].trim().split(/\s+/).map(parseFloat);
+                        if (rM) trigRot = rM[1].trim().split(/\s+/).map(parseFloat);
+                    }
+
+                    let shopPos = [0, 0, 0];
+                    let shopRot = [0, 0, 0];
+                    const shopMatch = beforeText.match(/<TransformGroup[^>]+name="(?:vehicleShop|store)"[^>]*>/i);
+                    if (shopMatch) {
+                        const tM = shopMatch[0].match(/translation="([^"]+)"/i);
+                        const rM = shopMatch[0].match(/rotation="([^"]+)"/i);
+                        if (tM) shopPos = tM[1].trim().split(/\s+/).map(parseFloat);
+                        if (rM) shopRot = rM[1].trim().split(/\s+/).map(parseFloat);
+                    }
+
+                    const step1 = localToWorld(sTrans, trigPos, trigRot);
+                    const finalWorld = localToWorld([step1.x, step1.y, step1.z], shopPos, shopRot);
+                    if (!isNaN(finalWorld.x) && !isNaN(finalWorld.y) && !isNaN(finalWorld.z)) {
+                        return finalWorld;
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[SavegameManager] Error in resolveVehicleShopFromMapI3d:', e);
     }
     return null;
 }
@@ -3260,7 +3360,26 @@ function resolveTeleportFromPlaceable(shopPlaceable, mapModName) {
     if (placeableFn) {
         const defXml = readPlaceableXmlFile(placeableFn, mapModName);
         if (defXml) {
-            // Check base i3d for teleportNode FIRST (Giants Engine PlaceableHotspots order)
+            // Check defXml for teleportWorldPosition (must not be unedited generic basegame copy-paste)
+            const shopHotspotMatch = defXml.match(/<hotspot[^>]*type="SHOP"[^>]*teleportWorldPosition="([^"]+)"/i) ||
+                                     defXml.match(/teleportWorldPosition="([^"]+)"/i);
+            if (shopHotspotMatch && shopHotspotMatch[1]) {
+                const rawCoords = shopHotspotMatch[1].trim();
+                const isGenericDefault = rawCoords.startsWith('-128 49.2 -162') || rawCoords.startsWith('-263 60 44');
+                if (!isGenericDefault) {
+                    const coords = rawCoords.split(/\s+/).map(parseFloat);
+                    if (coords.length >= 3 && !isNaN(coords[0])) {
+                        return { x: coords[0], y: coords[1], z: coords[2] };
+                    }
+                }
+            }
+
+            // Check if placeable is purely a workshop placeable or points to workshopMarker
+            const hotspotTag = (defXml.match(/<hotspot[^>]*type="SHOP"[^>]*>/i) || [])[0] || '';
+            const tNodeAttr = (hotspotTag.match(/teleportNode="([^"]+)"/i) || [])[1];
+            const isWorkshopTarget = tNodeAttr && (tNodeAttr.includes('workshop') || tNodeAttr.includes('playerInteraction'));
+            const isWorkshopPlaceable = defXml.includes('type="workshop"') || defXml.includes('<name>Repair Shop</name>');
+
             const baseI3dMatch = defXml.match(/<base>[\s\S]*?<filename>(.*?)<\/filename>[\s\S]*?<\/base>/i);
             if (baseI3dMatch && baseI3dMatch[1] && placeablePos.length >= 3 && !isNaN(placeablePos[0])) {
                 let rawI3d = baseI3dMatch[1].trim();
@@ -3271,26 +3390,30 @@ function resolveTeleportFromPlaceable(shopPlaceable, mapModName) {
                 }
                 for (const cPath of candidates) {
                     const i3dText = readPlaceableXmlFile(cPath, mapModName);
-                    const localParts = extractTeleportFromI3d(i3dText);
-                    if (localParts) {
-                        return localToWorld(localParts, placeablePos, placeableRot);
+                    if (isWorkshopPlaceable || isWorkshopTarget) {
+                        // Workshop placeables: ONLY accept hotspotNode (which points to the store entrance)
+                        const hsParts = extractHotspotNodeFromI3d(i3dText);
+                        if (hsParts) {
+                            return localToWorld(hsParts, placeablePos, placeableRot);
+                        }
+                    } else {
+                        // Standard sellingStation / store placeable: accept teleportNode
+                        const localParts = extractTeleportFromI3d(i3dText);
+                        if (localParts) {
+                            return localToWorld(localParts, placeablePos, placeableRot);
+                        }
                     }
                 }
             }
 
-            // If i3d didn't have teleportNode, check defXml for teleportWorldPosition
-            const shopHotspotMatch = defXml.match(/<hotspot[^>]*type="SHOP"[^>]*teleportWorldPosition="([^"]+)"/i) ||
-                                     defXml.match(/teleportWorldPosition="([^"]+)"/i);
-            if (shopHotspotMatch && shopHotspotMatch[1]) {
-                const coords = shopHotspotMatch[1].trim().split(/\s+/).map(parseFloat);
-                if (coords.length >= 3 && !isNaN(coords[0])) {
-                    return { x: coords[0], y: coords[1], z: coords[2] };
-                }
+            // If it was a workshop placeable and no hotspotNode was found, return null to fall back to map i3d!
+            if (isWorkshopPlaceable || isWorkshopTarget) {
+                return null;
             }
         }
     }
 
-    // Fallback to placeablePos (vehicle spawn/delivery area)
+    // Fallback to placeablePos (vehicle spawn/delivery area) only for non-workshop placeables
     if (placeablePos.length >= 3 && !isNaN(placeablePos[0])) {
         return { x: placeablePos[0], y: placeablePos[1], z: placeablePos[2] };
     }
@@ -3538,6 +3661,9 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
                         if (!shopCoords && shopPlaceable['@_isPreplaced'] === 'true') {
                             shopCoords = resolvePreplacedShopFromMod(mapModName, shopPlaceable);
                         }
+                        if (!shopCoords && mapModName) {
+                            shopCoords = resolveVehicleShopFromMapI3d(mapModName);
+                        }
                         if (shopCoords) return shopCoords;
                     }
                 }
@@ -3626,6 +3752,10 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
                 // Try resolving preplaced shop from mod i3d
                 const preplacedPos = resolvePreplacedShopFromMod(mapModName, null);
                 if (preplacedPos) return preplacedPos;
+
+                // Try resolving vehicle shop from map i3d
+                const mapI3dShop = resolveVehicleShopFromMapI3d(mapModName);
+                if (mapI3dShop) return mapI3dShop;
             }
         }
     } catch (e) {
