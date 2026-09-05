@@ -2443,25 +2443,30 @@ function getMapSubfolderName(modTitle, modId = null, remoteModOrDetail = null) {
 	* We intercept the download event from the session.
 	*/
 async function installModInternal(modId, modTitle, downloadUrl, onProgress, category, subFolder = null, techData = null) {
-	// Only custom Mod Maps get dedicated subfolders. Base maps and regular mods go to main root mods folder.
-	const titleClean = (modTitle || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
-	// FS25 Official Base Maps: MapUS (Riverbend Springs), MapEU (Zielonka), MapAS (Hutan Pantai), Kinlaig (Highlands DLC), pdlc
-	const isBaseMap = titleClean.startsWith('mapus') || 
-	                  titleClean.startsWith('mapeu') || 
-	                  titleClean.startsWith('mapas') || 
-	                  titleClean.startsWith('kinlaig') || 
-	                  titleClean.startsWith('zielonka') || 
-	                  titleClean.startsWith('elmcreek') || 
-	                  titleClean.startsWith('riverbend') || 
-	                  titleClean.startsWith('hautbeyleron') || 
-	                  titleClean.startsWith('erlengrat') || 
-	                  titleClean.startsWith('pdlc');
-	let isModMap = !isBaseMap && isMapCategory(category);
-	if (!isModMap && !category && modId) {
+	// 1. By default, regular mods (vehicles, trailers, tools, scripts) go directly to the root mods folder
+	let isModMap = false;
+
+	// 2. ONLY if the category is confirmed as a Map do we evaluate map routing and subfolders
+	if (isMapCategory(category)) {
+		const titleClean = (modTitle || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+		const isBaseMap = titleClean.startsWith('mapus') || 
+		                  titleClean.startsWith('mapeu') || 
+		                  titleClean.startsWith('mapas') || 
+		                  titleClean.startsWith('kinlaig') || 
+		                  titleClean.startsWith('zielonka') || 
+		                  titleClean.startsWith('elmcreek') || 
+		                  titleClean.startsWith('riverbend') || 
+		                  titleClean.startsWith('hautbeyleron') || 
+		                  titleClean.startsWith('erlengrat') || 
+		                  titleClean.startsWith('pdlc');
+		isModMap = !isBaseMap;
+	} else if (!category && modId) {
 		const pool = cache.getModHubMetadataPool();
 		const cleanId = String(modId).replace(/^0+/, '');
 		const target = pool[cleanId] || pool[String(modId)];
 		if (target && (isMapCategory(target.category) || target.isMap)) {
+			const titleClean = (modTitle || target.title || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+			const isBaseMap = titleClean.startsWith('mapus') || titleClean.startsWith('mapeu') || titleClean.startsWith('pdlc');
 			isModMap = !isBaseMap;
 		}
 	}
