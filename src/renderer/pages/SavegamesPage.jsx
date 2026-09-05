@@ -1775,6 +1775,15 @@ export default function SavegamesPage() {
           if (coords) await window.api.savegames.setPlayerPosition({ savePath, x: coords.x, y: coords.y, z: coords.z });
         } else if (spawnPref.mode === 'vehicle' && spawnPref.vehicleId) {
           await window.api.savegames.setPlayerPosition({ savePath, vehicleUniqueId: spawnPref.vehicleId });
+        } else {
+          // No preset selected: ensure save has the map's native start point if currently unspawned
+          const curPos = await window.api.savegames.getPlayerPosition(savePath);
+          if (!curPos || (curPos.x === 0 && curPos.y === 0 && curPos.z === 0)) {
+            const defCoords = await window.api.savegames.getMapHomeCoordinates(savePath);
+            if (defCoords && defCoords.x !== undefined) {
+              await window.api.savegames.setPlayerPosition({ savePath, x: defCoords.x, y: defCoords.y, z: defCoords.z });
+            }
+          }
         }
       }
     } catch (e) {

@@ -1090,16 +1090,23 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 savegameData.careerSavegame.player['@_spawnPositionY'] = '19.800';
                 savegameData.careerSavegame.player['@_spawnPositionZ'] = '-61.100';
             } else {
-                delete savegameData.careerSavegame.player['@_spawnPositionX'];
-                delete savegameData.careerSavegame.player['@_spawnPositionY'];
-                delete savegameData.careerSavegame.player['@_spawnPositionZ'];
+                const defaultSpawn = await getMapDefaultStartCoordinates(slotPath);
+                if (defaultSpawn && defaultSpawn.x !== undefined) {
+                    savegameData.careerSavegame.player['@_spawnPositionX'] = defaultSpawn.x.toFixed(3);
+                    savegameData.careerSavegame.player['@_spawnPositionY'] = defaultSpawn.y.toFixed(3);
+                    savegameData.careerSavegame.player['@_spawnPositionZ'] = defaultSpawn.z.toFixed(3);
+                } else {
+                    delete savegameData.careerSavegame.player['@_spawnPositionX'];
+                    delete savegameData.careerSavegame.player['@_spawnPositionY'];
+                    delete savegameData.careerSavegame.player['@_spawnPositionZ'];
+                }
             }
             // Always ensure the player does NOT spawn inside a vehicle or car
             delete savegameData.careerSavegame.player['@_spawnYaw'];
             delete savegameData.careerSavegame.player['@_vehicleId'];
             delete savegameData.careerSavegame.player['@_vehicleFilename'];
 
-            // Strip any lingering player spawn coordinates in players.xml
+            // Configure player spawn coordinates in players.xml with map default
             const playersPath = path.join(slotPath, 'players.xml');
             if (fs.existsSync(playersPath)) {
                 try {
@@ -1107,8 +1114,15 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     const pData = parser.parse(pXml);
                     if (pData?.players?.player) {
                         const plist = Array.isArray(pData.players.player) ? pData.players.player : [pData.players.player];
+                        const defaultSpawn = await getMapDefaultStartCoordinates(slotPath);
                         for (const p of plist) {
-                            if (p.spawn) delete p.spawn;
+                            if (defaultSpawn && defaultSpawn.x !== undefined) {
+                                p.spawn = {
+                                    '@_position': `${defaultSpawn.x.toFixed(3)} ${defaultSpawn.y.toFixed(3)} ${defaultSpawn.z.toFixed(3)}`
+                                };
+                            } else if (p.spawn) {
+                                delete p.spawn;
+                            }
                         }
                         await fs.writeFile(playersPath, builder.build(pData));
                     }
@@ -3014,71 +3028,79 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true) {
             }
         }
 
-        // Fallback: parse map mod zip itself!
+        if (!mapModName) {
+            if (mapId === 'MapUS') {
+                return { x: -128.0, y: 49.2, z: -162.0 };
+            } else if (mapId === 'MapEU') {
+                return { x: -263.0, y: 60.0, z: 44.0 };
+            } else if (mapId === 'MapAS') {
+                return { x: -528.8, y: 19.8, z: -61.1 };
+            }
+        }
+
+        // Fallback: parse map mod zip itself for careerStartPoint
         if (mapModName) {
             const modManager = require('./modManager');
             const modsDir = modManager.getModsPath();
             const modZip = path.join(modsDir, `${mapModName}.zip`);
             if (fs.existsSync(modZip)) {
-                // Let's first search in modDesc.xml maps config
+                // 1. Check modDesc.xml maps config
                 const modDescBuf = modManager.readEntryFromZip(modZip, 'modDesc.xml');
+                let mapConfigFile = null;
                 if (modDescBuf) {
                     const modDescXml = modDescBuf.toString('utf8');
                     const mdObj = parser.parse(modDescXml);
                     if (mdObj && mdObj.modDesc && mdObj.modDesc.maps && mdObj.modDesc.maps.map) {
                         const mNode = Array.isArray(mdObj.modDesc.maps.map) ? mdObj.modDesc.maps.map[0] : mdObj.modDesc.maps.map;
-                        const configFilename = mNode['@_configFilename'];
-                        if (configFilename) {
-                            const mapXmlBuf = modManager.readEntryFromZip(modZip, configFilename);
-                            if (mapXmlBuf) {
-                                const mapXml = mapXmlBuf.toString('utf8');
-                                const mapObj = parser.parse(mapXml);
-                                if (mapObj && mapObj.map && mapObj.map.playerStart) {
-                                    const pStart = mapObj.map.playerStart;
-                                    if (pStart['@_position']) {
-                                        const coords = pStart['@_position'].split(' ').map(parseFloat);
-                                        if (coords.length >= 3) {
-                                            return { x: coords[0], y: coords[1], z: coords[2] };
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        mapConfigFile = mNode['@_configFilename'];
                     }
                 }
-                
-                // Fallback search: look for any map.xml in zip
-                const zipEntries = modManager.listZipEntries(modZip);
-                const mapXmlEntry = zipEntries.find(e => e.entryName.toLowerCase().endsWith('map.xml'));
-                if (mapXmlEntry) {
-                    const mapXmlBuf = modManager.readEntryFromZip(modZip, mapXmlEntry.entryName);
+
+                // 2. Check map config XML for playerStart position
+                if (mapConfigFile) {
+                    const mapXmlBuf = modManager.readEntryFromZip(modZip, mapConfigFile) ||
+                                     modManager.readEntryFromZip(modZip, mapConfigFile.replace(/\\/g, '/'));
                     if (mapXmlBuf) {
                         const mapXml = mapXmlBuf.toString('utf8');
-                        const mapObj = parser.parse(mapXml);
-                        if (mapObj && mapObj.map && mapObj.map.playerStart) {
-                            const pStart = mapObj.map.playerStart;
-                            if (pStart['@_position']) {
-                                const coords = pStart['@_position'].split(' ').map(parseFloat);
-                                if (coords.length >= 3) {
-                                    return { x: coords[0], y: coords[1], z: coords[2] };
-                                }
-                            }
-                        }
-                    }
-                }
-                const i3dEntry = zipEntries.find(e => e.entryName.toLowerCase().endsWith('map.i3d'));
-                if (i3dEntry && i3dEntry.uncompSize < 15 * 1024 * 1024) {
-                    const i3dBuf = modManager.readEntryFromZip(modZip, i3dEntry.entryName);
-                    if (i3dBuf) {
-                        const i3dText = i3dBuf.toString('utf8');
-                        const match = i3dText.match(/<TransformGroup\s+[^>]*name="[^"]*(?:careerStartPoint|playerStart)[^"]*"[^>]*translation="([^"]+)"/i) ||
-                                      i3dText.match(/name="[^"]*(?:careerStartPoint|playerStart)[^"]*"[^>]*translation="([^"]+)"/i) ||
-                                      i3dText.match(/translation="([^"]+)"[^>]*name="[^"]*(?:careerStartPoint|playerStart)[^"]*"/i);
-                        if (match && match[1]) {
-                            const coords = match[1].split(' ').map(parseFloat);
+                        const pMatch = mapXml.match(/<playerStart\s+[^>]*position=["']([^"']+)["']/i) ||
+                                      mapXml.match(/position=["']([^"']+)["'][^>]*<playerStart/i);
+                        if (pMatch && pMatch[1]) {
+                            const coords = pMatch[1].trim().split(/\s+/).map(parseFloat);
                             if (coords.length >= 3 && !isNaN(coords[0])) {
                                 return { x: coords[0], y: coords[1], z: coords[2] };
                             }
+                        }
+                    }
+                }
+
+                // 3. Search map .i3d entries for careerStartPoint
+                const zipEntries = modManager.listZipEntries(modZip);
+                const i3dEntries = zipEntries.filter(e => {
+                    const n = e.entryName.toLowerCase();
+                    return n.endsWith('.i3d') && !n.includes('shapes') && !n.includes('placeable') &&
+                           !n.includes('vehicle') && !n.includes('foliage') && !n.includes('props') &&
+                           !n.includes('particle');
+                });
+
+                i3dEntries.sort((a, b) => {
+                    const aN = a.entryName.toLowerCase();
+                    const bN = b.entryName.toLowerCase();
+                    const aIsMain = aN.includes('map') ? 1 : 0;
+                    const bIsMain = bN.includes('map') ? 1 : 0;
+                    return bIsMain - aIsMain;
+                });
+
+                for (const entry of i3dEntries) {
+                    const i3dBuf = modManager.readEntryFromZip(modZip, entry.entryName);
+                    if (!i3dBuf) continue;
+                    const text = i3dBuf.toString('utf8');
+                    const match = text.match(/<TransformGroup\s+[^>]*name="[^"]*(?:careerStartPoint|playerStart)[^"]*"[^>]*translation="([^"]+)"/i) ||
+                                  text.match(/name="[^"]*(?:careerStartPoint|playerStart)[^"]*"[^>]*translation="([^"]+)"/i) ||
+                                  text.match(/translation="([^"]+)"[^>]*name="[^"]*(?:careerStartPoint|playerStart)[^"]*"/i);
+                    if (match && match[1]) {
+                        const coords = match[1].trim().split(/\s+/).map(parseFloat);
+                        if (coords.length >= 3 && !isNaN(coords[0])) {
+                            return { x: coords[0], y: coords[1], z: coords[2] };
                         }
                     }
                 }
@@ -3088,15 +3110,6 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true) {
         console.error('Error getting map default start coordinates:', e);
     }
     
-    // Shop fallback if default start coordinates couldn't be parsed
-    try {
-        const shopPos = allowFallback ? await getMapShopCoordinates(savePath, false) : null;
-        if (shopPos && (shopPos.x !== 0 || shopPos.y !== 0 || shopPos.z !== 0)) {
-            return shopPos;
-        }
-    } catch (err) {
-        console.error('Error getting shop fallback coordinates:', err);
-    }
     return null;
 }
 
@@ -3821,6 +3834,8 @@ async function resetPlayerSpawn(savePath) {
         const fs = require('fs');
         const { XMLParser, XMLBuilder } = require('fast-xml-parser');
         
+        const defaultSpawn = await getMapDefaultStartCoordinates(savePath);
+
         // 1. Reset in players.xml
         const xmlPath = path.join(savePath, 'players.xml');
         if (fs.existsSync(xmlPath)) {
@@ -3830,7 +3845,11 @@ async function resetPlayerSpawn(savePath) {
             if (obj && obj.players && obj.players.player) {
                 let players = Array.isArray(obj.players.player) ? obj.players.player : [obj.players.player];
                 for (let p of players) {
-                    if (p.spawn) {
+                    if (defaultSpawn && defaultSpawn.x !== undefined) {
+                        p.spawn = {
+                            '@_position': `${defaultSpawn.x.toFixed(3)} ${defaultSpawn.y.toFixed(3)} ${defaultSpawn.z.toFixed(3)}`
+                        };
+                    } else if (p.spawn) {
                         delete p.spawn['@_position'];
                         delete p.spawn['@_yaw'];
                         delete p.spawn['@_vehicleUniqueId'];
@@ -3850,9 +3869,15 @@ async function resetPlayerSpawn(savePath) {
             const careerXml = fs.readFileSync(careerPath, 'utf8');
             const careerObj = parser.parse(careerXml);
             if (careerObj && careerObj.careerSavegame && careerObj.careerSavegame.player) {
-                delete careerObj.careerSavegame.player['@_spawnPositionX'];
-                delete careerObj.careerSavegame.player['@_spawnPositionY'];
-                delete careerObj.careerSavegame.player['@_spawnPositionZ'];
+                if (defaultSpawn && defaultSpawn.x !== undefined) {
+                    careerObj.careerSavegame.player['@_spawnPositionX'] = defaultSpawn.x.toFixed(3);
+                    careerObj.careerSavegame.player['@_spawnPositionY'] = defaultSpawn.y.toFixed(3);
+                    careerObj.careerSavegame.player['@_spawnPositionZ'] = defaultSpawn.z.toFixed(3);
+                } else {
+                    delete careerObj.careerSavegame.player['@_spawnPositionX'];
+                    delete careerObj.careerSavegame.player['@_spawnPositionY'];
+                    delete careerObj.careerSavegame.player['@_spawnPositionZ'];
+                }
                 delete careerObj.careerSavegame.player['@_vehicleId'];
                 delete careerObj.careerSavegame.player['@_spawnYaw'];
                 delete careerObj['?xml'];
@@ -4389,6 +4414,7 @@ module.exports = {
     getPlayerPosition,
     setPlayerPosition,
     resetPlayerSpawn,
+    getMapDefaultStartCoordinates,
     getMapHomeCoordinates,
     getMapShopCoordinates,
     getFleetPositions,
