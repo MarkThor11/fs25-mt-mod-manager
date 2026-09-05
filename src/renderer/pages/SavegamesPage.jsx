@@ -654,13 +654,34 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                       </div>
                     </div>
                     <div className="setting">
-                      <label>MONTH</label>
+                      <label>TIME OF DAY</label>
+                      <div className="input-with-icon">
+                        <Clock size={14} />
+                        <input 
+                          type="time" 
+                          defaultValue={save.formattedTime || "08:00"} 
+                          style={{ minWidth: 100 }}
+                          onBlur={(e) => handleUpdate('environment', 'dayTime', e.target.value)} 
+                        />
+                      </div>
+                    </div>
+                    <div className="setting">
+                      <label>MONTH / SEASON</label>
                       <div className="input-with-icon">
                         <Calendar size={14} />
-                        <select defaultValue={save.currentPeriod || 1} onChange={(e) => handleUpdate('environment', 'currentPeriod', e.target.value)}>
-                          {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((m, i) => (
-                            <option key={i+1} value={i+1}>{m}</option>
-                          ))}
+                        <select defaultValue={save.currentPeriod || 6} onChange={(e) => handleUpdate('environment', 'currentPeriod', e.target.value)}>
+                          <option value="1">March (Spring)</option>
+                          <option value="2">April (Spring)</option>
+                          <option value="3">May (Spring)</option>
+                          <option value="4">June (Summer)</option>
+                          <option value="5">July (Summer)</option>
+                          <option value="6">August (Summer - Default)</option>
+                          <option value="7">September (Autumn)</option>
+                          <option value="8">October (Autumn)</option>
+                          <option value="9">November (Autumn)</option>
+                          <option value="10">December (Winter)</option>
+                          <option value="11">January (Winter)</option>
+                          <option value="12">February (Winter)</option>
                         </select>
                       </div>
                     </div>
@@ -678,6 +699,17 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                          }} />
                        </div>
                      </div>
+                    <div className="setting">
+                      <label>CURRENT WEATHER</label>
+                      <div className="input-with-icon">
+                        <Cloud size={14} />
+                        <select defaultValue={save.weather || 'SUN'} onChange={(e) => handleUpdate('environment', 'weather', e.target.value)}>
+                          <option value="SUN">Clear / Sunny</option>
+                          <option value="CLOUDY">Cloudy / Overcast</option>
+                          <option value="RAIN">Rain</option>
+                        </select>
+                      </div>
+                    </div>
                    </div>
                  </div>
                </div>
@@ -1746,7 +1778,9 @@ export default function SavegamesPage() {
   const [createSeasonLength, setCreateSeasonLength] = useState(1);
   const [createTimeScale, setCreateTimeScale] = useState(1.0);
   const [missingDeps, setMissingDeps] = useState(null);
-  const [createStartMonth, setCreateStartMonth] = useState(1);
+  const [createStartMonth, setCreateStartMonth] = useState('DEFAULT');
+  const [createStartTime, setCreateStartTime] = useState('DEFAULT');
+  const [createStartWeather, setCreateStartWeather] = useState('DEFAULT');
   const [autoLaunchOnCreate, setAutoLaunchOnCreate] = useState(false);
   const [createMode, setCreateMode] = useState('NEW_FARMER');
   const [includeStartFarm, setIncludeStartFarm] = useState(true);
@@ -2005,6 +2039,9 @@ export default function SavegamesPage() {
   const openCreateModal = (slot = 'auto') => {
     setCreateSlot(slot.toString());
     setCreateName('New Farming Career');
+    setCreateStartMonth('DEFAULT');
+    setCreateStartTime('DEFAULT');
+    setCreateStartWeather('DEFAULT');
     
     // Reset map to default so the useEffect always re-fires when user picks a map
     setCreateMap('MapUS|Riverbend Springs|||');
@@ -2110,6 +2147,8 @@ export default function SavegamesPage() {
         fixedSeasonLength: createSeasonLength,
         timeScale: createTimeScale,
         startMonth: createStartMonth,
+        startTime: createStartTime,
+        startWeather: createStartWeather,
         includeStartFarm: includeStartFarm
       });
 
@@ -2745,6 +2784,50 @@ export default function SavegamesPage() {
                                     </div>
                                 </div>
                             )}
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
+                                <div>
+                                    <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>STARTING MONTH</label>
+                                    <select value={createStartMonth} onChange={e => setCreateStartMonth(e.target.value)} style={{ width: '100%', padding: '14px', fontSize: 14, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                                        <option value="DEFAULT">Map Default (August)</option>
+                                        <option value="1">March (Spring)</option>
+                                        <option value="2">April (Spring)</option>
+                                        <option value="3">May (Spring)</option>
+                                        <option value="4">June (Summer)</option>
+                                        <option value="5">July (Summer)</option>
+                                        <option value="6">August (Summer)</option>
+                                        <option value="7">September (Autumn)</option>
+                                        <option value="8">October (Autumn)</option>
+                                        <option value="9">November (Autumn)</option>
+                                        <option value="10">December (Winter)</option>
+                                        <option value="11">January (Winter)</option>
+                                        <option value="12">February (Winter)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>STARTING TIME</label>
+                                    <select value={createStartTime} onChange={e => setCreateStartTime(e.target.value)} style={{ width: '100%', padding: '14px', fontSize: 14, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                                        <option value="DEFAULT">Map Default (08:00 AM)</option>
+                                        <option value="06:00">06:00 AM (Dawn)</option>
+                                        <option value="07:00">07:00 AM (Sunrise)</option>
+                                        <option value="08:00">08:00 AM (Morning)</option>
+                                        <option value="09:00">09:00 AM</option>
+                                        <option value="10:00">10:00 AM</option>
+                                        <option value="12:00">12:00 PM (Noon)</option>
+                                        <option value="14:00">02:00 PM (Afternoon)</option>
+                                        <option value="18:00">06:00 PM (Evening)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>STARTING WEATHER</label>
+                                    <select value={createStartWeather} onChange={e => setCreateStartWeather(e.target.value)} style={{ width: '100%', padding: '14px', fontSize: 14, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                                        <option value="DEFAULT">Map Default</option>
+                                        <option value="SUN">Clear / Sunny</option>
+                                        <option value="CLOUDY">Cloudy / Overcast</option>
+                                        <option value="RAIN">Rain</option>
+                                    </select>
+                                </div>
+                            </div>
 
                             <div style={{ padding: '24px', background: 'var(--bg-tertiary)', borderRadius: 16, border: includeStartFarm ? '1px solid var(--accent)' : '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 20 }}>
                                 <div style={{ width: 44, height: 44, borderRadius: 12, background: includeStartFarm ? 'var(--accent-dim)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: includeStartFarm ? 'var(--accent)' : 'var(--text-tertiary)' }}>

@@ -774,7 +774,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         initialLoan = 0,
         fixedSeasonLength = 1,
         timeScale = 5.0,
-        startMonth = 1,
+        startMonth = 'DEFAULT',
+        startTime = 'DEFAULT',
+        startWeather = 'DEFAULT',
         mode = 'NEW_FARMER' 
     } = opts;
     const includeStartFarm = opts.includeStartFarm !== false && opts.includeStartFarm !== 'false';
@@ -1129,23 +1131,43 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 } catch (e) {}
             }
 
-            // Reset template environment.xml to clean runtime Day 1 and strip stale forecast
+            // Configure template environment.xml: Preserve map default weather, date and time unless explicitly changed
             const envTemplatePath = path.join(slotPath, 'environment.xml');
             if (fs.existsSync(envTemplatePath)) {
                 try {
                     const eXml = await fs.readFile(envTemplatePath, 'utf8');
                     const eData = parser.parse(eXml);
                     if (eData?.environment) {
-                        eData.environment.currentPeriod = String(startMonth || 1);
-                        eData.environment.daysPerPeriod = String(fixedSeasonLength || 1);
-                        eData.environment.currentDay = '1';
-                        eData.environment.currentMonotonicDay = '1';
-                        eData.environment.realHourTimer = '0.000000';
-                        eData.environment.dayTime = '480.000000';
-                        eData.environment.time = '480.000000';
-                        if (eData.environment.weather?.forecast) {
-                            delete eData.environment.weather.forecast;
+                        if (fixedSeasonLength) {
+                            eData.environment.daysPerPeriod = String(fixedSeasonLength);
                         }
+                        // Only change date/month if user did not choose DEFAULT
+                        if (startMonth && startMonth !== 'DEFAULT') {
+                            const dpp = parseInt(fixedSeasonLength || eData.environment.daysPerPeriod || 1);
+                            const pNum = parseInt(startMonth);
+                            eData.environment.currentPeriod = String(pNum);
+                            eData.environment.currentDay = String((pNum - 1) * dpp + 1);
+                            eData.environment.currentMonotonicDay = eData.environment.currentDay;
+                        }
+                        // Only change time of day if user did not choose DEFAULT
+                        if (startTime && startTime !== 'DEFAULT') {
+                            let minutes = 480;
+                            if (typeof startTime === 'string' && startTime.includes(':')) {
+                                const [h, m] = startTime.split(':').map(Number);
+                                minutes = (h || 0) * 60 + (m || 0);
+                            } else {
+                                minutes = parseFloat(startTime) || 480;
+                            }
+                            eData.environment.dayTime = Number(minutes).toFixed(6);
+                            eData.environment.time = Number(minutes).toFixed(6);
+                        }
+                        // Only change weather if user did not choose DEFAULT
+                        if (startWeather && startWeather !== 'DEFAULT') {
+                            applyWeatherToEnvironment(eData.environment, startWeather);
+                        }
+                        // Reset runtime timer to 0 so fresh career starts cleanly
+                        eData.environment.realHourTimer = '0.000000';
+
                         await fs.writeFile(envTemplatePath, builder.build(eData));
                     }
                 } catch (e) {}
@@ -1447,20 +1469,119 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     const envPath = path.join(slotPath, 'environment.xml');
-    if (!fs.existsSync(envPath)) {
-        const envXml = `<?xml version="1.0" encoding="utf-8" standalone="no"?>
-<environment>
-    <currentPeriod>${startMonth || 1}</currentPeriod>
-    <daysPerPeriod>${fixedSeasonLength || 1}</daysPerPeriod>
-    <currentDay>1</currentDay>
-    <currentMonotonicDay>1</currentMonotonicDay>
-    <realHourTimer>0.000000</realHourTimer>
-    <time>480.000000</time>
-</environment>`;
-        await fs.writeFile(envPath, envXml);
+    const hasCustomEnv = (startMonth && startMonth !== 'DEFAULT') || (startTime && startTime !== 'DEFAULT') || (startWeather && startWeather !== 'DEFAULT');
+    if (!fs.existsSync(envPath) && hasCustomEnv) {
+        let pNum = 6;
+        if (startMonth && startMonth !== 'DEFAULT') pNum = parseInt(startMonth);
+        const dpp = fixedSeasonLength || 1;
+        const curDay = (pNum - 1) * dpp + 1;
+        let dayMinutes = 480;
+        if (startTime && startTime !== 'DEFAULT') {
+            if (typeof startTime === 'string' && startTime.includes(':')) {
+                const [h, m] = startTime.split(':').map(Number);
+                dayMinutes = (h || 0) * 60 + (m || 0);
+            } else {
+                dayMinutes = parseFloat(startTime) || 480;
+            }
+        }
+        const wType = (startWeather && startWeather !== 'DEFAULT') ? startWeather.toUpperCase() : 'SUN';
+        const initialEnv = {
+            environment: {
+                dayTime: Number(dayMinutes).toFixed(6),
+                currentDay: String(curDay),
+                currentMonotonicDay: String(curDay),
+                realHourTimer: '0.000000',
+                daysPerPeriod: String(dpp),
+                currentPeriod: String(pNum),
+                time: Number(dayMinutes).toFixed(6),
+                weather: {
+                    '@_timeSinceLastRain': wType === 'RAIN' ? '0' : '24',
+                    forecast: {
+                        instance: [
+                            {
+                                '@_typeName': wType,
+                                '@_season': 'SUMMER',
+                                '@_variationIndex': '1',
+                                '@_startDay': String(curDay),
+                                '@_startDayTime': '28800000',
+                                '@_duration': '39600000'
+                            },
+                            {
+                                '@_typeName': wType === 'RAIN' ? 'CLOUDY' : 'SUN',
+                                '@_season': 'SUMMER',
+                                '@_variationIndex': '2',
+                                '@_startDay': String(curDay),
+                                '@_startDayTime': '68400000',
+                                '@_duration': '18000000'
+                            }
+                        ]
+                    },
+                    ground: {
+                        '@_wetness': wType === 'RAIN' ? '1.000000' : '0.000000'
+                    }
+                }
+            }
+        };
+        await fs.writeFile(envPath, builder.build(initialEnv));
     }
 
     return { success: true, path: slotPath, requiresEngineInit, mapId };
+}
+
+/**
+ * Synchronize and apply weather states cleanly to an environment object
+ */
+function applyWeatherToEnvironment(env, weatherType) {
+    if (!env) return;
+    if (!env.weather) env.weather = {};
+    const w = env.weather;
+    const curDay = parseInt(env.currentDay) || 6;
+    const normType = (weatherType || 'SUN').toUpperCase();
+
+    if (!w.ground) w.ground = {};
+    if (!w.twister) w.twister = { '@_position': '0.00 0.00 0.00', '@_isSpawned': 'false' };
+
+    if (normType === 'RAIN') {
+        w['@_timeSinceLastRain'] = '0';
+        w.ground['@_wetness'] = '1.000000';
+    } else if (normType === 'CLOUDY') {
+        w['@_timeSinceLastRain'] = String(Math.max(12, parseInt(w['@_timeSinceLastRain'] || 12)));
+        w.ground['@_wetness'] = '0.000000';
+    } else { // SUN
+        w['@_timeSinceLastRain'] = String(Math.max(24, parseInt(w['@_timeSinceLastRain'] || 24)));
+        w.ground['@_wetness'] = '0.000000';
+    }
+
+    if (w.forecast && w.forecast.instance) {
+        const instances = Array.isArray(w.forecast.instance) ? w.forecast.instance : [w.forecast.instance];
+        if (instances.length > 0) {
+            instances[0]['@_typeName'] = normType;
+            if (instances.length > 1 && normType === 'SUN') {
+                instances[1]['@_typeName'] = 'SUN';
+            }
+        }
+    } else {
+        w.forecast = {
+            instance: [
+                {
+                    '@_typeName': normType,
+                    '@_season': 'SUMMER',
+                    '@_variationIndex': '1',
+                    '@_startDay': String(curDay),
+                    '@_startDayTime': '28800000',
+                    '@_duration': '39600000'
+                },
+                {
+                    '@_typeName': normType === 'RAIN' ? 'CLOUDY' : 'SUN',
+                    '@_season': 'SUMMER',
+                    '@_variationIndex': '2',
+                    '@_startDay': String(curDay),
+                    '@_startDayTime': '68400000',
+                    '@_duration': '18000000'
+                }
+            ]
+        };
+    }
 }
 
 /**
@@ -1517,10 +1638,45 @@ async function updateSavegameAttribute(savePath, fileType, attribute, value) {
         } else if (attribute === 'loan') {
             farm['@_loan'] = stringValue;
         }
-    }
- else if (fileType === 'environment') {
-        if (attribute === 'currentPeriod') data.environment.currentPeriod = stringValue;
-        else if (attribute === 'daysPerPeriod') data.environment.daysPerPeriod = stringValue;
+    } else if (fileType === 'environment') {
+        if (!data.environment) data.environment = {};
+        const env = data.environment;
+        if (attribute === 'currentPeriod') {
+            const pNum = Math.max(1, Math.min(12, parseInt(value) || 1));
+            env.currentPeriod = String(pNum);
+            const dpp = parseInt(env.daysPerPeriod) || 1;
+            const newDay = (pNum - 1) * dpp + 1;
+            env.currentDay = String(newDay);
+            env.currentMonotonicDay = String(newDay);
+
+            if (env.weather?.forecast?.instance) {
+                const instances = Array.isArray(env.weather.forecast.instance) 
+                    ? env.weather.forecast.instance 
+                    : [env.weather.forecast.instance];
+                if (instances.length > 0) {
+                    const oldFirstDay = parseInt(instances[0]['@_startDay']) || newDay;
+                    const diff = newDay - oldFirstDay;
+                    for (const inst of instances) {
+                        const cur = parseInt(inst['@_startDay']) || oldFirstDay;
+                        inst['@_startDay'] = String(cur + diff);
+                    }
+                }
+            }
+        } else if (attribute === 'daysPerPeriod') {
+            env.daysPerPeriod = stringValue;
+        } else if (attribute === 'dayTime') {
+            let minutes = 480;
+            if (typeof value === 'string' && value.includes(':')) {
+                const [h, m] = value.split(':').map(Number);
+                minutes = (h || 0) * 60 + (m || 0);
+            } else {
+                minutes = parseFloat(value) || 480;
+            }
+            env.dayTime = Number(minutes).toFixed(6);
+            env.time = Number(minutes).toFixed(6);
+        } else if (attribute === 'weather') {
+            applyWeatherToEnvironment(env, String(value));
+        }
     }
 
     const newXml = builder.build(data);
@@ -1604,6 +1760,49 @@ async function getAllSavegames() {
                 console.error('[SAVEGAMES] Failed to check template for', mapId, e);
             }
 
+            // Read environment.xml for accurate current month, day, time, and weather
+            let currentPeriod = 6;
+            let currentDay = 6;
+            let dayTime = 480;
+            let formattedTime = '08:00';
+            let currentWeather = 'SUN';
+            const envFile = path.join(savePath, 'environment.xml');
+            if (fs.existsSync(envFile)) {
+                try {
+                    const eXml = await fs.readFile(envFile, 'utf8');
+                    const eData = parser.parse(eXml);
+                    const env = eData?.environment;
+                    if (env) {
+                        currentDay = parseInt(env.currentDay) || 1;
+                        const dpp = parseInt(env.daysPerPeriod) || parseInt(settings['@_plannedDaysPerPeriod'] || settings.plannedDaysPerPeriod) || 1;
+                        if (env.currentPeriod) {
+                            currentPeriod = parseInt(env.currentPeriod);
+                        } else {
+                            currentPeriod = Math.floor((currentDay - 1) / dpp) + 1;
+                            if (currentPeriod > 12) currentPeriod = ((currentPeriod - 1) % 12) + 1;
+                        }
+                        dayTime = parseFloat(env.dayTime != null ? env.dayTime : env.time) || 480;
+                        const hrs = Math.floor(dayTime / 60) % 24;
+                        const mins = Math.floor(dayTime % 60);
+                        formattedTime = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+                        
+                        const forecast = env.weather?.forecast?.instance;
+                        const instances = Array.isArray(forecast) ? forecast : (forecast ? [forecast] : []);
+                        const activeInst = instances.find(inst => {
+                            const sDay = parseInt(inst['@_startDay']);
+                            const sTime = parseFloat(inst['@_startDayTime']) / 60000;
+                            const dur = parseFloat(inst['@_duration']) / 60000;
+                            return sDay === currentDay && dayTime >= sTime && dayTime < (sTime + dur);
+                        }) || instances[0];
+                        if (activeInst && activeInst['@_typeName']) {
+                            currentWeather = activeInst['@_typeName'].toUpperCase();
+                        } else if (parseFloat(env.weather?.ground?.['@_wetness'] || 0) > 0.5) {
+                            currentWeather = 'RAIN';
+                        }
+                    }
+                } catch (e) {}
+            }
+
             savegames.push({
                 index: i,
                 path: savePath,
@@ -1622,7 +1821,11 @@ async function getAllSavegames() {
                 economicDifficulty: settings['@_economicDifficulty'] || settings.economicDifficulty,
                 autoSaveInterval: settings['@_autoSaveInterval'] || settings.autoSaveInterval,
                 timeScale: settings['@_timeScale'] || settings.timeScale,
-                currentPeriod: data.careerSavegame.environment?.currentPeriod,
+                currentPeriod: currentPeriod || 6,
+                currentDay: currentDay || 6,
+                dayTime: dayTime != null ? dayTime : 480,
+                formattedTime: formattedTime || '08:00',
+                weather: currentWeather,
                 plannedDaysPerPeriod: settings['@_plannedDaysPerPeriod'] || settings.plannedDaysPerPeriod,
                 trafficEnabled: (settings['@_trafficEnabled'] || settings.trafficEnabled) !== 'false',
                 fruitDestruction: (settings['@_fruitDestruction'] || settings.fruitDestruction) !== 'false',
