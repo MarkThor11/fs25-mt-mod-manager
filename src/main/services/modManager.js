@@ -2164,31 +2164,33 @@ async function runInstallTask(task) {
 		if (result.success) {
 			const modsPath = getModsPath();
 			const backupsDir = path.join(modsPath, 'backups');
+			const bakPath = oldPath ? path.join(backupsDir, `${path.basename(oldPath)}.bak`) : null;
 			
 			if (oldPath && fs.existsSync(oldPath)) {
 				const fileName = path.basename(oldPath);
-				const bakPath = path.join(backupsDir, `${fileName}.bak`);
 				
 				if (oldPath !== result.filePath) {
 					console.log(`[UPDATE] Filename changed. Moving old version to backup: ${fileName}`);
 					try {
 						await fs.ensureDir(backupsDir);
-						if (fs.existsSync(bakPath)) await fs.remove(bakPath);
+						if (bakPath && fs.existsSync(bakPath)) await fs.remove(bakPath);
 						await fs.move(oldPath, bakPath);
 					} catch (e) { console.warn(`[UPDATE] Failed to move old mod to backup: ${e.message}`); }
 				} else {
 					if (recoveryPath && fs.existsSync(recoveryPath)) {
-						console.log(`[UPDATE] Filename same (overwritten). Moving recovery copy to backup: ${fileName}`);
-						try {
-							await fs.ensureDir(backupsDir);
-							if (fs.existsSync(bakPath)) await fs.remove(bakPath);
-							await fs.move(recoveryPath, bakPath);
-						} catch (e) { console.warn(`[UPDATE] Failed to move recovery copy to backup: ${e.message}`); }
+						if (bakPath && recoveryPath !== bakPath) {
+							console.log(`[UPDATE] Filename same (overwritten). Moving recovery copy to backup: ${fileName}`);
+							try {
+								await fs.ensureDir(backupsDir);
+								if (fs.existsSync(bakPath)) await fs.remove(bakPath);
+								await fs.move(recoveryPath, bakPath);
+							} catch (e) { console.warn(`[UPDATE] Failed to move recovery copy to backup: ${e.message}`); }
+						}
 					}
 				}
 			}
 
-			if (recoveryPath && fs.existsSync(recoveryPath)) {
+			if (recoveryPath && fs.existsSync(recoveryPath) && recoveryPath !== bakPath) {
 				await fs.remove(recoveryPath).catch(() => {});
 			}
 		}
@@ -2444,6 +2446,16 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 	// Only custom Mod Maps get dedicated subfolders. Base maps and regular mods go to main root mods folder.
 	const titleClean = (modTitle || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
 	// FS25 Official Base Maps: MapUS (Riverbend Springs), MapEU (Zielonka), MapAS (Hutan Pantai), Kinlaig (Highlands DLC), pdlc
+	const isBaseMap = titleClean.startsWith('mapus') || 
+	                  titleClean.startsWith('mapeu') || 
+	                  titleClean.startsWith('mapas') || 
+	                  titleClean.startsWith('kinlaig') || 
+	                  titleClean.startsWith('zielonka') || 
+	                  titleClean.startsWith('elmcreek') || 
+	                  titleClean.startsWith('riverbend') || 
+	                  titleClean.startsWith('hautbeyleron') || 
+	                  titleClean.startsWith('erlengrat') || 
+	                  titleClean.startsWith('pdlc');
 	let isModMap = !isBaseMap && isMapCategory(category);
 	if (!isModMap && !category && modId) {
 		const pool = cache.getModHubMetadataPool();
