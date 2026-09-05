@@ -901,6 +901,42 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         if (matchedMapMod?.version) mapModObj.version = matchedMapMod.version;
     }
 
+    // Auto-include sibling mods from dedicated map subfolder (e.g. required placeables/buildings)
+    if (matchedMapMod && matchedMapMod.filePath) {
+        try {
+            const mapDir = path.dirname(matchedMapMod.filePath);
+            const configuredRoots = modManager.getModsPaths().map(p => path.resolve(p).toLowerCase());
+            const mapDirResolved = path.resolve(mapDir).toLowerCase();
+            const parentOfMapDir = path.resolve(path.dirname(mapDir)).toLowerCase();
+
+            if (configuredRoots.includes(parentOfMapDir) && !configuredRoots.includes(mapDirResolved)) {
+                const subfolderSiblings = allMods.filter(m => {
+                    if (!m.filePath) return false;
+                    const mDir = path.resolve(path.dirname(m.filePath)).toLowerCase();
+                    if (mDir !== mapDirResolved) return false;
+                    if (m.modName && m.modName.toLowerCase() === matchedMapMod.modName.toLowerCase()) return false;
+                    if (m.isMap) return false;
+                    return true;
+                });
+
+                for (const sib of subfolderSiblings) {
+                    if (!finalMods.some(m => (m.modName || '').toLowerCase() === (sib.modName || '').toLowerCase())) {
+                        console.log(`[CREATE] Auto-including map subfolder sibling mod: ${sib.title || sib.modName}`);
+                        finalMods.push({
+                            modName: sib.modName,
+                            title: sib.title || sib.modName,
+                            version: sib.version || '1.0.0.0',
+                            required: false,
+                            fileHash: sib.fileHash || ''
+                        });
+                    }
+                }
+            }
+        } catch (subErr) {
+            console.warn('[CREATE] Failed to resolve subfolder siblings:', subErr.message);
+        }
+    }
+
     // --- AUTO-INJECT DEPENDENCIES FOR ALL SELECTED MODS ---
     // If we don't do this, the FS25 engine pauses the launch and prompts: "Do you want to select all required mods?"
     try {
@@ -4462,6 +4498,74 @@ async function cleanupBridgeModFromSavegame(savePath) {
     }
 }
 
+/**
+ * Reliably finds the map mod object corresponding to a savegame from careerSavegame.xml data.
+ */
+function findMapModInSavegame(xmlData, localMods = []) {
+    if (!xmlData || !localMods || localMods.length === 0) return null;
+
+    // 1. Check <careerSavegame><mod modName="..." .../></careerSavegame> list
+    // In FS25, every mod map is recorded as an active mod tag in careerSavegame.xml
+    const modMatches = [...xmlData.matchAll(/<mod\s+[^>]*modName=["']([^"']+)["']/gi)];
+    const saveModNames = modMatches.map(m => m[1]);
+
+    for (const sName of saveModNames) {
+        const matched = localMods.find(m => m.isMap && m.modName && m.modName.toLowerCase() === sName.toLowerCase());
+        if (matched) return matched;
+    }
+
+    // 2. Extract mapId and mapTitle from <settings>
+    const mapIdMatch = xmlData.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xmlData.match(/mapId=["']([^"']+)["']/i);
+    const rawMapId = mapIdMatch ? mapIdMatch[1].trim() : null;
+
+    // Skip default base-game maps
+    if (rawMapId && ['MapUS', 'MapEU', 'MapAS', 'HighlandsFishingMap'].includes(rawMapId)) {
+        return null;
+    }
+
+    const mapTitleMatch = xmlData.match(/<mapTitle[^>]*>([^<]+)<\/mapTitle>/i) || xmlData.match(/mapTitle=["']([^"']+)["']/i);
+    const rawMapTitle = mapTitleMatch ? mapTitleMatch[1].trim() : null;
+
+    if (rawMapId) {
+        // If mapId is "FS25_Courtright_Line.CourtrightLineModMap", split('.')[0] gives "FS25_Courtright_Line"
+        const prefix = rawMapId.split('.')[0];
+        const matchByPrefix = localMods.find(m => m.isMap && m.modName && m.modName.toLowerCase() === prefix.toLowerCase());
+        if (matchByPrefix) return matchByPrefix;
+
+        // Try exact mapId match (ignoring generic placeholder IDs used by many modders)
+        const GENERIC_MAP_IDS = new Set([
+            'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
+            'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
+            'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek'
+        ]);
+        if (!GENERIC_MAP_IDS.has(rawMapId.toLowerCase())) {
+            const matchByMapId = localMods.find(m => m.isMap && m.mapId && m.mapId.toLowerCase() === rawMapId.toLowerCase());
+            if (matchByMapId) return matchByMapId;
+        }
+    }
+
+    if (rawMapTitle) {
+        const titleLower = rawMapTitle.toLowerCase();
+        const matchByTitle = localMods.find(m => m.isMap && (
+            (m.title && m.title.toLowerCase() === titleLower) ||
+            (m.mapTitle && m.mapTitle.toLowerCase() === titleLower)
+        ));
+        if (matchByTitle) return matchByTitle;
+    }
+
+    // Fallback: match by file basename or modName
+    if (rawMapId) {
+        const rawLower = rawMapId.toLowerCase();
+        const fallbackMatch = localMods.find(m => m.isMap && (
+            (m.modName && m.modName.toLowerCase() === rawLower) ||
+            (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === rawLower)
+        ));
+        if (fallbackMatch) return fallbackMatch;
+    }
+
+    return null;
+}
+
 async function syncSubfolderMapDependencies(savePath) {
     try {
         const path = require('path');
@@ -4475,54 +4579,140 @@ async function syncSubfolderMapDependencies(savePath) {
         const obj = parser.parse(xmlData);
         if (!obj || !obj.careerSavegame) return;
 
-        // Try to identify the map mod
-        const mapMatch = xmlData.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xmlData.match(/mapId="([^"]+)"/i);
-        if (!mapMatch || !mapMatch[1]) return;
-        const mapId = mapMatch[1].split('.')[0];
-        
-        // Skip default maps
-        if (['MapUS', 'MapEU', 'MapAS', 'HighlandsFishingMap'].includes(mapId)) return;
-
         // Scan local mods
         const modManager = require('./modManager');
         const { mods: localMods } = await modManager.scanLocalMods();
-        const mapModObj = localMods.find(m => m.modName && m.modName.toLowerCase() === mapId.toLowerCase());
-        
-        if (mapModObj && mapModObj.folder && mapModObj.folder.toLowerCase() !== 'mods' && mapModObj.folder.toLowerCase() !== '') {
-            const folderLower = mapModObj.folder.toLowerCase();
-            const siblingMods = localMods.filter(m => m.folder && m.folder.toLowerCase() === folderLower && m.modName && m.modName.toLowerCase() !== mapId.toLowerCase());
-            
-            if (siblingMods.length > 0) {
-                let mods = obj.careerSavegame.mod;
-                if (!mods) mods = [];
-                else if (!Array.isArray(mods)) mods = [mods];
+        if (!localMods || localMods.length === 0) return;
 
-                let modified = false;
-                for (const sib of siblingMods) {
-                    const hasMod = mods.some(m => m['@_modName'] && m['@_modName'].toLowerCase() === sib.modName.toLowerCase());
-                    if (!hasMod) {
-                        console.log(`[SYNC-DEPS] Auto-activating missing sibling mod in careerSavegame.xml: ${sib.modName}`);
-                        mods.push({
-                            '@_modName': sib.modName,
-                            '@_title': sib.title || sib.modName,
-                            '@_version': sib.version || '1.0.0.0',
-                            '@_required': 'false',
-                            '@_fileHash': sib.fileHash || ''
-                        });
-                        modified = true;
+        // Identify the map mod using robust detection
+        const mapModObj = findMapModInSavegame(xmlData, localMods);
+        if (!mapModObj) return;
+
+        const modsToEnsure = [];
+        const seenModNames = new Set();
+        seenModNames.add(mapModObj.modName.toLowerCase());
+
+        // 1. Check if the map resides in a dedicated subfolder
+        if (mapModObj.filePath) {
+            try {
+                const mapDir = path.dirname(mapModObj.filePath);
+                const configuredRoots = modManager.getModsPaths().map(p => path.resolve(p).toLowerCase());
+                const mapDirResolved = path.resolve(mapDir).toLowerCase();
+                const parentOfMapDir = path.resolve(path.dirname(mapDir)).toLowerCase();
+
+                // It's a dedicated subfolder if its parent is a configured root and it is not a root itself
+                if (configuredRoots.includes(parentOfMapDir) && !configuredRoots.includes(mapDirResolved)) {
+                    // Collect all non-map sibling mods in the subfolder
+                    const siblingMods = localMods.filter(m => {
+                        if (!m.filePath) return false;
+                        const mDir = path.resolve(path.dirname(m.filePath)).toLowerCase();
+                        if (mDir !== mapDirResolved) return false;
+                        if (m.modName && m.modName.toLowerCase() === mapModObj.modName.toLowerCase()) return false;
+                        // Exclude alternate map versions in same subfolder (e.g. PC vs CP)
+                        if (m.isMap) return false;
+                        return true;
+                    });
+
+                    // Also check physical directory for any un-indexed zip files
+                    try {
+                        const dirEntries = fs.readdirSync(mapDir);
+                        for (const entry of dirEntries) {
+                            if (!entry.toLowerCase().endsWith('.zip')) continue;
+                            const sibName = entry.replace(/\.zip$/i, '');
+                            if (sibName.toLowerCase() === mapModObj.modName.toLowerCase()) continue;
+                            if (!siblingMods.some(s => s.modName && s.modName.toLowerCase() === sibName.toLowerCase())) {
+                                const matched = localMods.find(m => m.modName && m.modName.toLowerCase() === sibName.toLowerCase());
+                                if (matched && !matched.isMap) {
+                                    siblingMods.push(matched);
+                                } else if (!matched) {
+                                    siblingMods.push({
+                                        modName: sibName,
+                                        title: sibName,
+                                        version: '1.0.0.0',
+                                        fileHash: ''
+                                    });
+                                }
+                            }
+                        }
+                    } catch (dErr) {}
+
+                    for (const sib of siblingMods) {
+                        const sLow = (sib.modName || '').toLowerCase();
+                        if (sLow && !seenModNames.has(sLow)) {
+                            seenModNames.add(sLow);
+                            modsToEnsure.push(sib);
+                        }
                     }
                 }
+            } catch (dirErr) {
+                console.warn('[SYNC-DEPS] Error checking subfolder siblings:', dirErr.message);
+            }
+        }
 
-                if (modified) {
-                    obj.careerSavegame.mod = mods;
-                    obj.careerSavegame['@_valid'] = 'true';
-                    delete obj['?xml'];
-                    const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
-                    const newXml = builder.build(obj);
-                    fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
-                    console.log(`[SYNC-DEPS] Successfully updated careerSavegame.xml with subfolder map dependencies.`);
+        // 2. Recursively resolve all declared dependencies for the map and its siblings
+        const queue = [mapModObj, ...modsToEnsure];
+        while (queue.length > 0) {
+            const current = queue.shift();
+            if (current && current.dependencies && Array.isArray(current.dependencies) && current.dependencies.length > 0) {
+                for (const dep of current.dependencies) {
+                    let depStr = (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '')).toLowerCase();
+                    if (!depStr) continue;
+
+                    let matchedDep = localMods.find(m => 
+                        (m.modName && m.modName.toLowerCase() === depStr) ||
+                        (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === depStr) ||
+                        (m.title && m.title.toLowerCase() === depStr)
+                    );
+
+                    if (!matchedDep && typeof dep === 'object' && dep.url) {
+                        const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
+                        if (idMatch) {
+                            matchedDep = localMods.find(m => m.modId && String(m.modId) === String(idMatch[1]));
+                        }
+                    }
+
+                    if (matchedDep && matchedDep.modName) {
+                        const dLow = matchedDep.modName.toLowerCase();
+                        if (!seenModNames.has(dLow)) {
+                            seenModNames.add(dLow);
+                            modsToEnsure.push(matchedDep);
+                            queue.push(matchedDep);
+                        }
+                    }
                 }
             }
+        }
+
+        if (modsToEnsure.length === 0) return;
+
+        let mods = obj.careerSavegame.mod;
+        if (!mods) mods = [];
+        else if (!Array.isArray(mods)) mods = [mods];
+
+        let modified = false;
+        for (const item of modsToEnsure) {
+            const hasMod = mods.some(m => m['@_modName'] && m['@_modName'].toLowerCase() === item.modName.toLowerCase());
+            if (!hasMod) {
+                console.log(`[SYNC-DEPS] Auto-activating required map mod/dependency in careerSavegame.xml: ${item.modName}`);
+                mods.push({
+                    '@_modName': item.modName,
+                    '@_title': item.title || item.modName,
+                    '@_version': item.version || '1.0.0.0',
+                    '@_required': 'false',
+                    '@_fileHash': item.fileHash || ''
+                });
+                modified = true;
+            }
+        }
+
+        if (modified) {
+            obj.careerSavegame.mod = mods;
+            obj.careerSavegame['@_valid'] = 'true';
+            delete obj['?xml'];
+            const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
+            const newXml = builder.build(obj);
+            fs.writeFileSync(xmlPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
+            console.log(`[SYNC-DEPS] Successfully updated careerSavegame.xml with ${modsToEnsure.length} map dependencies/siblings.`);
         }
     } catch (e) {
         console.error('[SYNC-DEPS] Failed to sync map dependencies:', e.message);
@@ -4540,21 +4730,53 @@ async function getUsedModsInSavegame(savePath) {
             return { usedModNames: [], mapModName: null };
         }
 
+        const modManager = require('./modManager');
+        const scanRes = await modManager.scanLocalMods();
+        const allMods = scanRes.mods || [];
+
         // 1. Map mod from careerSavegame.xml
         let mapModName = null;
+        let mapModObj = null;
         const careerPath = path.join(savePath, 'careerSavegame.xml');
         if (fs.existsSync(careerPath)) {
             const xml = await fs.readFile(careerPath, 'utf8');
-            const mapMatch = xml.match(/<mapId>([^<]+)<\/mapId>/i);
-            if (mapMatch) {
-                const mapId = mapMatch[1].trim();
-                if (mapId.includes('.')) {
-                    mapModName = mapId.split('.')[0];
-                    usedModsMap.set(mapModName.toLowerCase(), mapModName);
-                } else if (!['MapUS', 'MapEU', 'MapAS'].includes(mapId)) {
-                    mapModName = mapId;
-                    usedModsMap.set(mapModName.toLowerCase(), mapModName);
+            mapModObj = findMapModInSavegame(xml, allMods);
+            if (mapModObj && mapModObj.modName) {
+                mapModName = mapModObj.modName;
+                usedModsMap.set(mapModName.toLowerCase(), mapModName);
+            } else {
+                const mapMatch = xml.match(/<mapId>([^<]+)<\/mapId>/i);
+                if (mapMatch) {
+                    const mapId = mapMatch[1].trim();
+                    if (mapId.includes('.')) {
+                        mapModName = mapId.split('.')[0];
+                        usedModsMap.set(mapModName.toLowerCase(), mapModName);
+                    } else if (!['MapUS', 'MapEU', 'MapAS'].includes(mapId)) {
+                        mapModName = mapId;
+                        usedModsMap.set(mapModName.toLowerCase(), mapModName);
+                    }
                 }
+            }
+
+            // If map has dedicated subfolder siblings, include them
+            if (mapModObj && mapModObj.filePath) {
+                try {
+                    const mapDir = path.dirname(mapModObj.filePath);
+                    const configuredRoots = modManager.getModsPaths().map(p => path.resolve(p).toLowerCase());
+                    const mapDirResolved = path.resolve(mapDir).toLowerCase();
+                    const parentOfMapDir = path.resolve(path.dirname(mapDir)).toLowerCase();
+
+                    if (configuredRoots.includes(parentOfMapDir) && !configuredRoots.includes(mapDirResolved)) {
+                        const sibs = allMods.filter(m => {
+                            if (!m.filePath) return false;
+                            const mDir = path.resolve(path.dirname(m.filePath)).toLowerCase();
+                            return mDir === mapDirResolved && !m.isMap && m.modName && m.modName.toLowerCase() !== mapModObj.modName.toLowerCase();
+                        });
+                        for (const s of sibs) {
+                            usedModsMap.set(s.modName.toLowerCase(), s.modName);
+                        }
+                    }
+                } catch (subErr) {}
             }
         }
 
@@ -4607,10 +4829,6 @@ async function getUsedModsInSavegame(savePath) {
 
         // 4. Resolve dependencies of used mods so required vehicle/script packs aren't broken
         try {
-            const modManager = require('./modManager');
-            const scanRes = await modManager.scanLocalMods();
-            const allMods = scanRes.mods || [];
-
             let addedNew = true;
             while (addedNew) {
                 addedNew = false;
@@ -4770,5 +4988,7 @@ module.exports = {
     updateFleetMaintenance,
     getSavegameTransferData,
     executeTransfer,
-    autoInjectDependencies
+    autoInjectDependencies,
+    findMapModInSavegame,
+    syncSubfolderMapDependencies
 };

@@ -566,9 +566,13 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 			await fs.ensureDir(virtualPath);
 		}
 
+		// Fetch all authoritative mods
+		const { mods } = await scanLocalMods();
+
 		// Initialize as an empty set if we are in selective mode
 		let activeModNames = savegameIndex !== null ? new Set() : null;
 		let mapModName = null;
+		let mapModObj = null;
 
 		if (savegameIndex) {
 			const savegameManager = require('./savegameManager');
@@ -582,15 +586,21 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 						modsList.forEach(m => activeModNames.add(m.modName.toLowerCase()));
 					}
 					
-					// Try to identify the map mod
+					// Identify the map mod using robust detection
 					const careerPath = path.join(savePath, 'careerSavegame.xml');
 					if (fs.existsSync(careerPath)) {
 						const xml = await fs.readFile(careerPath, 'utf8');
-						const mapMatch = xml.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xml.match(/mapId="([^"]+)"/i);
-						if (mapMatch && mapMatch[1] && !['MapUS', 'MapEU', 'MapAS', 'HighlandsFishingMap'].includes(mapMatch[1])) {
-							// It's likely a mod map (e.g. FS25_Mecklenburg_Lake_District_crossplay.SampleModMap)
-							mapModName = mapMatch[1].split('.')[0].toLowerCase();
+						mapModObj = savegameManager.findMapModInSavegame(xml, mods);
+						if (mapModObj && mapModObj.modName) {
+							mapModName = mapModObj.modName.toLowerCase();
 							activeModNames.add(mapModName);
+						} else {
+							const mapMatch = xml.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xml.match(/mapId="([^"]+)"/i);
+							if (mapMatch && mapMatch[1] && !['MapUS', 'MapEU', 'MapAS', 'HighlandsFishingMap'].includes(mapMatch[1])) {
+								mapModName = mapMatch[1].split('.')[0].toLowerCase();
+								activeModNames.add(mapModName);
+								mapModObj = mods.find(m => m.modName && m.modName.toLowerCase() === mapModName);
+							}
 						}
 					}
 				} catch (e) {
@@ -602,26 +612,42 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 		let linkedCount = 0;
 		const seenFiles = new Set();
 
-        // Fetch all authoritative mods
-        const { mods } = await scanLocalMods();
+		// If mapModObj is found and active, find its dedicated subfolder and auto-add non-map sibling mods
+		if (mapModObj && activeModNames && mapModObj.filePath) {
+			try {
+				const mapDir = path.dirname(mapModObj.filePath);
+				const configuredRoots = getModsPaths().map(p => path.resolve(p).toLowerCase());
+				const mapDirResolved = path.resolve(mapDir).toLowerCase();
+				const parentOfMapDir = path.resolve(path.dirname(mapDir)).toLowerCase();
 
-        // If mapModName is active, find its folder and auto-add non-map sibling mods from the same subfolder
-        if (mapModName && activeModNames) {
-            const mapModObj = mods.find(m => m.modName && m.modName.toLowerCase() === mapModName);
-            if (mapModObj && mapModObj.folder && mapModObj.folder.toLowerCase() !== 'mods' && mapModObj.folder.toLowerCase() !== '') {
-                const folderLower = mapModObj.folder.toLowerCase();
-                debugLog(`[VIRTUAL] Map '${mapModName}' resides in subfolder '${mapModObj.folder}'. Auto-activating non-map sibling mods from that folder.`);
-                mods.forEach(m => {
-                    if (m.folder && m.folder.toLowerCase() === folderLower && m.modName) {
-                        // DO NOT auto-add conflicting alternate map versions (e.g. crossplay vs non-crossplay in same folder)
-                        if (m.isMap && m.modName.toLowerCase() !== mapModName) {
-                            return;
-                        }
-                        activeModNames.add(m.modName.toLowerCase());
-                    }
-                });
-            }
-        }
+				if (configuredRoots.includes(parentOfMapDir) && !configuredRoots.includes(mapDirResolved)) {
+					debugLog(`[VIRTUAL] Map '${mapModObj.modName}' resides in dedicated subfolder '${path.basename(mapDir)}'. Auto-activating non-map sibling mods.`);
+					mods.forEach(m => {
+						if (!m.filePath || !m.modName) return;
+						const mDir = path.resolve(path.dirname(m.filePath)).toLowerCase();
+						if (mDir === mapDirResolved) {
+							// DO NOT auto-add conflicting alternate map versions (e.g. crossplay vs non-crossplay in same folder)
+							if (m.isMap && m.modName.toLowerCase() !== mapModObj.modName.toLowerCase()) {
+								return;
+							}
+							activeModNames.add(m.modName.toLowerCase());
+						}
+					});
+				} else if (mapModObj.folder && mapModObj.folder.toLowerCase() !== 'mods' && mapModObj.folder.toLowerCase() !== '') {
+					const folderLower = mapModObj.folder.toLowerCase();
+					mods.forEach(m => {
+						if (m.folder && m.folder.toLowerCase() === folderLower && m.modName) {
+							if (m.isMap && m.modName.toLowerCase() !== mapModObj.modName.toLowerCase()) {
+								return;
+							}
+							activeModNames.add(m.modName.toLowerCase());
+						}
+					});
+				}
+			} catch (mDirErr) {
+				console.warn('[VIRTUAL] Error resolving subfolder siblings:', mDirErr.message);
+			}
+		}
 
         // Recursively resolve all dependencies of active mods (including shared mods outside the subfolder)
         if (activeModNames) {

@@ -1861,24 +1861,37 @@ export default function SavegamesPage() {
           }
 
           const { installed, missing } = resolveRecursiveDependencies(modName, mods);
+          const installedList = Array.isArray(installed) ? installed : Array.from(installed || []);
+          const missingList = Array.isArray(missing) ? missing : Array.from(missing || []);
           
-          if (installed.size > 0) {
-            console.log(`[CAREER MODAL] Auto-selecting ${installed.size} mods:`, Array.from(installed));
+          const hasSubfolderSiblings = birglandMod && birglandMod.folder && birglandMod.folder !== '' && birglandMod.folder !== 'mods';
+          if (installedList.length > 0 || hasSubfolderSiblings) {
+            console.log(`[CAREER MODAL] Auto-selecting ${installedList.length} dependency mods:`, installedList);
             setModalSelectedMods(prev => {
               const next = new Set(prev);
-              installed.forEach(d => {
+              installedList.forEach(d => {
                 const isMapMod = mods.some(m => m.modName === d && m.isMap);
                 if (!isMapMod) {
                   next.add(d);
                 }
               });
+
+              // Also auto-select non-map sibling mods from the map's dedicated subfolder
+              if (hasSubfolderSiblings) {
+                const fLow = birglandMod.folder.toLowerCase();
+                const sibs = (mods || []).filter(m => m.folder && m.folder.toLowerCase() === fLow && !m.isMap && m.modName.toLowerCase() !== modName.toLowerCase());
+                sibs.forEach(s => {
+                  if (s.modName) next.add(s.modName);
+                });
+              }
+
               return next;
             });
           }
 
-          if (missing.size > 0) {
-            console.log(`[CAREER MODAL] Missing dependencies detected:`, Array.from(missing));
-            setLocalMissingDeps(Array.from(missing));
+          if (missingList.length > 0) {
+            console.log(`[CAREER MODAL] Missing dependencies detected:`, missingList);
+            setLocalMissingDeps(missingList);
           }
         } catch (e) {
           console.error('[CAREER MODAL] Dependency auto-select failed:', e);
@@ -2106,8 +2119,9 @@ export default function SavegamesPage() {
         try {
           console.log(`[CREATE-SAFETY] Resolving dependencies for ${mapModForDeps}. Total mods: ${mods ? mods.length : 0}`);
           const { installed } = resolveRecursiveDependencies(mapModForDeps, mods);
-          installed.forEach(d => finalModNames.add(d));
-          console.log(`[CREATE] Safety net resolved ${installed.size} map dependencies:`, Array.from(installed));
+          const installedList = Array.isArray(installed) ? installed : Array.from(installed || []);
+          installedList.forEach(d => finalModNames.add(d));
+          console.log(`[CREATE] Safety net resolved ${installedList.length} map dependencies:`, installedList);
         } catch (e) {
           console.error('[CREATE] Safety net dependency resolution failed:', e);
         }
