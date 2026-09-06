@@ -2118,15 +2118,6 @@ export default function InstalledModsPage() {
           <Plus size={16} style={{ marginRight: 6 }} /> New Folder
         </button>
 
-        <button
-          className="btn btn--secondary btn--sm"
-          onClick={handleConsolidateDependencies}
-          title="Move all dependency mods from map subfolders into the dedicated 'Map Dependencies' folder. Each map will still display its deps as virtual links."
-          style={{ minWidth: 'auto', padding: '0 14px', height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
-        >
-          <FolderOutput size={15} /> Consolidate Deps
-        </button>
-
 
         <div className="sort-bar__view-toggle" style={{ display: 'flex', gap: 4, background: 'var(--bg-tertiary)', padding: 4, borderRadius: 8, border: '1px solid var(--border)' }}>
           <button 
