@@ -186,11 +186,21 @@ async function safeRemove(targetPath, retries = 10, delay = 1000) {
  * Intelligent file move with retry logic for Windows EPERM/EBUSY.
  */
 async function safeMove(src, dest, options = {}, retries = 10, delay = 1000) {
+	const isFile = (await fs.pathExists(src)) && (await fs.stat(src)).isFile();
+	const tempDest = isFile ? `${dest}.tmp` : dest;
+
 	for (let i = 0; i < retries; i++) {
 		try {
-			await fs.move(src, dest, options);
+			await fs.move(src, tempDest, options);
+			if (isFile) {
+				if (await fs.pathExists(dest)) await fs.remove(dest);
+				await fs.rename(tempDest, dest);
+			}
 			return { success: true };
 		} catch (err) {
+			if (isFile && await fs.pathExists(tempDest)) {
+				await fs.remove(tempDest).catch(() => {});
+			}
 			if (i === retries - 1) throw err;
 			if (err.code === 'EPERM' || err.code === 'EBUSY') {
 				console.warn(`[SAFE-MOVE] ${src} is locked or busy (Error: ${err.code}). Retrying (${i + 1}/${retries})...`);
@@ -199,6 +209,34 @@ async function safeMove(src, dest, options = {}, retries = 10, delay = 1000) {
 				throw err;
 			}
 		}
+	}
+}
+
+/**
+ * Perform a safe, atomic copy to prevent creating corrupted/truncated files if the app is closed midway.
+ * It copies to a .tmp extension first, then atomically renames to the destination.
+ */
+async function atomicCopyFile(src, dest) {
+	const tempDest = `${dest}.tmp`;
+	try {
+		// Clean up any stale temp file
+		if (await fs.pathExists(tempDest)) {
+			await fs.remove(tempDest);
+		}
+		// Copy to the temporary location
+		await fs.copyFile(src, tempDest);
+		
+		// Atomically rename .tmp -> destination
+		if (await fs.pathExists(dest)) {
+			await fs.remove(dest); // Ensure destination doesn't exist
+		}
+		await fs.rename(tempDest, dest);
+	} catch (err) {
+		// If anything fails, clean up the temp file
+		if (await fs.pathExists(tempDest)) {
+			await fs.remove(tempDest).catch(() => {});
+		}
+		throw err;
 	}
 }
 
@@ -710,14 +748,14 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                             await fs.symlink(m.filePath, destPath, 'file');
                         } catch (sErr) {
                             // Fallback to direct copy if symlink fails across drives (e.g. without dev mode / admin permissions)
-                            await fs.copyFile(m.filePath, destPath);
+                            await atomicCopyFile(m.filePath, destPath);
                         }
                     }
                 } else {
                     try {
                         await fs.symlink(m.filePath, destPath, 'junction');
                     } catch (jErr) {
-                        await fs.copy(m.filePath, destPath);
+                        await atomicCopyFile(m.filePath, destPath);
                     }
                 }
                 linkedCount++;
@@ -4846,7 +4884,7 @@ async function installLocalMods(filePaths) {
 			const destPath = path.join(modsPath, fileName);
 			
 			// If file exists, we could check version, but for now we just copy it over
-			await fs.copy(filePath, destPath);
+			await atomicCopyFile(filePath, destPath);
 			
 			// Try to get some metadata for the toast
 			let title = fileName;
