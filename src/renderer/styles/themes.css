@@ -1,4 +1,4 @@
-/* ── Light Theme ── */
+﻿/* â”€â”€ Light Theme â”€â”€ */
 [data-theme="light"] {
   color-scheme: light;
   --bg-primary: #f5f7fa;
@@ -32,7 +32,7 @@
   --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.06), 0 0 1px rgba(0,0,0,0.08);
 }
 
-/* ── High Contrast Theme ── */
+/* â”€â”€ High Contrast Theme â”€â”€ */
 [data-theme="highcontrast"] {
   color-scheme: dark;
   --bg-primary: #000000;
@@ -57,7 +57,7 @@
   --border-light: rgba(255, 255, 255, 0.4);
 }
 
-/* ── Minimal Theme ── */
+/* â”€â”€ Minimal Theme â”€â”€ */
 [data-theme="minimal"] {
   --bg-primary: #fafafa;
   --bg-secondary: #ffffff;
@@ -85,7 +85,7 @@
   --shadow-card: 0 0 0 1px rgba(0,0,0,0.06);
 }
 
-/* ── Black & Blue Theme ── */
+/* â”€â”€ Black & Blue Theme â”€â”€ */
 [data-theme="blackblue"] {
   color-scheme: dark;
   --bg-primary: #05080f;
@@ -241,4 +241,5 @@
   --border: rgba(232, 97, 33, 0.2);
   --border-light: rgba(232, 97, 33, 0.3);
 }
+
 

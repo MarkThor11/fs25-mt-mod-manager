@@ -10,8 +10,6 @@ import { useLocalModsStore } from '../store/useLocalModsStore';
 
 const THEMES = [
   { value: 'dark', label: 'Dark', desc: 'Default dark theme inspired by ModHub', color: '#4ade80' },
-  { value: 'tractor', label: 'Tractor', desc: 'Classic farming green & yellow', color: '#367c2b' },
-  { value: 'autumn', label: 'Autumn', desc: 'Warm sunsets & harvest colors', color: '#e86121' },
   { value: 'cyberpunk', label: 'Cyberpunk', desc: 'Neon pink & cyan nights', color: '#f00e99' },
   { value: 'blackblue', label: 'Black & Blue', desc: 'Deep black with blue accents', color: '#3b82f6' },
   { value: 'highcontrast', label: 'High Contrast', desc: 'Maximum readability', color: '#00ff6a' },
