@@ -740,6 +740,22 @@ ipcMain.handle('mods:deleteFolder', async (_, folderName) => {
   }
 });
 
+ipcMain.handle('mods:consolidateDependencies', async () => {
+  try {
+    return await modManager.consolidateDependencies((progress) => {
+      const win = BrowserWindow.getAllWindows()[0];
+      if (win) win.webContents.send('consolidate:progress', progress);
+    });
+  } catch (err) {
+    console.error('[IPC] consolidateDependencies failed:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('mods:getMapDepsFolder', () => {
+  return modManager.MAP_DEPENDENCIES_FOLDER;
+});
+
 ipcMain.handle('mods:moveModsToFolder', async (_, args) => {
   const { fileNames, destinationFolder, targetRootPath } = args || {};
   console.log(`[IPC] mods:moveModsToFolder: Moving ${Array.isArray(fileNames) ? fileNames.length : 0} mods to "${destinationFolder}" (Root: ${targetRootPath || 'Primary'})`);

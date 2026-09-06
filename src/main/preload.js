@@ -54,6 +54,8 @@ contextBridge.exposeInMainWorld('api', {
     batchInstall: (modList) => ipcRenderer.invoke('mods:batchInstall', modList),
     probePath: (path) => ipcRenderer.invoke('mods:probePath', path),
     checkBakExists: (filePath) => ipcRenderer.invoke('mods:checkBakExists', filePath),
+    consolidateDependencies: () => ipcRenderer.invoke('mods:consolidateDependencies'),
+    getMapDepsFolder: () => ipcRenderer.invoke('mods:getMapDepsFolder'),
   },
 
   // Local Mods

@@ -553,6 +553,20 @@ function getModsPath() {
 	return getModsPaths()[0];
 }
 
+/**
+ * The dedicated subfolder name for shared map dependencies.
+ * All mods that are dependencies of maps live here so they are centrally
+ * managed, never duplicated, and safely shared across all maps.
+ */
+const MAP_DEPENDENCIES_FOLDER = 'Map Dependencies';
+
+/**
+ * Returns the full absolute path to the Map Dependencies folder inside the primary mods root.
+ */
+function getMapDepsPath() {
+	return path.join(getModsPath(), MAP_DEPENDENCIES_FOLDER);
+}
+
 async function getFolderSize(folderPath) {
 	const stats = await fs.stat(folderPath);
 	if (!stats.isDirectory()) return stats.size;
@@ -5493,7 +5507,7 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 								});
 							},
 							category,
-							subFolder || modObj.subFolder // Inherit from parent if this is a dependency call
+							MAP_DEPENDENCIES_FOLDER // Always route dependency downloads to the dedicated shared folder
 						);
 
 						if (installResult.success) {
@@ -6272,6 +6286,100 @@ async function flattenSubfolders() {
 }
 
 /**
+ * Consolidates all shared map dependencies into the dedicated 'Map Dependencies' subfolder.
+ * 
+ * For every non-map .zip file that exists inside a map subfolder (e.g. F:\mods4\Rettenbach\FS25_BaleStorage.zip),
+ * this function:
+ *   1. Ensures a copy exists in the 'Map Dependencies' folder (moving the first occurrence it finds).
+ *   2. Removes duplicate physical copies from all other map subfolders.
+ *   3. Leaves the map's own .zip file untouched.
+ *
+ * After consolidation, every map folder's dependencies appear in the UI as virtual SHARED links
+ * pointing to the single master copy inside 'Map Dependencies'.
+ */
+async function consolidateDependencies(onProgress = null) {
+	const modsPath = getModsPath();
+	if (!modsPath || !await fs.pathExists(modsPath)) {
+		return { success: false, error: 'Primary mods directory not found' };
+	}
+
+	const depsDir = path.join(modsPath, MAP_DEPENDENCIES_FOLDER);
+	await fs.ensureDir(depsDir);
+
+	// Build a map of all .zip files already in Map Dependencies so we know what we already have
+	const alreadyInDeps = new Map(); // lowercased filename -> full path
+	const existingDepsEntries = await fs.readdir(depsDir, { withFileTypes: true }).catch(() => []);
+	for (const e of existingDepsEntries) {
+		if (e.isFile() && e.name.toLowerCase().endsWith('.zip')) {
+			alreadyInDeps.set(e.name.toLowerCase(), path.join(depsDir, e.name));
+		}
+	}
+
+	const topEntries = await fs.readdir(modsPath, { withFileTypes: true }).catch(() => []);
+	let movedCount = 0;
+	let removedCount = 0;
+
+	for (const entry of topEntries) {
+		if (!entry.isDirectory()) continue;
+		const entryNameLower = entry.name.toLowerCase();
+		// Skip system/reserved folders
+		if (entry.name.startsWith('.') || entryNameLower === 'backups' || entryNameLower === 'pdlc' || entryNameLower === MAP_DEPENDENCIES_FOLDER.toLowerCase()) continue;
+
+		const subDir = path.join(modsPath, entry.name);
+		const subEntries = await fs.readdir(subDir, { withFileTypes: true }).catch(() => []);
+
+		for (const sub of subEntries) {
+			if (!sub.isFile() || !sub.name.toLowerCase().endsWith('.zip')) continue;
+
+			// Try to parse the zip to check if it's the map itself (isMap = true) — skip map files
+			const subFilePath = path.join(subDir, sub.name);
+			let isMap = false;
+			try {
+				const cachedRow = cache.getLocalModCache(subFilePath);
+				if (cachedRow && cachedRow.json_data) {
+					const parsed = typeof cachedRow.json_data === 'string' ? JSON.parse(cachedRow.json_data) : cachedRow.json_data;
+					isMap = !!parsed.isMap;
+				}
+			} catch (e) {}
+			if (isMap) continue; // Never move the map's own zip
+
+			const fileNameLower = sub.name.toLowerCase();
+			const targetPath = path.join(depsDir, sub.name);
+
+			if (alreadyInDeps.has(fileNameLower)) {
+				// A copy already exists in Map Dependencies — remove this duplicate
+				try {
+					await fs.remove(subFilePath);
+					cache.removeLocalModCache(subFilePath);
+					removedCount++;
+					onProgress?.({ type: 'REMOVED', file: sub.name, from: entry.name });
+					console.log(`[CONSOLIDATE] Removed duplicate: ${entry.name}/${sub.name} (already in Map Dependencies)`);
+				} catch (e) {
+					console.warn(`[CONSOLIDATE] Could not remove duplicate ${subFilePath}:`, e.message);
+				}
+			} else {
+				// First occurrence — move into Map Dependencies
+				try {
+					await fs.move(subFilePath, targetPath, { overwrite: false });
+					alreadyInDeps.set(fileNameLower, targetPath);
+					// Update cache: remove old path, the next scan will index the new path
+					cache.removeLocalModCache(subFilePath);
+					movedCount++;
+					onProgress?.({ type: 'MOVED', file: sub.name, from: entry.name });
+					console.log(`[CONSOLIDATE] Moved ${entry.name}/${sub.name} -> Map Dependencies/`);
+				} catch (e) {
+					console.warn(`[CONSOLIDATE] Could not move ${subFilePath} -> ${targetPath}:`, e.message);
+				}
+			}
+		}
+	}
+
+	clearScanCache();
+	console.log(`[CONSOLIDATE] Done. Moved: ${movedCount}, Removed duplicates: ${removedCount}`);
+	return { success: true, movedCount, removedCount };
+}
+
+/**
  * Returns all corrupt mods from the last scan result, grouped so that the same
  * mod appearing in multiple directories is represented as a single entry with
  * an `allPaths` array listing every corrupt copy.
@@ -6398,4 +6506,6 @@ module.exports = {
 	listZipEntries,
 	getCorruptMods,
 	repairCorruptMod,
+	consolidateDependencies,
+	MAP_DEPENDENCIES_FOLDER,
 };
