@@ -1719,7 +1719,7 @@ async function performScan(manualPaths = null) {
 				isCrossplay: !!isCrossplay,
 				mapId: modDesc?.mapId || null,
 				mapTitle: modDesc?.mapTitle || null,
-				modName: modDesc?.techName || entryName.replace(/\.zip$/i, '').replace(/[_\\-]v\d+([_\\.]\d+)*$/i, ''),
+				modName: modDesc?.techName || entryName.replace(/\.zip$/i, ''),
 				technicalName: modDesc?.techName || '',
 				dependencies,
 				conflicts: modDesc?.conflicts || [],
