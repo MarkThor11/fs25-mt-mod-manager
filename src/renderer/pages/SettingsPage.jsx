@@ -557,7 +557,7 @@ export default function SettingsPage() {
               Consolidate Map Dependencies
             </div>
             <div className="settings-row__desc">
-              Moves all duplicate dependency mods out of your map subfolders and into a single shared "Map Dependencies" folder to save space.
+              Moves all duplicate dependency mods out of your map subfolders and into a single shared "Map Dependencies" folder to save space. (This replaces duplicate mods with links where needed)
             </div>
           </div>
           <div className="settings-row__control">
