@@ -20,6 +20,7 @@ const scraper = require('./scraper');
 const crypto = require('crypto');
 const gameLauncher = require('./gameLauncher');
 const pathProvider = require('./pathProvider');
+const dependencyResolver = require('./dependencyResolver');
 
 const activeInstalls = new Map();
 const downloadQueue = [];
@@ -668,53 +669,7 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                 const mObj = modsByName.get(currentName);
                 if (mObj && mObj.dependencies && mObj.dependencies.length > 0) {
                     for (const dep of mObj.dependencies) {
-                        let depTitle = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
-                        if (!depTitle) continue;
-                        
-                        let foundMod = null;
-                        const depLower = depTitle.toLowerCase();
-                        
-                        // 1. Exact case-insensitive modName/fileName match
-                        if (modsByName.has(depLower)) {
-                            foundMod = modsByName.get(depLower);
-                        }
-                        
-                        if (!foundMod) {
-                            foundMod = mods.find(m => {
-                                const mFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
-                                return mFile === depLower;
-                            });
-                        }
-
-                        // 2. Fallback from URL filename if available (exact match)
-                        if (!foundMod && typeof dep === 'object' && dep.url) {
-                            const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
-                            if (fileMatch) {
-                                const fallbackFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
-                                foundMod = mods.find(m => m.modName && m.modName.toLowerCase() === fallbackFileName);
-                                if (!foundMod) {
-                                    foundMod = mods.find(m => {
-                                        const mFile = m.fileName ? m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase() : '';
-                                        return mFile === fallbackFileName;
-                                    });
-                                }
-                            }
-                        }
-                        
-                        // 3. Fallback by Title (lowest priority fallback, checked case-insensitively, no name alterations)
-                        if (!foundMod) {
-                            const depTitleLower = depLower;
-                            foundMod = mods.find(m => {
-                                if (m.title && m.title.toLowerCase() === depTitleLower) {
-                                    // If both have technical names but they don't match exactly, reject
-                                    if (depTitle && m.modName) {
-                                        if (depTitle.toLowerCase() !== m.modName.toLowerCase()) return false;
-                                    }
-                                    return true;
-                                }
-                                return false;
-                            });
-                        }
+                        const foundMod = mods.find(m => dependencyResolver.matchModWithDependency(m, dep));
 
                         if (foundMod && foundMod.modName) {
                             const resolvedName = foundMod.modName.toLowerCase();

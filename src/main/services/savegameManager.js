@@ -6,6 +6,7 @@ const nodeFs = require('fs');
 const { XMLParser, XMLBuilder } = require('fast-xml-parser');
 const AdmZip = require('adm-zip');
 const pathProvider = require('./pathProvider');
+const dependencyResolver = require('./dependencyResolver');
 
 function ultraNormalize(str) {
     if (!str) return '';
@@ -951,28 +952,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 );
                 if (fullMod && fullMod.dependencies && fullMod.dependencies.length > 0) {
                     for (const dep of fullMod.dependencies) {
-                        let installedDep = null;
-
-                        // 1. Resolve match from ModHub ID if available
-                        if (typeof dep === 'object' && dep.url) {
-                            const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
-                            if (idMatch) {
-                                const depId = idMatch[1];
-                                installedDep = allMods.find(m => m.modId && String(m.modId) === String(depId));
-                            }
-                        }
-
-                        // 2. Resolve match from the dependency name string
-                        if (!installedDep) {
-                            const depStr = (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '')).toLowerCase();
-                            if (!depStr) continue;
-                            
-                            installedDep = allMods.find(m => 
-                                (m.modName && m.modName.toLowerCase() === depStr) ||
-                                (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === depStr) ||
-                                (m.title && m.title.toLowerCase() === depStr)
-                            );
-                        }
+                        const installedDep = allMods.find(m => dependencyResolver.matchModWithDependency(m, dep));
 
                         if (installedDep && installedDep.modName !== mapModName && !finalMods.some(m => m.modName.toLowerCase() === installedDep.modName.toLowerCase())) {
                             console.log(`[CREATE] Auto-injecting dependency: ${installedDep.title} (required by ${selMod.title || selMod.modName})`);
@@ -4359,37 +4339,7 @@ async function autoInjectDependencies(savegamePath) {
                 const fullMod = allMods.find(m => m.modName === selMod['@_modName']);
                 if (fullMod && fullMod.dependencies && fullMod.dependencies.length > 0) {
                     for (const dep of fullMod.dependencies) {
-                        let installedDep = null;
-                        if (typeof dep === 'object' && dep.url) {
-                            const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
-                            if (idMatch) {
-                                installedDep = allMods.find(m => m.modId && String(m.modId) === String(idMatch[1]));
-                            }
-                        }
-                        if (!installedDep) {
-                            const depStr = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
-                            if (!depStr) continue;
-                            
-                            // Try exact literal match first
-                            installedDep = allMods.find(m => m.modName && m.modName.toLowerCase() === depStr.toLowerCase());
-                            
-                            if (!installedDep) {
-                                const normalizedDep = ultraNormalize(depStr);
-                                if (normalizedDep) {
-                                    installedDep = allMods.find(m => {
-                                        const localName = ultraNormalize(m.modName);
-                                        const localTitle = ultraNormalize(m.title);
-                                        const localTech = ultraNormalize(m.technicalName);
-                                        
-                                        if (localName && (localName === normalizedDep || localName.includes(normalizedDep) || normalizedDep.includes(localName))) return true;
-                                        if (localTitle && (localTitle === normalizedDep || localTitle.includes(normalizedDep) || normalizedDep.includes(localTitle))) return true;
-                                        if (localTech && (localTech === normalizedDep || localTech.includes(normalizedDep) || normalizedDep.includes(localTech))) return true;
-                                        
-                                        return false;
-                                    });
-                                }
-                            }
-                        }
+                        const installedDep = allMods.find(m => dependencyResolver.matchModWithDependency(m, dep));
                         if (installedDep) {
                             const depStrMatch = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
                             if (depStrMatch && installedDep.modName !== depStrMatch && /^[a-zA-Z0-9_-]+$/.test(depStrMatch)) {
@@ -4649,27 +4599,26 @@ async function syncSubfolderMapDependencies(savePath) {
             }
         }
 
+        // Also check by folder property if map has a dedicated folder
+        if (mapModObj.folder && mapModObj.folder.toLowerCase() !== 'mods' && mapModObj.folder.toLowerCase() !== '') {
+            const fLow = mapModObj.folder.toLowerCase();
+            const folderSibs = localMods.filter(m => m.folder && m.folder.toLowerCase() === fLow && !m.isMap && m.modName.toLowerCase() !== mapModObj.modName.toLowerCase());
+            for (const fsib of folderSibs) {
+                const sLow = (fsib.modName || '').toLowerCase();
+                if (sLow && !seenModNames.has(sLow)) {
+                    seenModNames.add(sLow);
+                    modsToEnsure.push(fsib);
+                }
+            }
+        }
+
         // 2. Recursively resolve all declared dependencies for the map and its siblings
         const queue = [mapModObj, ...modsToEnsure];
         while (queue.length > 0) {
             const current = queue.shift();
             if (current && current.dependencies && Array.isArray(current.dependencies) && current.dependencies.length > 0) {
                 for (const dep of current.dependencies) {
-                    let depStr = (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '')).toLowerCase();
-                    if (!depStr) continue;
-
-                    let matchedDep = localMods.find(m => 
-                        (m.modName && m.modName.toLowerCase() === depStr) ||
-                        (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === depStr) ||
-                        (m.title && m.title.toLowerCase() === depStr)
-                    );
-
-                    if (!matchedDep && typeof dep === 'object' && dep.url) {
-                        const idMatch = dep.url.match(/mod_id=(\d+)/) || dep.url.match(/storage\/(\d+)\//);
-                        if (idMatch) {
-                            matchedDep = localMods.find(m => m.modId && String(m.modId) === String(idMatch[1]));
-                        }
-                    }
+                    const matchedDep = localMods.find(m => dependencyResolver.matchModWithDependency(m, dep));
 
                     if (matchedDep && matchedDep.modName) {
                         const dLow = matchedDep.modName.toLowerCase();
@@ -4837,12 +4786,7 @@ async function getUsedModsInSavegame(savePath) {
                     const fullMod = allMods.find(m => (m.modName || '').toLowerCase() === uName);
                     if (fullMod && fullMod.dependencies && fullMod.dependencies.length > 0) {
                         for (const dep of fullMod.dependencies) {
-                            const depStr = (typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '')).toLowerCase();
-                            if (!depStr) continue;
-                            const matchedDep = allMods.find(m => 
-                                (m.modName && m.modName.toLowerCase() === depStr) ||
-                                (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === depStr)
-                            );
+                            const matchedDep = allMods.find(m => dependencyResolver.matchModWithDependency(m, dep));
                             if (matchedDep && !usedModsMap.has(matchedDep.modName.toLowerCase())) {
                                 usedModsMap.set(matchedDep.modName.toLowerCase(), matchedDep.modName);
                                 addedNew = true;
