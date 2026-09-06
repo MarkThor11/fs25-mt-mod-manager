@@ -1952,15 +1952,17 @@ export default function SavegamesPage() {
       console.warn('[LAUNCH] Could not re-apply spawn position:', e);
     }
 
+    // Optimistically mark the slot as active immediately so the UI responds
+    // without waiting for the game process to actually start.
+    const numericSlot = parseInt(slotIndex, 10);
+    useSavegameStore.setState({ isGameRunning: true, playingSlot: numericSlot });
+    useSettingsStore.getState().setSavegameSlot(numericSlot);
+
     const result = await window.api.game.launch({ 
         savegameIndex: slotIndex,
         skipIntro: skipIntro !== false,
         ...extraOptions
     });
-    
-    const numericSlot = parseInt(slotIndex, 10);
-    useSavegameStore.setState({ isGameRunning: true, playingSlot: numericSlot });
-    useSettingsStore.getState().setSavegameSlot(numericSlot);
     
     if (result.success) {
       if (result.needsManualInit) {
@@ -1969,6 +1971,9 @@ export default function SavegamesPage() {
         useToastStore.getState().success(`Launching Slot ${slotIndex}...`);
       }
     } else {
+      // Launch failed — revert the optimistic state so the UI doesn't appear stuck
+      useSavegameStore.setState({ isGameRunning: false, playingSlot: null });
+      useSettingsStore.getState().setSavegameSlot(null);
       useToastStore.getState().error(result.error);
     }
   };
