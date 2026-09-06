@@ -1865,43 +1865,50 @@ async function performScan(manualPaths = null) {
 	});
 
 	for (const m of sortedForDedupe) {
-		// If mod is in a subfolder, include folder in the uniqueness scope so separate subfolders are preserved
-		const folderPrefix = (m.folder && m.folder !== '') ? `[DIR:${m.folder.toLowerCase()}]_` : '';
+		// Only MAP mods (e.g. PC vs CP versions in separate folders) are preserved across different folders.
+		// Regular mods that exist in multiple folders should be deduplicated so the user does not see duplicates across folders.
+		const isMapMod = !!m.isMap;
+		const folderPrefix = (isMapMod && m.folder && m.folder !== '') ? `[DIR:${m.folder.toLowerCase()}]_` : '';
 		const idKey = m.modId ? `${folderPrefix}ID_${m.modId}` : null;
 		const fileKey = `${folderPrefix}FILE_${path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '')}`;
 
-		// Global root vs subfolder collision key (only drops root if subfolder exists)
+		// Global collision keys: used to deduplicate across folders for regular mods,
+		// and to drop root mods if a subfolder version already exists.
 		const globalFileKey = `GLOBAL_FILE_${path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '')}`;
 		const globalIdKey = m.modId ? `GLOBAL_ID_${m.modId}` : null;
 
 		const isRoot = !m.folder || m.folder === '';
 		let alreadySeen = false;
 
-		if (isRoot) {
-			// If root mod, check if a subfolder version (or earlier root version) already claimed it
-			if (uniqueModsMap.has(globalFileKey) || (globalIdKey && uniqueModsMap.has(globalIdKey))) {
-				alreadySeen = true;
+		if (isMapMod) {
+			if (isRoot) {
+				// Map in root: drop if a subfolder version of this map exists
+				if (uniqueModsMap.has(globalFileKey) || (globalIdKey && uniqueModsMap.has(globalIdKey))) {
+					alreadySeen = true;
+				}
+			} else {
+				// Map in dedicated folder: only deduplicate within the same folder
+				const keys = [idKey, fileKey].filter(Boolean);
+				for (const k of keys) {
+					if (uniqueModsMap.has(k)) {
+						alreadySeen = true;
+						break;
+					}
+				}
 			}
 		} else {
-			// In a subfolder: check within its own folder scope
-			const keys = [idKey, fileKey].filter(Boolean);
-			for (const k of keys) {
-				if (uniqueModsMap.has(k)) {
-					alreadySeen = true;
-					break;
-				}
+			// Non-map mods: deduplicate globally so identical mods in multiple folders do not duplicate
+			if (uniqueModsMap.has(globalFileKey) || (globalIdKey && uniqueModsMap.has(globalIdKey))) {
+				alreadySeen = true;
 			}
 		}
 
 		if (!alreadySeen) {
-			// Register scoped keys
-			if (!isRoot) {
+			if (isMapMod && !isRoot) {
 				[idKey, fileKey].filter(Boolean).forEach(k => uniqueModsMap.set(k, m));
 			}
-			// Register global keys to prevent root duplicates
 			uniqueModsMap.set(globalFileKey, m);
 			if (globalIdKey) uniqueModsMap.set(globalIdKey, m);
-			// Also register m by its filePath to guarantee it is kept in finalMods
 			uniqueModsMap.set(`FP_${m.filePath || m.fileName}`, m);
 		}
 	}

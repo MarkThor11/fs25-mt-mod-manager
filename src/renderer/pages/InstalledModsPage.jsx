@@ -1452,19 +1452,31 @@ export default function InstalledModsPage() {
     mapFolders.forEach(folderName => {
         const modsInThisFolder = groups[folderName];
         const mapsInFolder = modsInThisFolder.filter(m => m.isMap);
-        // Build a fast lookup of filenames already physically in this folder
-        const folderFileNames = new Set(modsInThisFolder.map(m => m.fileName));
+        // Build a fast lookup of filenames (normalized basename) and mod identities already in this folder
+        const folderBaseNames = new Set(modsInThisFolder.map(m => (m.fileName || '').split(/[/\\]/).pop().toLowerCase().replace(/\.zip$/i, '')));
+        const folderModNames = new Set(modsInThisFolder.map(m => (m.modName || '').toLowerCase()).filter(Boolean));
+        const folderModIds = new Set(modsInThisFolder.map(m => m.modId ? String(m.modId).replace(/^0+/, '') : null).filter(Boolean));
 
         mapsInFolder.forEach(mapMod => {
             if (mapMod.dependencies && mapMod.dependencies.length > 0) {
                 mapMod.dependencies.forEach(dep => {
-                    // Fast path: if the dep resolves to a mod whose fileName is already in the folder, skip
                     const physicalDep = findFastMatch(dep);
                     if (!physicalDep) return; // dep not installed at all, nothing to inject
-                    if (folderFileNames.has(physicalDep.fileName)) return; // already visible
+                    
+                    const depBaseName = (physicalDep.fileName || '').split(/[/\\]/).pop().toLowerCase().replace(/\.zip$/i, '');
+                    const depModName = (physicalDep.modName || '').toLowerCase();
+                    const depModId = physicalDep.modId ? String(physicalDep.modId).replace(/^0+/, '') : null;
+
+                    // Skip if any physical copy of this mod already exists in this folder
+                    if (folderBaseNames.has(depBaseName)) return;
+                    if (depModName && folderModNames.has(depModName)) return;
+                    if (depModId && folderModIds.has(depModId)) return;
+
                     // Inject the physical dep as a virtual reference
                     modsInThisFolder.push({ ...physicalDep, isVirtual: true });
-                    folderFileNames.add(physicalDep.fileName); // prevent duplicate injection
+                    folderBaseNames.add(depBaseName);
+                    if (depModName) folderModNames.add(depModName);
+                    if (depModId) folderModIds.add(depModId);
                 });
             }
         });
