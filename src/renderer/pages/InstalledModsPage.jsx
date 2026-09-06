@@ -992,29 +992,40 @@ export default function InstalledModsPage() {
   const [tagSearch, setTagSearch] = useState('');
   const [tagSortBy, setTagSortBy] = useState('count'); // 'count' or 'alpha'
 
-  // Helper to normalize and clean category names into human-readable labels
-  const normalizeCategory = (cat) => {
-    if (!cat) return null;
+  // Helper to extract main category and sub-category from category strings
+  const parseModCategory = (cat, isMap) => {
+    if (isMap) return { main: 'Maps', sub: null };
+    if (!cat) return { main: null, sub: null };
     let s = String(cat).trim();
-    if (!s || s.length > 35 || s.includes('<') || s.includes('\n') || s.includes('\r')) return null;
+    if (!s || s.length > 35 || s.includes('<') || s.includes('\n') || s.includes('\r')) return { main: null, sub: null };
     if (s.startsWith('CATEGORY:')) {
       s = s.substring(9).trim();
     }
     const lower = s.toLowerCase();
-    if (['generic', 'skipped', 'dlc', 'unknown'].includes(lower)) return null;
-    // Split sub-categories like "Trailers - Low Loaders" -> "Low Loaders" (or "Trailers")
+    if (['generic', 'skipped', 'dlc', 'unknown', 'latest'].includes(lower)) return { main: null, sub: null };
+    if (lower.includes('map')) return { main: 'Maps', sub: null };
+
+    let main = s;
+    let sub = null;
     if (s.includes(' - ')) {
       const parts = s.split(' - ').map(p => p.trim());
-      s = parts[1] || parts[0];
+      main = parts[0];
+      sub = parts[1] || null;
     }
-    // Title case formatting
-    s = s.replace(/\b\w/g, char => char.toUpperCase());
-    return s;
+    const toTitle = (str) => str ? str.replace(/\b\w/g, c => c.toUpperCase()) : null;
+    return { main: toTitle(main), sub: toTitle(sub) };
   };
 
-  // Compute clean structured tags: Functional, Categories, and Custom User Tags
+  // Helper for backward compatibility and filtering
+  const normalizeCategory = (cat, isMap) => {
+    const parsed = parseModCategory(cat, isMap);
+    return parsed.sub || parsed.main;
+  };
+
+  // Compute clean structured tags: Key Filters (Main categories & functional), Subcategories, and Custom User Tags
   const { functionalTags, categoryTags, customTags, allUniqueTags } = useMemo(() => {
-    const catCounts = {};
+    const mainCatCounts = {};
+    const subCatCounts = {};
     const customCounts = {};
     let mapsCount = 0;
     let crossplayCount = 0;
@@ -1028,9 +1039,12 @@ export default function InstalledModsPage() {
       if (mod.isCrossplay) crossplayCount++;
       if ((mod.tags || []).includes('lock-updates')) lockedCount++;
 
-      const cleanCat = normalizeCategory(mod.category);
-      if (cleanCat) {
-        catCounts[cleanCat] = (catCounts[cleanCat] || 0) + 1;
+      const { main, sub } = parseModCategory(mod.category, mod.isMap);
+      if (main && main !== 'Maps') {
+        mainCatCounts[main] = (mainCatCounts[main] || 0) + 1;
+      }
+      if (sub) {
+        subCatCounts[sub] = (subCatCounts[sub] || 0) + 1;
       }
 
       if (Array.isArray(mod.tags)) {
@@ -1046,19 +1060,18 @@ export default function InstalledModsPage() {
           const lower = trimmed.toLowerCase();
           if (['dlc', 'lock-updates', 'maps', 'generic', 'skipped', 'unknown'].includes(lower)) continue;
 
-          // Check if it's identical to category
+          // Check if it's identical to main or sub category
           const normalizedTag = normalizeCategory(trimmed) || trimmed;
-          if (normalizedTag === cleanCat || normalizedTag.toLowerCase() === 'unknown') continue;
+          if (
+            normalizedTag === main ||
+            normalizedTag === sub ||
+            normalizedTag.toLowerCase() === 'unknown'
+          ) continue;
 
           customCounts[trimmed] = (customCounts[trimmed] || 0) + 1;
         }
       }
     }
-
-    const functional = [];
-    if (mapsCount > 0) functional.push({ name: 'Maps', label: 'Maps', count: mapsCount, isFunctional: true });
-    if (crossplayCount > 0) functional.push({ name: 'Crossplay', label: 'Crossplay', count: crossplayCount, isFunctional: true });
-    if (lockedCount > 0) functional.push({ name: 'lock-updates', label: 'Auto-Updates Locked', count: lockedCount, isFunctional: true });
 
     const sortFn = (a, b) => {
       if (tagSortBy === 'alpha') {
@@ -1067,11 +1080,24 @@ export default function InstalledModsPage() {
       return b[1] - a[1] || a[0].localeCompare(b[0]);
     };
 
-    const categories = Object.entries(catCounts)
+    // Key Filters section: Maps, Crossplay, Auto-Updates Locked + Main Categories (e.g. Drivables, Trailers, Placeable)
+    const coreKeyFilters = [];
+    if (mapsCount > 0) coreKeyFilters.push({ name: 'Maps', label: 'Maps', count: mapsCount, isFunctional: true });
+    if (crossplayCount > 0) coreKeyFilters.push({ name: 'Crossplay', label: 'Crossplay', count: crossplayCount, isFunctional: true });
+    if (lockedCount > 0) coreKeyFilters.push({ name: 'lock-updates', label: 'Auto-Updates Locked', count: lockedCount, isFunctional: true });
+
+    const mainCategoryFilters = Object.entries(mainCatCounts)
+      .sort(sortFn)
+      .map(([name, count]) => ({ name, label: name, count, isMainCategory: true }));
+
+    const functional = [...coreKeyFilters, ...mainCategoryFilters];
+
+    // Subcategories section (e.g. Medium Tractors, Low Loaders, Sheds)
+    const categories = Object.entries(subCatCounts)
       .sort(sortFn)
       .map(([name, count]) => ({ name, label: name, count, isCategory: true }));
 
-    // User/custom tags: filter out micro-tags (e.g. junk tags with count < 2) unless explicitly manually added
+    // User/custom tags
     const custom = Object.entries(customCounts)
       .sort(sortFn)
       .map(([name, count]) => ({ name, label: name, count, isCustom: true }));
@@ -1246,8 +1272,9 @@ export default function InstalledModsPage() {
             if (tLower === 'crossplay') return m.isCrossplay;
             if (tLower === 'lock-updates') return (m.tags || []).includes('lock-updates');
             
-            const modNormCat = normalizeCategory(m.category);
-            if (modNormCat && modNormCat.toLowerCase() === tLower) return true;
+            const { main, sub } = parseModCategory(m.category, m.isMap);
+            if (main && main.toLowerCase() === tLower) return true;
+            if (sub && sub.toLowerCase() === tLower) return true;
 
             return (m.tags || []).some(t => {
               const tClean = String(t).toLowerCase();
@@ -2543,11 +2570,11 @@ export default function InstalledModsPage() {
             </div>
           )}
 
-          {/* Section 2: Categories */}
+          {/* Section 2: Subcategories */}
           {categoryTags.length > 0 && (!tagSearch || categoryTags.some(t => t.label.toLowerCase().includes(tagSearch.toLowerCase()))) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
-                Categories
+                Subcategories
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, maxHeight: 320, overflowY: 'auto', paddingRight: 6 }}>
                 {categoryTags
