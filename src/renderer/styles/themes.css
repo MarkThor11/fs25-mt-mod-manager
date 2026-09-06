@@ -243,3 +243,106 @@
 }
 
 
+
+/* ── Pro Studio Theme ── */
+[data-theme="studio"] {
+  color-scheme: dark;
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d30;
+  --bg-card: #252526;
+  --bg-card-hover: #2a2d2e;
+  --bg-surface: #2d2d30;
+  --bg-overlay: rgba(0, 0, 0, 0.5);
+
+  --accent: #007acc;
+  --accent-hover: #0098ff;
+  --accent-dim: rgba(0, 122, 204, 0.15);
+  --accent-glow: rgba(0, 122, 204, 0.3);
+  --accent2: #4fc1ff;
+  --accent2-dim: rgba(79, 193, 255, 0.15);
+
+  --text-primary: #cccccc;
+  --text-secondary: #999999;
+  --text-tertiary: #808080;
+  --text-muted: #666666;
+
+  --border: #3c3c3c;
+  --border-light: #444444;
+  --border-accent: rgba(0, 122, 204, 0.5);
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Ocean Glass Theme ── */
+[data-theme="glass-ocean"] {
+  color-scheme: dark;
+  --bg-primary: linear-gradient(135deg, #020b14, #081b29, #020813);
+  --bg-secondary: rgba(10, 25, 47, 0.4);
+  --bg-tertiary: rgba(10, 25, 47, 0.6);
+  --bg-card: rgba(255, 255, 255, 0.03);
+  --bg-card-hover: rgba(255, 255, 255, 0.07);
+  --bg-surface: rgba(255, 255, 255, 0.02);
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+
+  --accent: #0ea5e9;
+  --accent-hover: #38bdf8;
+  --accent-dim: rgba(14, 165, 233, 0.15);
+  --accent-glow: rgba(14, 165, 233, 0.3);
+  --accent2: #2dd4bf;
+  --accent2-dim: rgba(45, 212, 191, 0.15);
+
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --text-muted: #64748b;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.12);
+  --border-accent: rgba(14, 165, 233, 0.3);
+}
+
+/* ── Ruby Glass Theme ── */
+[data-theme="glass-ruby"] {
+  color-scheme: dark;
+  --bg-primary: linear-gradient(135deg, #140304, #240508, #110103);
+  --bg-secondary: rgba(36, 5, 8, 0.4);
+  --bg-tertiary: rgba(36, 5, 8, 0.6);
+  --bg-card: rgba(255, 255, 255, 0.03);
+  --bg-card-hover: rgba(255, 255, 255, 0.07);
+  --bg-surface: rgba(255, 255, 255, 0.02);
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+
+  --accent: #e11d48;
+  --accent-hover: #f43f5e;
+  --accent-dim: rgba(225, 29, 72, 0.15);
+  --accent-glow: rgba(225, 29, 72, 0.3);
+  --accent2: #fb7185;
+  --accent2-dim: rgba(251, 113, 133, 0.15);
+
+  --text-primary: #fff1f2;
+  --text-secondary: #fecdd3;
+  --text-tertiary: #fda4af;
+  --text-muted: #fb7185;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.12);
+  --border-accent: rgba(225, 29, 72, 0.3);
+}
+
+/* Glass Effect Utilities */
+[data-theme^="glass"] .sidebar,
+[data-theme^="glass"] .settings-section,
+[data-theme^="glass"] .title-bar,
+[data-theme^="glass"] .modal,
+[data-theme^="glass"] .mod-card {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+[data-theme^="glass"] .main-content {
+  background: transparent;
+}

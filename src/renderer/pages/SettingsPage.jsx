@@ -10,6 +10,9 @@ import { useLocalModsStore } from '../store/useLocalModsStore';
 
 const THEMES = [
   { value: 'dark', label: 'Dark', desc: 'Default dark theme inspired by ModHub', color: '#4ade80' },
+  { value: 'studio', label: 'Pro Studio', desc: 'Sleek, muted dark greys for professionals', color: '#007acc' },
+  { value: 'glass-ocean', label: 'Ocean Glass', desc: 'Deep blue frosted glass aesthetic', color: '#0ea5e9' },
+  { value: 'glass-ruby', label: 'Ruby Glass', desc: 'Dark crimson frosted glass aesthetic', color: '#e11d48' },
   { value: 'cyberpunk', label: 'Cyberpunk', desc: 'Neon pink & cyan nights', color: '#f00e99' },
   { value: 'blackblue', label: 'Black & Blue', desc: 'Deep black with blue accents', color: '#3b82f6' },
   { value: 'highcontrast', label: 'High Contrast', desc: 'Maximum readability', color: '#00ff6a' },
