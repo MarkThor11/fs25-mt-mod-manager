@@ -60,6 +60,7 @@
       "package.json"
     ],
     "win": {
+      "requestedExecutionLevel": "requireAdministrator",
       "target": [
         {
           "target": "nsis",
