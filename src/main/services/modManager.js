@@ -1033,7 +1033,13 @@ function parseModDesc(modPath, zipInstance = null) {
 		const version = getTag(xmlContent, 'version') || '1.0.0';
 		const author = getTag(xmlContent, 'author') || 'Unknown';
 		const modId = getTag(xmlContent, 'modId') || null;
-		const categoryXml = getTag(xmlContent, 'category') || getTag(xmlContent, 'extraContent') || '';
+		
+		// Extract category only if it is a simple short tag (prevent multi-line <helpline> or nested tags)
+		let categoryXml = '';
+		const catRaw = getTag(xmlContent, 'category') || getTag(xmlContent, 'extraContent') || '';
+		if (catRaw && catRaw.length <= 40 && !catRaw.includes('<') && !catRaw.includes('\n') && !catRaw.includes('\r')) {
+			categoryXml = catRaw.trim();
+		}
 		
 		// Robust icon detection: <iconFilename>...</iconFilename> OR <icon filename="..."/>
 		const iconFile = getTag(xmlContent, 'iconFilename') || getAttr(xmlContent, 'icon', 'filename') || '';
