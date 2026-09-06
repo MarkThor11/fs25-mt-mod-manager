@@ -425,6 +425,7 @@ export const useLocalModsStore = create((set, get) => ({
 
   checkCorruptMods: async () => {
     if (!window.api?.localMods) return;
+    if (get().isCheckingCorrupt) return;
     set({ isCheckingCorrupt: true });
     try {
       const corrupt = await window.api.localMods.getCorruptMods();
@@ -432,9 +433,9 @@ export const useLocalModsStore = create((set, get) => ({
       set({ corruptMods: corruptList });
 
       // Automatically repair in the background — no user action needed.
-      // Only repair mods that are on ModHub (canAutoRepair). Third-party
-      // corrupt files are skipped silently since we have nowhere to fetch them from.
-      const repairable = corruptList.filter(m => m.canAutoRepair);
+      // Only repair mods that are on ModHub (canAutoRepair) and not currently being repaired.
+      const activeRepairs = get().activeRepairs || new Set();
+      const repairable = corruptList.filter(m => m.canAutoRepair && !activeRepairs.has(m.fileName));
       if (repairable.length > 0) {
         console.log(`[CORRUPT] Auto-repairing ${repairable.length} corrupt mod(s) in background`);
         setTimeout(() => { get().repairAllCorruptMods(); }, 500);
@@ -447,33 +448,37 @@ export const useLocalModsStore = create((set, get) => ({
     }
   },
 
+  activeRepairs: new Set(),
+
   repairCorruptMod: async (fileName, modId, allPaths) => {
     if (!window.api?.localMods) return { success: false, error: 'Bridge not available' };
-    try {
-      import('./useDownloadStore').then(d => {
-        d.useDownloadStore.getState().addDownload(modId || fileName, fileName.replace(/\.zip$/i, ''), null, 0, null, null, 'downloading');
-      }).catch(() => {});
+    const { activeRepairs } = get();
+    if (activeRepairs.has(fileName)) return { success: false, error: 'Already repairing' };
+    
+    activeRepairs.add(fileName);
+    set({ activeRepairs: new Set(activeRepairs) });
 
+    try {
       const result = await window.api.localMods.repairCorruptMod({ fileName, modId, allPaths });
       if (result?.success) {
-        // Remove repaired entry from corruptMods list
         set(s => ({ corruptMods: s.corruptMods.filter(m => m.fileName !== fileName) }));
-        // Rescan so the repaired mod gets proper metadata
         await get().scanMods(null, false);
       }
       return result;
     } catch (err) {
       return { success: false, error: err.message };
+    } finally {
+      const current = get().activeRepairs;
+      current.delete(fileName);
+      set({ activeRepairs: new Set(current) });
     }
   },
 
   repairAllCorruptMods: async () => {
-    const { corruptMods, repairCorruptMod } = get();
-    const repairable = corruptMods.filter(m => m.canAutoRepair);
+    const { corruptMods, repairCorruptMod, activeRepairs } = get();
+    const repairable = corruptMods.filter(m => m.canAutoRepair && !activeRepairs.has(m.fileName));
     if (repairable.length === 0) return;
 
-    // Queue all repairs silently — they run through the existing download queue
-    // and will appear in the Downloads panel if the user happens to look there.
     for (const mod of repairable) {
       await repairCorruptMod(mod.fileName, mod.modId, mod.allPaths);
     }

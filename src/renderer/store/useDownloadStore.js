@@ -544,7 +544,9 @@ if (window.api?.on) {
       } else if (status === 'error') {
         const displayTitle = (resolvedTitle && !resolvedTitle.startsWith('Mod ')) ? resolvedTitle : (active?.title || incomingTitle || `Mod ${strId}`);
         
-        useToastStore.getState().error(`Download failed: ${displayTitle}`, { id: `dl-toast-${strId}` });
+        if (!data?.isBackground) {
+          useToastStore.getState().error(`Download failed: ${displayTitle}`, { id: `dl-toast-${strId}` });
+        }
         
         console.warn(`Download failed for mod ${strId}`);
         setTimeout(() => {

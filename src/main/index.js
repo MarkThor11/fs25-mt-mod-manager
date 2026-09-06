@@ -848,17 +848,17 @@ ipcMain.handle('localMods:repairCorruptMod', async (_, { fileName, modId, allPat
   try {
     const result = await modManager.repairCorruptMod(fileName, modId, allPaths, (progress) => {
       const progressObj = typeof progress === 'object' ? progress : { percent: progress };
-      mainWindow?.webContents.send('download:progress', { modId, progress: progressObj });
+      mainWindow?.webContents.send('download:progress', { modId, progress: progressObj, isBackground: true });
     });
     if (result && result.success) {
-      mainWindow?.webContents.send('download:status', { modId, status: 'success', fileName });
+      mainWindow?.webContents.send('download:status', { modId, status: 'success', fileName, isBackground: true });
     } else {
-      mainWindow?.webContents.send('download:status', { modId, status: 'error', error: result?.error || 'Repair failed' });
+      mainWindow?.webContents.send('download:status', { modId, status: 'error', error: result?.error || 'Repair failed', isBackground: true });
     }
     return result;
   } catch (err) {
     console.error(`[REPAIR] IPC error for ${fileName}:`, err);
-    mainWindow?.webContents.send('download:status', { modId, status: 'error', error: err.message });
+    mainWindow?.webContents.send('download:status', { modId, status: 'error', error: err.message, isBackground: true });
     return { success: false, error: err.message };
   }
 });
