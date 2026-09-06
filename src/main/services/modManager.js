@@ -1600,8 +1600,23 @@ async function performScan(manualPaths = null) {
 				if (!calculatedModId && (remoteMod.modId || remoteMod.id || remoteMod.rawModId)) {
 					calculatedModId = String(remoteMod.modId || remoteMod.id || remoteMod.rawModId).replace(/^0+/, '');
 				}
-				// Concentrate solely on dependencies listed on the ModHub website.
-				dependencies = remoteMod.dependencies || [];
+				// Combine dependencies from ModHub website and local modDesc.xml so neither is lost
+				const webDeps = Array.isArray(remoteMod.dependencies) ? remoteMod.dependencies : [];
+				const localDeps = Array.isArray(dependencies) ? dependencies : [];
+				const mergedDeps = [...webDeps];
+				for (const lDep of localDeps) {
+					const lStr = (typeof lDep === 'string' ? lDep : (lDep.modName || lDep.title || lDep.fileName || '')).toLowerCase();
+					const cleanL = lStr.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+					const exists = mergedDeps.some(d => {
+						const dStr = (typeof d === 'string' ? d : (d.modName || d.title || d.fileName || '')).toLowerCase();
+						const cleanD = dStr.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+						return cleanD && cleanL && (cleanD === cleanL || cleanD.includes(cleanL) || cleanL.includes(cleanD));
+					});
+					if (!exists) {
+						mergedDeps.push(lDep);
+					}
+				}
+				dependencies = mergedDeps;
 
 				// Enrich missing metadata
 				if (author === 'Unknown' && remoteMod.author) author = remoteMod.author;
@@ -5943,9 +5958,22 @@ async function autoResolveMissingDependencies(mods, targetMapName = null) {
                 if (map.modId) {
                     const scraper = require('./scraper');
                     const detail = await scraper.fetchModDetail(map.modId);
-                    if (detail && detail.dependencies) {
+                    if (detail && Array.isArray(detail.dependencies)) {
                         console.log(`[AUTO-RESOLVE] Successfully fetched exact ModHub dependencies for map.`);
-                        mapDeps = detail.dependencies;
+                        const webDeps = detail.dependencies;
+                        const currentDeps = Array.isArray(mapDeps) ? mapDeps : [];
+                        const merged = [...webDeps];
+                        for (const cDep of currentDeps) {
+                            const cStr = (typeof cDep === 'string' ? cDep : (cDep.modName || cDep.title || cDep.fileName || '')).toLowerCase();
+                            const cleanC = cStr.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+                            const exists = merged.some(d => {
+                                const dStr = (typeof d === 'string' ? d : (d.modName || d.title || d.fileName || '')).toLowerCase();
+                                const cleanD = dStr.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+                                return cleanD && cleanC && (cleanD === cleanC || cleanD.includes(cleanC) || cleanC.includes(cleanD));
+                            });
+                            if (!exists) merged.push(cDep);
+                        }
+                        mapDeps = merged;
                     }
                 }
             } catch (err) {

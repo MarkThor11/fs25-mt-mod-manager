@@ -960,7 +960,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                                 modName: installedDep.modName,
                                 title: installedDep.title,
                                 version: installedDep.version || '1.0.0.0',
-                                required: false,
+                                required: true,
                                 fileHash: installedDep.fileHash || ''
                             });
                             addedNewDep = true;
@@ -4647,7 +4647,7 @@ async function syncSubfolderMapDependencies(savePath) {
                     '@_modName': item.modName,
                     '@_title': item.title || item.modName,
                     '@_version': item.version || '1.0.0.0',
-                    '@_required': 'false',
+                    '@_required': 'true',
                     '@_fileHash': item.fileHash || ''
                 });
                 modified = true;
