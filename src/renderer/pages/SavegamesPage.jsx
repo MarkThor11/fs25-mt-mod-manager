@@ -2122,6 +2122,17 @@ export default function SavegamesPage() {
           const installedList = Array.isArray(installed) ? installed : Array.from(installed || []);
           installedList.forEach(d => finalModNames.add(d));
           console.log(`[CREATE] Safety net resolved ${installedList.length} map dependencies:`, installedList);
+
+          // Also auto-select non-map sibling mods from the map's dedicated subfolder
+          const mapObj = mods ? mods.find(m => m.modName === mapModForDeps || m.modName.toLowerCase() === mapModForDeps.toLowerCase()) : null;
+          if (mapObj && mapObj.folder && mapObj.folder !== '' && mapObj.folder !== 'mods') {
+            const fLow = mapObj.folder.toLowerCase();
+            const sibs = (mods || []).filter(m => m.folder && m.folder.toLowerCase() === fLow && !m.isMap && m.modName.toLowerCase() !== mapModForDeps.toLowerCase());
+            sibs.forEach(s => {
+              if (s.modName) finalModNames.add(s.modName);
+            });
+            console.log(`[CREATE] Safety net added ${sibs.length} dedicated folder sibling mods for ${mapObj.folder}`);
+          }
         } catch (e) {
           console.error('[CREATE] Safety net dependency resolution failed:', e);
         }
