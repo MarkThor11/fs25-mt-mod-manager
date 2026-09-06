@@ -1010,7 +1010,7 @@ function parseModDesc(modPath, zipInstance = null) {
 		
 		// Improved Map Detection: FS25 maps use varied structures
 		// 1. Check for <map id="..."> or <maps> tags with flexible regex
-		const mapMatch = xmlContent.match(/<map\s+[^>]*id=["']([^"']+)["'][^>]*>/is) || 
+		const mapMatch = xmlContent.match(/<map\s+[^>]*id=(["'])(.*?)\1[^>]*>/is) || 
 		                 xmlContent.match(/<maps[^>]*>/is);
 		
 		// 2. Additional patterns: modType="map", <mapConfiguration>, or map .i3d references
@@ -1021,12 +1021,12 @@ function parseModDesc(modPath, zipInstance = null) {
 		if (mapMatch || hasModTypeMap || hasMapConfiguration) {
 			isMap = true;
 			// If we matched the <map> tag with a group, extract the ID
-			if (mapMatch && mapMatch[1]) {
-				mapId = mapMatch[1];
+			if (mapMatch && mapMatch[2]) {
+				mapId = mapMatch[2];
 			} else {
 				// Fallback: look for the first map tag inside the maps block
-				const innerMapIdMatch = xmlContent.match(/<map\s+[^>]*id=["']([^"']+)["'][^>]*>/is);
-				mapId = innerMapIdMatch ? innerMapIdMatch[1] : null;
+				const innerMapIdMatch = xmlContent.match(/<map\s+[^>]*id=(["'])(.*?)\1[^>]*>/is);
+				mapId = innerMapIdMatch ? innerMapIdMatch[2] : null;
 			}
 			
 			// Try to find title in the map tag or sub-tag
