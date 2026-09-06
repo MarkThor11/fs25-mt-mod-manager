@@ -990,6 +990,7 @@ export default function InstalledModsPage() {
   }, []);
   
   const [tagSearch, setTagSearch] = useState('');
+  const [tagSortBy, setTagSortBy] = useState('count'); // 'count' or 'alpha'
 
   // Helper to normalize and clean category names into human-readable labels
   const normalizeCategory = (cat) => {
@@ -1059,18 +1060,25 @@ export default function InstalledModsPage() {
     if (crossplayCount > 0) functional.push({ name: 'Crossplay', label: 'Crossplay', count: crossplayCount, isFunctional: true });
     if (lockedCount > 0) functional.push({ name: 'lock-updates', label: 'Auto-Updates Locked', count: lockedCount, isFunctional: true });
 
+    const sortFn = (a, b) => {
+      if (tagSortBy === 'alpha') {
+        return a[0].localeCompare(b[0]);
+      }
+      return b[1] - a[1] || a[0].localeCompare(b[0]);
+    };
+
     const categories = Object.entries(catCounts)
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .sort(sortFn)
       .map(([name, count]) => ({ name, label: name, count, isCategory: true }));
 
     // User/custom tags: filter out micro-tags (e.g. junk tags with count < 2) unless explicitly manually added
     const custom = Object.entries(customCounts)
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .sort(sortFn)
       .map(([name, count]) => ({ name, label: name, count, isCustom: true }));
 
     const all = [...functional, ...categories, ...custom];
     return { functionalTags: functional, categoryTags: categories, customTags: custom, allUniqueTags: all };
-  }, [mods]);
+  }, [mods, tagSortBy]);
 
   const [selectedMods, setSelectedMods] = useState([]);
   const [showFolderInput, setShowFolderInput] = useState(false);
