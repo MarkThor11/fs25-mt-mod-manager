@@ -1502,7 +1502,19 @@ async function performScan(manualPaths = null) {
 			});
 
 			// ONLY parse ZIP if modDesc is not cached (new or modified file)
-			if (!modDesc) {
+		let isCorrupt = false;
+		if (!modDesc && isZip && !isDownloadingFile) {
+			// Quick integrity check — catches 0-byte files and truncated downloads
+			// without needing to decompress anything
+			const integrity = verifyZipFileIntegrity(targetPath);
+			if (!integrity.ok) {
+				isCorrupt = true;
+				debugLog(`[CORRUPT] ${entryName}: ${integrity.error}`);
+				// Don't attempt to parse — it will throw. Fall through to mods.push with isCorrupt=true.
+			}
+		}
+
+		if (!modDesc && !isCorrupt) {
 				try {
 					if (targetPath.toLowerCase().endsWith('.zip') && isDownloadingFile) {
 						// Skip parsing while actively downloading to avoid file contention
@@ -1662,6 +1674,7 @@ async function performScan(manualPaths = null) {
 				storeData: null,
 				fileHash: fileHash || '',
 				tags: cached?.tags ? JSON.parse(cached.tags) : [],
+				isCorrupt: isCorrupt || false,
 			});
 
 			// ── CONSOLIDATED MOD METADATA REFINEMENT ──
@@ -6208,6 +6221,86 @@ async function flattenSubfolders() {
 	}
 }
 
+/**
+ * Returns all corrupt mods from the last scan result, grouped so that the same
+ * mod appearing in multiple directories is represented as a single entry with
+ * an `allPaths` array listing every corrupt copy.
+ */
+function getCorruptMods() {
+	const scanResult = getLastScanResult();
+	if (!scanResult || !Array.isArray(scanResult.mods)) return [];
+
+	const corruptMods = scanResult.mods.filter(m => m.isCorrupt);
+	// Group by base filename (entryName without subfolder prefix) so duplicates
+	// across multiple mod directories collapse into one entry.
+	const groups = new Map();
+	for (const mod of corruptMods) {
+		const baseFile = path.basename(mod.fileName); // e.g. FS25_Deppenhausen.zip
+		const key = mod.modId ? `id_${mod.modId}` : `file_${baseFile.toLowerCase()}`;
+		if (!groups.has(key)) {
+			groups.set(key, {
+				modName: baseFile.replace(/\.zip$/i, ''),
+				fileName: baseFile,
+				modId: mod.modId || null,
+				title: mod.title || baseFile.replace(/\.zip$/i, ''),
+				allPaths: [],
+				canAutoRepair: !!mod.modId,
+				isMap: mod.isMap || false,
+				size: mod.size || 0,
+			});
+		}
+		groups.get(key).allPaths.push(mod.filePath);
+	}
+
+	return Array.from(groups.values());
+}
+
+/**
+ * Repairs a corrupt mod by re-downloading it from ModHub and replacing every
+ * corrupt copy at allPaths with the fresh download.
+ *
+ * @param {string} fileName   - Base filename, e.g. FS25_Deppenhausen.zip
+ * @param {string} modId      - ModHub mod ID
+ * @param {string[]} allPaths - All corrupt file paths to replace
+ * @param {Function} onProgress - Progress callback (same shape as updateMod)
+ */
+async function repairCorruptMod(fileName, modId, allPaths, onProgress) {
+	if (!modId) {
+		return { success: false, thirdParty: true, error: 'No ModHub ID — re-obtain this mod manually.' };
+	}
+	try {
+		console.log(`[REPAIR] Starting repair of ${fileName} (modId: ${modId}), paths: ${allPaths.join(', ')}`);
+
+		// Use the primary path as the download target. If the file exists there (even corrupt),
+		// updateMod will back it up and overwrite. If not, it downloads fresh.
+		const primaryPath = allPaths[0];
+		const result = await updateMod(fileName, modId, onProgress, primaryPath);
+		if (!result || !result.success) {
+			return { success: false, error: result?.error || 'Download failed' };
+		}
+
+		// After the primary is repaired, replace remaining corrupt copies.
+		const repairedPath = await findModPath(fileName).catch(() => null) || primaryPath;
+		if (allPaths.length > 1) {
+			for (const otherPath of allPaths.slice(1)) {
+				try {
+					if (nodeFs.existsSync(repairedPath)) {
+						await fs.copy(repairedPath, otherPath, { overwrite: true });
+						console.log(`[REPAIR] Replaced corrupt copy at ${otherPath}`);
+					}
+				} catch (e) {
+					console.warn(`[REPAIR] Could not replace copy at ${otherPath}: ${e.message}`);
+				}
+			}
+		}
+
+		return { success: true, fileName };
+	} catch (err) {
+		console.error(`[REPAIR] Failed to repair ${fileName}:`, err);
+		return { success: false, error: err.message };
+	}
+}
+
 module.exports = {
 	getModsPaths,
 	getModsPath,
@@ -6253,4 +6346,6 @@ module.exports = {
 	isCrossplayMod,
 	readEntryFromZip,
 	listZipEntries,
+	getCorruptMods,
+	repairCorruptMod,
 };

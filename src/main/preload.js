@@ -67,6 +67,8 @@ contextBridge.exposeInMainWorld('api', {
     autoResolveMapDependencies: (params) => ipcRenderer.invoke('localMods:autoResolveMapDependencies', params),
     resumePending: () => ipcRenderer.invoke('mods:resumePending'),
     getPending: () => ipcRenderer.invoke('mods:getPending'),
+    getCorruptMods: () => ipcRenderer.invoke('localMods:getCorruptMods'),
+    repairCorruptMod: (params) => ipcRenderer.invoke('localMods:repairCorruptMod', params),
   },
 
   // Third Party Tracker

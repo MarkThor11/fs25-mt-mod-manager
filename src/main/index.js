@@ -835,6 +835,34 @@ ipcMain.handle('localMods:restoreVersion', async (_, { filePath }) => {
   return await modManager.restoreModVersion(filePath);
 });
 
+ipcMain.handle('localMods:getCorruptMods', async () => {
+  try {
+    return modManager.getCorruptMods();
+  } catch (err) {
+    console.error('[CORRUPT] getCorruptMods error:', err);
+    return [];
+  }
+});
+
+ipcMain.handle('localMods:repairCorruptMod', async (_, { fileName, modId, allPaths }) => {
+  try {
+    const result = await modManager.repairCorruptMod(fileName, modId, allPaths, (progress) => {
+      const progressObj = typeof progress === 'object' ? progress : { percent: progress };
+      mainWindow?.webContents.send('download:progress', { modId, progress: progressObj });
+    });
+    if (result && result.success) {
+      mainWindow?.webContents.send('download:status', { modId, status: 'success', fileName });
+    } else {
+      mainWindow?.webContents.send('download:status', { modId, status: 'error', error: result?.error || 'Repair failed' });
+    }
+    return result;
+  } catch (err) {
+    console.error(`[REPAIR] IPC error for ${fileName}:`, err);
+    mainWindow?.webContents.send('download:status', { modId, status: 'error', error: err.message });
+    return { success: false, error: err.message };
+  }
+});
+
 ipcMain.handle('localMods:autoInstallDependencies', async (event, { mods, subFolder, parentId }) => {
   try {
     return await modManager.autoInstallDependencies(mods, (progress) => {

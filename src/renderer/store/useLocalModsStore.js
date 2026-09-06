@@ -64,6 +64,9 @@ export const useLocalModsStore = create((set, get) => ({
   isResolving: false,
   resolvingStatus: null, // { modName, status, progress }
   showOnlyUpdates: false,
+  showOnlyCorrupt: false,
+  corruptMods: [],       // grouped corrupt mods from getCorruptMods()
+  isCheckingCorrupt: false,
 
   isScanning: false,
 
@@ -190,6 +193,9 @@ export const useLocalModsStore = create((set, get) => ({
             allFolders: allFolders || []
         }));
       } catch (_) {}
+
+      // Refresh corrupt mods list after each successful scan (non-blocking)
+      setTimeout(() => { get().checkCorruptMods(); }, 0);
 
     } catch (err) {
       set({ error: err.message, isLoading: false });
@@ -414,6 +420,55 @@ export const useLocalModsStore = create((set, get) => ({
       return res;
     } finally {
       set({ isSyncing: false });
+    }
+  },
+
+  checkCorruptMods: async () => {
+    if (!window.api?.localMods) return;
+    set({ isCheckingCorrupt: true });
+    try {
+      const corrupt = await window.api.localMods.getCorruptMods();
+      set({ corruptMods: Array.isArray(corrupt) ? corrupt : [] });
+    } catch (err) {
+      console.error('[CORRUPT] checkCorruptMods error:', err);
+      set({ corruptMods: [] });
+    } finally {
+      set({ isCheckingCorrupt: false });
+    }
+  },
+
+  repairCorruptMod: async (fileName, modId, allPaths) => {
+    if (!window.api?.localMods) return { success: false, error: 'Bridge not available' };
+    try {
+      import('./useDownloadStore').then(d => {
+        d.useDownloadStore.getState().addDownload(modId || fileName, fileName.replace(/\.zip$/i, ''), null, 0, null, null, 'downloading');
+      }).catch(() => {});
+
+      const result = await window.api.localMods.repairCorruptMod({ fileName, modId, allPaths });
+      if (result?.success) {
+        // Remove repaired entry from corruptMods list
+        set(s => ({ corruptMods: s.corruptMods.filter(m => m.fileName !== fileName) }));
+        // Rescan so the repaired mod gets proper metadata
+        await get().scanMods(null, false);
+      }
+      return result;
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  },
+
+  repairAllCorruptMods: async () => {
+    const { corruptMods, repairCorruptMod } = get();
+    const repairable = corruptMods.filter(m => m.canAutoRepair);
+    if (repairable.length === 0) return;
+
+    import('./useToastStore').then(t => {
+      t.useToastStore.getState().info(`Queueing repair for ${repairable.length} corrupt mod${repairable.length > 1 ? 's' : ''}...`);
+    }).catch(() => {});
+
+    // Queue all repairs — they run through the existing download queue sequentially
+    for (const mod of repairable) {
+      await repairCorruptMod(mod.fileName, mod.modId, mod.allPaths);
     }
   },
 
