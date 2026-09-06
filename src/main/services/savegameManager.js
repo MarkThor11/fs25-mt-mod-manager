@@ -2541,7 +2541,36 @@ async function renameSavegame(savePath, newName) {
 
 async function deleteSavegame(savePath) {
     if (fs.existsSync(savePath)) {
+        // Extract slot number, e.g. savegame4 -> 4
+        const folderName = path.basename(savePath);
+        const slotMatch = folderName.match(/savegame(\d+)/i);
+        const slotIndex = slotMatch ? slotMatch[1] : null;
+
         await fs.remove(savePath);
+
+        // Thorough cleanup: Also remove any virtual active mods staging directory for this slot
+        if (slotIndex) {
+            try {
+                const modManager = require('./modManager');
+                const allPaths = modManager.getModsPaths ? modManager.getModsPaths() : [];
+                const rootsToCheck = [
+                    (app && app.getPath) ? app.getPath('userData') : path.join(process.env.APPDATA, 'fs25-mt-mod-manager'),
+                    ...allPaths.map(p => {
+                        const parsed = path.parse(p);
+                        return path.join(parsed.root || path.dirname(p), '.fs25_virtual_mods');
+                    })
+                ];
+                for (const base of rootsToCheck) {
+                    const stagingDir = path.join(base, `VirtualActiveMods_Savegame${slotIndex}`);
+                    if (fs.existsSync(stagingDir)) {
+                        await fs.remove(stagingDir).catch(() => {});
+                    }
+                }
+            } catch (e) {
+                console.warn(`[SAVEGAMES] Note: Non-critical virtual folder cleanup for slot ${slotIndex}:`, e.message);
+            }
+        }
+
         return { success: true };
     }
     return { success: false, error: 'Savegame not found' };
