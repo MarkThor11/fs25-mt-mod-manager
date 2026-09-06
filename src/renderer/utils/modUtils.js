@@ -119,11 +119,6 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
     if (cleanDepAlphanum) {
       if (m.fileName && normalizeForMatching(m.fileName).replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '') === cleanDepAlphanum) return true;
       if (m.modName && normalizeForMatching(m.modName).replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '') === cleanDepAlphanum) return true;
-      const strippedBrand = cleanDepAlphanum.replace(/^agi/i, '');
-      if (strippedBrand && strippedBrand !== cleanDepAlphanum) {
-        if (m.fileName && normalizeForMatching(m.fileName).replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '') === strippedBrand) return true;
-        if (m.modName && normalizeForMatching(m.modName).replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '') === strippedBrand) return true;
-      }
     }
   }
 
