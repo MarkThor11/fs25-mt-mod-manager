@@ -1026,6 +1026,7 @@ export default function InstalledModsPage() {
   };
 
   // Helper to map any mod to an intuitive high-level "Key Filter"
+  // Focuses strictly on multi-subcategory roundups (Tractors, Combines, Implements, Trailers, Loaders, Vehicles) and Maps.
   const getModKeyFilter = (mod) => {
     if (!mod) return null;
     if (mod.isMap) return 'Maps';
@@ -1052,12 +1053,6 @@ export default function InstalledModsPage() {
     if (cat.includes('loader') || cat.includes('telehandler') || cat.includes('forklift') || cat.includes('excavator') || cat.includes('forwarder')) {
       return 'Loaders';
     }
-    if (cat.includes('placeable') || ['shed', 'silo', 'farmhouse', 'pen', 'production', 'storage', 'fence', 'tank', 'generator', 'floodlighting'].some(k => cat.includes(k))) {
-      return 'Placeables';
-    }
-    if (cat.includes('gameplay')) return 'Gameplay';
-    if (cat.includes('forestry')) return 'Forestry';
-    if (cat.includes('prefab')) return 'Prefabs';
     return null;
   };
 
