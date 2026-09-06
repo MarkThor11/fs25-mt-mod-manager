@@ -46,6 +46,7 @@ export const useSettingsStore = create((set) => ({
   selectiveLoading: true,
   autoDownloadMapDeps: true,
   nickname: '',
+  hasPromptedConsolidation: false,
 
   setIsOnline: (isOnline) => set({ isOnline }),
 
@@ -122,12 +123,18 @@ export const useSettingsStore = create((set) => ({
         selectiveLoading: settings.selectiveLoading !== 'false',
         autoDownloadMapDeps: settings.autoDownloadMapDeps !== 'false',
         nickname: settings.nickname || '',
+        hasPromptedConsolidation: settings.hasPromptedConsolidation === 'true',
         isLoaded: true,
       });
     } catch (err) {
       console.error('Failed to load settings:', err);
       set({ isLoaded: true });
     }
+  },
+
+  setHasPromptedConsolidation: async (hasPromptedConsolidation) => {
+    set({ hasPromptedConsolidation });
+    if (window.api?.settings) await window.api.settings.set('hasPromptedConsolidation', String(hasPromptedConsolidation));
   },
 
   setAutoDownloadMapDeps: async (autoDownloadMapDeps) => {
