@@ -5330,32 +5330,10 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 			}
 
 			if (alreadyInstalled) {
-				// If it's already installed but NOT in the requested subfolder, move it there
-				// This respects the user's desire for folder isolation even for existing mods.
-				if (subFolder && localMod && localMod.folder !== subFolder) {
-					console.log(`[AUTO-INSTALL] Hardlinking map dependency ${modName} from "${localMod.folder || 'MAIN'}" to map subfolder "${subFolder}"`);
-					try {
-						const targetSubDir = path.join(getModsPath(), subFolder);
-						await fs.ensureDir(targetSubDir);
-						if (localMod.fileName) {
-							const baseFileName = path.basename(localMod.fileName);
-							const targetPath = path.join(targetSubDir, baseFileName);
-							const sourcePath = localMod.filePath && fs.existsSync(localMod.filePath)
-								? localMod.filePath
-								: (localMod.folder ? path.join(getModsPath(), localMod.folder, baseFileName) : path.join(getModsPath(), baseFileName));
-							if (fs.existsSync(sourcePath) && !fs.existsSync(targetPath)) {
-								await fs.link(sourcePath, targetPath).catch(async () => {
-									await fs.copy(sourcePath, targetPath).catch(() => {});
-								});
-							}
-						}
-					} catch (linkErr) {
-						console.warn(`[AUTO-INSTALL] Failed to link map dependency ${modName} to subfolder:`, linkErr.message);
-					}
-				}
-
+				// If it's already installed anywhere, DO NOT create a physical copy in the subfolder.
+				// The map folder will link to it virtually (via virtual dependency injection in the UI / symlinks during launch).
 				results.installed++;
-				console.log(`[AUTO-INSTALL] Mod "${modName}" is already installed and verified on disk. Skipping download.`);
+				console.log(`[AUTO-INSTALL] Mod "${modName}" is already installed (in "${localMod.folder || 'MAIN'}"). Map "${subFolder || 'N/A'}" will link to it virtually. Skipping duplicate file creation.`);
 				continue; // Skip download without polluting active download queue
 			}
 
