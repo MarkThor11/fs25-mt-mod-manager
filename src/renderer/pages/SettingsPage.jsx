@@ -550,6 +550,40 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
+
+        <div className="settings-row">
+          <div style={{ flex: 1 }}>
+            <div className="settings-row__label">
+              Consolidate Map Dependencies
+            </div>
+            <div className="settings-row__desc">
+              Moves all duplicate dependency mods out of your map subfolders and into a single shared "Map Dependencies" folder to save space.
+            </div>
+          </div>
+          <div className="settings-row__control">
+            <button 
+              className="btn btn--secondary" 
+              onClick={async () => {
+                if (!confirm('This will move all non-map dependency zips from map subfolders into the Map Dependencies folder and delete redundancies. Continue?')) return;
+                
+                useToastStore.getState().info('Consolidating dependencies...');
+                try {
+                  const result = await window.api.mods.consolidateDependencies();
+                  if (result?.success) {
+                    useToastStore.getState().success(`Done! Moved ${result.movedCount} mods, removed ${result.removedCount} duplicates.`);
+                    await useLocalModsStore.getState().scanMods();
+                  } else {
+                    useToastStore.getState().error(`Consolidation failed: ${result?.error || 'Unknown error'}`);
+                  }
+                } catch (err) {
+                  useToastStore.getState().error(`Consolidation error: ${err.message}`);
+                }
+              }} 
+            >
+              Consolidate Now
+            </button>
+          </div>
+        </div>
       </CollapsibleSection>
 
       {/* Theme */}
