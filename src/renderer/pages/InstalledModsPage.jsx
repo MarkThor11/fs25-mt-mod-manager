@@ -2357,19 +2357,20 @@ export default function InstalledModsPage() {
           background: 'var(--bg-secondary)',
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius-lg)',
-          padding: '16px 20px',
-          marginBottom: 20,
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+          padding: '20px 24px',
+          marginBottom: 24,
+          minHeight: 220,
+          boxShadow: '0 6px 24px rgba(0, 0, 0, 0.28)',
           display: 'flex',
           flexDirection: 'column',
-          gap: 14
+          gap: 18
         }}>
           {/* Header Row: Title, active count, quick search, and Clear button */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
-                width: 28,
-                height: 28,
+                width: 32,
+                height: 32,
                 borderRadius: 8,
                 background: 'var(--accent-dim)',
                 color: 'var(--accent)',
@@ -2377,21 +2378,21 @@ export default function InstalledModsPage() {
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <Filter size={15} />
+                <Filter size={17} />
               </div>
               <div>
-                <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.02em', color: 'var(--text-primary)' }}>
+                <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: '0.02em', color: 'var(--text-primary)' }}>
                   Categories & Tags
                 </span>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>
                   ({allUniqueTags.length} available)
                 </span>
               </div>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ position: 'relative', width: 180 }}>
-                <Search size={12} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <div style={{ position: 'relative', width: 200 }}>
+                <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input
                   type="text"
                   placeholder="Filter chips..."
@@ -2399,9 +2400,9 @@ export default function InstalledModsPage() {
                   onChange={(e) => setTagSearch(e.target.value)}
                   style={{
                     width: '100%',
-                    height: 28,
-                    padding: '0 8px 0 26px',
-                    fontSize: 11,
+                    height: 32,
+                    padding: '0 10px 0 28px',
+                    fontSize: 12,
                     background: 'var(--bg-primary)',
                     border: '1px solid var(--border)',
                     borderRadius: 6,
@@ -2412,9 +2413,9 @@ export default function InstalledModsPage() {
                 {tagSearch && (
                   <button 
                     onClick={() => setTagSearch('')}
-                    style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
+                    style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
                   >
-                    <X size={12} />
+                    <X size={13} />
                   </button>
                 )}
               </div>
@@ -2423,9 +2424,9 @@ export default function InstalledModsPage() {
                 <button 
                   className="btn btn--secondary btn--xs"
                   onClick={() => setSelectedTags([])}
-                  style={{ height: 28, padding: '0 10px', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                  style={{ height: 32, padding: '0 12px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
                 >
-                  <X size={12} /> Clear Filters ({selectedTags.length})
+                  <X size={13} /> Clear Filters ({selectedTags.length})
                 </button>
               )}
             </div>
@@ -2433,8 +2434,8 @@ export default function InstalledModsPage() {
 
           {/* Section 1: Functional & Core Tags */}
           {functionalTags.length > 0 && (!tagSearch || functionalTags.some(t => t.label.toLowerCase().includes(tagSearch.toLowerCase()))) && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
                 Key Filters
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9 }}>
@@ -2487,11 +2488,11 @@ export default function InstalledModsPage() {
 
           {/* Section 2: Categories */}
           {categoryTags.length > 0 && (!tagSearch || categoryTags.some(t => t.label.toLowerCase().includes(tagSearch.toLowerCase()))) && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
                 Categories
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, maxHeight: 190, overflowY: 'auto', paddingRight: 4 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, maxHeight: 320, overflowY: 'auto', paddingRight: 6 }}>
                 {categoryTags
                   .filter(t => !tagSearch || t.label.toLowerCase().includes(tagSearch.toLowerCase()))
                   .map(tag => {
