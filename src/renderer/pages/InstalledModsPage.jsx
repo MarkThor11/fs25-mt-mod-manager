@@ -2399,6 +2399,55 @@ export default function InstalledModsPage() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border)',
+                borderRadius: 6,
+                padding: 2,
+                gap: 2
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setTagSortBy('count')}
+                  style={{
+                    height: 26,
+                    padding: '0 8px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    borderRadius: 4,
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: tagSortBy === 'count' ? 'var(--primary)' : 'transparent',
+                    color: tagSortBy === 'count' ? '#fff' : 'var(--text-muted)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Sort by mod count (highest first)"
+                >
+                  Qty
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTagSortBy('alpha')}
+                  style={{
+                    height: 26,
+                    padding: '0 8px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    borderRadius: 4,
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: tagSortBy === 'alpha' ? 'var(--primary)' : 'transparent',
+                    color: tagSortBy === 'alpha' ? '#fff' : 'var(--text-muted)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Sort alphabetically (A to Z)"
+                >
+                  A-Z
+                </button>
+              </div>
+
               <div style={{ position: 'relative', width: 200 }}>
                 <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input
