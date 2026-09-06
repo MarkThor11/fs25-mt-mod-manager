@@ -1012,7 +1012,10 @@ export default function InstalledModsPage() {
       main = parts[0];
       sub = parts[1] || null;
     }
-    const toTitle = (str) => str ? str.replace(/\b\w/g, c => c.toUpperCase()) : null;
+    const toTitle = (str) => {
+      if (!str) return null;
+      return str.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
+    };
     return { main: toTitle(main), sub: toTitle(sub) };
   };
 
