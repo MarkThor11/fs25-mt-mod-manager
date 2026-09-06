@@ -2437,7 +2437,7 @@ export default function InstalledModsPage() {
               <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
                 Key Filters
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9 }}>
                 {functionalTags
                   .filter(t => !tagSearch || t.label.toLowerCase().includes(tagSearch.toLowerCase()))
                   .map(tag => {
@@ -2453,10 +2453,10 @@ export default function InstalledModsPage() {
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: 6,
-                          padding: '4px 12px',
+                          gap: 7,
+                          padding: '6px 14px',
                           borderRadius: 100,
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: 700,
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
@@ -2466,14 +2466,14 @@ export default function InstalledModsPage() {
                           boxShadow: isSelected ? '0 2px 8px var(--accent-dim)' : 'none'
                         }}
                       >
-                        {tag.name === 'lock-updates' ? <Lock size={11} /> : <Tag size={11} />}
+                        {tag.name === 'lock-updates' ? <Lock size={12} /> : <Tag size={12} />}
                         {tag.label}
                         <span style={{
                           background: isSelected ? 'rgba(255,255,255,0.25)' : 'var(--bg-tertiary)',
                           color: isSelected ? '#ffffff' : 'var(--text-muted)',
-                          padding: '1px 6px',
-                          borderRadius: 10,
-                          fontSize: 10,
+                          padding: '2px 7px',
+                          borderRadius: 12,
+                          fontSize: 11,
                           fontWeight: 800
                         }}>
                           {tag.count}
@@ -2491,7 +2491,7 @@ export default function InstalledModsPage() {
               <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
                 Categories
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 180, overflowY: 'auto', paddingRight: 4 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, maxHeight: 190, overflowY: 'auto', paddingRight: 4 }}>
                 {categoryTags
                   .filter(t => !tagSearch || t.label.toLowerCase().includes(tagSearch.toLowerCase()))
                   .map(tag => {
@@ -2507,10 +2507,10 @@ export default function InstalledModsPage() {
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: 6,
-                          padding: '4px 12px',
+                          gap: 7,
+                          padding: '5px 13px',
                           borderRadius: 100,
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: 600,
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
@@ -2524,9 +2524,9 @@ export default function InstalledModsPage() {
                         <span style={{
                           background: isSelected ? 'rgba(255,255,255,0.25)' : 'var(--bg-tertiary)',
                           color: isSelected ? '#ffffff' : 'var(--text-muted)',
-                          padding: '1px 6px',
-                          borderRadius: 10,
-                          fontSize: 10,
+                          padding: '2px 7px',
+                          borderRadius: 12,
+                          fontSize: 11,
                           fontWeight: 800
                         }}>
                           {tag.count}
@@ -2544,7 +2544,7 @@ export default function InstalledModsPage() {
               <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
                 User Tags
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9 }}>
                 {customTags
                   .filter(t => !tagSearch || t.label.toLowerCase().includes(tagSearch.toLowerCase()))
                   .map(tag => {
@@ -2560,10 +2560,10 @@ export default function InstalledModsPage() {
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: 6,
-                          padding: '3px 10px',
-                          borderRadius: 6,
-                          fontSize: 11,
+                          gap: 7,
+                          padding: '4px 11px',
+                          borderRadius: 7,
+                          fontSize: 12,
                           fontWeight: 600,
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
@@ -2572,14 +2572,14 @@ export default function InstalledModsPage() {
                           border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)'
                         }}
                       >
-                        <Tag size={10} />
+                        <Tag size={11} />
                         {tag.label}
                         <span style={{
                           background: isSelected ? 'rgba(255,255,255,0.25)' : 'var(--bg-tertiary)',
                           color: isSelected ? '#ffffff' : 'var(--text-muted)',
-                          padding: '1px 5px',
-                          borderRadius: 8,
-                          fontSize: 9,
+                          padding: '2px 6px',
+                          borderRadius: 10,
+                          fontSize: 10,
                           fontWeight: 800
                         }}>
                           {tag.count}
