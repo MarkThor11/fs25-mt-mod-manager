@@ -5436,13 +5436,13 @@ async function autoInstallDependencies(mods, onProgress, subFolder = null, paren
 
 			if (modId) {
 				// 4. Fetch Detail if we don't have direct download link yet
-				let category = 'Unknown';
+				let category = null;
 				if (!downloadUrl) {
 					try {
 						const detail = await scraper.fetchModDetail(modId);
 						modTitle = detail?.title || modTitle;
 						downloadUrl = detail?.downloadUrl || null;
-						category = (detail?.category || 'Unknown').toUpperCase();
+						category = detail?.category || null;
 					} catch (err) {
 						console.warn(`[AUTO-INSTALL] fetchModDetail failed for ID ${modId}, using CDN fallback:`, err.message);
 					}

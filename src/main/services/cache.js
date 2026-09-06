@@ -406,7 +406,7 @@ function setModTracking(modId, data) {
         price = COALESCE(excluded.price, price),
         technical_data = COALESCE(excluded.technical_data, technical_data),
         category = CASE 
-          WHEN excluded.category IS NOT NULL AND excluded.category != '' THEN excluded.category 
+          WHEN excluded.category IS NOT NULL AND excluded.category != '' AND LOWER(excluded.category) != 'unknown' THEN excluded.category 
           ELSE category 
         END
     `).run(
