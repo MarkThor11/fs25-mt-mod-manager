@@ -1025,12 +1025,48 @@ export default function InstalledModsPage() {
     return parsed.sub || parsed.main;
   };
 
-  // Compute clean structured tags: Key Filters (Main categories & functional), Subcategories, and Custom User Tags
-  const { functionalTags, categoryTags, customTags, allUniqueTags } = useMemo(() => {
+  // Helper to map any mod to an intuitive high-level "Key Filter"
+  const getModKeyFilter = (mod) => {
+    if (!mod) return null;
+    if (mod.isMap) return 'Maps';
+    const cat = String(mod.category || '').toLowerCase();
+    if (cat.includes('map')) return 'Maps';
+    if (cat.includes('tractor')) return 'Tractors';
+    if (cat.includes('combine') || cat.includes('harvester')) return 'Combines';
+    if (cat.includes('trailer')) return 'Trailers';
+    if (cat.includes('truck')) return 'Trucks';
+    if (cat.includes('car') || cat.includes('bike')) return 'Vehicles';
+    if (
+      cat.includes('cultivat') || cat.includes('plow') || cat.includes('seeder') ||
+      cat.includes('planter') || cat.includes('roller') || cat.includes('spreader') ||
+      cat.includes('sprayer') || cat.includes('mower') || cat.includes('tedder') ||
+      cat.includes('windrower') || cat.includes('baler') || cat.includes('header') ||
+      cat.includes('loader tool') || cat.includes('spader') || cat.includes('subsoiler') ||
+      cat.includes('disc harrow') || cat.includes('weeder') || cat.includes('mulcher') ||
+      cat.includes('belt system') || cat.includes('leveler') || cat.includes('compaction') ||
+      cat.includes('winch') || cat.includes('tree planter') || cat.includes('stump cutter') ||
+      cat.includes('chainsaw') || cat.includes('shovel')
+    ) {
+      return 'Implements';
+    }
+    if (cat.includes('loader') || cat.includes('telehandler') || cat.includes('forklift') || cat.includes('excavator') || cat.includes('forwarder')) {
+      return 'Loaders';
+    }
+    if (cat.includes('placeable') || ['shed', 'silo', 'farmhouse', 'pen', 'production', 'storage', 'fence', 'tank', 'generator', 'floodlighting'].some(k => cat.includes(k))) {
+      return 'Placeables';
+    }
+    if (cat.includes('gameplay')) return 'Gameplay';
+    if (cat.includes('forestry')) return 'Forestry';
+    if (cat.includes('prefab')) return 'Prefabs';
+    return null;
+  };
+
+  // Compute clean structured tags: Key Filters (Rounded up concepts), Categories (Main ModHub categories), Subcategories, and Custom User Tags
+  const { keyFilters, functionalTags, categoryTags, customTags, allUniqueTags } = useMemo(() => {
+    const keyFilterCounts = {};
     const mainCatCounts = {};
     const subCatCounts = {};
     const customCounts = {};
-    let mapsCount = 0;
     let crossplayCount = 0;
     let lockedCount = 0;
 
@@ -1038,10 +1074,16 @@ export default function InstalledModsPage() {
       const mod = mods[i];
       if (!mod || mod.isDLC || mod.folder === 'DLC') continue;
 
-      if (mod.isMap) mapsCount++;
       if (mod.isCrossplay) crossplayCount++;
       if ((mod.tags || []).includes('lock-updates')) lockedCount++;
 
+      // 1. Key Filters (Rounded up concepts: Tractors, Combines, Implements, etc.)
+      const kf = getModKeyFilter(mod);
+      if (kf) {
+        keyFilterCounts[kf] = (keyFilterCounts[kf] || 0) + 1;
+      }
+
+      // 2. ModHub Main categories & Subcategories
       const { main, sub } = parseModCategory(mod.category, mod.isMap);
       if (main && main !== 'Maps') {
         mainCatCounts[main] = (mainCatCounts[main] || 0) + 1;
@@ -1050,20 +1092,18 @@ export default function InstalledModsPage() {
         subCatCounts[sub] = (subCatCounts[sub] || 0) + 1;
       }
 
+      // 3. User & Functional Tags
       if (Array.isArray(mod.tags)) {
         for (let j = 0; j < mod.tags.length; j++) {
           const rawTag = mod.tags[j];
           if (!rawTag) continue;
           const trimmed = String(rawTag).trim();
-          // Filter out garbage/XML micro-tags or special markers
           if (trimmed.length > 30 || trimmed.length < 2) continue;
           if (trimmed.startsWith('<') || trimmed.endsWith('>')) continue;
           if (trimmed.includes('{') || trimmed.includes('}')) continue;
-          // Filter out internal and invalid tag names
           const lower = trimmed.toLowerCase();
           if (['dlc', 'lock-updates', 'maps', 'generic', 'skipped', 'unknown'].includes(lower)) continue;
 
-          // Check if it's identical to main or sub category
           const normalizedTag = normalizeCategory(trimmed) || trimmed;
           if (
             normalizedTag === main ||
@@ -1083,20 +1123,25 @@ export default function InstalledModsPage() {
       return b[1] - a[1] || a[0].localeCompare(b[0]);
     };
 
-    // Key Filters section: Maps, Crossplay, Auto-Updates Locked + Main Categories (e.g. Drivables, Trailers, Placeable)
-    const coreKeyFilters = [];
-    if (mapsCount > 0) coreKeyFilters.push({ name: 'Maps', label: 'Maps', count: mapsCount, isFunctional: true });
-    if (crossplayCount > 0) coreKeyFilters.push({ name: 'Crossplay', label: 'Crossplay', count: crossplayCount, isFunctional: true });
-    if (lockedCount > 0) coreKeyFilters.push({ name: 'lock-updates', label: 'Auto-Updates Locked', count: lockedCount, isFunctional: true });
+    // Curated Key Filters (Top Section)
+    const kfList = Object.entries(keyFilterCounts)
+      .sort(sortFn)
+      .map(([name, count]) => ({ name, label: name, count, isKeyFilter: true }));
 
-    const mainCategoryFilters = Object.entries(mainCatCounts)
+    if (crossplayCount > 0) {
+      kfList.unshift({ name: 'Crossplay', label: 'Crossplay', count: crossplayCount, isFunctional: true });
+    }
+    if (lockedCount > 0) {
+      kfList.push({ name: 'lock-updates', label: 'Auto-Updates Locked', count: lockedCount, isFunctional: true });
+    }
+
+    // Categories (ModHub Main categories)
+    const mainCategories = Object.entries(mainCatCounts)
       .sort(sortFn)
       .map(([name, count]) => ({ name, label: name, count, isMainCategory: true }));
 
-    const functional = [...coreKeyFilters, ...mainCategoryFilters];
-
-    // Subcategories section (e.g. Medium Tractors, Low Loaders, Sheds)
-    const categories = Object.entries(subCatCounts)
+    // Subcategories (Granular types like Small Tractors, Low Loaders, Sheds)
+    const subCategories = Object.entries(subCatCounts)
       .sort(sortFn)
       .map(([name, count]) => ({ name, label: name, count, isCategory: true }));
 
@@ -1105,8 +1150,14 @@ export default function InstalledModsPage() {
       .sort(sortFn)
       .map(([name, count]) => ({ name, label: name, count, isCustom: true }));
 
-    const all = [...functional, ...categories, ...custom];
-    return { functionalTags: functional, categoryTags: categories, customTags: custom, allUniqueTags: all };
+    const all = [...kfList, ...mainCategories, ...subCategories, ...custom];
+    return {
+      keyFilters: kfList,
+      functionalTags: mainCategories,
+      categoryTags: subCategories,
+      customTags: custom,
+      allUniqueTags: all
+    };
   }, [mods, tagSortBy]);
 
   const [selectedMods, setSelectedMods] = useState([]);
@@ -1275,6 +1326,9 @@ export default function InstalledModsPage() {
             if (tLower === 'crossplay') return m.isCrossplay;
             if (tLower === 'lock-updates') return (m.tags || []).includes('lock-updates');
             
+            const kf = getModKeyFilter(m);
+            if (kf && kf.toLowerCase() === tLower) return true;
+
             const { main, sub } = parseModCategory(m.category, m.isMap);
             if (main && main.toLowerCase() === tLower) return true;
             if (sub && sub.toLowerCase() === tLower) return true;
@@ -2519,14 +2573,14 @@ export default function InstalledModsPage() {
             </div>
           </div>
 
-          {/* Section 1: Categories (Main categories & Functional) */}
-          {functionalTags.length > 0 && (!tagSearch || functionalTags.some(t => t.label.toLowerCase().includes(tagSearch.toLowerCase()))) && (
+          {/* Section 1: Key Filters (Rounded up core concepts: Tractors, Combines, Implements, etc.) */}
+          {keyFilters.length > 0 && (!tagSearch || keyFilters.some(t => t.label.toLowerCase().includes(tagSearch.toLowerCase()))) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
-                Categories
+                Key Filters
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9 }}>
-                {functionalTags
+                {keyFilters
                   .filter(t => !tagSearch || t.label.toLowerCase().includes(tagSearch.toLowerCase()))
                   .map(tag => {
                     const isSelected = selectedTags.includes(tag.name);
@@ -2573,7 +2627,60 @@ export default function InstalledModsPage() {
             </div>
           )}
 
-          {/* Section 2: Subcategories */}
+          {/* Section 2: Categories (Main ModHub categories) */}
+          {functionalTags.length > 0 && (!tagSearch || functionalTags.some(t => t.label.toLowerCase().includes(tagSearch.toLowerCase()))) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+                Categories
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9 }}>
+                {functionalTags
+                  .filter(t => !tagSearch || t.label.toLowerCase().includes(tagSearch.toLowerCase()))
+                  .map(tag => {
+                    const isSelected = selectedTags.includes(tag.name);
+                    return (
+                      <button
+                        key={tag.name}
+                        onClick={() => {
+                          setSelectedTags(prev => 
+                            isSelected ? prev.filter(t => t !== tag.name) : [...prev, tag.name]
+                          );
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 7,
+                          padding: '5px 13px',
+                          borderRadius: 100,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          background: isSelected ? 'var(--accent)' : 'var(--bg-card)',
+                          color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                          border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
+                          boxShadow: isSelected ? '0 2px 8px var(--accent-dim)' : 'none'
+                        }}
+                      >
+                        {tag.label}
+                        <span style={{
+                          background: isSelected ? 'rgba(255,255,255,0.25)' : 'var(--bg-tertiary)',
+                          color: isSelected ? '#ffffff' : 'var(--text-muted)',
+                          padding: '2px 7px',
+                          borderRadius: 12,
+                          fontSize: 11,
+                          fontWeight: 800
+                        }}>
+                          {tag.count}
+                        </span>
+                      </button>
+                    );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Section 3: Subcategories */}
           {categoryTags.length > 0 && (!tagSearch || categoryTags.some(t => t.label.toLowerCase().includes(tagSearch.toLowerCase()))) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
@@ -2626,7 +2733,7 @@ export default function InstalledModsPage() {
             </div>
           )}
 
-          {/* Section 3: Custom User Tags */}
+          {/* Section 4: Custom User Tags */}
           {customTags.length > 0 && (!tagSearch || customTags.some(t => t.label.toLowerCase().includes(tagSearch.toLowerCase()))) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
