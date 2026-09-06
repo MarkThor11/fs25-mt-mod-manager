@@ -4370,41 +4370,9 @@ async function autoInjectDependencies(savegamePath) {
                         const installedDep = allMods.find(m => dependencyResolver.matchModWithDependency(m, dep));
                         if (installedDep) {
                             const depStrMatch = typeof dep === 'string' ? dep : (dep.modName || dep.technicalName || dep.title || dep.fileName || '');
-                            if (depStrMatch && installedDep.modName !== depStrMatch && /^[a-zA-Z0-9_-]+$/.test(depStrMatch)) {
-                                try {
-                                    const path = require('path');
-                                    const fsExtra = require('fs-extra');
-                                    const oldPath = installedDep.filePath;
-                                    if (oldPath && fsExtra.existsSync(oldPath)) {
-                                        const dir = path.dirname(oldPath);
-                                        const newPath = path.join(dir, depStrMatch + '.zip');
-                                        if (!fsExtra.existsSync(newPath)) {
-                                            console.log(`[AUTO-INJECT] Renaming mismatched dependency: ${installedDep.modName} -> ${depStrMatch}`);
-                                            fsExtra.renameSync(oldPath, newPath);
-                                            installedDep.modName = depStrMatch;
-                                            installedDep.fileName = depStrMatch + '.zip';
-                                            installedDep.filePath = newPath;
-                                            
-                                            // Also update cache if it exists
-                                            const cache = require('./cache');
-                                            if (cache.has('localMods')) {
-                                                const cached = cache.get('localMods');
-                                                if (cached && cached.mods) {
-                                                    const cachedMod = cached.mods.find(m => m.filePath === oldPath);
-                                                    if (cachedMod) {
-                                                        cachedMod.modName = depStrMatch;
-                                                        cachedMod.fileName = depStrMatch + '.zip';
-                                                        cachedMod.filePath = newPath;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                } catch (e) {
-                                    console.warn(`[AUTO-INJECT] Failed to rename mismatched dependency ${installedDep.modName}:`, e.message);
-                                }
-                            }
-
+                            // REMOVED DESTRUCTIVE FILE RENAMING BLOCK HERE. The Virtual Folder 
+                            // transparently symlinks `m.modName.zip` so renaming the physical file is unnecessary.
+                            
                             const alreadySelected = mods.find(m => m['@_modName'] === installedDep.modName);
                             if (!alreadySelected) {
                                 console.log(`[AUTO-INJECT] Injecting dependency: ${installedDep.title} (required by ${selMod['@_title'] || selMod['@_modName']})`);
