@@ -2519,11 +2519,11 @@ export default function InstalledModsPage() {
             </div>
           </div>
 
-          {/* Section 1: Functional & Core Tags */}
+          {/* Section 1: Categories (Main categories & Functional) */}
           {functionalTags.length > 0 && (!tagSearch || functionalTags.some(t => t.label.toLowerCase().includes(tagSearch.toLowerCase()))) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
-                Key Filters
+                Categories
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9 }}>
                 {functionalTags
