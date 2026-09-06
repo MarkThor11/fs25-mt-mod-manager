@@ -329,7 +329,7 @@ export default function MapsPage() {
                             const hasAutomated = templates.some(t => t.mapId === mod.mapId || t.title === mod.title);
                             const modIsCP = isCrossplay(mod.title, mod);
                             return (
-                                <div key={mod.fileName} className="save-card" style={{ padding: 'var(--sp-4)', position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 180, overflow: 'hidden' }}>
+                                <div key={mod.filePath || `${mod.folder || ''}_${mod.fileName}`} className="save-card" style={{ padding: 'var(--sp-4)', position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 180, overflow: 'hidden' }}>
                                     {/* Map Preview Background */}
                                     <div style={{ 
                                         position: 'absolute', 

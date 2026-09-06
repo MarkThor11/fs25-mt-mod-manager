@@ -1853,6 +1853,8 @@ async function performScan(manualPaths = null) {
 	// ── FINAL DEDUPLICATION (By Identity & Filename) ──
 	// We use multiple keys to catch duplicates even if the filename or version changed.
 	// We ALWAYS prioritize mods in a subfolder over those in the root.
+	// However, distinct non-empty subfolders (such as PC vs CP versions of maps, or mods
+	// organized into separate folders) must NEVER deduplicate against each other.
 	const uniqueModsMap = new Map();
 	const sortedForDedupe = [...mods].sort((a, b) => {
 		const aIsRoot = !a.folder || a.folder === '';
@@ -1863,21 +1865,44 @@ async function performScan(manualPaths = null) {
 	});
 
 	for (const m of sortedForDedupe) {
-		const idKey = m.modId ? `ID_${m.modId}` : null;
-		const fileKey = `FILE_${path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '')}`;
+		// If mod is in a subfolder, include folder in the uniqueness scope so separate subfolders are preserved
+		const folderPrefix = (m.folder && m.folder !== '') ? `[DIR:${m.folder.toLowerCase()}]_` : '';
+		const idKey = m.modId ? `${folderPrefix}ID_${m.modId}` : null;
+		const fileKey = `${folderPrefix}FILE_${path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '')}`;
 
-		const keys = [idKey, fileKey].filter(Boolean);
+		// Global root vs subfolder collision key (only drops root if subfolder exists)
+		const globalFileKey = `GLOBAL_FILE_${path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '')}`;
+		const globalIdKey = m.modId ? `GLOBAL_ID_${m.modId}` : null;
+
+		const isRoot = !m.folder || m.folder === '';
 		let alreadySeen = false;
-		for (const k of keys) {
-			if (uniqueModsMap.has(k)) {
+
+		if (isRoot) {
+			// If root mod, check if a subfolder version (or earlier root version) already claimed it
+			if (uniqueModsMap.has(globalFileKey) || (globalIdKey && uniqueModsMap.has(globalIdKey))) {
 				alreadySeen = true;
-				break;
+			}
+		} else {
+			// In a subfolder: check within its own folder scope
+			const keys = [idKey, fileKey].filter(Boolean);
+			for (const k of keys) {
+				if (uniqueModsMap.has(k)) {
+					alreadySeen = true;
+					break;
+				}
 			}
 		}
 
 		if (!alreadySeen) {
-			// Register all identity keys for this mod instance
-			keys.forEach(k => uniqueModsMap.set(k, m));
+			// Register scoped keys
+			if (!isRoot) {
+				[idKey, fileKey].filter(Boolean).forEach(k => uniqueModsMap.set(k, m));
+			}
+			// Register global keys to prevent root duplicates
+			uniqueModsMap.set(globalFileKey, m);
+			if (globalIdKey) uniqueModsMap.set(globalIdKey, m);
+			// Also register m by its filePath to guarantee it is kept in finalMods
+			uniqueModsMap.set(`FP_${m.filePath || m.fileName}`, m);
 		}
 	}
 
