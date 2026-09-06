@@ -1041,11 +1041,13 @@ export default function InstalledModsPage() {
           if (trimmed.length > 30 || trimmed.length < 2) continue;
           if (trimmed.startsWith('<') || trimmed.endsWith('>')) continue;
           if (trimmed.includes('{') || trimmed.includes('}')) continue;
-          if (['DLC', 'lock-updates', 'Maps', 'generic', 'skipped'].includes(trimmed)) continue;
+          // Filter out internal and invalid tag names
+          const lower = trimmed.toLowerCase();
+          if (['dlc', 'lock-updates', 'maps', 'generic', 'skipped', 'unknown'].includes(lower)) continue;
 
           // Check if it's identical to category
           const normalizedTag = normalizeCategory(trimmed) || trimmed;
-          if (normalizedTag === cleanCat) continue;
+          if (normalizedTag === cleanCat || normalizedTag.toLowerCase() === 'unknown') continue;
 
           customCounts[trimmed] = (customCounts[trimmed] || 0) + 1;
         }

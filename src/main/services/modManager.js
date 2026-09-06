@@ -1916,12 +1916,8 @@ function getTemplatesPath() {
 			m.tags = Array.from(new Set([...(m.tags || []), ...trackingTags]));
 		}
 
-		if (m.isMap && !(m.tags || []).includes('Maps')) {
-			m.tags = [...(m.tags || []), 'Maps'];
-		}
-		if (m.category && m.category !== 'generic' && !(m.tags || []).includes(m.category)) {
-			m.tags = [...(m.tags || []), m.category];
-		}
+		// Note: mod.tags is strictly preserved for user-assigned tags (e.g. lock-updates or custom user tags).
+		// System categories and map classifications remain in m.category and m.isMap.
 		m.tags = Array.from(new Set((m.tags || []).filter(Boolean)));
 	}
 
