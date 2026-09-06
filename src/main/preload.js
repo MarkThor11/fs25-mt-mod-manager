@@ -158,6 +158,11 @@ contextBridge.exposeInMainWorld('api', {
     getAll: () => ipcRenderer.invoke('settings:getAll'),
   },
 
+  system: {
+    checkDevMode: () => ipcRenderer.invoke('system:checkDevMode'),
+    enableDevMode: () => ipcRenderer.invoke('system:enableDevMode')
+  },
+
   // Shell
   shell: {
     openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),

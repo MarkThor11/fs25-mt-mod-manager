@@ -73,7 +73,14 @@ export default function SettingsPage() {
   const [systemSpecs, setSystemSpecs] = useState(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isCheckingAppUpdate, setIsCheckingAppUpdate] = useState(false);
+  const [devModeStatus, setDevModeStatus] = useState(null);
+  const [isSettingDevMode, setIsSettingDevMode] = useState(false);
 
+  useEffect(() => {
+    if (window.api?.system?.checkDevMode) {
+      window.api.system.checkDevMode().then(setDevModeStatus);
+    }
+  }, []);
   const handleCheckAppUpdate = async () => {
     if (!window.api?.appUpdate?.check) {
       useToastStore.getState().warning('App updater is available in desktop builds.');
@@ -92,6 +99,20 @@ export default function SettingsPage() {
     } catch (err) {
       setIsCheckingAppUpdate(false);
       useToastStore.getState().error(`Update check failed: ${err.message}`);
+    }
+  };
+
+  const handleEnableDevMode = async () => {
+    if (!window.api?.system?.enableDevMode) return;
+    useToastStore.getState().info('Please accept the Windows Administrator prompt...');
+    setIsSettingDevMode(true);
+    const result = await window.api.system.enableDevMode();
+    setIsSettingDevMode(false);
+    if (result.success) {
+      useToastStore.getState().success('Developer Mode enabled successfully!');
+      setDevModeStatus(true);
+    } else {
+      useToastStore.getState().error('Failed to enable: ' + (result.error || 'Unknown error'));
     }
   };
 
@@ -985,6 +1006,33 @@ export default function SettingsPage() {
               <div className="toggle__track" />
               <div className="toggle__thumb" />
             </label>
+          </div>
+        </div>
+
+        <div className="settings-row" style={{ background: devModeStatus ? 'var(--bg-tertiary)' : 'rgba(255,165,0,0.05)' }}>
+          <div style={{ flex: 1 }}>
+            <div className="settings-row__label">
+              Windows Developer Mode 
+              {devModeStatus === true && <span style={{ color: 'var(--accent)', marginLeft: 8, fontSize: 12, padding: '2px 6px', background: 'var(--bg-elevated)', borderRadius: 4 }}>ENABLED</span>}
+            </div>
+            <div className="settings-row__desc">
+              Enables instant, zero-duplication cross-drive mod loading. Required if your mods span multiple drives.
+            </div>
+          </div>
+          <div className="settings-row__control">
+            {devModeStatus === true ? (
+              <button className="btn btn--secondary" disabled style={{ opacity: 0.6 }}>
+                Active
+              </button>
+            ) : (
+              <button 
+                className="btn btn--primary" 
+                onClick={handleEnableDevMode} 
+                disabled={isSettingDevMode || devModeStatus === null}
+              >
+                {isSettingDevMode ? <RefreshCw size={14} className="animate-spin" /> : 'Enable (Requires Admin)'}
+              </button>
+            )}
           </div>
         </div>
       </CollapsibleSection>

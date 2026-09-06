@@ -1379,6 +1379,32 @@ ipcMain.handle('settings:set', (_, { key, value }) => cache.setSetting(key, valu
 ipcMain.handle('settings:getAll', () => cache.getAllSettings());
 
 // ── Shell ──
+//  System 
+ipcMain.handle('system:checkDevMode', async () => {
+  const { exec } = require('child_process');
+  return new Promise((resolve) => {
+    // Only works on Windows
+    if (process.platform !== 'win32') return resolve(false);
+    exec('reg query "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AppModelUnlock" /v AllowDevelopmentWithoutDevLicense', (error, stdout) => {
+      if (error) return resolve(false);
+      // Check if it's set to 0x1 (enabled)
+      resolve(stdout.includes('0x1'));
+    });
+  });
+});
+
+ipcMain.handle('system:enableDevMode', async () => {
+  const { exec } = require('child_process');
+  return new Promise((resolve) => {
+    if (process.platform !== 'win32') return resolve({ success: false, error: 'Windows only' });
+    const psCommand = `Start-Process powershell -Verb RunAs -WindowStyle Hidden -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command \\"New-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AppModelUnlock' -Name 'AllowDevelopmentWithoutDevLicense' -Value 1 -PropertyType DWORD -Force; New-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AppModelUnlock' -Name 'AllowAllTrustedApps' -Value 1 -PropertyType DWORD -Force\\""`;
+    exec(psCommand, (error) => {
+      if (error) return resolve({ success: false, error: error.message });
+      resolve({ success: true });
+    });
+  });
+});
+
 ipcMain.handle('shell:openExternal', (_, url) => shell.openExternal(url));
 ipcMain.handle('shell:showItemInFolder', (_, filePath) => shell.showItemInFolder(filePath));
 ipcMain.handle('shell:openPath', (_, dirPath) => shell.openPath(dirPath));
