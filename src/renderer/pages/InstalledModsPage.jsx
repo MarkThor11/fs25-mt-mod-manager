@@ -5,7 +5,7 @@ import {
   RefreshCw, Download, Trash2, FolderOpen, Package, Lock, Loader2, Info,
   CheckCircle, Check, AlertTriangle, HardDrive, Search, List, LayoutGrid, ChevronDown, ChevronRight, ChevronsUp, ChevronsDown,
   Tag, Plus, X, Settings2, Folder, FolderPlus, FolderOutput, Eye, EyeOff, MoreVertical, Zap, Layers, RefreshCcw,
-  Heart, Star, Share2, Pencil, GripVertical, User, Pin, ArrowRightLeft, Move
+  Heart, Star, Share2, Pencil, GripVertical, User, Pin, ArrowRightLeft, Move, Filter
 } from 'lucide-react';
 import { useLocalModsStore } from '../store/useLocalModsStore';
 import { useDownloadStore } from '../store/useDownloadStore';
@@ -989,26 +989,85 @@ export default function InstalledModsPage() {
     };
   }, []);
   
-  // Compute all unique tags across all mods (excluding DLC system tag)
-  const allUniqueTags = useMemo(() => {
-    const tagCounts = {};
+  const [tagSearch, setTagSearch] = useState('');
+
+  // Helper to normalize and clean category names into human-readable labels
+  const normalizeCategory = (cat) => {
+    if (!cat) return null;
+    let s = String(cat).trim();
+    if (!s || s.length > 35 || s.includes('<') || s.includes('\n') || s.includes('\r')) return null;
+    if (s.startsWith('CATEGORY:')) {
+      s = s.substring(9).trim();
+    }
+    const lower = s.toLowerCase();
+    if (['generic', 'skipped', 'dlc', 'unknown'].includes(lower)) return null;
+    // Split sub-categories like "Trailers - Low Loaders" -> "Low Loaders" (or "Trailers")
+    if (s.includes(' - ')) {
+      const parts = s.split(' - ').map(p => p.trim());
+      s = parts[1] || parts[0];
+    }
+    // Title case formatting
+    s = s.replace(/\b\w/g, char => char.toUpperCase());
+    return s;
+  };
+
+  // Compute clean structured tags: Functional, Categories, and Custom User Tags
+  const { functionalTags, categoryTags, customTags, allUniqueTags } = useMemo(() => {
+    const catCounts = {};
+    const customCounts = {};
+    let mapsCount = 0;
+    let crossplayCount = 0;
+    let lockedCount = 0;
+
     for (let i = 0; i < mods.length; i++) {
       const mod = mods[i];
-      if (mod && !mod.isDLC && mod.folder !== 'DLC') {
-        if (mod.tags) {
-          for (let j = 0; j < mod.tags.length; j++) {
-            const tag = mod.tags[j];
-            if (tag && tag !== 'DLC') tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-          }
-        }
-        if (mod.category && mod.category !== 'generic' && mod.category !== 'DLC') {
-          tagCounts[mod.category] = (tagCounts[mod.category] || 0) + 1;
+      if (!mod || mod.isDLC || mod.folder === 'DLC') continue;
+
+      if (mod.isMap) mapsCount++;
+      if (mod.isCrossplay) crossplayCount++;
+      if ((mod.tags || []).includes('lock-updates')) lockedCount++;
+
+      const cleanCat = normalizeCategory(mod.category);
+      if (cleanCat) {
+        catCounts[cleanCat] = (catCounts[cleanCat] || 0) + 1;
+      }
+
+      if (Array.isArray(mod.tags)) {
+        for (let j = 0; j < mod.tags.length; j++) {
+          const rawTag = mod.tags[j];
+          if (!rawTag) continue;
+          const trimmed = String(rawTag).trim();
+          // Filter out garbage/XML micro-tags or special markers
+          if (trimmed.length > 30 || trimmed.length < 2) continue;
+          if (trimmed.startsWith('<') || trimmed.endsWith('>')) continue;
+          if (trimmed.includes('{') || trimmed.includes('}')) continue;
+          if (['DLC', 'lock-updates', 'Maps', 'generic', 'skipped'].includes(trimmed)) continue;
+
+          // Check if it's identical to category
+          const normalizedTag = normalizeCategory(trimmed) || trimmed;
+          if (normalizedTag === cleanCat) continue;
+
+          customCounts[trimmed] = (customCounts[trimmed] || 0) + 1;
         }
       }
     }
-    return Object.entries(tagCounts)
-      .sort((a,b) => b[1] - a[1]) // Most frequent first
-      .map(([name, count]) => ({ name, count }));
+
+    const functional = [];
+    if (mapsCount > 0) functional.push({ name: 'Maps', label: 'Maps', count: mapsCount, isFunctional: true });
+    if (crossplayCount > 0) functional.push({ name: 'Crossplay', label: 'Crossplay', count: crossplayCount, isFunctional: true });
+    if (lockedCount > 0) functional.push({ name: 'lock-updates', label: 'Auto-Updates Locked', count: lockedCount, isFunctional: true });
+
+    const categories = Object.entries(catCounts)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, label: name, count, isCategory: true }));
+
+    // User/custom tags: filter out micro-tags (e.g. junk tags with count < 2) unless explicitly manually added
+    const custom = Object.entries(customCounts)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, label: name, count, isCustom: true }));
+
+    const all = [...functional, ...categories, ...custom];
+    return { functionalTags: functional, categoryTags: categories, customTags: custom, allUniqueTags: all };
   }, [mods]);
 
   const [selectedMods, setSelectedMods] = useState([]);
@@ -1173,9 +1232,17 @@ export default function InstalledModsPage() {
         if (selectedTags.length > 0) {
           const hasMatch = selectedTags.some(tag => {
             const tLower = tag.toLowerCase();
-            return (m.tags || []).some(t => t.toLowerCase() === tLower) ||
-                   (m.category && m.category.toLowerCase() === tLower) ||
-                   (m.isMap && tLower === 'maps');
+            if (tLower === 'maps') return m.isMap;
+            if (tLower === 'crossplay') return m.isCrossplay;
+            if (tLower === 'lock-updates') return (m.tags || []).includes('lock-updates');
+            
+            const modNormCat = normalizeCategory(m.category);
+            if (modNormCat && modNormCat.toLowerCase() === tLower) return true;
+
+            return (m.tags || []).some(t => {
+              const tClean = String(t).toLowerCase();
+              return tClean === tLower || normalizeCategory(tClean)?.toLowerCase() === tLower;
+            }) || (m.category && m.category.toLowerCase() === tLower);
           });
           if (!hasMatch) return false;
         }
@@ -2042,14 +2109,9 @@ export default function InstalledModsPage() {
 
         <button 
           className={`btn ${showTagBar || selectedTags.length > 0 ? 'btn--primary' : 'btn--secondary'} btn--sm`}
-          onClick={() => {
-            if (showTagBar) {
-              setSelectedTags([]);
-            }
-            setShowTagBar(!showTagBar);
-          }}
+          onClick={() => setShowTagBar(!showTagBar)}
           style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6 }}
-          title="Toggle Tag Filter Bar"
+          title="Toggle Category & Tag Filter Panel"
         >
           <Tag size={14} /> Tags
           {selectedTags.length > 0 && (
@@ -2288,52 +2350,243 @@ export default function InstalledModsPage() {
         )}
       </div>
 
-      {showTagBar && allUniqueTags.length > 0 && (
-        <div className="tag-ribbon" style={{ 
-          display: 'flex', 
-          gap: 8, 
-          overflowX: 'auto', 
-          padding: '0 0 16px 0', 
-          marginBottom: 8,
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none'
+      {showTagBar && (
+        <div className="tag-filter-panel animate-fade-in-down" style={{ 
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '16px 20px',
+          marginBottom: 20,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 14
         }}>
-          {allUniqueTags.map(tag => {
-            const isSelected = selectedTags.includes(tag.name);
-            return (
-              <button
-                key={tag.name}
-                className={`btn btn--xs ${isSelected ? 'btn--primary' : 'btn--secondary'}`}
-                onClick={() => {
-                  setSelectedTags(prev => 
-                    isSelected ? prev.filter(t => t !== tag.name) : [...prev, tag.name]
-                  );
-                }}
-                style={{ 
-                  borderRadius: 100, 
-                  padding: '4px 12px', 
-                  fontSize: 10, 
-                  whiteSpace: 'nowrap',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  boxShadow: isSelected ? '0 2px 8px var(--accent-dim)' : 'none'
-                }}
-              >
-                <Tag size={10} />
-                {tag.name}
-                <span style={{ opacity: 0.5 }}>{tag.count}</span>
-              </button>
-            );
-          })}
-          {selectedTags.length > 0 && (
-            <button 
-              className="btn btn--ghost btn--xs" 
-              onClick={() => setSelectedTags([])}
-              style={{ fontSize: 10, color: 'var(--text-muted)' }}
-            >
-              Clear Filters
-            </button>
+          {/* Header Row: Title, active count, quick search, and Clear button */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                background: 'var(--accent-dim)',
+                color: 'var(--accent)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Filter size={15} />
+              </div>
+              <div>
+                <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.02em', color: 'var(--text-primary)' }}>
+                  Categories & Tags
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>
+                  ({allUniqueTags.length} available)
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ position: 'relative', width: 180 }}>
+                <Search size={12} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Filter chips..."
+                  value={tagSearch}
+                  onChange={(e) => setTagSearch(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: 28,
+                    padding: '0 8px 0 26px',
+                    fontSize: 11,
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 6,
+                    color: 'var(--text-primary)',
+                    outline: 'none'
+                  }}
+                />
+                {tagSearch && (
+                  <button 
+                    onClick={() => setTagSearch('')}
+                    style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {selectedTags.length > 0 && (
+                <button 
+                  className="btn btn--secondary btn--xs"
+                  onClick={() => setSelectedTags([])}
+                  style={{ height: 28, padding: '0 10px', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                >
+                  <X size={12} /> Clear Filters ({selectedTags.length})
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Section 1: Functional & Core Tags */}
+          {functionalTags.length > 0 && (!tagSearch || functionalTags.some(t => t.label.toLowerCase().includes(tagSearch.toLowerCase()))) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+                Key Filters
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {functionalTags
+                  .filter(t => !tagSearch || t.label.toLowerCase().includes(tagSearch.toLowerCase()))
+                  .map(tag => {
+                    const isSelected = selectedTags.includes(tag.name);
+                    return (
+                      <button
+                        key={tag.name}
+                        onClick={() => {
+                          setSelectedTags(prev => 
+                            isSelected ? prev.filter(t => t !== tag.name) : [...prev, tag.name]
+                          );
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '4px 12px',
+                          borderRadius: 100,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          background: isSelected ? 'var(--accent)' : 'var(--bg-card)',
+                          color: isSelected ? '#ffffff' : 'var(--text-primary)',
+                          border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
+                          boxShadow: isSelected ? '0 2px 8px var(--accent-dim)' : 'none'
+                        }}
+                      >
+                        {tag.name === 'lock-updates' ? <Lock size={11} /> : <Tag size={11} />}
+                        {tag.label}
+                        <span style={{
+                          background: isSelected ? 'rgba(255,255,255,0.25)' : 'var(--bg-tertiary)',
+                          color: isSelected ? '#ffffff' : 'var(--text-muted)',
+                          padding: '1px 6px',
+                          borderRadius: 10,
+                          fontSize: 10,
+                          fontWeight: 800
+                        }}>
+                          {tag.count}
+                        </span>
+                      </button>
+                    );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Section 2: Categories */}
+          {categoryTags.length > 0 && (!tagSearch || categoryTags.some(t => t.label.toLowerCase().includes(tagSearch.toLowerCase()))) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+                Categories
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 180, overflowY: 'auto', paddingRight: 4 }}>
+                {categoryTags
+                  .filter(t => !tagSearch || t.label.toLowerCase().includes(tagSearch.toLowerCase()))
+                  .map(tag => {
+                    const isSelected = selectedTags.includes(tag.name);
+                    return (
+                      <button
+                        key={tag.name}
+                        onClick={() => {
+                          setSelectedTags(prev => 
+                            isSelected ? prev.filter(t => t !== tag.name) : [...prev, tag.name]
+                          );
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '4px 12px',
+                          borderRadius: 100,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          background: isSelected ? 'var(--accent)' : 'var(--bg-card)',
+                          color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                          border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
+                          boxShadow: isSelected ? '0 2px 8px var(--accent-dim)' : 'none'
+                        }}
+                      >
+                        {tag.label}
+                        <span style={{
+                          background: isSelected ? 'rgba(255,255,255,0.25)' : 'var(--bg-tertiary)',
+                          color: isSelected ? '#ffffff' : 'var(--text-muted)',
+                          padding: '1px 6px',
+                          borderRadius: 10,
+                          fontSize: 10,
+                          fontWeight: 800
+                        }}>
+                          {tag.count}
+                        </span>
+                      </button>
+                    );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Section 3: Custom User Tags */}
+          {customTags.length > 0 && (!tagSearch || customTags.some(t => t.label.toLowerCase().includes(tagSearch.toLowerCase()))) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+                User Tags
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {customTags
+                  .filter(t => !tagSearch || t.label.toLowerCase().includes(tagSearch.toLowerCase()))
+                  .map(tag => {
+                    const isSelected = selectedTags.includes(tag.name);
+                    return (
+                      <button
+                        key={tag.name}
+                        onClick={() => {
+                          setSelectedTags(prev => 
+                            isSelected ? prev.filter(t => t !== tag.name) : [...prev, tag.name]
+                          );
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '3px 10px',
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          background: isSelected ? 'var(--accent)' : 'var(--bg-card)',
+                          color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                          border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)'
+                        }}
+                      >
+                        <Tag size={10} />
+                        {tag.label}
+                        <span style={{
+                          background: isSelected ? 'rgba(255,255,255,0.25)' : 'var(--bg-tertiary)',
+                          color: isSelected ? '#ffffff' : 'var(--text-muted)',
+                          padding: '1px 5px',
+                          borderRadius: 8,
+                          fontSize: 9,
+                          fontWeight: 800
+                        }}>
+                          {tag.count}
+                        </span>
+                      </button>
+                    );
+                })}
+              </div>
+            </div>
           )}
         </div>
       )}
