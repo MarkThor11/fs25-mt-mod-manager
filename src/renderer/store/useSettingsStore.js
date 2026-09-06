@@ -42,6 +42,7 @@ export const useSettingsStore = create((set) => ({
   skipDeleteConfirm: false,
   badgeDuration: '48h',
   expandedFolders: { '': true },
+  showTagBar: false,
   selectiveLoading: true,
   autoDownloadMapDeps: true,
   nickname: '',
@@ -117,6 +118,7 @@ export const useSettingsStore = create((set) => ({
         skipDeleteConfirm: settings.skipDeleteConfirm === 'true',
         badgeDuration: settings.badgeDuration || '48h',
         expandedFolders: settings.expandedFolders ? JSON.parse(settings.expandedFolders) : { '': true },
+        showTagBar: settings.showTagBar === 'true',
         selectiveLoading: settings.selectiveLoading !== 'false',
         autoDownloadMapDeps: settings.autoDownloadMapDeps !== 'false',
         nickname: settings.nickname || '',
@@ -426,6 +428,11 @@ export const useSettingsStore = create((set) => ({
       if (window.api?.settings) window.api.settings.set('expandedFolders', JSON.stringify(newExpanded)).catch(console.error);
       return { expandedFolders: newExpanded };
     });
+  },
+
+  setShowTagBar: async (val) => {
+    set({ showTagBar: val });
+    if (window.api?.settings) await window.api.settings.set('showTagBar', String(val)).catch(console.error);
   },
 
   setSelectiveLoading: async (val) => {

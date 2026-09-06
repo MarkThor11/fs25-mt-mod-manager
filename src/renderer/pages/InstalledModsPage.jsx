@@ -940,7 +940,8 @@ export default function InstalledModsPage() {
   const { 
     hiddenFolders, toggleHiddenFolder, installedModsViewMode, setInstalledModsViewMode,
     folderOrder, setFolderOrder, folderZooms, setFolderZoom, isInternalDragging, setIsInternalDragging,
-    iconOnlyFolders, toggleIconOnlyFolder, isOnline, isLoaded, modUpdateMode, modsPaths, modsPath
+    iconOnlyFolders, toggleIconOnlyFolder, isOnline, isLoaded, modUpdateMode, modsPaths, modsPath,
+    showTagBar, setShowTagBar
   } = useSettingsStore();
   const { toggleFavoriteMod, toggleFavoriteAuthor, favoriteMods, favoriteAuthors } = useModHubStore();
   const sessionInstalled = useDownloadStore((s) => s.sessionInstalled);
@@ -957,7 +958,6 @@ export default function InstalledModsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [selectedTags, setSelectedTags] = useState([]);
-  const [showTagBar, setShowTagBar] = useState(false);
   const [updatingMod, setUpdatingMod] = useState(null);
   const [autoResolveMode, setAutoResolveMode] = useState(false);
   const [selectedDriveFilter, setSelectedDriveFilter] = useState('ALL');
