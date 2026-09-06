@@ -258,29 +258,7 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
                 </div>
             )}
 
-            {mod.isCorrupt && status !== 'update' && (
-                <div style={{ 
-                    position: 'absolute', 
-                    top: 8, 
-                    right: 8, 
-                    background: 'var(--danger, #ef4444)', 
-                    color: 'white', 
-                    padding: '2px 8px', 
-                    borderRadius: 4, 
-                    fontSize: 10, 
-                    fontWeight: 900, 
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                    zIndex: 30,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 3
-                }}>
-                    <AlertTriangle size={9} /> CORRUPT
-                </div>
-            )}
-            
+
             {mod.isDLC && (
                 <div style={{ position: 'absolute', bottom: 8, left: 8, display: 'flex', alignItems: 'center', gap: 4, zIndex: 10 }}>
                     <div style={{ background: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 900, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
@@ -783,11 +761,6 @@ const LazyModList = ({
                         {status === 'removed' && (
                             <span style={{ fontSize: 10, background: 'var(--danger)', color: 'white', padding: '2px 8px', borderRadius: 4, fontWeight: 900 }}>REMOVED</span>
                         )}
-                        {mod.isCorrupt && status !== 'update' && (
-                            <span style={{ fontSize: 10, background: 'var(--danger)', color: 'white', padding: '2px 8px', borderRadius: 4, fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                                <AlertTriangle size={9} /> CORRUPT
-                            </span>
-                        )}
                     </div>
                     <div style={{ fontSize: 13, color: isFavAuthor ? 'var(--danger)' : 'var(--text-secondary)', marginTop: 4, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 12 }}>
                       {!mod.isDLC && (
@@ -895,20 +868,6 @@ const LazyModList = ({
                         {isUpdating ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
                     </button>
                 )}
-                {mod.isCorrupt && status !== 'update' && (
-                    <button
-                        className="btn btn--icon btn--sm"
-                        onClick={() => {
-                          const corrupt = useLocalModsStore.getState().corruptMods.find(c => c.fileName === (mod.fileName.includes('/') ? mod.fileName.split('/').pop() : mod.fileName));
-                          if (corrupt) useLocalModsStore.getState().repairCorruptMod(corrupt.fileName, corrupt.modId, corrupt.allPaths);
-                        }}
-                        title={mod.modId ? "Re-download from ModHub to repair" : "Cannot auto-repair — not on ModHub"}
-                        disabled={!mod.modId}
-                        style={{ width: 32, height: 32, background: 'var(--danger)', color: 'white', border: 'none' }}
-                    >
-                        <Download size={14} />
-                    </button>
-                )}
                 {!mod.isDLC && (
                   <>
                     <button
@@ -976,7 +935,6 @@ export default function InstalledModsPage() {
     isResolving, resolvingStatus, showOnlyUpdates, setShowOnlyUpdates,
     scanMods, checkUpdates, uninstallMod, updateMod, updateAllMods, initListeners, toggleAutoResolve,
     createFolder, renameFolder, deleteFolder, moveModsToFolder, moveFolderToDrive, bulkMoveFoldersToDrive, exportCollection,
-    corruptMods, checkCorruptMods, repairCorruptMod, repairAllCorruptMods, showOnlyCorrupt,
   } = useLocalModsStore();
 
   const { 
@@ -1225,15 +1183,11 @@ export default function InstalledModsPage() {
         if (showOnlyUpdates) {
           if (!updateFileNamesSet.has(m.fileName)) return false;
         }
-
-        if (showOnlyCorrupt) {
-          if (!m.isCorrupt) return false;
-        }
       }
 
       return true;
     });
-  }, [mods, selectedDriveFilter, searchQuery, showOnlyFavorites, favModIdsSet, favAuthorsSet, selectedTags, showOnlyUpdates, updateFileNamesSet, showOnlyCorrupt]);
+  }, [mods, selectedDriveFilter, searchQuery, showOnlyFavorites, favModIdsSet, favAuthorsSet, selectedTags, showOnlyUpdates, updateFileNamesSet]);
 
   const modLookupIndex = useMemo(() => {
     const byId = new Map();
@@ -2083,39 +2037,6 @@ export default function InstalledModsPage() {
                 <Download size={14} /> Update All ({updates.length})
               </button>
             )}
-          </>
-        )}
-
-        {corruptMods.length > 0 && (
-          <>
-            <button 
-              className={`btn ${showOnlyCorrupt ? 'btn--primary' : 'btn--secondary'} btn--sm animate-fade-in`}
-              onClick={() => useLocalModsStore.setState({ showOnlyCorrupt: !showOnlyCorrupt })}
-              style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6, borderColor: showOnlyCorrupt ? undefined : 'var(--danger)', color: showOnlyCorrupt ? undefined : 'var(--danger)' }}
-              title="Filter to show only corrupt / failed downloads"
-            >
-              <AlertTriangle size={14} /> Corrupt
-              <span style={{ 
-                  background: showOnlyCorrupt ? 'white' : 'var(--danger)', 
-                  color: showOnlyCorrupt ? 'var(--danger)' : 'white', 
-                  borderRadius: 10, 
-                  padding: '1px 6px', 
-                  fontSize: 10, 
-                  fontWeight: 900, 
-                  minWidth: 18, 
-                  textAlign: 'center' 
-              }}>
-                  {corruptMods.length}
-              </span>
-            </button>
-            <button 
-              className="btn btn--sm animate-fade-in"
-              onClick={() => repairAllCorruptMods()}
-              style={{ height: 36, display: 'flex', alignItems: 'center', gap: 6, background: 'var(--danger)', color: 'white', border: 'none' }}
-              title="Re-download all corrupt mods from ModHub"
-            >
-              <Download size={14} /> Repair All ({corruptMods.filter(m => m.canAutoRepair).length})
-            </button>
           </>
         )}
 

@@ -428,7 +428,17 @@ export const useLocalModsStore = create((set, get) => ({
     set({ isCheckingCorrupt: true });
     try {
       const corrupt = await window.api.localMods.getCorruptMods();
-      set({ corruptMods: Array.isArray(corrupt) ? corrupt : [] });
+      const corruptList = Array.isArray(corrupt) ? corrupt : [];
+      set({ corruptMods: corruptList });
+
+      // Automatically repair in the background — no user action needed.
+      // Only repair mods that are on ModHub (canAutoRepair). Third-party
+      // corrupt files are skipped silently since we have nowhere to fetch them from.
+      const repairable = corruptList.filter(m => m.canAutoRepair);
+      if (repairable.length > 0) {
+        console.log(`[CORRUPT] Auto-repairing ${repairable.length} corrupt mod(s) in background`);
+        setTimeout(() => { get().repairAllCorruptMods(); }, 500);
+      }
     } catch (err) {
       console.error('[CORRUPT] checkCorruptMods error:', err);
       set({ corruptMods: [] });
@@ -462,11 +472,8 @@ export const useLocalModsStore = create((set, get) => ({
     const repairable = corruptMods.filter(m => m.canAutoRepair);
     if (repairable.length === 0) return;
 
-    import('./useToastStore').then(t => {
-      t.useToastStore.getState().info(`Queueing repair for ${repairable.length} corrupt mod${repairable.length > 1 ? 's' : ''}...`);
-    }).catch(() => {});
-
-    // Queue all repairs — they run through the existing download queue sequentially
+    // Queue all repairs silently — they run through the existing download queue
+    // and will appear in the Downloads panel if the user happens to look there.
     for (const mod of repairable) {
       await repairCorruptMod(mod.fileName, mod.modId, mod.allPaths);
     }
