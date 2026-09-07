@@ -25,6 +25,7 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 import ScrollRestorer from './components/common/ScrollRestorer';
 import AppUpdateModal from './components/common/AppUpdateModal';
 import ConsolidationPromptModal from './components/common/ConsolidationPromptModal';
+import AutoUpdatePromptModal from './components/common/AutoUpdatePromptModal';
 import { useModHubStore } from './store/useModHubStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useLocalModsStore } from './store/useLocalModsStore';
@@ -370,6 +371,7 @@ export default function App() {
         <WelcomeTour />
         <AppUpdateModal />
         <ConsolidationPromptModal />
+        <AutoUpdatePromptModal />
       </HashRouter>
     </ErrorBoundary>
   );

@@ -1,39 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { RefreshCw, Settings, Play, ShieldAlert, Check } from 'lucide-react';
+import { RefreshCw, ShieldAlert, Check } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useLocalModsStore } from '../../store/useLocalModsStore';
 import { useToastStore } from '../../store/useToastStore';
 
 const AutoUpdatePromptModal = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { modUpdateMode, setModUpdateMode } = useSettingsStore();
-
+  const { hasPromptedInitialUpdate, setHasPromptedInitialUpdate } = useSettingsStore();
+  const { mods, setModTags } = useLocalModsStore();
+  
   useEffect(() => {
-    // Only show if explicitly set to prompt (new installs or unconfigured users)
-    if (modUpdateMode === 'prompt') {
-      // Delay slightly so it doesn't collide violently with WelcomeTour or Consolidation modal
+    // Only show if we haven't prompted yet, and they actually have mods installed
+    if (!hasPromptedInitialUpdate && mods && mods.length > 0) {
       const timer = setTimeout(() => {
         setIsOpen(true);
       }, 1500);
       return () => clearTimeout(timer);
+    } else if (!hasPromptedInitialUpdate && mods && mods.length === 0) {
+      // If they have no mods, we don't need to ask them about updating existing mods
+      setHasPromptedInitialUpdate(true);
     } else {
       setIsOpen(false);
     }
-  }, [modUpdateMode]);
+  }, [hasPromptedInitialUpdate, mods, setHasPromptedInitialUpdate]);
 
-  const handleSelect = async (mode) => {
-    await setModUpdateMode(mode);
+  const handleSelect = async (shouldUpdate) => {
     setIsOpen(false);
     
-    useToastStore.getState().success(`Mod updates set to ${mode === 'auto' ? 'Automatic' : 'Manual'}`);
-
-    // If they chose auto, trigger the first check now
-    if (mode === 'auto') {
+    if (shouldUpdate) {
+      useToastStore.getState().success('Mods will be updated automatically.');
       setTimeout(() => {
         useLocalModsStore.getState().triggerAutoUpdateIfNeeded();
       }, 1000);
+    } else {
+      useToastStore.getState().success('Locking current mods to prevent automatic updates...');
+      // Loop through all current mods and add the lock-updates tag
+      for (const mod of mods) {
+        const currentTags = mod.tags || [];
+        if (!currentTags.includes('lock-updates')) {
+          await setModTags(mod.fileName, [...currentTags, 'lock-updates']);
+        }
+      }
+      useToastStore.getState().success('All current mods have been locked against updates.');
     }
+
+    await setHasPromptedInitialUpdate(true);
   };
 
   if (!isOpen) return null;
@@ -55,7 +67,7 @@ const AutoUpdatePromptModal = () => {
           <div>
             <h2 style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, margin: '0 0 4px 0' }}>Update your existing mods?</h2>
             <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: 'var(--fs-sm)' }}>
-              Do you want us to automatically update the mods currently sitting in your folder to their latest versions?
+              We detected out of date mods in your folder. Do you want them updated to their latest versions?
             </p>
           </div>
         </div>
@@ -65,7 +77,7 @@ const AutoUpdatePromptModal = () => {
           
           <button 
             className="btn-card"
-            onClick={() => handleSelect('auto')}
+            onClick={() => handleSelect(true)}
             style={{ 
               display: 'flex', alignItems: 'flex-start', gap: 16, 
               padding: 20, textAlign: 'left',
@@ -78,7 +90,7 @@ const AutoUpdatePromptModal = () => {
               <Check size={24} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Yes, keep my mods updated automatically</div>
+              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Yes, allow existing mods to update</div>
               <div style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.4 }}>
                 We will immediately check your current mods and download the newest versions from ModHub. (This will overwrite your existing files).
               </div>
@@ -87,7 +99,7 @@ const AutoUpdatePromptModal = () => {
 
           <button 
             className="btn-card"
-            onClick={() => handleSelect('manual')}
+            onClick={() => handleSelect(false)}
             style={{ 
               display: 'flex', alignItems: 'flex-start', gap: 16, 
               padding: 20, textAlign: 'left',
@@ -100,18 +112,13 @@ const AutoUpdatePromptModal = () => {
               <ShieldAlert size={24} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>No, leave my mods exactly as they are</div>
+              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>No, block existing mods from updates</div>
               <div style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.4 }}>
-                Recommended if you have old savegames. We won't touch your existing files. You can manually choose which mods to update later.
+                Recommended if you have old savegames. We will lock all your current mods so they are never touched. Future downloads will still update normally.
               </div>
             </div>
           </button>
 
-        </div>
-
-        {/* Footer */}
-        <div style={{ background: 'var(--bg-tertiary)', padding: '16px 24px', borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center' }}>
-          You can change this anytime in Settings &gt; Library & Files.
         </div>
 
       </div>

@@ -20,7 +20,10 @@ export const useSettingsStore = create((set) => ({
   homeShowLatest: true,
   homeShowDownloaded: true,
   homeShowUpdates: true,
+  downloadSpeedLimit: 0,
   modUpdateMode: 'auto', // 'auto' or 'manual'
+  hasPromptedInitialUpdate: false,
+  discordRpc: true,
   lastUpdateCheck: 0,
   lastGlobalWarming: 0,
   conflictSensitivity: 'warn',
@@ -101,6 +104,7 @@ export const useSettingsStore = create((set) => ({
         homeShowDownloaded: settings.homeShowDownloaded !== 'false',
         homeShowUpdates: settings.homeShowUpdates !== 'false',
         modUpdateMode: settings.modUpdateMode || 'auto',
+        hasPromptedInitialUpdate: settings.hasPromptedInitialUpdate === 'true',
         lastUpdateCheck: parseInt(settings.lastUpdateCheck || '0'),
         lastGlobalWarming: parseInt(settings.lastGlobalWarming || '0'),
         conflictSensitivity: settings.conflictSensitivity || 'warn',
@@ -135,6 +139,11 @@ export const useSettingsStore = create((set) => ({
   setHasPromptedConsolidation: async (hasPromptedConsolidation) => {
     set({ hasPromptedConsolidation });
     if (window.api?.settings) await window.api.settings.set('hasPromptedConsolidation', String(hasPromptedConsolidation));
+  },
+
+  setHasPromptedInitialUpdate: async (hasPromptedInitialUpdate) => {
+    set({ hasPromptedInitialUpdate });
+    if (window.api?.settings) await window.api.settings.set('hasPromptedInitialUpdate', String(hasPromptedInitialUpdate));
   },
 
   setAutoDownloadMapDeps: async (autoDownloadMapDeps) => {
