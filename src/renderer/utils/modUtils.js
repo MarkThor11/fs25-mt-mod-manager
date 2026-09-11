@@ -147,7 +147,7 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
  * @param {Array} allMods - The list of all installed mods.
  * @returns {Object} - { installed: Set(names), missing: Set(names) }
  */
-export const resolveRecursiveDependencies = (targetModName, allMods, sessionInstalled = {}, resolvedMetadata = {}) => {
+export const resolveRecursiveDependencies = (targetModOrName, allMods, sessionInstalled = {}, resolvedMetadata = {}) => {
   const installed = new Set();
   const missing = new Set();
   const processed = new Set();
@@ -161,16 +161,24 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
   const indexByName = new Map();
   const subfolderModsMap = new Map();
 
+  const addToIndex = (indexMap, key, mod) => {
+    if (!key) return;
+    const existing = indexMap.get(key);
+    // Prioritize ModHub mods over local third-party mods when names collide
+    if (existing && existing.modId && !mod.modId) return;
+    indexMap.set(key, mod);
+  };
+
   for (let i = 0; i < allMods.length; i++) {
     const m = allMods[i];
     if (!m) continue;
     if (m.modId) indexById.set(String(m.modId).replace(/^0+/, ''), m);
-    if (m.modName) indexByName.set(m.modName.toLowerCase(), m);
+    if (m.modName) addToIndex(indexByName, m.modName.toLowerCase(), m);
     if (m.fileName) {
       const cleanFile = m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
-      indexByName.set(cleanFile, m);
+      addToIndex(indexByName, cleanFile, m);
     }
-    if (m.title) indexByName.set(m.title.toLowerCase(), m);
+    if (m.title) addToIndex(indexByName, m.title.toLowerCase(), m);
 
     if (m.folder && m.folder.toLowerCase() !== 'mods' && m.folder.toLowerCase() !== '') {
       const fLow = m.folder.toLowerCase();
@@ -180,8 +188,18 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
   }
 
   let mapSubfolderMods = [];
-  if (targetModName) {
-    const targetMod = indexByName.get(targetModName.toLowerCase());
+  let targetMod = null;
+  let targetModNameForResolve = '';
+
+  if (targetModOrName) {
+    if (typeof targetModOrName === 'string') {
+        targetMod = indexByName.get(targetModOrName.toLowerCase());
+        targetModNameForResolve = targetModOrName;
+    } else if (typeof targetModOrName === 'object') {
+        targetMod = targetModOrName;
+        targetModNameForResolve = targetMod.modName || targetMod.fileName || targetMod.title;
+    }
+
     if (targetMod && targetMod.folder && targetMod.folder.toLowerCase() !== 'mods' && targetMod.folder.toLowerCase() !== '') {
       const folderLower = targetMod.folder.toLowerCase();
       mapSubfolderMods = subfolderModsMap.get(folderLower) || [];
@@ -223,22 +241,28 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
     if (processed.has(nameLower)) return;
     processed.add(nameLower);
 
-    // O(1) Instant Lookup Strategy
-    let match = (depId ? indexById.get(depId) : null) || indexByName.get(nameLower);
+    // 1. Mod ID lookup (O(1) and strictly exact)
+    let match = depId ? indexById.get(depId) : null;
     
-    if (!match) {
-      match = allMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, false));
-    }
-
-    // Check if installed in map subfolder
+    // 2. Subfolder Priority: If we are resolving dependencies for a map, check its subfolder first
     if (!match && mapSubfolderMods.length > 0) {
       match = mapSubfolderMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, false));
+    }
+
+    // 3. Global Name Lookup (O(1) but prone to generic name collisions)
+    if (!match) {
+      match = indexByName.get(nameLower);
+    }
+    
+    // 4. Global Loose Search (O(N))
+    if (!match) {
+      match = allMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, false));
     }
     
     const isSessionInstalledByName = Boolean(nameLower) && Object.values(sessionInstalled).some(val => val && val.toLowerCase() === nameLower);
 
     if (match) {
-      if (match.modName && match.modName.toLowerCase() !== targetModName.toLowerCase()) {
+      if (match.modName && match.modName.toLowerCase() !== targetModNameForResolve.toLowerCase()) {
         installed.add(match.modName);
       }
       if (match.dependencies) {
@@ -251,7 +275,7 @@ export const resolveRecursiveDependencies = (targetModName, allMods, sessionInst
     }
   };
 
-  resolve(targetModName);
+  resolve(targetModNameForResolve);
   return { installed: Array.from(installed), missing: Array.from(missing) };
 };
 

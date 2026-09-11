@@ -1365,6 +1365,65 @@ function detectConflicts(mods) {
 }
 
 /**
+ * Perform a deep scan inside the mod zip files (specifically their .lua files) 
+ * to find code-level conflicts where multiple mods overwrite or append to the 
+ * exact same base game functions (e.g. Utils.overwrittenFunction).
+ */
+async function deepScanLuaConflicts(modsToScan) {
+	// regex matches: Utils.overwrittenFunction( Vehicle, "update", ... )
+	const regex = /Utils\.(overwritten|appended|prepended)Function\(\s*([^,]+),\s*["']([^"']+)["']/g;
+	
+	const overrides = new Map();
+
+	for (const mod of modsToScan) {
+		if (!mod.filePath || !nodeFs.existsSync(mod.filePath)) continue;
+		
+		try {
+			const zip = new AdmZip(mod.filePath);
+			const entries = zip.getEntries();
+			for (const entry of entries) {
+				if (entry.entryName.toLowerCase().endsWith('.lua')) {
+					const content = entry.getData().toString('utf8');
+					let match;
+					while ((match = regex.exec(content)) !== null) {
+						const type = match[1]; // overwritten, appended, prepended
+						const baseObj = match[2].trim();
+						const funcName = match[3].trim();
+						const target = `${baseObj}.${funcName}`;
+						
+						if (!overrides.has(target)) overrides.set(target, []);
+						const list = overrides.get(target);
+						
+						if (!list.find(x => x.modName === mod.modName)) {
+							list.push({
+								modName: mod.modName,
+								title: mod.title,
+								file: entry.entryName,
+								type
+							});
+						}
+					}
+				}
+			}
+		} catch (err) {
+			debugLog(`deepScanLuaConflicts failed to parse zip: ${mod.filePath} - ${err.message}`);
+		}
+	}
+
+	const deepConflicts = [];
+	overrides.forEach((involvedMods, target) => {
+		if (involvedMods.length > 1) {
+			deepConflicts.push({
+				target,
+				mods: involvedMods
+			});
+		}
+	});
+
+	return deepConflicts;
+}
+
+/**
 	* Internal function for the queue worker to run.
 	*/
 async function runInstallTask(task) {
@@ -4160,6 +4219,7 @@ module.exports = {
 	detectPath,
 	debugProbePath,
 	detectAllModsPaths,
+	deepScanLuaConflicts,
 	getPersonalFolderPath: pathProvider.getPersonalFolderPath,
 	pruneBackups,
 	createFolder,

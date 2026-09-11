@@ -814,9 +814,13 @@ ipcMain.handle('localMods:flattenSubfolders', async () => {
   try {
     return await modManager.flattenSubfolders();
   } catch (err) {
-    console.error('Flatten subfolders failed:', err);
+    console.error('Failed to flatten subfolders:', err);
     return { success: false, error: err.message };
   }
+});
+
+ipcMain.handle('localMods:deepScanLuaConflicts', async (_, modsToScan) => {
+    return await modManager.deepScanLuaConflicts(modsToScan);
 });
 
 ipcMain.handle('localMods:checkUpdates', async () => {
@@ -1049,6 +1053,9 @@ ipcMain.handle('savegames:resetPlayerSpawn', async (_, savePath) => {
   return savegameManager.resetPlayerSpawn(savePath);
 });
 
+ipcMain.handle('savegames:getMapHomeCoordinates', async (_, savePath) => {
+  return await savegames.getMapHomeCoordinates(savePath);
+});
 ipcMain.handle('savegames:getPlayerPosition', async (_, savePath) => {
   return savegameManager.getPlayerPosition(savePath);
 });

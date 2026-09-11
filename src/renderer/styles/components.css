@@ -204,6 +204,8 @@
   border-radius: var(--radius-full);
   min-width: 20px;
   text-align: center;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .sidebar__launch-section {

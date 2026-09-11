@@ -287,6 +287,7 @@ function ModAuditModal({ save, allInstalledMods, onClose, onRefresh }) {
  * Savegame Editor Modal Component
  */
 function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
+  const activeModalConflicts = new Map();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const [modSearchQuery, setModSearchQuery] = useState('');
@@ -444,7 +445,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={onClose}>
-      <div className="modal animate-zoom-in" style={{ width: 1300, maxWidth: 'none', maxHeight: '90vh', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+      <div className="modal animate-zoom-in" style={{ width: '95vw', maxWidth: 1800, height: '95vh', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={{ background: 'var(--bg-tertiary)', padding: '24px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -463,19 +464,19 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
 
         {/* Tab Switcher */}
         <div className="tab-switcher" style={{ padding: '0 24px', borderBottom: '1px solid var(--border)' }}>
-          <button className={`tab-btn ${activeTab === 'general' ? 'tab-btn--active' : ''}`} onClick={() => setActiveTab('general')}>
+          <button className={`tab-btn ${activeTab === 'general' ? 'tab-btn--active' : ''}`} title="Basic savegame settings and economy." title="Basic savegame settings and economy." title="Basic savegame settings and economy." onClick={() => setActiveTab('general')}>
             <Globe size={14} /> General
           </button>
-          <button className={`tab-btn ${activeTab === 'realism' ? 'tab-btn--active' : ''}`} onClick={() => setActiveTab('realism')}>
+          <button className={`tab-btn ${activeTab === 'realism' ? 'tab-btn--active' : ''}`} title="Simulation realism and environment options." title="Simulation realism and environment options." title="Simulation realism and environment options." onClick={() => setActiveTab('realism')}>
             <Info size={14} /> Realism & Units
           </button>
-          <button className={`tab-btn ${activeTab === 'controls' ? 'tab-btn--active' : ''}`} onClick={() => setActiveTab('controls')}>
+          <button className={`tab-btn ${activeTab === 'controls' ? 'tab-btn--active' : ''}`} title="Player and camera controls." title="Player and camera controls." title="Player and camera controls." onClick={() => setActiveTab('controls')}>
             <Gamepad2 size={14} /> Controls
           </button>
-          <button className={`tab-btn ${activeTab === 'spawn' ? 'tab-btn--active' : ''}`} onClick={() => setActiveTab('spawn')}>
+          <button className={`tab-btn ${activeTab === 'spawn' ? 'tab-btn--active' : ''}`} title="Choose spawn location." title="Choose spawn location." title="Choose spawn location." onClick={() => setActiveTab('spawn')}>
             <MapPin size={14} /> Spawn & Persistence
           </button>
-          <button className={`tab-btn ${activeTab === 'mods' ? 'tab-btn--active' : ''}`} onClick={() => setActiveTab('mods')}>
+          <button className={`tab-btn ${activeTab === 'mods' ? 'tab-btn--active' : ''}`} title="Choose exactly which mods are active for this save." title="Choose exactly which mods are active for this save." title="Choose exactly which mods are active for this save." onClick={() => setActiveTab('mods')}>
             <Package size={14} /> Selective Mods
           </button>
         </div>
@@ -489,14 +490,14 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                 <h3 className="section-title"><MapIcon size={16} /> Base Information</h3>
                 <div className="settings-grid">
                   <div className="setting" style={{ gridColumn: 'span 2' }}>
-                    <label>Savegame Name (Farm Name)</label>
+                    <label title="The name of your farm as it appears in multiplayer and menus.">Savegame Name (Farm Name)</label>
                     <div className="input-with-icon">
                       <Edit3 size={14} />
                       <input type="text" defaultValue={save.farmName} onBlur={(e) => handleUpdate('career', 'savegameName', e.target.value)} />
                     </div>
                   </div>
                   <div className="setting">
-                    <label>Player Name</label>
+                    <label title="The main character name in this savegame.">Player Name</label>
                     <div className="input-with-icon">
                       <input 
                         type="text" 
@@ -507,14 +508,14 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                     </div>
                   </div>
                   <div className="setting">
-                      <label>Map</label>
+                      <label title="The map loaded for this savegame. Note: Changing this requires replacing your map files.">Map</label>
                       <div className="input-with-icon">
                         <MapPin size={14} />
                         <input type="text" value={getLocalizedString(save.mapTitle, 'Unknown Map')} disabled style={{ opacity: 0.6 }} />
                       </div>
                   </div>
                   <div className="setting">
-                    <label>Loan</label>
+                    <label title="The current bank loan amount.">Loan</label>
                     <div className="input-with-icon">
                       <Coins size={14} />
                       <input type="number" defaultValue={save.initialLoan || 0} onBlur={(e) => {
@@ -524,7 +525,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                     </div>
                   </div>
                   <div className="setting">
-                    <label>Money</label>
+                    <label title="The current bank balance.">Money</label>
                     <div className="input-with-icon">
                       <Coins size={14} />
                       <input type="number" defaultValue={Math.floor(save.money)} onBlur={(e) => {
@@ -534,7 +535,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                     </div>
                   </div>
                   <div className="setting">
-                      <label>Economic Difficulty</label>
+                      <label title="Affects crop selling prices and contract payouts.">Economic Difficulty</label>
                       <div className="input-with-icon">
                         <TrendingUp size={14} />
                         <select defaultValue={save.economicDifficulty || 'NORMAL'} onChange={(e) => handleUpdate('career', 'economicDifficulty', e.target.value)}>
@@ -545,7 +546,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                       </div>
                   </div>
                   <div className="setting">
-                    <label>Auto-Save Interval</label>
+                    <label title="How frequently the game automatically saves.">Auto-Save Interval</label>
                     <div className="input-with-icon">
                       <Shield size={14} />
                       <select defaultValue={save.autoSaveInterval || "15.000000"} onChange={(e) => handleUpdate('career', 'autoSaveInterval', e.target.value)}>
@@ -584,7 +585,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                             const res = await window.api.savegames.updateFleetMaintenance({ savePath: save.path, type: 'dirt', value: fleetCleanPct / 100 });
                             if (res.success) useToastStore.getState().success('Fleet dirt levels updated!');
                          }}
-                       >Apply</button>
+                        title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item.">Apply</button>
                     </div>
 
                    {/* Repair Fleet */}
@@ -606,7 +607,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                             const res = await window.api.savegames.updateFleetMaintenance({ savePath: save.path, type: 'repair', value: fleetRepairPct / 100 });
                             if (res.success) useToastStore.getState().success('Fleet mechanical condition updated!');
                          }}
-                       >Apply</button>
+                        title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item.">Apply</button>
                     </div>
 
                    {/* Paint Repair */}
@@ -628,7 +629,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                             const res = await window.api.savegames.updateFleetMaintenance({ savePath: save.path, type: 'paint', value: fleetPaintPct / 100 });
                             if (res.success) useToastStore.getState().success('Fleet paint condition updated!');
                          }}
-                       >Apply</button>
+                        title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item.">Apply</button>
                     </div>
                 </div>
 
@@ -636,7 +637,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                   <h3 className="section-title"><Clock size={16} /> Environment & Time</h3>
                   <div className="settings-grid">
                     <div className="setting">
-                      <label>TIME SCALE (X)</label>
+                      <label title="The speed at which in-game time passes.">TIME SCALE (X)</label>
                       <div className="input-with-icon">
                         <FastForward size={14} />
                         <select 
@@ -654,7 +655,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                       </div>
                     </div>
                     <div className="setting">
-                      <label>TIME OF DAY</label>
+                      <label title="Current time of day in the savegame.">TIME OF DAY</label>
                       <div className="input-with-icon">
                         <Clock size={14} />
                         <input 
@@ -666,7 +667,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                       </div>
                     </div>
                     <div className="setting">
-                      <label>MONTH / SEASON</label>
+                      <label title="Current month/season in the savegame.">MONTH / SEASON</label>
                       <div className="input-with-icon">
                         <Calendar size={14} />
                         <select defaultValue={save.currentPeriod || 6} onChange={(e) => handleUpdate('environment', 'currentPeriod', e.target.value)}>
@@ -686,7 +687,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                       </div>
                     </div>
                     <div className="setting">
-                      <label>DAYS PER MONTH</label>
+                      <label title="How many in-game days are in a month.">DAYS PER MONTH</label>
                       <div className="input-with-icon">
                         <CalendarDays size={14} />
                         <input 
@@ -700,7 +701,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                        </div>
                      </div>
                     <div className="setting">
-                      <label>CURRENT WEATHER</label>
+                      <label title="Weather currently playing out in the savegame.">CURRENT WEATHER</label>
                       <div className="input-with-icon">
                         <Cloud size={14} />
                         <select defaultValue={save.weather || 'SUN'} onChange={(e) => handleUpdate('environment', 'weather', e.target.value)}>
@@ -722,19 +723,19 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                 <h3 className="section-title"><AlertCircle size={16} /> Gameplay Realism</h3>
                 <div className="settings-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
-                    <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.trafficEnabled !== false} onChange={e => handleUpdate('career', 'trafficEnabled', e.target.checked)} /><span>Traffic Enabled</span></label>
-                    <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.fruitDestruction !== false} onChange={e => handleUpdate('career', 'fruitDestruction', e.target.checked)} /><span>Crop Destruction</span></label>
-                    <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.plowingRequiredEnabled} onChange={e => handleUpdate('career', 'plowingRequiredEnabled', e.target.checked)} /><span>Periodic Plowing</span></label>
-                    <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.limeRequired !== false} onChange={e => handleUpdate('career', 'limeRequired', e.target.checked)} /><span>Lime Required</span></label>
-                    <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.stonesEnabled !== false} onChange={e => handleUpdate('career', 'stonesEnabled', e.target.checked)} /><span>Field Stones</span></label>
-                    <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.weedsEnabled !== false} onChange={e => handleUpdate('career', 'weedsEnabled', e.target.checked)} /><span>Weeds Enabled</span></label>
+                    <label className="checkbox-setting" title="Turns AI cars on the road on or off."><input type="checkbox" defaultChecked={save.trafficEnabled !== false} onChange={e => handleUpdate('career', 'trafficEnabled', e.target.checked)} /><span>Traffic Enabled</span></label>
+                    <label className="checkbox-setting" title="Vehicles destroy crops when driving over them."><input type="checkbox" defaultChecked={save.fruitDestruction !== false} onChange={e => handleUpdate('career', 'fruitDestruction', e.target.checked)} /><span>Crop Destruction</span></label>
+                    <label className="checkbox-setting" title="Fields require plowing after certain crops."><input type="checkbox" defaultChecked={save.plowingRequiredEnabled} onChange={e => handleUpdate('career', 'plowingRequiredEnabled', e.target.checked)} /><span>Periodic Plowing</span></label>
+                    <label className="checkbox-setting" title="Fields need lime to maintain maximum yield."><input type="checkbox" defaultChecked={save.limeRequired !== false} onChange={e => handleUpdate('career', 'limeRequired', e.target.checked)} /><span>Lime Required</span></label>
+                    <label className="checkbox-setting" title="Stones will surface during cultivation."><input type="checkbox" defaultChecked={save.stonesEnabled !== false} onChange={e => handleUpdate('career', 'stonesEnabled', e.target.checked)} /><span>Field Stones</span></label>
+                    <label className="checkbox-setting" title="Weeds will grow and reduce crop yield."><input type="checkbox" defaultChecked={save.weedsEnabled !== false} onChange={e => handleUpdate('career', 'weedsEnabled', e.target.checked)} /><span>Weeds Enabled</span></label>
 
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
-                    <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.isSnowEnabled !== false} onChange={e => handleUpdate('career', 'isSnowEnabled', e.target.checked)} /><span>Snow Enabled</span></label>
-                    <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.stopAndGoBraking !== false} onChange={e => handleUpdate('career', 'stopAndGoBraking', e.target.checked)} /><span>Stop & Go Braking</span></label>
-                    <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.trailerFillLimit} onChange={e => handleUpdate('career', 'trailerFillLimit', e.target.checked)} /><span>Trailer Fill Limit</span></label>
-                    <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.automaticMotorStartEnabled !== false} onChange={e => handleUpdate('career', 'automaticMotorStartEnabled', e.target.checked)} /><span>Auto Motor Start</span></label>
+                    <label className="checkbox-setting" title="Snow accumulates during winter."><input type="checkbox" defaultChecked={save.isSnowEnabled !== false} onChange={e => handleUpdate('career', 'isSnowEnabled', e.target.checked)} /><span>Snow Enabled</span></label>
+                    <label className="checkbox-setting" title="Pushing reverse once stops the tractor, twice reverses."><input type="checkbox" defaultChecked={save.stopAndGoBraking !== false} onChange={e => handleUpdate('career', 'stopAndGoBraking', e.target.checked)} /><span>Stop & Go Braking</span></label>
+                    <label className="checkbox-setting" title="Trailers respect their weight capacity limits."><input type="checkbox" defaultChecked={save.trailerFillLimit} onChange={e => handleUpdate('career', 'trailerFillLimit', e.target.checked)} /><span>Trailer Fill Limit</span></label>
+                    <label className="checkbox-setting" title="Vehicles start automatically when you enter."><input type="checkbox" defaultChecked={save.automaticMotorStartEnabled !== false} onChange={e => handleUpdate('career', 'automaticMotorStartEnabled', e.target.checked)} /><span>Auto Motor Start</span></label>
                     <label className="checkbox-setting">
                       <input 
                         type="checkbox" 
@@ -747,7 +748,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                   </div>
 
                   <div className="setting" style={{ marginTop: 8 }}>
-                    <label>Gear Shift Mode</label>
+                    <label title="Manual or automatic transmission mode.">Gear Shift Mode</label>
                     <div className="input-with-icon">
                       <Settings2 size={14} />
                       <select defaultValue={save.gearShiftMode || 0} onChange={e => handleUpdate('career', 'gearShiftMode', e.target.value)}>
@@ -758,7 +759,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                     </div>
                   </div>
                   <div className="setting" style={{ marginTop: 8 }}>
-                    <label>Fuel Usage</label>
+                    <label title="How quickly vehicles consume fuel.">Fuel Usage</label>
                     <div className="input-with-icon">
                       <Zap size={14} />
                       <select defaultValue={save.fuelUsage || 2} onChange={e => handleUpdate('career', 'fuelUsage', e.target.value)}>
@@ -775,28 +776,28 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                 <h3 className="section-title"><Users size={16} /> Helper & AI Options</h3>
                 <div className="settings-grid">
                   <div className="setting">
-                    <label>Buy Fuel</label>
+                    <label title="Whether helpers automatically buy fuel when empty.">Buy Fuel</label>
                     <select defaultValue={save.helperBuyFuel !== false ? 'true' : 'false'} onChange={e => handleUpdate('career', 'helperBuyFuel', e.target.value)}>
                       <option value="true">Buy</option>
                       <option value="false">Off</option>
                     </select>
                   </div>
                   <div className="setting">
-                    <label>Buy Seeds</label>
+                    <label title="Whether helpers automatically buy seeds when empty.">Buy Seeds</label>
                     <select defaultValue={save.helperBuySeeds !== false ? 'true' : 'false'} onChange={e => handleUpdate('career', 'helperBuySeeds', e.target.value)}>
                       <option value="true">Buy</option>
                       <option value="false">Off</option>
                     </select>
                   </div>
                   <div className="setting">
-                    <label>Buy Fertilizer</label>
+                    <label title="Whether helpers automatically buy fertilizer when empty.">Buy Fertilizer</label>
                     <select defaultValue={save.helperBuyFertilizer !== false ? 'true' : 'false'} onChange={e => handleUpdate('career', 'helperBuyFertilizer', e.target.value)}>
                       <option value="true">Buy</option>
                       <option value="false">Off</option>
                     </select>
                   </div>
                   <div className="setting">
-                    <label>Slurry Source</label>
+                    <label title="Where AI workers get slurry from.">Slurry Source</label>
                     <select defaultValue={save.helperSlurrySource || 2} onChange={e => handleUpdate('career', 'helperSlurrySource', e.target.value)}>
                       <option value="1">Storage</option>
                       <option value="2">Buy</option>
@@ -809,7 +810,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                 <h3 className="section-title"><Ruler size={16} /> Units & Environment</h3>
                 <div className="settings-grid">
                   <div className="setting">
-                    <label>Dirt Interval</label>
+                    <label title="How fast vehicles get dirty.">Dirt Interval</label>
                     <select defaultValue={save.dirtInterval || 3} onChange={e => handleUpdate('career', 'dirtInterval', e.target.value)}>
                       <option value="1">Slow</option>
                       <option value="3">Normal</option>
@@ -818,7 +819,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                     </select>
                   </div>
                   <div className="setting">
-                    <label>Money Unit</label>
+                    <label title="Currency displayed in-game.">Money Unit</label>
                     <select defaultValue={save.moneyUnit || 0} onChange={e => handleUpdate('career', 'moneyUnit', e.target.value)}>
                       <option value="0">Euro (€)</option>
                       <option value="1">Dollar ($)</option>
@@ -826,14 +827,14 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                     </select>
                   </div>
                   <div className="setting">
-                    <label>Measuring Unit</label>
+                    <label title="Unit used for distances and capacities.">Measuring Unit</label>
                     <select defaultValue={save.useMetric ? 'true' : 'false'} onChange={e => handleUpdate('career', 'useMetric', e.target.value)}>
                       <option value="true">Metric (m/km)</option>
                       <option value="false">Imperial (ft/mi)</option>
                     </select>
                   </div>
                   <div className="setting">
-                    <label>Temperature</label>
+                    <label title="Unit for temperature (Celsius/Fahrenheit).">Temperature</label>
                     <select defaultValue={save.temperatureUnit || 0} onChange={e => handleUpdate('career', 'temperatureUnit', e.target.value)}>
                       <option value="0">Celsius</option>
                       <option value="1">Fahrenheit</option>
@@ -855,7 +856,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                     <span>Radio Enabled</span>
                   </label>
                   <div className="setting">
-                    <label>Master Volume ({Math.round((save.masterVolume || 1.0) * 100)}%)</label>
+                    <label title="Overall volume level for the game.">Master Volume ({Math.round((save.masterVolume || 1.0) * 100)}%)</label>
                     <input type="range" min="0" max="1" step="0.05" defaultValue={save.masterVolume || 1.0} onBlur={e => handleUpdate('career', 'masterVolume', e.target.value)} />
                   </div>
                 </div>
@@ -864,12 +865,12 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
               <div className="settings-panel">
                 <h3 className="section-title"><Video size={16} /> Camera & Visuals</h3>
                 <div className="settings-grid">
-                  <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.resetVehicleCamera} onChange={e => handleUpdate('career', 'resetVehicleCamera', e.target.checked)} /><span>Reset Vehicle Camera</span></label>
-                  <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.indoorCameraSuspension} onChange={e => handleUpdate('career', 'indoorCameraSuspension', e.target.checked)} /><span>Indoor Camera Suspension</span></label>
-                  <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.dynamicVehicleCamera} onChange={e => handleUpdate('career', 'dynamicVehicleCamera', e.target.checked)} /><span>Dynamic Vehicle Camera</span></label>
-                  <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.invertYLook} onChange={e => handleUpdate('career', 'invertYLook', e.target.checked)} /><span>Invert Y-Look</span></label>
-                  <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.showHints !== false} onChange={e => handleUpdate('career', 'showHints', e.target.checked)} /><span>Show Gameplay Hints</span></label>
-                  <label className="checkbox-setting"><input type="checkbox" defaultChecked={save.showHelpIcons !== false} onChange={e => handleUpdate('career', 'showHelpIcons', e.target.checked)} /><span>Show Help Icons</span></label>
+                  <label className="checkbox-setting" title="Camera snaps back to center when you enter."><input type="checkbox" defaultChecked={save.resetVehicleCamera} onChange={e => handleUpdate('career', 'resetVehicleCamera', e.target.checked)} /><span>Reset Vehicle Camera</span></label>
+                  <label className="checkbox-setting" title="Camera bounces with the vehicle seat."><input type="checkbox" defaultChecked={save.indoorCameraSuspension} onChange={e => handleUpdate('career', 'indoorCameraSuspension', e.target.checked)} /><span>Indoor Camera Suspension</span></label>
+                  <label className="checkbox-setting" title="Camera FOV adjusts based on speed."><input type="checkbox" defaultChecked={save.dynamicVehicleCamera} onChange={e => handleUpdate('career', 'dynamicVehicleCamera', e.target.checked)} /><span>Dynamic Vehicle Camera</span></label>
+                  <label className="checkbox-setting" title="Inverts mouse Y axis."><input type="checkbox" defaultChecked={save.invertYLook} onChange={e => handleUpdate('career', 'invertYLook', e.target.checked)} /><span>Invert Y-Look</span></label>
+                  <label className="checkbox-setting" title="Shows tutorial popups during gameplay."><input type="checkbox" defaultChecked={save.showHints !== false} onChange={e => handleUpdate('career', 'showHints', e.target.checked)} /><span>Show Gameplay Hints</span></label>
+                  <label className="checkbox-setting" title="Shows interactive icons at triggers."><input type="checkbox" defaultChecked={save.showHelpIcons !== false} onChange={e => handleUpdate('career', 'showHelpIcons', e.target.checked)} /><span>Show Help Icons</span></label>
                 </div>
               </div>
 
@@ -877,11 +878,11 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                 <h3 className="section-title"><Gamepad2 size={16} /> Input Controls</h3>
                 <div className="settings-grid">
                   <div className="setting">
-                    <label>Camera Sensitivity</label>
+                    <label title="Mouse and controller look sensitivity.">Camera Sensitivity</label>
                     <input type="range" min="0.5" max="2.0" step="0.1" defaultValue={save.cameraSensitivity || 1.0} onBlur={e => handleUpdate('career', 'cameraSensitivity', e.target.value)} />
                   </div>
                   <div className="setting">
-                    <label>Input Help Mode</label>
+                    <label title="Keyboard or Controller hints displayed.">Input Help Mode</label>
                     <select defaultValue={save.inputHelpMode || 0} onChange={e => handleUpdate('career', 'inputHelpMode', e.target.value)}>
                       <option value="0">Auto</option>
                       <option value="1">Keyboard</option>
@@ -957,11 +958,11 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
               <div className="settings-panel" style={{ padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <MapPin size={16} className="text-accent" />
-                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--text-primary)' }}>PLAYER TELEPORTATION</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--text-primary)' }} title="Move your character to specific coordinates.">PLAYER TELEPORTATION</div>
                 </div>
                 
                 <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 8, padding: '16px' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Current Saved Position</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }} title="Your current coordinates in this save.">Current Saved Position</div>
                   <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
                     {playerPos ? `${playerPos.x.toFixed(1)}, ${playerPos.y.toFixed(1)}, ${playerPos.z.toFixed(1)}` : 'Unknown or Not Saved'}
                   </div>
@@ -972,7 +973,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
               <div className="settings-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', flex: (isVehicleListOpen || selectedSpawnMode === 'vehicle') ? 1 : 'none', minHeight: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <MapIcon size={16} className="text-accent" />
-                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--text-primary)' }}>QUICK TELEPORT PRESETS</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--text-primary)' }} title="Jump to common map locations.">QUICK TELEPORT PRESETS</div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: (isVehicleListOpen || selectedSpawnMode === 'vehicle') ? 16 : 0 }}>
@@ -1275,7 +1276,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                 <div style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', background: 'var(--bg-tertiary)', borderRadius: 100, border: '1px solid var(--border)' }}>
                   {selectedMods.size} Selected
                 </div>
-                <label 
+                                      <label title="Filter the list to only show mods currently used in this savegame."
                   style={{ 
                     display: 'inline-flex', 
                     alignItems: 'center', 
@@ -1360,6 +1361,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                       setIsDeselectingUnused(false);
                     }
                   }}
+                title="Uncheck any mods that are not currently being used in this savegame."
                 >
                   <Trash2 size={13} style={{ color: 'var(--danger, #ef4444)' }} /> DESELECT UNUSED MODS
                 </button>
@@ -1396,6 +1398,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                       useToastStore.getState().info("All Must-Haves already present or not installed.");
                     }
                   }}
+                title="Automatically select all mods marked as Must-Have in your profiles."
                 >
                   <Pin size={12} fill="currentColor" /> ADOPT MUST-HAVES
                 </button>
@@ -1429,49 +1432,40 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                       </div>
                       
                       {isExpanded && (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 6, padding: '8px 4px' }}>
-                          {items.map(m => (
-                            <div 
-                              key={m.modName} 
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, padding: '8px 4px' }}>
+                          {items.map(m => {
+                            const conflictData = activeModalConflicts && activeModalConflicts.get(m.modName);
+                            const isConflicting = !!conflictData;
+                            const isMustHave = useModHubStore.getState().favoriteMods.find(f => (f.modId && m.modId && String(f.modId) === String(m.modId)) || (f.fileName && m.fileName && f.fileName === m.fileName))?.isMustHave;
+                            return (
+                            <div
+                              key={m.modName}
                               onClick={() => toggleMod(m.modName)}
-                              style={{ 
-                                padding: 8, 
-                                borderRadius: 8, 
-                                background: selectedMods.has(m.modName) ? 'var(--accent-dim)' : 'var(--bg-card)',
-                                border: `1px solid ${selectedMods.has(m.modName) ? 'var(--accent)' : 'var(--border-light)'}`,
-                                cursor: 'pointer',
-                                fontSize: 11,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 8,
-                                transition: 'all 0.1s'
-                              }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px', fontSize: 14, cursor: 'pointer', borderRadius: 10, background: isConflicting ? 'rgba(255, 100, 0, 0.05)' : (selectedMods.has(m.modName) ? 'var(--accent-dim)' : 'var(--bg-card)'), border: `2px solid ${isConflicting ? 'rgba(255, 100, 0, 0.6)' : (selectedMods.has(m.modName) ? 'var(--accent)' : 'var(--border-light)')}`, transition: 'all 0.15s' }} className="hover-bg-subtle"
                             >
-                              <div style={{ width: 14, height: 14, border: '1px solid var(--border)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', background: selectedMods.has(m.modName) ? 'var(--accent)' : 'transparent' }}>
-                                {selectedMods.has(m.modName) && <Check size={10} color="white" />}
+                              <div style={{ flexShrink: 0 }}>
+                                <MiniModIcon mod={m} size={64} />
                               </div>
-                               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: selectedMods.has(m.modName) ? 'white' : 'inherit', flex: 1 }}>
-                                {m.title || m.modName}
-                              </span>
-                              {usedMods.has(m.modName.toLowerCase()) && (
-                                <span style={{ 
-                                  fontSize: 9, 
-                                  fontWeight: 800, 
-                                  color: 'var(--accent)', 
-                                  background: 'rgba(var(--accent-rgb), 0.18)', 
-                                  padding: '1px 5px', 
-                                  borderRadius: 4, 
-                                  letterSpacing: 0.5,
-                                  whiteSpace: 'nowrap'
-                                }}>
-                                  IN USE
-                                </span>
-                              )}
-                              {useModHubStore.getState().favoriteMods.find(f => (f.modId && m.modId && String(f.modId) === String(m.modId)) || (f.fileName && m.fileName && f.fileName === m.fileName))?.isMustHave && (
-                                <Pin size={10} fill="var(--accent)" style={{ opacity: 0.8 }} />
-                              )}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+                                    <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title || m.modName}</span>
+                                    <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'} • v{m.version}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                    {isMustHave && <Pin size={14} fill="var(--accent)" style={{ opacity: 0.8 }} />}
+                                    {usedMods.has(m.modName.toLowerCase()) && (
+                                      <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent)', background: 'rgba(var(--accent-rgb), 0.18)', padding: '2px 6px', borderRadius: 4, letterSpacing: 0.5 }}>IN USE</span>
+                                    )}
+                                    {isConflicting && (
+                                      <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictInfoMod(m); }} style={{ cursor: 'pointer', color: 'orange', padding: '2px 4px', display: 'flex' }} title="Show conflict details">
+                                        <ShieldAlert size={16} />
+                                      </div>
+                                    )}
+                                  </div>
+                              </div>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -1789,6 +1783,7 @@ export default function SavegamesPage() {
   const [includeMustHaves, setIncludeMustHaves] = useState(true);
   const [localMissingDeps, setLocalMissingDeps] = useState([]);
   
+    const activeModalConflicts = new Map();
   // Savegame Editor state
   const [showEditor, setShowEditor] = useState(null); // Save object
   const [showAudit, setShowAudit] = useState(null); // Save object
@@ -2969,27 +2964,57 @@ export default function SavegamesPage() {
                                             <div style={{ fontSize: 10, fontWeight: 900, color: 'var(--accent)', letterSpacing: 1, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 8 }}>
                                               <Pin size={10} fill="var(--accent)" /> PINNED MUST-HAVES
                                             </div>
-                                            {mustHaveMods.map(m => (
-                                              <label key={m.modName} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', fontSize: 14, cursor: 'default', borderRadius: 8, background: 'rgba(var(--accent-rgb), 0.1)', opacity: 0.8, marginBottom: 4 }} title={`Version: ${m.version}`}>
-                                                <input type="checkbox" checked={true} readOnly style={{ width: 18, height: 18, accentColor: 'var(--accent)' }} />
-                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                    <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{m.title}</span>
-                                                    <span style={{ fontSize: 11, opacity: 0.6 }}>{m.author} • v{m.version}</span>
+                                            {mustHaveMods.map(m => {
+                                              const conflictData = activeModalConflicts && activeModalConflicts.get(m.modName);
+                                              const isConflicting = !!conflictData;
+                                              return (
+                                              <div 
+                                                key={m.modName} 
+                                                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px', fontSize: 14, cursor: 'default', borderRadius: 10, background: isConflicting ? 'rgba(255, 100, 0, 0.05)' : 'rgba(var(--accent-rgb), 0.1)', border: `2px solid ${isConflicting ? 'rgba(255, 100, 0, 0.5)' : 'var(--accent)'}`, opacity: isConflicting ? 1 : 0.8, marginBottom: 4 }} 
+                                                title={`Version: ${m.version}`}
+                                              >
+                                                <div style={{ flexShrink: 0 }}>
+                                                  <MiniModIcon mod={m} size={64} />
                                                 </div>
-                                              </label>
-                                            ))}
+                                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                                                    <span style={{ color: isConflicting ? 'orange' : 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</span>
+                                                    <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author} • v{m.version}</span>
+                                                </div>
+                                                {isConflicting && (
+                                                  <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictInfoMod(m); }} style={{ cursor: 'pointer', color: 'orange', padding: '2px 4px', display: 'flex' }} title="Show conflict details">
+                                                    <ShieldAlert size={16} />
+                                                  </div>
+                                                )}
+                                              </div>
+                                              );
+                                            })}
                                           </div>
                                         )}
                                         
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                                             {(includeMustHaves ? otherMods : deduplicate(allValidMods)).map(m => (
-                                            <label key={m.modName} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', fontSize: 14, cursor: 'pointer', borderRadius: 8, background: modalSelectedMods.has(m.modName) ? 'var(--accent-dim)' : 'transparent', border: '1px solid transparent', transition: 'all 0.15s' }} className="hover-bg-subtle">
-                                                <input type="checkbox" checked={modalSelectedMods.has(m.modName)} onChange={() => toggleModalModSelection(m.modName)} style={{ width: 18, height: 18, accentColor: 'var(--accent)' }} />
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
-                                                    <span style={{ fontWeight: 600 }}>{m.title}</span>
-                                                    <span style={{ fontSize: 11, opacity: 0.4, whiteSpace: 'nowrap' }}>v{m.version}</span>
-                                                </div>
-                                            </label>
+                                            <div 
+  key={m.modName} 
+  onClick={() => toggleModalModSelection(m.modName)}
+  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px', fontSize: 14, cursor: 'pointer', borderRadius: 10, background: (activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'rgba(255, 100, 0, 0.05)' : (modalSelectedMods.has(m.modName) ? 'var(--accent-dim)' : 'transparent'), border: `2px solid ${(activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'rgba(255, 100, 0, 0.6)' : (modalSelectedMods.has(m.modName) ? 'var(--accent)' : 'transparent')}`, transition: 'all 0.15s' }} className="hover-bg-subtle"
+>
+    <div style={{ flexShrink: 0 }}>
+      <MiniModIcon mod={m} size={64} />
+    </div>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+          <span style={{ fontWeight: 700, fontSize: 13, color: (activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</span>
+          <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'} • v{m.version}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {(activeModalConflicts && activeModalConflicts.get(m.modName)) && (
+            <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictInfoMod(m); }} style={{ cursor: 'pointer', color: 'orange', padding: '2px 4px', display: 'flex' }} title="Show conflict details">
+              <ShieldAlert size={16} />
+            </div>
+          )}
+        </div>
+    </div>
+</div>
                                             ))}
                                         </div>
                                       </div>
@@ -3018,7 +3043,7 @@ export default function SavegamesPage() {
                             </strong> Mods Selected
                         </div>
                     </div>
-                    <button className="btn btn--ghost" style={{ height: 48, padding: '0 32px', fontSize: 16 }} onClick={() => setShowCreateModal(false)}>Cancel</button>
+                    <button className="btn btn--ghost" style={{ height: 48, padding: '0 32px', fontSize: 16 }} title="Discard all changes without saving." title="Discard all changes without saving." title="Discard all changes without saving." onClick={() => setShowCreateModal(false)}>Cancel</button>
                     <button className="btn btn--primary" style={{ height: 48, padding: '0 48px', fontSize: 16, fontWeight: 800, background: 'var(--accent)', color: 'var(--bg-primary)' }} onClick={handleCreate} disabled={creating}>{creating ? 'Creating...' : 'Create Career'}</button>
                 </div>
               </div>
@@ -3045,7 +3070,7 @@ export default function SavegamesPage() {
                     </label>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--sp-2)', justifyContent: 'flex-end' }}>
-                    <button className="btn btn--ghost" onClick={() => setShowRestoreModal(null)}>Cancel</button>
+                    <button className="btn btn--ghost" title="Discard all changes without saving." title="Discard all changes without saving." title="Discard all changes without saving." onClick={() => setShowRestoreModal(null)}>Cancel</button>
                     <button className="btn btn--primary" onClick={handleRestore}>Restore Now</button>
                 </div>
               </div>

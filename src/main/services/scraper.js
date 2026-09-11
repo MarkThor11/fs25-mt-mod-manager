@@ -9,7 +9,7 @@ const MOD_URL = `${BASE_URL}/mod.php`;
 
 // Rate limit: one request per 1.5 seconds
 let lastRequestTime = 0;
-const MIN_DELAY = 500;
+const MIN_DELAY = 150;
 let phpsessid = null;
 let sessionPromise = null;
 
@@ -85,6 +85,12 @@ function isMapCategory(category) {
  */
 function getPHPSESSID() {
   return phpsessid;
+}
+
+function clearSession() {
+  phpsessid = null;
+  sessionPromise = null;
+  console.log('[SCRAPER] Session cleared. Will fetch a fresh token on next request.');
 }
 
 async function throttledFetch(url) {
@@ -1067,4 +1073,4 @@ async function fetchTrueModCount() {
   }
 }
 
-module.exports = { fetchModList, fetchModDetail, searchMods, fetchModsByAuthor, fetchTrueModCount, getPHPSESSID };
+module.exports = { fetchModList, fetchModDetail, searchMods, fetchModsByAuthor, fetchTrueModCount, getPHPSESSID, clearSession };

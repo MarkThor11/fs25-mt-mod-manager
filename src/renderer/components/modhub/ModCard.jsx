@@ -263,7 +263,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
 
     const modId = mod.modId;
     const modTitle = mod.title;
-    const modCategory = mod.category || currentFilter || '';
+    const modCategory = mod.category || '';
     let installQueued = false;
 
     setInstalling(true);

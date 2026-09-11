@@ -2119,48 +2119,19 @@ function getTemplatesPath() {
  */
 function detectConflicts(mods) {
 	const conflicts = [];
-	const scriptMap = new Map(); // fileName -> [{ modTitle, isMap, folder }]
+
 	const specMap = new Map();   // specName -> [{ modTitle, isMap, folder }]
 
 	for (const mod of (mods || [])) {
 		const isMapMod = !!(mod.isMap || (mod.category && isMapCategory(mod.category)));
-		// 1. Script Conflicts (extraSourceFiles)
-		for (const scriptPath of (mod.scripts || [])) {
-			const scriptName = path.basename(scriptPath).toLowerCase();
-			if (!scriptMap.has(scriptName)) scriptMap.set(scriptName, []);
-			scriptMap.get(scriptName).push({ title: mod.title, isMap: isMapMod, folder: mod.folder || 'MAIN' });
-		}
 
-		// 2. Specialization Conflicts
+		// Specialization Conflicts
 		for (const specName of (mod.specializations || [])) {
 			const lowerSpec = specName.toLowerCase();
 			if (!specMap.has(lowerSpec)) specMap.set(lowerSpec, []);
 			specMap.get(lowerSpec).push({ title: mod.title, isMap: isMapMod, folder: mod.folder || 'MAIN' });
 		}
 	}
-
-	// Analyze script conflicts (Filter out Map-vs-Map false positives since only 1 map loads at a time in FS25)
-	scriptMap.forEach((entries, scriptName) => {
-		const uniqueMods = [];
-		const seenTitles = new Set();
-		for (const e of entries) {
-			if (!seenTitles.has(e.title)) {
-				seenTitles.add(e.title);
-				uniqueMods.push(e);
-			}
-		}
-
-		// Only flag if at least one non-map mod is involved
-		const nonMapMods = uniqueMods.filter(m => !m.isMap);
-		if (uniqueMods.length > 1 && nonMapMods.length > 0) {
-			conflicts.push({
-				type: 'script',
-				name: scriptName,
-				mods: uniqueMods.map(m => m.title),
-				severity: 'warning'
-			});
-		}
-	});
 
 	// Analyze specialization conflicts
 	specMap.forEach((entries, specName) => {
@@ -2620,7 +2591,17 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 					
 					downloadWithNet(modId, details.downloadUrl, targetDirPath, modTitle, onProgress, category, 0, details.techData || techData, modUrl, scraper.getPHPSESSID?.())
 						.then(wrappedResolve)
-						.catch(wrappedReject);
+						.catch((err) => {
+							if (err.message && err.message.includes('403')) {
+								debugLog(`[INSTALL] Scraped link gave 403. Clearing session and retrying once...`);
+								scraper.clearSession?.();
+								downloadWithNet(modId, details.downloadUrl, targetDirPath, modTitle, onProgress, category, 0, details.techData || techData, modUrl, scraper.getPHPSESSID?.())
+									.then(wrappedResolve)
+									.catch(wrappedReject);
+							} else {
+								wrappedReject(err);
+							}
+						});
 					return;
 				}
 				
@@ -2793,6 +2774,9 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 				.then(wrappedResolve)
 				.catch((directErr) => {
 					debugLog(`[INSTALL] Direct URL download failed (${directErr.message}). Refreshing link from ModHub...`);
+					if (directErr.message && directErr.message.includes('403')) {
+						scraper.clearSession?.();
+					}
 					triggerScrapeFallback();
 				});
 			return;
@@ -6459,6 +6443,64 @@ async function repairCorruptMod(fileName, modId, allPaths, onProgress) {
 	}
 }
 
+/**
+ * to find code-level conflicts where multiple mods overwrite or append to the 
+ * exact same base game functions (e.g. Utils.overwrittenFunction).
+ */
+async function deepScanLuaConflicts(modsToScan) {
+	// regex matches: Utils.overwrittenFunction( Vehicle, "update", ... )
+	const regex = /Utils\.(overwritten|appended|prepended)Function\(\s*([^,]+),\s*["']([^"']+)["']/g;
+	
+	const overrides = new Map();
+
+	for (const mod of modsToScan) {
+		if (!mod.filePath || !nodeFs.existsSync(mod.filePath)) continue;
+		
+		try {
+			const zip = new AdmZip(mod.filePath);
+			const entries = zip.getEntries();
+			for (const entry of entries) {
+				if (entry.entryName.toLowerCase().endsWith('.lua')) {
+					const content = entry.getData().toString('utf8');
+					let match;
+					while ((match = regex.exec(content)) !== null) {
+						const type = match[1]; // overwritten, appended, prepended
+						const baseObj = match[2].trim();
+						const funcName = match[3].trim();
+						const target = `${baseObj}.${funcName}`;
+						
+						if (!overrides.has(target)) overrides.set(target, []);
+						const list = overrides.get(target);
+						
+						if (!list.find(x => x.modName === mod.modName)) {
+							list.push({
+								modName: mod.modName,
+								title: mod.title,
+								file: entry.entryName,
+								type
+							});
+						}
+					}
+				}
+			}
+		} catch (err) {
+			debugLog(`deepScanLuaConflicts failed to parse zip: ${mod.filePath} - ${err.message}`);
+		}
+	}
+
+	const deepConflicts = [];
+	overrides.forEach((involvedMods, target) => {
+		if (involvedMods.length > 1) {
+			deepConflicts.push({
+				target,
+				mods: involvedMods
+			});
+		}
+	});
+
+	return deepConflicts;
+}
+
 module.exports = {
 	getModsPaths,
 	getModsPath,
@@ -6477,6 +6519,7 @@ module.exports = {
 	detectPath,
 	debugProbePath,
 	detectAllModsPaths,
+	deepScanLuaConflicts,
 	getPersonalFolderPath: pathProvider.getPersonalFolderPath,
 	pruneBackups,
 	createFolder,

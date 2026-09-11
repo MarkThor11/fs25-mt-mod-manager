@@ -207,20 +207,40 @@ export default function ModDetailPage() {
     resolveDeps(mod.dependencies);
     
     // Sort to prioritize dependencies with ModHub URLs
-    return depsList.sort((a, b) => {
+    const sortedDirect = depsList.sort((a, b) => {
       const aUrl = typeof a === 'object' && a.url;
       const bUrl = typeof b === 'object' && b.url;
       return (bUrl ? 1 : 0) - (aUrl ? 1 : 0);
     });
-  }, [mod?.dependencies, localMods, resolvedMetadata]);
+
+    // 2. Fetch the true recursive missing list to catch any that were missed by simple traversal
+    const mapKey = mod.modName || mod.fileName;
+    if (mod) {
+        const { missing } = resolveRecursiveDependencies(mod, localMods, [], resolvedMetadata);
+        const recursiveMissing = Array.from(missing);
+        
+        recursiveMissing.forEach(mName => {
+            // Check if this missing dependency is already in sortedDirect
+            const exists = sortedDirect.some(d => {
+                const dName = (typeof d === 'string' ? d : (d.fileName || d.title || d.modName || '')).toLowerCase();
+                return dName === mName || dName.includes(mName) || mName.includes(dName);
+            });
+            if (!exists) {
+                sortedDirect.push(mName); // Append missing recursive dep so it shows up in UI
+            }
+        });
+    }
+    
+    return sortedDirect;
+  }, [mod?.dependencies, localMods, resolvedMetadata, mod?.modName, mod?.fileName]);
 
   const dependencyStatus = useMemo(() => {
     if (uniqueDependencies.length === 0) return { allMet: true, missingCount: 0, statuses: {}, missingList: [] };
     if (!localMods) return { allMet: false, missingCount: uniqueDependencies.length, statuses: {}, missingList: uniqueDependencies };
 
-    let missingCount = 0;
+    let directMissingCount = 0;
     const statuses = {};
-    const missingList = [];
+    const directMissingList = [];
 
     uniqueDependencies.forEach(dep => {
         let isInstalled = false;
@@ -258,10 +278,31 @@ export default function ModDetailPage() {
         const key = getDependencyUniqueKey(dep, resolvedMetadata);
         statuses[key] = isInstalled;
         if (!isInstalled) {
-            missingCount++;
-            missingList.push(dep);
+            directMissingCount++;
+            directMissingList.push(dep);
         }
     });
+
+    // Determine recursive missing using exactly the same logic as InstalledModsPage
+    let missingList = directMissingList;
+    let missingCount = directMissingCount;
+    
+    if (mod) {
+        const { missing } = resolveRecursiveDependencies(mod, localMods, sessionInstalled, resolvedMetadata);
+        const recursiveMissing = Array.from(missing);
+        
+        if (recursiveMissing.length > 0) {
+            // Reconcile recursive string lists into original dependency objects where possible
+            missingList = recursiveMissing.map(mName => {
+                const existingDirect = directMissingList.find(d => {
+                    const dName = (typeof d === 'string' ? d : (d.fileName || d.title || d.modName || '')).toLowerCase();
+                    return dName === mName || dName.includes(mName) || mName.includes(dName);
+                });
+                return existingDirect || mName; // Return original object with URL/metadata if it was a direct dep
+            });
+            missingCount = missingList.length;
+        }
+    }
 
     return {
         allMet: missingCount === 0,
@@ -269,7 +310,7 @@ export default function ModDetailPage() {
         statuses,
         missingList
     };
-  }, [uniqueDependencies, localMods, sessionInstalled, resolvedMetadata]);
+  }, [uniqueDependencies, localMods, sessionInstalled, resolvedMetadata, mod?.modName, mod?.fileName]);
 
   const images = useMemo(() => {
     if (!mod) return [];

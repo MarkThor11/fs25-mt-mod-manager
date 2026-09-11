@@ -517,8 +517,7 @@ const FolderRequirements = React.memo(({ folderMods, allMods, sessionInstalled, 
     const timer = setTimeout(() => {
       const missingMods = new Set();
       for (const map of maps) {
-        const mapKey = map.modName || map.fileName;
-        const { missing } = resolveRecursiveDependencies(mapKey, allMods, sessionInstalled);
+        const { missing } = resolveRecursiveDependencies(map, allMods, sessionInstalled);
         missing.forEach(m => missingMods.add(m));
       }
       setResult({

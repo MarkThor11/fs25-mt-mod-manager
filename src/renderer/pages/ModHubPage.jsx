@@ -713,7 +713,7 @@ export default function ModHubPage() {
 
         {(activeFilters.brands.length > 0 || authorFilter || activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < 1000000 || 
           activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < 2000 || 
-          activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < 1000000 || activeFilters.platforms.length > 0) && (
+          activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < 1000000 || activeFilters.platforms.length > 0 || activeFilters.hideRequired || activeFilters.hideInstalled) && (
           <div className="filter-chips">
             {authorFilter && (
               <div className="filter-chip filter-chip--author">
@@ -904,24 +904,20 @@ export default function ModHubPage() {
                     </div>
                     <div className="platform-filters" style={{ display: 'flex', gap: 'var(--sp-2)', marginTop: 'var(--sp-2)' }}>
                       <button 
-                        className={`btn btn--sm ${activeFilters.platforms.includes('pc') ? 'btn--primary' : 'btn--secondary'}`}
-                        onClick={() => {
-                          const platforms = activeFilters.platforms.includes('pc') 
-                            ? activeFilters.platforms.filter(p => p !== 'pc')
-                            : [...activeFilters.platforms, 'pc'];
-                          setFilters({ platforms });
-                        }}
+                        className={`btn btn--sm ${(activeFilters.platforms?.length || 0) === 0 ? 'btn--primary' : 'btn--secondary'}`}
+                        onClick={() => setFilters({ platforms: [] })}
                       >
-                        PC Only / Mac
+                        All
                       </button>
                       <button 
-                        className={`btn btn--sm ${activeFilters.platforms.includes('crossplay') ? 'btn--primary' : 'btn--secondary'}`}
-                        onClick={() => {
-                          const platforms = activeFilters.platforms.includes('crossplay')
-                            ? activeFilters.platforms.filter(p => p !== 'crossplay')
-                            : [...activeFilters.platforms, 'crossplay'];
-                          setFilters({ platforms });
-                        }}
+                        className={`btn btn--sm ${activeFilters.platforms?.includes('pc') ? 'btn--primary' : 'btn--secondary'}`}
+                        onClick={() => setFilters({ platforms: ['pc'] })}
+                      >
+                        PC Only
+                      </button>
+                      <button 
+                        className={`btn btn--sm ${activeFilters.platforms?.includes('crossplay') ? 'btn--primary' : 'btn--secondary'}`}
+                        onClick={() => setFilters({ platforms: ['crossplay'] })}
                       >
                         Crossplay
                       </button>
@@ -963,7 +959,7 @@ export default function ModHubPage() {
               </div>
               
               <div className="filter-summary">
-                {!authorFilter && (activeFilters.brands?.length || 0) === 0 && activeFilters.priceRange[0] === 0 && activeFilters.priceRange[1] === 1000000 && activeFilters.hpRange[0] === 0 && activeFilters.capRange[0] === 0 && (activeFilters.platforms?.length || 0) === 0 ? (
+                {!authorFilter && (activeFilters.brands?.length || 0) === 0 && activeFilters.priceRange[0] === 0 && activeFilters.priceRange[1] === 1000000 && activeFilters.hpRange[0] === 0 && activeFilters.capRange[0] === 0 && (activeFilters.platforms?.length || 0) === 0 && !activeFilters.hideRequired && !activeFilters.hideInstalled ? (
                   <div className="filter-summary__empty">No filters active</div>
                 ) : (
                   <div className="filter-summary__list">

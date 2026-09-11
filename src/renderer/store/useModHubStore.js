@@ -713,7 +713,7 @@ export const useModHubStore = create((set, get) => ({
     const isOverpopulatedGlobalFeed = isGlobalFeed && (cached?.allMods?.length || 0) > 72;
 
     if (cached && !isPrefetch && !isOverpopulatedGlobalFeed && !bustCache) {
-      const isStale = now - cached.timestamp > 180000; // 3 minutes stale for UI
+      const isStale = now - cached.timestamp > 1800000; // 30 minutes stale for UI
       
       set({ 
         categoryAllMods: cached.allMods || [],

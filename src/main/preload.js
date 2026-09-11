@@ -62,6 +62,7 @@ contextBridge.exposeInMainWorld('api', {
   localMods: {
     scan: (force = false) => ipcRenderer.invoke('localMods:scan', force),
     flattenSubfolders: () => ipcRenderer.invoke('localMods:flattenSubfolders'),
+    deepScanLuaConflicts: (modsToScan) => ipcRenderer.invoke('localMods:deepScanLuaConflicts', modsToScan),
     checkUpdates: () => ipcRenderer.invoke('localMods:checkUpdates'),
     updateMod: (params) => ipcRenderer.invoke('localMods:updateMod', params),
     restoreVersion: (params) => ipcRenderer.invoke('localMods:restoreVersion', params),
@@ -111,6 +112,7 @@ contextBridge.exposeInMainWorld('api', {
     adoptTemplate: (saveIndex) => ipcRenderer.invoke('savegame:adoptTemplate', saveIndex),
     updateAttribute: (params) => ipcRenderer.invoke('savegames:updateAttribute', params),
     resetPlayerSpawn: (savePath) => ipcRenderer.invoke('savegames:resetPlayerSpawn', savePath),
+    getMapHomeCoordinates: (savePath) => ipcRenderer.invoke('savegames:getMapHomeCoordinates', savePath),
     getPlayerPosition: (savePath) => ipcRenderer.invoke('savegames:getPlayerPosition', savePath),
     setPlayerPosition: (params) => ipcRenderer.invoke('savegames:setPlayerPosition', params),
     getFleetPositions: (savePath, mapModName) => ipcRenderer.invoke('savegames:getFleetPositions', { savePath, mapModName }),
