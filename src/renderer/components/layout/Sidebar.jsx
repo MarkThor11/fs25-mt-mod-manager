@@ -55,12 +55,13 @@ export default function Sidebar() {
 
   const handleLaunch = async () => {
     try {
-      const { savegameSlot, enableCheats, skipModDialog, skipIntro } = useSettingsStore.getState();
+      const { savegameSlot, enableCheats, skipModDialog, skipIntro, autoStart } = useSettingsStore.getState();
       const options = {};
       if (savegameSlot) options.savegameIndex = savegameSlot;
       if (enableCheats) options.cheats = true;
       options.skipModUpdateDialog = skipModDialog !== false;
       options.skipIntro = skipIntro !== false;
+      options.autoStart = autoStart;
       
       const result = await window.api.game.launch(options);
       if (result.success) {

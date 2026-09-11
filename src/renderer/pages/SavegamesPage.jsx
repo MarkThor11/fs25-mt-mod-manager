@@ -291,6 +291,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const [modSearchQuery, setModSearchQuery] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedMods, setSelectedMods] = useState(new Set((save.mods || []).map(m => typeof m === 'string' ? m : m?.modName)));
   const { mods: installedMods } = useLocalModsStore();
   const [expandedFolders, setExpandedFolders] = useState(new Set(['MAIN']));
@@ -299,6 +300,25 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
   const [fleetPaintPct, setFleetPaintPct] = useState(100);
   const [usedMods, setUsedMods] = useState(new Set());
   const [showOnlyUsed, setShowOnlyUsed] = useState(false);
+  const availableBrands = React.useMemo(() => {
+      const brands = new Set();
+      const modCache = useModHubStore.getState().modCache || {};
+      const hardcoded = useModHubStore.getState().hardcodedBrands || [];
+      (installedMods || []).forEach(m => {
+          let b = null;
+          if (m.modId && modCache[m.modId]?.brand) b = modCache[m.modId].brand;
+          if (!b) {
+              for (const hb of hardcoded) {
+                  if (m.title && m.title.toLowerCase().includes(hb.toLowerCase())) {
+                      b = hb;
+                      break;
+                  }
+              }
+          }
+          if (b) brands.add(b);
+      });
+      return Array.from(brands).sort();
+  }, [installedMods]);
   const [isDeselectingUnused, setIsDeselectingUnused] = useState(false);
 
   useEffect(() => {
@@ -1750,6 +1770,7 @@ export default function SavegamesPage() {
   const [updatingMod, setUpdatingMod] = useState(null);
   const [autoResolveMode, setAutoResolveMode] = useState(false);
   const [createActiveTab, setCreateActiveTab] = useState('basic');
+    const [createBrandFilter, setCreateBrandFilter] = useState('');
   const [editingName, setEditingName] = useState(null);
   const [newName, setNewName] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -1782,6 +1803,26 @@ export default function SavegamesPage() {
   const [selectedSaves, setSelectedSaves] = useState(new Set());
   const [includeMustHaves, setIncludeMustHaves] = useState(true);
   const [localMissingDeps, setLocalMissingDeps] = useState([]);
+    
+    const availableCreateBrands = React.useMemo(() => {
+        const brands = new Set();
+        const modCache = useModHubStore.getState().modCache || {};
+        const hardcoded = useModHubStore.getState().hardcodedBrands || [];
+        (installedMods || []).forEach(m => {
+            let b = null;
+            if (m.modId && modCache[m.modId]?.brand) b = modCache[m.modId].brand;
+            if (!b) {
+                for (const hb of hardcoded) {
+                    if (m.title && m.title.toLowerCase().includes(hb.toLowerCase())) {
+                        b = hb;
+                        break;
+                    }
+                }
+            }
+            if (b) brands.add(b);
+        });
+        return Array.from(brands).sort();
+    }, [installedMods]);
   
     const activeModalConflicts = new Map();
   // Savegame Editor state
@@ -1956,6 +1997,7 @@ export default function SavegamesPage() {
     const result = await window.api.game.launch({ 
         savegameIndex: slotIndex,
         skipIntro: skipIntro !== false,
+        autoStart: true,
         ...extraOptions
     });
     

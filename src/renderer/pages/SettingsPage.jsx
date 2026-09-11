@@ -1247,7 +1247,7 @@ export default function SettingsPage() {
           <code style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent)', wordBreak: 'break-all' }}>
             FarmingSimulator2025.exe
             {savegameSlot ? ` -autoStartSavegameId ${savegameSlot}` : ''}
-            {autoStart || savegameSlot ? ' -autostart' : ''}
+            {autoStart ? ' -autostart' : ''}
             {enableCheats ? ' -cheats' : ''}
             {skipModDialog !== false ? ' -skipModUpdateDialog' : ''}
             {skipIntro !== false ? ' -skipStartVideos' : ''}
