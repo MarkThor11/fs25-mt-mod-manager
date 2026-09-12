@@ -432,7 +432,7 @@ export default function ProfilesPage() {
           <button
             key={p.id}
             className={`tab-item ${selectedProfile?.id === p.id ? 'tab-item--active' : ''}`}
-            onClick={() => selectProfile(p.id)}
+            onClick={() => setSelectedProfileId(p.id)}
             style={{
               padding: '10px 20px',
               borderRadius: 'var(--radius-md) var(--radius-md) 0 0',
