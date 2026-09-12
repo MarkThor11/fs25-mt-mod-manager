@@ -2129,7 +2129,7 @@ function detectConflicts(mods) {
 		for (const specName of (mod.specializations || [])) {
 			const lowerSpec = specName.toLowerCase();
 			if (!specMap.has(lowerSpec)) specMap.set(lowerSpec, []);
-			specMap.get(lowerSpec).push({ title: mod.title, isMap: isMapMod, folder: mod.folder || 'MAIN' });
+			specMap.get(lowerSpec).push({ title: mod.title, modName: mod.modName, isMap: isMapMod, folder: mod.folder || 'MAIN' });
 		}
 	}
 
@@ -2151,6 +2151,7 @@ function detectConflicts(mods) {
 				type: 'specialization',
 				name: specName,
 				mods: uniqueMods.map(m => m.title),
+				modNames: uniqueMods.map(m => m.modName),
 				severity: 'critical'
 			});
 		}

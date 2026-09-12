@@ -303,3 +303,41 @@ export const compareVersions = (v1, v2) => {
     }
     return 0;
 };
+
+/**
+ * Calculates which mods in a given savegame are actively conflicting.
+ * A conflict only triggers if MULTIPLE mods from the same conflict group are active.
+ * @param {Array|Set} activeModNames - List of currently active modNames in the savegame
+ * @param {Array} allConflicts - Global array of all detected script conflicts
+ * @returns {Map} Map of modName (lowercase) to array of conflict objects
+ */
+export const getActiveConflictsForSave = (activeModNames, allConflicts) => {
+  const activeSet = new Set();
+  (activeModNames || []).forEach(name => {
+    if (typeof name === 'string') activeSet.add(name.toLowerCase());
+    else if (name && name.modName) activeSet.add(name.modName.toLowerCase());
+  });
+
+  const conflictsMap = new Map();
+
+  (allConflicts || []).forEach(conflict => {
+    // Determine which mods in this conflict group are actually active
+    const activeInGroup = (conflict.modNames || conflict.mods || []).filter(m => activeSet.has(m.toLowerCase()));
+    
+    // A conflict only manifests if 2 or more mods from the group are active
+    if (activeInGroup.length > 1) {
+      activeInGroup.forEach(modName => {
+        const lowerName = modName.toLowerCase();
+        if (!conflictsMap.has(lowerName)) {
+          conflictsMap.set(lowerName, []);
+        }
+        conflictsMap.get(lowerName).push({
+          ...conflict,
+          activeConflictingMods: activeInGroup.filter(m => m.toLowerCase() !== lowerName)
+        });
+      });
+    }
+  });
+
+  return conflictsMap;
+};

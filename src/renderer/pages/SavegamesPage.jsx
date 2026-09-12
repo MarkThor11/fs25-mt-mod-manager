@@ -15,7 +15,7 @@ import { useLocalModsStore } from '../store/useLocalModsStore';
 import { useModHubStore } from '../store/useModHubStore';
 import { useDownloadStore } from '../store/useDownloadStore';
 import MapImage, { MAP_PREVIEWS } from '../components/common/MapImage';
-import { resolveRecursiveDependencies } from '../utils/modUtils';
+import { resolveRecursiveDependencies, getActiveConflictsForSave } from '../utils/modUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 import MapSelectDropdown from '../components/common/MapSelectDropdown';
 import { COMBINE_HARVESTER_ICON } from '../assets/combineIconData';
@@ -287,7 +287,7 @@ function ModAuditModal({ save, allInstalledMods, onClose, onRefresh }) {
  * Savegame Editor Modal Component
  */
 function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
-  const activeModalConflicts = new Map();
+  const activeModalConflicts = getActiveConflictsForSave(selectedMods, useLocalModsStore.getState().conflicts);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const [modSearchQuery, setModSearchQuery] = useState('');
@@ -497,7 +497,27 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
     const nextSelected = new Set(selectedMods);
     if (nextSelected.has(modName)) nextSelected.delete(modName);
     else nextSelected.add(modName);
-    
+
+    // Apply conflict resolution if toggling ON
+    const { conflictSensitivity } = useSettingsStore.getState();
+    if (conflictSensitivity !== 'off' && nextSelected.has(modName)) {
+        const allConflicts = useLocalModsStore.getState().conflicts;
+        const activeConflictsMap = getActiveConflictsForSave(nextSelected, allConflicts);
+        if (activeConflictsMap.has(modName.toLowerCase())) {
+            if (conflictSensitivity === 'auto-disable') {
+                const conflictDataArr = activeConflictsMap.get(modName.toLowerCase());
+                conflictDataArr.forEach(c => {
+                    c.activeConflictingMods.forEach(otherModName => {
+                        nextSelected.delete(otherModName);
+                    });
+                });
+                import('../store/useToastStore').then(m => m.useToastStore.getState().info('Auto-disabled conflicting mods to maintain stability.'));
+            } else if (conflictSensitivity === 'warn') {
+                import('../store/useToastStore').then(m => m.useToastStore.getState().warning('Warning: The selected mod conflicts with other active mods.'));
+            }
+        }
+    }
+
     setSelectedMods(nextSelected);
     
     // Auto-save the mod list change surgically
@@ -1558,10 +1578,24 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                                 }
                                 
                                 if (changed) {
-                                  setSelectedMods(nextSelected);
-                                  const modsToApply = installedMods.filter(m => typeof m.modName === 'string' && nextSelected.has(m.modName));
-                                  
-                                  const result = window.api.savegames.setSavegameMods
+    const { conflictSensitivity } = useSettingsStore.getState();
+    if (conflictSensitivity !== 'off') {
+        const allConflicts = useLocalModsStore.getState().conflicts;
+        const activeMap = getActiveConflictsForSave(nextSelected, allConflicts);
+        if (activeMap.size > 0) {
+            if (conflictSensitivity === 'auto-disable') {
+                activeMap.forEach((_, modName) => nextSelected.delete(Array.from(nextSelected).find(m => m.toLowerCase() === modName) || modName));
+                import('../store/useToastStore').then(m => m.useToastStore.getState().info(`Auto-disabled ${activeMap.size} conflicting mods.`));
+            } else if (conflictSensitivity === 'warn') {
+                import('../store/useToastStore').then(m => m.useToastStore.getState().warning(`Warning: Must-haves introduced ${activeMap.size} conflicts.`));
+            }
+        }
+    }
+
+    setSelectedMods(nextSelected);
+    const modsToApply = installedMods.filter(m => typeof m.modName === 'string' && nextSelected.has(m.modName));
+
+    const result = window.api.savegames.setSavegameMods
                                     ? await window.api.savegames.setSavegameMods(save.path, modsToApply)
                                     : await window.api.savegames.updateSavegameMods(save.path, modsToApply);
                                     
@@ -2046,7 +2080,7 @@ export default function SavegamesPage() {
         return Array.from(brands).sort();
     }, [mods]);
   
-    const activeModalConflicts = new Map();
+    const activeModalConflicts = getActiveConflictsForSave(modalSelectedMods, useLocalModsStore.getState().conflicts);
   // Savegame Editor state
   const [showEditor, setShowEditor] = useState(null); // Save object
   const [showAudit, setShowAudit] = useState(null); // Save object
@@ -2208,6 +2242,34 @@ export default function SavegamesPage() {
       }
     } catch (e) {
       console.warn('[LAUNCH] Could not re-apply spawn position:', e);
+    }
+
+    const { conflictSensitivity } = useSettingsStore.getState();
+    if (conflictSensitivity !== 'off') {
+      const allSaves = useSavegameStore.getState().savegames;
+      const saveToLaunch = allSaves.find(sg => sg.index === slotIndex);
+      if (saveToLaunch && saveToLaunch.mods) {
+        const allConflicts = useLocalModsStore.getState().conflicts;
+        const activeConflictsMap = getActiveConflictsForSave(saveToLaunch.mods, allConflicts);
+        
+        if (activeConflictsMap.size > 0) {
+          if (conflictSensitivity === 'auto-disable') {
+            const safeMods = (saveToLaunch.mods || []).filter(m => {
+              const name = typeof m === 'string' ? m : m.modName;
+              return !activeConflictsMap.has(name.toLowerCase());
+            });
+            const resultSave = window.api.savegames.setSavegameMods
+              ? await window.api.savegames.setSavegameMods(saveToLaunch.path, safeMods.map(m => typeof m === 'string' ? { modName: m } : m))
+              : await window.api.savegames.updateSavegameMods(saveToLaunch.path, safeMods.map(m => typeof m === 'string' ? { modName: m } : m));
+            await import('../store/useToastStore').then(module => module.useToastStore.getState().info(Auto-disabled  conflicting mods before launch.));
+            // Ensure the save store refreshes
+            await useSavegameStore.getState().fetchSavegames();
+          } else if (conflictSensitivity === 'warn') {
+            await import('../store/useToastStore').then(module => module.useToastStore.getState().error(Launch prevented: Found  active script conflicts. Resolve them or change sensitivity to Off.));
+            return; // ABORT LAUNCH
+          }
+        }
+      }
     }
 
     // Optimistically mark the slot as active immediately so the UI responds
@@ -2590,8 +2652,24 @@ export default function SavegamesPage() {
 
   const applyProfileToModal = (profileId) => {
     const p = profiles.find(x => x.id === profileId);
-    if (p) setModalSelectedMods(new Set((p.mods || []).map(m => m.modName)));
-  };
+    if (p) {
+        const next = new Set((p.mods || []).map(m => m.modName));
+        const { conflictSensitivity } = useSettingsStore.getState();
+        if (conflictSensitivity !== 'off') {
+            const allConflicts = useLocalModsStore.getState().conflicts;
+            const activeMap = getActiveConflictsForSave(next, allConflicts);
+            if (activeMap.size > 0) {
+                if (conflictSensitivity === 'auto-disable') {
+                    activeMap.forEach((_, modName) => next.delete(Array.from(next).find(m => m.toLowerCase() === modName) || modName));
+                    import('../store/useToastStore').then(m => m.useToastStore.getState().info(Auto-disabled  conflicting mods from profile.));
+                } else if (conflictSensitivity === 'warn') {
+                    import('../store/useToastStore').then(m => m.useToastStore.getState().warning(Warning: Profile contains  script conflicts.));
+                }
+            }
+        }
+        setModalSelectedMods(next);
+    }
+};
 
   const formatMoney = (amount) => Math.round(amount || 0).toLocaleString();
   const formatPlayTime = (minutes) => {
@@ -3177,7 +3255,23 @@ export default function SavegamesPage() {
                                             {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                         </select>
                                     )}
-                                    <button className="btn btn--secondary btn--sm" onClick={() => setModalSelectedMods(new Set(mods.filter(m => !m.isMap).map(m => m.modName)))}>Select All</button>
+                                    <button className="btn btn--secondary btn--sm" onClick={() => {
+    const next = new Set(mods.filter(m => !m.isMap).map(m => m.modName));
+    const { conflictSensitivity } = useSettingsStore.getState();
+    if (conflictSensitivity !== 'off') {
+        const allConflicts = useLocalModsStore.getState().conflicts;
+        const activeMap = getActiveConflictsForSave(next, allConflicts);
+        if (activeMap.size > 0) {
+            if (conflictSensitivity === 'auto-disable') {
+                activeMap.forEach((_, modName) => next.delete(Array.from(next).find(m => m.toLowerCase() === modName) || modName));
+                import('../store/useToastStore').then(m => m.useToastStore.getState().info(`Auto-disabled ${activeMap.size} conflicting mods.`));
+            } else if (conflictSensitivity === 'warn') {
+                import('../store/useToastStore').then(m => m.useToastStore.getState().warning(`Warning: ${activeMap.size} script conflicts.`));
+            }
+        }
+    }
+    setModalSelectedMods(next);
+}}>Select All</button>
                                     <button className="btn btn--secondary btn--sm" onClick={() => setModalSelectedMods(new Set())}>Clear</button>
                                 </div>
                             </div>
