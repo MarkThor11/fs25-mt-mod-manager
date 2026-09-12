@@ -1068,9 +1068,9 @@ export default function ProfilesPage() {
                                             <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
                                               <div 
                                                 style={{ 
-                                                  fontSize: zoom < 160 ? 11 : 13, 
+                                                  fontSize: 12, 
                                                   fontWeight: 800,
-                                                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                                                  whiteSpace: 'nowrap',
                                                   overflow: 'hidden',
                                                   textOverflow: 'ellipsis',
                                                   color: isConflict ? 'orange' : 'var(--text-primary)'
@@ -1079,7 +1079,7 @@ export default function ProfilesPage() {
                                                 {mod.title || mod.modName}
                                               </div>
                                                 {zoom >= 160 && (
-                                                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
                                                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.8 }}>{mod.author || 'Unknown'}</div>
                                                     <div style={{ display: 'flex', justifyContent: 'center', gap: 4, opacity: 0.7 }}>
                                                       <span>v{mod.version || '1.0.0.0'}</span>
@@ -1142,7 +1142,7 @@ export default function ProfilesPage() {
                                               className="mod-name" 
                                               title={mod.title || mod.modName}
                                               style={{ 
-                                                fontSize: listIconSize > 90 ? 'var(--fs-lg)' : 'var(--fs-md)', 
+                                                fontSize: 'var(--fs-sm)', 
                                                 fontWeight: 700,
                                                 whiteSpace: 'nowrap',
                                                 overflow: 'hidden',
