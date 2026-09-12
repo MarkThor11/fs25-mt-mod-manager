@@ -156,6 +156,24 @@ export default function FavouritesPage() {
             <Star size={16} fill={activeTab === 'mods' ? "#facc15" : "none"} style={{ color: activeTab === 'mods' ? '#facc15' : 'inherit' }} /> Mods
         </button>
         <button 
+            className={`tab-item ${activeTab === 'must-haves' ? 'tab-item--active' : ''}`}
+            onClick={() => setActiveTab('must-haves')}
+            style={{ 
+                color: activeTab === 'must-haves' ? 'var(--accent)' : 'var(--text-tertiary)',
+                background: activeTab === 'must-haves' ? 'rgba(var(--accent-rgb), 0.1)' : 'transparent',
+                border: activeTab === 'must-haves' ? '1px solid var(--accent)' : '1px solid transparent',
+                padding: '10px 20px',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                transition: 'all 0.2s ease',
+                cursor: 'pointer'
+            }}
+        >
+            <Pin size={16} fill={activeTab === 'must-haves' ? "currentColor" : "none"} /> Must-Haves
+        </button>
+        <button 
             className={`tab-item ${activeTab === 'authors' ? 'tab-item--active' : ''}`}
             onClick={() => setActiveTab('authors')}
             style={{ 
