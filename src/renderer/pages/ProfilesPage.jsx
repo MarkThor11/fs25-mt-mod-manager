@@ -407,7 +407,7 @@ export default function ProfilesPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-2)' }}>
         <div>
           <h2 style={{ fontWeight: 'var(--fw-bold)', margin: 0 }}>Game Templates</h2>
-          <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-tertiary)', margin: 0 }}>Create game blueprints with preset mods.</p>
+          <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-tertiary)', margin: 0 }}>Create game blueprints with preset mods and settings.</p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
           <button className="btn btn--primary" onClick={handleCreateNew}>
