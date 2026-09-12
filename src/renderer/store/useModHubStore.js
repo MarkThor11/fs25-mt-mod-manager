@@ -520,7 +520,7 @@ export const useModHubStore = create((set, get) => ({
   toggleMustHaveMod: (mod) => {
     const { favoriteMods, toggleFavoriteMod } = get();
     const modId = mod.modId;
-    const fileName = mod.fileName;
+    const fileName = mod.fileName ? mod.fileName.split(/[\\/\\]/).pop() : (mod.modName ? `${mod.modName}.zip` : undefined);
 
     const exists = favoriteMods.find(m => 
       (m.modId && modId && String(m.modId) === String(modId)) || 

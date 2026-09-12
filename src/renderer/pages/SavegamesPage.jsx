@@ -292,6 +292,8 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
   const [activeTab, setActiveTab] = useState('general');
   const [modSearchQuery, setModSearchQuery] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
+  const [selectedFolder, setSelectedFolder] = useState('ALL');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedMods, setSelectedMods] = useState(new Set((save.mods || []).map(m => typeof m === 'string' ? m : m?.modName)));
   const { mods: installedMods } = useLocalModsStore();
   const [expandedFolders, setExpandedFolders] = useState(new Set(['MAIN']));
@@ -300,7 +302,54 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
   const [fleetPaintPct, setFleetPaintPct] = useState(100);
   const [usedMods, setUsedMods] = useState(new Set());
   const [showOnlyUsed, setShowOnlyUsed] = useState(false);
-  const availableBrands = React.useMemo(() => {
+  const availableCategories = React.useMemo(() => {
+        const cats = new Set();
+        const modCache = useModHubStore.getState().modCache || {};
+        const { favoriteMods } = useModHubStore.getState();
+        
+        const parseModCategory = (cat, isMap) => {
+            if (isMap) return 'Maps';
+            if (!cat) return null;
+            let s = String(cat).toLowerCase();
+            if (s.includes('map')) return 'Maps';
+            if (s.includes('tractor') || s.includes('truck') || s.includes('car') || s.includes('bike') || s.includes('harvester') || s.includes('loader') || s.includes('telehandler') || s.includes('forklift') || s.includes('excavator') || s.includes('forwarder') || s.includes('drivable') || s.includes('vehicle')) return 'Vehicles';
+            if (s.includes('trailer') || s.includes('cultivat') || s.includes('plow') || s.includes('seeder') || s.includes('planter') || s.includes('roller') || s.includes('spreader') || s.includes('sprayer') || s.includes('mower') || s.includes('tedder') || s.includes('windrower') || s.includes('header') || s.includes('tool') || s.includes('spader') || s.includes('subsoiler') || s.includes('harrow') || s.includes('weeder') || s.includes('mulcher') || s.includes('belt') || s.includes('leveler') || s.includes('compaction') || s.includes('winch') || s.includes('cutter') || s.includes('chainsaw') || s.includes('shovel') || s.includes('implement') || s.includes('yield') || s.includes('slurry') || s.includes('manure') || s.includes('forage')) return 'Implements';
+            if (s.includes('placeable') || s.includes('shed') || s.includes('silo') || s.includes('production') || s.includes('farmhouse') || s.includes('animal') || s.includes('decoration')) return 'Placeables';
+            if (s.includes('object') || s.includes('bale') || s.includes('pallet') || s.includes('bigbag') || s.includes('weight')) return 'Objects';
+            if (s.includes('pack') || s.includes('package')) return 'Packs';
+            if (s.includes('gameplay') || s.includes('script') || s.includes('prefab')) return 'Gameplay and Scripts';
+            return 'Other';
+        };
+
+        let hasFavs = false;
+
+        (installedMods || []).forEach(m => {
+            let catStr = m.category;
+            if (m.modId && modCache[m.modId]?.category) {
+                catStr = modCache[m.modId].category;
+            }
+            const mainCat = parseModCategory(catStr, m.isMap);
+            if (mainCat) cats.add(mainCat);
+
+            const fnStr = typeof m.fileName === 'string' ? m.fileName : '';
+            const mnStr = typeof m.modName === 'string' ? m.modName : '';
+            const modBasename = fnStr ? fnStr.split(/[\\/\\]/).pop().toLowerCase() : (mnStr ? `${mnStr.toLowerCase()}.zip` : '');
+            
+            const isFav = (favoriteMods||[]).some(fm => {
+                if (!fm) return false;
+                const idMatch = fm.modId && m.modId && String(fm.modId) === String(m.modId);
+                const fmStr = typeof fm.fileName === 'string' ? fm.fileName : '';
+                return idMatch || (fmStr && fmStr.toLowerCase() === modBasename);
+            });
+            if (isFav) hasFavs = true;
+        });
+
+        const arr = Array.from(cats).sort();
+        if (hasFavs) arr.unshift('Favourites');
+        return arr;
+    }, [installedMods]);
+
+    const availableBrands = React.useMemo(() => {
       const brands = new Set();
       const modCache = useModHubStore.getState().modCache || {};
       const hardcoded = useModHubStore.getState().hardcodedBrands || [];
@@ -333,6 +382,16 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
   // Spawn & Persistence State
   const [isPersistenceActive, setIsPersistenceActive] = useState(false);
   const [playerPos, setPlayerPos] = useState(null);
+  const [defaultPos, setDefaultPos] = useState(null);
+
+  useEffect(() => {
+    if (activeTab === 'spawn' && !defaultPos && window.api?.savegames?.getMapHomeCoordinates) {
+      window.api.savegames.getMapHomeCoordinates(save.path)
+        .then(res => { if (res) setDefaultPos(res); })
+        .catch(e => console.error("Error fetching default coords", e));
+    }
+  }, [activeTab, save.path, defaultPos]);
+
   const [selectedSpawnMode, setSelectedSpawnMode] = useState(() => {
     try {
       const saved = localStorage.getItem(`selected_spawn_${save.path}`);
@@ -465,7 +524,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={onClose}>
-      <div className="modal animate-zoom-in" style={{ width: '95vw', maxWidth: 1800, height: '95vh', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+      <div className="modal animate-zoom-in" style={{ width: '98vw', maxWidth: 1800, height: '98vh', maxHeight: '98vh', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={{ background: 'var(--bg-tertiary)', padding: '24px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -984,7 +1043,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
                 <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 8, padding: '16px' }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }} title="Your current coordinates in this save.">Current Saved Position</div>
                   <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-                    {playerPos ? `${playerPos.x.toFixed(1)}, ${playerPos.y.toFixed(1)}, ${playerPos.z.toFixed(1)}` : 'Unknown or Not Saved'}
+                    {playerPos ? `${playerPos.x.toFixed(1)}, ${playerPos.y.toFixed(1)}, ${playerPos.z.toFixed(1)}` : (isPersistenceActive && defaultPos ? `Default Starting Point (${defaultPos.x.toFixed(1)}, ${defaultPos.y.toFixed(1)}, ${defaultPos.z.toFixed(1)})` : 'Unknown or Not Saved')}
                   </div>
                 </div>
               </div>
@@ -1287,217 +1346,352 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
 
 
           {activeTab === 'mods' && (
-            <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)', flex: 1, minHeight: 0 }}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                <div className="search-input-wrapper" style={{ flex: 1, minWidth: 200, position: 'relative' }}>
-                  <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
-                  <input type="text" placeholder="Search installed mods..." value={modSearchQuery} onChange={e => setModSearchQuery(e.target.value)} style={{ width: '100%', paddingLeft: 32 }} />
-                </div>
-                <div style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', background: 'var(--bg-tertiary)', borderRadius: 100, border: '1px solid var(--border)' }}>
-                  {selectedMods.size} Selected
-                </div>
-                                      <label title="Filter the list to only show mods currently used in this savegame."
-                  style={{ 
-                    display: 'inline-flex', 
-                    alignItems: 'center', 
-                    gap: 6, 
-                    fontSize: 12, 
-                    fontWeight: 600, 
-                    cursor: 'pointer', 
-                    userSelect: 'none',
-                    padding: '4px 10px',
-                    borderRadius: 8,
-                    border: `1px solid ${showOnlyUsed ? 'var(--accent)' : 'var(--border)'}`,
-                    background: showOnlyUsed ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg-tertiary)',
-                    color: showOnlyUsed ? 'var(--accent)' : 'var(--text-secondary)',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  <input 
-                    type="checkbox" 
-                    checked={showOnlyUsed} 
-                    onChange={e => setShowOnlyUsed(e.target.checked)} 
-                    style={{ cursor: 'pointer', accentColor: 'var(--accent)' }} 
-                  />
-                  <span>Show Used Only ({usedMods.size})</span>
-                </label>
-                <button 
-                  className="btn btn--secondary btn--sm" 
-                  style={{ 
-                    gap: 6, 
-                    padding: '0 14px', 
-                    height: 32,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    color: 'var(--text-primary)',
-                    background: 'rgba(239, 68, 68, 0.08)'
-                  }}
-                  disabled={isDeselectingUnused}
-                  onClick={async () => {
-                    setIsDeselectingUnused(true);
-                    try {
-                      let currentUsed = usedMods;
-                      if (window.api?.savegames?.getUsedMods) {
-                        const res = await window.api.savegames.getUsedMods(save.path);
-                        if (res && res.usedModNames) {
-                          currentUsed = new Set(res.usedModNames.map(m => m.toLowerCase()));
-                          setUsedMods(currentUsed);
-                        }
-                      }
-
-                      const nextSelected = new Set();
-                      let deselectedCount = 0;
-                      for (const modName of selectedMods) {
-                        if (currentUsed.has(modName.toLowerCase()) || modName.toLowerCase() === 'fs25_quietloadingscreen') {
-                          nextSelected.add(modName);
-                        } else {
-                          deselectedCount++;
-                        }
-                      }
-
-                      if (deselectedCount === 0) {
-                        useToastStore.getState().info("All selected mods are already in use on this save.");
-                        setIsDeselectingUnused(false);
-                        return;
-                      }
-
-                      setSelectedMods(nextSelected);
-
-                      const modsToApply = installedMods.filter(m => nextSelected.has(m.modName));
-                      const saveRes = window.api.savegames.setSavegameMods
-                        ? await window.api.savegames.setSavegameMods(save.path, modsToApply)
-                        : await window.api.savegames.setMods({ savegamePath: save.path, mods: modsToApply });
-
-                      if (saveRes?.success !== false) {
-                        useToastStore.getState().success(`Deselected ${deselectedCount} unused mods (${nextSelected.size} used mods kept active)`);
-                      } else {
-                        useToastStore.getState().error(`Failed to save: ${saveRes?.error || 'Unknown error'}`);
-                      }
-                    } catch (err) {
-                      console.error('Error deselecting unused mods:', err);
-                      useToastStore.getState().error('Failed to deselect unused mods');
-                    } finally {
-                      setIsDeselectingUnused(false);
-                    }
-                  }}
-                title="Uncheck any mods that are not currently being used in this savegame."
-                >
-                  <Trash2 size={13} style={{ color: 'var(--danger, #ef4444)' }} /> DESELECT UNUSED MODS
-                </button>
-                <button 
-                  className="btn btn--primary btn--sm" 
-                  style={{ gap: 6, padding: '0 16px', height: 32 }}
-                  onClick={() => {
-                    const mustHaves = useModHubStore.getState().favoriteMods.filter(m => m.isMustHave);
-                    const nextSelected = new Set(selectedMods);
-                    let added = 0;
-                    mustHaves.forEach(mh => {
-                      // Try to find the installed mod that matches this must-have
-                      const installed = installedMods.find(im => 
-                        (mh.modId && String(im.modId) === String(mh.modId)) || 
-                        im.modName.toLowerCase() === (mh.fileName || '').replace('.zip', '').toLowerCase()
-                      );
-                      if (installed && !nextSelected.has(installed.modName)) {
-                        nextSelected.add(installed.modName);
-                        added++;
-                      }
-                    });
-                    if (added > 0) {
-                      setSelectedMods(nextSelected);
-                      if (window.api?.savegames) {
-                        const modsToApply = installedMods.filter(m => nextSelected.has(m.modName));
-                        if (window.api.savegames.setSavegameMods) {
-                          window.api.savegames.setSavegameMods(save.path, modsToApply);
-                        } else if (window.api.savegames.setMods) {
-                          window.api.savegames.setMods({ savegamePath: save.path, mods: modsToApply });
-                        }
-                      }
-                      useToastStore.getState().success(`Adopted ${added} Must-Have mods!`);
-                    } else {
-                      useToastStore.getState().info("All Must-Haves already present or not installed.");
-                    }
-                  }}
-                title="Automatically select all mods marked as Must-Have in your profiles."
-                >
-                  <Pin size={12} fill="currentColor" /> ADOPT MUST-HAVES
-                </button>
-              </div>
-
-              <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 8, border: '1px solid var(--border)' }}>
-                {Object.keys(groupedMods).sort().map(folderName => {
-                  const items = groupedMods[folderName].filter(m => {
-                    if (showOnlyUsed && !usedMods.has(m.modName.toLowerCase())) return false;
-                    if (!modSearchQuery) return true;
-                    return m.title?.toLowerCase().includes(modSearchQuery.toLowerCase()) || m.modName.toLowerCase().includes(modSearchQuery.toLowerCase());
-                  });
-                  if (items.length === 0) return null;
-                  const isExpanded = expandedFolders.has(folderName);
-
-                  return (
-                    <div key={folderName} style={{ marginBottom: 4 }}>
-                      <div 
-                        onClick={() => setExpandedFolders(prev => {
-                          const next = new Set(prev);
-                          if (next.has(folderName)) next.delete(folderName);
-                          else next.add(folderName);
-                          return next;
-                        })}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer', background: isExpanded ? 'rgba(var(--accent-rgb), 0.1)' : 'transparent', borderRadius: 8, fontSize: 12, fontWeight: 800 }}
-                      >
-                        {isExpanded ? <ChevronDown size={14} className="text-accent" /> : <ChevronRight size={14} className="text-accent" />}
-                        <Folder size={14} className="text-accent" />
-                        {folderName}
-                        <span style={{ fontSize: 10, opacity: 0.3, marginLeft: 'auto' }}>{items.length} MODS</span>
-                      </div>
-                      
-                      {isExpanded && (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, padding: '8px 4px' }}>
-                          {items.map(m => {
-                            const conflictData = activeModalConflicts && activeModalConflicts.get(m.modName);
-                            const isConflicting = !!conflictData;
-                            const isMustHave = useModHubStore.getState().favoriteMods.find(f => (f.modId && m.modId && String(f.modId) === String(m.modId)) || (f.fileName && m.fileName && f.fileName === m.fileName))?.isMustHave;
-                            return (
-                            <div
-                              key={m.modName}
-                              onClick={() => toggleMod(m.modName)}
-                              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px', fontSize: 14, cursor: 'pointer', borderRadius: 10, background: isConflicting ? 'rgba(255, 100, 0, 0.05)' : (selectedMods.has(m.modName) ? 'var(--accent-dim)' : 'var(--bg-card)'), border: `2px solid ${isConflicting ? 'rgba(255, 100, 0, 0.6)' : (selectedMods.has(m.modName) ? 'var(--accent)' : 'var(--border-light)')}`, transition: 'all 0.15s' }} className="hover-bg-subtle"
-                            >
-                              <div style={{ flexShrink: 0 }}>
-                                <MiniModIcon mod={m} size={64} />
-                              </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
-                                  <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
-                                    <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title || m.modName}</span>
-                                    <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'} • v{m.version}</span>
-                                  </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                                    {isMustHave && <Pin size={14} fill="var(--accent)" style={{ opacity: 0.8 }} />}
-                                    {usedMods.has(m.modName.toLowerCase()) && (
-                                      <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent)', background: 'rgba(var(--accent-rgb), 0.18)', padding: '2px 6px', borderRadius: 4, letterSpacing: 0.5 }}>IN USE</span>
-                                    )}
-                                    {isConflicting && (
-                                      <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictInfoMod(m); }} style={{ cursor: 'pointer', color: 'orange', padding: '2px 4px', display: 'flex' }} title="Show conflict details">
-                                        <ShieldAlert size={16} />
-                                      </div>
-                                    )}
-                                  </div>
-                              </div>
-                            </div>
-                            );
-                          })}
+                    <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)', flex: 1, minHeight: 0 }}>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <div className="search-input-wrapper" style={{ flex: '0 0 250px', position: 'relative' }}>
+                          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
+                          <input type="text" placeholder="Search installed mods..." value={modSearchQuery} onChange={e => setModSearchQuery(e.target.value)} style={{ width: '100%', paddingLeft: 32 }} />
                         </div>
-                      )}
+                        {availableBrands && availableBrands.length > 0 && (
+                          <select 
+                              value={selectedBrand} 
+                              onChange={e => setSelectedBrand(e.target.value)}
+                              title="Filter mods by brand."
+                              style={{ width: 140, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+                          >
+                              <option value="">All Brands</option>
+                              {availableBrands.map(b => (
+                                  <option key={b} value={b}>{b}</option>
+                              ))}
+                          </select>
+                        )}
+                        {availableCategories && availableCategories.length > 0 && (
+                          <select 
+                              value={selectedCategory} 
+                              onChange={e => setSelectedCategory(e.target.value)}
+                              title="Filter mods by category."
+                              style={{ width: 140, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+                          >
+                              <option value="">All Categories</option>
+                              {availableCategories.map(c => (
+                                  <option key={c} value={c}>{c}</option>
+                              ))}
+                          </select>
+                        )}
+                        <select 
+                            value={selectedFolder} 
+                            onChange={e => setSelectedFolder(e.target.value)}
+                            title="Filter by mod folder."
+                            style={{ width: 160, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+                        >
+                            <option value="ALL">All Folders</option>
+                            {Object.keys(groupedMods).sort().map(folderName => (
+                                <option key={folderName} value={folderName}>{folderName}</option>
+                            ))}
+                        </select>
+                        <div style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', background: 'var(--bg-tertiary)', borderRadius: 100, border: '1px solid var(--border)' }}>
+                          {selectedMods.size} Selected
+                        </div>
+                        <label title="Filter the list to only show mods currently used in this savegame."
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            padding: '4px 10px',
+                            borderRadius: 8,
+                            border: `1px solid ${showOnlyUsed ? 'var(--accent)' : 'var(--border)'}`,
+                            background: showOnlyUsed ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg-tertiary)',
+                            color: showOnlyUsed ? 'var(--accent)' : 'var(--text-secondary)',
+                            transition: 'all 0.15s'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={showOnlyUsed}
+                            onChange={e => setShowOnlyUsed(e.target.checked)}
+                            style={{ cursor: 'pointer', accentColor: 'var(--accent)' }}
+                          />
+                          <span>Show Used Only ({usedMods.size})</span>
+                        </label>
+                        <button 
+                          className="btn btn--secondary btn--sm"
+                          style={{ gap: 6, padding: '0 14px', height: 32, fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', background: 'transparent', border: '1px solid var(--border)' }}
+                          onClick={() => {
+                            const nextSelected = new Set(selectedMods);
+                            const toRemove = [];
+                            installedMods.forEach(mod => {
+                              if (nextSelected.has(mod.modName) && !usedMods.has(mod.modName.toLowerCase())) {
+                                toRemove.push(mod.modName);
+                              }
+                            });
+                            if (toRemove.length > 0) {
+                              setIsDeselectingUnused(true);
+                              toRemove.forEach(m => nextSelected.delete(m));
+                              setSelectedMods(nextSelected);
+                              const modsToApply = installedMods.filter(m => nextSelected.has(m.modName));
+                              window.api.savegames.setSavegameMods(save.path, modsToApply).then(() => {
+                                setIsDeselectingUnused(false);
+                                onRefresh();
+                              });
+                            }
+                          }}
+                        >
+                          <Trash2 size={14} />
+                          DESELECT UNUSED MODS
+                        </button>
+                        <button 
+                          className="btn btn--sm"
+                          title="Toggle all Must-Have mods."
+                          style={{ gap: 6, padding: '0 14px', height: 32, fontSize: 11, fontWeight: 700, 
+                                   background: (() => {
+                                       const favsForToggle = useModHubStore.getState().favoriteMods || [];
+                                       let activeCount = 0;
+                                       let totalCount = 0;
+                                       installedMods.forEach(m => {
+                                           const mnStr = typeof m.modName === 'string' ? m.modName : '';
+                                           if (!mnStr) return;
+                                           const fnStr = typeof m.fileName === 'string' ? m.fileName : '';
+                                           const modBasename = fnStr ? fnStr.split(/[\\/\\]/).pop().toLowerCase() : `${mnStr.toLowerCase()}.zip`;
+                                           const isMustHave = favsForToggle.some(fm => {
+                                               if (!fm || !fm.isMustHave) return false;
+                                               const idMatch = fm.modId && m.modId && String(fm.modId) === String(m.modId);
+                                               const fmStr = typeof fm.fileName === 'string' ? fm.fileName : '';
+                                               return idMatch || (fmStr && fmStr.toLowerCase() === modBasename);
+                                           });
+                                           if (isMustHave) {
+                                               totalCount++;
+                                               if (selectedMods.has(mnStr)) activeCount++;
+                                           }
+                                       });
+                                       return (totalCount > 0 && activeCount === totalCount) ? 'var(--accent)' : 'transparent';
+                                   })(),
+                                   color: (() => {
+                                       const favsForToggle = useModHubStore.getState().favoriteMods || [];
+                                       let activeCount = 0;
+                                       let totalCount = 0;
+                                       installedMods.forEach(m => {
+                                           const mnStr = typeof m.modName === 'string' ? m.modName : '';
+                                           if (!mnStr) return;
+                                           const fnStr = typeof m.fileName === 'string' ? m.fileName : '';
+                                           const modBasename = fnStr ? fnStr.split(/[\\/\\]/).pop().toLowerCase() : `${mnStr.toLowerCase()}.zip`;
+                                           const isMustHave = favsForToggle.some(fm => {
+                                               if (!fm || !fm.isMustHave) return false;
+                                               const idMatch = fm.modId && m.modId && String(fm.modId) === String(m.modId);
+                                               const fmStr = typeof fm.fileName === 'string' ? fm.fileName : '';
+                                               return idMatch || (fmStr && fmStr.toLowerCase() === modBasename);
+                                           });
+                                           if (isMustHave) {
+                                               totalCount++;
+                                               if (selectedMods.has(mnStr)) activeCount++;
+                                           }
+                                       });
+                                       return (totalCount > 0 && activeCount === totalCount) ? 'white' : 'var(--text-secondary)';
+                                   })(),
+                                   border: '1px solid ' + (() => {
+                                       const favsForToggle = useModHubStore.getState().favoriteMods || [];
+                                       let activeCount = 0;
+                                       let totalCount = 0;
+                                       installedMods.forEach(m => {
+                                           const mnStr = typeof m.modName === 'string' ? m.modName : '';
+                                           if (!mnStr) return;
+                                           const fnStr = typeof m.fileName === 'string' ? m.fileName : '';
+                                           const modBasename = fnStr ? fnStr.split(/[\\/\\]/).pop().toLowerCase() : `${mnStr.toLowerCase()}.zip`;
+                                           const isMustHave = favsForToggle.some(fm => {
+                                               if (!fm || !fm.isMustHave) return false;
+                                               const idMatch = fm.modId && m.modId && String(fm.modId) === String(m.modId);
+                                               const fmStr = typeof fm.fileName === 'string' ? fm.fileName : '';
+                                               return idMatch || (fmStr && fmStr.toLowerCase() === modBasename);
+                                           });
+                                           if (isMustHave) {
+                                               totalCount++;
+                                               if (selectedMods.has(mnStr)) activeCount++;
+                                           }
+                                       });
+                                       return (totalCount > 0 && activeCount === totalCount) ? 'var(--accent)' : 'var(--border)';
+                                   })()
+                                 }}
+                          onClick={async () => {
+                            try {
+                                const nextSelected = new Set(selectedMods);
+                                let changed = false;
+                                const favs = useModHubStore.getState().favoriteMods || [];
+                                
+                                const mustHaveModNames = new Set();
+                                installedMods.forEach(mod => {
+                                    const fnStr = typeof mod.fileName === 'string' ? mod.fileName : '';
+                                    const mnStr = typeof mod.modName === 'string' ? mod.modName : '';
+                                    const modBasename = fnStr ? fnStr.split(/[\\/\\]/).pop().toLowerCase() : (mnStr ? `${mnStr.toLowerCase()}.zip` : '');
+                                    
+                                    const isMustHave = favs.some(fm => {
+                                        if (!fm || !fm.isMustHave) return false;
+                                        const idMatch = fm.modId && mod.modId && String(fm.modId) === String(mod.modId);
+                                        const fmStr = typeof fm.fileName === 'string' ? fm.fileName : '';
+                                        return idMatch || (fmStr && fmStr.toLowerCase() === modBasename);
+                                    });
+                                    if (isMustHave && mnStr) {
+                                        mustHaveModNames.add(mnStr);
+                                    }
+                                });
+                                
+                                const isAdoptMustHavesActive = mustHaveModNames.size > 0 && Array.from(mustHaveModNames).every(mn => nextSelected.has(mn));
+                                
+                                if (isAdoptMustHavesActive) {
+                                    // Turn OFF
+                                    mustHaveModNames.forEach(mn => {
+                                        if (nextSelected.has(mn)) {
+                                            nextSelected.delete(mn);
+                                            changed = true;
+                                        }
+                                    });
+                                } else {
+                                    // Turn ON
+                                    mustHaveModNames.forEach(mn => {
+                                        if (!nextSelected.has(mn)) {
+                                            nextSelected.add(mn);
+                                            changed = true;
+                                        }
+                                    });
+                                }
+                                
+                                if (changed) {
+                                  setSelectedMods(nextSelected);
+                                  const modsToApply = installedMods.filter(m => typeof m.modName === 'string' && nextSelected.has(m.modName));
+                                  
+                                  const result = window.api.savegames.setSavegameMods
+                                    ? await window.api.savegames.setSavegameMods(save.path, modsToApply)
+                                    : await window.api.savegames.updateSavegameMods(save.path, modsToApply);
+                                    
+                                  if (result && !result.success) {
+                                      import('../store/useToastStore').then(module => module.useToastStore.getState().error(result.error || "Failed to update mods"));
+                                  } else {
+                                      onRefresh();
+                                  }
+                                } else {
+                                  import('../store/useToastStore').then(module => module.useToastStore.getState().info("No Must-Have mods available to toggle."));
+                                }
+                            } catch(err) {
+                                console.error("Adopt Must Haves error:", err);
+                                import('../store/useToastStore').then(module => module.useToastStore.getState().error("Error: " + err.message));
+                            }
+                          }}
+                        >
+                          <Pin size={14} />
+                          ADOPT MUST-HAVES
+                        </button>
+                      </div>
+
+                      <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 8, border: '1px solid var(--border)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 8, padding: '8px 4px' }}>
+                          {(() => {
+                              let list = [];
+                              if (selectedFolder === 'ALL') {
+                                  Object.values(groupedMods).forEach(arr => list.push(...arr));
+                              } else {
+                                  list = groupedMods[selectedFolder] || [];
+                              }
+                              
+                              const displayedMods = list.filter(m => {
+                                  if (showOnlyUsed && !usedMods.has(m.modName.toLowerCase())) return false;
+                                  if (selectedCategory) {
+                                      if (selectedCategory === 'Favourites') {
+                                          const fnStr = typeof m.fileName === 'string' ? m.fileName : '';
+                                          const mnStr = typeof m.modName === 'string' ? m.modName : '';
+                                          const modBasename = fnStr ? fnStr.split(/[\\/\\]/).pop().toLowerCase() : (mnStr ? `${mnStr.toLowerCase()}.zip` : '');
+                                          const isFav = (useModHubStore.getState().favoriteMods||[]).some(fm => {
+                                              if (!fm) return false;
+                                              const idMatch = fm.modId && m.modId && String(fm.modId) === String(m.modId);
+                                              const fmStr = typeof fm.fileName === 'string' ? fm.fileName : '';
+                                              return idMatch || (fmStr && fmStr.toLowerCase() === modBasename);
+                                          });
+                                          if (!isFav) return false;
+                                      } else {
+                                          let catStr = m.category;
+                                          const modCache = useModHubStore.getState().modCache || {};
+                                          if (m.modId && modCache[m.modId]?.category) catStr = modCache[m.modId].category;
+                                          
+                                          const parseModCategory = (cat, isMap) => {
+            if (isMap) return 'Maps';
+            if (!cat) return null;
+            let s = String(cat).toLowerCase();
+            if (s.includes('map')) return 'Maps';
+            if (s.includes('tractor') || s.includes('truck') || s.includes('car') || s.includes('bike') || s.includes('harvester') || s.includes('loader') || s.includes('telehandler') || s.includes('forklift') || s.includes('excavator') || s.includes('forwarder') || s.includes('drivable') || s.includes('vehicle')) return 'Vehicles';
+            if (s.includes('trailer') || s.includes('cultivat') || s.includes('plow') || s.includes('seeder') || s.includes('planter') || s.includes('roller') || s.includes('spreader') || s.includes('sprayer') || s.includes('mower') || s.includes('tedder') || s.includes('windrower') || s.includes('header') || s.includes('tool') || s.includes('spader') || s.includes('subsoiler') || s.includes('harrow') || s.includes('weeder') || s.includes('mulcher') || s.includes('belt') || s.includes('leveler') || s.includes('compaction') || s.includes('winch') || s.includes('cutter') || s.includes('chainsaw') || s.includes('shovel') || s.includes('implement') || s.includes('yield') || s.includes('slurry') || s.includes('manure') || s.includes('forage')) return 'Implements';
+            if (s.includes('placeable') || s.includes('shed') || s.includes('silo') || s.includes('production') || s.includes('farmhouse') || s.includes('animal') || s.includes('decoration')) return 'Placeables';
+            if (s.includes('object') || s.includes('bale') || s.includes('pallet') || s.includes('bigbag') || s.includes('weight')) return 'Objects';
+            if (s.includes('pack') || s.includes('package')) return 'Packs';
+            if (s.includes('gameplay') || s.includes('script') || s.includes('prefab')) return 'Gameplay and Scripts';
+            return 'Other';
+        };
+                                          
+                                          const mainCat = parseModCategory(catStr, m.isMap);
+                                          if (mainCat !== selectedCategory) return false;
+                                      }
+                                  }
+                                  if (selectedBrand) {
+                                      let b = null;
+                                      const modCache = useModHubStore.getState().modCache || {};
+                                      if (m.modId && modCache[m.modId]?.brand) b = modCache[m.modId].brand;
+                                      if (!b) {
+                                          const hardcoded = useModHubStore.getState().hardcodedBrands || [];
+                                          for (const hb of hardcoded) {
+                                              if (m.title && m.title.toLowerCase().includes(hb.toLowerCase())) { b = hb; break; }
+                                          }
+                                      }
+                                      if (b !== selectedBrand) return false;
+                                  }
+                                  if (!modSearchQuery) return true;
+                                  return m.title?.toLowerCase().includes(modSearchQuery.toLowerCase()) || m.modName.toLowerCase().includes(modSearchQuery.toLowerCase());
+                              }).sort((a, b) => (a.title || a.modName).localeCompare(b.title || b.modName));
+                              
+                              if (displayedMods.length === 0) {
+                                  return <div style={{ padding: 20, textAlign: 'center', opacity: 0.5, gridColumn: '1 / -1' }}>No mods found matching your criteria.</div>;
+                              }
+                              
+                              return displayedMods.map(m => {
+                                const conflictData = activeModalConflicts && activeModalConflicts.get(m.modName);
+                                const isConflicting = !!conflictData;
+                                const mBasename = m.fileName ? m.fileName.split(/[\\/\\]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : '');
+                                const isMustHave = useModHubStore.getState().favoriteMods.some(f => f.isMustHave && (
+                                    (f.modId && m.modId && String(f.modId) === String(m.modId)) || 
+                                    (f.fileName && f.fileName.toLowerCase() === mBasename)
+                                ));
+                                return (
+                                  <div
+                                    key={m.modName}
+                                    onClick={() => toggleMod(m.modName)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px', fontSize: 14, cursor: 'pointer', borderRadius: 10, background: isConflicting ? 'rgba(255, 100, 0, 0.05)' : (selectedMods.has(m.modName) ? 'var(--accent-dim)' : 'var(--bg-card)'), border: `2px solid ${isConflicting ? 'rgba(255, 100, 0, 0.6)' : (selectedMods.has(m.modName) ? 'var(--accent)' : 'var(--border-light)')}`, transition: 'all 0.15s' }} className="hover-bg-subtle"
+                                  >
+                                    <MiniModIcon mod={m} size={64} />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12, overflow: 'hidden' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+                                          <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title || m.modName}</span>
+                                          <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'} • v{m.version}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                          {isMustHave && <Pin size={14} fill="var(--accent)" style={{ opacity: 0.8 }} />}
+                                          {usedMods.has(m.modName.toLowerCase()) && (
+                                            <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent)', background: 'rgba(var(--accent-rgb), 0.18)', padding: '2px 6px', borderRadius: 4, letterSpacing: 0.5 }}>IN USE</span>
+                                          )}
+                                          {isConflicting && (
+                                            <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictInfoMod(m); }} style={{ cursor: 'pointer', color: 'orange', padding: '2px 4px', display: 'flex' }} title="Show conflict details">
+                                              <ShieldAlert size={16} />
+                                            </div>
+                                          )}
+                                        </div>
+                                    </div>
+                                  </div>
+                                );
+                              });
+                          })()}
+                        </div>
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-              
-
-            </div>
-          )}
-
-          <div style={{ background: 'rgba(var(--accent-rgb), 0.05)', padding: '16px', borderRadius: 12, border: '1px solid var(--border)', fontSize: 'var(--fs-xs)', display: 'flex', gap: 12 }}>
+                  )}
+                  <div style={{ background: 'rgba(var(--accent-rgb), 0.05)', padding: '16px', borderRadius: 12, border: '1px solid var(--border)', fontSize: 'var(--fs-xs)', display: 'flex', gap: 12 }}>
             <Info size={16} className="text-accent" style={{ flexShrink: 0 }} />
             <p style={{ margin: 0, opacity: 0.8 }}>Changes are applied instantly to the XML files. We recommend archiving your savegame first as a manual backup.</p>
           </div>
@@ -1753,6 +1947,34 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
     );
 }
 
+
+
+
+
+
+const MiniModIcon = React.memo(({ mod, size = 64 }) => {
+    const [error, setError] = React.useState(false);
+    let imageUrl = null;
+    
+    if (mod?.iconData && !mod.iconData.startsWith('CATEGORY:')) {
+        imageUrl = mod.iconData.startsWith('http') || mod.iconData.startsWith('data:') ? mod.iconData : `data:image/png;base64,${mod.iconData}`;
+    } else if (mod?.filePath) {
+        imageUrl = `mod-icon://icon?path=${encodeURIComponent(mod.filePath)}`;
+    }
+    
+    return (
+        <div style={{ width: size, height: size, borderRadius: 8, overflow: 'hidden', background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {imageUrl && !error ? (
+                <img src={imageUrl} alt={mod?.title || mod?.modName || ""} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={() => setError(true)} />
+            ) : (
+                <div style={{ fontSize: size * 0.4, fontWeight: 900, color: 'var(--text-secondary)' }}>
+                    {(mod?.title || mod?.modName || 'M').charAt(0).toUpperCase()}
+                </div>
+            )}
+        </div>
+    );
+});
+
 export default function SavegamesPage() {
   const navigate = useNavigate();
   const { mods } = useLocalModsStore();
@@ -1808,7 +2030,7 @@ export default function SavegamesPage() {
         const brands = new Set();
         const modCache = useModHubStore.getState().modCache || {};
         const hardcoded = useModHubStore.getState().hardcodedBrands || [];
-        (installedMods || []).forEach(m => {
+        (mods || []).forEach(m => {
             let b = null;
             if (m.modId && modCache[m.modId]?.brand) b = modCache[m.modId].brand;
             if (!b) {
@@ -1822,7 +2044,7 @@ export default function SavegamesPage() {
             if (b) brands.add(b);
         });
         return Array.from(brands).sort();
-    }, [installedMods]);
+    }, [mods]);
   
     const activeModalConflicts = new Map();
   // Savegame Editor state
@@ -2151,7 +2373,7 @@ export default function SavegamesPage() {
       if (includeMustHaves) {
         const favoriteMods = useModHubStore.getState().favoriteMods || [];
         mods
-          .filter(m => !m.isMap && favoriteMods.some(fm => fm.isMustHave && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && m.fileName && fm.fileName === m.fileName))))
+          .filter(m => !m.isMap && favoriteMods.some(fm => fm.isMustHave && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && fm.fileName.toLowerCase() === (m.fileName ? m.fileName.split(/[\\/\\]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : ""))))))
           .forEach(m => finalModNames.add(m.modName));
       }
 
@@ -2945,7 +3167,7 @@ export default function SavegamesPage() {
                                             onChange={(e) => setIncludeMustHaves(e.target.checked)}
                                             style={{ accentColor: 'var(--accent)', width: 16, height: 16 }}
                                         /> 
-                                        Include Must-Haves ({mods.filter(m => !m.isMap && (useModHubStore.getState().favoriteMods || []).some(fm => fm.isMustHave && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && m.fileName && fm.fileName === m.fileName)))).length})
+                                        Include Must-Haves ({mods.filter(m => !m.isMap && (useModHubStore.getState().favoriteMods || []).some(fm => fm.isMustHave && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && fm.fileName.toLowerCase() === (m.fileName ? m.fileName.split(/[\\/\\]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : '')))))).length})
                                     </label>
                                 </div>
                                 <div style={{ display: 'flex', gap: 8 }}>
@@ -2991,7 +3213,7 @@ export default function SavegamesPage() {
                                   const mustHaveMods = deduplicate(allValidMods.filter(m => 
                                       favoriteMods.some(fm => fm.isMustHave && (
                                           (fm.modId && m.modId && String(fm.modId) === String(m.modId)) || 
-                                          (fm.fileName && m.fileName && fm.fileName === m.fileName)
+                                          (fm.fileName && fm.fileName.toLowerCase() === (m.fileName ? m.fileName.split(/[\\/\\]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : "")))
                                       ))
                                   ));
                                   
@@ -3076,7 +3298,7 @@ export default function SavegamesPage() {
                                       !m.isMap && (useModHubStore.getState().favoriteMods || []).some(fm => 
                                         fm.isMustHave && (
                                           (fm.modId && m.modId && String(fm.modId) === String(m.modId)) || 
-                                          (fm.fileName && m.fileName && fm.fileName === m.fileName)
+                                          (fm.fileName && fm.fileName.toLowerCase() === (m.fileName ? m.fileName.split(/[\\/\\]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : "")))
                                         )
                                       )
                                     ).length : 0;
