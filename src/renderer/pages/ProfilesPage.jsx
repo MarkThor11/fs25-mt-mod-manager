@@ -42,7 +42,6 @@ const ProfileModImage = ({ mod, zoom, isList }) => {
 };
 
 const CustomSlider = ({ value, min, max, step, onChange, width = '100%', title }) => {
-  const percentage = ((value - min) / (max - min)) * 100;
   return (
     <input
       type="range"
@@ -53,10 +52,7 @@ const CustomSlider = ({ value, min, max, step, onChange, width = '100%', title }
       value={value}
       onChange={onChange}
       title={title}
-      style={{
-        width,
-        background: `linear-gradient(to right, var(--accent) ${percentage}%, rgba(255,255,255,0.1) ${percentage}%)`
-      }}
+      style={{ width }}
     />
   );
 };
@@ -1309,7 +1305,7 @@ export default function ProfilesPage() {
         }
 
         .tab-btn--active {
-          background: var(--bg-tertiary);
+          background: rgba(255, 255, 255, 0.1);
           color: var(--accent);
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
@@ -1529,9 +1525,11 @@ export default function ProfilesPage() {
           outline: none;
           cursor: pointer;
           margin: 0;
+          padding: 0;
           display: inline-block;
           vertical-align: middle;
-          /* no border */
+          background: rgba(255, 255, 255, 0.1);
+          overflow: hidden;
         }
         .perfect-pill-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
@@ -1542,7 +1540,7 @@ export default function ProfilesPage() {
           background: var(--accent);
           cursor: pointer;
           border: none;
-          box-shadow: none;
+          box-shadow: -400px 0 0 400px var(--accent);
         }
 
         .zoom-control-wrapper {
