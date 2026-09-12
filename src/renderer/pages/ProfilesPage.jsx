@@ -46,7 +46,7 @@ const CustomSlider = ({ value, min, max, step, onChange, width = '100%', title }
   return (
     <input
       type="range"
-      className="native-range-slider"
+      className="perfect-pill-slider"
       min={min}
       max={max}
       step={step}
@@ -1521,31 +1521,28 @@ export default function ProfilesPage() {
           color: var(--bg-primary);
           font-weight: 800;
         }
-        .native-range-slider {
+        .perfect-pill-slider {
           -webkit-appearance: none;
           appearance: none;
-          height: 6px;
-          border-radius: 3px;
+          height: 14px;
+          border-radius: 7px;
           outline: none;
           cursor: pointer;
           margin: 0;
           display: inline-block;
           vertical-align: middle;
+          /* no border */
         }
-        .native-range-slider::-webkit-slider-thumb {
+        .perfect-pill-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 16px;
-          height: 16px;
+          width: 14px;
+          height: 14px;
           border-radius: 50%;
           background: var(--accent);
           cursor: pointer;
-          border: 2px solid var(--bg-primary);
-          box-shadow: 0 0 5px rgba(0,0,0,0.5);
-          transition: transform 0.1s ease;
-        }
-        .native-range-slider::-webkit-slider-thumb:hover {
-          transform: scale(1.15);
+          border: none;
+          box-shadow: none;
         }
 
         .zoom-control-wrapper {
