@@ -24,6 +24,7 @@ export default function FavouritesPage() {
   const getInstalledVersion = useInstalledLookup();
   const [activeTab, setActiveTab] = useState('mods');
   const actualFavoriteMods = favoriteMods.filter(m => m.isFavorite !== false);
+  const mustHaveMods = favoriteMods.filter(m => m.isMustHave);
 
   useEffect(() => {
     loadCache();
@@ -38,7 +39,7 @@ export default function FavouritesPage() {
 
 
   return (
-    <div className="page-container">
+    <div className="page animate-fade-in-up">
       <div className="page-header">
         <div className="page-header__icon" style={{ background: 'rgba(var(--danger-rgb), 0.14)', color: 'var(--danger)', border: '1px solid var(--danger)' }}>
           <Heart size={24} fill="currentColor" />
@@ -50,7 +51,7 @@ export default function FavouritesPage() {
           </p>
         </div>
         
-        {activeTab === 'mods' && actualFavoriteMods.length > 0 && (
+        {((activeTab === 'mods' && actualFavoriteMods.length > 0) || (activeTab === 'must-haves' && mustHaveMods.length > 0)) && (
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 12, alignItems: 'center' }}>
             <div style={{ 
               display: 'flex', 
@@ -219,8 +220,20 @@ export default function FavouritesPage() {
             ))}
           </div>
         )
-      ) : (
-        actualFavoriteMods.length === 0 ? (
+      ) : activeTab === 'must-haves' && mustHaveMods.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state__icon" style={{ color: 'var(--accent)' }}>
+              <Pin size={48} fill="currentColor" />
+            </div>
+            <h2 className="empty-state__title">No Must-Have Mods Yet</h2>
+            <p className="empty-state__text">
+              Pin mods in the ModHub or your Installed list to add them here.
+            </p>
+            <button className="btn btn--primary" onClick={() => navigate('/modhub')}>
+              Explore Mods
+            </button>
+          </div>
+      ) : activeTab === 'mods' && actualFavoriteMods.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state__icon">
               <Star size={48} />
@@ -233,11 +246,10 @@ export default function FavouritesPage() {
               Explore Mods
             </button>
           </div>
-        ) : (
+      ) : (
 <div className="mod-grid-container animate-fade-in-up">
                   {(() => {
-                    const mustHaves = actualFavoriteMods.filter(m => m.isMustHave);
-                    const others = actualFavoriteMods.filter(m => !m.isMustHave);
+                    const modsToRender = activeTab === 'must-haves' ? mustHaveMods : actualFavoriteMods;
                     
                     const renderModCard = (mod) => {
                       // Enrich local meta with cached remote data if missing
@@ -291,33 +303,12 @@ export default function FavouritesPage() {
                     };
 
                     return (
-                      <>
-                        {mustHaves.length > 0 && (
-                          <div style={{ marginBottom: 40 }}>
-                            <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--accent)', letterSpacing: '0.1em', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <Pin size={12} fill="var(--accent)" /> MUST-HAVE MODS ({mustHaves.length})
-                            </div>
-                            <div className="mod-grid">
-                              {mustHaves.map(renderModCard)}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {others.length > 0 && (
-                          <div>
-                            <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-tertiary)', letterSpacing: '0.1em', marginBottom: 16 }}>
-                              OTHER FAVOURITES ({others.length})
-                            </div>
-                            <div className="mod-grid">
-                              {others.map(renderModCard)}
-                            </div>
-                          </div>
-                        )}
-                      </>
+                      <div className="mod-grid" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${favouritesZoom || 240}px, 1fr))` }}>
+                        {modsToRender.map(renderModCard)}
+                      </div>
                     );
                   })()}
               </div>
-        )
       )}
     </div>
   );
