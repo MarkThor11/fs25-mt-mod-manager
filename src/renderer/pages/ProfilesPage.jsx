@@ -1019,7 +1019,8 @@ export default function ProfilesPage() {
                                       const isConflict = options.isCrossPlatform && isPCOnly;
                                       const isSelected = selectedMods.has(mod.modName);
                                       
-                                      const cachedImg = mod.modId ? useModHubStore.getState().modCache?.[mod.modId]?.image : null;
+                                      const modIdStr = mod.modId ? String(mod.modId).replace(/^0+/, '') : null;
+                                      const cachedImg = modIdStr ? useModHubStore.getState().modCache?.[modIdStr]?.image : null;
                                       let imgUrl = mod.iconData || cachedImg || null;
                                       if (imgUrl && imgUrl.startsWith('//')) imgUrl = `https:${imgUrl}`;
 
@@ -1079,10 +1080,9 @@ export default function ProfilesPage() {
                                               </div>
                                                 {zoom >= 160 && (
                                                   <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mod.author || 'Unknown Author'}</div>
-                                                    <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+                                                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.8 }}>{mod.author || 'Unknown'}</div>
+                                                    <div style={{ display: 'flex', justifyContent: 'center', gap: 4, opacity: 0.7 }}>
                                                       <span>v{mod.version || '1.0.0.0'}</span>
-                                                      <span>{((mod.size || 0)/(1024*1024)).toFixed(1)} MB</span>
                                                     </div>
                                                   </div>
                                                 )}
@@ -1153,9 +1153,8 @@ export default function ProfilesPage() {
                                               {mod.title || mod.modName}
                                             </div>
                                               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', display: 'flex', gap: 12, marginTop: 4 }}>
-                                                <span>{mod.author || 'Unknown Author'}</span>
+                                                <span>{mod.author || 'Unknown'}</span>
                                                 <span>v{mod.version || '1.0.0.0'}</span>
-                                                <span>{((mod.size || 0)/(1024*1024)).toFixed(1)} MB</span>
                                               </div>
                                             {isPCOnly && (
                                               <span className="pc-only-badge">PC ONLY</span>
