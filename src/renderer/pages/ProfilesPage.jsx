@@ -1070,7 +1070,7 @@ export default function ProfilesPage() {
                                                 style={{ 
                                                   fontSize: zoom < 160 ? 11 : 13, 
                                                   fontWeight: 800,
-                                                  whiteSpace: 'nowrap',
+                                                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                                                   overflow: 'hidden',
                                                   textOverflow: 'ellipsis',
                                                   color: isConflict ? 'orange' : 'var(--text-primary)'
