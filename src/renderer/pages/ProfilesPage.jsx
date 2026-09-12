@@ -526,7 +526,7 @@ export default function ProfilesPage() {
   return (
     <div className="page animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0', position: 'relative', minHeight: 0 }}>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-2)' }}>
+      <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-2)' }}>
         <div>
           <h2 style={{ fontWeight: 'var(--fw-bold)', margin: 0 }}>Game Templates</h2>
           <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-tertiary)', margin: 0 }}>Create game blueprints with preset mods and settings.</p>
@@ -541,10 +541,10 @@ export default function ProfilesPage() {
         </div>
       </div>
 
-      <div style={{ 
-        display: 'flex', 
-        gap: 'var(--sp-2)', 
-        overflowX: 'auto', 
+      <div className='hide-scrollbar' style={{ flexShrink: 0,
+        display: 'flex',
+        gap: 'var(--sp-2)',
+        overflowX: profiles.length > 5 ? 'auto' : 'visible', 
         borderBottom: '1px solid var(--border)', 
         paddingBottom: '0', 
         marginBottom: 'var(--sp-2)',
@@ -586,7 +586,7 @@ export default function ProfilesPage() {
             <div style={{ padding: '10px', color: 'var(--text-muted)' }}>No templates created yet. Click 'New Template' to start.</div>
         )}
       </div>
-      <div style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 'var(--sp-5)', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 'var(--sp-5)', display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto' }}>
         {selectedProfile ? (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-6)', gap: 'var(--sp-4)' }}>
@@ -594,7 +594,7 @@ export default function ProfilesPage() {
                 type="text"
                 value={profileName}
                 onChange={(e) => setProfileName(e.target.value)}
-                style={{ fontSize: 'var(--fs-xl)', fontWeight: 'var(--fw-bold)', background: 'transparent', border: 'none', borderBottom: '2px solid var(--border)', padding: 'var(--sp-1) 0', color: 'var(--text-primary)', flex: 1, outline: 'none' }}
+                style={{ fontSize: 'var(--fs-xl)', fontWeight: 'var(--fw-bold)', background: 'transparent',  borderBottom: '2px solid var(--border)', padding: 'var(--sp-1) 0', color: 'var(--text-primary)', flex: 1, outline: 'none' }}
                 placeholder="Template Name"
               />
               {options.isCrossPlatform && (
@@ -1105,7 +1105,7 @@ export default function ProfilesPage() {
                                           display: 'flex', alignItems: 'center', padding: '4px 8px', borderRadius: 4, 
                                           background: viewMode === 'list' ? 'var(--accent)' : 'transparent',
                                           color: viewMode === 'list' ? 'var(--bg-primary)' : 'var(--text-tertiary)',
-                                          border: 'none', cursor: 'pointer', transition: 'all 0.2s', width: 32, height: 28, justifyContent: 'center'
+                                           cursor: 'pointer', transition: 'all 0.2s', width: 32, height: 28, justifyContent: 'center'
                                         }}
                                         title="List View"
                                       >
@@ -1117,7 +1117,7 @@ export default function ProfilesPage() {
                                           display: 'flex', alignItems: 'center', padding: '4px 8px', borderRadius: 4, 
                                           background: viewMode === 'grid' ? 'var(--accent)' : 'transparent',
                                           color: viewMode === 'grid' ? 'var(--bg-primary)' : 'var(--text-tertiary)',
-                                          border: 'none', cursor: 'pointer', transition: 'all 0.2s', width: 32, height: 28, justifyContent: 'center'
+                                           cursor: 'pointer', transition: 'all 0.2s', width: 32, height: 28, justifyContent: 'center'
                                         }}
                                         title="Grid View"
                                       >
@@ -1282,7 +1282,7 @@ export default function ProfilesPage() {
                                             title={isMustHave ? "Remove from Must-Have" : "Make Must-Have"}
                                             style={{ 
                                               background: 'transparent',
-                                              border: 'none',
+                                              
                                               padding: '4px',
                                               cursor: 'pointer',
                                               display: 'flex',

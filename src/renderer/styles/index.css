@@ -110,3 +110,13 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* Force Vite update */
+
+
+/* Hide scrollbar for specific elements */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
