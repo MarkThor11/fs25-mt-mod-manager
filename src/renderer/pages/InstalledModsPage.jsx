@@ -119,7 +119,7 @@ const LocalModIcon = React.memo(({ mod }) => {
 
 const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpdate, onUninstall, status, updateInfo, isUpdating, formatSize, isIconOnly }) => {
   const { toggleFavoriteMod, favoriteMods, toggleFavoriteAuthor, favoriteAuthors, toggleMustHaveMod } = useModHubStore();
-  const isFavMod = favoriteMods.some(f => (f.modId && mod.modId && String(f.modId) === String(mod.modId)) || (f.fileName && mod.fileName && f.fileName === mod.fileName));
+  const isFavMod = favoriteMods.some(f => f.isFavorite !== false && ((f.modId && mod.modId && String(f.modId) === String(mod.modId)) || (f.fileName && mod.fileName && f.fileName === mod.fileName)));
   const isMustHave = favoriteMods.some(m => ((m.modId && mod.modId && String(m.modId) === String(mod.modId)) || (m.fileName && mod.fileName && m.fileName === mod.fileName)) && m.isMustHave);
   const authorName = mod.author || 'Unknown';
   const isFavAuthor = favoriteAuthors.some(f => f.name.toLowerCase() === authorName.toLowerCase());
@@ -377,16 +377,12 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
                             <button 
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    if (!isFavMod) {
-                                        useToastStore.getState().info("Please favorite the mod first to mark it as 'Must Have'");
-                                        return;
-                                    }
                                     toggleMustHaveMod(mod);
                                 }}
                                 style={{ 
                                     color: isMustHave ? 'var(--accent)' : 'var(--text-muted)', 
-                                    opacity: isFavMod ? 1 : 0.4,
-                                    cursor: isFavMod ? 'pointer' : 'not-allowed',
+                                    opacity: 1,
+                                    cursor: 'pointer',
                                     background: 'transparent', border: 'none', padding: 0, display: 'flex'
                                 }}
                                 title={isMustHave ? "Remove from Must-Haves" : "Mark as Must-Have"}

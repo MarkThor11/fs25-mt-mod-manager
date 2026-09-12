@@ -156,8 +156,10 @@ export default function ModDetailPage() {
     if (!mod) return false;
     const targetId = modId || mod.modId;
     return favoriteMods.some(f => 
-      (targetId && f.modId && String(f.modId) === String(targetId)) || 
-      (mod.fileName && f.fileName && f.fileName === mod.fileName)
+      f.isFavorite !== false && (
+        (targetId && f.modId && String(f.modId) === String(targetId)) || 
+        (mod.fileName && f.fileName && f.fileName === mod.fileName)
+      )
     );
   }, [mod, modId, favoriteMods]);
 
