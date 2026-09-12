@@ -16,6 +16,29 @@ const MAPS = [
   { id: 'MapAS', title: 'Hutan Pantai' },
 ];
 
+const ProfileModImage = ({ mod, zoom, isList }) => {
+  
+  
+  const [imgSrc, setImgSrc] = useState(cachedImg || mod.iconData || null);
+
+  useEffect(() => {
+    let active = true;
+    if (!imgSrc && mod.filePath && window.api?.mods?.getIcon) {
+        window.api.mods.getIcon({ filePath: mod.filePath, iconFile: mod.iconFile }).then(b64 => {
+            if (active && b64) setImgSrc(b64);
+        });
+    }
+    return () => { active = false; };
+  }, [imgSrc, mod.filePath, mod.iconFile]);
+
+  if (!imgSrc) {
+      return <Package size={isList ? Math.floor(zoom / 2) : Math.floor(zoom / 4)} style={{ opacity: 0.2 }} />;
+  }
+
+  const finalUrl = imgSrc.startsWith('//') ? 'https:' + imgSrc : imgSrc;
+  return <img src={finalUrl} alt='' style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+};
+
 export default function ProfilesPage() {
   const { profiles, fetchProfiles, createProfile, updateProfile, deleteProfile, exportProfile, importProfile } = useProfileStore();
   const installedMods = useLocalModsStore((state) => state.mods || []);
@@ -1023,10 +1046,10 @@ export default function ProfilesPage() {
                                       const isConflict = options.isCrossPlatform && isPCOnly;
                                       const isSelected = selectedMods.has(mod.modName);
                                       
-                                      const modIdStr = mod.modId ? String(mod.modId).replace(/^0+/, '') : null;
-                                      const cachedImg = modIdStr ? useModHubStore.getState().modCache?.[modIdStr]?.image : null;
-                                      let imgUrl = mod.iconData || cachedImg || null;
-                                      if (imgUrl && imgUrl.startsWith('//')) imgUrl = `https:${imgUrl}`;
+                                      
+                                      
+                                      
+                                      
 
                                       if (viewMode === 'grid') {
                                         return (
@@ -1058,11 +1081,7 @@ export default function ProfilesPage() {
                                               overflow: 'hidden',
                                               border: '1px solid rgba(255,255,255,0.05)'
                                             }}>
-                                              {imgUrl ? (
-                                                <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                              ) : (
-                                                <Package size={zoom / 4} style={{ opacity: 0.2 }} />
-                                              )}
+                                              <ProfileModImage mod={mod} zoom={zoom} isList={false} />
                                               {isMustHave && (
                                                 <div style={{ position: 'absolute', top: 6, right: 6, color: 'var(--accent)', filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))' }}>
                                                   <Pin size={14} fill="var(--accent)" />
@@ -1074,11 +1093,12 @@ export default function ProfilesPage() {
                                                 style={{ 
                                                   fontSize: zoom < 160 ? 11 : 13, 
                                                   fontWeight: 800,
-                                                  whiteSpace: 'nowrap',
+                                                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                                                   overflow: 'hidden',
                                                   textOverflow: 'ellipsis',
                                                   color: isConflict ? 'orange' : 'var(--text-primary)'
                                                 }}
+                                                title={mod.title || mod.modName}
                                               >
                                                 {mod.title || mod.modName}
                                               </div>
@@ -1135,11 +1155,7 @@ export default function ProfilesPage() {
                                             flexShrink: 0,
                                             transition: 'all 0.1s ease'
                                           }}>
-                                            {imgUrl ? (
-                                              <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            ) : (
-                                              <Package size={listIconSize / 2} style={{ opacity: 0.2 }} />
-                                            )}
+                                            <ProfileModImage mod={mod} zoom={listIconSize} isList={true} />
                                           </div>
                                           <div style={{ flex: 1, minWidth: 0 }}>
                                             <div 
