@@ -547,43 +547,89 @@ export const useModHubStore = create((set, get) => ({
     console.log(`[MODHUB] [REPAIR] Completed.`);
   },
 
-  toggleMustHaveMod: (mod) => {
-    const { favoriteMods, toggleFavoriteMod } = get();
+  toggleMustHaveMod: async (mod) => {
+    const { favoriteMods } = get();
     const modId = mod.modId;
     const fileName = mod.fileName ? mod.fileName.split(/[\\/\\]/).pop() : (mod.modName ? `${mod.modName}.zip` : undefined);
 
-    const exists = favoriteMods.find(m => 
-      (m.modId && modId && String(m.modId) === String(modId)) || 
+    const exists = favoriteMods.find(m =>
+      (m.modId && modId && String(m.modId) === String(modId)) ||
       (m.fileName && fileName && m.fileName === fileName)
     );
 
     if (!exists) {
-      // If not even a favorite, toggle favorite first then set must-have
-      get().toggleFavoriteMod(mod).then(() => {
-        set((state) => ({
-          favoriteMods: state.favoriteMods.map(m => {
-            if ((m.modId && modId && String(m.modId) === String(modId)) || (m.fileName && fileName && m.fileName === fileName)) {
-              return { ...m, isMustHave: true };
-            }
-            return m;
-          })
-        }));
-        localStorage.setItem('fav_mods', JSON.stringify(get().favoriteMods));
-      });
+      // Add as must-have only, NOT favorite
+      let enrichedMod = { ...mod };
+      if (!mod.rating || !mod.image) {
+          const targetId = mod.modId ? String(mod.modId) : null;
+          const targetTitle = mod.title ? mod.title.toLowerCase().replace(/[^a-z0-9]/g, '') : null;
+
+          for (const val of Object.values(get().modCache)) {
+              if (val && typeof val === 'object') {
+                if (Array.isArray(val.mods)) {
+                    const match = val.mods.find(m => {
+                        if (targetId && String(m.modId) === targetId) return true;
+                        if (targetTitle && m.title) {
+                            const mTitle = m.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+                            return mTitle === targetTitle || mTitle.includes(targetTitle) || targetTitle.includes(mTitle);
+                        }
+                        return false;
+                    });
+                    if (match) { enrichedMod = { ...enrichedMod, ...match }; break; }
+                } else if (targetId && String(val.modId) === targetId) {
+                    enrichedMod = { ...enrichedMod, ...val }; break;
+                } else if (targetTitle && val.title) {
+                    const vTitle = val.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (vTitle === targetTitle || vTitle.includes(targetTitle) || targetTitle.includes(vTitle)) {
+                        enrichedMod = { ...enrichedMod, ...val }; break;
+                    }
+                }
+              }
+          }
+      }
+
+      if (!enrichedMod.rating && enrichedMod.modId) {
+          try {
+              const detail = await window.api.modhub.fetchModDetail({ modId: enrichedMod.modId });
+              if (detail && detail.rating) {
+                  enrichedMod.rating = detail.rating;
+              }
+          } catch (e) {
+              console.warn(`[MODHUB] Failed to fetch rating for must-have ${enrichedMod.modId}:`, e);
+          }
+      }
+
+      const newFavs = [...favoriteMods, {
+        modId: enrichedMod.modId,
+        fileName: enrichedMod.fileName,
+        title: enrichedMod.title,
+        image: enrichedMod.image,
+        iconData: enrichedMod.iconData,
+        author: enrichedMod.author,
+        version: enrichedMod.version,
+        rating: enrichedMod.rating,
+        dependencies: enrichedMod.dependencies || [],
+        isMustHave: true,
+        isFavorite: false
+      }];
+      set({ favoriteMods: newFavs });
+      localStorage.setItem('fav_mods', JSON.stringify(newFavs));
       return;
     }
 
-    const newFavs = favoriteMods.map(m => {
-      if ((m.modId && modId && String(m.modId) === String(modId)) || (m.fileName && fileName && m.fileName === fileName)) {
-        return { ...m, isMustHave: !m.isMustHave };
-      }
-      return m;
-    });
+    const nextIsMustHave = !exists.isMustHave;
+    const currentIsFavorite = exists.isFavorite !== false;
+
+    let newFavs;
+    if (!nextIsMustHave && !currentIsFavorite) {
+      newFavs = favoriteMods.filter(m => m !== exists);
+    } else {
+      newFavs = favoriteMods.map(m => m === exists ? { ...m, isMustHave: nextIsMustHave } : m);
+    }
+
     set({ favoriteMods: newFavs });
     localStorage.setItem('fav_mods', JSON.stringify(newFavs));
   },
-
-
   setAuthorFilter: (author, shouldFetch = true, source = null) => {
     if (author) {
       const state = get();
