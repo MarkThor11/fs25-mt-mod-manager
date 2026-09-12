@@ -42,6 +42,7 @@ const ProfileModImage = ({ mod, zoom, isList }) => {
 };
 
 const CustomSlider = ({ value, min, max, step, onChange, width = '100%', title }) => {
+  const percentage = ((value - min) / (max - min)) * 100;
   return (
     <input
       type="range"
@@ -52,7 +53,10 @@ const CustomSlider = ({ value, min, max, step, onChange, width = '100%', title }
       value={value}
       onChange={onChange}
       title={title}
-      style={{ width }}
+      style={{
+        width,
+        background: `linear-gradient(to right, var(--accent) calc(7px + ${percentage} * (100% - 14px) / 100), rgba(255,255,255,0.1) calc(7px + ${percentage} * (100% - 14px) / 100))`
+      }}
     />
   );
 };
@@ -1528,8 +1532,6 @@ export default function ProfilesPage() {
           padding: 0;
           display: inline-block;
           vertical-align: middle;
-          background: rgba(255, 255, 255, 0.1);
-          overflow: hidden;
         }
         .perfect-pill-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
@@ -1539,8 +1541,8 @@ export default function ProfilesPage() {
           border-radius: 50%;
           background: var(--accent);
           cursor: pointer;
-          border: none;
-          box-shadow: -400px 0 0 400px var(--accent);
+          border: 1px solid rgba(0, 0, 0, 0.15);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
         }
 
         .zoom-control-wrapper {
