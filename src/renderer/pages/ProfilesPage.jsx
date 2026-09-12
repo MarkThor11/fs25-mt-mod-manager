@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { CustomSlider } from '../components/common/CustomSlider';
 import { Plus, Trash2, Save, Package, PlayCircle, Coins, Map, Settings, Info, DollarSign, Share2, Download, Copy, RefreshCw, AlertCircle, Pin, Search, ChevronLeft, ChevronRight, Folder, ChevronDown, Truck, Users, Globe, Eye, Palette, MapPin, Ruler, Thermometer, Maximize, Radio, Video, Gamepad2, Volume2, LayoutGrid, List, Pencil } from 'lucide-react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useModHubStore } from '../store/useModHubStore';
@@ -39,26 +40,6 @@ const ProfileModImage = ({ mod, zoom, isList }) => {
 
   const finalUrl = imgSrc.startsWith('//') ? 'https:' + imgSrc : imgSrc;
   return <img src={finalUrl} alt='' style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
-};
-
-const CustomSlider = ({ value, min, max, step, onChange, width = '100%', title }) => {
-  const percentage = ((value - min) / (max - min)) * 100;
-  return (
-    <input
-      type="range"
-      className="perfect-pill-slider"
-      min={min}
-      max={max}
-      step={step}
-      value={value}
-      onChange={onChange}
-      title={title}
-      style={{
-        width,
-        background: `linear-gradient(to right, var(--accent) calc(7px + ${percentage} * (100% - 14px) / 100), rgba(255,255,255,0.1) calc(7px + ${percentage} * (100% - 14px) / 100))`
-      }}
-    />
-  );
 };
 
 export default function ProfilesPage() {
@@ -1520,29 +1501,6 @@ export default function ProfilesPage() {
           background: var(--accent);
           color: var(--bg-primary);
           font-weight: 800;
-        }
-        .perfect-pill-slider {
-          -webkit-appearance: none;
-          appearance: none;
-          height: 14px;
-          border-radius: 7px;
-          outline: none;
-          cursor: pointer;
-          margin: 0;
-          padding: 0;
-          display: inline-block;
-          vertical-align: middle;
-        }
-        .perfect-pill-slider::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 14px;
-          height: 14px;
-          border-radius: 50%;
-          background: var(--accent);
-          cursor: pointer;
-          border: 1px solid rgba(0, 0, 0, 0.15);
-          box-shadow: 0 1px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
         }
 
         .zoom-control-wrapper {

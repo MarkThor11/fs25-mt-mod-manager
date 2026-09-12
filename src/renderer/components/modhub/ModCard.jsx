@@ -198,7 +198,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
               setCandidateIdx(v => v + 1);
               setImgError(false);
           } else if (mod.iconData) {
-              setImgSrc(mod.iconData);
+              resolveProxyImage(mod.iconData);
               setImgError(false);
           } else if (mod.filePath && window.api?.mods?.getIcon) {
               // Try fetching local icon if remote and mod.iconData both failed/missing
@@ -215,7 +215,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           resolveProxyImage(remoteUrl);
       }
     } else if (mod.iconData) {
-      setImgSrc(mod.iconData);
+      resolveProxyImage(mod.iconData);
       setImgError(false);
     } else if (mod.filePath && window.api?.mods?.getIcon) {
       // Try fetching local icon if offline and mod.iconData is missing
@@ -232,7 +232,13 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
   }, [candidateIdx, mod.image, mod.iconData, isOnline, imgError, isVisible]);
 
   const resolveProxyImage = async (url) => {
-    if (!url || !window.api?.images) return;
+    if (!url) return;
+    if (url.startsWith('data:') || url.startsWith('file:') || url.startsWith('CATEGORY:')) {
+      setImgSrc(url);
+      setImgError(false);
+      return;
+    }
+    if (!window.api?.images) return;
     try {
       const proxied = await window.api.images.proxy(url);
       if (proxied) {

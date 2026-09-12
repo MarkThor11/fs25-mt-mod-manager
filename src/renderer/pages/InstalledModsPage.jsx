@@ -1,3 +1,4 @@
+import { CustomSlider } from '../components/common/CustomSlider';
 import React, { useEffect, useState, useMemo, useDeferredValue } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -3211,14 +3212,14 @@ export default function InstalledModsPage() {
                             alignItems: 'center',
                             margin: '0 4px'
                           }}>
-                              <input 
-                                type="range" 
+                              <CustomSlider 
+                                 
                                 min="120" 
                                 max="350" 
                                 step="5"
                                 value={folderZooms[folderName] || 180}
                                 onChange={(e) => setFolderZoom(folderName, parseInt(e.target.value))}
-                                className="range-slider"
+                                
                                 style={{ 
                                   position: 'absolute',
                                   left: '50%',

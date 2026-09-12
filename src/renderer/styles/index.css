@@ -108,3 +108,5 @@ input:focus, select:focus, textarea:focus {
 .hover-opacity-1:hover {
   opacity: 1 !important;
 }
+
+/* Force Vite update */

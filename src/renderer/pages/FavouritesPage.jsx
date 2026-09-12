@@ -1,3 +1,4 @@
+import { CustomSlider } from '../components/common/CustomSlider';
 import React, { useState, useEffect } from 'react';
 import { Heart, Star, X, User, Package, LayoutGrid, Pin } from 'lucide-react';
 import { useModHubStore } from '../store/useModHubStore';
@@ -108,14 +109,14 @@ export default function FavouritesPage() {
                 alignItems: 'center',
                 margin: '0 4px'
               }}>
-                <input 
-                  type="range" 
+                <CustomSlider 
+                   
                   min="140" 
                   max="350" 
                   step="5"
                   value={favouritesZoom}
                   onChange={(e) => setFavouritesZoom(parseInt(e.target.value, 10))}
-                  className="range-slider"
+                  
                   style={{ 
                     position: 'absolute',
                     left: '50%',

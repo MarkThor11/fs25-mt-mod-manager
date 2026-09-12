@@ -1,3 +1,4 @@
+import { CustomSlider } from '../components/common/CustomSlider';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -287,7 +288,6 @@ function ModAuditModal({ save, allInstalledMods, onClose, onRefresh }) {
  * Savegame Editor Modal Component
  */
 function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
-  const activeModalConflicts = getActiveConflictsForSave(selectedMods, useLocalModsStore.getState().conflicts);
   const [loading, setLoading] = useState(false);
     const [pendingLaunchSlot, setPendingLaunchSlot] = useState(null);
   const [launchExtraOptions, setLaunchExtraOptions] = useState({});
@@ -333,6 +333,7 @@ const [activeTab, setActiveTab] = useState('general');
   const [selectedFolder, setSelectedFolder] = useState('ALL');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedMods, setSelectedMods] = useState(new Set((save.mods || []).map(m => typeof m === 'string' ? m : m?.modName)));
+  const activeModalConflicts = getActiveConflictsForSave(selectedMods, useLocalModsStore.getState().conflicts);
   const { mods: installedMods } = useLocalModsStore();
   const [expandedFolders, setExpandedFolders] = useState(new Set(['MAIN']));
   const [fleetCleanPct, setFleetCleanPct] = useState(100);
@@ -717,8 +718,8 @@ const [activeTab, setActiveTab] = useState('general');
                           <Droplets size={14} className="text-accent" />
                           <span style={{ fontSize: 12, fontWeight: 700 }}>CLEAN FLEET</span>
                        </div>
-                       <input 
-                          type="range" min="0" max="100" value={fleetCleanPct} 
+                       <CustomSlider 
+                          min="0" max="100" value={fleetCleanPct} 
                           onChange={e => setFleetCleanPct(parseInt(e.target.value))}
                           style={{ width: '100%' }}
                        />
@@ -739,8 +740,8 @@ const [activeTab, setActiveTab] = useState('general');
                           <Wrench size={14} className="text-accent" />
                           <span style={{ fontSize: 12, fontWeight: 700 }}>REPAIR FLEET</span>
                        </div>
-                       <input 
-                          type="range" min="0" max="100" value={fleetRepairPct} 
+                       <CustomSlider 
+                          min="0" max="100" value={fleetRepairPct} 
                           onChange={e => setFleetRepairPct(parseInt(e.target.value))}
                           style={{ width: '100%' }}
                        />
@@ -761,8 +762,8 @@ const [activeTab, setActiveTab] = useState('general');
                           <Paintbrush size={14} className="text-accent" />
                           <span style={{ fontSize: 12, fontWeight: 700 }}>PAINT REPAIR</span>
                        </div>
-                       <input 
-                          type="range" min="0" max="100" value={fleetPaintPct} 
+                       <CustomSlider 
+                          min="0" max="100" value={fleetPaintPct} 
                           onChange={e => setFleetPaintPct(parseInt(e.target.value))}
                           style={{ width: '100%' }}
                        />
@@ -1002,7 +1003,7 @@ const [activeTab, setActiveTab] = useState('general');
                   </label>
                   <div className="setting">
                     <label title="Overall volume level for the game.">Master Volume ({Math.round((save.masterVolume || 1.0) * 100)}%)</label>
-                    <input type="range" min="0" max="1" step="0.05" defaultValue={save.masterVolume || 1.0} onBlur={e => handleUpdate('career', 'masterVolume', e.target.value)} />
+                    <CustomSlider min="0" max="1" step="0.05" defaultValue={save.masterVolume || 1.0} onBlur={e => handleUpdate('career', 'masterVolume', e.target.value)} />
                   </div>
                 </div>
               </div>
@@ -1024,7 +1025,7 @@ const [activeTab, setActiveTab] = useState('general');
                 <div className="settings-grid">
                   <div className="setting">
                     <label title="Mouse and controller look sensitivity.">Camera Sensitivity</label>
-                    <input type="range" min="0.5" max="2.0" step="0.1" defaultValue={save.cameraSensitivity || 1.0} onBlur={e => handleUpdate('career', 'cameraSensitivity', e.target.value)} />
+                    <CustomSlider min="0.5" max="2.0" step="0.1" defaultValue={save.cameraSensitivity || 1.0} onBlur={e => handleUpdate('career', 'cameraSensitivity', e.target.value)} />
                   </div>
                   <div className="setting">
                     <label title="Keyboard or Controller hints displayed.">Input Help Mode</label>

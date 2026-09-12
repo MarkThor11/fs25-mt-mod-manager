@@ -1,3 +1,4 @@
+import { CustomSlider } from '../components/common/CustomSlider';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Search, RefreshCw, SlidersHorizontal, Tag, Zap, Layers, X, DollarSign, Heart, ArrowLeft, LayoutGrid, ChevronLeft, ChevronRight, Milestone, Globe, Package, Download } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -660,14 +661,14 @@ export default function ModHubPage() {
                 alignItems: 'center',
                 margin: '0 4px'
               }}>
-                <input 
-                  type="range" 
+                <CustomSlider 
+                   
                   min="140" 
                   max="350" 
                   step="5"
                   value={modHubZoom}
                   onChange={(e) => setModHubZoom(parseInt(e.target.value, 10))}
-                  className="range-slider"
+                  
                   style={{ 
                     position: 'absolute',
                     left: '50%',

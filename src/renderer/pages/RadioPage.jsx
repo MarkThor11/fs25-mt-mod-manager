@@ -1,3 +1,4 @@
+import { CustomSlider } from '../components/common/CustomSlider';
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Trash2, Radio as RadioIcon, ExternalLink, Music, Globe, Check, Volume2, AlertCircle, RefreshCw, Disc, LogIn, Play, Pause, UserCheck, Link2, X } from 'lucide-react';
 import { useRadioStore } from '../store/useRadioStore';
@@ -348,7 +349,7 @@ const RadioPage = () => {
                             {playingStationUrl && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--accent-dim)', padding: '6px 16px', borderRadius: '10px', marginLeft: 'auto' }}>
                                     <Volume2 size={16} style={{ color: 'var(--accent)' }} />
-                                    <input type="range" min="0" max="1" step="0.05" value={volume} onChange={(e) => setVolume(parseFloat(e.target.value))} style={{ width: '80px', accentColor: 'var(--accent)', cursor: 'pointer' }} />
+                                    <CustomSlider min="0" max="1" step="0.05" value={volume} onChange={(e) => setVolume(parseFloat(e.target.value))} style={{ width: '80px', accentColor: 'var(--accent)', cursor: 'pointer' }} />
                                     <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--accent)', minWidth: '35px' }}>{Math.round(volume * 100)}%</span>
                                 </div>
                             )}
