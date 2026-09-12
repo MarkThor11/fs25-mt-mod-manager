@@ -191,13 +191,30 @@ export default function ProfilesPage() {
   const [collapsedSettings, setCollapsedSettings] = useState(new Set());
 
   // Helper to group mods by folder
+  const parseModCategory = (cat, isMap) => {
+      if (isMap) return 'Maps';
+      if (!cat) return 'Other';
+      let s = String(cat).toLowerCase();
+      if (s.includes('map')) return 'Maps';
+      if (s.includes('tractor') || s.includes('truck') || s.includes('car') || s.includes('bike') || s.includes('harvester') || s.includes('loader') || s.includes('telehandler') || s.includes('forklift') || s.includes('excavator') || s.includes('forwarder') || s.includes('drivable') || s.includes('vehicle')) return 'Vehicles';
+      if (s.includes('trailer') || s.includes('cultivat') || s.includes('plow') || s.includes('seeder') || s.includes('planter') || s.includes('roller') || s.includes('spreader') || s.includes('sprayer') || s.includes('mower') || s.includes('tedder') || s.includes('windrower') || s.includes('header') || s.includes('tool') || s.includes('spader') || s.includes('subsoiler') || s.includes('harrow') || s.includes('weeder') || s.includes('mulcher') || s.includes('belt') || s.includes('leveler') || s.includes('compaction') || s.includes('winch') || s.includes('cutter') || s.includes('chainsaw') || s.includes('shovel') || s.includes('implement') || s.includes('yield') || s.includes('slurry') || s.includes('manure') || s.includes('forage')) return 'Implements';
+      if (s.includes('placeable') || s.includes('shed') || s.includes('silo') || s.includes('production') || s.includes('farmhouse') || s.includes('animal') || s.includes('decoration')) return 'Placeables';
+      if (s.includes('object') || s.includes('bale') || s.includes('pallet') || s.includes('bigbag') || s.includes('weight')) return 'Objects';
+      if (s.includes('pack') || s.includes('package')) return 'Packs';
+      if (s.includes('gameplay') || s.includes('script') || s.includes('prefab')) return 'Gameplay and Scripts';
+      return 'Other';
+  };
+
   const groupedMods = useMemo(() => {
     const groups = {};
+    const modCache = useModHubStore.getState().modCache || {};
     installedMods.forEach(mod => {
       if (mod.isMap) return;
-      const folderName = mod.folder || 'MAIN';
-      if (!groups[folderName]) groups[folderName] = [];
-      groups[folderName].push(mod);
+      let catStr = mod.category;
+      if (mod.modId && modCache[mod.modId]?.category) catStr = modCache[mod.modId].category;
+      const categoryName = parseModCategory(catStr, mod.isMap);
+      if (!groups[categoryName]) groups[categoryName] = [];
+      groups[categoryName].push(mod);
     });
     return groups;
   }, [installedMods]);
@@ -1056,6 +1073,15 @@ export default function ProfilesPage() {
                                               >
                                                 {mod.title || mod.modName}
                                               </div>
+                                                {zoom >= 160 && (
+                                                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mod.author || 'Unknown Author'}</div>
+                                                    <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+                                                      <span>v{mod.version || '1.0.0.0'}</span>
+                                                      <span>{((mod.size || 0)/(1024*1024)).toFixed(1)} MB</span>
+                                                    </div>
+                                                  </div>
+                                                )}
                                               {isPCOnly && <div className="pc-only-badge">PC ONLY</div>}
                                             </div>
                                             <input
@@ -1127,6 +1153,11 @@ export default function ProfilesPage() {
                                             >
                                               {mod.title || mod.modName}
                                             </div>
+                                              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', display: 'flex', gap: 12, marginTop: 4 }}>
+                                                <span>{mod.author || 'Unknown Author'}</span>
+                                                <span>v{mod.version || '1.0.0.0'}</span>
+                                                <span>{((mod.size || 0)/(1024*1024)).toFixed(1)} MB</span>
+                                              </div>
                                             {isPCOnly && (
                                               <span className="pc-only-badge">PC ONLY</span>
                                             )}
