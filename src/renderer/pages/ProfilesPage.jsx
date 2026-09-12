@@ -1009,7 +1009,7 @@ export default function ProfilesPage() {
                                     padding: '16px', 
                                     display: 'grid', 
                                     gridTemplateColumns: viewMode === 'grid' 
-                          ? `repeat(auto-fill, minmax(${zoom}px, 1fr))`
+                          ? `repeat(auto-fill, minmax(${Math.max(240, zoom * 1.3)}px, 1fr))`
                                       : `repeat(auto-fill, minmax(${Math.max(280, zoom)}px, 1fr))`, 
                                     gap: '12px' 
                                   }}>
@@ -1068,7 +1068,7 @@ export default function ProfilesPage() {
                                             <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
                                               <div 
                                                 style={{ 
-                                                  fontSize: 12, 
+                                                  fontSize: zoom < 160 ? 11 : 13, 
                                                   fontWeight: 800,
                                                   whiteSpace: 'nowrap',
                                                   overflow: 'hidden',
