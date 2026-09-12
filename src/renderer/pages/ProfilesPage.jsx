@@ -41,6 +41,26 @@ const ProfileModImage = ({ mod, zoom, isList }) => {
   return <img src={finalUrl} alt='' style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
 };
 
+const CustomSlider = ({ value, min, max, step, onChange, width = '100%', title }) => {
+  const percentage = ((value - min) / (max - min)) * 100;
+  return (
+    <input
+      type="range"
+      className="native-range-slider"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={onChange}
+      title={title}
+      style={{
+        width,
+        background: `linear-gradient(to right, var(--accent) ${percentage}%, rgba(255,255,255,0.1) ${percentage}%)`
+      }}
+    />
+  );
+};
+
 export default function ProfilesPage() {
   const { profiles, fetchProfiles, createProfile, updateProfile, deleteProfile, exportProfile, importProfile } = useProfileStore();
   const installedMods = useLocalModsStore((state) => state.mods || []);
@@ -754,7 +774,7 @@ export default function ProfilesPage() {
                         </div>
                         <div className="setting">
                           <label>Master Volume ({Math.round(options.masterVolume * 100)}%)</label>
-                          <input type="range" min="0" max="1" step="0.05" value={options.masterVolume} onChange={e => setOptions(prev => ({ ...prev, masterVolume: parseFloat(e.target.value) }))} />
+                          <CustomSlider min="0" max="1" step="0.05" value={options.masterVolume} onChange={e => setOptions(prev => ({ ...prev, masterVolume: parseFloat(e.target.value) }))} />
                         </div>
                       </div>
                     </div>
@@ -774,7 +794,7 @@ export default function ProfilesPage() {
                       <div className="settings-grid">
                         <div className="setting">
                           <label>Camera Sensitivity ({Math.round(options.cameraSensitivity * 100)}%)</label>
-                          <input type="range" min="0.5" max="2.0" step="0.1" value={options.cameraSensitivity} onChange={e => setOptions(prev => ({ ...prev, cameraSensitivity: parseFloat(e.target.value) }))} />
+                          <CustomSlider min="0.5" max="2.0" step="0.1" value={options.cameraSensitivity} onChange={e => setOptions(prev => ({ ...prev, cameraSensitivity: parseFloat(e.target.value) }))} />
                         </div>
                         <div className="setting">
                           <label>Gear Shift Mode</label>
@@ -1508,6 +1528,33 @@ export default function ProfilesPage() {
           color: var(--bg-primary);
           font-weight: 800;
         }
+        .native-range-slider {
+          -webkit-appearance: none;
+          appearance: none;
+          height: 6px;
+          border-radius: 3px;
+          outline: none;
+          cursor: pointer;
+          margin: 0;
+          display: inline-block;
+          vertical-align: middle;
+        }
+        .native-range-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: var(--accent);
+          cursor: pointer;
+          border: 2px solid var(--bg-primary);
+          box-shadow: 0 0 5px rgba(0,0,0,0.5);
+          transition: transform 0.1s ease;
+        }
+        .native-range-slider::-webkit-slider-thumb:hover {
+          transform: scale(1.15);
+        }
+
         .zoom-control-wrapper {
           display: flex;
           align-items: center;
