@@ -9,7 +9,34 @@ const HARDCODED_BRANDS = [
   "Hardi", "Holmer", "Ropa", "Volvo", "Mack Trucks", "Lizard"
 ];
 
+
+const loadFavMods = () => {
+  try {
+    const raw = localStorage.getItem('fav_mods');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    let migrated = false;
+    const fixed = parsed.map(mod => {
+      if (mod.isFavorite === undefined) {
+        migrated = true;
+        if (mod.isMustHave) {
+          return { ...mod, isFavorite: false };
+        }
+        return { ...mod, isFavorite: true };
+      }
+      return mod;
+    });
+    if (migrated) {
+      localStorage.setItem('fav_mods', JSON.stringify(fixed));
+    }
+    return fixed;
+  } catch (e) {
+    return [];
+  }
+};
+
 export const useModHubStore = create((set, get) => ({
+
   // State
   mods: [],
   hardcodedBrands: HARDCODED_BRANDS,
@@ -38,7 +65,7 @@ export const useModHubStore = create((set, get) => ({
     hideInstalled: false,
   },
   favoriteAuthors: JSON.parse(localStorage.getItem('fav_authors') || '[]'),
-  favoriteMods: JSON.parse(localStorage.getItem('fav_mods') || '[]'),
+  favoriteMods: loadFavMods(),
   hiddenMods: JSON.parse(localStorage.getItem('hidden_mods') || '[]'),
   authorFilter: null, // { id: string, name: string }
   authorFilterSource: null, // 'favourites' | 'card' | 'category'
