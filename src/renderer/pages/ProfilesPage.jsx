@@ -402,204 +402,68 @@ export default function ProfilesPage() {
   };
 
   return (
-    <div className="page animate-fade-in-up" style={{ display: 'flex', height: '100%', gap: isSidebarCollapsed ? 0 : 'var(--sp-6)', position: 'relative' }}>
-      
-      {isSidebarCollapsed && (
-        <button className="expand-toggle animate-fade-in" onClick={toggleCollapse} title="Expand Templates List">
-          <ChevronRight size={20} />
-        </button>
-      )}
+    <div className="page animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '0', position: 'relative', minHeight: 0 }}>
 
-      <div 
-        className={`profiles-sidebar ${isSidebarCollapsed ? 'profiles-sidebar--collapsed' : ''}`}
-        style={{ width: 280 }}
-      >
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-2)' }}>
+        <div>
           <h2 style={{ fontWeight: 'var(--fw-bold)', margin: 0 }}>Game Templates</h2>
-          <button className="collapse-toggle" onClick={toggleCollapse} title="Hide Templates List">
-            <ChevronLeft size={16} />
-          </button>
+          <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-tertiary)', margin: 0 }}>Create game blueprints with preset mods.</p>
         </div>
-        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-tertiary)', margin: 0 }}>
-          Create game blueprints with preset mods.
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--sp-2)' }}>
+        <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
           <button className="btn btn--primary" onClick={handleCreateNew}>
-            <Plus size={16} /> New
+            <Plus size={16} /> New Template
           </button>
           <button className="btn btn--secondary" onClick={handleImport}>
             <Download size={16} /> Import
           </button>
         </div>
-
-        <div style={{ marginTop: 'var(--sp-2)' }}>
-          <button 
-            className="btn btn--ghost btn--xs" 
-            style={{ fontSize: 10, opacity: 0.5 }}
-            onClick={() => setShowDiagnostics(!showDiagnostics)}
-          >
-            {showDiagnostics ? 'Hide Diagnostics' : 'Show Diagnostics'}
-          </button>
-        </div>
-
-        {showDiagnostics && (
-          <div className="animate-fade-in" style={{ 
-            marginTop: 'var(--sp-2)', 
-            padding: 'var(--sp-3)', 
-            background: 'rgba(0,0,0,0.2)', 
-            borderRadius: 'var(--radius-md)',
-            fontSize: 10,
-            color: 'var(--text-secondary)',
-            border: '1px dashed var(--border)'
-          }}>
-            <div style={{ marginBottom: 4 }}><strong>Path:</strong> {modsPath}</div>
-            <div style={{ marginBottom: 4 }}>
-              <strong>Total Mods Found (Store):</strong> {installedMods.length}
-              {installedMods.length === 0 && <span style={{ marginLeft: 8, color: 'var(--color-error)' }}><AlertCircle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> No mods in store</span>}
-            </div>
-            <div><strong>Map Detected:</strong> {installedMods.filter(m => m.isMap).length}</div>
-            <div style={{ marginTop: 8, display: 'flex', gap: 'var(--sp-2)' }}>
-              <button 
-                className="btn btn--secondary btn--xs" 
-                onClick={async () => {
-                  try {
-                    if (!window.api?.mods) throw new Error('API not available');
-                    const res = await window.api.mods.probePath(modsPath);
-                    setProbeResult(res);
-                  } catch (err) {
-                    setProbeResult({ error: err.message });
-                  }
-                }}
-              >
-                Analyze Path (Main Process)
-              </button>
-              <button 
-                className="btn btn--secondary btn--xs" 
-                onClick={async () => {
-                  await scanMods();
-                }}
-              >
-                Sync with Sidebar
-              </button>
-            </div>
-
-            {probeResult && (
-              <div style={{ marginTop: 8, padding: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4 }}>
-                <div style={{ color: probeResult.exists ? 'var(--color-success)' : 'var(--color-error)' }}>
-                  <strong>{probeResult.exists ? '✓ Path Exists' : '✗ Path Missing'}</strong>
-                </div>
-                {probeResult.exists && (
-                  <>
-                    <div><strong>Files Found:</strong> {probeResult.fileCount}</div>
-                    <div><strong>Is Dir:</strong> {probeResult.isDir ? 'Yes' : 'No'}</div>
-                    {probeResult.sampleFiles && probeResult.sampleFiles.length > 0 && (
-                      <div style={{ marginTop: 4, opacity: 0.8 }}>
-                        <strong>Sample:</strong> {probeResult.sampleFiles[0]}
-                      </div>
-                    )}
-                  </>
-                )}
-                {probeResult.error && <div style={{ color: 'var(--color-error)' }}>{probeResult.error}</div>}
-              </div>
-            )}
-            <div style={{ marginTop: 8, maxHeight: 100, overflowY: 'auto' }}>
-              <strong>Non-Map Mods:</strong>
-              {installedMods.filter(m => !m.isMap).map(m => (
-                <div key={m.fileName} style={{ opacity: 0.7 }}>• {m.fileName}</div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)', marginTop: 'var(--sp-2)', overflowY: 'auto' }}>
-          {profiles.length === 0 ? (
-            <div style={{ color: 'var(--text-muted)', fontSize: 'var(--fs-sm)', textAlign: 'center', padding: 'var(--sp-4)' }}>
-              No templates yet.
-            </div>
-          ) : (
-            profiles.map(p => (
-              <div
-                key={p.id}
-                onClick={() => setSelectedProfileId(p.id)}
-                style={{
-                  padding: 'var(--sp-3)',
-                  background: selectedProfileId === p.id ? 'var(--accent-dim)' : 'var(--bg-card)',
-                  border: `1px solid ${selectedProfileId === p.id ? 'var(--accent)' : 'var(--border)'}`,
-                  borderRadius: 'var(--radius-md)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, color: selectedProfileId === p.id ? 'var(--accent)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {renamingProfileId === p.id ? (
-                      <input 
-                        autoFocus
-                        className="editable-label__input"
-                        value={renamingValue}
-                        onChange={e => setRenamingValue(e.target.value)}
-                        onBlur={() => handleSidebarRename(p.id, renamingValue)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') handleSidebarRename(p.id, renamingValue);
-                          if (e.key === 'Escape') setRenamingProfileId(null);
-                        }}
-                        onClick={e => e.stopPropagation()}
-                        style={{ fontSize: 13, height: 20 }}
-                      />
-                    ) : (
-                      <span 
-                        className="editable-label"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setRenamingProfileId(p.id);
-                          setRenamingValue(p.name);
-                        }}
-                        title="Click to rename template"
-                      >
-                        {p.name}
-                        <Pencil size={12} className="editable-label__icon" style={{ marginLeft: 6 }} />
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)' }}>
-                    {(p.mods || []).length} mods · {p.options?.mapTitle || 'No map'}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', marginLeft: 'var(--sp-2)' }}>
-                  <button
-                    className="btn btn--ghost btn--sm btn--icon"
-                    onClick={(e) => handleCopyList(p, e)}
-                    title="Copy Mod List to Clipboard"
-                    style={{ color: 'var(--text-tertiary)' }}
-                  >
-                    <Copy size={14} />
-                  </button>
-                  <button
-                    className="btn btn--ghost btn--sm btn--icon"
-                    onClick={(e) => handleExport(p.id, e)}
-                    title="Export Template"
-                    style={{ color: 'var(--accent)' }}
-                  >
-                    <Share2 size={14} />
-                  </button>
-                  <button
-                    className="btn btn--ghost btn--sm btn--icon"
-                    onClick={(e) => handleDelete(p.id, e)}
-                    title="Delete Template"
-                    style={{ color: 'var(--error)' }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
       </div>
 
+      <div style={{ 
+        display: 'flex', 
+        gap: 'var(--sp-2)', 
+        overflowX: 'auto', 
+        borderBottom: '1px solid var(--border)', 
+        paddingBottom: '0', 
+        marginBottom: 'var(--sp-2)',
+        paddingTop: 'var(--sp-2)'
+      }}>
+        {profiles.map(p => (
+          <button
+            key={p.id}
+            className={`tab-item ${selectedProfile?.id === p.id ? 'tab-item--active' : ''}`}
+            onClick={() => selectProfile(p.id)}
+            style={{
+              padding: '10px 20px',
+              borderRadius: 'var(--radius-md) var(--radius-md) 0 0',
+              borderBottom: selectedProfile?.id === p.id ? '2px solid var(--accent)' : '2px solid transparent',
+              background: selectedProfile?.id === p.id ? 'rgba(var(--accent-rgb), 0.1)' : 'transparent',
+              color: selectedProfile?.id === p.id ? 'var(--accent)' : 'var(--text-tertiary)',
+              fontWeight: selectedProfile?.id === p.id ? 'var(--fw-bold)' : 'var(--fw-normal)',
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+              borderTop: 'none', borderLeft: 'none', borderRight: 'none',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}
+          >
+            {p.name}
+            <span style={{ 
+              background: 'rgba(255,255,255,0.1)', 
+              padding: '2px 6px', 
+              borderRadius: 10, 
+              fontSize: '10px' 
+            }}>
+              {(p.mods || []).length}
+            </span>
+          </button>
+        ))}
+        {profiles.length === 0 && (
+            <div style={{ padding: '10px', color: 'var(--text-muted)' }}>No templates created yet. Click 'New Template' to start.</div>
+        )}
+      </div>
       <div style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 'var(--sp-5)', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {selectedProfile ? (
           <>
@@ -617,6 +481,12 @@ export default function ProfilesPage() {
                   CROSSPLAY
                 </div>
               )}
+              {/* Added Icon Actions */}
+              <div style={{ display: 'flex', gap: '8px', paddingRight: '16px', borderRight: '1px solid var(--border)' }}>
+                  <button className="btn btn--ghost btn--sm btn--icon" onClick={(e) => handleCopyList(selectedProfile, e)} title="Copy Mod List to Clipboard" style={{ color: 'var(--text-tertiary)' }}><Copy size={16} /></button>
+                  <button className="btn btn--ghost btn--sm btn--icon" onClick={(e) => handleExport(selectedProfile.id, e)} title="Export Template" style={{ color: 'var(--accent)' }}><Share2 size={16} /></button>
+                  <button className="btn btn--ghost btn--sm btn--icon" onClick={(e) => handleDelete(selectedProfile.id, e)} title="Delete Template" style={{ color: 'var(--error)' }}><Trash2 size={16} /></button>
+              </div>
               <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
                 <button className="btn btn--secondary" onClick={handleSave} disabled={isSaving}>
                   <Save size={16} /> {isSaving ? 'Saving...' : 'Save Template'}
