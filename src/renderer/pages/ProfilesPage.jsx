@@ -212,6 +212,10 @@ export default function ProfilesPage() {
       if (mod.isMap) return;
       let catStr = mod.category;
       if (mod.modId && modCache[mod.modId]?.category) catStr = modCache[mod.modId].category;
+      
+      // Filter out prefabs
+      if ((catStr && catStr.toLowerCase().includes('prefab')) || (mod.title && mod.title.toLowerCase().includes('prefab')) || (mod.modName && mod.modName.toLowerCase().includes('prefab'))) return;
+      
       const categoryName = parseModCategory(catStr, mod.isMap);
       if (!groups[categoryName]) groups[categoryName] = [];
       groups[categoryName].push(mod);

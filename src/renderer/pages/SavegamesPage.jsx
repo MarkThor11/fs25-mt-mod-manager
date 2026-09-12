@@ -571,8 +571,16 @@ const [activeTab, setActiveTab] = useState('general');
 
   const groupedMods = React.useMemo(() => {
     const groups = {};
+    const modCache = useModHubStore.getState().modCache || {};
     installedMods.forEach(mod => {
       if (mod.isMap) return;
+      
+      let catStr = mod.category;
+      if (mod.modId && modCache[mod.modId]?.category) catStr = modCache[mod.modId].category;
+      
+      // Filter out prefabs
+      if ((catStr && catStr.toLowerCase().includes('prefab')) || (mod.title && mod.title.toLowerCase().includes('prefab')) || (mod.modName && mod.modName.toLowerCase().includes('prefab'))) return;
+
       const folderName = mod.folder || 'MAIN';
       if (!groups[folderName]) groups[folderName] = [];
       groups[folderName].push(mod);
