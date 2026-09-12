@@ -23,6 +23,7 @@ export default function FavouritesPage() {
   const mods = useLocalModsStore((state) => state.mods);
   const getInstalledVersion = useInstalledLookup();
   const [activeTab, setActiveTab] = useState('mods');
+  const actualFavoriteMods = favoriteMods.filter(m => m.isFavorite !== false);
 
   useEffect(() => {
     loadCache();
@@ -45,11 +46,11 @@ export default function FavouritesPage() {
         <div>
           <h1 className="page-header__title">Favourites Library</h1>
           <p className="page-header__subtitle">
-            {favoriteAuthors.length} author{favoriteAuthors.length !== 1 ? 's' : ''}, {favoriteMods.length} mod{favoriteMods.length !== 1 ? 's' : ''} saved
+            {favoriteAuthors.length} author{favoriteAuthors.length !== 1 ? 's' : ''}, {actualFavoriteMods.length} mod{actualFavoriteMods.length !== 1 ? 's' : ''} saved
           </p>
         </div>
         
-        {activeTab === 'mods' && favoriteMods.length > 0 && (
+        {activeTab === 'mods' && actualFavoriteMods.length > 0 && (
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 12, alignItems: 'center' }}>
             <div style={{ 
               display: 'flex', 
@@ -219,7 +220,7 @@ export default function FavouritesPage() {
           </div>
         )
       ) : (
-        favoriteMods.length === 0 ? (
+        actualFavoriteMods.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state__icon">
               <Star size={48} />
@@ -235,8 +236,8 @@ export default function FavouritesPage() {
         ) : (
 <div className="mod-grid-container animate-fade-in-up">
                   {(() => {
-                    const mustHaves = favoriteMods.filter(m => m.isMustHave);
-                    const others = favoriteMods.filter(m => !m.isMustHave);
+                    const mustHaves = actualFavoriteMods.filter(m => m.isMustHave);
+                    const others = actualFavoriteMods.filter(m => !m.isMustHave);
                     
                     const renderModCard = (mod) => {
                       // Enrich local meta with cached remote data if missing

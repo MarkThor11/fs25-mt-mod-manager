@@ -400,10 +400,12 @@ export const useModHubStore = create((set, get) => ({
     );
     let newFavs;
     if (exists) {
-      newFavs = favoriteMods.filter(m => 
-        !((m.modId && mod.modId && String(m.modId) === String(mod.modId)) || 
-          (m.fileName && mod.fileName && m.fileName === mod.fileName))
-      );
+      const nextIsFavorite = !(exists.isFavorite !== false);
+      if (!nextIsFavorite && !exists.isMustHave) {
+        newFavs = favoriteMods.filter(m => m !== exists);
+      } else {
+        newFavs = favoriteMods.map(m => m === exists ? { ...m, isFavorite: nextIsFavorite } : m);
+      }
     } else {
       // Enrichment: If favoriting from a local source, try to find the full remote data in our cache
       let enrichedMod = { ...mod };
@@ -457,7 +459,8 @@ export const useModHubStore = create((set, get) => ({
         version: enrichedMod.version,
         rating: enrichedMod.rating,
         dependencies: enrichedMod.dependencies || [],
-        isMustHave: false
+        isMustHave: false,
+        isFavorite: true
       }];
     }
     set({ favoriteMods: newFavs });
