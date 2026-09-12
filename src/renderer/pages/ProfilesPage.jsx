@@ -233,6 +233,79 @@ export default function ProfilesPage() {
       return 'Other';
   };
 
+
+  const availableCategories = useMemo(() => {
+    const cats = new Set();
+    const modCache = useModHubStore.getState().modCache || {};
+    let hasFavs = false;
+    
+    const parseModCategory = (cat, isMap) => {
+      if (isMap) return 'Maps';
+      if (!cat) return null;
+      let s = String(cat).toLowerCase();
+      if (s.includes('map')) return 'Maps';
+      if (s.includes('tractor') || s.includes('truck') || s.includes('car') || s.includes('bike') || s.includes('harvester') || s.includes('loader') || s.includes('telehandler') || s.includes('forklift') || s.includes('excavator') || s.includes('forwarder') || s.includes('drivable') || s.includes('vehicle')) return 'Vehicles';
+      if (s.includes('trailer') || s.includes('cultivat') || s.includes('plow') || s.includes('seeder') || s.includes('planter') || s.includes('roller') || s.includes('spreader') || s.includes('sprayer') || s.includes('mower') || s.includes('tedder') || s.includes('windrower') || s.includes('header') || s.includes('tool') || s.includes('spader') || s.includes('subsoiler') || s.includes('harrow') || s.includes('weeder') || s.includes('mulcher') || s.includes('belt') || s.includes('leveler') || s.includes('compaction') || s.includes('winch') || s.includes('cutter') || s.includes('chainsaw') || s.includes('shovel') || s.includes('implement') || s.includes('yield') || s.includes('slurry') || s.includes('manure') || s.includes('forage')) return 'Implements';
+      if (s.includes('placeable') || s.includes('shed') || s.includes('silo') || s.includes('production') || s.includes('farmhouse') || s.includes('animal') || s.includes('decoration')) return 'Placeables';
+      if (s.includes('object') || s.includes('bale') || s.includes('pallet') || s.includes('bigbag') || s.includes('weight')) return 'Objects';
+      if (s.includes('pack') || s.includes('package')) return 'Packs';
+      if (s.includes('gameplay') || s.includes('script') || s.includes('prefab')) return 'Gameplay and Scripts';
+      return 'Other';
+    };
+
+    (installedMods || []).forEach(m => {
+      let catStr = m.category;
+      if (m.modId && modCache[m.modId]?.category) catStr = modCache[m.modId].category;
+      const mainCat = parseModCategory(catStr, m.isMap);
+      if (mainCat) cats.add(mainCat);
+      
+      const fnStr = typeof m.fileName === 'string' ? m.fileName : '';
+      const mnStr = typeof m.modName === 'string' ? m.modName : '';
+      const modBasename = fnStr ? fnStr.split(/[\\/\\]/).pop().toLowerCase() : (mnStr ? `${mnStr.toLowerCase()}.zip` : '');
+      const isFav = (useModHubStore.getState().favoriteMods||[]).some(fm => {
+        if (!fm) return false;
+        const idMatch = fm.modId && m.modId && String(fm.modId) === String(m.modId);
+        const fmStr = typeof fm.fileName === 'string' ? fm.fileName : '';
+        return idMatch || (fmStr && fmStr.toLowerCase() === modBasename);
+      });
+      if (isFav) hasFavs = true;
+    });
+    const arr = Array.from(cats).sort();
+    if (hasFavs) arr.unshift('Favourites');
+    return arr;
+  }, [installedMods]);
+
+  const availableBrands = useMemo(() => {
+    const brands = new Set();
+    const modCache = useModHubStore.getState().modCache || {};
+    const hardcoded = useModHubStore.getState().hardcodedBrands || [];
+    (installedMods || []).forEach(m => {
+      let b = null;
+      if (m.modId && modCache[m.modId]?.brand) b = modCache[m.modId].brand;
+      if (!b) {
+        for (const hb of hardcoded) {
+          if (m.title && m.title.toLowerCase().includes(hb.toLowerCase())) { b = hb; break; }
+        }
+      }
+      if (b) brands.add(b);
+    });
+    return Array.from(brands).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  }, [installedMods]);
+  
+  const parseModCategoryExport = (cat, isMap) => {
+      if (isMap) return 'Maps';
+      if (!cat) return null;
+      let s = String(cat).toLowerCase();
+      if (s.includes('map')) return 'Maps';
+      if (s.includes('tractor') || s.includes('truck') || s.includes('car') || s.includes('bike') || s.includes('harvester') || s.includes('loader') || s.includes('telehandler') || s.includes('forklift') || s.includes('excavator') || s.includes('forwarder') || s.includes('drivable') || s.includes('vehicle')) return 'Vehicles';
+      if (s.includes('trailer') || s.includes('cultivat') || s.includes('plow') || s.includes('seeder') || s.includes('planter') || s.includes('roller') || s.includes('spreader') || s.includes('sprayer') || s.includes('mower') || s.includes('tedder') || s.includes('windrower') || s.includes('header') || s.includes('tool') || s.includes('spader') || s.includes('subsoiler') || s.includes('harrow') || s.includes('weeder') || s.includes('mulcher') || s.includes('belt') || s.includes('leveler') || s.includes('compaction') || s.includes('winch') || s.includes('cutter') || s.includes('chainsaw') || s.includes('shovel') || s.includes('implement') || s.includes('yield') || s.includes('slurry') || s.includes('manure') || s.includes('forage')) return 'Implements';
+      if (s.includes('placeable') || s.includes('shed') || s.includes('silo') || s.includes('production') || s.includes('farmhouse') || s.includes('animal') || s.includes('decoration')) return 'Placeables';
+      if (s.includes('object') || s.includes('bale') || s.includes('pallet') || s.includes('bigbag') || s.includes('weight')) return 'Objects';
+      if (s.includes('pack') || s.includes('package')) return 'Packs';
+      if (s.includes('gameplay') || s.includes('script') || s.includes('prefab')) return 'Gameplay and Scripts';
+      return 'Other';
+  };
+
   const groupedMods = useMemo(() => {
     const groups = {};
     const modCache = useModHubStore.getState().modCache || {};
