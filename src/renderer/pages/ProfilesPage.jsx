@@ -1092,16 +1092,16 @@ export default function ProfilesPage() {
                                             </div>
                                             <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
                                               <div 
-                                                style={{ 
-                                                  fontSize: zoom < 160 ? 11 : 13, 
-                                                  fontWeight: 800,
-                                                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                                                  overflow: 'hidden',
-                                                  textOverflow: 'ellipsis',
-                                                  color: isConflict ? 'orange' : 'var(--text-primary)'
-                                                }}
-                                                title={mod.title || mod.modName}
-                                              >
+                                                  className="mod-card__title"
+                                                  style={{ 
+                                                    fontSize: zoom < 160 ? 11 : 13, 
+                                                    color: isConflict ? 'orange' : 'var(--text-primary)',
+                                                    whiteSpace: 'normal',
+                                                      fontWeight: 800,
+                                                    height: 'auto'
+                                                  }}
+                                                  title={mod.title || mod.modName}
+                                                >
                                                 {mod.title || mod.modName}
                                               </div>
                                                 {zoom >= 160 && (
@@ -1161,17 +1161,16 @@ export default function ProfilesPage() {
                                           </div>
                                           <div style={{ flex: 1, minWidth: 0 }}>
                                             <div 
-                                              className="mod-name" 
-                                              title={mod.title || mod.modName}
-                                              style={{ 
-                                                fontSize: 'var(--fs-sm)', 
-                                                fontWeight: 700,
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                color: isConflict ? 'orange' : (isSelected ? 'var(--text-primary)' : 'var(--text-secondary)')
-                                              }}
-                                            >
+                                                className="mod-card__title" 
+                                                title={mod.title || mod.modName}
+                                                style={{ 
+                                                  fontSize: 'var(--fs-sm)', 
+                                                  color: isConflict ? 'orange' : 'var(--text-primary)',
+                                                  whiteSpace: 'normal',
+                                                      fontWeight: 800,
+                                                  height: 'auto'
+                                                }}
+                                              >
                                               {mod.title || mod.modName}
                                             </div>
                                               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', display: 'flex', gap: 12, marginTop: 4 }}>
