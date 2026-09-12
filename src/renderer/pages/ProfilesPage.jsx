@@ -70,6 +70,8 @@ export default function ProfilesPage() {
   const [profileName, setProfileName] = useState('');
   const [selectedMods, setSelectedMods] = useState(new Set());
   const [modSearchQuery, setModSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState('');
   const [includeMustHaves, setIncludeMustHaves] = useState(true);
   const [activeTab, setActiveTab] = useState('general');
   const [renamingProfileId, setRenamingProfileId] = useState(null);
@@ -816,7 +818,33 @@ export default function ProfilesPage() {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)' }}>
-                      <div className="search-input-wrapper" style={{ position: 'relative', minWidth: '240px' }}>
+                                        {availableBrands && availableBrands.length > 0 && (
+                    <select
+                      value={selectedBrand}
+                      onChange={e => setSelectedBrand(e.target.value)}
+                      title="Filter mods by brand."
+                      style={{ width: 140, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+                    >
+                      <option value="">All Brands</option>
+                      {availableBrands.map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  )}
+                  {availableCategories && availableCategories.length > 0 && (
+                    <select
+                      value={selectedCategory}
+                      onChange={e => setSelectedCategory(e.target.value)}
+                      title="Filter mods by category."
+                      style={{ width: 140, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+                    >
+                      <option value="">All Categories</option>
+                      {availableCategories.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  )}
+                  <div className="search-input-wrapper" style={{ position: 'relative', minWidth: '240px' }}>
                         <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                         <input
                           type="text"

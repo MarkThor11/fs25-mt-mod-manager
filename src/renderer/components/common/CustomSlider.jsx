@@ -33,8 +33,8 @@ export const CustomSlider = ({ value, min, max, step, onChange, width = '100%', 
         .perfect-pill-slider {
           -webkit-appearance: none;
           appearance: none;
-          height: 6px;
-          border-radius: 3px;
+          height: 14px;
+          border-radius: 7px;
           outline: none;
           cursor: pointer;
           margin: 0;
@@ -50,12 +50,8 @@ export const CustomSlider = ({ value, min, max, step, onChange, width = '100%', 
           border-radius: 50%;
           background: var(--accent);
           cursor: pointer;
-          border: 2px solid var(--bg-surface);
-          box-shadow: 0 0 5px rgba(0,0,0,0.3);
-          transition: transform 0.15s ease;
-        }
-        .perfect-pill-slider::-webkit-slider-thumb:hover {
-          transform: scale(1.2);
+          border: 1px solid rgba(0, 0, 0, 0.15);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
         }
       `}</style>
       <input
