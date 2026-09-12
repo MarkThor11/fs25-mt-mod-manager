@@ -16,7 +16,17 @@ const loadFavMods = () => {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     let migrated = false;
-    const fixed = parsed.map(mod => {
+    
+    // Filter out ghost entries that are completely disabled
+    const cleaned = parsed.filter(mod => {
+      if (mod.isFavorite === false && !mod.isMustHave) {
+        migrated = true;
+        return false;
+      }
+      return true;
+    });
+
+    const fixed = cleaned.map(mod => {
       if (mod.isFavorite === undefined) {
         migrated = true;
         if (mod.isMustHave) {
