@@ -19,6 +19,8 @@ const MAPS = [
 const ProfileModImage = ({ mod, zoom, isList }) => {
   
   
+  const modIdStr = mod.modId ? String(mod.modId).replace(/^0+/, '') : null;
+  const cachedImg = modIdStr ? useModHubStore.getState().modCache?.[modIdStr]?.image : null;
   const [imgSrc, setImgSrc] = useState(cachedImg || mod.iconData || null);
 
   useEffect(() => {
