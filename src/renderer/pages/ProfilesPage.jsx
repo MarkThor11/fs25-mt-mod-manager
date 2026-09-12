@@ -1000,23 +1000,16 @@ export default function ProfilesPage() {
                                       }}
                                     >
                                       <LayoutGrid size={11} style={{ opacity: 0.5 }} />
-                                      <input 
-                                        type="range" 
-                                        min="120" 
-                                        max="350" 
+                                      <CustomSlider
+                                        min="120"
+                                        max="350"
                                         step="10"
                                         value={zoom}
                                         onChange={(e) => {
                                           const val = parseInt(e.target.value);
                                           setFolderZooms(prev => ({ ...prev, [folderName]: val }));
                                         }}
-                                        style={{ 
-                                          width: '60px', 
-                                          height: '14px',
-                                          cursor: 'pointer',
-                                          accentColor: 'var(--accent)',
-                                          margin: 0
-                                        }}
+                                        width="60px"
                                         title="Adjust Grid Size"
                                       />
                                       <LayoutGrid size={14} style={{ opacity: 0.8 }} />
