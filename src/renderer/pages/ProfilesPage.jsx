@@ -1019,6 +1019,10 @@ export default function ProfilesPage() {
                                       const isConflict = options.isCrossPlatform && isPCOnly;
                                       const isSelected = selectedMods.has(mod.modName);
                                       
+                                      const cachedImg = mod.modId ? useModHubStore.getState().modCache?.[mod.modId]?.image : null;
+                                      let imgUrl = mod.iconData || cachedImg || null;
+                                      if (imgUrl && imgUrl.startsWith('//')) imgUrl = `https:${imgUrl}`;
+
                                       if (viewMode === 'grid') {
                                         return (
                                           <div 
@@ -1049,8 +1053,8 @@ export default function ProfilesPage() {
                                               overflow: 'hidden',
                                               border: '1px solid rgba(255,255,255,0.05)'
                                             }}>
-                                              {mod.iconData ? (
-                                                <img src={mod.iconData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                              {imgUrl ? (
+                                                <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                               ) : (
                                                 <Package size={zoom / 4} style={{ opacity: 0.2 }} />
                                               )}
@@ -1113,12 +1117,7 @@ export default function ProfilesPage() {
                                             opacity: (isMustHave && !isSelected) ? 0.8 : 1
                                           }}
                                         >
-                                          <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            readOnly
-                                            style={{ accentColor: isConflict ? 'orange' : 'var(--accent)', width: 16, height: 16 }}
-                                          />
+
                                           <div style={{ 
                                             width: listIconSize, 
                                             height: listIconSize, 
@@ -1132,8 +1131,8 @@ export default function ProfilesPage() {
                                             flexShrink: 0,
                                             transition: 'all 0.1s ease'
                                           }}>
-                                            {mod.iconData ? (
-                                              <img src={mod.iconData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            {imgUrl ? (
+                                              <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                             ) : (
                                               <Package size={listIconSize / 2} style={{ opacity: 0.2 }} />
                                             )}
