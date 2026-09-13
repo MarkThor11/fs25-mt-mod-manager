@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import {
   SlidersHorizontal, Search, RefreshCw, AlertTriangle, ShieldCheck, Download,
   Upload, Trash2, Edit2, Check, X, RotateCcw, Monitor, Gamepad2,
-  FolderOpen, Plus, Sliders, ChevronDown, ChevronRight, Layers, Tag
+  FolderOpen, Plus, Sliders, ChevronDown, ChevronRight, Layers, Tag, Disc, Radio
 } from 'lucide-react';
 import { useKeybindStore } from '../store/useKeybindStore';
 import { useToastStore } from '../store/useToastStore';
@@ -45,11 +45,184 @@ export default function KeybindsPage() {
   const [editingBinding, setEditingBinding] = useState(null); // { action, device, oldInput, value }
   const [showConflictsOnly, setShowConflictsOnly] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [captureModal, setCaptureModal] = useState(null); // { action, device, oldInput }
+  const [detectedInput, setDetectedInput] = useState(null); // { rawInput, display }
 
   useEffect(() => {
     fetchKeybinds();
     fetchBackups();
   }, []);
+
+  // Map browser KeyboardEvent.code / key to FS25 XML input string
+  const mapCodeToFS25 = (e) => {
+    const code = e.code;
+    const key = e.key;
+
+    // Modifiers alone don't finalize
+    const isModifier = ['Shift', 'Control', 'Alt', 'Meta'].includes(key);
+
+    const parts = [];
+    if (e.ctrlKey && key !== 'Control') parts.push(e.location === 2 ? 'KEY_rctrl' : 'KEY_lctrl');
+    if (e.shiftKey && key !== 'Shift') parts.push(e.location === 2 ? 'KEY_rshift' : 'KEY_lshift');
+    if (e.altKey && key !== 'Alt') parts.push(e.location === 2 ? 'KEY_ralt' : 'KEY_lalt');
+
+    let mainKey = '';
+    if (!isModifier) {
+      if (code.startsWith('Key')) {
+        mainKey = 'KEY_' + code.slice(3).toLowerCase();
+      } else if (code.startsWith('Digit')) {
+        mainKey = 'KEY_' + code.slice(5);
+      } else if (code.startsWith('Numpad')) {
+        mainKey = 'KEY_numpad' + code.slice(6).toLowerCase();
+      } else if (code.startsWith('F') && !isNaN(code.slice(1))) {
+        mainKey = 'KEY_' + code.toLowerCase();
+      } else {
+        const special = {
+          'Space': 'KEY_space',
+          'Enter': 'KEY_return',
+          'NumpadEnter': 'KEY_numpadenter',
+          'Backspace': 'KEY_backspace',
+          'Tab': 'KEY_tab',
+          'Escape': 'KEY_escape',
+          'ArrowUp': 'KEY_up',
+          'ArrowDown': 'KEY_down',
+          'ArrowLeft': 'KEY_left',
+          'ArrowRight': 'KEY_right',
+          'Insert': 'KEY_insert',
+          'Delete': 'KEY_delete',
+          'Home': 'KEY_home',
+          'End': 'KEY_end',
+          'PageUp': 'KEY_pageup',
+          'PageDown': 'KEY_pagedown',
+          'Comma': 'KEY_comma',
+          'Period': 'KEY_period',
+          'Slash': 'KEY_slash',
+          'Backslash': 'KEY_backslash',
+          'Semicolon': 'KEY_semicolon',
+          'Quote': 'KEY_apostrophe',
+          'Minus': 'KEY_minus',
+          'Equal': 'KEY_equals',
+          'BracketLeft': 'KEY_lbracket',
+          'BracketRight': 'KEY_rbracket'
+        };
+        mainKey = special[code] || ('KEY_' + key.toLowerCase());
+      }
+      parts.push(mainKey);
+    } else {
+      if (key === 'Control') parts.push(e.location === 2 ? 'KEY_rctrl' : 'KEY_lctrl');
+      else if (key === 'Shift') parts.push(e.location === 2 ? 'KEY_rshift' : 'KEY_lshift');
+      else if (key === 'Alt') parts.push(e.location === 2 ? 'KEY_ralt' : 'KEY_lalt');
+    }
+
+    return parts.join(' ');
+  };
+
+  // Keyboard & Mouse listener for capture modal
+  useEffect(() => {
+    if (!captureModal) {
+      setDetectedInput(null);
+      return;
+    }
+
+    const handleKeyDown = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === 'Escape' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+        setCaptureModal(null);
+        setDetectedInput(null);
+        return;
+      }
+      const raw = mapCodeToFS25(e);
+      if (raw) {
+        setDetectedInput({
+          rawInput: raw,
+          display: raw.replace(/KEY_lshift/gi, 'Left Shift').replace(/KEY_rshift/gi, 'Right Shift').replace(/KEY_lctrl/gi, 'Left Ctrl').replace(/KEY_rctrl/gi, 'Right Ctrl').replace(/KEY_lalt/gi, 'Left Alt').replace(/KEY_ralt/gi, 'Right Alt').replace(/KEY_space/gi, 'Space').replace(/KEY_return/gi, 'Enter').replace(/KEY_/gi, '').toUpperCase()
+        });
+      }
+    };
+
+    const handleMouseDown = (e) => {
+      // Only capture mouse buttons inside the capture modal box
+      const target = e.target.closest('#keybind-capture-zone');
+      if (!target) return;
+      e.preventDefault();
+      e.stopPropagation();
+      let raw = '';
+      if (e.button === 0) raw = 'MOUSE_BUTTON_LEFT';
+      else if (e.button === 1) raw = 'MOUSE_BUTTON_MIDDLE';
+      else if (e.button === 2) raw = 'MOUSE_BUTTON_RIGHT';
+      else raw = `MOUSE_BUTTON_${e.button + 1}`;
+
+      const mods = [];
+      if (e.ctrlKey) mods.push('KEY_lctrl');
+      if (e.shiftKey) mods.push('KEY_lshift');
+      if (e.altKey) mods.push('KEY_lalt');
+      mods.push(raw);
+      const full = mods.join(' ');
+
+      setDetectedInput({
+        rawInput: full,
+        display: full.replace(/MOUSE_BUTTON_LEFT/gi, 'Left Click').replace(/MOUSE_BUTTON_RIGHT/gi, 'Right Click').replace(/MOUSE_BUTTON_MIDDLE/gi, 'Middle Click').replace(/KEY_/gi, '').toUpperCase()
+      });
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('mousedown', handleMouseDown, true);
+
+    // Gamepad polling loop
+    let animId;
+    const pollGamepad = () => {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for (const gp of gamepads) {
+        if (!gp) continue;
+        // Check buttons
+        for (let bIdx = 0; bIdx < gp.buttons.length; bIdx++) {
+          if (gp.buttons[bIdx]?.pressed) {
+            const raw = `BUTTON_${bIdx + 1}`;
+            setDetectedInput({
+              rawInput: raw,
+              display: `${gp.id.includes('G27') || gp.id.includes('Wheel') ? 'Wheel' : 'Gamepad'} Button ${bIdx + 1}`
+            });
+            break;
+          }
+        }
+        // Check axes
+        for (let aIdx = 0; aIdx < gp.axes.length; aIdx++) {
+          const val = gp.axes[aIdx];
+          if (Math.abs(val) > 0.6) {
+            const dir = val > 0 ? '+' : '-';
+            const raw = `AXIS_${aIdx + 1}${dir}`;
+            setDetectedInput({
+              rawInput: raw,
+              display: `Axis ${aIdx + 1} (${dir})`
+            });
+            break;
+          }
+        }
+      }
+      animId = requestAnimationFrame(pollGamepad);
+    };
+    animId = requestAnimationFrame(pollGamepad);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('mousedown', handleMouseDown, true);
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [captureModal]);
+
+  const handleApplyCapturedInput = async () => {
+    if (!captureModal || !detectedInput) return;
+    const { action, device, oldInput } = captureModal;
+    const res = await updateBinding(action, device, oldInput, detectedInput.rawInput);
+    if (res.success) {
+      useToastStore.getState().success(`Bound ${action} to ${detectedInput.display}!`);
+      setCaptureModal(null);
+      setDetectedInput(null);
+    } else {
+      useToastStore.getState().error(`Failed to assign binding: ${res.error}`);
+    }
+  };
 
   const handleSaveBinding = async () => {
     if (!editingBinding) return;
@@ -473,7 +646,7 @@ export default function KeybindsPage() {
                                   padding: '4px 10px',
                                   borderRadius: 4
                                 }}
-                                onClick={() => setEditingBinding({ action: act.action, device: dev.id, oldInput: '', value: '' })}
+                                onClick={() => setCaptureModal({ action: act.action, device: dev.id, oldInput: '' })}
                               >
                                 + Assign
                               </button>
@@ -544,9 +717,11 @@ export default function KeybindsPage() {
                                         fontWeight: 700,
                                         color: isKeyConflict ? 'var(--danger)' : 'var(--accent)',
                                         fontFamily: 'var(--font-mono, monospace)',
-                                        letterSpacing: '0.02em'
+                                        letterSpacing: '0.02em',
+                                        cursor: 'pointer'
                                       }}
-                                      title={`Raw XML: ${b.input}`}
+                                      onClick={() => setCaptureModal({ action: act.action, device: b.device, oldInput: b.input })}
+                                      title="Click to re-bind by pressing any key or controller button"
                                     >
                                       {b.formattedInput || b.input}
                                     </span>
@@ -554,9 +729,17 @@ export default function KeybindsPage() {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 2 }}>
                                       <button
                                         className="btn btn--ghost btn--xs btn--icon"
+                                        onClick={() => setCaptureModal({ action: act.action, device: b.device, oldInput: b.input })}
+                                        title="Press Key/Button to Rebind"
+                                        style={{ padding: '2px', height: 'auto', width: 'auto', opacity: 0.8 }}
+                                      >
+                                        <Disc size={11} className="text-accent" />
+                                      </button>
+                                      <button
+                                        className="btn btn--ghost btn--xs btn--icon"
                                         onClick={() => setEditingBinding({ action: act.action, device: b.device, oldInput: b.input, value: b.input })}
-                                        title="Edit key"
-                                        style={{ padding: '2px', height: 'auto', width: 'auto', opacity: 0.7 }}
+                                        title="Type raw XML name manually"
+                                        style={{ padding: '2px', height: 'auto', width: 'auto', opacity: 0.5 }}
                                       >
                                         <Edit2 size={11} />
                                       </button>
@@ -589,6 +772,95 @@ export default function KeybindsPage() {
         <div style={{ textAlign: 'center', padding: 'var(--sp-12)', color: 'var(--text-muted)' }}>
           <SlidersHorizontal size={36} style={{ opacity: 0.3, marginBottom: 8 }} />
           <div>No keybindings found matching your filters.</div>
+        </div>
+      )}
+
+      {/* Live Key & Gamepad Capture Modal (Press any key or button) */}
+      {captureModal && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => setCaptureModal(null)} 
+          style={{ zIndex: 1300, background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(4px)' }}
+        >
+          <div 
+            id="keybind-capture-zone"
+            className="modal animate-zoom-in" 
+            style={{ 
+              width: 520, 
+              padding: '24px', 
+              textAlign: 'center', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              gap: 16,
+              border: '2px solid var(--accent)',
+              boxShadow: '0 8px 32px rgba(var(--accent-rgb), 0.25)'
+            }} 
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 56, height: 56, borderRadius: '50%', background: 'rgba(var(--accent-rgb), 0.15)', color: 'var(--accent)' }}>
+              {captureModal.device === 'KB_MOUSE_DEFAULT' ? <Monitor size={28} /> : <Gamepad2 size={28} />}
+            </div>
+
+            <div>
+              <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>
+                {devices.find(d => d.id === captureModal.device)?.name || 'Device'}
+              </div>
+              <h2 style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, margin: '4px 0 0 0', color: 'var(--text-primary)' }}>
+                {captureModal.action.replace(/_/g, ' ')}
+              </h2>
+            </div>
+
+            <div style={{ 
+              width: '100%', 
+              padding: '20px', 
+              background: 'var(--bg-tertiary)', 
+              borderRadius: 'var(--radius-md)', 
+              border: '1px dashed var(--border)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 8
+            }}>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-secondary)' }}>
+                {detectedInput ? 'Captured Input:' : 'Press any key, mouse button, or controller button...'}
+              </div>
+              <div style={{ 
+                fontSize: detectedInput ? '22px' : '16px', 
+                fontWeight: 800, 
+                color: detectedInput ? 'var(--accent)' : 'var(--text-muted)',
+                fontFamily: 'var(--font-mono, monospace)',
+                minHeight: 32,
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                {detectedInput ? detectedInput.display : 'Listening for input...'}
+              </div>
+              {detectedInput && (
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontFamily: 'monospace' }}>
+                  Raw XML: {detectedInput.rawInput}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
+              <button 
+                className="btn btn--secondary" 
+                style={{ flex: 1 }} 
+                onClick={() => setCaptureModal(null)}
+              >
+                Cancel (Esc)
+              </button>
+              <button 
+                className="btn btn--primary" 
+                style={{ flex: 1 }} 
+                disabled={!detectedInput}
+                onClick={handleApplyCapturedInput}
+              >
+                Confirm Binding
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
