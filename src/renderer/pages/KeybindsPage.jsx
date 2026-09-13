@@ -863,12 +863,6 @@ export default function KeybindsPage() {
               { raw: 'MOUSE_BUTTON_MIDDLE', label: 'MMB' },
               { raw: 'MOUSE_BUTTON_4',      label: 'M4' },
               { raw: 'MOUSE_BUTTON_5',      label: 'M5' },
-              { raw: 'MOUSE_AXIS_X+',       label: 'Mouse →' },
-              { raw: 'MOUSE_AXIS_X-',       label: 'Mouse ←' },
-              { raw: 'MOUSE_AXIS_Y+',       label: 'Mouse ↓' },
-              { raw: 'MOUSE_AXIS_Y-',       label: 'Mouse ↑' },
-              { raw: 'MOUSE_WHEEL_UP',      label: 'Scroll ↑' },
-              { raw: 'MOUSE_WHEEL_DOWN',    label: 'Scroll ↓' },
             ]
           },
           {
@@ -926,11 +920,19 @@ export default function KeybindsPage() {
             });
         });
 
-        // Keys that are reliably intercepted by Windows/system before the game sees them
+        // Keys that are reliably intercepted by Windows/system before the game sees them,
+        // OR keys that Farming Simulator hardcodes for debugging/menus and cannot be reliably unbound
         const SYSTEM_RESERVED = new Set([
+          // Windows OS level
           'KEY_lwin', 'KEY_rwin',       // Windows key — always grabbed by OS
-          'KEY_sysrq',                   // Print Screen — OS screenshot
-          'KEY_scrollock',               // Scroll Lock — some OEM firmware intercepts
+          'KEY_sysrq',                  // Print Screen — OS screenshot
+          'KEY_scrollock',              // Scroll Lock — some OEM firmware intercepts
+          
+          // FS Base Game Hardcoded (Menus/Debug)
+          // F1 = Help Menu, F2 = HUD, F3 = Flight, F4 = Wireframe, F5 = Collision, F8 = Stats
+          // F9-F11 used for various console/dev features depending on game version
+          'KEY_f2', 'KEY_f3', 'KEY_f4', 'KEY_f5', 'KEY_f6', 
+          'KEY_f7', 'KEY_f8', 'KEY_f9', 'KEY_f10', 'KEY_f11',
         ]);
 
         // Modifier rows for the combo builder (FS25 distinguishes L/R)
@@ -1055,7 +1057,7 @@ export default function KeybindsPage() {
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '10px', color: 'var(--text-muted)' }}>
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warning, #f59e0b)', display: 'inline-block' }} />
-                      May conflict with system
+                      May conflict with system/game
                     </span>
                   </div>
                 </div>
@@ -1130,7 +1132,7 @@ export default function KeybindsPage() {
                             : isUsed
                               ? `In use by: ${usedBy.join(', ')}`
                               : isReserved
-                                ? `May conflict with Windows or system apps`
+                                ? `May conflict with system or game defaults`
                                 : fullRaw;
 
                           return (
