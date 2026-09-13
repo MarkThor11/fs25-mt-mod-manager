@@ -110,24 +110,32 @@ export default function ProfilesPage() {
     areaUnit: 0, // 0: Hectare, 1: Acre
     // Radio & Sound
     isRadioEnabled: true,
-    radioRange: 1, // 0: Always, 1: Vehicle Only
+    radioVehicleOnly: false,
     masterVolume: 1.0,
+    vehicleVolume: 1.0,
+    environmentVolume: 0.7,
+    radioVolume: 1.0,
+    musicVolume: 0.0,
+    guiVolume: 0.0,
+    voiceVolume: 1.0,
     // Camera
     resetVehicleCamera: true,
     indoorCameraSuspension: true,
     dynamicVehicleCamera: true,
     invertYLook: false,
-    // Input Controls
-    easyArmControls: true,
     cameraSensitivity: 1.0,
-    vehicleArmSensitivity: 1.0,
-    steeringBackSpeed: 0.7,
-    steeringSensitivity: 1.0,
-    directionChangeMode: 1, // 0: Manual, 1: Auto
-    gearShiftMode: 0, // 0: Auto, 1: Manual
-    speedometerDisplayValue: 1, // 0: Engine, 1: Vehicle
-    switchToTrainsEnabled: true,
+    // Input Controls
     inputHelpMode: 0, // 0: Auto, 1: Keyboard, 2: Gamepad
+    gearShiftMode: 0, // 0: Auto, 1: Manual with Clutch, 2: Manual
+    steeringSensitivity: 1.0,
+    steeringBackSpeed: 7.0,
+    vehicleArmSensitivity: 1.0,
+    forceFeedback: 0.5,
+    steeringAssistLines: true,
+    steeringAssistCruiseControl: false,
+    easyArmControl: true,
+    gyroscopeSteering: false,
+    switchToTrainsEnabled: true,
     woodHarvesterAutomaticCutting: true,
   });
 
@@ -159,7 +167,8 @@ export default function ProfilesPage() {
         });
       }
 
-      setOptions({
+      setOptions(prev => ({
+        ...prev,
         money: selectedProfile.options?.money || 1000000,
         mapId: selectedProfile.options?.mapId || 'MapUS',
         mapTitle: selectedProfile.options?.mapTitle || 'Riverbend Springs',
@@ -182,11 +191,13 @@ export default function ProfilesPage() {
         limeRequired: selectedProfile.options?.limeRequired ?? true,
         plowingRequiredEnabled: selectedProfile.options?.plowingRequiredEnabled ?? false,
         isCrossPlatform: selectedProfile.options?.isCrossPlatform ?? true,
-      });
+        ...(selectedProfile.options || {})
+      }));
     } else {
       setProfileName('');
       setSelectedMods(new Set());
-      setOptions({
+      setOptions(prev => ({
+        ...prev,
         money: 1000000,
         initialLoan: 0,
         mapId: 'MapUS',
@@ -209,7 +220,7 @@ export default function ProfilesPage() {
         limeRequired: true,
         plowingRequiredEnabled: false,
         isCrossPlatform: true,
-      });
+      }));
     }
   }, [selectedProfile]);
 
@@ -754,7 +765,7 @@ export default function ProfilesPage() {
                         </div>
                       </div>
                     </div>
-<div className="settings-panel" style={{ marginBottom: 'var(--sp-4)' }}>
+                    <div className="settings-panel" style={{ marginBottom: 'var(--sp-4)' }}>
                       <h3 className="section-title"><Volume2 size={16} /> Audio & Sound</h3>
                       <div className="settings-grid">
                         <div className="setting">
@@ -764,8 +775,38 @@ export default function ProfilesPage() {
                           </label>
                         </div>
                         <div className="setting">
+                          <label className="checkbox-setting">
+                            <input type="checkbox" checked={options.radioVehicleOnly} onChange={e => setOptions(prev => ({ ...prev, radioVehicleOnly: e.target.checked }))} />
+                            <span>Radio in Vehicles Only</span>
+                          </label>
+                        </div>
+                        <div className="setting">
                           <label>Master Volume ({Math.round((parseFloat(options.masterVolume) || 0) * 100)}%)</label>
                           <CustomSlider min="0" max="1" step="0.05" value={options.masterVolume} onChange={e => setOptions(prev => ({ ...prev, masterVolume: parseFloat(e.target.value) }))} />
+                        </div>
+                        <div className="setting">
+                          <label>Vehicle Volume ({Math.round((parseFloat(options.vehicleVolume ?? 1.0) || 0) * 100)}%)</label>
+                          <CustomSlider min="0" max="1" step="0.05" value={options.vehicleVolume ?? 1.0} onChange={e => setOptions(prev => ({ ...prev, vehicleVolume: parseFloat(e.target.value) }))} />
+                        </div>
+                        <div className="setting">
+                          <label>Environment Volume ({Math.round((parseFloat(options.environmentVolume ?? 0.7) || 0) * 100)}%)</label>
+                          <CustomSlider min="0" max="1" step="0.05" value={options.environmentVolume ?? 0.7} onChange={e => setOptions(prev => ({ ...prev, environmentVolume: parseFloat(e.target.value) }))} />
+                        </div>
+                        <div className="setting">
+                          <label>Radio Volume ({Math.round((parseFloat(options.radioVolume ?? 1.0) || 0) * 100)}%)</label>
+                          <CustomSlider min="0" max="1" step="0.05" value={options.radioVolume ?? 1.0} onChange={e => setOptions(prev => ({ ...prev, radioVolume: parseFloat(e.target.value) }))} />
+                        </div>
+                        <div className="setting">
+                          <label>Music Volume ({Math.round((parseFloat(options.musicVolume ?? 0.0) || 0) * 100)}%)</label>
+                          <CustomSlider min="0" max="1" step="0.05" value={options.musicVolume ?? 0.0} onChange={e => setOptions(prev => ({ ...prev, musicVolume: parseFloat(e.target.value) }))} />
+                        </div>
+                        <div className="setting">
+                          <label>GUI Volume ({Math.round((parseFloat(options.guiVolume ?? 0.0) || 0) * 100)}%)</label>
+                          <CustomSlider min="0" max="1" step="0.05" value={options.guiVolume ?? 0.0} onChange={e => setOptions(prev => ({ ...prev, guiVolume: parseFloat(e.target.value) }))} />
+                        </div>
+                        <div className="setting">
+                          <label>Voice Volume ({Math.round((parseFloat(options.voiceVolume ?? 1.0) || 0) * 100)}%)</label>
+                          <CustomSlider min="0" max="1" step="0.05" value={options.voiceVolume ?? 1.0} onChange={e => setOptions(prev => ({ ...prev, voiceVolume: parseFloat(e.target.value) }))} />
                         </div>
                       </div>
                     </div>
@@ -773,6 +814,10 @@ export default function ProfilesPage() {
                     <div className="settings-panel" style={{ marginBottom: 'var(--sp-4)' }}>
                       <h3 className="section-title"><Video size={16} /> Camera Settings</h3>
                       <div className="settings-grid">
+                        <div className="setting">
+                          <label>Camera Sensitivity ({Math.round((parseFloat(options.cameraSensitivity) || 0) * 100)}%)</label>
+                          <CustomSlider min="0.5" max="2.0" step="0.1" value={options.cameraSensitivity} onChange={e => setOptions(prev => ({ ...prev, cameraSensitivity: parseFloat(e.target.value) }))} />
+                        </div>
                         <label className="checkbox-setting"><input type="checkbox" checked={options.resetVehicleCamera} onChange={e => setOptions(prev => ({ ...prev, resetVehicleCamera: e.target.checked }))} /><span>Reset Vehicle Camera</span></label>
                         <label className="checkbox-setting"><input type="checkbox" checked={options.indoorCameraSuspension} onChange={e => setOptions(prev => ({ ...prev, indoorCameraSuspension: e.target.checked }))} /><span>Indoor Camera Suspension</span></label>
                         <label className="checkbox-setting"><input type="checkbox" checked={options.dynamicVehicleCamera} onChange={e => setOptions(prev => ({ ...prev, dynamicVehicleCamera: e.target.checked }))} /><span>Dynamic Vehicle Camera</span></label>
@@ -849,29 +894,66 @@ export default function ProfilesPage() {
                       <h3 className="section-title"><Gamepad2 size={16} /> Input Controls</h3>
                       <div className="settings-grid">
                         <div className="setting">
-                          <label>Camera Sensitivity ({Math.round((parseFloat(options.cameraSensitivity) || 0) * 100)}%)</label>
-                          <CustomSlider min="0.5" max="2.0" step="0.1" value={options.cameraSensitivity} onChange={e => setOptions(prev => ({ ...prev, cameraSensitivity: parseFloat(e.target.value) }))} />
-                        </div>
-                        <div className="setting">
-                          <label>Gear Shift Mode</label>
-                          <select value={options.gearShiftMode} onChange={e => setOptions(prev => ({ ...prev, gearShiftMode: parseInt(e.target.value) }))}>
-                            <option value="0">Automatic</option>
-                            <option value="1">Manual</option>
-                          </select>
-                        </div>
-                        <div className="setting">
-                          <label className="checkbox-setting">
-                            <input type="checkbox" checked={options.switchToTrainsEnabled} onChange={e => setOptions(prev => ({ ...prev, switchToTrainsEnabled: e.target.checked }))} />
-                            <span>Allow Switching to Trains</span>
-                          </label>
-                        </div>
-                        <div className="setting">
                           <label>Input Help Mode</label>
                           <select value={options.inputHelpMode} onChange={e => setOptions(prev => ({ ...prev, inputHelpMode: parseInt(e.target.value) }))}>
                             <option value="0">Auto</option>
                             <option value="1">Keyboard</option>
                             <option value="2">Gamepad</option>
                           </select>
+                        </div>
+                        <div className="setting">
+                          <label>Gear Shift Mode</label>
+                          <select value={options.gearShiftMode} onChange={e => setOptions(prev => ({ ...prev, gearShiftMode: parseInt(e.target.value) }))}>
+                            <option value="0">Automatic</option>
+                            <option value="1">Manual with Clutch</option>
+                            <option value="2">Manual</option>
+                          </select>
+                        </div>
+                        <div className="setting">
+                          <label>Steering Sensitivity ({Math.round((parseFloat(options.steeringSensitivity) || 1.0) * 100)}%)</label>
+                          <CustomSlider min="0.5" max="2.0" step="0.05" value={options.steeringSensitivity ?? 1.0} onChange={e => setOptions(prev => ({ ...prev, steeringSensitivity: parseFloat(e.target.value) }))} />
+                        </div>
+                        <div className="setting">
+                          <label>Steering Return Speed ({parseFloat(options.steeringBackSpeed ?? 7.0).toFixed(1)})</label>
+                          <CustomSlider min="1.0" max="15.0" step="0.5" value={options.steeringBackSpeed ?? 7.0} onChange={e => setOptions(prev => ({ ...prev, steeringBackSpeed: parseFloat(e.target.value) }))} />
+                        </div>
+                        <div className="setting">
+                          <label>Vehicle Arm Sensitivity ({Math.round((parseFloat(options.vehicleArmSensitivity) || 1.0) * 100)}%)</label>
+                          <CustomSlider min="0.5" max="2.0" step="0.05" value={options.vehicleArmSensitivity ?? 1.0} onChange={e => setOptions(prev => ({ ...prev, vehicleArmSensitivity: parseFloat(e.target.value) }))} />
+                        </div>
+                        <div className="setting">
+                          <label>Force Feedback ({Math.round((parseFloat(options.forceFeedback) || 0.5) * 100)}%)</label>
+                          <CustomSlider min="0" max="1" step="0.05" value={options.forceFeedback ?? 0.5} onChange={e => setOptions(prev => ({ ...prev, forceFeedback: parseFloat(e.target.value) }))} />
+                        </div>
+                        <div className="setting">
+                          <label className="checkbox-setting">
+                            <input type="checkbox" checked={options.steeringAssistLines !== false} onChange={e => setOptions(prev => ({ ...prev, steeringAssistLines: e.target.checked }))} />
+                            <span>Steering Assist Lines</span>
+                          </label>
+                        </div>
+                        <div className="setting">
+                          <label className="checkbox-setting">
+                            <input type="checkbox" checked={options.steeringAssistCruiseControl || false} onChange={e => setOptions(prev => ({ ...prev, steeringAssistCruiseControl: e.target.checked }))} />
+                            <span>Steering Assist Cruise Control</span>
+                          </label>
+                        </div>
+                        <div className="setting">
+                          <label className="checkbox-setting">
+                            <input type="checkbox" checked={options.easyArmControl !== false} onChange={e => setOptions(prev => ({ ...prev, easyArmControl: e.target.checked }))} />
+                            <span>Easy Arm Control</span>
+                          </label>
+                        </div>
+                        <div className="setting">
+                          <label className="checkbox-setting">
+                            <input type="checkbox" checked={options.gyroscopeSteering || false} onChange={e => setOptions(prev => ({ ...prev, gyroscopeSteering: e.target.checked }))} />
+                            <span>Gyroscope Steering</span>
+                          </label>
+                        </div>
+                        <div className="setting">
+                          <label className="checkbox-setting">
+                            <input type="checkbox" checked={options.switchToTrainsEnabled} onChange={e => setOptions(prev => ({ ...prev, switchToTrainsEnabled: e.target.checked }))} />
+                            <span>Allow Switching to Trains</span>
+                          </label>
                         </div>
                       </div>
                     </div>
