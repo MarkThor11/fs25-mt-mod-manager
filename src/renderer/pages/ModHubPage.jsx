@@ -866,16 +866,12 @@ export default function ModHubPage() {
                       </div>
                     </label>
                     <div className="range-slider-wrap">
-                      <input 
-                        type="range" 
-                        className="range-slider" 
+                      <CustomSlider 
                         min="0" max="2000" step="10" 
                         value={activeFilters.hpRange[0]} 
                         onChange={(e) => setFilters({ hpRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.hpRange[1])] })} 
                       />
-                      <input 
-                        type="range" 
-                        className="range-slider" 
+                      <CustomSlider 
                         min="0" max="2000" step="10" 
                         value={activeFilters.hpRange[1]} 
                         onChange={(e) => setFilters({ hpRange: [Math.min(parseInt(e.target.value), activeFilters.hpRange[0]), parseInt(e.target.value)] })} 
