@@ -754,7 +754,33 @@ export default function ProfilesPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
+<div className="settings-panel" style={{ marginBottom: 'var(--sp-4)' }}>
+                      <h3 className="section-title"><Volume2 size={16} /> Audio & Sound</h3>
+                      <div className="settings-grid">
+                        <div className="setting">
+                          <label className="checkbox-setting">
+                            <input type="checkbox" checked={options.isRadioEnabled} onChange={e => setOptions(prev => ({ ...prev, isRadioEnabled: e.target.checked }))} />
+                            <span>Radio Enabled</span>
+                          </label>
+                        </div>
+                        <div className="setting">
+                          <label>Master Volume ({Math.round(options.masterVolume * 100)}%)</label>
+                          <CustomSlider min="0" max="1" step="0.05" value={options.masterVolume} onChange={e => setOptions(prev => ({ ...prev, masterVolume: parseFloat(e.target.value) }))} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="settings-panel" style={{ marginBottom: 'var(--sp-4)' }}>
+                      <h3 className="section-title"><Video size={16} /> Camera Settings</h3>
+                      <div className="settings-grid">
+                        <label className="checkbox-setting"><input type="checkbox" checked={options.resetVehicleCamera} onChange={e => setOptions(prev => ({ ...prev, resetVehicleCamera: e.target.checked }))} /><span>Reset Vehicle Camera</span></label>
+                        <label className="checkbox-setting"><input type="checkbox" checked={options.indoorCameraSuspension} onChange={e => setOptions(prev => ({ ...prev, indoorCameraSuspension: e.target.checked }))} /><span>Indoor Camera Suspension</span></label>
+                        <label className="checkbox-setting"><input type="checkbox" checked={options.dynamicVehicleCamera} onChange={e => setOptions(prev => ({ ...prev, dynamicVehicleCamera: e.target.checked }))} /><span>Dynamic Vehicle Camera</span></label>
+                        <label className="checkbox-setting"><input type="checkbox" checked={options.invertYLook} onChange={e => setOptions(prev => ({ ...prev, invertYLook: e.target.checked }))} /><span>Invert Y-Look</span></label>
+                      </div>
+                    </div>
+
+                                      </div>
                 </>
               )}
 
@@ -819,32 +845,6 @@ export default function ProfilesPage() {
               {activeTab === 'controls' && (
                 <>
                   <div className="settings-tab-content">
-                    <div className="settings-panel" style={{ marginBottom: 'var(--sp-4)' }}>
-                      <h3 className="section-title"><Volume2 size={16} /> Audio & Sound</h3>
-                      <div className="settings-grid">
-                        <div className="setting">
-                          <label className="checkbox-setting">
-                            <input type="checkbox" checked={options.isRadioEnabled} onChange={e => setOptions(prev => ({ ...prev, isRadioEnabled: e.target.checked }))} />
-                            <span>Radio Enabled</span>
-                          </label>
-                        </div>
-                        <div className="setting">
-                          <label>Master Volume ({Math.round(options.masterVolume * 100)}%)</label>
-                          <CustomSlider min="0" max="1" step="0.05" value={options.masterVolume} onChange={e => setOptions(prev => ({ ...prev, masterVolume: parseFloat(e.target.value) }))} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="settings-panel" style={{ marginBottom: 'var(--sp-4)' }}>
-                      <h3 className="section-title"><Video size={16} /> Camera Settings</h3>
-                      <div className="settings-grid">
-                        <label className="checkbox-setting"><input type="checkbox" checked={options.resetVehicleCamera} onChange={e => setOptions(prev => ({ ...prev, resetVehicleCamera: e.target.checked }))} /><span>Reset Vehicle Camera</span></label>
-                        <label className="checkbox-setting"><input type="checkbox" checked={options.indoorCameraSuspension} onChange={e => setOptions(prev => ({ ...prev, indoorCameraSuspension: e.target.checked }))} /><span>Indoor Camera Suspension</span></label>
-                        <label className="checkbox-setting"><input type="checkbox" checked={options.dynamicVehicleCamera} onChange={e => setOptions(prev => ({ ...prev, dynamicVehicleCamera: e.target.checked }))} /><span>Dynamic Vehicle Camera</span></label>
-                        <label className="checkbox-setting"><input type="checkbox" checked={options.invertYLook} onChange={e => setOptions(prev => ({ ...prev, invertYLook: e.target.checked }))} /><span>Invert Y-Look</span></label>
-                      </div>
-                    </div>
-
                     <div className="settings-panel">
                       <h3 className="section-title"><Gamepad2 size={16} /> Input Controls</h3>
                       <div className="settings-grid">
