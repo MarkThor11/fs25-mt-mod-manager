@@ -610,19 +610,19 @@ const [activeTab, setActiveTab] = useState('general');
 
         {/* Tab Switcher */}
         <div className="tab-switcher" style={{ padding: '0 24px', borderBottom: '1px solid var(--border)' }}>
-          <button className={`tab-btn ${activeTab === 'general' ? 'tab-btn--active' : ''}`} title="Basic savegame settings and economy." title="Basic savegame settings and economy." title="Basic savegame settings and economy." onClick={() => setActiveTab('general')}>
+          <button className={`tab-btn ${activeTab === 'general' ? 'tab-btn--active' : ''}`} title="Basic savegame settings and economy." onClick={() => setActiveTab('general')}>
             <Globe size={14} /> General
           </button>
-          <button className={`tab-btn ${activeTab === 'realism' ? 'tab-btn--active' : ''}`} title="Simulation realism and environment options." title="Simulation realism and environment options." title="Simulation realism and environment options." onClick={() => setActiveTab('realism')}>
+          <button className={`tab-btn ${activeTab === 'realism' ? 'tab-btn--active' : ''}`} title="Simulation realism and environment options." onClick={() => setActiveTab('realism')}>
             <Info size={14} /> Realism & Units
           </button>
-          <button className={`tab-btn ${activeTab === 'controls' ? 'tab-btn--active' : ''}`} title="Player and camera controls." title="Player and camera controls." title="Player and camera controls." onClick={() => setActiveTab('controls')}>
+          <button className={`tab-btn ${activeTab === 'controls' ? 'tab-btn--active' : ''}`} title="Player and camera controls." onClick={() => setActiveTab('controls')}>
             <Gamepad2 size={14} /> Controls
           </button>
-          <button className={`tab-btn ${activeTab === 'spawn' ? 'tab-btn--active' : ''}`} title="Choose spawn location." title="Choose spawn location." title="Choose spawn location." onClick={() => setActiveTab('spawn')}>
+          <button className={`tab-btn ${activeTab === 'spawn' ? 'tab-btn--active' : ''}`} title="Choose spawn location." onClick={() => setActiveTab('spawn')}>
             <MapPin size={14} /> Spawn & Persistence
           </button>
-          <button className={`tab-btn ${activeTab === 'mods' ? 'tab-btn--active' : ''}`} title="Choose exactly which mods are active for this save." title="Choose exactly which mods are active for this save." title="Choose exactly which mods are active for this save." onClick={() => setActiveTab('mods')}>
+          <button className={`tab-btn ${activeTab === 'mods' ? 'tab-btn--active' : ''}`} title="Choose exactly which mods are active for this save." onClick={() => setActiveTab('mods')}>
             <Package size={14} /> Selective Mods
           </button>
         </div>
@@ -731,7 +731,7 @@ const [activeTab, setActiveTab] = useState('general');
                             const res = await window.api.savegames.updateFleetMaintenance({ savePath: save.path, type: 'dirt', value: fleetCleanPct / 100 });
                             if (res.success) useToastStore.getState().success('Fleet dirt levels updated!');
                          }}
-                        title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item.">Apply</button>
+                        title="Apply the selected setting or spawn item.">Apply</button>
                     </div>
 
                    {/* Repair Fleet */}
@@ -753,7 +753,7 @@ const [activeTab, setActiveTab] = useState('general');
                             const res = await window.api.savegames.updateFleetMaintenance({ savePath: save.path, type: 'repair', value: fleetRepairPct / 100 });
                             if (res.success) useToastStore.getState().success('Fleet mechanical condition updated!');
                          }}
-                        title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item.">Apply</button>
+                        title="Apply the selected setting or spawn item.">Apply</button>
                     </div>
 
                    {/* Paint Repair */}
@@ -775,7 +775,7 @@ const [activeTab, setActiveTab] = useState('general');
                             const res = await window.api.savegames.updateFleetMaintenance({ savePath: save.path, type: 'paint', value: fleetPaintPct / 100 });
                             if (res.success) useToastStore.getState().success('Fleet paint condition updated!');
                          }}
-                        title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item.">Apply</button>
+                        title="Apply the selected setting or spawn item.">Apply</button>
                     </div>
                 </div>
 
@@ -3535,7 +3535,7 @@ export default function SavegamesPage() {
                             </strong> Mods Selected
                         </div>
                     </div>
-                    <button className="btn btn--ghost" style={{ height: 48, padding: '0 32px', fontSize: 16 }} title="Discard all changes without saving." title="Discard all changes without saving." title="Discard all changes without saving." onClick={() => setShowCreateModal(false)}>Cancel</button>
+                    <button className="btn btn--ghost" style={{ height: 48, padding: '0 32px', fontSize: 16 }} title="Discard all changes without saving." onClick={() => setShowCreateModal(false)}>Cancel</button>
                     <button className="btn btn--primary" style={{ height: 48, padding: '0 48px', fontSize: 16, fontWeight: 800, background: 'var(--accent)', color: 'var(--bg-primary)' }} onClick={handleCreate} disabled={creating}>{creating ? 'Creating...' : 'Create Career'}</button>
                 </div>
               </div>
@@ -3562,7 +3562,7 @@ export default function SavegamesPage() {
                     </label>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--sp-2)', justifyContent: 'flex-end' }}>
-                    <button className="btn btn--ghost" title="Discard all changes without saving." title="Discard all changes without saving." title="Discard all changes without saving." onClick={() => setShowRestoreModal(null)}>Cancel</button>
+                    <button className="btn btn--ghost" title="Discard all changes without saving." onClick={() => setShowRestoreModal(null)}>Cancel</button>
                     <button className="btn btn--primary" onClick={handleRestore}>Restore Now</button>
                 </div>
               </div>
