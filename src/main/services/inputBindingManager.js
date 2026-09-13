@@ -2,6 +2,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { XMLParser, XMLBuilder } = require('fast-xml-parser');
 const pathProvider = require('./pathProvider');
+const cache = require('./cache');
 const { app } = require('electron');
 
 const parser = new XMLParser({
@@ -355,6 +356,22 @@ async function restoreBackup(fileName) {
     }
 }
 
+async function updateBackup(fileName) {
+    const backupsDir = getKeybindBackupsPath();
+    const destPath = path.join(backupsDir, fileName);
+    const sourcePath = getInputBindingPath();
+
+    if (!fs.existsSync(sourcePath)) return { success: false, error: 'inputBinding.xml not found' };
+    if (!fs.existsSync(destPath)) return { success: false, error: 'Target backup not found' };
+
+    try {
+        await fs.copy(sourcePath, destPath);
+        return { success: true };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+}
+
 async function deleteBackup(fileName) {
     const backupsDir = getKeybindBackupsPath();
     const filePath = path.join(backupsDir, fileName);
@@ -399,6 +416,7 @@ module.exports = {
     getBackups,
     createBackup,
     restoreBackup,
+    updateBackup,
     deleteBackup,
     resetToDefaults
 };

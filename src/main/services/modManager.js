@@ -1232,6 +1232,16 @@ function parseModDesc(modPath, zipInstance = null) {
 			techData: null,
 		};
 
+		// ── MOD KEYBINDS EXTRACTION ──
+		try {
+			// Extract actions and inputBinding XML blocks natively as strings
+			const actionsBlock = getTag(xmlContent, 'actions');
+			const inputBindingBlock = getTag(xmlContent, 'inputBinding');
+			
+			if (actionsBlock) result.actionsXml = actionsBlock;
+			if (inputBindingBlock) result.inputBindingXml = inputBindingBlock;
+		} catch (e) {}
+
 		// ── TECHNICAL SPECS EXTRACTION (Tractors/Vehicles) ──
 		try {
 			const storeItemsRegex = /<storeItem\s+[^>]*xmlFilename=["']([^"']+)["'][^>]*>/gi;
