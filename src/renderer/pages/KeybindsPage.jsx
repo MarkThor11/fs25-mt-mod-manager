@@ -747,93 +747,257 @@ export default function KeybindsPage() {
       )}
 
       {/* Live Key & Gamepad Capture Modal (Press any key or button) */}
-      {captureModal && (
-        <div 
-          className="modal-overlay" 
-          onClick={() => setCaptureModal(null)} 
-          style={{ zIndex: 1300, background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(4px)' }}
-        >
+      {captureModal && (() => {
+        const isKB = captureModal.device === 'KB_MOUSE_DEFAULT';
+
+        // Suggested keys for Keyboard/Mouse device
+        const KB_SUGGESTIONS = [
+          {
+            group: 'Letters',
+            keys: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l => ({ raw: `KEY_${l.toLowerCase()}`, label: l }))
+          },
+          {
+            group: 'Numbers',
+            keys: '1234567890'.split('').map(n => ({ raw: `KEY_${n}`, label: n }))
+          },
+          {
+            group: 'Function',
+            keys: Array.from({ length: 12 }, (_, i) => ({ raw: `KEY_f${i + 1}`, label: `F${i + 1}` }))
+          },
+          {
+            group: 'Special',
+            keys: [
+              { raw: 'KEY_space',     label: 'Space' },
+              { raw: 'KEY_return',    label: 'Enter' },
+              { raw: 'KEY_tab',       label: 'Tab' },
+              { raw: 'KEY_backspace', label: '⌫ Back' },
+              { raw: 'KEY_escape',    label: 'Esc' },
+              { raw: 'KEY_lshift',    label: 'L Shift' },
+              { raw: 'KEY_rshift',    label: 'R Shift' },
+              { raw: 'KEY_lctrl',     label: 'L Ctrl' },
+              { raw: 'KEY_rctrl',     label: 'R Ctrl' },
+              { raw: 'KEY_lalt',      label: 'L Alt' },
+              { raw: 'KEY_ralt',      label: 'R Alt' },
+              { raw: 'KEY_delete',    label: 'Del' },
+              { raw: 'KEY_insert',    label: 'Ins' },
+              { raw: 'KEY_home',      label: 'Home' },
+              { raw: 'KEY_end',       label: 'End' },
+              { raw: 'KEY_pageup',    label: 'PgUp' },
+              { raw: 'KEY_pagedown',  label: 'PgDn' },
+            ]
+          },
+          {
+            group: 'Arrows',
+            keys: [
+              { raw: 'KEY_up',    label: '↑' },
+              { raw: 'KEY_down',  label: '↓' },
+              { raw: 'KEY_left',  label: '←' },
+              { raw: 'KEY_right', label: '→' },
+            ]
+          },
+          {
+            group: 'Numpad',
+            keys: [
+              ...Array.from({ length: 10 }, (_, i) => ({ raw: `KEY_numpad${i}`, label: `Num ${i}` })),
+              { raw: 'KEY_numpadplus',   label: 'Num +' },
+              { raw: 'KEY_numpadminus',  label: 'Num -' },
+              { raw: 'KEY_numpadmultiply', label: 'Num *' },
+              { raw: 'KEY_numpaddivide', label: 'Num /' },
+              { raw: 'KEY_numpadenter',  label: 'Num ↵' },
+              { raw: 'KEY_numpadperiod', label: 'Num .' },
+            ]
+          },
+          {
+            group: 'Mouse',
+            keys: [
+              { raw: 'MOUSE_BUTTON_LEFT',   label: 'LMB' },
+              { raw: 'MOUSE_BUTTON_RIGHT',  label: 'RMB' },
+              { raw: 'MOUSE_BUTTON_MIDDLE', label: 'MMB' },
+              { raw: 'MOUSE_BUTTON_4',      label: 'M4' },
+              { raw: 'MOUSE_BUTTON_5',      label: 'M5' },
+              { raw: 'MOUSE_AXIS_X+',       label: 'Mouse →' },
+              { raw: 'MOUSE_AXIS_X-',       label: 'Mouse ←' },
+              { raw: 'MOUSE_AXIS_Y+',       label: 'Mouse ↓' },
+              { raw: 'MOUSE_AXIS_Y-',       label: 'Mouse ↑' },
+              { raw: 'MOUSE_WHEEL_UP',      label: 'Scroll ↑' },
+              { raw: 'MOUSE_WHEEL_DOWN',    label: 'Scroll ↓' },
+            ]
+          },
+        ];
+
+        // Suggested keys for Gamepad/Wheel device
+        const GP_SUGGESTIONS = [
+          {
+            group: 'Buttons',
+            keys: Array.from({ length: 16 }, (_, i) => ({ raw: `BUTTON_${i + 1}`, label: `Btn ${i + 1}` }))
+          },
+          {
+            group: 'Axes',
+            keys: [
+              { raw: 'AXIS_1+', label: 'Axis 1+' }, { raw: 'AXIS_1-', label: 'Axis 1−' },
+              { raw: 'AXIS_2+', label: 'Axis 2+' }, { raw: 'AXIS_2-', label: 'Axis 2−' },
+              { raw: 'AXIS_3+', label: 'Axis 3+' }, { raw: 'AXIS_3-', label: 'Axis 3−' },
+              { raw: 'AXIS_4+', label: 'Axis 4+' }, { raw: 'AXIS_4-', label: 'Axis 4−' },
+              { raw: 'AXIS_5+', label: 'Axis 5+' }, { raw: 'AXIS_5-', label: 'Axis 5−' },
+              { raw: 'AXIS_6+', label: 'Axis 6+' }, { raw: 'AXIS_6-', label: 'Axis 6−' },
+            ]
+          },
+        ];
+
+        const suggestions = isKB ? KB_SUGGESTIONS : GP_SUGGESTIONS;
+
+        return (
           <div 
-            id="keybind-capture-zone"
-            className="modal animate-zoom-in" 
-            style={{ 
-              width: 520, 
-              padding: '24px', 
-              textAlign: 'center', 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              gap: 16,
-              border: '2px solid var(--accent)',
-              boxShadow: '0 8px 32px rgba(var(--accent-rgb), 0.25)'
-            }} 
-            onClick={e => e.stopPropagation()}
+            className="modal-overlay" 
+            onClick={() => setCaptureModal(null)} 
+            style={{ zIndex: 1300, background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(4px)' }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 56, height: 56, borderRadius: '50%', background: 'rgba(var(--accent-rgb), 0.15)', color: 'var(--accent)' }}>
-              {captureModal.device === 'KB_MOUSE_DEFAULT' ? <Monitor size={28} /> : <Gamepad2 size={28} />}
-            </div>
-
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>
-                {devices.find(d => d.id === captureModal.device)?.name || 'Device'}
-              </div>
-              <h2 style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, margin: '4px 0 0 0', color: 'var(--text-primary)' }}>
-                {captureModal.action.replace(/_/g, ' ')}
-              </h2>
-            </div>
-
-            <div style={{ 
-              width: '100%', 
-              padding: '20px', 
-              background: 'var(--bg-tertiary)', 
-              borderRadius: 'var(--radius-md)', 
-              border: '1px dashed var(--border)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 8
-            }}>
-              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-secondary)' }}>
-                {detectedInput ? 'Captured Input:' : 'Press any key, mouse button, or controller button...'}
-              </div>
-              <div style={{ 
-                fontSize: detectedInput ? '22px' : '16px', 
-                fontWeight: 800, 
-                color: detectedInput ? 'var(--accent)' : 'var(--text-muted)',
-                fontFamily: 'var(--font-mono, monospace)',
-                minHeight: 32,
-                display: 'flex',
-                alignItems: 'center'
-              }}>
-                {detectedInput ? detectedInput.display : 'Listening for input...'}
-              </div>
-              {detectedInput && (
-                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontFamily: 'monospace' }}>
-                  Raw XML: {detectedInput.rawInput}
+            <div 
+              id="keybind-capture-zone"
+              className="modal animate-zoom-in" 
+              style={{ 
+                width: 680, 
+                maxWidth: '95vw',
+                maxHeight: '90vh',
+                padding: '24px', 
+                textAlign: 'center', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                gap: 16,
+                border: '2px solid var(--accent)',
+                boxShadow: '0 8px 32px rgba(var(--accent-rgb), 0.25)',
+                overflowY: 'auto'
+              }} 
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: '50%', background: 'rgba(var(--accent-rgb), 0.15)', color: 'var(--accent)', flexShrink: 0 }}>
+                  {isKB ? <Monitor size={22} /> : <Gamepad2 size={22} />}
                 </div>
-              )}
-            </div>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>
+                    {devices.find(d => d.id === captureModal.device)?.name || 'Device'}
+                  </div>
+                  <h2 style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                    {captureModal.action
+                      .toLowerCase()
+                      .split('_')
+                      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                      .join(' ')}
+                  </h2>
+                </div>
+              </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
-              <button 
-                className="btn btn--secondary" 
-                style={{ flex: 1 }} 
-                onClick={() => setCaptureModal(null)}
-              >
-                Cancel (Esc)
-              </button>
-              <button 
-                className="btn btn--primary" 
-                style={{ flex: 1 }} 
-                disabled={!detectedInput}
-                onClick={handleApplyCapturedInput}
-              >
-                Confirm Binding
-              </button>
+              {/* Live detection area */}
+              <div style={{ 
+                width: '100%', 
+                padding: '14px 20px', 
+                background: detectedInput ? 'rgba(var(--accent-rgb), 0.08)' : 'var(--bg-tertiary)', 
+                borderRadius: 'var(--radius-md)', 
+                border: detectedInput ? '1px solid var(--accent)' : '1px dashed var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                transition: 'all 0.2s ease'
+              }}>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: 2 }}>
+                    {detectedInput ? 'Captured input:' : 'Press any key, mouse button, or controller input...'}
+                  </div>
+                  <div style={{ 
+                    fontSize: detectedInput ? '20px' : '14px', 
+                    fontWeight: 800, 
+                    color: detectedInput ? 'var(--accent)' : 'var(--text-muted)',
+                    fontFamily: 'var(--font-mono, monospace)',
+                  }}>
+                    {detectedInput ? detectedInput.display : 'Listening...'}
+                  </div>
+                  {detectedInput && (
+                    <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontFamily: 'monospace', marginTop: 2 }}>
+                      {detectedInput.rawInput}
+                    </div>
+                  )}
+                </div>
+                {detectedInput && (
+                  <button
+                    onClick={() => setDetectedInput(null)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4, flexShrink: 0 }}
+                    title="Clear"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+
+              {/* Suggested Keys Panel */}
+              <div style={{ width: '100%', textAlign: 'left' }}>
+                <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', letterSpacing: '0.05em', marginBottom: 10 }}>
+                  Suggested Keys — click to select
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {suggestions.map(({ group, keys }) => (
+                    <div key={group}>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        {group}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                        {keys.map(({ raw, label }) => {
+                          const isSelected = detectedInput?.rawInput === raw;
+                          return (
+                            <button
+                              key={raw}
+                              onClick={() => setDetectedInput({ rawInput: raw, display: label })}
+                              style={{
+                                padding: '5px 10px',
+                                borderRadius: 6,
+                                border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
+                                background: isSelected ? 'var(--accent)' : 'var(--bg-tertiary)',
+                                color: isSelected ? 'var(--bg-primary)' : 'var(--text-secondary)',
+                                fontSize: '12px',
+                                fontWeight: isSelected ? 700 : 500,
+                                fontFamily: 'var(--font-mono, monospace)',
+                                cursor: 'pointer',
+                                transition: 'all 0.12s ease',
+                                minWidth: 36,
+                                textAlign: 'center'
+                              }}
+                              title={raw}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', paddingTop: 4 }}>
+                <button 
+                  className="btn btn--secondary" 
+                  style={{ flex: 1 }} 
+                  onClick={() => setCaptureModal(null)}
+                >
+                  Cancel (Esc)
+                </button>
+                <button 
+                  className="btn btn--primary" 
+                  style={{ flex: 1 }} 
+                  disabled={!detectedInput}
+                  onClick={handleApplyCapturedInput}
+                >
+                  Confirm Binding
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Backup & Profile Management Modal */}
       {showBackupModal && (
