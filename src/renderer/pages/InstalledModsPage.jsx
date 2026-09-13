@@ -2424,13 +2424,13 @@ export default function InstalledModsPage() {
             display: 'flex',
             alignItems: 'center',
             gap: 10,
-            background: 'var(--accent)',
+            background: 'rgba(15, 23, 42, 0.92)',
             color: 'white',
             padding: '10px 16px',
             borderRadius: 40,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.12)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.55), 0 0 0 1px var(--accent)',
             whiteSpace: 'nowrap',
-            backdropFilter: 'blur(4px)',
+            backdropFilter: 'blur(12px)',
           }}>
             <span style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.05em', paddingRight: 6, borderRight: '1px solid rgba(255,255,255,0.25)' }}>{selectedMods.length} SELECTED</span>
 
