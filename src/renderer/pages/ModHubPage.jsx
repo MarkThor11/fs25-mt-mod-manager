@@ -127,6 +127,24 @@ export default function ModHubPage() {
     return (categoryAllMods && categoryAllMods.length > 0) ? categoryAllMods : (mods || []);
   }, [categoryAllMods, mods]);
 
+  const [dynamicMaxes, setDynamicMaxes] = useState({ price: 1000000, hp: 2000, cap: 1000000 });
+  useEffect(() => {
+    let maxPrice = 0, maxHp = 0, maxCap = 0;
+    sourceMods.forEach(m => {
+      if (m.techData) {
+        if (m.techData.price > maxPrice) maxPrice = m.techData.price;
+        if (m.techData.hp > maxHp) maxHp = m.techData.hp;
+        if (m.techData.capacity > maxCap) maxCap = m.techData.capacity;
+      }
+    });
+    setDynamicMaxes({
+      price: maxPrice || 100000,
+      hp: maxHp || 1000,
+      cap: maxCap || 100000
+    });
+  }, [sourceMods]);
+
+
   // Filter mods based on active filters
   const filteredMods = useMemo(() => {
     return sourceMods.filter(mod => {
@@ -196,15 +214,11 @@ export default function ModHubPage() {
         }
       }
 
-      if ((activeFilters.platforms?.length || 0) > 0) {
+      if (activeFilters.platforms?.includes('crossplay')) {
         const metadata = mod.metadata || {};
         const platformText = (metadata['Platform'] || metadata['platform'] || '').toLowerCase();
-        
         const isCrossplay = platformText.includes('ps5') || platformText.includes('ps4') || platformText.includes('xbs') || platformText.includes('xb1');
-        const isPCOnly = platformText.includes('pc') && !isCrossplay;
-
-        if (activeFilters.platforms.includes('pc') && !isPCOnly) return false;
-        if (activeFilters.platforms.includes('crossplay') && !isCrossplay) return false;
+        if (!isCrossplay) return false;
       }
 
       // Requirement Filter
@@ -712,9 +726,9 @@ export default function ModHubPage() {
         )}
 
 
-        {(activeFilters.brands.length > 0 || authorFilter || activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < 1000000 || 
-          activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < 2000 || 
-          activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < 1000000 || activeFilters.platforms.length > 0 || activeFilters.hideRequired || activeFilters.hideInstalled) && (
+        {(activeFilters.brands.length > 0 || authorFilter || activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < dynamicMaxes.price || 
+          activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < dynamicMaxes.hp || 
+          activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < dynamicMaxes.cap || activeFilters.platforms.length > 0 || activeFilters.hideRequired || activeFilters.hideInstalled) && (
           <div className="filter-chips">
             {authorFilter && (
               <div className="filter-chip filter-chip--author">
@@ -734,35 +748,35 @@ export default function ModHubPage() {
                 </div>
               </div>
             ))}
-            {(activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < 1000000) && (
+            {(activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < dynamicMaxes.price) && (
               <div className="filter-chip">
                 <DollarSign size={12} />
                 <span className="filter-chip__label">Price:</span> 
                 {activeFilters.priceRange[0] > 0 ? `$${(activeFilters.priceRange[0]/1000).toFixed(0)}k+` : ''}
-                {activeFilters.priceRange[1] < 1000000 ? ` <$${(activeFilters.priceRange[1]/1000).toFixed(0)}k` : ''}
-                <div className="filter-chip__close" onClick={() => setFilters({ priceRange: [0, 1000000] })}>
+                {activeFilters.priceRange[1] < dynamicMaxes.price ? ` <$${(activeFilters.priceRange[1]/1000).toFixed(0)}k` : ''}
+                <div className="filter-chip__close" onClick={() => setFilters({ priceRange: [0, dynamicMaxes.price] })}>
                   <X size={10} />
                 </div>
               </div>
             )}
-            {(activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < 2000) && (
+            {(activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < dynamicMaxes.hp) && (
               <div className="filter-chip">
                 <Zap size={12} />
                 <span className="filter-chip__label">Power:</span> 
                 {activeFilters.hpRange[0] > 0 ? `${activeFilters.hpRange[0]}hp+` : ''}
-                {activeFilters.hpRange[1] < 2000 ? ` <${activeFilters.hpRange[1]}hp` : ''}
-                <div className="filter-chip__close" onClick={() => setFilters({ hpRange: [0, 2000] })}>
+                {activeFilters.hpRange[1] < dynamicMaxes.hp ? ` <${activeFilters.hpRange[1]}hp` : ''}
+                <div className="filter-chip__close" onClick={() => setFilters({ hpRange: [0, dynamicMaxes.hp] })}>
                   <X size={10} />
                 </div>
               </div>
             )}
-            {(activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < 1000000) && (
+            {(activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < dynamicMaxes.cap) && (
               <div className="filter-chip">
                 <Layers size={12} />
                 <span className="filter-chip__label">Capacity:</span> 
                 {activeFilters.capRange[0] > 0 ? `${(activeFilters.capRange[0]/1000).toFixed(0)}kL+` : ''}
-                {activeFilters.capRange[1] < 1000000 ? ` <${(activeFilters.capRange[1]/1000).toFixed(0)}kL` : ''}
-                <div className="filter-chip__close" onClick={() => setFilters({ capRange: [0, 1000000] })}>
+                {activeFilters.capRange[1] < dynamicMaxes.cap ? ` <${(activeFilters.capRange[1]/1000).toFixed(0)}kL` : ''}
+                <div className="filter-chip__close" onClick={() => setFilters({ capRange: [0, dynamicMaxes.cap] })}>
                   <X size={10} />
                 </div>
               </div>
@@ -847,14 +861,14 @@ export default function ModHubPage() {
                       <div className="range-values">
                         <input type="number" value={activeFilters.priceRange[0]} onChange={(e) => setFilters({ priceRange: [parseInt(e.target.value) || 0, activeFilters.priceRange[1]] })} />
                         <span>-</span>
-                        <input type="number" value={activeFilters.priceRange[1]} onChange={(e) => setFilters({ priceRange: [activeFilters.priceRange[0], parseInt(e.target.value) || 1000000] })} />
+                        <input type="number" value={activeFilters.priceRange[1]} onChange={(e) => setFilters({ priceRange: [activeFilters.priceRange[0], parseInt(e.target.value) || dynamicMaxes.price] })} />
                       </div>
                     </label>
                     <div className="range-slider-wrap">
                       <div style={{ position: 'absolute', height: '100%', background: 'var(--accent)', borderRadius: 7, pointerEvents: 'none',
-                                    left: `calc(7px + (${activeFilters.priceRange[0] / 1000000}) * (100% - 14px))`, right: `calc(100% - (7px + (${activeFilters.priceRange[1] / 1000000}) * (100% - 14px)))` }} />
-                      <input type="range" className="range-slider" min="0" max="1000000" step="1000" value={activeFilters.priceRange[0]} onChange={(e) => setFilters({ priceRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.priceRange[1])] })} />
-                      <input type="range" className="range-slider" min="0" max="1000000" step="1000" value={activeFilters.priceRange[1]} onChange={(e) => setFilters({ priceRange: [Math.min(parseInt(e.target.value), activeFilters.priceRange[0]), parseInt(e.target.value)] })} />
+                                    left: `calc(7px + (${activeFilters.priceRange[0] / dynamicMaxes.price}) * (100% - 14px))`, right: `calc(100% - (7px + (${activeFilters.priceRange[1] / dynamicMaxes.price}) * (100% - 14px)))` }} />
+                      <input type="range" className="range-slider" min="0" max={dynamicMaxes.price} step="1000" value={activeFilters.priceRange[0]} onChange={(e) => setFilters({ priceRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.priceRange[1])] })} />
+                      <input type="range" className="range-slider" min="0" max={dynamicMaxes.price} step="1000" value={activeFilters.priceRange[1]} onChange={(e) => setFilters({ priceRange: [Math.min(parseInt(e.target.value), activeFilters.priceRange[0]), parseInt(e.target.value)] })} />
                     </div>
                   </div>
 
@@ -864,23 +878,23 @@ export default function ModHubPage() {
                       <div className="range-values">
                         <input type="number" value={activeFilters.hpRange[0]} onChange={(e) => setFilters({ hpRange: [parseInt(e.target.value) || 0, activeFilters.hpRange[1]] })} />
                         <span>-</span>
-                        <input type="number" value={activeFilters.hpRange[1]} onChange={(e) => setFilters({ hpRange: [activeFilters.hpRange[0], parseInt(e.target.value) || 2000] })} />
+                        <input type="number" value={activeFilters.hpRange[1]} onChange={(e) => setFilters({ hpRange: [activeFilters.hpRange[0], parseInt(e.target.value) || dynamicMaxes.hp] })} />
                       </div>
                     </label>
                     <div className="range-slider-wrap">
                       <div style={{ position: 'absolute', height: '100%', background: 'var(--accent)', borderRadius: 7, pointerEvents: 'none',
-                                    left: `calc(7px + (${activeFilters.hpRange[0] / 2000}) * (100% - 14px))`, right: `calc(100% - (7px + (${activeFilters.hpRange[1] / 2000}) * (100% - 14px)))` }} />
+                                    left: `calc(7px + (${activeFilters.hpRange[0] / dynamicMaxes.hp}) * (100% - 14px))`, right: `calc(100% - (7px + (${activeFilters.hpRange[1] / dynamicMaxes.hp}) * (100% - 14px)))` }} />
                       <input 
                         type="range" 
                         className="range-slider" 
-                        min="0" max="2000" step="10" 
+                        min="0" max={dynamicMaxes.hp} step="10" 
                         value={activeFilters.hpRange[0]} 
                         onChange={(e) => setFilters({ hpRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.hpRange[1])] })} 
                       />
                       <input 
                         type="range" 
                         className="range-slider" 
-                        min="0" max="2000" step="10" 
+                        min="0" max={dynamicMaxes.hp} step="10" 
                         value={activeFilters.hpRange[1]} 
                         onChange={(e) => setFilters({ hpRange: [Math.min(parseInt(e.target.value), activeFilters.hpRange[0]), parseInt(e.target.value)] })} 
                       />
@@ -893,14 +907,14 @@ export default function ModHubPage() {
                       <div className="range-values">
                         <input type="number" value={activeFilters.capRange[0]} onChange={(e) => setFilters({ capRange: [parseInt(e.target.value) || 0, activeFilters.capRange[1]] })} />
                         <span>-</span>
-                        <input type="number" value={activeFilters.capRange[1]} onChange={(e) => setFilters({ capRange: [activeFilters.capRange[0], parseInt(e.target.value) || 1000000] })} />
+                        <input type="number" value={activeFilters.capRange[1]} onChange={(e) => setFilters({ capRange: [activeFilters.capRange[0], parseInt(e.target.value) || dynamicMaxes.cap] })} />
                       </div>
                     </label>
                     <div className="range-slider-wrap">
                       <div style={{ position: 'absolute', height: '100%', background: 'var(--accent)', borderRadius: 7, pointerEvents: 'none',
-                                    left: `calc(7px + (${activeFilters.capRange[0] / 1000000}) * (100% - 14px))`, right: `calc(100% - (7px + (${activeFilters.capRange[1] / 1000000}) * (100% - 14px)))` }} />
-                      <input type="range" className="range-slider" min="0" max="1000000" step="1000" value={activeFilters.capRange[0]} onChange={(e) => setFilters({ capRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.capRange[1])] })} />
-                      <input type="range" className="range-slider" min="0" max="1000000" step="1000" value={activeFilters.capRange[1]} onChange={(e) => setFilters({ capRange: [Math.min(parseInt(e.target.value), activeFilters.capRange[0]), parseInt(e.target.value)] })} />
+                                    left: `calc(7px + (${activeFilters.capRange[0] / dynamicMaxes.cap}) * (100% - 14px))`, right: `calc(100% - (7px + (${activeFilters.capRange[1] / dynamicMaxes.cap}) * (100% - 14px)))` }} />
+                      <input type="range" className="range-slider" min="0" max={dynamicMaxes.cap} step="1000" value={activeFilters.capRange[0]} onChange={(e) => setFilters({ capRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.capRange[1])] })} />
+                      <input type="range" className="range-slider" min="0" max={dynamicMaxes.cap} step="1000" value={activeFilters.capRange[1]} onChange={(e) => setFilters({ capRange: [Math.min(parseInt(e.target.value), activeFilters.capRange[0]), parseInt(e.target.value)] })} />
                     </div>
                   </div>
 
@@ -961,7 +975,7 @@ export default function ModHubPage() {
               </div>
               
               <div className="filter-summary">
-                {!authorFilter && (activeFilters.brands?.length || 0) === 0 && activeFilters.priceRange[0] === 0 && activeFilters.priceRange[1] === 1000000 && activeFilters.hpRange[0] === 0 && activeFilters.capRange[0] === 0 && (activeFilters.platforms?.length || 0) === 0 && !activeFilters.hideRequired && !activeFilters.hideInstalled ? (
+                {!authorFilter && (activeFilters.brands?.length || 0) === 0 && activeFilters.priceRange[0] === 0 && activeFilters.priceRange[1] === dynamicMaxes.price && activeFilters.hpRange[0] === 0 && activeFilters.capRange[0] === 0 && (activeFilters.platforms?.length || 0) === 0 && !activeFilters.hideRequired && !activeFilters.hideInstalled ? (
                   <div className="filter-summary__empty">No filters active</div>
                 ) : (
                   <div className="filter-summary__list">
@@ -975,8 +989,8 @@ export default function ModHubPage() {
                         {brand} <X size={10} />
                       </div>
                     ))}
-                    {(activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < 1000000) && (
-                      <div className="chip" onClick={() => setFilters({ priceRange: [0, 1000000] })}>
+                    {(activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < dynamicMaxes.price) && (
+                      <div className="chip" onClick={() => setFilters({ priceRange: [0, dynamicMaxes.price] })}>
                         Price Range <X size={10} />
                       </div>
                     )}
@@ -991,12 +1005,12 @@ export default function ModHubPage() {
                       </div>
                     )}
                     {activeFilters.hpRange[0] > 0 && (
-                      <div className="chip" onClick={() => setFilters({ hpRange: [0, 2000] })}>
+                      <div className="chip" onClick={() => setFilters({ hpRange: [0, dynamicMaxes.hp] })}>
                         {activeFilters.hpRange[0]}hp+ <X size={10} />
                       </div>
                     )}
                     {activeFilters.capRange[0] > 0 && (
-                      <div className="chip" onClick={() => setFilters({ capRange: [0, 1000000] })}>
+                      <div className="chip" onClick={() => setFilters({ capRange: [0, dynamicMaxes.cap] })}>
                         {activeFilters.capRange[0].toLocaleString()}L+ <X size={10} />
                       </div>
                     )}
@@ -1089,7 +1103,7 @@ export default function ModHubPage() {
                     }}
                     isIconOnly={modHubIconOnly}
                     zoom={modHubZoom}
-                    hidePower={!isSmartMatchEnabled && activeFilters.hpRange[0] === 0 && activeFilters.hpRange[1] === 2000}
+                    hidePower={!isSmartMatchEnabled && activeFilters.hpRange[0] === 0 && activeFilters.hpRange[1] === dynamicMaxes.hp}
                     hideCompare={noCompareFilters.some(x => f.includes(x))}
                     hideMatch={noMatchFilters.some(x => f.includes(x))}
                     getInstalledVersion={getInstalledVersion}

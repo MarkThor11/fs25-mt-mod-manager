@@ -33,7 +33,15 @@ export default function KeybindsPage() {
   const [showConflictsOnly, setShowConflictsOnly] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [captureModal, setCaptureModal] = useState(null); // { action, device, oldInput }
-  const [detectedInput, setDetectedInput] = useState(null); // { rawInput, display }
+  const [detectedInput, setDetectedInput] = useState(null);
+  const [selectedDeviceId, setSelectedDeviceId] = useState(null);
+  
+  // Set default selected device
+  useEffect(() => {
+    if (devices && devices.length > 0 && !selectedDeviceId) {
+      setSelectedDeviceId('KB_MOUSE_DEFAULT');
+    }
+  }, [devices]);
 
   useEffect(() => {
     fetchKeybinds();
@@ -621,7 +629,7 @@ export default function KeybindsPage() {
                           }}>
                             Action / Function
                           </th>
-                          {deviceColumns.map(dev => (
+                          {deviceColumns.filter(d => selectedDeviceId ? d.id === selectedDeviceId : true).map(dev => (
                             <th key={dev.id} style={{ 
                               padding: '10px 18px', 
                               fontSize: 'var(--fs-xs)', 
@@ -679,7 +687,7 @@ export default function KeybindsPage() {
                               </td>
 
                               {/* Columns for Each Device */}
-                              {deviceColumns.map(dev => {
+                              {deviceColumns.filter(d => selectedDeviceId ? d.id === selectedDeviceId : true).map(dev => {
                                 const devBindings = act.bindings.filter(b => b.device === dev.id);
 
                                 return (

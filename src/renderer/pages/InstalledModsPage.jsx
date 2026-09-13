@@ -9,6 +9,7 @@ import {
   Heart, Star, Share2, Pencil, GripVertical, User, Pin, ArrowRightLeft, Move, Filter
 } from 'lucide-react';
 import { useLocalModsStore } from '../store/useLocalModsStore';
+import { useSavegameStore } from '../store/useSavegameStore';
 import { useDownloadStore } from '../store/useDownloadStore';
 import { useToastStore } from '../store/useToastStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -1152,6 +1153,13 @@ export default function InstalledModsPage() {
   }, [mods, tagSortBy]);
 
   const [selectedMods, setSelectedMods] = useState([]);
+  const savegames = useSavegameStore(s => s.savegames);
+  const fetchSavegames = useSavegameStore(s => s.fetchSavegames);
+  
+  useEffect(() => {
+    if (!savegames || savegames.length === 0) fetchSavegames();
+  }, []);
+
   const [showFolderInput, setShowFolderInput] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const { expandedFolders, setExpandedFolder, collapseAllFolders, expandAllFolders, skipDeleteConfirm } = useSettingsStore();
@@ -2395,6 +2403,75 @@ export default function InstalledModsPage() {
                   </select>
                   <ChevronDown size={12} style={{ position: 'absolute', right: 8, pointerEvents: 'none', opacity: 0.7 }} />
               </div>
+
+              {/* ADD TO SAVE DROPDOWN */}
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginLeft: '12px' }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginRight: 4 }}>ADD TO SAVE:</span>
+                <select 
+                    className="select-custom"
+                    value=""
+                    onChange={async (e) => {
+                        const savePath = e.target.value;
+                        if (!savePath) return;
+                        const savegame = savegames.find(s => s.path === savePath);
+                        if (!savegame) return;
+                        
+                        const existingModNames = (savegame.mods || []).map(m => m.modName);
+                        const selectedModObjects = mods.filter(m => selectedMods.includes(m.fileName));
+                        
+                        const newMods = [...(savegame.mods || [])];
+                        let addedCount = 0;
+                        selectedModObjects.forEach(m => {
+                            if (!existingModNames.includes(m.modName)) {
+                                newMods.push({ modName: m.modName, title: m.title });
+                                addedCount++;
+                            }
+                        });
+                        
+                        if (addedCount === 0) {
+                            useToastStore.getState().info('All selected mods are already in this savegame.');
+                            setSelectedMods([]);
+                            return;
+                        }
+
+                        const result = await window.api.savegames.setMods({
+                            savegamePath: savePath,
+                            mods: newMods
+                        });
+                        
+                        if (result.success) {
+                            useToastStore.getState().success(`Added ${addedCount} mods to ${savegame.farmName || savegame.name}`);
+                            setSelectedMods([]);
+                            fetchSavegames();
+                        } else {
+                            useToastStore.getState().error('Failed to add mods to save');
+                        }
+                    }}
+                    style={{ 
+                        background: 'rgba(0,0,0,0.25)', 
+                        border: '1px solid rgba(255,255,255,0.2)', 
+                        color: 'white',
+                        padding: '0 24px 0 10px',
+                        height: 28,
+                        fontSize: 10,
+                        fontWeight: 800,
+                        borderRadius: 6,
+                        appearance: 'none',
+                        cursor: 'pointer',
+                        outline: 'none',
+                        minWidth: 140
+                    }}
+                >
+                    <option value="" disabled hidden>SELECT SAVEGAME...</option>
+                    {savegames.map(s => (
+                        <option key={s.path} value={s.path} style={{ background: '#0f172a', color: 'white' }}>
+                            {s.farmName || s.name}
+                        </option>
+                    ))}
+                </select>
+                <ChevronDown size={12} style={{ position: 'absolute', right: 8, pointerEvents: 'none', opacity: 0.7 }} />
+              </div>
+
 
               {modsPaths && modsPaths.length > 1 && (
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
