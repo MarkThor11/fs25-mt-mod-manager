@@ -63,6 +63,16 @@ export default function KeybindsPage() {
     }
   };
 
+  const handleClearBinding = async (action, device, oldInput) => {
+    if (!confirm(`Clear this binding for ${action}?`)) return;
+    const res = await updateBinding(action, device, oldInput, '');
+    if (res.success) {
+      useToastStore.getState().success(`Cleared binding for ${action}!`);
+    } else {
+      useToastStore.getState().error(`Failed to clear binding: ${res.error}`);
+    }
+  };
+
   const handleCreateBackup = async () => {
     if (!newBackupName.trim()) {
       useToastStore.getState().warning('Please provide a name for this backup.');
@@ -110,44 +120,54 @@ export default function KeybindsPage() {
     }
   };
 
-  // Filter actions based on device, category, search, and conflicts
+  // Extract distinct categories from actual actions
+  const availableCategories = useMemo(() => {
+    const set = new Set();
+    actions.forEach(a => {
+      if (a.context) set.add(a.context);
+      else if (a.category) set.add(a.category);
+    });
+    return ['ALL', ...Array.from(set)];
+  }, [actions]);
+
+  // Filter actions based on category, search, and conflicts
   const filteredActions = useMemo(() => {
     const q = (searchQuery || '').toLowerCase().trim();
     const conflictActionNames = new Set(conflicts.flatMap(c => c.actions));
 
     return actions.filter(act => {
-      // Conflict filter
       if (showConflictsOnly && !conflictActionNames.has(act.action)) {
         return false;
       }
 
-      // Category filter
-      if (selectedCategory !== 'ALL' && act.category !== selectedCategory) {
+      if (selectedCategory !== 'ALL' && act.context !== selectedCategory && act.category !== selectedCategory) {
         return false;
       }
 
-      // Device filter
-      if (selectedDevice !== 'ALL') {
-        const hasDeviceBinding = act.bindings.some(b => b.device === selectedDevice);
-        if (!hasDeviceBinding) return false;
-      }
-
-      // Search filter
       if (q) {
         const matchesAction = act.action.toLowerCase().includes(q);
-        const matchesCategory = act.category.toLowerCase().includes(q);
+        const matchesCategory = (act.category || '').toLowerCase().includes(q);
+        const matchesContext = (act.context || '').toLowerCase().includes(q);
         const matchesInput = act.bindings.some(b => 
           (b.input && b.input.toLowerCase().includes(q)) || 
           (b.formattedInput && b.formattedInput.toLowerCase().includes(q))
         );
-        if (!matchesAction && !matchesCategory && !matchesInput) return false;
+        if (!matchesAction && !matchesCategory && !matchesContext && !matchesInput) return false;
       }
 
       return true;
     });
-  }, [actions, selectedDevice, selectedCategory, searchQuery, showConflictsOnly, conflicts]);
+  }, [actions, selectedCategory, searchQuery, showConflictsOnly, conflicts]);
 
-  const activeDeviceName = devices.find(d => d.id === selectedDevice)?.name || 'All Devices';
+  // Devices columns: Ensure Keyboard/Mouse is first, followed by detected gamepads/controllers
+  const deviceColumns = useMemo(() => {
+    if (!devices || devices.length === 0) {
+      return [{ id: 'KB_MOUSE_DEFAULT', name: 'Keyboard & Mouse', isDefault: true }];
+    }
+    const kb = devices.filter(d => d.id === 'KB_MOUSE_DEFAULT');
+    const others = devices.filter(d => d.id !== 'KB_MOUSE_DEFAULT');
+    return [...kb, ...others];
+  }, [devices]);
 
   return (
     <div className="page animate-fade-in" style={{ padding: 'var(--sp-6)', maxWidth: 1600, margin: '0 auto' }}>
@@ -302,35 +322,17 @@ export default function KeybindsPage() {
             )}
           </div>
 
-          {/* Device Tabs */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--bg-secondary)', padding: '3px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', overflowX: 'auto' }}>
-            <button
-              className={`btn btn--xs ${selectedDevice === 'ALL' ? 'btn--primary' : 'btn--ghost'}`}
-              onClick={() => setSelectedDevice('ALL')}
-            >
-              All Devices
-            </button>
-            {devices.map(dev => (
-              <button
-                key={dev.id}
-                className={`btn btn--xs ${selectedDevice === dev.id ? 'btn--primary' : 'btn--ghost'}`}
-                onClick={() => setSelectedDevice(dev.id)}
-                title={dev.id}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
-              >
-                {dev.id === 'KB_MOUSE_DEFAULT' ? <Monitor size={12} /> : <Gamepad2 size={12} />}
-                {dev.name.length > 20 ? dev.name.slice(0, 20) + '…' : dev.name}
-              </button>
-            ))}
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)' }}>
+            Showing <strong>{filteredActions.length}</strong> actions across <strong>{deviceColumns.length}</strong> input devices
           </div>
         </div>
 
-        {/* Category Pills */}
+        {/* State Filter Tabs */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', paddingTop: 6, borderTop: '1px solid var(--border-subtle)' }}>
           <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginRight: 4 }}>
-            Category:
+            Filter State:
           </span>
-          {CATEGORIES.map(cat => (
+          {availableCategories.map(cat => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
@@ -352,192 +354,235 @@ export default function KeybindsPage() {
         </div>
       </div>
 
-      {/* Results Header Count */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', fontWeight: 600 }}>
-        <span>Showing {filteredActions.length} actions for <strong>{activeDeviceName}</strong></span>
-        {conflicts.length === 0 && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent)' }}>
-            <ShieldCheck size={14} /> No Conflicts Detected
-          </span>
-        )}
-      </div>
-
-      {/* Keybindings Grid */}
+      {/* In-Game Style Keybindings Table */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))',
-        gap: '12px'
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-md)',
+        overflow: 'hidden',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
       }}>
-        {filteredActions.map(act => {
-          const isConflicted = conflicts.some(c => c.actions.includes(act.action));
+        <div style={{ overflowX: 'auto', width: '100%' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border)' }}>
+                {/* Left Column: Action Name & Context */}
+                <th style={{ 
+                  padding: '14px 18px', 
+                  fontSize: 'var(--fs-xs)', 
+                  fontWeight: 800, 
+                  textTransform: 'uppercase', 
+                  letterSpacing: '0.05em', 
+                  color: 'var(--text-secondary)',
+                  width: '32%',
+                  minWidth: 260
+                }}>
+                  Action / Function
+                </th>
 
-          return (
-            <div
-              key={act.action}
-              style={{
-                background: isConflicted ? 'rgba(239, 68, 68, 0.04)' : 'var(--bg-card)',
-                border: isConflicted ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--border)',
-                borderRadius: 'var(--radius-md)',
-                padding: '14px 16px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: 12,
-                transition: 'border-color 0.2s'
-              }}
-            >
-              {/* Action Title & Category */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontWeight: 700, fontSize: 'var(--fs-sm)', color: 'var(--text-primary)', wordBreak: 'break-word' }}>
-                    {act.action.replace(/_/g, ' ')}
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {act.context && (
-                      <span style={{
-                        fontSize: '9px',
-                        fontWeight: 700,
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        background: 'rgba(59, 130, 246, 0.1)',
-                        color: 'var(--accent, #60a5fa)',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {act.context}
-                      </span>
-                    )}
-                    <span style={{
-                      fontSize: '9px',
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      padding: '2px 6px',
-                      borderRadius: 4,
-                      background: 'rgba(255,255,255,0.05)',
-                      color: 'var(--text-tertiary)',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {act.category}
-                    </span>
-                  </div>
-                </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 2, fontFamily: 'monospace' }}>
-                  {act.action}
-                </div>
-              </div>
+                {/* Columns for Each Device (Keyboard/Mouse, Gamepad/Wheel) */}
+                {deviceColumns.map(dev => (
+                  <th key={dev.id} style={{ 
+                    padding: '14px 18px', 
+                    fontSize: 'var(--fs-xs)', 
+                    fontWeight: 800, 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.05em', 
+                    color: 'var(--text-secondary)',
+                    borderLeft: '1px solid var(--border)',
+                    minWidth: 280
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {dev.id === 'KB_MOUSE_DEFAULT' ? <Monitor size={15} className="text-accent" /> : <Gamepad2 size={15} className="text-accent" />}
+                      <span>{dev.name}</span>
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredActions.map((act, rIdx) => {
+                const isConflicted = conflicts.some(c => c.actions.includes(act.action));
 
-              {/* Bindings List */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {act.bindings.length === 0 ? (
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                    Unassigned
-                  </div>
-                ) : (
-                  act.bindings.map((b, idx) => {
-                    const isDeviceMatch = selectedDevice === 'ALL' || b.device === selectedDevice;
-                    if (!isDeviceMatch) return null;
-
-                    const isKeyConflict = conflicts.some(c => c.device === b.device && c.input === b.input);
-                    const isEditing = editingBinding?.action === act.action && editingBinding?.device === b.device && editingBinding?.oldInput === b.input;
-
-                    return (
-                      <div
-                        key={`${b.device}_${b.input}_${idx}`}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: 8,
-                          background: isKeyConflict ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-tertiary)',
-                          padding: '6px 10px',
-                          borderRadius: 'var(--radius-sm)',
-                          border: isKeyConflict ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--border-subtle)'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-                          <span style={{ opacity: 0.6 }} title={b.device}>
-                            {b.device === 'KB_MOUSE_DEFAULT' ? <Monitor size={14} /> : <Gamepad2 size={14} />}
+                return (
+                  <tr 
+                    key={act.action}
+                    style={{
+                      borderBottom: '1px solid var(--border-subtle)',
+                      background: isConflicted 
+                        ? 'rgba(239, 68, 68, 0.05)' 
+                        : (rIdx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.015)'),
+                      transition: 'background 0.15s ease'
+                    }}
+                    onMouseEnter={e => {
+                      if (!isConflicted) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                    }}
+                    onMouseLeave={e => {
+                      if (!isConflicted) e.currentTarget.style.background = (rIdx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.015)');
+                    }}
+                  >
+                    {/* Left Column: Action Details */}
+                    <td style={{ padding: '12px 18px', verticalAlign: 'middle' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 700, fontSize: 'var(--fs-sm)', color: 'var(--text-primary)' }}>
+                            {act.action.replace(/_/g, ' ')}
                           </span>
-
-                          {isEditing ? (
-                            <input 
-                              type="text" 
-                              value={editingBinding.value}
-                              onChange={e => setEditingBinding(prev => ({ ...prev, value: e.target.value }))}
-                              placeholder="e.g. KEY_e, KEY_space"
-                              style={{
-                                flex: 1,
-                                background: 'var(--bg-surface)',
-                                border: '1px solid var(--accent)',
-                                borderRadius: 4,
-                                padding: '3px 8px',
-                                fontSize: '12px',
-                                color: 'var(--text-primary)',
-                                outline: 'none',
-                                fontFamily: 'monospace'
-                              }}
-                              autoFocus
-                            />
-                          ) : (
-                            <span 
-                              style={{
-                                fontSize: '12px',
-                                fontWeight: 700,
-                                color: isKeyConflict ? 'var(--danger)' : 'var(--accent)',
-                                background: isKeyConflict ? 'rgba(239, 68, 68, 0.15)' : 'rgba(var(--accent-rgb), 0.1)',
-                                padding: '2px 8px',
-                                borderRadius: 4,
-                                border: `1px solid ${isKeyConflict ? 'rgba(239, 68, 68, 0.3)' : 'rgba(var(--accent-rgb), 0.2)'}`,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                              }}
-                              title={b.input}
-                            >
-                              {b.formattedInput || b.input}
+                          {act.context && (
+                            <span style={{
+                              fontSize: '9px',
+                              fontWeight: 700,
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              background: 'rgba(59, 130, 246, 0.1)',
+                              color: 'var(--accent, #60a5fa)',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {act.context}
                             </span>
                           )}
                         </div>
-
-                        {/* Edit Action Button */}
-                        <div>
-                          {isEditing ? (
-                            <div style={{ display: 'flex', gap: 4 }}>
-                              <button 
-                                className="btn btn--primary btn--xs" 
-                                onClick={handleSaveBinding}
-                                title="Save binding"
-                                style={{ padding: '3px 6px' }}
-                              >
-                                <Check size={12} />
-                              </button>
-                              <button 
-                                className="btn btn--secondary btn--xs" 
-                                onClick={() => setEditingBinding(null)}
-                                title="Cancel"
-                                style={{ padding: '3px 6px' }}
-                              >
-                                <X size={12} />
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              className="btn btn--ghost btn--xs btn--icon"
-                              onClick={() => setEditingBinding({ action: act.action, device: b.device, oldInput: b.input, value: b.input })}
-                              title="Edit keybinding"
-                            >
-                              <Edit2 size={12} />
-                            </button>
-                          )}
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                          {act.action}
                         </div>
                       </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          );
-        })}
+                    </td>
+
+                    {/* Columns for Each Device */}
+                    {deviceColumns.map(dev => {
+                      const devBindings = act.bindings.filter(b => b.device === dev.id);
+
+                      return (
+                        <td 
+                          key={dev.id} 
+                          style={{ 
+                            padding: '10px 18px', 
+                            verticalAlign: 'middle',
+                            borderLeft: '1px solid var(--border-subtle)'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                            {devBindings.length === 0 ? (
+                              <button
+                                className="btn btn--ghost btn--xs"
+                                style={{ 
+                                  fontSize: '11px', 
+                                  color: 'var(--text-muted)', 
+                                  fontStyle: 'italic',
+                                  border: '1px dashed var(--border)',
+                                  padding: '4px 10px',
+                                  borderRadius: 4
+                                }}
+                                onClick={() => setEditingBinding({ action: act.action, device: dev.id, oldInput: '', value: '' })}
+                              >
+                                + Assign
+                              </button>
+                            ) : (
+                              devBindings.map((b, bIdx) => {
+                                const isKeyConflict = conflicts.some(c => c.device === b.device && c.input === b.input);
+                                const isEditing = editingBinding?.action === act.action && editingBinding?.device === b.device && editingBinding?.oldInput === b.input;
+
+                                if (isEditing) {
+                                  return (
+                                    <div 
+                                      key={`${b.device}_${b.input}_${bIdx}`} 
+                                      style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-surface)', padding: '3px 6px', borderRadius: 6, border: '1px solid var(--accent)' }}
+                                    >
+                                      <input 
+                                        type="text" 
+                                        value={editingBinding.value}
+                                        onChange={e => setEditingBinding(prev => ({ ...prev, value: e.target.value }))}
+                                        placeholder="KEY_e, BUTTON_1..."
+                                        style={{
+                                          width: 140,
+                                          background: 'transparent',
+                                          border: 'none',
+                                          fontSize: '12px',
+                                          color: 'var(--text-primary)',
+                                          outline: 'none',
+                                          fontFamily: 'monospace'
+                                        }}
+                                        autoFocus
+                                      />
+                                      <button 
+                                        className="btn btn--primary btn--xs" 
+                                        onClick={handleSaveBinding}
+                                        title="Save binding"
+                                        style={{ padding: '2px 5px' }}
+                                      >
+                                        <Check size={12} />
+                                      </button>
+                                      <button 
+                                        className="btn btn--secondary btn--xs" 
+                                        onClick={() => setEditingBinding(null)}
+                                        title="Cancel"
+                                        style={{ padding: '2px 5px' }}
+                                      >
+                                        <X size={12} />
+                                      </button>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div
+                                    key={`${b.device}_${b.input}_${bIdx}`}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 6,
+                                      background: isKeyConflict ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-tertiary)',
+                                      border: isKeyConflict ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--border)',
+                                      borderRadius: 'var(--radius-sm)',
+                                      padding: '4px 10px',
+                                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                    }}
+                                  >
+                                    <span 
+                                      style={{
+                                        fontSize: '12px',
+                                        fontWeight: 700,
+                                        color: isKeyConflict ? 'var(--danger)' : 'var(--accent)',
+                                        fontFamily: 'var(--font-mono, monospace)',
+                                        letterSpacing: '0.02em'
+                                      }}
+                                      title={`Raw XML: ${b.input}`}
+                                    >
+                                      {b.formattedInput || b.input}
+                                    </span>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 2 }}>
+                                      <button
+                                        className="btn btn--ghost btn--xs btn--icon"
+                                        onClick={() => setEditingBinding({ action: act.action, device: b.device, oldInput: b.input, value: b.input })}
+                                        title="Edit key"
+                                        style={{ padding: '2px', height: 'auto', width: 'auto', opacity: 0.7 }}
+                                      >
+                                        <Edit2 size={11} />
+                                      </button>
+                                      <button
+                                        className="btn btn--ghost btn--xs btn--icon"
+                                        onClick={() => handleClearBinding(act.action, b.device, b.input)}
+                                        title="Unassign"
+                                        style={{ padding: '2px', height: 'auto', width: 'auto', opacity: 0.5, color: 'var(--danger)' }}
+                                      >
+                                        <X size={11} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {filteredActions.length === 0 && (
