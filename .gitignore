@@ -97,3 +97,8 @@ extracted/
 *unzipped/
 *.i3d
 *.i3d.shapes
+
+node_modules/
+dist/
+release/
+build/

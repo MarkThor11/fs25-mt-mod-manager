@@ -90,7 +90,31 @@ export default function KeybindsPage() {
           'Minus': 'KEY_minus',
           'Equal': 'KEY_equals',
           'BracketLeft': 'KEY_lbracket',
-          'BracketRight': 'KEY_rbracket'
+          'BracketRight': 'KEY_rbracket',
+          'Backquote': 'KEY_grave',
+          'IntlBackslash': 'KEY_less',      // ISO keyboards: key between LShift and Z
+          'PrintScreen': 'KEY_sysrq',
+          'ScrollLock': 'KEY_scrollock',
+          'Pause': 'KEY_pause',
+          'NumLock': 'KEY_numlock',
+          'CapsLock': 'KEY_capslock',
+          'ContextMenu': 'KEY_menu',
+          // Media / extra keys (Electron/Chromium exposes these)
+          'MediaPlayPause': 'KEY_mediapause',
+          'MediaStop': 'KEY_mediastop',
+          'MediaTrackNext': 'KEY_medianext',
+          'MediaTrackPrevious': 'KEY_mediaprev',
+          'AudioVolumeUp': 'KEY_volumeup',
+          'AudioVolumeDown': 'KEY_volumedown',
+          'AudioVolumeMute': 'KEY_mute',
+          'BrowserHome': 'KEY_browserhome',
+          'BrowserBack': 'KEY_browserback',
+          'BrowserForward': 'KEY_browserforward',
+          'BrowserRefresh': 'KEY_browserrefresh',
+          'BrowserSearch': 'KEY_browsersearch',
+          'LaunchMail': 'KEY_mail',
+          'LaunchApp1': 'KEY_launch1',
+          'LaunchApp2': 'KEY_launch2',
         };
         mainKey = special[code] || ('KEY_' + key.toLowerCase());
       }
@@ -273,6 +297,13 @@ export default function KeybindsPage() {
   const [collapsedSections, setCollapsedSections] = useState({});
   const toggleSection = (key) => setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
+  // Combo modifier toggle state for the suggestion panel
+  const [comboModifiers, setComboModifiers] = useState(new Set());
+  const toggleComboMod = (mod) => setComboModifiers(prev => {
+    const next = new Set(prev);
+    if (next.has(mod)) next.delete(mod); else next.add(mod);
+    return next;
+  });
 
   // Filter actions based on search and conflicts only (no category filter — we section by category)
   const filteredActions = useMemo(() => {
@@ -772,18 +803,18 @@ export default function KeybindsPage() {
               { raw: 'KEY_tab',       label: 'Tab' },
               { raw: 'KEY_backspace', label: '⌫ Back' },
               { raw: 'KEY_escape',    label: 'Esc' },
-              { raw: 'KEY_lshift',    label: 'L Shift' },
-              { raw: 'KEY_rshift',    label: 'R Shift' },
-              { raw: 'KEY_lctrl',     label: 'L Ctrl' },
-              { raw: 'KEY_rctrl',     label: 'R Ctrl' },
-              { raw: 'KEY_lalt',      label: 'L Alt' },
-              { raw: 'KEY_ralt',      label: 'R Alt' },
+              { raw: 'KEY_capslock',  label: 'Caps' },
               { raw: 'KEY_delete',    label: 'Del' },
               { raw: 'KEY_insert',    label: 'Ins' },
               { raw: 'KEY_home',      label: 'Home' },
               { raw: 'KEY_end',       label: 'End' },
               { raw: 'KEY_pageup',    label: 'PgUp' },
               { raw: 'KEY_pagedown',  label: 'PgDn' },
+              { raw: 'KEY_sysrq',     label: 'PrtSc' },
+              { raw: 'KEY_scrollock', label: 'ScLk' },
+              { raw: 'KEY_pause',     label: 'Pause' },
+              { raw: 'KEY_numlock',   label: 'NumLk' },
+              { raw: 'KEY_menu',      label: 'Menu' },
             ]
           },
           {
@@ -799,12 +830,29 @@ export default function KeybindsPage() {
             group: 'Numpad',
             keys: [
               ...Array.from({ length: 10 }, (_, i) => ({ raw: `KEY_numpad${i}`, label: `Num ${i}` })),
-              { raw: 'KEY_numpadplus',   label: 'Num +' },
-              { raw: 'KEY_numpadminus',  label: 'Num -' },
-              { raw: 'KEY_numpadmultiply', label: 'Num *' },
-              { raw: 'KEY_numpaddivide', label: 'Num /' },
-              { raw: 'KEY_numpadenter',  label: 'Num ↵' },
-              { raw: 'KEY_numpadperiod', label: 'Num .' },
+              { raw: 'KEY_numpadplus',     label: 'Num +' },
+              { raw: 'KEY_numpadminus',    label: 'Num −' },
+              { raw: 'KEY_numpadmultiply', label: 'Num ×' },
+              { raw: 'KEY_numpaddivide',   label: 'Num ÷' },
+              { raw: 'KEY_numpadenter',    label: 'Num ↵' },
+              { raw: 'KEY_numpadperiod',   label: 'Num .' },
+            ]
+          },
+          {
+            group: 'Punctuation & Symbols',
+            keys: [
+              { raw: 'KEY_grave',      label: '` ~' },
+              { raw: 'KEY_minus',      label: '- _' },
+              { raw: 'KEY_equals',     label: '= +' },
+              { raw: 'KEY_lbracket',   label: '[ {' },
+              { raw: 'KEY_rbracket',   label: '] }' },
+              { raw: 'KEY_backslash',  label: '\\ |' },
+              { raw: 'KEY_semicolon',  label: '; :' },
+              { raw: 'KEY_apostrophe', label: "\' \"" },
+              { raw: 'KEY_comma',      label: ', <' },
+              { raw: 'KEY_period',     label: '. >' },
+              { raw: 'KEY_slash',      label: '/ ?' },
+              { raw: 'KEY_less',       label: '< >' },  // ISO key
             ]
           },
           {
@@ -821,6 +869,23 @@ export default function KeybindsPage() {
               { raw: 'MOUSE_AXIS_Y-',       label: 'Mouse ↑' },
               { raw: 'MOUSE_WHEEL_UP',      label: 'Scroll ↑' },
               { raw: 'MOUSE_WHEEL_DOWN',    label: 'Scroll ↓' },
+            ]
+          },
+          {
+            group: 'Media & Extra Keys',
+            keys: [
+              { raw: 'KEY_mediapause', label: '⏯ Play' },
+              { raw: 'KEY_mediastop',  label: '⏹ Stop' },
+              { raw: 'KEY_medianext',  label: '⏭ Next' },
+              { raw: 'KEY_mediaprev',  label: '⏮ Prev' },
+              { raw: 'KEY_volumeup',   label: '🔊 Vol+' },
+              { raw: 'KEY_volumedown', label: '🔉 Vol−' },
+              { raw: 'KEY_mute',       label: '🔇 Mute' },
+              { raw: 'KEY_browserhome', label: 'Browser Home' },
+              { raw: 'KEY_browserback', label: 'Browser ←' },
+              { raw: 'KEY_browserforward', label: 'Browser →' },
+              { raw: 'KEY_launch1',    label: 'Launch 1' },
+              { raw: 'KEY_launch2',    label: 'Launch 2' },
             ]
           },
         ];
@@ -847,11 +912,10 @@ export default function KeybindsPage() {
         const suggestions = isKB ? KB_SUGGESTIONS : GP_SUGGESTIONS;
 
         // Build map: rawInput → list of action titles that already use it (for this device)
-        const usedInputMap = new Map(); // raw → [actionTitle, ...]
+        const usedInputMap = new Map();
         actions.forEach(act => {
           act.bindings
             .filter(b => b.device === captureModal.device && b.input && b.input.trim())
-            // exclude the binding being replaced
             .filter(b => !(act.action === captureModal.action && b.input === captureModal.oldInput))
             .forEach(b => {
               const title = act.action
@@ -862,29 +926,39 @@ export default function KeybindsPage() {
             });
         });
 
-        // Well-known system / external app keys (keyboard only) that are commonly reserved
-        // These are known to conflict with Windows, Nvidia overlay, Steam, etc.
+        // Keys that are reliably intercepted by Windows/system before the game sees them
         const SYSTEM_RESERVED = new Set([
-          // Windows system
-          'KEY_escape', 'KEY_tab', 'KEY_backspace',
-          'KEY_lwin', 'KEY_rwin',
-          // Windows + common apps often grab F-keys in combos, but standalone
-          // F-keys sometimes grabbed by OEM software / Fn layer:
-          'KEY_f1', // help in many apps
-          // Print Screen / Scroll Lock / Pause often grabbed by OS
-          // Nvidia GeForce Overlay defaults: Alt+Z, Alt+F1–F4, Ctrl+Shift+F5
-          // Since we show single keys, flag the ones Nvidia grabs solo:
-          // (None solo — Nvidia uses combos, so no single-key conflicts to flag here)
-          // Common Steam overlay: Shift+Tab — again a combo
-          // Windows snipping / clipboard shortcuts use Win+key combos
-          // Flag only things that truly cannot be used alone safely:
-          'KEY_return', // Enter is grabbed by UI focus systems
+          'KEY_lwin', 'KEY_rwin',       // Windows key — always grabbed by OS
+          'KEY_sysrq',                   // Print Screen — OS screenshot
+          'KEY_scrollock',               // Scroll Lock — some OEM firmware intercepts
         ]);
+
+        // Modifier rows for the combo builder (FS25 distinguishes L/R)
+        const MODIFIERS = isKB ? [
+          { raw: 'KEY_lctrl',  label: 'L Ctrl'  },
+          { raw: 'KEY_rctrl',  label: 'R Ctrl'  },
+          { raw: 'KEY_lshift', label: 'L Shift' },
+          { raw: 'KEY_rshift', label: 'R Shift' },
+          { raw: 'KEY_lalt',   label: 'L Alt'   },
+          { raw: 'KEY_ralt',   label: 'R Alt'   },
+        ] : [];
+
+        // Build the combo raw string: modifiers first, then key
+        const buildComboRaw = (keyRaw) => {
+          const mods = [...comboModifiers];
+          return mods.length > 0 ? [...mods, keyRaw].join(' ') : keyRaw;
+        };
+        const buildComboDisplay = (keyLabel) => {
+          const modLabels = [...comboModifiers].map(m =>
+            MODIFIERS.find(x => x.raw === m)?.label || m
+          );
+          return modLabels.length > 0 ? [...modLabels, keyLabel].join(' + ') : keyLabel;
+        };
 
         return (
           <div 
             className="modal-overlay" 
-            onClick={() => setCaptureModal(null)} 
+            onClick={() => { setCaptureModal(null); setComboModifiers(new Set()); }} 
             style={{ zIndex: 1300, background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(4px)' }}
           >
             <div 
@@ -985,6 +1059,39 @@ export default function KeybindsPage() {
                     </span>
                   </div>
                 </div>
+                {/* Modifier Combo Builder (Keyboard Only) */}
+                {isKB && (
+                  <div style={{ marginBottom: 16, padding: '10px 12px', background: 'rgba(var(--accent-rgb), 0.05)', borderRadius: 'var(--radius-md)', border: '1px dashed rgba(var(--accent-rgb), 0.3)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Add Modifiers (Optional)
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {MODIFIERS.map(mod => {
+                        const isActive = comboModifiers.has(mod.raw);
+                        return (
+                          <button
+                            key={mod.raw}
+                            onClick={() => toggleComboMod(mod.raw)}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: 4,
+                              border: isActive ? '1px solid var(--accent)' : '1px solid var(--border)',
+                              background: isActive ? 'var(--accent)' : 'var(--bg-card)',
+                              color: isActive ? 'var(--bg-primary)' : 'var(--text-secondary)',
+                              fontSize: '11px',
+                              fontWeight: isActive ? 700 : 500,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {mod.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {suggestions.map(({ group, keys }) => (
                     <div key={group}>
@@ -993,10 +1100,14 @@ export default function KeybindsPage() {
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                         {keys.map(({ raw, label }) => {
-                          const isSelected = detectedInput?.rawInput === raw;
-                          const usedBy = usedInputMap.get(raw); // array of action names, or undefined
+                          const fullRaw = buildComboRaw(raw);
+                          const fullDisplay = buildComboDisplay(label);
+                          const isSelected = detectedInput?.rawInput === fullRaw;
+                          const usedBy = usedInputMap.get(fullRaw); // array of action names, or undefined
                           const isUsed = !!usedBy;
-                          const isReserved = isKB && SYSTEM_RESERVED.has(raw);
+                          // If it's a combo, system reserved usually doesn't apply the same way (like Ctrl+C vs just C), 
+                          // but we'll still flag the base key if they didn't pick any modifiers.
+                          const isReserved = isKB && comboModifiers.size === 0 && SYSTEM_RESERVED.has(raw);
 
                           // Priority: selected > in-use > system-reserved > default
                           let bg, border, color, opacity;
@@ -1015,17 +1126,17 @@ export default function KeybindsPage() {
                           }
 
                           const tooltip = isSelected
-                            ? raw
+                            ? fullRaw
                             : isUsed
                               ? `In use by: ${usedBy.join(', ')}`
                               : isReserved
                                 ? `May conflict with Windows or system apps`
-                                : raw;
+                                : fullRaw;
 
                           return (
                             <button
                               key={raw}
-                              onClick={() => setDetectedInput({ rawInput: raw, display: label })}
+                              onClick={() => setDetectedInput({ rawInput: fullRaw, display: fullDisplay })}
                               style={{
                                 position: 'relative',
                                 padding: '5px 10px',
