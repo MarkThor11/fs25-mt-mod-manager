@@ -1218,9 +1218,12 @@ export default function InstalledModsPage() {
   const [selectedMods, setSelectedMods] = useState([]);
   const savegames = useSavegameStore(s => s.savegames);
   const fetchSavegames = useSavegameStore(s => s.fetchSavegames);
+  const profiles = useProfileStore(s => s.profiles);
+  const fetchProfiles = useProfileStore(s => s.fetchProfiles);
   
   useEffect(() => {
     if (!savegames || savegames.length === 0) fetchSavegames();
+    if (!profiles || profiles.length === 0) fetchProfiles();
   }, []);
 
   const [showFolderInput, setShowFolderInput] = useState(false);
@@ -2497,7 +2500,7 @@ export default function InstalledModsPage() {
                   style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', padding: '0 26px 0 10px', height: 30, fontSize: 11, fontWeight: 700, borderRadius: 8, appearance: 'none', cursor: 'pointer', outline: 'none', minWidth: 140 }}
                 >
                   <option value="" disabled hidden>Select profile...</option>
-                  {(useProfileStore.getState().profiles || []).map(p => (
+                  {(profiles || []).map(p => (
                     <option key={p.id} value={String(p.id)} style={{ background: '#0f172a' }}>{p.name}</option>
                   ))}
                 </select>
