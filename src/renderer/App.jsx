@@ -18,6 +18,7 @@ import ThirdPartyPage from './pages/ThirdPartyPage';
 import MapsPage from './pages/MapsPage';
 import DownloadsPage from './pages/DownloadsPage';
 import RadioPage from './pages/RadioPage';
+import KeybindsPage from './pages/KeybindsPage';
 import ToastContainer from './components/common/ToastContainer';
 import DropOverlay from './components/common/DropOverlay';
 import WelcomeTour from './components/common/WelcomeTour';
@@ -354,6 +355,7 @@ export default function App() {
                 <Route path="/hidden" element={<HiddenModsPage />} />
                 <Route path="/savegames" element={<SavegamesPage />} />
                 <Route path="/profiles" element={<ProfilesPage />} />
+                <Route path="/keybinds" element={<KeybindsPage />} />
                 <Route path="/maps" element={<MapsPage />} />
                 <Route path="/downloads" element={<DownloadsPage />} />
                 <Route path="/radio" element={<RadioPage />} />

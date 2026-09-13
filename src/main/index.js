@@ -12,6 +12,7 @@ const externalTracker = require('./services/externalTracker');
 const discovery = require('./services/discovery');
 const { getSystemSpecs, optimize, optimizeRevert, setHighPerformancePlan } = require('./services/systemOptimizer');
 const radioManager = require('./services/radioManager');
+const inputBindingManager = require('./services/inputBindingManager');
 const { initAppUpdater } = require('./services/appUpdater');
 const CATEGORIES = require('./resources/data/categories');
 const isDev = !app.isPackaged;
@@ -1182,6 +1183,15 @@ ipcMain.handle('radio:launchSpotify', async () => {
     }
   });
 });
+
+// ── Keybindings & Input Controls ──
+ipcMain.handle('keybinds:get', async () => inputBindingManager.getInputBindings());
+ipcMain.handle('keybinds:update', async (_, { actionName, deviceId, oldInput, newInput }) => inputBindingManager.updateBinding(actionName, deviceId, oldInput, newInput));
+ipcMain.handle('keybinds:getBackups', async () => inputBindingManager.getBackups());
+ipcMain.handle('keybinds:createBackup', async (_, { name }) => inputBindingManager.createBackup(name));
+ipcMain.handle('keybinds:restoreBackup', async (_, { fileName }) => inputBindingManager.restoreBackup(fileName));
+ipcMain.handle('keybinds:deleteBackup', async (_, { fileName }) => inputBindingManager.deleteBackup(fileName));
+ipcMain.handle('keybinds:resetToDefaults', async () => inputBindingManager.resetToDefaults());
 
 // ── Mod management ──
 ipcMain.handle('savegames:getMods', async (_, { savegamePath }) => {

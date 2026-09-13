@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Home, Globe, HardDrive, Save, Settings, Play, Download, Radio,
   Tractor, Package, Database, Heart, EyeOff, Map,
-  ChevronLeft, ChevronRight, LayoutGrid, RefreshCw, ShieldAlert, ArrowRightLeft
+  ChevronLeft, ChevronRight, LayoutGrid, RefreshCw, ShieldAlert, ArrowRightLeft, Keyboard
 } from 'lucide-react';
 import { useLocalModsStore } from '../../store/useLocalModsStore';
 import { useModHubStore } from '../../store/useModHubStore';
@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { to: '/savegames', label: 'Savegames', icon: Save },
   { to: '/save-transfer', label: 'Save Transfer', icon: ArrowRightLeft },
   { to: '/profiles', label: 'Profiles', icon: Database },
+  { to: '/keybinds', label: 'Keybindings', icon: Keyboard },
   { to: '/maps', label: 'Map Library', icon: Map },
   { to: '/radio', label: 'Radio Stations', icon: Radio },
   { to: '/downloads', label: 'Downloads', icon: Download },

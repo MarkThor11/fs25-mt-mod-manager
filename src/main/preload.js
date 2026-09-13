@@ -155,6 +155,17 @@ contextBridge.exposeInMainWorld('api', {
     checkTemplate: (mapId, mapTitle, modName) => ipcRenderer.invoke('maps:checkTemplate', mapId, mapTitle, modName),
   },
 
+  // Keybindings & Controls
+  keybinds: {
+    get: () => ipcRenderer.invoke('keybinds:get'),
+    update: (params) => ipcRenderer.invoke('keybinds:update', params),
+    getBackups: () => ipcRenderer.invoke('keybinds:getBackups'),
+    createBackup: (params) => ipcRenderer.invoke('keybinds:createBackup', params),
+    restoreBackup: (params) => ipcRenderer.invoke('keybinds:restoreBackup', params),
+    deleteBackup: (params) => ipcRenderer.invoke('keybinds:deleteBackup', params),
+    resetToDefaults: () => ipcRenderer.invoke('keybinds:resetToDefaults'),
+  },
+
   // Settings
   settings: {
     get: (key) => ipcRenderer.invoke('settings:get', key),
