@@ -851,8 +851,8 @@ export default function ModHubPage() {
                       </div>
                     </label>
                     <div className="range-slider-wrap">
-                      <input type="range" className="range-slider" min="0" max="1000000" step="1000" value={activeFilters.priceRange[0]} onChange={(e) => setFilters({ priceRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.priceRange[1])] })} />
-                      <input type="range" className="range-slider" min="0" max="1000000" step="1000" value={activeFilters.priceRange[1]} onChange={(e) => setFilters({ priceRange: [Math.min(parseInt(e.target.value), activeFilters.priceRange[0]), parseInt(e.target.value)] })} />
+                      <CustomSlider min="0" max="1000000" step="1000" value={activeFilters.priceRange[0]} onChange={(e) => setFilters({ priceRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.priceRange[1])] })} />
+                      <CustomSlider min="0" max="1000000" step="1000" value={activeFilters.priceRange[1]} onChange={(e) => setFilters({ priceRange: [Math.min(parseInt(e.target.value), activeFilters.priceRange[0]), parseInt(e.target.value)] })} />
                     </div>
                   </div>
 
@@ -893,8 +893,8 @@ export default function ModHubPage() {
                       </div>
                     </label>
                     <div className="range-slider-wrap">
-                      <input type="range" className="range-slider" min="0" max="1000000" step="1000" value={activeFilters.capRange[0]} onChange={(e) => setFilters({ capRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.capRange[1])] })} />
-                      <input type="range" className="range-slider" min="0" max="1000000" step="1000" value={activeFilters.capRange[1]} onChange={(e) => setFilters({ capRange: [Math.min(parseInt(e.target.value), activeFilters.capRange[0]), parseInt(e.target.value)] })} />
+                      <CustomSlider min="0" max="1000000" step="1000" value={activeFilters.capRange[0]} onChange={(e) => setFilters({ capRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.capRange[1])] })} />
+                      <CustomSlider min="0" max="1000000" step="1000" value={activeFilters.capRange[1]} onChange={(e) => setFilters({ capRange: [Math.min(parseInt(e.target.value), activeFilters.capRange[0]), parseInt(e.target.value)] })} />
                     </div>
                   </div>
 
@@ -904,21 +904,16 @@ export default function ModHubPage() {
                       <span>Platform Support</span>
                     </div>
                     <div className="platform-filters" style={{ display: 'flex', gap: 'var(--sp-2)', marginTop: 'var(--sp-2)' }}>
-                      <button 
-                        className={`btn btn--sm ${(activeFilters.platforms?.length || 0) === 0 ? 'btn--primary' : 'btn--secondary'}`}
-                        onClick={() => setFilters({ platforms: [] })}
-                      >
-                        All
-                      </button>
+                      
                       <button 
                         className={`btn btn--sm ${activeFilters.platforms?.includes('pc') ? 'btn--primary' : 'btn--secondary'}`}
-                        onClick={() => setFilters({ platforms: ['pc'] })}
+                        onClick={() => setFilters({ platforms: activeFilters.platforms?.includes('pc') ? [] : ['pc'] })}
                       >
                         PC Only
                       </button>
                       <button 
                         className={`btn btn--sm ${activeFilters.platforms?.includes('crossplay') ? 'btn--primary' : 'btn--secondary'}`}
-                        onClick={() => setFilters({ platforms: ['crossplay'] })}
+                        onClick={() => setFilters({ platforms: activeFilters.platforms?.includes('crossplay') ? [] : ['crossplay'] })}
                       >
                         Crossplay
                       </button>

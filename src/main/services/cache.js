@@ -149,15 +149,14 @@ function init() {
   // without forcing a slow reload on every single startup.
   // db.prepare("DELETE FROM cache WHERE key LIKE 'mods_latest_%'").run();
 
-  // One-time purge for inverted icons (v1.0.3 — removed incorrect Y-flip)
+  // One-time purge for cache structural changes (v1.2.0 — keybind extraction)
   try {
-    const row = db.prepare('SELECT value FROM settings WHERE key = ?').get('iconFixVersion');
-    if (!row || row.value !== 'v1.1.3') {
-      // v1.1.3: Force re-scan to apply aggressive downscaling to icons
+    const row = db.prepare('SELECT value FROM settings WHERE key = ?').get('cacheVersion');
+    if (!row || row.value !== 'v1.2.0') {
       db.prepare('DELETE FROM local_mod_cache').run();
-      db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('iconFixVersion', 'v1.1.3');
-      debugLog('Performed cache purge for icon downscaling improvements (v1.1.3).');
-      console.log('[CACHE] Purged local_mod_cache for v1.1.3 icon downscaling.');
+      db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('cacheVersion', 'v1.2.0');
+      debugLog('Performed cache purge for keybind extraction (v1.2.0).');
+      console.log('[CACHE] Purged local_mod_cache for v1.2.0 keybind extraction.');
     }
   } catch (e) {
     debugLog('One-time purge check failed: ' + e.message);
