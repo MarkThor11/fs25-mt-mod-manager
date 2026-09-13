@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
-  Keyboard, Search, RefreshCw, AlertTriangle, ShieldCheck, Download,
+  SlidersHorizontal, Search, RefreshCw, AlertTriangle, ShieldCheck, Download,
   Upload, Trash2, Edit2, Check, X, RotateCcw, Monitor, Gamepad2,
   FolderOpen, Plus, Sliders, ChevronDown, ChevronRight, Layers, Tag
 } from 'lucide-react';
@@ -156,7 +156,7 @@ export default function KeybindsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--sp-5)', flexWrap: 'wrap', gap: 'var(--sp-4)' }}>
         <div>
           <h1 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 12, margin: 0 }}>
-            <Keyboard size={28} className="text-accent" /> Keybindings & Controls Manager
+            <SlidersHorizontal size={28} className="text-accent" /> Keybindings & Controls Manager
           </h1>
           <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-tertiary)', marginTop: 4 }}>
             View, search, edit, and backup all FS25 keyboard, mouse, steering wheel, and gamepad controls.
@@ -491,7 +491,7 @@ export default function KeybindsPage() {
 
       {filteredActions.length === 0 && (
         <div style={{ textAlign: 'center', padding: 'var(--sp-12)', color: 'var(--text-muted)' }}>
-          <Keyboard size={36} style={{ opacity: 0.3, marginBottom: 8 }} />
+          <SlidersHorizontal size={36} style={{ opacity: 0.3, marginBottom: 8 }} />
           <div>No keybindings found matching your filters.</div>
         </div>
       )}

@@ -1057,7 +1057,7 @@ const [activeTab, setActiveTab] = useState('general');
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--sp-3)' }}>
                   <div>
                     <h4 style={{ margin: '0 0 4px 0', fontSize: 'var(--fs-base)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Keyboard size={16} className="text-accent" /> Keybindings & Controller Mappings
+                      <Sliders size={16} className="text-accent" /> Keybindings & Controller Mappings
                     </h4>
                     <p style={{ margin: 0, fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>
                       Manage device keys, detect conflict overlaps, and create backup snapshot profiles.
