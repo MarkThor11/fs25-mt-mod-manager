@@ -239,7 +239,10 @@ function createWindow() {
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
+    mainWindow.webContents.once('did-finish-load', () => {
+      // Open DevTools docked to right to avoid detached window IPC/Network race condition
+      mainWindow.webContents.openDevTools({ mode: 'right' });
+    });
   } else {
     // Disable DevTools in production
     mainWindow.webContents.on('devtools-opened', () => {
