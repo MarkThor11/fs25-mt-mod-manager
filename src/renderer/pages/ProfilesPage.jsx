@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { CustomSlider } from '../components/common/CustomSlider';
-import { Plus, Trash2, Save, Package, PlayCircle, Coins, Map, Settings, Info, DollarSign, Share2, Download, Copy, RefreshCw, AlertCircle, Pin, Search, ChevronLeft, ChevronRight, Folder, ChevronDown, Truck, Users, Globe, Eye, Palette, MapPin, Ruler, Thermometer, Maximize, Radio, Video, Gamepad2, Volume2, LayoutGrid, List, Pencil } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Trash2, Save, Package, PlayCircle, Coins, Map, Settings, Info, DollarSign, Share2, Download, Copy, RefreshCw, AlertCircle, Pin, Search, ChevronLeft, ChevronRight, Folder, ChevronDown, Truck, Users, Globe, Eye, Palette, MapPin, Ruler, Thermometer, Maximize, Radio, Video, Gamepad2, Volume2, LayoutGrid, List, Pencil, Sliders } from 'lucide-react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useModHubStore } from '../store/useModHubStore';
 import { useToastStore } from '../store/useToastStore';
@@ -43,6 +44,7 @@ const ProfileModImage = ({ mod, zoom, isList }) => {
 };
 
 export default function ProfilesPage() {
+  const navigate = useNavigate();
   const { profiles, fetchProfiles, createProfile, updateProfile, deleteProfile, exportProfile, importProfile } = useProfileStore();
   const installedMods = useLocalModsStore((state) => state.mods || []);
   const scanMods = useLocalModsStore((state) => state.scanMods);

@@ -272,6 +272,7 @@ export default function KeybindsPage() {
   // State: which sections are collapsed
   const [collapsedSections, setCollapsedSections] = useState({});
   const toggleSection = (key) => setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
 
   // Filter actions based on search and conflicts only (no category filter — we section by category)
   const filteredActions = useMemo(() => {
@@ -280,6 +281,12 @@ export default function KeybindsPage() {
 
     return actions.filter(act => {
       if (showConflictsOnly && !conflictActionNames.has(act.action)) return false;
+
+      // Show only actions where ALL device bindings are empty
+      if (showUnassignedOnly) {
+        const hasAnyBinding = act.bindings.some(b => b.input && b.input.trim() !== '');
+        if (hasAnyBinding) return false;
+      }
 
       if (q) {
         const matchesAction = act.action.toLowerCase().includes(q);
@@ -294,7 +301,7 @@ export default function KeybindsPage() {
 
       return true;
     });
-  }, [actions, searchQuery, showConflictsOnly, conflicts]);
+  }, [actions, searchQuery, showConflictsOnly, showUnassignedOnly, conflicts]);
 
   // Group filtered actions by their context/category label
   const groupedActions = useMemo(() => {
@@ -469,6 +476,29 @@ export default function KeybindsPage() {
             />
           )}
         </div>
+
+        <button
+          onClick={() => setShowUnassignedOnly(!showUnassignedOnly)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '7px 14px',
+            borderRadius: 'var(--radius-sm)',
+            border: showUnassignedOnly ? '1px solid var(--warning, #f59e0b)' : '1px solid var(--border)',
+            background: showUnassignedOnly ? 'rgba(245, 158, 11, 0.12)' : 'transparent',
+            color: showUnassignedOnly ? 'var(--warning, #f59e0b)' : 'var(--text-secondary)',
+            fontSize: '13px',
+            fontWeight: showUnassignedOnly ? 700 : 500,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            transition: 'all 0.15s ease'
+          }}
+          title="Show only actions with no key assigned"
+        >
+          <AlertTriangle size={13} />
+          Unassigned Only
+        </button>
 
         <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
           Showing <strong>{filteredActions.length}</strong> actions across <strong>{deviceColumns.length}</strong> input device{deviceColumns.length !== 1 ? 's' : ''}
