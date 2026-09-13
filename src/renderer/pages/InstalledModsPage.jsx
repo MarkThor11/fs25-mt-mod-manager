@@ -2413,191 +2413,122 @@ export default function InstalledModsPage() {
           </div>
         )}
 
-        {/* Bulk Mod Actions */}
-        {selectedMods.length > 0 && (
-          <div className="animate-fade-in-down" style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 12, 
-            background: 'var(--accent)', 
+        {/* Bulk Mod Actions — rendered as a fixed bottom-centre floating pill via portal */}
+        {selectedMods.length > 0 && createPortal(
+          <div style={{
+            position: 'fixed',
+            bottom: 32,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            background: 'var(--accent)',
             color: 'white',
-            padding: '4px 8px 4px 12px', 
-            borderRadius: 8,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            padding: '10px 16px',
+            borderRadius: 40,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.12)',
+            whiteSpace: 'nowrap',
+            backdropFilter: 'blur(4px)',
           }}>
-            <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.05em' }}>{selectedMods.length} SELECTED</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginRight: 4 }}>MOVE TO:</span>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <select 
-                    className="select-custom"
-                    value=""
-                    onChange={(e) => {
-                        if (e.target.value === '__NEW__') {
-                            setShowFolderInput(true);
-                        } else {
-                            handleMoveTo(e.target.value, selectedTargetDrive || null);
-                        }
-                    }}
-                    style={{ 
-                        background: 'rgba(0,0,0,0.25)', 
-                        border: '1px solid rgba(255,255,255,0.2)', 
-                        color: 'white',
-                        padding: '0 24px 0 10px',
-                        height: 28,
-                        fontSize: 10,
-                        fontWeight: 800,
-                        borderRadius: 6,
-                        appearance: 'none',
-                        cursor: 'pointer',
-                        outline: 'none',
-                        minWidth: 140
-                    }}
-                  >
-                    <option value="" disabled hidden>SELECT DESTINATION...</option>
-                    <option value="" style={{ background: '#0f172a', color: 'white' }}>MAIN LIBRARY</option>
-                    {allFolders.filter(f => f !== '' && f !== 'DLC' && !hiddenFolders.includes(f)).map(f => {
-                        return (
-                            <option key={f} value={f} style={{ background: '#0f172a', color: 'white' }}>{f.toUpperCase()}</option>
-                        );
-                    })}
-                    <option value="__NEW__" style={{ background: '#0f172a', color: 'var(--accent)', fontWeight: 900 }}>+ NEW FOLDER...</option>
-                  </select>
-                  <ChevronDown size={12} style={{ position: 'absolute', right: 8, pointerEvents: 'none', opacity: 0.7 }} />
-              </div>
+            <span style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.05em', paddingRight: 6, borderRight: '1px solid rgba(255,255,255,0.25)' }}>{selectedMods.length} SELECTED</span>
 
-              {/* ADD TO SAVE DROPDOWN */}
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginLeft: '12px' }}>
-                <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginRight: 4 }}>ADD TO SAVE:</span>
+            {/* MOVE TO */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.65)' }}>MOVE TO</span>
+              <div style={{ position: 'relative' }}>
                 <select 
-                    className="select-custom"
-                    value=""
-                    onChange={async (e) => {
-                        const savePath = e.target.value;
-                        if (!savePath) return;
-                        const savegame = savegames.find(s => s.path === savePath);
-                        if (!savegame) return;
-                        
-                        const existingModNames = (savegame.mods || []).map(m => m.modName);
-                        const selectedModObjects = mods.filter(m => selectedMods.includes(m.fileName));
-                        
-                        const newMods = [...(savegame.mods || [])];
-                        let addedCount = 0;
-                        selectedModObjects.forEach(m => {
-                            if (!existingModNames.includes(m.modName)) {
-                                newMods.push({ modName: m.modName, title: m.title });
-                                addedCount++;
-                            }
-                        });
-                        
-                        if (addedCount === 0) {
-                            useToastStore.getState().info('All selected mods are already in this savegame.');
-                            setSelectedMods([]);
-                            return;
-                        }
-
-                        const result = await window.api.savegames.setMods({
-                            savegamePath: savePath,
-                            mods: newMods
-                        });
-                        
-                        if (result.success) {
-                            useToastStore.getState().success(`Added ${addedCount} mods to ${savegame.farmName || savegame.name}`);
-                            setSelectedMods([]);
-                            fetchSavegames();
-                        } else {
-                            useToastStore.getState().error('Failed to add mods to save');
-                        }
-                    }}
-                    style={{ 
-                        background: 'rgba(0,0,0,0.25)', 
-                        border: '1px solid rgba(255,255,255,0.2)', 
-                        color: 'white',
-                        padding: '0 24px 0 10px',
-                        height: 28,
-                        fontSize: 10,
-                        fontWeight: 800,
-                        borderRadius: 6,
-                        appearance: 'none',
-                        cursor: 'pointer',
-                        outline: 'none',
-                        minWidth: 140
-                    }}
+                  className="select-custom"
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value === '__NEW__') { setShowFolderInput(true); }
+                    else { handleMoveTo(e.target.value, selectedTargetDrive || null); }
+                  }}
+                  style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '0 24px 0 8px', height: 28, fontSize: 10, fontWeight: 800, borderRadius: 6, appearance: 'none', cursor: 'pointer', outline: 'none', minWidth: 130 }}
                 >
-                    <option value="" disabled hidden>SELECT SAVEGAME...</option>
-                    {savegames.map(s => (
-                        <option key={s.path} value={s.path} style={{ background: '#0f172a', color: 'white' }}>
-                            {s.farmName || s.name}
-                        </option>
-                    ))}
+                  <option value="" disabled hidden>DESTINATION...</option>
+                  <option value="" style={{ background: '#0f172a' }}>MAIN LIBRARY</option>
+                  {allFolders.filter(f => f !== '' && f !== 'DLC' && !hiddenFolders.includes(f)).map(f => (
+                    <option key={f} value={f} style={{ background: '#0f172a' }}>{f.toUpperCase()}</option>
+                  ))}
+                  <option value="__NEW__" style={{ background: '#0f172a', color: 'var(--accent)', fontWeight: 900 }}>+ NEW FOLDER...</option>
                 </select>
-                <ChevronDown size={12} style={{ position: 'absolute', right: 8, pointerEvents: 'none', opacity: 0.7 }} />
+                <ChevronDown size={11} style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.7 }} />
               </div>
-
-
-              {modsPaths && modsPaths.length > 1 && (
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <select
-                    className="select-custom"
-                    value={selectedTargetDrive}
-                    onChange={(e) => setSelectedTargetDrive(e.target.value)}
-                    style={{
-                      background: 'rgba(0,0,0,0.25)',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      color: 'white',
-                      padding: '0 24px 0 10px',
-                      height: 28,
-                      fontSize: 10,
-                      fontWeight: 800,
-                      borderRadius: 6,
-                      appearance: 'none',
-                      cursor: 'pointer',
-                      outline: 'none',
-                      minWidth: 120
-                    }}
-                    title="Choose target drive for move"
-                  >
-                    <option value="" style={{ background: '#0f172a', color: 'white' }}>LOCATION: PRIMARY</option>
-                    {driveStats.map(ds => (
-                      <option key={ds.rootPath} value={ds.rootPath} style={{ background: '#0f172a', color: 'white' }}>
-                        {ds.shortLabel} {ds.isPrimary ? '(PRIMARY)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown size={12} style={{ position: 'absolute', right: 8, pointerEvents: 'none', opacity: 0.7 }} />
-                </div>
-              )}
             </div>
-            <button 
-              className="btn btn--secondary btn--sm"
+
+            <span style={{ opacity: 0.3 }}>|</span>
+
+            {/* ADD TO SAVE */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.65)' }}>ADD TO SAVE</span>
+              <div style={{ position: 'relative' }}>
+                <select 
+                  className="select-custom"
+                  value=""
+                  onChange={async (e) => {
+                    const savePath = e.target.value;
+                    if (!savePath) return;
+                    const savegame = savegames.find(s => s.path === savePath);
+                    if (!savegame) return;
+                    const existingModNames = (savegame.mods || []).map(m => m.modName);
+                    const selectedModObjects = mods.filter(m => selectedMods.includes(m.fileName));
+                    const newMods = [...(savegame.mods || [])];
+                    let addedCount = 0;
+                    selectedModObjects.forEach(m => {
+                      if (!existingModNames.includes(m.modName)) { newMods.push({ modName: m.modName, title: m.title }); addedCount++; }
+                    });
+                    if (addedCount === 0) { useToastStore.getState().info('All selected mods are already in this savegame.'); setSelectedMods([]); return; }
+                    const result = await window.api.savegames.setMods({ savegamePath: savePath, mods: newMods });
+                    if (result.success) { useToastStore.getState().success(`Added ${addedCount} mods to ${savegame.farmName || savegame.name}`); setSelectedMods([]); fetchSavegames(); }
+                    else { useToastStore.getState().error('Failed to add mods to save'); }
+                  }}
+                  style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '0 24px 0 8px', height: 28, fontSize: 10, fontWeight: 800, borderRadius: 6, appearance: 'none', cursor: 'pointer', outline: 'none', minWidth: 130 }}
+                >
+                  <option value="" disabled hidden>SAVEGAME...</option>
+                  {savegames.map(s => (
+                    <option key={s.path} value={s.path} style={{ background: '#0f172a' }}>{s.farmName || s.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={11} style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.7 }} />
+              </div>
+            </div>
+
+            {modsPaths && modsPaths.length > 1 && (
+              <>
+                <span style={{ opacity: 0.3 }}>|</span>
+                <div style={{ position: 'relative' }}>
+                  <select className="select-custom" value={selectedTargetDrive} onChange={(e) => setSelectedTargetDrive(e.target.value)}
+                    style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '0 24px 0 8px', height: 28, fontSize: 10, fontWeight: 800, borderRadius: 6, appearance: 'none', cursor: 'pointer', outline: 'none', minWidth: 110 }}>
+                    <option value="" style={{ background: '#0f172a' }}>PRIMARY</option>
+                    {driveStats.map(ds => <option key={ds.rootPath} value={ds.rootPath} style={{ background: '#0f172a' }}>{ds.shortLabel}{ds.isPrimary ? ' ✓' : ''}</option>)}
+                  </select>
+                  <ChevronDown size={11} style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.7 }} />
+                </div>
+              </>
+            )}
+
+            <span style={{ opacity: 0.3 }}>|</span>
+
+            <button className="btn btn--secondary btn--sm"
               onClick={() => {
-                const selectedModIds = mods
-                  .filter(m => selectedMods.includes(m.fileName))
-                  .map(m => m.modId)
-                  .filter(id => id);
-                
+                const selectedModIds = mods.filter(m => selectedMods.includes(m.fileName)).map(m => m.modId).filter(id => id);
                 const key = exportCollection(selectedModIds);
-                if (key) {
-                  if (window.api && window.api.clipboard) {
-                    window.api.clipboard.writeText(key);
-                  } else {
-                    navigator.clipboard.writeText(key);
-                  }
-                  useToastStore.getState().success('Selection exported as Mod Key!');
-                }
+                if (key) { (window.api?.clipboard ? window.api.clipboard.writeText(key) : navigator.clipboard.writeText(key)); useToastStore.getState().success('Selection exported as Mod Key!'); }
               }}
-              style={{ height: 28, fontSize: 11, fontWeight: 700 }}
+              style={{ height: 28, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '0 10px', display: 'flex', alignItems: 'center', gap: 5 }}
             >
-              <Share2 size={12} /> EXPORT CLUSTER
+              <Share2 size={11} /> EXPORT
             </button>
-            <button 
-              className="btn btn--sm" 
-              onClick={() => setSelectedMods([])} 
-              style={{ padding: 0, width: 24, height: 24, background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white' }}
+
+            <button onClick={() => setSelectedMods([])}
+              style={{ padding: 0, width: 24, height: 24, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              <X size={14} />
+              <X size={13} />
             </button>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
 
