@@ -242,8 +242,8 @@ function createWindow() {
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.once('did-finish-load', () => {
-      // Open DevTools docked to right to avoid detached window IPC/Network race condition
-      mainWindow.webContents.openDevTools({ mode: 'right' });
+      // Open DevTools detached
+      mainWindow.webContents.openDevTools({ mode: 'detach' });
     });
   } else {
     // Disable DevTools in production
