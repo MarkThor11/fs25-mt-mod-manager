@@ -73,11 +73,11 @@ const LocalModIcon = React.memo(({ mod }) => {
   const categoryType = fallbackCategory.split(':')[1] || 'generic';
 
   const DLC_ICONS = {
-    "emergency pack": "https://cdn11.giants-software.com/modHub/storage/00318535/emergencyPack_modhub_icon.png",
-    "plains & prairies pack": "https://cdn11.giants-software.com/modHub/storage/00366666/plainsAndPrairies_modhub_icon.png",
-    "pumps and hoses pack": "https://cdn11.giants-software.com/modHub/storage/00344583/pumpsAndHoses_modhub_icon.png",
-    "pumps & hoses pack": "https://cdn11.giants-software.com/modHub/storage/00344583/pumpsAndHoses_modhub_icon.png",
-    "sky agriculture pack": "https://cdn11.giants-software.com/modHub/storage/00366667/skyAgriculture_modhub_icon.png"
+    "emergency pack": "https://www.farming-simulator.com/img/content/products/fs22/dlc-fs22emergency-cover.jpg",
+    "pumps and hoses": "https://www.farming-simulator.com/img/content/products/fs22/dlc-fs22pumpsnhoses-cover.jpg",
+    "pumps & hoses": "https://www.farming-simulator.com/img/content/products/fs22/dlc-fs22pumpsnhoses-cover.jpg",
+    "plains & prairies": "https://www.farming-simulator.com/img/content/products/fs25/dlc-fs25plains-cover.jpg",
+    "sky agriculture": "https://www.farming-simulator.com/img/content/products/fs25/dlc-fs25sky-cover.jpg",
   };
 
   const titleLower = (mod.title || "").toLowerCase();
