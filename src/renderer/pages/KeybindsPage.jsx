@@ -552,6 +552,21 @@ export default function KeybindsPage() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          
+        {/* Device Tabs */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
+          {deviceColumns.map(dev => (
+            <button
+              key={dev.id}
+              className={`btn btn--sm ${selectedDeviceId === dev.id ? 'btn--primary' : 'btn--secondary'}`}
+              onClick={() => setSelectedDeviceId(dev.id)}
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              {dev.name}
+            </button>
+          ))}
+        </div>
+
           {groupedActions.map(([sectionName, sectionActions]) => {
             const isCollapsed = !!collapsedSections[sectionName];
             const sectionConflicts = sectionActions.filter(act =>

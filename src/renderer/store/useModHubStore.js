@@ -67,9 +67,9 @@ export const useModHubStore = create((set, get) => ({
   categories: [],
   activeFilters: {
     brands: [],
-    priceRange: [0, 1000000],
-    hpRange: [0, 2000],
-    capRange: [0, 1000000],
+    priceRange: [0, 10000000],
+    hpRange: [0, 10000],
+    capRange: [0, 10000000],
     platforms: [],
     hideRequired: false,
     hideInstalled: false,
@@ -278,9 +278,9 @@ export const useModHubStore = create((set, get) => ({
     set({
       activeFilters: {
         brands: [],
-        priceRange: [0, 1000000],
-        hpRange: [0, 2000],
-        capRange: [0, 1000000],
+        priceRange: [0, 10000000],
+        hpRange: [0, 10000],
+        capRange: [0, 10000000],
         platforms: [],
         hideRequired: false,
         hideInstalled: false
@@ -1009,9 +1009,9 @@ export const useModHubStore = create((set, get) => ({
       authorFilter: null,
       activeFilters: {
         brands: [],
-        priceRange: [0, 1000000],
-        hpRange: [0, 2000],
-        capRange: [0, 1000000],
+        priceRange: [0, 10000000],
+        hpRange: [0, 10000],
+        capRange: [0, 10000000],
         platforms: [],
       },
       isSmartMatchEnabled: false,
