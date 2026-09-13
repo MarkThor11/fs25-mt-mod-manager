@@ -231,10 +231,11 @@ function createWindow() {
   };
 
   mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-    logBuffer.push(`[Renderer] [L${level}] [${path.basename(sourceId)}:${line}] ${message}\n`);
-    if (logBuffer.length >= 25) {
-      flushLogBuffer();
+    if (isDev) {
+      console.log(`[Renderer] [L${level}] [${path.basename(sourceId)}:${line}] ${message}`);
     }
+    logBuffer.push(`[Renderer] [L${level}] [${path.basename(sourceId)}:${line}] ${message}\n`);
+    flushLogBuffer();
   });
 
   if (isDev) {
