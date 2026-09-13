@@ -610,19 +610,19 @@ const [activeTab, setActiveTab] = useState('general');
 
         {/* Tab Switcher */}
         <div className="tab-switcher" style={{ padding: '0 24px', borderBottom: '1px solid var(--border)' }}>
-          <button className={`tab-btn ${activeTab === 'general' ? 'tab-btn--active' : ''}`} title="Basic savegame settings and economy." title="Basic savegame settings and economy." onClick={() => setActiveTab('general')}>
+          <button className={`tab-btn ${activeTab === 'general' ? 'tab-btn--active' : ''}`} title="Basic savegame settings and economy." onClick={() => setActiveTab('general')}>
             <Globe size={14} /> General
           </button>
-          <button className={`tab-btn ${activeTab === 'realism' ? 'tab-btn--active' : ''}`} title="Simulation realism and environment options." title="Simulation realism and environment options." onClick={() => setActiveTab('realism')}>
+          <button className={`tab-btn ${activeTab === 'realism' ? 'tab-btn--active' : ''}`} title="Simulation realism and environment options." onClick={() => setActiveTab('realism')}>
             <Info size={14} /> Realism & Units
           </button>
-          <button className={`tab-btn ${activeTab === 'controls' ? 'tab-btn--active' : ''}`} title="Player and camera controls." title="Player and camera controls." onClick={() => setActiveTab('controls')}>
+          <button className={`tab-btn ${activeTab === 'controls' ? 'tab-btn--active' : ''}`} title="Player and camera controls." onClick={() => setActiveTab('controls')}>
             <Gamepad2 size={14} /> Controls
           </button>
-          <button className={`tab-btn ${activeTab === 'spawn' ? 'tab-btn--active' : ''}`} title="Choose spawn location." title="Choose spawn location." onClick={() => setActiveTab('spawn')}>
+          <button className={`tab-btn ${activeTab === 'spawn' ? 'tab-btn--active' : ''}`} title="Choose spawn location." onClick={() => setActiveTab('spawn')}>
             <MapPin size={14} /> Spawn & Persistence
           </button>
-          <button className={`tab-btn ${activeTab === 'mods' ? 'tab-btn--active' : ''}`} title="Choose exactly which mods are active for this save." title="Choose exactly which mods are active for this save." onClick={() => setActiveTab('mods')}>
+          <button className={`tab-btn ${activeTab === 'mods' ? 'tab-btn--active' : ''}`} title="Choose exactly which mods are active for this save." onClick={() => setActiveTab('mods')}>
             <Package size={14} /> Selective Mods
           </button>
         </div>
