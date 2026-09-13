@@ -1130,27 +1130,25 @@
 
 .range-slider-wrap {
   position: relative;
-  height: 20px;
-  margin-top: 4px;
-  background: var(--border-subtle);
-  border-radius: 2px;
-  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 7px;
+  height: 14px;
   margin: 8px 0;
 }
 
 .range-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: calc(100% + 14px);
-  height: 6px;
+  width: 100%;
+  height: 14px;
   background: transparent;
   outline: none;
   position: absolute;
-  left: -7px;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 0;
+  top: 0;
   pointer-events: none;
   margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -1161,8 +1159,8 @@
   background: var(--accent);
   border-radius: 50%;
   cursor: pointer;
-  border: 2px solid var(--bg-surface);
-  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
   transition: transform var(--duration-fast) ease;
   pointer-events: all;
   position: relative;
