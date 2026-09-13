@@ -1481,30 +1481,9 @@ app.whenReady().then(() => {
     cache.set('mods_best_0', null);
   }
 
-  // Ensure modsDirectoryOverride is disabled on app startup so standalone game launches use standard mods folder
-  gameLauncher.isGameRunning().then(running => {
-    if (!running) {
-      gameLauncher.disableModsDirectoryOverride();
-    }
-  }).catch(() => {});
-
-  // Ensure all mods stored in dedicated map/category subfolders are mirrored to the primary mods directory
-  try {
-    const defaultMods = modManager.getDefaultModsPath();
-    if (defaultMods) {
-      modManager.syncMirrorLinks(defaultMods).catch(err => console.warn('[STARTUP] Subfolder mirror sync warning:', err.message));
-    }
-  } catch (e) {}
-
-  // APP STARTUP
-  // (Removed automated ingestion for native 20-slot system)
-  // ── Security Hardening ──
-  
-  // 1. Content Security Policy (Hardened for Production)
+  // Security Hardening
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    // Tightened CSP: removed unsafe-inline where possible, kept fonts/images from trusted sources
     const csp = "default-src 'self' mod-icon: radio-proxy:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: mod-icon:; connect-src 'self' https: ws: radio-proxy:;";
-    
     callback({
       responseHeaders: {
         ...details.responseHeaders,
@@ -1514,6 +1493,26 @@ app.whenReady().then(() => {
       }
     });
   });
+
+  createWindow();
+
+  // Background initialization tasks (non-blocking)
+  setTimeout(() => {
+    // Ensure modsDirectoryOverride is disabled on app startup so standalone game launches use standard mods folder
+    gameLauncher.isGameRunning().then(running => {
+      if (!running) {
+        gameLauncher.disableModsDirectoryOverride();
+      }
+    }).catch(() => {});
+
+    // Ensure all mods stored in dedicated map/category subfolders are mirrored to the primary mods directory
+    try {
+      const defaultMods = modManager.getDefaultModsPath();
+      if (defaultMods) {
+        modManager.syncMirrorLinks(defaultMods).catch(err => console.warn('[STARTUP] Subfolder mirror sync warning:', err.message));
+      }
+    } catch (e) {}
+  }, 100);
 
   // 2. Deny all permission requests (Camera, Mic, Location, etc.)
   const ses = session.defaultSession;
@@ -1576,8 +1575,6 @@ app.whenReady().then(() => {
       menu.popup({ window: BrowserWindow.fromWebContents(contents) });
     });
   });
-
-  createWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
