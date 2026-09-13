@@ -1,0 +1,41 @@
+scanMods: async (manualPaths = null, force = false) => {
+    const now = Date.now();
+    const { isScanning, lastScanTime, mods: currentMods } = get();
+
+    // Prevent duplicate parallel scans if already scanning (unless forced)
+    if (isScanning && !force) return;
+
+    // Short cooldown (2 seconds) to avoid spamming scans
+    if (!force && currentMods.length > 0 && lastScanTime > 0 && (now - lastScanTime < 2000)) return;
+
+    set({ isScanning: true, isLoading: currentMods.length === 0, error: null });
+
+    try {
+      if (!window.api?.localMods) {
+        set({ isLoading: false, isScanning: false });
+        return;
+      }
+      
+      const { mods, allFolders, conflicts, missingDependencies, error } = await window.api.localMods.scan(force);
+      const modArray = mods || [];
+      const cleanUpdates = reconcileUpdates(get().updates, modArray);
+
+      set({
+        mods: modArray,
+        modCount: computeModCount(modArray),
+        allFolders: allFolders || [],
+        conflicts: conflicts || [],
+        missingDependencies: missingDependencies || [],
+        updates: cleanUpdates,
+        isLoading: false,
+        isScanning: false,
+        lastScanTime: Date.now(),
+        error: error || null,
+      });
+
+      try { localStorage.setItem('mod_updates', JSON.stringify(cleanUpdates)); } catch (_) {}
+      
+      // Persist fresh data for next launch (keep essential properties for instant load)
+      try {
+        const lightweightMods = (mods || []).map(m => ({
+          

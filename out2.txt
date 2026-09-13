@@ -1,0 +1,43 @@
+const allDlcs = [...profileDlcs];
+    for (const dlc of gameDlcs) {
+        if (!allDlcs.some(d => d.fileName.toLowerCase() === dlc.fileName.toLowerCase())) {
+            allDlcs.push(dlc);
+        }
+    }
+
+	mods.push(...allDlcs);
+	if (allDlcs.length > 0) {
+		allFolders.push('DLC');
+	}
+
+	const processEntry = async (modRootPath, entryName, subFolder = '') => {
+		const fullPath = subFolder ? path.join(modRootPath, subFolder, entryName) : path.join(modRootPath, entryName);
+		
+		const isZip = entryName.toLowerCase().endsWith('.zip');
+		let isModDir = false;
+
+		// Allow all zip files and directories regardless of leading digits
+		
+		try {
+			// Use asynchronous stat to prevent blocking, especially on NAS
+			let stats = await fs.lstat(fullPath).catch(() => null);
+			if (!stats) return;
+
+			// CRITICAL: Skip symbolic links in the root folder. 
+			// These are likely mirrors created by the manager. We only scan the sources.
+			if (stats.isSymbolicLink() && !subFolder) {
+				debugLog(`[SCAN] Skipping mirror link in root: ${entryName}`);
+				return;
+			}
+
+			let targetPath = fullPath;
+			if (stats.isSymbolicLink() && subFolder) {
+				try {
+					targetPath = await fs.realpath(fullPath);
+					const realStats = await fs.stat(targetPath).catch(() => null);
+					if (realStats && realStats.size > 1000) {
+						stats = realStats;
+					} else {
+						// Link target might be broken or 0 bytes, check if root zip exists
+						const rootZipPath = path.join(modRootPath, entryName);
+						if (fs.exi

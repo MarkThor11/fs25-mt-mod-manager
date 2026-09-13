@@ -491,14 +491,21 @@ async function setSavegameMods(savegamePath, mods) {
 
     // Get existing required mods (e.g. map dependencies)
     const existingMods = data.careerSavegame.mod || (data.careerSavegame.mods?.mod) || [];
-    const existingModsArray = Array.isArray(existingMods) ? existingMods : [existingMods];
-    const requiredExisting = existingModsArray.filter(m => m['@_required'] === 'true');
+        const existingModsArray = Array.isArray(existingMods) ? existingMods : [existingMods];
 
     // Build the new mod array
     const newModsMap = new Map();
     
-    // First, preserve all required existing mods
-    requiredExisting.forEach(m => {
+    // Create a lookup for all existing mods to preserve their hashes and properties
+    const existingLookup = new Map();
+    existingModsArray.forEach(m => {
+        if (m && m['@_modName']) {
+            existingLookup.set(m['@_modName'].toLowerCase(), m);
+        }
+    });
+
+    // First, preserve all required existing mods (like map dependencies)
+    existingModsArray.filter(m => m['@_required'] === 'true').forEach(m => {
         newModsMap.set(m['@_modName'], m);
     });
 
@@ -507,12 +514,13 @@ async function setSavegameMods(savegamePath, mods) {
         const isMap = m.required || (mapId && m.modName === mapId.split('.')[0]) || (mapTitle && m.title === mapTitle);
         // Exclude the Player Positions mod if we want to hide it completely from being listed, BUT wait, if we don't list it, it won't load! 
         // We will keep it but maybe set something else? Actually let's just add it normally here.
+        const existing = existingLookup.get(m.modName.toLowerCase());
         newModsMap.set(m.modName, {
             '@_modName': m.modName,
-            '@_title': m.title,
-            '@_version': m.version || '1.0.0.0',
-            '@_required': isMap ? 'true' : 'false',
-            '@_fileHash': m.fileHash || ''
+            '@_title': m.title || (existing && existing['@_title']) || m.modName,
+            '@_version': m.version || (existing && existing['@_version']) || '1.0.0.0',
+            '@_required': isMap ? 'true' : (existing && existing['@_required'] ? existing['@_required'] : 'false'),
+            '@_fileHash': (existing && existing['@_fileHash']) || m.fileHash || ''
         });
     });
 

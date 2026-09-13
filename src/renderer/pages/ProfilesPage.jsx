@@ -764,7 +764,7 @@ export default function ProfilesPage() {
                           </label>
                         </div>
                         <div className="setting">
-                          <label>Master Volume ({Math.round(options.masterVolume * 100)}%)</label>
+                          <label>Master Volume ({Math.round((parseFloat(options.masterVolume) || 0) * 100)}%)</label>
                           <CustomSlider min="0" max="1" step="0.05" value={options.masterVolume} onChange={e => setOptions(prev => ({ ...prev, masterVolume: parseFloat(e.target.value) }))} />
                         </div>
                       </div>
@@ -849,7 +849,7 @@ export default function ProfilesPage() {
                       <h3 className="section-title"><Gamepad2 size={16} /> Input Controls</h3>
                       <div className="settings-grid">
                         <div className="setting">
-                          <label>Camera Sensitivity ({Math.round(options.cameraSensitivity * 100)}%)</label>
+                          <label>Camera Sensitivity ({Math.round((parseFloat(options.cameraSensitivity) || 0) * 100)}%)</label>
                           <CustomSlider min="0.5" max="2.0" step="0.1" value={options.cameraSensitivity} onChange={e => setOptions(prev => ({ ...prev, cameraSensitivity: parseFloat(e.target.value) }))} />
                         </div>
                         <div className="setting">
