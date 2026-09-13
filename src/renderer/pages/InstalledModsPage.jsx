@@ -73,11 +73,27 @@ const LocalModIcon = React.memo(({ mod }) => {
   const categoryType = fallbackCategory.split(':')[1] || 'generic';
 
   const DLC_ICONS = {
-    "emergency pack": "https://www.farming-simulator.com/img/content/products/fs22/dlc-fs22emergency-cover.jpg",
-    "pumps and hoses": "https://www.farming-simulator.com/img/content/products/fs22/dlc-fs22pumpsnhoses-cover.jpg",
-    "pumps & hoses": "https://www.farming-simulator.com/img/content/products/fs22/dlc-fs22pumpsnhoses-cover.jpg",
-    "plains & prairies": "https://www.farming-simulator.com/img/content/products/fs25/dlc-fs25plains-cover.jpg",
-    "sky agriculture": "https://www.farming-simulator.com/img/content/products/fs25/dlc-fs25sky-cover.jpg",
+    "beans and alpacas":    "https://www.farming-simulator.com/img/content/products/fs25/fs25beansandalpacas-cover.jpg",
+    "pumps and hoses":      "https://www.farming-simulator.com/img/content/products/fs25/fs25pumpsnhoses-cover.jpg",
+    "pumps & hoses":        "https://www.farming-simulator.com/img/content/products/fs25/fs25pumpsnhoses-cover.jpg",
+    "emergency pack":       "https://www.farming-simulator.com/img/content/products/fs25/fs25emergency-cover.jpg",
+    "emergency two":        "https://www.farming-simulator.com/img/content/products/fs25/fs25emergency-cover.jpg",
+    "sky agriculture":      "https://www.farming-simulator.com/img/content/products/fs25/fs25skyagriculture-cover.jpg",
+    "vredo":                "https://www.farming-simulator.com/img/content/products/fs25/fs25vredo-cover.jpg",
+    "season pass 2":        "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass2-cover.jpg",
+    "jcb":                  "https://www.farming-simulator.com/img/content/products/fs25/fs25jcbwft-cover.jpg",
+    "highlands":            "https://www.farming-simulator.com/img/content/products/fs25/fs25highlandsfishing-cover.jpg",
+    "mercedes":             "https://www.farming-simulator.com/img/content/products/fs25/fs25mercedesbenztrucks-cover.jpg",
+    "straw harvest":        "https://www.farming-simulator.com/img/content/products/fs25/fs25strawharvest-cover.jpg",
+    "plains and prairies":  "https://www.farming-simulator.com/img/content/products/fs25/fs25plainsandprairies-cover.jpg",
+    "plains & prairies":    "https://www.farming-simulator.com/img/content/products/fs25/fs25plainsandprairies-cover.jpg",
+    "precision farming":    "https://www.farming-simulator.com/img/content/products/fs25/fs25precisionfarming-cover.jpg",
+    "nexat":                "https://www.farming-simulator.com/img/content/products/fs25/fs25nexat-cover.jpg",
+    "season pass 1":        "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass1-cover.jpg",
+    "macdon":               "https://www.farming-simulator.com/img/content/products/fs25/fs25macdon-cover.jpg",
+    "new holland cr11":     "https://www.farming-simulator.com/img/content/products/fs25/fs25nhcr11gold-cover.jpg",
+    "nhcr11":               "https://www.farming-simulator.com/img/content/products/fs25/fs25nhcr11gold-cover.jpg",
+    "daimler":              "https://www.farming-simulator.com/img/content/products/fs25/fs25mercedesbenztrucks-cover.jpg",
   };
 
   const titleLower = (mod.title || "").toLowerCase();
