@@ -610,19 +610,19 @@ const [activeTab, setActiveTab] = useState('general');
 
         {/* Tab Switcher */}
         <div className="tab-switcher" style={{ padding: '0 24px', borderBottom: '1px solid var(--border)' }}>
-          <button className={`tab-btn ${activeTab === 'general' ? 'tab-btn--active' : ''}`} title="Basic savegame settings and economy." onClick={() => setActiveTab('general')}>
+          <button className={`tab-btn ${activeTab === 'general' ? 'tab-btn--active' : ''}`} title="Basic savegame settings and economy." title="Basic savegame settings and economy." title="Basic savegame settings and economy." onClick={() => setActiveTab('general')}>
             <Globe size={14} /> General
           </button>
-          <button className={`tab-btn ${activeTab === 'realism' ? 'tab-btn--active' : ''}`} title="Simulation realism and environment options." onClick={() => setActiveTab('realism')}>
+          <button className={`tab-btn ${activeTab === 'realism' ? 'tab-btn--active' : ''}`} title="Simulation realism and environment options." title="Simulation realism and environment options." title="Simulation realism and environment options." onClick={() => setActiveTab('realism')}>
             <Info size={14} /> Realism & Units
           </button>
-          <button className={`tab-btn ${activeTab === 'controls' ? 'tab-btn--active' : ''}`} title="Player and camera controls." onClick={() => setActiveTab('controls')}>
+          <button className={`tab-btn ${activeTab === 'controls' ? 'tab-btn--active' : ''}`} title="Player and camera controls." title="Player and camera controls." title="Player and camera controls." onClick={() => setActiveTab('controls')}>
             <Gamepad2 size={14} /> Controls
           </button>
-          <button className={`tab-btn ${activeTab === 'spawn' ? 'tab-btn--active' : ''}`} title="Choose spawn location." onClick={() => setActiveTab('spawn')}>
+          <button className={`tab-btn ${activeTab === 'spawn' ? 'tab-btn--active' : ''}`} title="Choose spawn location." title="Choose spawn location." title="Choose spawn location." onClick={() => setActiveTab('spawn')}>
             <MapPin size={14} /> Spawn & Persistence
           </button>
-          <button className={`tab-btn ${activeTab === 'mods' ? 'tab-btn--active' : ''}`} title="Choose exactly which mods are active for this save." onClick={() => setActiveTab('mods')}>
+          <button className={`tab-btn ${activeTab === 'mods' ? 'tab-btn--active' : ''}`} title="Choose exactly which mods are active for this save." title="Choose exactly which mods are active for this save." title="Choose exactly which mods are active for this save." onClick={() => setActiveTab('mods')}>
             <Package size={14} /> Selective Mods
           </button>
         </div>
@@ -731,7 +731,7 @@ const [activeTab, setActiveTab] = useState('general');
                             const res = await window.api.savegames.updateFleetMaintenance({ savePath: save.path, type: 'dirt', value: fleetCleanPct / 100 });
                             if (res.success) useToastStore.getState().success('Fleet dirt levels updated!');
                          }}
-                        title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item.">Apply</button>
+                        title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item.">Apply</button>
                     </div>
 
                    {/* Repair Fleet */}
@@ -753,7 +753,7 @@ const [activeTab, setActiveTab] = useState('general');
                             const res = await window.api.savegames.updateFleetMaintenance({ savePath: save.path, type: 'repair', value: fleetRepairPct / 100 });
                             if (res.success) useToastStore.getState().success('Fleet mechanical condition updated!');
                          }}
-                        title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item.">Apply</button>
+                        title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item.">Apply</button>
                     </div>
 
                    {/* Paint Repair */}
@@ -775,7 +775,7 @@ const [activeTab, setActiveTab] = useState('general');
                             const res = await window.api.savegames.updateFleetMaintenance({ savePath: save.path, type: 'paint', value: fleetPaintPct / 100 });
                             if (res.success) useToastStore.getState().success('Fleet paint condition updated!');
                          }}
-                        title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item.">Apply</button>
+                        title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item." title="Apply the selected setting or spawn item.">Apply</button>
                     </div>
                 </div>
 
@@ -860,6 +860,168 @@ const [activeTab, setActiveTab] = useState('general');
                    </div>
                  </div>
 <div className="settings-panel">
+                <h3 className="section-title"><Volume2 size={16} /> Audio & Sound</h3>
+                <div className="settings-grid">
+                  <label className="checkbox-setting">
+                    <input type="checkbox" defaultChecked={save.isRadioEnabled !== false} onChange={e => handleUpdate('career', 'isRadioEnabled', e.target.checked)} />
+                    <span>Radio Enabled</span>
+                  </label>
+                  <div className="setting">
+                    <label title="Overall volume level for the game.">Master Volume ({Math.round(parseFloat(save.masterVolume ?? 1.0) * 100) || 0}%)</label>
+                    <CustomSlider min="0" max="1" step="0.05" defaultValue={parseFloat(save.masterVolume ?? 1.0)} onBlur={e => handleUpdate('career', 'masterVolume', e.target.value)} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="settings-panel">
+                <h3 className="section-title"><Video size={16} /> Camera & Visuals</h3>
+                <div className="settings-grid">
+                  <label className="checkbox-setting" title="Camera snaps back to center when you enter."><input type="checkbox" defaultChecked={save.resetVehicleCamera} onChange={e => handleUpdate('career', 'resetVehicleCamera', e.target.checked)} /><span>Reset Vehicle Camera</span></label>
+                  <label className="checkbox-setting" title="Camera bounces with the vehicle seat."><input type="checkbox" defaultChecked={save.indoorCameraSuspension} onChange={e => handleUpdate('career', 'indoorCameraSuspension', e.target.checked)} /><span>Indoor Camera Suspension</span></label>
+                  <label className="checkbox-setting" title="Camera FOV adjusts based on speed."><input type="checkbox" defaultChecked={save.dynamicVehicleCamera} onChange={e => handleUpdate('career', 'dynamicVehicleCamera', e.target.checked)} /><span>Dynamic Vehicle Camera</span></label>
+                  <label className="checkbox-setting" title="Inverts mouse Y axis."><input type="checkbox" defaultChecked={save.invertYLook} onChange={e => handleUpdate('career', 'invertYLook', e.target.checked)} /><span>Invert Y-Look</span></label>
+                  <label className="checkbox-setting" title="Shows tutorial popups during gameplay."><input type="checkbox" defaultChecked={save.showHints !== false} onChange={e => handleUpdate('career', 'showHints', e.target.checked)} /><span>Show Gameplay Hints</span></label>
+                  <label className="checkbox-setting" title="Shows interactive icons at triggers."><input type="checkbox" defaultChecked={save.showHelpIcons !== false} onChange={e => handleUpdate('career', 'showHelpIcons', e.target.checked)} /><span>Show Help Icons</span></label>
+                </div>
+              </div>
+
+                             </div>
+           )}
+
+
+          {activeTab === 'realism' && (
+            <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
+              <div className="settings-panel">
+                <h3 className="section-title"><AlertCircle size={16} /> Gameplay Realism</h3>
+                <div className="settings-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
+                    <label className="checkbox-setting" title="Turns AI cars on the road on or off."><input type="checkbox" defaultChecked={save.trafficEnabled !== false} onChange={e => handleUpdate('career', 'trafficEnabled', e.target.checked)} /><span>Traffic Enabled</span></label>
+                    <label className="checkbox-setting" title="Vehicles destroy crops when driving over them."><input type="checkbox" defaultChecked={save.fruitDestruction !== false} onChange={e => handleUpdate('career', 'fruitDestruction', e.target.checked)} /><span>Crop Destruction</span></label>
+                    <label className="checkbox-setting" title="Tornados and hail destroy crops."><input type="checkbox" defaultChecked={save.disasterDestructionState !== 'DISABLED'} onChange={e => handleUpdate('career', 'disasterDestructionState', e.target.checked ? 'ENABLED' : 'DISABLED')} /><span>Disaster Destruction</span></label>
+                    <label className="checkbox-setting" title="Fields require plowing after certain crops."><input type="checkbox" defaultChecked={save.plowingRequiredEnabled} onChange={e => handleUpdate('career', 'plowingRequiredEnabled', e.target.checked)} /><span>Periodic Plowing</span></label>
+                    <label className="checkbox-setting" title="Fields need lime to maintain maximum yield."><input type="checkbox" defaultChecked={save.limeRequired !== false} onChange={e => handleUpdate('career', 'limeRequired', e.target.checked)} /><span>Lime Required</span></label>
+                    <label className="checkbox-setting" title="Stones will surface during cultivation."><input type="checkbox" defaultChecked={save.stonesEnabled !== false} onChange={e => handleUpdate('career', 'stonesEnabled', e.target.checked)} /><span>Field Stones</span></label>
+                    <label className="checkbox-setting" title="Weeds will grow and reduce crop yield."><input type="checkbox" defaultChecked={save.weedsEnabled !== false} onChange={e => handleUpdate('career', 'weedsEnabled', e.target.checked)} /><span>Weeds Enabled</span></label>
+
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
+                    <label className="checkbox-setting" title="Snow accumulates during winter."><input type="checkbox" defaultChecked={save.isSnowEnabled !== false} onChange={e => handleUpdate('career', 'isSnowEnabled', e.target.checked)} /><span>Snow Enabled</span></label>
+                    <label className="checkbox-setting" title="Pushing reverse once stops the tractor, twice reverses."><input type="checkbox" defaultChecked={save.stopAndGoBraking !== false} onChange={e => handleUpdate('career', 'stopAndGoBraking', e.target.checked)} /><span>Stop & Go Braking</span></label>
+                    <label className="checkbox-setting" title="Trailers respect their weight capacity limits."><input type="checkbox" defaultChecked={save.trailerFillLimit} onChange={e => handleUpdate('career', 'trailerFillLimit', e.target.checked)} /><span>Trailer Fill Limit</span></label>
+                    <label className="checkbox-setting" title="Vehicles start automatically when you enter."><input type="checkbox" defaultChecked={save.automaticMotorStartEnabled !== false} onChange={e => handleUpdate('career', 'automaticMotorStartEnabled', e.target.checked)} /><span>Auto Motor Start</span></label>
+                    <label className="checkbox-setting">
+                      <input 
+                        type="checkbox" 
+                        defaultChecked={save.isTrainTabEnabled !== false} 
+                        onChange={e => handleUpdate('career', 'isTrainTabEnabled', e.target.checked)} 
+                      />
+                      <TrainFront size={14} className="text-accent" />
+                      <span>Allow Switching to Trains</span>
+                    </label>
+                  </div>
+
+                  <div className="setting" style={{ marginTop: 8 }}>
+                    <label title="Manual or automatic transmission mode.">Gear Shift Mode</label>
+                    <div className="input-with-icon">
+                      <Settings2 size={14} />
+                      <select defaultValue={save.gearShiftMode || 0} onChange={e => handleUpdate('career', 'gearShiftMode', e.target.value)}>
+                        <option value="0">Automatic</option>
+                        <option value="1">Manual with Clutch</option>
+                        <option value="2">Manual</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="setting" style={{ marginTop: 8 }}>
+                    <label title="How quickly vehicles consume fuel.">Fuel Usage</label>
+                    <div className="input-with-icon">
+                      <Zap size={14} />
+                      <select defaultValue={save.fuelUsage || 2} onChange={e => handleUpdate('career', 'fuelUsage', e.target.value)}>
+                        <option value="1">Low</option>
+                        <option value="2">Normal</option>
+                        <option value="3">High</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="settings-panel">
+                <h3 className="section-title"><Users size={16} /> Helper & AI Options</h3>
+                <div className="settings-grid">
+                  <div className="setting">
+                    <label title="Whether helpers automatically buy fuel when empty.">Buy Fuel</label>
+                    <select defaultValue={save.helperBuyFuel !== false ? 'true' : 'false'} onChange={e => handleUpdate('career', 'helperBuyFuel', e.target.value)}>
+                      <option value="true">Buy</option>
+                      <option value="false">Off</option>
+                    </select>
+                  </div>
+                  <div className="setting">
+                    <label title="Whether helpers automatically buy seeds when empty.">Buy Seeds</label>
+                    <select defaultValue={save.helperBuySeeds !== false ? 'true' : 'false'} onChange={e => handleUpdate('career', 'helperBuySeeds', e.target.value)}>
+                      <option value="true">Buy</option>
+                      <option value="false">Off</option>
+                    </select>
+                  </div>
+                  <div className="setting">
+                    <label title="Whether helpers automatically buy fertilizer when empty.">Buy Fertilizer</label>
+                    <select defaultValue={save.helperBuyFertilizer !== false ? 'true' : 'false'} onChange={e => handleUpdate('career', 'helperBuyFertilizer', e.target.value)}>
+                      <option value="true">Buy</option>
+                      <option value="false">Off</option>
+                    </select>
+                  </div>
+                  <div className="setting">
+                    <label title="Where AI workers get slurry from.">Slurry Source</label>
+                    <select defaultValue={save.helperSlurrySource || 2} onChange={e => handleUpdate('career', 'helperSlurrySource', e.target.value)}>
+                      <option value="1">Storage</option>
+                      <option value="2">Buy</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="settings-panel">
+                <h3 className="section-title"><Ruler size={16} /> Units & Environment</h3>
+                <div className="settings-grid">
+                  <div className="setting">
+                    <label title="How fast vehicles get dirty.">Dirt Interval</label>
+                    <select defaultValue={save.dirtInterval || 3} onChange={e => handleUpdate('career', 'dirtInterval', e.target.value)}>
+                      <option value="1">Slow</option>
+                      <option value="3">Normal</option>
+                      <option value="4">Fast</option>
+                      <option value="0">Off</option>
+                    </select>
+                  </div>
+                  <div className="setting">
+                    <label title="Currency displayed in-game.">Money Unit</label>
+                    <select defaultValue={save.moneyUnit || 0} onChange={e => handleUpdate('career', 'moneyUnit', e.target.value)}>
+                      <option value="0">Euro (€)</option>
+                      <option value="1">Dollar ($)</option>
+                      <option value="2">Pound (£)</option>
+                    </select>
+                  </div>
+                  <div className="setting">
+                    <label title="Unit used for distances and capacities.">Measuring Unit</label>
+                    <select defaultValue={save.useMetric ? 'true' : 'false'} onChange={e => handleUpdate('career', 'useMetric', e.target.value)}>
+                      <option value="true">Metric (m/km)</option>
+                      <option value="false">Imperial (ft/mi)</option>
+                    </select>
+                  </div>
+                  <div className="setting">
+                    <label title="Unit for temperature (Celsius/Fahrenheit).">Temperature</label>
+                    <select defaultValue={save.temperatureUnit || 0} onChange={e => handleUpdate('career', 'temperatureUnit', e.target.value)}>
+                      <option value="0">Celsius</option>
+                      <option value="1">Fahrenheit</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+
+          {activeTab === 'controls' && (
+            <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
+              <div className="settings-panel">
                 <h3 className="section-title"><Gamepad2 size={16} /> Input Controls</h3>
                 <div className="settings-grid">
                   <div className="setting">
@@ -3373,7 +3535,7 @@ export default function SavegamesPage() {
                             </strong> Mods Selected
                         </div>
                     </div>
-                    <button className="btn btn--ghost" style={{ height: 48, padding: '0 32px', fontSize: 16 }} title="Discard all changes without saving." title="Discard all changes without saving." onClick={() => setShowCreateModal(false)}>Cancel</button>
+                    <button className="btn btn--ghost" style={{ height: 48, padding: '0 32px', fontSize: 16 }} title="Discard all changes without saving." title="Discard all changes without saving." title="Discard all changes without saving." onClick={() => setShowCreateModal(false)}>Cancel</button>
                     <button className="btn btn--primary" style={{ height: 48, padding: '0 48px', fontSize: 16, fontWeight: 800, background: 'var(--accent)', color: 'var(--bg-primary)' }} onClick={handleCreate} disabled={creating}>{creating ? 'Creating...' : 'Create Career'}</button>
                 </div>
               </div>
@@ -3400,7 +3562,7 @@ export default function SavegamesPage() {
                     </label>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--sp-2)', justifyContent: 'flex-end' }}>
-                    <button className="btn btn--ghost" title="Discard all changes without saving." title="Discard all changes without saving." onClick={() => setShowRestoreModal(null)}>Cancel</button>
+                    <button className="btn btn--ghost" title="Discard all changes without saving." title="Discard all changes without saving." title="Discard all changes without saving." onClick={() => setShowRestoreModal(null)}>Cancel</button>
                     <button className="btn btn--primary" onClick={handleRestore}>Restore Now</button>
                 </div>
               </div>
@@ -3477,176 +3639,6 @@ export default function SavegamesPage() {
             }}
           />
       )}
-    <div className="settings-panel">
-                <h3 className="section-title"><Volume2 size={16} /> Audio & Sound</h3>
-                <div className="settings-grid">
-                  <label className="checkbox-setting">
-                    <input type="checkbox" defaultChecked={save.isRadioEnabled !== false} onChange={e => handleUpdate('career', 'isRadioEnabled', e.target.checked)} />
-                    <span>Radio Enabled</span>
-                  </label>
-                  <div className="setting">
-                    <label title="Overall volume level for the game.">Master Volume ({Math.round((parseFloat(save.masterVolume) || 0) * 100)}%)</label>
-                    <CustomSlider min="0" max="1" step="0.05" defaultValue={parseFloat(save.masterVolume ?? 1.0)} onBlur={e => handleUpdate('career', 'masterVolume', e.target.value)} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="settings-panel">
-                <h3 className="section-title"><Video size={16} /> Camera & Visuals</h3>
-                <div className="settings-grid">
-                  <label className="checkbox-setting" title="Camera snaps back to center when you enter."><input type="checkbox" defaultChecked={save.resetVehicleCamera} onChange={e => handleUpdate('career', 'resetVehicleCamera', e.target.checked)} /><span>Reset Vehicle Camera</span></label>
-                  <label className="checkbox-setting" title="Camera bounces with the vehicle seat."><input type="checkbox" defaultChecked={save.indoorCameraSuspension} onChange={e => handleUpdate('career', 'indoorCameraSuspension', e.target.checked)} /><span>Indoor Camera Suspension</span></label>
-                  <label className="checkbox-setting" title="Camera FOV adjusts based on speed."><input type="checkbox" defaultChecked={save.dynamicVehicleCamera} onChange={e => handleUpdate('career', 'dynamicVehicleCamera', e.target.checked)} /><span>Dynamic Vehicle Camera</span></label>
-                  <label className="checkbox-setting" title="Inverts mouse Y axis."><input type="checkbox" defaultChecked={save.invertYLook} onChange={e => handleUpdate('career', 'invertYLook', e.target.checked)} /><span>Invert Y-Look</span></label>
-                  <label className="checkbox-setting" title="Shows tutorial popups during gameplay."><input type="checkbox" defaultChecked={save.showHints !== false} onChange={e => handleUpdate('career', 'showHints', e.target.checked)} /><span>Show Gameplay Hints</span></label>
-                  <label className="checkbox-setting" title="Shows interactive icons at triggers."><input type="checkbox" defaultChecked={save.showHelpIcons !== false} onChange={e => handleUpdate('career', 'showHelpIcons', e.target.checked)} /><span>Show Help Icons</span></label>
-                </div>
-              </div>
-
-                             </div>
-           )}
-
-
-          {activeTab === 'realism' && (
-            <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
-              <div className="settings-panel">
-                <h3 className="section-title"><AlertCircle size={16} /> Gameplay Realism</h3>
-                <div className="settings-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
-                    <label className="checkbox-setting" title="Turns AI cars on the road on or off."><input type="checkbox" defaultChecked={save.trafficEnabled !== false} onChange={e => handleUpdate('career', 'trafficEnabled', e.target.checked)} /><span>Traffic Enabled</span></label>
-                    <label className="checkbox-setting" title="Vehicles destroy crops when driving over them."><input type="checkbox" defaultChecked={save.fruitDestruction !== false} onChange={e => handleUpdate('career', 'fruitDestruction', e.target.checked)} /><span>Crop Destruction</span></label>
-                    <label className="checkbox-setting" title="Tornados and hail destroy crops."><input type="checkbox" defaultChecked={save.disasterDestructionState !== 'DISABLED'} onChange={e => handleUpdate('career', 'disasterDestructionState', e.target.checked ? 'ENABLED' : 'DISABLED')} /><span>Disaster Destruction</span></label>
-
-                    <label className="checkbox-setting" title="Fields require plowing after certain crops."><input type="checkbox" defaultChecked={save.plowingRequiredEnabled} onChange={e => handleUpdate('career', 'plowingRequiredEnabled', e.target.checked)} /><span>Periodic Plowing</span></label>
-                    <label className="checkbox-setting" title="Fields need lime to maintain maximum yield."><input type="checkbox" defaultChecked={save.limeRequired !== false} onChange={e => handleUpdate('career', 'limeRequired', e.target.checked)} /><span>Lime Required</span></label>
-                    <label className="checkbox-setting" title="Stones will surface during cultivation."><input type="checkbox" defaultChecked={save.stonesEnabled !== false} onChange={e => handleUpdate('career', 'stonesEnabled', e.target.checked)} /><span>Field Stones</span></label>
-                    <label className="checkbox-setting" title="Weeds will grow and reduce crop yield."><input type="checkbox" defaultChecked={save.weedsEnabled !== false} onChange={e => handleUpdate('career', 'weedsEnabled', e.target.checked)} /><span>Weeds Enabled</span></label>
-
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
-                    <label className="checkbox-setting" title="Snow accumulates during winter."><input type="checkbox" defaultChecked={save.isSnowEnabled !== false} onChange={e => handleUpdate('career', 'isSnowEnabled', e.target.checked)} /><span>Snow Enabled</span></label>
-                    <label className="checkbox-setting" title="Pushing reverse once stops the tractor, twice reverses."><input type="checkbox" defaultChecked={save.stopAndGoBraking !== false} onChange={e => handleUpdate('career', 'stopAndGoBraking', e.target.checked)} /><span>Stop & Go Braking</span></label>
-                    <label className="checkbox-setting" title="Trailers respect their weight capacity limits."><input type="checkbox" defaultChecked={save.trailerFillLimit} onChange={e => handleUpdate('career', 'trailerFillLimit', e.target.checked)} /><span>Trailer Fill Limit</span></label>
-                    <label className="checkbox-setting" title="Vehicles start automatically when you enter."><input type="checkbox" defaultChecked={save.automaticMotorStartEnabled !== false} onChange={e => handleUpdate('career', 'automaticMotorStartEnabled', e.target.checked)} /><span>Auto Motor Start</span></label>
-                    <label className="checkbox-setting">
-                      <input 
-                        type="checkbox" 
-                        defaultChecked={save.isTrainTabEnabled !== false} 
-                        onChange={e => handleUpdate('career', 'isTrainTabEnabled', e.target.checked)} 
-                      />
-                      <TrainFront size={14} className="text-accent" />
-                      <span>Allow Switching to Trains</span>
-                    </label>
-                  </div>
-
-                  <div className="setting" style={{ marginTop: 8 }}>
-                    <label title="Manual or automatic transmission mode.">Gear Shift Mode</label>
-                    <div className="input-with-icon">
-                      <Settings2 size={14} />
-                      <select defaultValue={save.gearShiftMode || 0} onChange={e => handleUpdate('career', 'gearShiftMode', e.target.value)}>
-                        <option value="0">Automatic</option>
-                        <option value="1">Manual with Clutch</option>
-                        <option value="2">Manual</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="setting" style={{ marginTop: 8 }}>
-                    <label title="How quickly vehicles consume fuel.">Fuel Usage</label>
-                    <div className="input-with-icon">
-                      <Zap size={14} />
-                      <select defaultValue={save.fuelUsage || 2} onChange={e => handleUpdate('career', 'fuelUsage', e.target.value)}>
-                        <option value="1">Low</option>
-                        <option value="2">Normal</option>
-                        <option value="3">High</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="settings-panel">
-                <h3 className="section-title"><Users size={16} /> Helper & AI Options</h3>
-                <div className="settings-grid">
-                  <div className="setting">
-                    <label title="Whether helpers automatically buy fuel when empty.">Buy Fuel</label>
-                    <select defaultValue={save.helperBuyFuel !== false ? 'true' : 'false'} onChange={e => handleUpdate('career', 'helperBuyFuel', e.target.value)}>
-                      <option value="true">Buy</option>
-                      <option value="false">Off</option>
-                    </select>
-                  </div>
-                  <div className="setting">
-                    <label title="Whether helpers automatically buy seeds when empty.">Buy Seeds</label>
-                    <select defaultValue={save.helperBuySeeds !== false ? 'true' : 'false'} onChange={e => handleUpdate('career', 'helperBuySeeds', e.target.value)}>
-                      <option value="true">Buy</option>
-                      <option value="false">Off</option>
-                    </select>
-                  </div>
-                  <div className="setting">
-                    <label title="Whether helpers automatically buy fertilizer when empty.">Buy Fertilizer</label>
-                    <select defaultValue={save.helperBuyFertilizer !== false ? 'true' : 'false'} onChange={e => handleUpdate('career', 'helperBuyFertilizer', e.target.value)}>
-                      <option value="true">Buy</option>
-                      <option value="false">Off</option>
-                    </select>
-                  </div>
-                  <div className="setting">
-                    <label title="Where AI workers get slurry from.">Slurry Source</label>
-                    <select defaultValue={save.helperSlurrySource || 2} onChange={e => handleUpdate('career', 'helperSlurrySource', e.target.value)}>
-                      <option value="1">Storage</option>
-                      <option value="2">Buy</option>
-                    </select>
-                  </div>
-                  <div className="setting">
-                    <label title="Where AI workers get manure from.">Manure Source</label>
-                    <select defaultValue={save.helperManureSource || 2} onChange={e => handleUpdate('career', 'helperManureSource', e.target.value)}>
-                      <option value="1">Storage</option>
-                      <option value="2">Buy</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="settings-panel">
-                <h3 className="section-title"><Ruler size={16} /> Units & Environment</h3>
-                <div className="settings-grid">
-                  <div className="setting">
-                    <label title="How fast vehicles get dirty.">Dirt Interval</label>
-                    <select defaultValue={save.dirtInterval || 3} onChange={e => handleUpdate('career', 'dirtInterval', e.target.value)}>
-                      <option value="1">Slow</option>
-                      <option value="3">Normal</option>
-                      <option value="4">Fast</option>
-                      <option value="0">Off</option>
-                    </select>
-                  </div>
-                  <div className="setting">
-                    <label title="Currency displayed in-game.">Money Unit</label>
-                    <select defaultValue={save.moneyUnit || 0} onChange={e => handleUpdate('career', 'moneyUnit', e.target.value)}>
-                      <option value="0">Euro (€)</option>
-                      <option value="1">Dollar ($)</option>
-                      <option value="2">Pound (£)</option>
-                    </select>
-                  </div>
-                  <div className="setting">
-                    <label title="Unit used for distances and capacities.">Measuring Unit</label>
-                    <select defaultValue={save.useMetric ? 'true' : 'false'} onChange={e => handleUpdate('career', 'useMetric', e.target.value)}>
-                      <option value="true">Metric (m/km)</option>
-                      <option value="false">Imperial (ft/mi)</option>
-                    </select>
-                  </div>
-                  <div className="setting">
-                    <label title="Unit for temperature (Celsius/Fahrenheit).">Temperature</label>
-                    <select defaultValue={save.temperatureUnit || 0} onChange={e => handleUpdate('career', 'temperatureUnit', e.target.value)}>
-                      <option value="0">Celsius</option>
-                      <option value="1">Fahrenheit</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-
-          {activeTab === 'controls' && (
-            <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
-              </div>
+    </div>
   );
 }
