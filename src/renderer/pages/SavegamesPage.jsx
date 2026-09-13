@@ -288,6 +288,7 @@ function ModAuditModal({ save, allInstalledMods, onClose, onRefresh }) {
  * Savegame Editor Modal Component
  */
 function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
     const [pendingLaunchSlot, setPendingLaunchSlot] = useState(null);
   const [launchExtraOptions, setLaunchExtraOptions] = useState({});
@@ -1067,7 +1068,10 @@ const [activeTab, setActiveTab] = useState('general');
                     type="button" 
                     className="btn btn--secondary btn--sm"
                     style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                    onClick={() => navigate('/keybinds')}
+                    onClick={() => {
+                      if (onClose) onClose();
+                      navigate('/keybinds');
+                    }}
                   >
                     Open Keybinds Manager &rarr;
                   </button>

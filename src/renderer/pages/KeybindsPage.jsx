@@ -191,6 +191,42 @@ export default function KeybindsPage() {
         </div>
       </div>
 
+      {/* Error Alert Banner */}
+      {error && (
+        <div style={{ 
+          background: 'rgba(239, 68, 68, 0.1)', 
+          border: '1px solid var(--danger)', 
+          borderRadius: 'var(--radius-md)', 
+          padding: '12px 16px', 
+          marginBottom: 'var(--sp-4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <AlertTriangle size={20} style={{ color: 'var(--danger)', flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 'var(--fs-sm)', color: 'var(--danger)' }}>
+                Unable to Load Keybindings
+              </div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-secondary)' }}>
+                {error}
+              </div>
+            </div>
+          </div>
+          <button 
+            className="btn btn--secondary btn--sm"
+            onClick={() => {
+              fetchKeybinds();
+              fetchBackups();
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Conflict Warning Banner */}
       {conflicts.length > 0 && (
         <div style={{ 

@@ -12,7 +12,10 @@ export const useKeybindStore = create((set, get) => ({
   searchQuery: '',
 
   fetchKeybinds: async () => {
-    if (!window.api?.keybinds?.get) return;
+    if (!window.api?.keybinds?.get) {
+      set({ error: 'Keybindings API is not available. Please restart the desktop application.', isLoading: false });
+      return;
+    }
     set({ isLoading: true, error: null });
     try {
       const res = await window.api.keybinds.get();
