@@ -859,7 +859,33 @@ const [activeTab, setActiveTab] = useState('general');
                     </div>
                    </div>
                  </div>
-               </div>
+<div className="settings-panel">
+                <h3 className="section-title"><Volume2 size={16} /> Audio & Sound</h3>
+                <div className="settings-grid">
+                  <label className="checkbox-setting">
+                    <input type="checkbox" defaultChecked={save.isRadioEnabled !== false} onChange={e => handleUpdate('career', 'isRadioEnabled', e.target.checked)} />
+                    <span>Radio Enabled</span>
+                  </label>
+                  <div className="setting">
+                    <label title="Overall volume level for the game.">Master Volume ({Math.round(parseFloat(save.masterVolume ?? 1.0) * 100) || 0}%)</label>
+                    <CustomSlider min="0" max="1" step="0.05" defaultValue={parseFloat(save.masterVolume ?? 1.0)} onBlur={e => handleUpdate('career', 'masterVolume', e.target.value)} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="settings-panel">
+                <h3 className="section-title"><Video size={16} /> Camera & Visuals</h3>
+                <div className="settings-grid">
+                  <label className="checkbox-setting" title="Camera snaps back to center when you enter."><input type="checkbox" defaultChecked={save.resetVehicleCamera} onChange={e => handleUpdate('career', 'resetVehicleCamera', e.target.checked)} /><span>Reset Vehicle Camera</span></label>
+                  <label className="checkbox-setting" title="Camera bounces with the vehicle seat."><input type="checkbox" defaultChecked={save.indoorCameraSuspension} onChange={e => handleUpdate('career', 'indoorCameraSuspension', e.target.checked)} /><span>Indoor Camera Suspension</span></label>
+                  <label className="checkbox-setting" title="Camera FOV adjusts based on speed."><input type="checkbox" defaultChecked={save.dynamicVehicleCamera} onChange={e => handleUpdate('career', 'dynamicVehicleCamera', e.target.checked)} /><span>Dynamic Vehicle Camera</span></label>
+                  <label className="checkbox-setting" title="Inverts mouse Y axis."><input type="checkbox" defaultChecked={save.invertYLook} onChange={e => handleUpdate('career', 'invertYLook', e.target.checked)} /><span>Invert Y-Look</span></label>
+                  <label className="checkbox-setting" title="Shows tutorial popups during gameplay."><input type="checkbox" defaultChecked={save.showHints !== false} onChange={e => handleUpdate('career', 'showHints', e.target.checked)} /><span>Show Gameplay Hints</span></label>
+                  <label className="checkbox-setting" title="Shows interactive icons at triggers."><input type="checkbox" defaultChecked={save.showHelpIcons !== false} onChange={e => handleUpdate('career', 'showHelpIcons', e.target.checked)} /><span>Show Help Icons</span></label>
+                </div>
+              </div>
+
+                             </div>
            )}
 
 
@@ -994,32 +1020,6 @@ const [activeTab, setActiveTab] = useState('general');
 
           {activeTab === 'controls' && (
             <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
-              <div className="settings-panel">
-                <h3 className="section-title"><Volume2 size={16} /> Audio & Sound</h3>
-                <div className="settings-grid">
-                  <label className="checkbox-setting">
-                    <input type="checkbox" defaultChecked={save.isRadioEnabled !== false} onChange={e => handleUpdate('career', 'isRadioEnabled', e.target.checked)} />
-                    <span>Radio Enabled</span>
-                  </label>
-                  <div className="setting">
-                    <label title="Overall volume level for the game.">Master Volume ({Math.round((save.masterVolume || 1.0) * 100)}%)</label>
-                    <CustomSlider min="0" max="1" step="0.05" defaultValue={save.masterVolume || 1.0} onBlur={e => handleUpdate('career', 'masterVolume', e.target.value)} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="settings-panel">
-                <h3 className="section-title"><Video size={16} /> Camera & Visuals</h3>
-                <div className="settings-grid">
-                  <label className="checkbox-setting" title="Camera snaps back to center when you enter."><input type="checkbox" defaultChecked={save.resetVehicleCamera} onChange={e => handleUpdate('career', 'resetVehicleCamera', e.target.checked)} /><span>Reset Vehicle Camera</span></label>
-                  <label className="checkbox-setting" title="Camera bounces with the vehicle seat."><input type="checkbox" defaultChecked={save.indoorCameraSuspension} onChange={e => handleUpdate('career', 'indoorCameraSuspension', e.target.checked)} /><span>Indoor Camera Suspension</span></label>
-                  <label className="checkbox-setting" title="Camera FOV adjusts based on speed."><input type="checkbox" defaultChecked={save.dynamicVehicleCamera} onChange={e => handleUpdate('career', 'dynamicVehicleCamera', e.target.checked)} /><span>Dynamic Vehicle Camera</span></label>
-                  <label className="checkbox-setting" title="Inverts mouse Y axis."><input type="checkbox" defaultChecked={save.invertYLook} onChange={e => handleUpdate('career', 'invertYLook', e.target.checked)} /><span>Invert Y-Look</span></label>
-                  <label className="checkbox-setting" title="Shows tutorial popups during gameplay."><input type="checkbox" defaultChecked={save.showHints !== false} onChange={e => handleUpdate('career', 'showHints', e.target.checked)} /><span>Show Gameplay Hints</span></label>
-                  <label className="checkbox-setting" title="Shows interactive icons at triggers."><input type="checkbox" defaultChecked={save.showHelpIcons !== false} onChange={e => handleUpdate('career', 'showHelpIcons', e.target.checked)} /><span>Show Help Icons</span></label>
-                </div>
-              </div>
-
               <div className="settings-panel">
                 <h3 className="section-title"><Gamepad2 size={16} /> Input Controls</h3>
                 <div className="settings-grid">
