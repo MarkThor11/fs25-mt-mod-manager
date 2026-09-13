@@ -190,27 +190,14 @@ function createWindow() {
       sandbox: true,
     },
     icon: path.join(__dirname, '../../assets/icon.png'),
-    show: false,
+    show: true,
   });
 
-  const showFallbackTimeout = setTimeout(() => {
-    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
-      const appFullscreen = cache.getSetting('appFullscreen') !== 'false';
-      if (appFullscreen) {
-        mainWindow.maximize();
-      }
-      mainWindow.show();
-    }
-  }, 3000);
-
-  mainWindow.once('ready-to-show', () => {
-    clearTimeout(showFallbackTimeout);
-    const appFullscreen = cache.getSetting('appFullscreen') !== 'false';
-    if (appFullscreen) {
-      mainWindow.maximize();
-    }
-    mainWindow.show();
-  });
+  const appFullscreen = cache.getSetting('appFullscreen') !== 'false';
+  if (appFullscreen) {
+    mainWindow.maximize();
+  }
+  mainWindow.show();
 
   let logBuffer = [];
   let isWritingLog = false;
