@@ -16,6 +16,14 @@ const { initAppUpdater } = require('./services/appUpdater');
 const CATEGORIES = require('./resources/data/categories');
 const isDev = !app.isPackaged;
 
+function debugLog(msg) {
+  try {
+    const userDataPath = (app && app.getPath) ? app.getPath('userData') : path.join(process.env.APPDATA, 'fs25-mt-mod-manager');
+    const logPath = path.join(userDataPath, 'detection_log.txt');
+    fs.appendFile(logPath, `[${new Date().toISOString()}] [MAIN] ${msg}\n`, 'utf8', () => {});
+  } catch (e) {}
+}
+
 // Increase V8 JavaScript Heap allocation limit to 8GB to handle scanning thousands of large map ZIPs
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192');
 
@@ -182,6 +190,26 @@ function createWindow() {
       sandbox: true,
     },
     icon: path.join(__dirname, '../../assets/icon.png'),
+    show: false,
+  });
+
+  const showFallbackTimeout = setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      const appFullscreen = cache.getSetting('appFullscreen') !== 'false';
+      if (appFullscreen) {
+        mainWindow.maximize();
+      }
+      mainWindow.show();
+    }
+  }, 3000);
+
+  mainWindow.once('ready-to-show', () => {
+    clearTimeout(showFallbackTimeout);
+    const appFullscreen = cache.getSetting('appFullscreen') !== 'false';
+    if (appFullscreen) {
+      mainWindow.maximize();
+    }
+    mainWindow.show();
   });
 
   let logBuffer = [];
@@ -221,11 +249,6 @@ function createWindow() {
       flushLogBuffer();
     }
   });
-  
-  const appFullscreen = cache.getSetting('appFullscreen') !== 'false';
-  if (appFullscreen) {
-    mainWindow.maximize();
-  }
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
