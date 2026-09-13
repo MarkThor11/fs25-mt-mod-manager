@@ -575,6 +575,18 @@ export default function ModHubPage() {
               </div>
             )}
 
+                        {/* Crossplay Toggle Button */}
+            <div className="btn-group">
+              <button
+                className={`btn ${activeFilters.platforms?.includes('crossplay') ? 'btn--primary' : 'btn--secondary'} btn--sm`}
+                onClick={() => setFilters({ platforms: activeFilters.platforms?.includes('crossplay') ? [] : ['crossplay'] })}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                title={activeFilters.platforms?.includes('crossplay') ? "Show All Mods" : "Show Crossplay Only"}
+              >
+                <Milestone size={14} />
+                Crossplay
+              </button>
+            </div>
             {/* Hide Installed Button */}
             <div className="btn-group">
               <button
@@ -897,27 +909,6 @@ export default function ModHubPage() {
                                     left: `calc(7px + (${activeFilters.capRange[0] / 10000000}) * (100% - 14px))`, right: `calc(100% - (7px + (${activeFilters.capRange[1] / 10000000}) * (100% - 14px)))` }} />
                       <input type="range" className="range-slider" min="0" max="10000000" step="10000" value={activeFilters.capRange[0]} onChange={(e) => setFilters({ capRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.capRange[1])] })} />
                       <input type="range" className="range-slider" min="0" max="10000000" step="10000" value={activeFilters.capRange[1]} onChange={(e) => setFilters({ capRange: [Math.min(parseInt(e.target.value), activeFilters.capRange[0]), parseInt(e.target.value)] })} />
-                    </div>
-                  </div>
-
-                  <div className="filter-panel__section" style={{ borderTop: '1px solid var(--border-light)', paddingTop: 'var(--sp-4)', marginTop: 'var(--sp-4)' }}>
-                    <div className="filter-panel__section-header">
-                      <Milestone size={16} />
-                      <span>Platform Support</span>
-                    </div>
-                    <div className="platform-filters" style={{ display: 'flex', gap: 'var(--sp-2)', marginTop: 'var(--sp-2)' }}>
-                      
-                      <button 
-                        className={`btn btn--sm ${activeFilters.platforms?.includes('pc') ? 'btn--primary' : 'btn--secondary'}`}
-                        onClick={() => setFilters({ platforms: activeFilters.platforms?.includes('pc') ? [] : ['pc'] })}
-                      >
-                      </button>
-                      <button 
-                        className={`btn btn--sm ${activeFilters.platforms?.includes('crossplay') ? 'btn--primary' : 'btn--secondary'}`}
-                        onClick={() => setFilters({ platforms: activeFilters.platforms?.includes('crossplay') ? [] : ['crossplay'] })}
-                      >
-                        Crossplay
-                      </button>
                     </div>
                   </div>
 
