@@ -497,7 +497,7 @@ export default function KeybindsPage() {
           title="Show only actions with no key assigned"
         >
           <AlertTriangle size={13} />
-          Unassigned Only
+          Show Unassigned
         </button>
 
         <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
@@ -846,6 +846,41 @@ export default function KeybindsPage() {
 
         const suggestions = isKB ? KB_SUGGESTIONS : GP_SUGGESTIONS;
 
+        // Build map: rawInput → list of action titles that already use it (for this device)
+        const usedInputMap = new Map(); // raw → [actionTitle, ...]
+        actions.forEach(act => {
+          act.bindings
+            .filter(b => b.device === captureModal.device && b.input && b.input.trim())
+            // exclude the binding being replaced
+            .filter(b => !(act.action === captureModal.action && b.input === captureModal.oldInput))
+            .forEach(b => {
+              const title = act.action
+                .toLowerCase().split('_')
+                .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+              if (!usedInputMap.has(b.input)) usedInputMap.set(b.input, []);
+              usedInputMap.get(b.input).push(title);
+            });
+        });
+
+        // Well-known system / external app keys (keyboard only) that are commonly reserved
+        // These are known to conflict with Windows, Nvidia overlay, Steam, etc.
+        const SYSTEM_RESERVED = new Set([
+          // Windows system
+          'KEY_escape', 'KEY_tab', 'KEY_backspace',
+          'KEY_lwin', 'KEY_rwin',
+          // Windows + common apps often grab F-keys in combos, but standalone
+          // F-keys sometimes grabbed by OEM software / Fn layer:
+          'KEY_f1', // help in many apps
+          // Print Screen / Scroll Lock / Pause often grabbed by OS
+          // Nvidia GeForce Overlay defaults: Alt+Z, Alt+F1–F4, Ctrl+Shift+F5
+          // Since we show single keys, flag the ones Nvidia grabs solo:
+          // (None solo — Nvidia uses combos, so no single-key conflicts to flag here)
+          // Common Steam overlay: Shift+Tab — again a combo
+          // Windows snipping / clipboard shortcuts use Win+key combos
+          // Flag only things that truly cannot be used alone safely:
+          'KEY_return', // Enter is grabbed by UI focus systems
+        ]);
+
         return (
           <div 
             className="modal-overlay" 
@@ -934,8 +969,21 @@ export default function KeybindsPage() {
 
               {/* Suggested Keys Panel */}
               <div style={{ width: '100%', textAlign: 'left' }}>
-                <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', letterSpacing: '0.05em', marginBottom: 10 }}>
-                  Suggested Keys — click to select
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>
+                    Suggested Keys — click to select
+                  </div>
+                  {/* Legend */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '10px', color: 'var(--text-muted)' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--danger, #ef4444)', display: 'inline-block' }} />
+                      Already in use
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '10px', color: 'var(--text-muted)' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warning, #f59e0b)', display: 'inline-block' }} />
+                      May conflict with system
+                    </span>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {suggestions.map(({ group, keys }) => (
@@ -946,27 +994,70 @@ export default function KeybindsPage() {
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                         {keys.map(({ raw, label }) => {
                           const isSelected = detectedInput?.rawInput === raw;
+                          const usedBy = usedInputMap.get(raw); // array of action names, or undefined
+                          const isUsed = !!usedBy;
+                          const isReserved = isKB && SYSTEM_RESERVED.has(raw);
+
+                          // Priority: selected > in-use > system-reserved > default
+                          let bg, border, color, opacity;
+                          if (isSelected) {
+                            bg = 'var(--accent)'; border = '1px solid var(--accent)';
+                            color = 'var(--bg-primary)'; opacity = 1;
+                          } else if (isUsed) {
+                            bg = 'rgba(239, 68, 68, 0.1)'; border = '1px solid rgba(239, 68, 68, 0.5)';
+                            color = 'var(--danger, #ef4444)'; opacity = 1;
+                          } else if (isReserved) {
+                            bg = 'rgba(245, 158, 11, 0.1)'; border = '1px solid rgba(245, 158, 11, 0.4)';
+                            color = 'var(--warning, #f59e0b)'; opacity = 1;
+                          } else {
+                            bg = 'var(--bg-tertiary)'; border = '1px solid var(--border)';
+                            color = 'var(--text-secondary)'; opacity = 1;
+                          }
+
+                          const tooltip = isSelected
+                            ? raw
+                            : isUsed
+                              ? `In use by: ${usedBy.join(', ')}`
+                              : isReserved
+                                ? `May conflict with Windows or system apps`
+                                : raw;
+
                           return (
                             <button
                               key={raw}
                               onClick={() => setDetectedInput({ rawInput: raw, display: label })}
                               style={{
+                                position: 'relative',
                                 padding: '5px 10px',
                                 borderRadius: 6,
-                                border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
-                                background: isSelected ? 'var(--accent)' : 'var(--bg-tertiary)',
-                                color: isSelected ? 'var(--bg-primary)' : 'var(--text-secondary)',
+                                border,
+                                background: bg,
+                                color,
                                 fontSize: '12px',
                                 fontWeight: isSelected ? 700 : 500,
                                 fontFamily: 'var(--font-mono, monospace)',
                                 cursor: 'pointer',
                                 transition: 'all 0.12s ease',
                                 minWidth: 36,
-                                textAlign: 'center'
+                                textAlign: 'center',
+                                opacity
                               }}
-                              title={raw}
+                              title={tooltip}
                             >
                               {label}
+                              {/* Small status dot for used/reserved (not when selected) */}
+                              {!isSelected && (isUsed || isReserved) && (
+                                <span style={{
+                                  position: 'absolute',
+                                  top: -3,
+                                  right: -3,
+                                  width: 7,
+                                  height: 7,
+                                  borderRadius: '50%',
+                                  background: isUsed ? 'var(--danger, #ef4444)' : 'var(--warning, #f59e0b)',
+                                  border: '1px solid var(--bg-card)'
+                                }} />
+                              )}
                             </button>
                           );
                         })}
