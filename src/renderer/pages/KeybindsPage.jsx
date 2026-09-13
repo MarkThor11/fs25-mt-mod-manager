@@ -248,7 +248,7 @@ export default function KeybindsPage() {
                 {conflicts.length} Keybinding Conflict{conflicts.length > 1 ? 's' : ''} Detected
               </div>
               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-secondary)' }}>
-                Multiple in-game actions share the exact same key or button on the same device.
+                Multiple actions in the same player state share the exact same key without a modifier.
               </div>
             </div>
           </div>
@@ -392,19 +392,34 @@ export default function KeybindsPage() {
                   <span style={{ fontWeight: 700, fontSize: 'var(--fs-sm)', color: 'var(--text-primary)', wordBreak: 'break-word' }}>
                     {act.action.replace(/_/g, ' ')}
                   </span>
-                  <span style={{
-                    fontSize: '9px',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    padding: '2px 8px',
-                    borderRadius: 4,
-                    background: 'rgba(255,255,255,0.05)',
-                    color: 'var(--text-tertiary)',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {act.category}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {act.context && (
+                      <span style={{
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                        background: 'rgba(59, 130, 246, 0.1)',
+                        color: 'var(--accent, #60a5fa)',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {act.context}
+                      </span>
+                    )}
+                    <span style={{
+                      fontSize: '9px',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                      background: 'rgba(255,255,255,0.05)',
+                      color: 'var(--text-tertiary)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {act.category}
+                    </span>
+                  </div>
                 </div>
                 <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 2, fontFamily: 'monospace' }}>
                   {act.action}

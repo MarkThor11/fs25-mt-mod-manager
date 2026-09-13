@@ -95,12 +95,74 @@ async function getInputBindings() {
             }))
         ];
 
+        // Context mapping for action states
+        function getActionContext(name) {
+            const a = (name || '').toUpperCase();
+            if (a.startsWith('MENU') || a.includes('MAP_') || a.includes('INGAMEMAP') || a.includes('HELP') || a.includes('STORE') || a.includes('CONSTRUCTION') || a.includes('CHARACTER_CREATION') || a.includes('MESSAGE_BOX') || a.includes('CONVERSATION') || a.includes('SCREENSHOT') || a.includes('CHAT') || a.includes('PAUSE') || a.includes('TIMESCALE') || a.includes('PICK_COLOR') || a.includes('NOTE')) {
+                return 'Menu & Interface';
+            }
+            if (a.includes('PLAYER') || a.includes('HANDTOOL') || a.includes('INTERACT') || a.includes('THROW') || a.includes('CROUCH') || a.includes('JUMP') || a.includes('ANIMAL_PET') || a.includes('HANDS_LEVEL') || a.includes('SPRAYCAN') || a.includes('ACTIVATE_OBJECT')) {
+                return 'On Foot (Character)';
+            }
+            if (a.includes('WINCH') || a.includes('YARDER')) {
+                return 'Forestry, Winch & Yarder';
+            }
+            if (a.startsWith('CRANE_') || a.startsWith('AXIS_CRANE') || a.startsWith('SH_')) {
+                return 'Crane Controls';
+            }
+            if (a.includes('FRONTLOADER')) {
+                return 'Front Loader Controls';
+            }
+            if (a.includes('WOOD_HARVESTER') || a.includes('TREE_AUTOMATIC')) {
+                return 'Wood Harvester & Forestry';
+            }
+            if (a.includes('BALE_') || a.includes('PALLET_FILLER') || a.includes('FOLDABLESTEPS')) {
+                return 'Specialized Implement Attachment';
+            }
+            if (a.includes('UNIVERSALAUTOLOAD')) {
+                return 'Universal Autoload (Mod)';
+            }
+            if (a.includes('DEBUG') || a.includes('CONSOLE') || a.includes('RELOAD_GAME')) {
+                return 'Developer / Debug Tools';
+            }
+            return 'Vehicle Driving & Base Implements';
+        }
+
+        // Intentionally shared bindings designed by GIANTS or mod contexts that are safe
+        const safeSharedActions = new Set([
+            'ACTIVATE_HANDTOOL', 'ACTIVATE_HANDTOOL_SECONDARY', 'INTERACT', 'THROW_OBJECT', 'ACTIVATE_OBJECT', 'ANIMAL_PET',
+            'TOGGLE_LIGHTS_FPS', 'TOGGLE_LIGHTS', 'SKIP_MESSAGE_BOX', 'INTRODUCTION_HELP_SKIP', 'CONVERSATION_SKIP',
+            'MENU_ACCEPT', 'MENU_ACTIVATE', 'MENU_BACK', 'MENU_CANCEL', 'INGAMEMAP_ACCEPT', 'SWITCH_SEAT', 'BALE_COUNTER_RESET',
+            'MENU_EXTRA_1', 'MENU_EXTRA_2', 'MENU_LIST_PAGE_START', 'MENU_LIST_PAGE_END', 'MENU_MAP_ACTION_1',
+            'AXIS_CONSTRUCTION_CAMERA_ZOOM', 'AXIS_CONSTRUCTION_CAMERA_ROTATE', 'AXIS_CONSTRUCTION_CAMERA_TILT',
+            'MENU_AXIS_UP_DOWN', 'AXIS_CONSTRUCTION_MENU_UP_DOWN', 'MENU_AXIS_LEFT_RIGHT', 'AXIS_CONSTRUCTION_MENU_LEFT_RIGHT',
+            'AXIS_MAP_ZOOM_IN', 'AXIS_MAP_ZOOM_OUT', 'AXIS_RUN', 'AXIS_CLUTCH_VEHICLE', 'AXIS_ACCELERATE_VEHICLE',
+            'AXIS_HYDRAULICATTACHER1', 'AXIS_HYDRAULICATTACHER2', 'AXIS_DOOR', 'AXIS_DOOR_2', 'AXIS_DOOR_3', 'AXIS_WHEEL_BASE',
+            'AXIS_LOOK_UPDOWN_DRAG', 'AXIS_LOOK_LEFTRIGHT_DRAG', 'AXIS_FRONTLOADER_ARM', 'AXIS_FRONTLOADER_ARM2',
+            'AXIS_FRONTLOADER_TOOL', 'AXIS_FRONTLOADER_TOOL2', 'AXIS_FRONTLOADER_TOOL3', 'AXIS_FRONTLOADER_TOOL4', 'AXIS_FRONTLOADER_TOOL5',
+            'AXIS_CRANE_ARM', 'AXIS_CRANE_ARM2', 'AXIS_CRANE_ARM3', 'AXIS_CRANE_ARM4', 'AXIS_CRANE_TOOL', 'AXIS_CRANE_TOOL2',
+            'AXIS_CRANE_TOOL3', 'AXIS_CRANE_SUPPORT', 'AXIS_CUTTER_REEL', 'AXIS_CUTTER_REEL2', 'AXIS_SPRAYER_ARM',
+            'AXIS_DRAWBAR', 'AXIS_DRAWBAR2', 'SH_MOVE_CRANE_TOOL', 'SH_ROTATE_CRANE_TOOL', 'SH_OPEN_CRANE_TOOL',
+            'AXIS_PIPE', 'AXIS_PIPE2', 'MOUSE_ALT_COMMAND3_BUTTON',
+            'CRABSTEERING_ALLWHEEL', 'WORKMODE_MIDDLE', 'CRABSTEERING_CRABLEFT', 'WORKMODE_LEFT', 'CRABSTEERING_CRABRIGHT', 'WORKMODE_RIGHT',
+            'YARDER_CONTROL_LEFTRIGHT', 'WINCH_CONTROL', 'YARDER_FOLLOW_ME', 'WINCH_ATTACH_MODE', 'YARDER_FOLLOW_PICKUP', 'WINCH_DETACH',
+            'YARDER_ATTACH', 'WINCH_ATTACH',
+            'CAMERA_ZOOM_IN_OUT', 'AXIS_MTO_SCROLL', 'MENU', 'HONK', 'TOGGLE_LIGHTS_EXTERNAL',
+            'TOGGLE_TIPSTATE', 'UNLOAD', 'TOGGLE_BEACON_LIGHTS', 'EDC_SUPER_STRENGTH',
+            'TOGGLE_CRABSTEERING', 'TOGGLE_WORKMODE', 'VEHICLE_ACTION_CONTROL', 'IMPLEMENT_EXTRA',
+            'IMPLEMENT_EXTRA3', 'TOGGLE_SEEDS', 'IMPLEMENT_EXTRA4', 'LIFTABLE_AXLE',
+            'DOUBLED_SPRAY_AMOUNT', 'TOGGLE_CHOPPER', 'TOGGLE_SEEDS_BACK', 'TOGGLE_CUT_LENGTH_BACK',
+            'TOGGLE_PIPE', 'MODULE_ATTACH_ASSIST', 'TOGGLE_COVER',
+            'CONSTRUCTION_ACTION_PRIMARY'
+        ]);
+
         const actions = [];
         const bindingsMap = {};
 
         for (const act of rawActions) {
             const actionName = act['@_action'] || '';
-            const rawBindings = act.binding
+            const actionContext = getActionContext(actionName);
+            const rawBindings = act.binding 
                 ? (Array.isArray(act.binding) ? act.binding : [act.binding])
                 : [];
 
@@ -111,9 +173,9 @@ async function getInputBindings() {
                 const axisComponent = b['@_axisComponent'] || '+';
 
                 if (input && input.trim()) {
-                    const conflictKey = `${device}::${input.trim()}`;
+                    const conflictKey = `${actionContext}::${device}::${input.trim()}`;
                     if (!bindingsMap[conflictKey]) bindingsMap[conflictKey] = [];
-                    bindingsMap[conflictKey].push({ action: actionName, input, device });
+                    bindingsMap[conflictKey].push({ action: actionName, input, device, context: actionContext });
                 }
 
                 return {
@@ -128,6 +190,7 @@ async function getInputBindings() {
             actions.push({
                 action: actionName,
                 category: categorizeAction(actionName),
+                context: actionContext,
                 bindings
             });
         }
@@ -135,13 +198,18 @@ async function getInputBindings() {
         const conflicts = [];
         for (const [key, list] of Object.entries(bindingsMap)) {
             if (list.length > 1) {
-                const [device, input] = key.split('::');
-                conflicts.push({
-                    device,
-                    input,
-                    formattedInput: formatKeyName(input),
-                    actions: list.map(item => item.action)
-                });
+                const [context, device, input] = key.split('::');
+                // Only consider it a genuine clash if not all participating actions are known safe design shares
+                const allSafe = list.every(item => safeSharedActions.has(item.action));
+                if (!allSafe) {
+                    conflicts.push({
+                        context,
+                        device,
+                        input,
+                        formattedInput: formatKeyName(input),
+                        actions: list.map(item => item.action)
+                    });
+                }
             }
         }
 
