@@ -1,21 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   SlidersHorizontal, Search, RefreshCw, AlertTriangle, ShieldCheck, Download,
-  Upload, Trash2, Edit2, Check, X, RotateCcw, Monitor, Gamepad2,
-  FolderOpen, Plus, Sliders, ChevronDown, ChevronRight, Layers, Tag, Disc, Radio
+  Upload, Trash2, Check, X, RotateCcw, Monitor, Gamepad2,
+  FolderOpen, Plus, Sliders, ChevronDown, ChevronRight, Layers, Tag
 } from 'lucide-react';
 import { useKeybindStore } from '../store/useKeybindStore';
 import { useToastStore } from '../store/useToastStore';
-
-const CATEGORIES = [
-  'ALL',
-  'Vehicle Driving',
-  'Implements & Tools',
-  'Character & Hand Tools',
-  'Camera & View',
-  'Interface & Menus',
-  'General & Other'
-];
 
 export default function KeybindsPage() {
   const {
@@ -25,7 +15,6 @@ export default function KeybindsPage() {
     backups,
     isLoading,
     error,
-    selectedDevice,
     selectedCategory,
     searchQuery,
     fetchKeybinds,
@@ -35,14 +24,12 @@ export default function KeybindsPage() {
     restoreBackup,
     deleteBackup,
     resetToDefaults,
-    setSelectedDevice,
     setSelectedCategory,
     setSearchQuery
   } = useKeybindStore();
 
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [newBackupName, setNewBackupName] = useState('');
-  const [editingBinding, setEditingBinding] = useState(null); // { action, device, oldInput, value }
   const [showConflictsOnly, setShowConflictsOnly] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [captureModal, setCaptureModal] = useState(null); // { action, device, oldInput }
@@ -224,17 +211,6 @@ export default function KeybindsPage() {
     }
   };
 
-  const handleSaveBinding = async () => {
-    if (!editingBinding) return;
-    const { action, device, oldInput, value } = editingBinding;
-    const res = await updateBinding(action, device, oldInput, value);
-    if (res.success) {
-      useToastStore.getState().success(`Updated binding for ${action}!`);
-      setEditingBinding(null);
-    } else {
-      useToastStore.getState().error(`Failed to update binding: ${res.error}`);
-    }
-  };
 
   const handleClearBinding = async (action, device, oldInput) => {
     if (!confirm(`Clear this binding for ${action}?`)) return;
@@ -501,8 +477,8 @@ export default function KeybindsPage() {
         </div>
 
         {/* State Filter Tabs */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', paddingTop: 6, borderTop: '1px solid var(--border-subtle)' }}>
-          <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginRight: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 8, borderTop: '1px solid var(--border-subtle)' }}>
+          <span style={{ fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', letterSpacing: '0.04em', marginRight: 4 }}>
             Filter State:
           </span>
           {availableCategories.map(cat => (
@@ -510,8 +486,8 @@ export default function KeybindsPage() {
               key={cat}
               onClick={() => setSelectedCategory(cat)}
               style={{
-                fontSize: '11px',
-                padding: '3px 10px',
+                fontSize: '13px',
+                padding: '6px 14px',
                 borderRadius: '100px',
                 border: selectedCategory === cat ? '1px solid var(--accent)' : '1px solid var(--border)',
                 background: selectedCategory === cat ? 'var(--accent-dim)' : 'transparent',
@@ -595,29 +571,34 @@ export default function KeybindsPage() {
                     }}
                   >
                     {/* Left Column: Action Details */}
-                    <td style={{ padding: '12px 18px', verticalAlign: 'middle' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 700, fontSize: 'var(--fs-sm)', color: 'var(--text-primary)' }}>
-                            {act.action.replace(/_/g, ' ')}
+                    <td style={{ padding: '14px 18px', verticalAlign: 'middle' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <span style={{ 
+                          fontWeight: 700, 
+                          fontSize: 'var(--fs-base, 15px)', 
+                          color: 'var(--text-primary)',
+                          letterSpacing: '0.01em'
+                        }}>
+                          {act.action
+                            .toLowerCase()
+                            .split('_')
+                            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                            .join(' ')
+                          }
+                        </span>
+                        {act.context && (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            background: 'rgba(59, 130, 246, 0.12)',
+                            color: 'var(--accent, #60a5fa)',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {act.context}
                           </span>
-                          {act.context && (
-                            <span style={{
-                              fontSize: '9px',
-                              fontWeight: 700,
-                              padding: '2px 6px',
-                              borderRadius: 4,
-                              background: 'rgba(59, 130, 246, 0.1)',
-                              color: 'var(--accent, #60a5fa)',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              {act.context}
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                          {act.action}
-                        </div>
+                        )}
                       </div>
                     </td>
 
@@ -637,65 +618,23 @@ export default function KeybindsPage() {
                           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                             {devBindings.length === 0 ? (
                               <button
-                                className="btn btn--ghost btn--xs"
+                                className="btn btn--ghost btn--sm"
                                 style={{ 
-                                  fontSize: '11px', 
+                                  fontSize: '12px', 
                                   color: 'var(--text-muted)', 
-                                  fontStyle: 'italic',
                                   border: '1px dashed var(--border)',
-                                  padding: '4px 10px',
-                                  borderRadius: 4
+                                  padding: '5px 14px',
+                                  borderRadius: 6,
+                                  cursor: 'pointer'
                                 }}
                                 onClick={() => setCaptureModal({ action: act.action, device: dev.id, oldInput: '' })}
+                                title="Click to assign a key or controller button"
                               >
                                 + Assign
                               </button>
                             ) : (
                               devBindings.map((b, bIdx) => {
                                 const isKeyConflict = conflicts.some(c => c.device === b.device && c.input === b.input);
-                                const isEditing = editingBinding?.action === act.action && editingBinding?.device === b.device && editingBinding?.oldInput === b.input;
-
-                                if (isEditing) {
-                                  return (
-                                    <div 
-                                      key={`${b.device}_${b.input}_${bIdx}`} 
-                                      style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-surface)', padding: '3px 6px', borderRadius: 6, border: '1px solid var(--accent)' }}
-                                    >
-                                      <input 
-                                        type="text" 
-                                        value={editingBinding.value}
-                                        onChange={e => setEditingBinding(prev => ({ ...prev, value: e.target.value }))}
-                                        placeholder="KEY_e, BUTTON_1..."
-                                        style={{
-                                          width: 140,
-                                          background: 'transparent',
-                                          border: 'none',
-                                          fontSize: '12px',
-                                          color: 'var(--text-primary)',
-                                          outline: 'none',
-                                          fontFamily: 'monospace'
-                                        }}
-                                        autoFocus
-                                      />
-                                      <button 
-                                        className="btn btn--primary btn--xs" 
-                                        onClick={handleSaveBinding}
-                                        title="Save binding"
-                                        style={{ padding: '2px 5px' }}
-                                      >
-                                        <Check size={12} />
-                                      </button>
-                                      <button 
-                                        className="btn btn--secondary btn--xs" 
-                                        onClick={() => setEditingBinding(null)}
-                                        title="Cancel"
-                                        style={{ padding: '2px 5px' }}
-                                      >
-                                        <X size={12} />
-                                      </button>
-                                    </div>
-                                  );
-                                }
 
                                 return (
                                   <div
@@ -703,55 +642,44 @@ export default function KeybindsPage() {
                                     style={{
                                       display: 'inline-flex',
                                       alignItems: 'center',
-                                      gap: 6,
+                                      gap: 8,
                                       background: isKeyConflict ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-tertiary)',
                                       border: isKeyConflict ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--border)',
                                       borderRadius: 'var(--radius-sm)',
-                                      padding: '4px 10px',
-                                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                      padding: '5px 12px',
+                                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                      transition: 'all 0.15s ease'
                                     }}
                                   >
-                                    <span 
+                                    <button
+                                      type="button"
+                                      onClick={() => setCaptureModal({ action: act.action, device: b.device, oldInput: b.input })}
                                       style={{
-                                        fontSize: '12px',
+                                        background: 'none',
+                                        border: 'none',
+                                        padding: 0,
+                                        margin: 0,
+                                        cursor: 'pointer',
+                                        fontSize: '13px',
                                         fontWeight: 700,
                                         color: isKeyConflict ? 'var(--danger)' : 'var(--accent)',
                                         fontFamily: 'var(--font-mono, monospace)',
                                         letterSpacing: '0.02em',
-                                        cursor: 'pointer'
+                                        outline: 'none'
                                       }}
-                                      onClick={() => setCaptureModal({ action: act.action, device: b.device, oldInput: b.input })}
                                       title="Click to re-bind by pressing any key or controller button"
                                     >
                                       {b.formattedInput || b.input}
-                                    </span>
+                                    </button>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 2 }}>
-                                      <button
-                                        className="btn btn--ghost btn--xs btn--icon"
-                                        onClick={() => setCaptureModal({ action: act.action, device: b.device, oldInput: b.input })}
-                                        title="Press Key/Button to Rebind"
-                                        style={{ padding: '2px', height: 'auto', width: 'auto', opacity: 0.8 }}
-                                      >
-                                        <Disc size={11} className="text-accent" />
-                                      </button>
-                                      <button
-                                        className="btn btn--ghost btn--xs btn--icon"
-                                        onClick={() => setEditingBinding({ action: act.action, device: b.device, oldInput: b.input, value: b.input })}
-                                        title="Type raw XML name manually"
-                                        style={{ padding: '2px', height: 'auto', width: 'auto', opacity: 0.5 }}
-                                      >
-                                        <Edit2 size={11} />
-                                      </button>
-                                      <button
-                                        className="btn btn--ghost btn--xs btn--icon"
-                                        onClick={() => handleClearBinding(act.action, b.device, b.input)}
-                                        title="Unassign"
-                                        style={{ padding: '2px', height: 'auto', width: 'auto', opacity: 0.5, color: 'var(--danger)' }}
-                                      >
-                                        <X size={11} />
-                                      </button>
-                                    </div>
+                                    <button
+                                      className="btn btn--ghost btn--xs btn--icon"
+                                      onClick={() => handleClearBinding(act.action, b.device, b.input)}
+                                      title="Unassign key"
+                                      style={{ padding: '2px', height: 'auto', width: 'auto', opacity: 0.5, color: 'var(--danger)' }}
+                                    >
+                                      <X size={12} />
+                                    </button>
                                   </div>
                                 );
                               })
