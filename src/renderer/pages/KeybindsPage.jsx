@@ -269,36 +269,24 @@ export default function KeybindsPage() {
     }
   };
 
-  // Extract distinct categories from actual actions
-  const availableCategories = useMemo(() => {
-    const set = new Set();
-    actions.forEach(a => {
-      if (a.context) set.add(a.context);
-      else if (a.category) set.add(a.category);
-    });
-    return ['ALL', ...Array.from(set)];
-  }, [actions]);
+  // State: which sections are collapsed
+  const [collapsedSections, setCollapsedSections] = useState({});
+  const toggleSection = (key) => setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
 
-  // Filter actions based on category, search, and conflicts
+  // Filter actions based on search and conflicts only (no category filter — we section by category)
   const filteredActions = useMemo(() => {
     const q = (searchQuery || '').toLowerCase().trim();
     const conflictActionNames = new Set(conflicts.flatMap(c => c.actions));
 
     return actions.filter(act => {
-      if (showConflictsOnly && !conflictActionNames.has(act.action)) {
-        return false;
-      }
-
-      if (selectedCategory !== 'ALL' && act.context !== selectedCategory && act.category !== selectedCategory) {
-        return false;
-      }
+      if (showConflictsOnly && !conflictActionNames.has(act.action)) return false;
 
       if (q) {
         const matchesAction = act.action.toLowerCase().includes(q);
         const matchesCategory = (act.category || '').toLowerCase().includes(q);
         const matchesContext = (act.context || '').toLowerCase().includes(q);
-        const matchesInput = act.bindings.some(b => 
-          (b.input && b.input.toLowerCase().includes(q)) || 
+        const matchesInput = act.bindings.some(b =>
+          (b.input && b.input.toLowerCase().includes(q)) ||
           (b.formattedInput && b.formattedInput.toLowerCase().includes(q))
         );
         if (!matchesAction && !matchesCategory && !matchesContext && !matchesInput) return false;
@@ -306,7 +294,18 @@ export default function KeybindsPage() {
 
       return true;
     });
-  }, [actions, selectedCategory, searchQuery, showConflictsOnly, conflicts]);
+  }, [actions, searchQuery, showConflictsOnly, conflicts]);
+
+  // Group filtered actions by their context/category label
+  const groupedActions = useMemo(() => {
+    const groups = new Map();
+    filteredActions.forEach(act => {
+      const key = act.context || act.category || 'General';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(act);
+    });
+    return Array.from(groups.entries()); // [ [sectionName, actionsArray], ... ]
+  }, [filteredActions]);
 
   // Devices columns: Ensure Keyboard/Mouse is first, followed by detected gamepads/controllers
   const deviceColumns = useMemo(() => {
@@ -439,267 +438,281 @@ export default function KeybindsPage() {
         padding: '14px 18px', 
         marginBottom: 'var(--sp-4)',
         display: 'flex',
-        flexDirection: 'column',
-        gap: 12
+        alignItems: 'center',
+        gap: 12,
+        flexWrap: 'wrap'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          {/* Search Input */}
-          <div style={{ position: 'relative', flex: '1 1 280px', minWidth: 240 }}>
-            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input 
-              type="text" 
-              placeholder="Search action or key (e.g. Enter, Lights, Space, E)..." 
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '8px 12px 8px 36px',
-                color: 'var(--text-primary)',
-                fontSize: 'var(--fs-sm)',
-                outline: 'none'
-              }}
+        {/* Search Input */}
+        <div style={{ position: 'relative', flex: '1 1 280px', minWidth: 240 }}>
+          <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input 
+            type="text" 
+            placeholder="Search action or key (e.g. Enter, Lights, Space, E)..." 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '8px 12px 8px 36px',
+              color: 'var(--text-primary)',
+              fontSize: 'var(--fs-sm)',
+              outline: 'none'
+            }}
+          />
+          {searchQuery && (
+            <X 
+              size={14} 
+              onClick={() => setSearchQuery('')}
+              style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: 'var(--text-muted)' }} 
             />
-            {searchQuery && (
-              <X 
-                size={14} 
-                onClick={() => setSearchQuery('')}
-                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: 'var(--text-muted)' }} 
-              />
-            )}
-          </div>
-
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)' }}>
-            Showing <strong>{filteredActions.length}</strong> actions across <strong>{deviceColumns.length}</strong> input devices
-          </div>
+          )}
         </div>
 
-        {/* State Filter Tabs */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 8, borderTop: '1px solid var(--border-subtle)' }}>
-          <span style={{ fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)', letterSpacing: '0.04em', marginRight: 4 }}>
-            Filter State:
-          </span>
-          {availableCategories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              style={{
-                fontSize: '13px',
-                padding: '6px 14px',
-                borderRadius: '100px',
-                border: selectedCategory === cat ? '1px solid var(--accent)' : '1px solid var(--border)',
-                background: selectedCategory === cat ? 'var(--accent-dim)' : 'transparent',
-                color: selectedCategory === cat ? 'var(--accent)' : 'var(--text-secondary)',
-                fontWeight: selectedCategory === cat ? 700 : 500,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              {cat}
-            </button>
-          ))}
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
+          Showing <strong>{filteredActions.length}</strong> actions across <strong>{deviceColumns.length}</strong> input device{deviceColumns.length !== 1 ? 's' : ''}
         </div>
       </div>
 
-      {/* In-Game Style Keybindings Table */}
-      <div style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius-md)',
-        overflow: 'hidden',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
-      }}>
-        <div style={{ overflowX: 'auto', width: '100%' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border)' }}>
-                {/* Left Column: Action Name & Context */}
-                <th style={{ 
-                  padding: '14px 18px', 
-                  fontSize: 'var(--fs-xs)', 
-                  fontWeight: 800, 
-                  textTransform: 'uppercase', 
-                  letterSpacing: '0.05em', 
-                  color: 'var(--text-secondary)',
-                  width: '32%',
-                  minWidth: 260
-                }}>
-                  Action / Function
-                </th>
-
-                {/* Columns for Each Device (Keyboard/Mouse, Gamepad/Wheel) */}
-                {deviceColumns.map(dev => (
-                  <th key={dev.id} style={{ 
-                    padding: '14px 18px', 
-                    fontSize: 'var(--fs-xs)', 
-                    fontWeight: 800, 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.05em', 
-                    color: 'var(--text-secondary)',
-                    borderLeft: '1px solid var(--border)',
-                    minWidth: 280
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {dev.id === 'KB_MOUSE_DEFAULT' ? <Monitor size={15} className="text-accent" /> : <Gamepad2 size={15} className="text-accent" />}
-                      <span>{dev.name}</span>
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredActions.map((act, rIdx) => {
-                const isConflicted = conflicts.some(c => c.actions.includes(act.action));
-
-                return (
-                  <tr 
-                    key={act.action}
-                    style={{
-                      borderBottom: '1px solid var(--border-subtle)',
-                      background: isConflicted 
-                        ? 'rgba(239, 68, 68, 0.05)' 
-                        : (rIdx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.015)'),
-                      transition: 'background 0.15s ease'
-                    }}
-                    onMouseEnter={e => {
-                      if (!isConflicted) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-                    }}
-                    onMouseLeave={e => {
-                      if (!isConflicted) e.currentTarget.style.background = (rIdx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.015)');
-                    }}
-                  >
-                    {/* Left Column: Action Details */}
-                    <td style={{ padding: '14px 18px', verticalAlign: 'middle' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                        <span style={{ 
-                          fontWeight: 700, 
-                          fontSize: 'var(--fs-base, 15px)', 
-                          color: 'var(--text-primary)',
-                          letterSpacing: '0.01em'
-                        }}>
-                          {act.action
-                            .toLowerCase()
-                            .split('_')
-                            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-                            .join(' ')
-                          }
-                        </span>
-                        {act.context && (
-                          <span style={{
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            padding: '3px 8px',
-                            borderRadius: 6,
-                            background: 'rgba(59, 130, 246, 0.12)',
-                            color: 'var(--accent, #60a5fa)',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {act.context}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Columns for Each Device */}
-                    {deviceColumns.map(dev => {
-                      const devBindings = act.bindings.filter(b => b.device === dev.id);
-
-                      return (
-                        <td 
-                          key={dev.id} 
-                          style={{ 
-                            padding: '10px 18px', 
-                            verticalAlign: 'middle',
-                            borderLeft: '1px solid var(--border-subtle)'
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                            {devBindings.length === 0 ? (
-                              <button
-                                className="btn btn--ghost btn--sm"
-                                style={{ 
-                                  fontSize: '12px', 
-                                  color: 'var(--text-muted)', 
-                                  border: '1px dashed var(--border)',
-                                  padding: '5px 14px',
-                                  borderRadius: 6,
-                                  cursor: 'pointer'
-                                }}
-                                onClick={() => setCaptureModal({ action: act.action, device: dev.id, oldInput: '' })}
-                                title="Click to assign a key or controller button"
-                              >
-                                + Assign
-                              </button>
-                            ) : (
-                              devBindings.map((b, bIdx) => {
-                                const isKeyConflict = conflicts.some(c => c.device === b.device && c.input === b.input);
-
-                                return (
-                                  <div
-                                    key={`${b.device}_${b.input}_${bIdx}`}
-                                    style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: 8,
-                                      background: isKeyConflict ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-tertiary)',
-                                      border: isKeyConflict ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--border)',
-                                      borderRadius: 'var(--radius-sm)',
-                                      padding: '5px 12px',
-                                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                      transition: 'all 0.15s ease'
-                                    }}
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={() => setCaptureModal({ action: act.action, device: b.device, oldInput: b.input })}
-                                      style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        padding: 0,
-                                        margin: 0,
-                                        cursor: 'pointer',
-                                        fontSize: '13px',
-                                        fontWeight: 700,
-                                        color: isKeyConflict ? 'var(--danger)' : 'var(--accent)',
-                                        fontFamily: 'var(--font-mono, monospace)',
-                                        letterSpacing: '0.02em',
-                                        outline: 'none'
-                                      }}
-                                      title="Click to re-bind by pressing any key or controller button"
-                                    >
-                                      {b.formattedInput || b.input}
-                                    </button>
-
-                                    <button
-                                      className="btn btn--ghost btn--xs btn--icon"
-                                      onClick={() => handleClearBinding(act.action, b.device, b.input)}
-                                      title="Unassign key"
-                                      style={{ padding: '2px', height: 'auto', width: 'auto', opacity: 0.5, color: 'var(--danger)' }}
-                                    >
-                                      <X size={12} />
-                                    </button>
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {filteredActions.length === 0 && (
+      {/* Grouped / Sectioned Keybindings Tables */}
+      {groupedActions.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 'var(--sp-12)', color: 'var(--text-muted)' }}>
           <SlidersHorizontal size={36} style={{ opacity: 0.3, marginBottom: 8 }} />
           <div>No keybindings found matching your filters.</div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {groupedActions.map(([sectionName, sectionActions]) => {
+            const isCollapsed = !!collapsedSections[sectionName];
+            const sectionConflicts = sectionActions.filter(act =>
+              conflicts.some(c => c.actions.includes(act.action))
+            ).length;
+
+            return (
+              <div
+                key={sectionName}
+                style={{
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
+                }}
+              >
+                {/* Section Header (Collapsible) */}
+                <button
+                  onClick={() => toggleSection(sectionName)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '12px 18px',
+                    background: 'var(--bg-secondary)',
+                    border: 'none',
+                    borderBottom: isCollapsed ? 'none' : '2px solid var(--border)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    color: 'var(--text-primary)',
+                    transition: 'background 0.15s ease'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                >
+                  {isCollapsed
+                    ? <ChevronRight size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    : <ChevronDown size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                  }
+                  <span style={{ fontWeight: 800, fontSize: 'var(--fs-sm)', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', flex: 1 }}>
+                    {sectionName}
+                  </span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)' }}>
+                    {sectionActions.length} action{sectionActions.length !== 1 ? 's' : ''}
+                  </span>
+                  {sectionConflicts > 0 && (
+                    <span style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      fontSize: '11px', fontWeight: 700, color: 'var(--danger)',
+                      background: 'rgba(239,68,68,0.12)', borderRadius: 100,
+                      padding: '2px 10px'
+                    }}>
+                      <AlertTriangle size={11} /> {sectionConflicts} conflict{sectionConflicts !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </button>
+
+                {/* Section Table (hidden when collapsed) */}
+                {!isCollapsed && (
+                  <div style={{ overflowX: 'auto', width: '100%' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}>
+                          <th style={{ 
+                            padding: '10px 18px', 
+                            fontSize: 'var(--fs-xs)', 
+                            fontWeight: 800, 
+                            textTransform: 'uppercase', 
+                            letterSpacing: '0.05em', 
+                            color: 'var(--text-secondary)',
+                            width: '32%',
+                            minWidth: 260
+                          }}>
+                            Action / Function
+                          </th>
+                          {deviceColumns.map(dev => (
+                            <th key={dev.id} style={{ 
+                              padding: '10px 18px', 
+                              fontSize: 'var(--fs-xs)', 
+                              fontWeight: 800, 
+                              textTransform: 'uppercase', 
+                              letterSpacing: '0.05em', 
+                              color: 'var(--text-secondary)',
+                              borderLeft: '1px solid var(--border)',
+                              minWidth: 280
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                {dev.id === 'KB_MOUSE_DEFAULT' ? <Monitor size={15} className="text-accent" /> : <Gamepad2 size={15} className="text-accent" />}
+                                <span>{dev.name}</span>
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sectionActions.map((act, rIdx) => {
+                          const isConflicted = conflicts.some(c => c.actions.includes(act.action));
+
+                          return (
+                            <tr 
+                              key={act.action}
+                              style={{
+                                borderBottom: '1px solid var(--border-subtle)',
+                                background: isConflicted 
+                                  ? 'rgba(239, 68, 68, 0.05)' 
+                                  : (rIdx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.015)'),
+                                transition: 'background 0.15s ease'
+                              }}
+                              onMouseEnter={e => {
+                                if (!isConflicted) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                              }}
+                              onMouseLeave={e => {
+                                if (!isConflicted) e.currentTarget.style.background = (rIdx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.015)');
+                              }}
+                            >
+                              {/* Left Column: Action Name */}
+                              <td style={{ padding: '14px 18px', verticalAlign: 'middle' }}>
+                                <span style={{ 
+                                  fontWeight: 700, 
+                                  fontSize: 'var(--fs-base, 15px)', 
+                                  color: isConflicted ? 'var(--danger)' : 'var(--text-primary)',
+                                  letterSpacing: '0.01em'
+                                }}>
+                                  {act.action
+                                    .toLowerCase()
+                                    .split('_')
+                                    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                                    .join(' ')
+                                  }
+                                </span>
+                              </td>
+
+                              {/* Columns for Each Device */}
+                              {deviceColumns.map(dev => {
+                                const devBindings = act.bindings.filter(b => b.device === dev.id);
+
+                                return (
+                                  <td 
+                                    key={dev.id} 
+                                    style={{ 
+                                      padding: '10px 18px', 
+                                      verticalAlign: 'middle',
+                                      borderLeft: '1px solid var(--border-subtle)'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                                      {devBindings.length === 0 ? (
+                                        <button
+                                          className="btn btn--ghost btn--sm"
+                                          style={{ 
+                                            fontSize: '12px', 
+                                            color: 'var(--text-muted)', 
+                                            border: '1px dashed var(--border)',
+                                            padding: '5px 14px',
+                                            borderRadius: 6,
+                                            cursor: 'pointer'
+                                          }}
+                                          onClick={() => setCaptureModal({ action: act.action, device: dev.id, oldInput: '' })}
+                                          title="Click to assign a key or controller button"
+                                        >
+                                          + Assign
+                                        </button>
+                                      ) : (
+                                        devBindings.map((b, bIdx) => {
+                                          const isKeyConflict = conflicts.some(c => c.device === b.device && c.input === b.input);
+
+                                          return (
+                                            <div
+                                              key={`${b.device}_${b.input}_${bIdx}`}
+                                              style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: 8,
+                                                background: isKeyConflict ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-tertiary)',
+                                                border: isKeyConflict ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--border)',
+                                                borderRadius: 'var(--radius-sm)',
+                                                padding: '5px 12px',
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                                transition: 'all 0.15s ease'
+                                              }}
+                                            >
+                                              <button
+                                                type="button"
+                                                onClick={() => setCaptureModal({ action: act.action, device: b.device, oldInput: b.input })}
+                                                style={{
+                                                  background: 'none',
+                                                  border: 'none',
+                                                  padding: 0,
+                                                  margin: 0,
+                                                  cursor: 'pointer',
+                                                  fontSize: '13px',
+                                                  fontWeight: 700,
+                                                  color: isKeyConflict ? 'var(--danger)' : 'var(--accent)',
+                                                  fontFamily: 'var(--font-mono, monospace)',
+                                                  letterSpacing: '0.02em',
+                                                  outline: 'none'
+                                                }}
+                                                title="Click to re-bind by pressing any key or controller button"
+                                              >
+                                                {b.formattedInput || b.input}
+                                              </button>
+
+                                              <button
+                                                className="btn btn--ghost btn--xs btn--icon"
+                                                onClick={() => handleClearBinding(act.action, b.device, b.input)}
+                                                title="Unassign key"
+                                                style={{ padding: '2px', height: 'auto', width: 'auto', opacity: 0.5, color: 'var(--danger)' }}
+                                              >
+                                                <X size={12} />
+                                              </button>
+                                            </div>
+                                          );
+                                        })
+                                      )}
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
