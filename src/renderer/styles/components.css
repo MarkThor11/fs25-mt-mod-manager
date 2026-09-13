@@ -1144,7 +1144,7 @@
   background: transparent;
   outline: none;
   position: absolute;
-  left: -7px;
+  left: 0;
   top: 0;
   pointer-events: none;
   margin: 0;
