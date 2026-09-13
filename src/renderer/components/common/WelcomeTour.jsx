@@ -120,7 +120,7 @@ const SLIDES = [
     targetId: "tour-nav-savegames"
   },
   {
-    title: "Save Transfer",
+    title: "Save Transfer (WIP)",
     description: "Move your progress! Transfer money, products, vehicles, and livestock between career slots with built-in capacity validation. Move your entire fleet in seconds!",
     icon: <ArrowRightLeft className="w-12 h-12 text-blue-400" />,
     color: "#3b82f6",

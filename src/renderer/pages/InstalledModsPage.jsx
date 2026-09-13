@@ -6,8 +6,7 @@ import {
   RefreshCw, Download, Trash2, FolderOpen, Package, Lock, Loader2, Info,
   CheckCircle, Check, AlertTriangle, HardDrive, Search, List, LayoutGrid, ChevronDown, ChevronRight, ChevronsUp, ChevronsDown,
   Tag, Plus, X, Settings2, Folder, FolderPlus, FolderOutput, Eye, EyeOff, MoreVertical, Zap, Layers, RefreshCcw,
-  Heart, Star, Share2, Pencil, GripVertical, User, Pin, ArrowRightLeft, Move, Filter
-} from 'lucide-react';
+  Heart, Star, Share2, Pencil, GripVertical, User, Pin, ArrowRightLeft, Move, Filter, Crown } from 'lucide-react';
 import { useLocalModsStore } from '../store/useLocalModsStore';
 import { useSavegameStore } from '../store/useSavegameStore';
 import { useDownloadStore } from '../store/useDownloadStore';
@@ -70,10 +69,53 @@ const LocalModIcon = React.memo(({ mod }) => {
     }
   }
 
-  const fallbackCategory = (typeof imageUrl === 'string' && imageUrl.startsWith('CATEGORY:')) ? imageUrl : 'CATEGORY:generic';
+    const fallbackCategory = (typeof imageUrl === 'string' && imageUrl.startsWith('CATEGORY:')) ? imageUrl : 'CATEGORY:generic';
   const categoryType = fallbackCategory.split(':')[1] || 'generic';
 
-  if (imageUrl && !imageUrl.startsWith('CATEGORY:') && !error) {
+  const DLC_ICONS = {
+    "emergency pack": "https://cdn11.giants-software.com/modHub/storage/00318535/emergencyPack_modhub_icon.png",
+    "plains & prairies pack": "https://cdn11.giants-software.com/modHub/storage/00366666/plainsAndPrairies_modhub_icon.png",
+    "pumps and hoses pack": "https://cdn11.giants-software.com/modHub/storage/00344583/pumpsAndHoses_modhub_icon.png",
+    "pumps & hoses pack": "https://cdn11.giants-software.com/modHub/storage/00344583/pumpsAndHoses_modhub_icon.png",
+    "sky agriculture pack": "https://cdn11.giants-software.com/modHub/storage/00366667/skyAgriculture_modhub_icon.png"
+  };
+
+  const titleLower = (mod.title || "").toLowerCase();
+  let finalImageUrl = imageUrl;
+  
+  if (mod.isDLC && (!imageUrl || imageUrl.startsWith('CATEGORY:') || error)) {
+      for (const [key, url] of Object.entries(DLC_ICONS)) {
+          if (titleLower.includes(key)) {
+              finalImageUrl = url;
+              break;
+          }
+      }
+  }
+
+  if (finalImageUrl && !finalImageUrl.startsWith('CATEGORY:') && !error) {
+      return (
+        <div style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+          <img 
+            src={finalImageUrl} 
+            style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid var(--border)' }} 
+            alt={mod.title || ""} 
+            loading="lazy" 
+            onError={() => setError(true)}
+          />
+        </div>
+      );
+  }
+
+  if (mod.isDLC) {
+      return (
+        <div style={{ width: '100%', height: '100%', overflow: 'hidden', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', border: '1px solid #fbbf24', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <Crown size={48} color="#fbbf24" style={{ filter: 'drop-shadow(0 0 10px rgba(251,191,36,0.5))', marginBottom: 8 }} />
+            <span style={{ color: '#fbbf24', fontWeight: 900, fontSize: 14, letterSpacing: 1 }}>OFFICIAL DLC</span>
+        </div>
+      );
+  }
+
+  if (error || (mod.iconData && mod.iconData.startsWith('CATEGORY:'))) {
     return (
       <div style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
         <img 

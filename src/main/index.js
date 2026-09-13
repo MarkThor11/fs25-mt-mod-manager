@@ -79,7 +79,7 @@ app.whenReady().then(() => {
         console.log('[RADIO-PROXY] Streaming:', url);
         
         const response = await net.fetch(url, {
-          headers: { 'User-Agent': 'FS25-MT-Mod-Manager/1.0.10' },
+          headers: { 'User-Agent': 'FS25-MT-Mod-Manager/1.1.0' },
           redirect: 'follow'
         });
 
