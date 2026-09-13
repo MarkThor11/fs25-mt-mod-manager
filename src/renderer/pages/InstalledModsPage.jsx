@@ -13,6 +13,7 @@ import { useDownloadStore } from '../store/useDownloadStore';
 import { useToastStore } from '../store/useToastStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useModHubStore } from '../store/useModHubStore';
+import { useProfileStore } from '../store/useProfileStore';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 import { resolveRecursiveDependencies, matchModWithDependency, normalizeForMatching } from '../utils/modUtils';
 
@@ -2413,7 +2414,7 @@ export default function InstalledModsPage() {
           </div>
         )}
 
-        {/* Bulk Mod Actions — rendered as a fixed bottom-centre floating pill via portal */}
+        {/* Bulk Mod Actions — fixed bottom-centre pill via portal */}
         {selectedMods.length > 0 && createPortal(
           <div style={{
             position: 'fixed',
@@ -2423,49 +2424,24 @@ export default function InstalledModsPage() {
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
+            gap: 12,
             background: 'rgba(15, 23, 42, 0.92)',
             color: 'white',
-            padding: '10px 16px',
+            padding: '10px 18px',
             borderRadius: 40,
             boxShadow: '0 8px 32px rgba(0,0,0,0.55), 0 0 0 1px var(--accent)',
             whiteSpace: 'nowrap',
             backdropFilter: 'blur(12px)',
           }}>
-            <span style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.05em', paddingRight: 6, borderRight: '1px solid rgba(255,255,255,0.25)' }}>{selectedMods.length} SELECTED</span>
-
-            {/* MOVE TO */}
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.65)' }}>MOVE TO</span>
-              <div style={{ position: 'relative' }}>
-                <select 
-                  className="select-custom"
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value === '__NEW__') { setShowFolderInput(true); }
-                    else { handleMoveTo(e.target.value, selectedTargetDrive || null); }
-                  }}
-                  style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '0 24px 0 8px', height: 28, fontSize: 10, fontWeight: 800, borderRadius: 6, appearance: 'none', cursor: 'pointer', outline: 'none', minWidth: 130 }}
-                >
-                  <option value="" disabled hidden>DESTINATION...</option>
-                  <option value="" style={{ background: '#0f172a' }}>MAIN LIBRARY</option>
-                  {allFolders.filter(f => f !== '' && f !== 'DLC' && !hiddenFolders.includes(f)).map(f => (
-                    <option key={f} value={f} style={{ background: '#0f172a' }}>{f.toUpperCase()}</option>
-                  ))}
-                  <option value="__NEW__" style={{ background: '#0f172a', color: 'var(--accent)', fontWeight: 900 }}>+ NEW FOLDER...</option>
-                </select>
-                <ChevronDown size={11} style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.7 }} />
-              </div>
-            </div>
-
-            <span style={{ opacity: 0.3 }}>|</span>
+            <span style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.05em', paddingRight: 10, borderRight: '1px solid rgba(255,255,255,0.2)', color: 'var(--accent)' }}>
+              {selectedMods.length} SELECTED
+            </span>
 
             {/* ADD TO SAVE */}
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.65)' }}>ADD TO SAVE</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.55)' }}>ADD TO SAVE</span>
               <div style={{ position: 'relative' }}>
-                <select 
-                  className="select-custom"
+                <select
                   value=""
                   onChange={async (e) => {
                     const savePath = e.target.value;
@@ -2484,46 +2460,54 @@ export default function InstalledModsPage() {
                     if (result.success) { useToastStore.getState().success(`Added ${addedCount} mods to ${savegame.farmName || savegame.name}`); setSelectedMods([]); fetchSavegames(); }
                     else { useToastStore.getState().error('Failed to add mods to save'); }
                   }}
-                  style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '0 24px 0 8px', height: 28, fontSize: 10, fontWeight: 800, borderRadius: 6, appearance: 'none', cursor: 'pointer', outline: 'none', minWidth: 130 }}
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', padding: '0 26px 0 10px', height: 30, fontSize: 11, fontWeight: 700, borderRadius: 8, appearance: 'none', cursor: 'pointer', outline: 'none', minWidth: 140 }}
                 >
-                  <option value="" disabled hidden>SAVEGAME...</option>
+                  <option value="" disabled hidden>Select savegame...</option>
                   {savegames.map(s => (
                     <option key={s.path} value={s.path} style={{ background: '#0f172a' }}>{s.farmName || s.name}</option>
                   ))}
                 </select>
-                <ChevronDown size={11} style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.7 }} />
+                <ChevronDown size={11} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.5 }} />
               </div>
             </div>
 
-            {modsPaths && modsPaths.length > 1 && (
-              <>
-                <span style={{ opacity: 0.3 }}>|</span>
-                <div style={{ position: 'relative' }}>
-                  <select className="select-custom" value={selectedTargetDrive} onChange={(e) => setSelectedTargetDrive(e.target.value)}
-                    style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '0 24px 0 8px', height: 28, fontSize: 10, fontWeight: 800, borderRadius: 6, appearance: 'none', cursor: 'pointer', outline: 'none', minWidth: 110 }}>
-                    <option value="" style={{ background: '#0f172a' }}>PRIMARY</option>
-                    {driveStats.map(ds => <option key={ds.rootPath} value={ds.rootPath} style={{ background: '#0f172a' }}>{ds.shortLabel}{ds.isPrimary ? ' ✓' : ''}</option>)}
-                  </select>
-                  <ChevronDown size={11} style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.7 }} />
-                </div>
-              </>
-            )}
+            <span style={{ opacity: 0.2 }}>|</span>
 
-            <span style={{ opacity: 0.3 }}>|</span>
-
-            <button className="btn btn--secondary btn--sm"
-              onClick={() => {
-                const selectedModIds = mods.filter(m => selectedMods.includes(m.fileName)).map(m => m.modId).filter(id => id);
-                const key = exportCollection(selectedModIds);
-                if (key) { (window.api?.clipboard ? window.api.clipboard.writeText(key) : navigator.clipboard.writeText(key)); useToastStore.getState().success('Selection exported as Mod Key!'); }
-              }}
-              style={{ height: 28, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: '0 10px', display: 'flex', alignItems: 'center', gap: 5 }}
-            >
-              <Share2 size={11} /> EXPORT
-            </button>
+            {/* ADD TO PROFILE */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.55)' }}>ADD TO PROFILE</span>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value=""
+                  onChange={async (e) => {
+                    const profileId = e.target.value;
+                    if (!profileId) return;
+                    const { profiles, updateProfile } = useProfileStore.getState();
+                    const profile = profiles.find(p => String(p.id) === profileId);
+                    if (!profile) return;
+                    const existingModNames = new Set((profile.mods || []).map(m => m.modName || m.fileName));
+                    const selectedModObjects = mods.filter(m => selectedMods.includes(m.fileName));
+                    const toAdd = selectedModObjects.filter(m => !existingModNames.has(m.modName || m.fileName));
+                    if (toAdd.length === 0) { useToastStore.getState().info('All selected mods are already in this profile.'); setSelectedMods([]); return; }
+                    const newMods = [...(profile.mods || []), ...toAdd.map(m => ({ modName: m.modName || m.fileName, title: m.title, fileName: m.fileName, modId: m.modId }))];
+                    const result = await updateProfile(profile.id, profile.name, newMods, profile.options || {});
+                    if (result?.success) { useToastStore.getState().success(`Added ${toAdd.length} mods to profile "${profile.name}"`); setSelectedMods([]); }
+                    else { useToastStore.getState().error('Failed to update profile'); }
+                  }}
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', padding: '0 26px 0 10px', height: 30, fontSize: 11, fontWeight: 700, borderRadius: 8, appearance: 'none', cursor: 'pointer', outline: 'none', minWidth: 140 }}
+                >
+                  <option value="" disabled hidden>Select profile...</option>
+                  {(useProfileStore.getState().profiles || []).map(p => (
+                    <option key={p.id} value={String(p.id)} style={{ background: '#0f172a' }}>{p.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={11} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.5 }} />
+              </div>
+            </div>
 
             <button onClick={() => setSelectedMods([])}
-              style={{ padding: 0, width: 24, height: 24, background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ marginLeft: 4, padding: 0, width: 26, height: 26, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.7)', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              title="Clear selection"
             >
               <X size={13} />
             </button>
