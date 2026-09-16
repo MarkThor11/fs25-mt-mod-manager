@@ -5868,8 +5868,8 @@ function looksLikeMap(modDesc) {
 function cleanModTitle(title, modName, fileName, isMap = false) {
     if (!title) return title;
 
-    // Unescape XML entities and normalize double quotes to single quotes to prevent broken XML attributes
-    let clean = title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, "'").replace(/"/g, "'").replace(/&apos;/g, "'");
+    // Unescape XML entities
+    let clean = title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'");
 
     // First, flatten newlines and extra spaces
     clean = clean.replace(/[\r\n\t]+/g, ' ').replace(/\s\s+/g, ' ').trim();
