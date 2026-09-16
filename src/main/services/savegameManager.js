@@ -517,7 +517,7 @@ async function setSavegameMods(savegamePath, mods) {
         const existing = existingLookup.get(m.modName.toLowerCase());
         newModsMap.set(m.modName, {
             '@_modName': m.modName,
-            '@_title': m.title || (existing && existing['@_title']) || m.modName,
+            '@_title': String(m.title || (existing && existing['@_title']) || m.modName || '').replace(/"/g, "'"),
             '@_version': m.version || (existing && existing['@_version']) || '1.0.0.0',
             '@_required': isMap ? 'true' : (existing && existing['@_required'] ? existing['@_required'] : 'false'),
             '@_fileHash': (existing && existing['@_fileHash']) || m.fileHash || ''
@@ -1025,7 +1025,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         const isRequired = mod.required === true;
         return {
             '@_modName': mod.modName,
-            '@_title': mod.title || mod.modName,
+            '@_title': String(mod.title || mod.modName || '').replace(/"/g, "'"),
             '@_version': mod.version || '1.0.0.0',
             '@_required': isRequired ? 'true' : 'false',
             '@_fileHash': mod.fileHash || ''
@@ -1072,7 +1072,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     if (tName && !existingNames.has(tName.toLowerCase())) {
                         modData.push({
                             '@_modName': tName,
-                            '@_title': tMod['@_title'] || tName,
+                            '@_title': String(tMod['@_title'] || tName || '').replace(/"/g, "'"),
                             '@_version': tMod['@_version'] || '1.0.0.0',
                             '@_required': tMod['@_required'] === 'true' ? 'true' : 'false',
                             '@_fileHash': tMod['@_fileHash'] || ''
@@ -4480,7 +4480,7 @@ async function autoInjectDependencies(savegamePath) {
                                 console.log(`[AUTO-INJECT] Injecting dependency: ${installedDep.title} (required by ${selMod['@_title'] || selMod['@_modName']})`);
                                 mods.push({
                                     '@_modName': installedDep.modName,
-                                    '@_title': installedDep.title,
+                                    '@_title': String(installedDep.title || '').replace(/"/g, "'"),
                                     '@_version': installedDep.version || '1.0.0.0',
                                     '@_required': 'true',
                                     '@_fileHash': installedDep.fileHash || ''
@@ -4743,7 +4743,7 @@ async function syncSubfolderMapDependencies(savePath) {
                 console.log(`[SYNC-DEPS] Auto-activating required map mod/dependency in careerSavegame.xml: ${item.modName}`);
                 mods.push({
                     '@_modName': item.modName,
-                    '@_title': item.title || item.modName,
+                    '@_title': String(item.title || item.modName || '').replace(/"/g, "'"),
                     '@_version': item.version || '1.0.0.0',
                     '@_required': 'true',
                     '@_fileHash': item.fileHash || ''
