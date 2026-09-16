@@ -1009,7 +1009,36 @@ function parseModDesc(modPath, zipInstance = null) {
 			}
 		}
 		
-		if (!xmlContent) return null;
+		if (!xmlContent) {
+			// Fallback: Check if zip contains map files even if modDesc.xml is missing or unparseable
+			if (modPath.toLowerCase().endsWith('.zip')) {
+				try {
+					const entries = listZipEntries(modPath);
+					const hasMapFile = entries.some(e => {
+						const n = e.entryName.toLowerCase();
+						return n.endsWith('terrain.heightmap.png') || n.endsWith('densitymap_fruits.gdm') || n.includes('maps/map');
+					});
+					if (hasMapFile) {
+						const mapName = path.basename(modPath, '.zip');
+						return {
+							title: mapName,
+							version: '1.0.0',
+							author: 'Unknown',
+							isMap: true,
+							modId: null,
+							techName: mapName,
+							category: 'CATEGORY:map',
+							mapId: mapName,
+							dependencies: [],
+							scripts: [],
+							specializations: [],
+							conflicts: []
+						};
+					}
+				} catch (e) {}
+			}
+			return null;
+		}
 		
 		// Strip XML comments so commented-out tags (like old versions) are never extracted
 		xmlContent = xmlContent.replace(/<!--[\s\S]*?-->/g, '');
@@ -1066,37 +1095,31 @@ function parseModDesc(modPath, zipInstance = null) {
 		let mapId = null;
 		let mapTitle = null;
 		
-		// Improved Map Detection: FS25 maps use varied structures
-		// 1. Check for <map id="..."> or <maps> tags with flexible regex
-		const mapMatch = xmlContent.match(/<map\s+[^>]*id=(["'])(.*?)\1[^>]*>/is) || 
-		                 xmlContent.match(/<maps[^>]*>/is);
-		
-		// 2. Additional patterns: modType="map", <mapConfiguration>, or map .i3d references
+		// Comprehensive Map Detection: FS19/FS22/FS25 maps use varied XML tag structures
+		// 1. Any <map ...> or <maps> or <mapConfiguration> tag
+		const hasMapTag = /<map[s]?[\s/>]/i.test(xmlContent);
 		const hasModTypeMap = /modType\s*=\s*["']map["']/i.test(xmlContent);
 		const hasMapConfiguration = /<mapConfiguration/i.test(xmlContent);
-		const hasMapI3D = /filename\s*=\s*["'][^"']*map[^"']*\.i3d["']/i.test(xmlContent);
+		const hasMapI3D = /filename\s*=\s*["'][^"']*(?:map|terrain)\w*\.i3d["']/i.test(xmlContent) ||
+		                  (/filename\s*=\s*["'][^"']*\.i3d["']/i.test(xmlContent) && /terrain\.heightmap/i.test(xmlContent));
 		
-		if (mapMatch || hasModTypeMap || hasMapConfiguration) {
+		if (hasMapTag || hasModTypeMap || hasMapConfiguration) {
 			isMap = true;
-			// If we matched the <map> tag with a group, extract the ID
-			if (mapMatch && mapMatch[2]) {
-				mapId = mapMatch[2];
-			} else {
-				// Fallback: look for the first map tag inside the maps block
-				const innerMapIdMatch = xmlContent.match(/<map\s+[^>]*id=(["'])(.*?)\1[^>]*>/is);
-				mapId = innerMapIdMatch ? innerMapIdMatch[2] : null;
-			}
+			
+			// Extract Map ID from id="..." or configFilename="..." or configFile="..." or name="..."
+			const idMatch = xmlContent.match(/<map\s+[^>]*\bid=(["'])(.*?)\1/i) ||
+			                xmlContent.match(/<map\s+[^>]*\bconfigFilename=(["'])(.*?)\1/i) ||
+			                xmlContent.match(/<map\s+[^>]*\bconfigFile=(["'])(.*?)\1/i) ||
+			                xmlContent.match(/<map\s+[^>]*\bname=(["'])(.*?)\1/i);
+			mapId = idMatch ? idMatch[2] : (techName || null);
 			
 			// Try to find title in the map tag or sub-tag
 			const fullMapTagMatch = xmlContent.match(/<map[\s\S]*?<\/map>/i);
-			const fullMapTag = fullMapTagMatch ? fullMapTagMatch[0] : (mapMatch ? mapMatch[0] : '');
+			const fullMapTag = fullMapTagMatch ? fullMapTagMatch[0] : '';
 			
-			// Map titles can be in a title attribute, or a <title> child tag
-			// Some titles use <en> tags inside the <title> tag
 			const titleAttr = fullMapTag ? (fullMapTag.match(/title=["']([^"']*)["']/i) || [])[1] : null;
 			let extractedTitle = fullMapTag ? (fullMapTag.match(/<title>([\s\S]*?)<\/title>/i) || [])[1] || '' : '';
 			
-			// If the title contains language tags, extract the one that's there
 			if (extractedTitle.includes('<')) {
 				const langMatch = extractedTitle.match(/<(en|de)>([^<]*)<\/\1>/i) || extractedTitle.match(/>([^<]+)</);
 				extractedTitle = langMatch ? (langMatch[2] || langMatch[1]).trim() : extractedTitle.replace(/<[^>]*>/g, '').trim();
@@ -1104,7 +1127,6 @@ function parseModDesc(modPath, zipInstance = null) {
 			
 			mapTitle = extractedTitle || titleAttr || title || mapId;
 		} else if (hasMapI3D) {
-			// Weaker signal: has a map .i3d file reference but no explicit <map> tag
 			isMap = true;
 			mapTitle = title;
 		}
