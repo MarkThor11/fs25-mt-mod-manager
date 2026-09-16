@@ -290,10 +290,22 @@ function ModAuditModal({ save, allInstalledMods, onClose, onRefresh }) {
 function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-    const [pendingLaunchSlot, setPendingLaunchSlot] = useState(null);
+    const [pendingLaunchSlot, setPendingLaunchSlot] = useState(null)
   const [launchExtraOptions, setLaunchExtraOptions] = useState({});
   const [conflictResolutionData, setConflictResolutionData] = useState(null);
-  
+
+  // Local audio state so labels update live as sliders are dragged
+  const [audioVols, setAudioVols] = useState({
+    masterVolume:      parseFloat(save.masterVolume      ?? 1.0),
+    vehicleVolume:     parseFloat(save.vehicleVolume     ?? 1.0),
+    environmentVolume: parseFloat(save.environmentVolume ?? 0.7),
+    musicVolume:       parseFloat(save.musicVolume       ?? 0.0),
+    radioVolume:       parseFloat(save.radioVolume       ?? 1.0),
+    guiVolume:         parseFloat(save.guiVolume         ?? 0.0),
+    voiceVolume:       parseFloat(save.voiceVolume       ?? 1.0),
+  });
+
+
   const handleResolveConflicts = async (modsToDisableSet) => {
       const data = conflictResolutionData;
       if (!data) return;
@@ -860,8 +872,8 @@ const [activeTab, setActiveTab] = useState('general');
                     </div>
                    </div>
                  </div>
-               <div className="settings-panel">
-                <h3 className="section-title"><Volume2 size={16} /> Audio & Sound</h3>
+              <div className="settings-panel">
+                <h3 className="section-title"><Volume2 size={16} /> Audio &amp; Sound</h3>
                 <div className="settings-grid">
                   <label className="checkbox-setting" title="Enables the in-game radio.">
                     <input type="checkbox" defaultChecked={save.isRadioEnabled !== false} onChange={e => handleUpdate('career', 'isRadioEnabled', e.target.checked)} />
@@ -872,32 +884,46 @@ const [activeTab, setActiveTab] = useState('general');
                     <span>Radio in Vehicles Only</span>
                   </label>
                   <div className="setting">
-                    <label title="Overall volume level for the game.">Master Volume ({Math.round(parseFloat(save.masterVolume ?? 1.0) * 100) || 0}%)</label>
-                    <CustomSlider min="0" max="1" step="0.05" defaultValue={parseFloat(save.masterVolume ?? 1.0)} onBlur={e => handleUpdate('career', 'masterVolume', e.target.value)} />
+                    <label title="Overall volume level for the game. Stored in game.xml">Master Volume ({Math.round(audioVols.masterVolume * 100)}%)</label>
+                    <CustomSlider min="0" max="1" step="0.05" value={audioVols.masterVolume}
+                      onChange={e => setAudioVols(v => ({ ...v, masterVolume: parseFloat(e.target.value) }))}
+                      onBlur={e => handleUpdate('audio', 'masterVolume', e.target.value)} />
                   </div>
                   <div className="setting">
-                    <label title="Vehicle engine and working sounds.">Vehicle Volume ({Math.round(parseFloat(save.vehicleVolume ?? 1.0) * 100) || 0}%)</label>
-                    <CustomSlider min="0" max="1" step="0.05" defaultValue={parseFloat(save.vehicleVolume ?? 1.0)} onBlur={e => handleUpdate('career', 'vehicleVolume', e.target.value)} />
+                    <label title="Vehicle engine and working sounds.">Vehicle Volume ({Math.round(audioVols.vehicleVolume * 100)}%)</label>
+                    <CustomSlider min="0" max="1" step="0.05" value={audioVols.vehicleVolume}
+                      onChange={e => setAudioVols(v => ({ ...v, vehicleVolume: parseFloat(e.target.value) }))}
+                      onBlur={e => handleUpdate('audio', 'vehicleVolume', e.target.value)} />
                   </div>
                   <div className="setting">
-                    <label title="Ambient environment and weather sounds.">Environment Volume ({Math.round(parseFloat(save.environmentVolume ?? 0.7) * 100) || 0}%)</label>
-                    <CustomSlider min="0" max="1" step="0.05" defaultValue={parseFloat(save.environmentVolume ?? 0.7)} onBlur={e => handleUpdate('career', 'environmentVolume', e.target.value)} />
+                    <label title="Ambient environment and weather sounds.">Environment Volume ({Math.round(audioVols.environmentVolume * 100)}%)</label>
+                    <CustomSlider min="0" max="1" step="0.05" value={audioVols.environmentVolume}
+                      onChange={e => setAudioVols(v => ({ ...v, environmentVolume: parseFloat(e.target.value) }))}
+                      onBlur={e => handleUpdate('audio', 'environmentVolume', e.target.value)} />
                   </div>
                   <div className="setting">
-                    <label title="Radio station broadcast volume.">Radio Volume ({Math.round(parseFloat(save.radioVolume ?? 1.0) * 100) || 0}%)</label>
-                    <CustomSlider min="0" max="1" step="0.05" defaultValue={parseFloat(save.radioVolume ?? 1.0)} onBlur={e => handleUpdate('career', 'radioVolume', e.target.value)} />
+                    <label title="Radio station broadcast volume.">Radio Volume ({Math.round(audioVols.radioVolume * 100)}%)</label>
+                    <CustomSlider min="0" max="1" step="0.05" value={audioVols.radioVolume}
+                      onChange={e => setAudioVols(v => ({ ...v, radioVolume: parseFloat(e.target.value) }))}
+                      onBlur={e => handleUpdate('audio', 'radioVolume', e.target.value)} />
                   </div>
                   <div className="setting">
-                    <label title="In-game background music volume.">Music Volume ({Math.round(parseFloat(save.musicVolume ?? 0.0) * 100) || 0}%)</label>
-                    <CustomSlider min="0" max="1" step="0.05" defaultValue={parseFloat(save.musicVolume ?? 0.0)} onBlur={e => handleUpdate('career', 'musicVolume', e.target.value)} />
+                    <label title="In-game background music volume.">Music Volume ({Math.round(audioVols.musicVolume * 100)}%)</label>
+                    <CustomSlider min="0" max="1" step="0.05" value={audioVols.musicVolume}
+                      onChange={e => setAudioVols(v => ({ ...v, musicVolume: parseFloat(e.target.value) }))}
+                      onBlur={e => handleUpdate('audio', 'musicVolume', e.target.value)} />
                   </div>
                   <div className="setting">
-                    <label title="Menu clicks and UI audio volume.">GUI Volume ({Math.round(parseFloat(save.guiVolume ?? 0.0) * 100) || 0}%)</label>
-                    <CustomSlider min="0" max="1" step="0.05" defaultValue={parseFloat(save.guiVolume ?? 0.0)} onBlur={e => handleUpdate('career', 'guiVolume', e.target.value)} />
+                    <label title="Menu clicks and UI audio volume.">GUI Volume ({Math.round(audioVols.guiVolume * 100)}%)</label>
+                    <CustomSlider min="0" max="1" step="0.05" value={audioVols.guiVolume}
+                      onChange={e => setAudioVols(v => ({ ...v, guiVolume: parseFloat(e.target.value) }))}
+                      onBlur={e => handleUpdate('audio', 'guiVolume', e.target.value)} />
                   </div>
                   <div className="setting">
-                    <label title="Multiplayer voice chat volume.">Voice Volume ({Math.round(parseFloat(save.voiceVolume ?? 1.0) * 100) || 0}%)</label>
-                    <CustomSlider min="0" max="1" step="0.05" defaultValue={parseFloat(save.voiceVolume ?? 1.0)} onBlur={e => handleUpdate('career', 'voiceVolume', e.target.value)} />
+                    <label title="Multiplayer voice chat volume.">Voice Volume ({Math.round(audioVols.voiceVolume * 100)}%)</label>
+                    <CustomSlider min="0" max="1" step="0.05" value={audioVols.voiceVolume}
+                      onChange={e => setAudioVols(v => ({ ...v, voiceVolume: parseFloat(e.target.value) }))}
+                      onBlur={e => handleUpdate('audio', 'voiceVolume', e.target.value)} />
                   </div>
                 </div>
               </div>

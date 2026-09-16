@@ -46,6 +46,7 @@ export const useSettingsStore = create((set) => ({
   badgeDuration: '48h',
   expandedFolders: { '': true },
   showTagBar: false,
+  installedTagFilter: [],
   selectiveLoading: true,
   autoDownloadMapDeps: true,
   nickname: '',
@@ -450,6 +451,8 @@ export const useSettingsStore = create((set) => ({
     set({ showTagBar: val });
     if (window.api?.settings) await window.api.settings.set('showTagBar', String(val)).catch(console.error);
   },
+
+  setInstalledTagFilter: (tags) => set({ installedTagFilter: tags }),
 
   setSelectiveLoading: async (val) => {
     set({ selectiveLoading: val });

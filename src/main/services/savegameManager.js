@@ -1611,7 +1611,51 @@ function applyWeatherToEnvironment(env, weatherType) {
  * Surgical attribute update for a savegame XML
  */
 async function updateSavegameAttribute(savePath, fileType, attribute, value) {
+    // Audio settings are global (not per-savegame) — write to gameSettings.xml / game.xml
+    if (fileType === 'audio') {
+        const fs25Path = getFs25Path();
+        const floatVal = parseFloat(value);
+        try {
+            if (attribute === 'masterVolume') {
+                // master volume is in game.xml as <audio volume="x.xx"/>
+                const gamePath = path.join(fs25Path, 'game.xml');
+                if (fs.existsSync(gamePath)) {
+                    let gameXml = await fs.readFile(gamePath, 'utf8');
+                    // Use regex to safely replace the volume attribute in the <audio> tag
+                    gameXml = gameXml.replace(/(<audio\s[^>]*volume=")[^"]*(")/,
+                        `$1${floatVal.toFixed(6)}$2`);
+                    await fs.writeFile(gamePath, gameXml);
+                }
+            } else {
+                // All other volumes go into gameSettings.xml <volume> section
+                const gsPath = path.join(fs25Path, 'gameSettings.xml');
+                if (fs.existsSync(gsPath)) {
+                    const gsXml = await fs.readFile(gsPath, 'utf8');
+                    const gsData = parser.parse(gsXml);
+                    if (!gsData.gameSettings) gsData.gameSettings = {};
+                    if (!gsData.gameSettings.volume) gsData.gameSettings.volume = {};
+                    const volKey = {
+                        vehicleVolume: 'vehicle',
+                        environmentVolume: 'environment',
+                        musicVolume: 'music',
+                        radioVolume: 'radio',
+                        guiVolume: 'gui',
+                        voiceVolume: 'voice',
+                    }[attribute];
+                    if (volKey) {
+                        gsData.gameSettings.volume[volKey] = floatVal.toFixed(6);
+                        await fs.writeFile(gsPath, builder.build(gsData));
+                    }
+                }
+            }
+            return { success: true };
+        } catch(e) {
+            return { success: false, error: e.message };
+        }
+    }
+
     const fileName = fileType === 'career' ? 'careerSavegame.xml' : (fileType === 'farms' ? 'farms.xml' : (fileType === 'environment' ? 'environment.xml' : null));
+
     if (!fileName) return { success: false, error: 'Invalid file type' };
 
     const filePath = path.join(savePath, fileName);
@@ -1748,6 +1792,46 @@ async function getAllSavegames() {
             const settings = data.careerSavegame.settings;
             const stats = data.careerSavegame.statistics;
 
+            // Read global gameSettings.xml and game.xml for audio volumes
+            let masterVolume = 1.0;
+            let vehicleVolume = 1.0;
+            let environmentVolume = 0.7;
+            let musicVolume = 0.0;
+            let radioVolume = 1.0;
+            let guiVolume = 0.0;
+            let voiceVolume = 1.0;
+            let isRadioEnabled = true;
+            let radioVehicleOnly = false;
+            try {
+                const gameSettingsPath = path.join(fs25Path, 'gameSettings.xml');
+                if (fs.existsSync(gameSettingsPath)) {
+                    const gsXml = await fs.readFile(gameSettingsPath, 'utf8');
+                    const gsData = parser.parse(gsXml);
+                    const gs = gsData.gameSettings || {};
+                    const vol = gs.volume || {};
+                    vehicleVolume = parseFloat(vol.vehicle ?? 1.0);
+                    environmentVolume = parseFloat(vol.environment ?? 0.7);
+                    musicVolume = parseFloat(vol.music ?? 0.0);
+                    radioVolume = parseFloat(vol.radio ?? 1.0);
+                    guiVolume = parseFloat(vol.gui ?? 0.0);
+                    voiceVolume = parseFloat(vol.voice ?? 1.0);
+                    isRadioEnabled = gs.radioIsActive !== 'false' && gs.radioIsActive !== false;
+                    radioVehicleOnly = gs.radioVehicleOnly === 'true' || gs.radioVehicleOnly === true;
+                }
+                const gamePath = path.join(fs25Path, 'game.xml');
+                if (fs.existsSync(gamePath)) {
+                    const gameXml = await fs.readFile(gamePath, 'utf8');
+                    const gameData = parser.parse(gameXml);
+                    const audio = gameData?.gameProfile?.audio || gameData?.game?.audio || gameData?.audio || null;
+                    if (audio) {
+                        masterVolume = parseFloat(audio['@_volume'] ?? audio.volume ?? 1.0);
+                    }
+                }
+            } catch(e) {
+                debugLog('[SAVEGAMES] Could not read audio settings:', e.message);
+            }
+
+
             const mapId = settings['@_mapId'] || settings.mapId;
             const mapTitle = settings['@_mapTitle'] || settings.mapTitle;
             let mapModName = null;
@@ -1861,6 +1945,16 @@ async function getAllSavegames() {
                 trailerFillLimit: (settings['@_trailerFillLimit'] || settings.trailerFillLimit) === 'true',
                 automaticMotorStartEnabled: (settings['@_automaticMotorStartEnabled'] || settings.automaticMotorStartEnabled) !== 'false',
                 isTrainTabEnabled: (settings['@_isTrainTabEnabled'] || settings.isTrainTabEnabled) !== 'false',
+                // Audio settings (from global gameSettings.xml / game.xml)
+                masterVolume,
+                vehicleVolume,
+                environmentVolume,
+                musicVolume,
+                radioVolume,
+                guiVolume,
+                voiceVolume,
+                isRadioEnabled,
+                radioVehicleOnly,
                 mods: (Array.isArray(data.careerSavegame.mod) ? data.careerSavegame.mod : (data.careerSavegame.mod ? [data.careerSavegame.mod] : (data.careerSavegame.mods?.mod || []))).map(m => ({
                     modName: m['@_modName'] || m.modName,
                     title: m['@_title'] || m.title,
