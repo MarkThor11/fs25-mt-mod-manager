@@ -261,6 +261,7 @@ async function launch(options = {}) {
       } else {
         console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is valid. Enabling Auto-Start into map.`);
         args.push('-autoStartSavegameId', String(options.savegameIndex));
+        args.push('-autoStart');
 
         // Automatically activate QuietLoadingScreen helper mod so loading screens are completely silent
         try {
