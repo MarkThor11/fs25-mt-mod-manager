@@ -204,8 +204,8 @@ async function getMapTemplates() {
                 const AdmZip = require('adm-zip');
                 const zip = new AdmZip(folderPath);
                 const heightmap = zip.getEntry('terrain.heightmap.png');
-                const economyFile = zip.getEntry('economy.xml');
-                if (!heightmap || !economyFile) return null;
+                const hasCore = zip.getEntry('economy.xml') || zip.getEntry('densityMap_fruits.gdm') || zip.getEntry('careerSavegame.xml') || zip.getEntry('placeables.xml');
+                if (!heightmap || !hasCore) return null;
 
                 const careerEntry = zip.getEntry('careerSavegame.xml');
                 if (careerEntry) {
@@ -218,8 +218,11 @@ async function getMapTemplates() {
                 filesCount = zip.getEntries().length;
             } else {
                 const heightmap = path.join(folderPath, 'terrain.heightmap.png');
-                const economyFile = path.join(folderPath, 'economy.xml');
-                if (!fs.existsSync(heightmap) || !fs.existsSync(economyFile)) return null;
+                const hasCore = fs.existsSync(path.join(folderPath, 'economy.xml')) ||
+                                fs.existsSync(path.join(folderPath, 'densityMap_fruits.gdm')) ||
+                                fs.existsSync(path.join(folderPath, 'careerSavegame.xml')) ||
+                                fs.existsSync(path.join(folderPath, 'placeables.xml'));
+                if (!fs.existsSync(heightmap) || !hasCore) return null;
 
                 const careerPath = path.join(folderPath, 'careerSavegame.xml');
                 if (fs.existsSync(careerPath)) {

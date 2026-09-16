@@ -1725,7 +1725,7 @@ async function performScan(manualPaths = null) {
 				filePath: fullPath,
 				folder: subFolder, 
 				isDLC: isDlc || subFolder === 'DLC' || entryName.toLowerCase().startsWith('pdlc_'),
-				isMap: modDesc?.isMap || false,
+				isMap: modDesc?.isMap || !!modDesc?.mapId || false,
 				isCrossplay: !!isCrossplay,
 				mapId: modDesc?.mapId || null,
 				mapTitle: modDesc?.mapTitle || null,
@@ -1761,9 +1761,15 @@ async function performScan(manualPaths = null) {
 			const hasNegativeIndicators = (titleLower + fileNameLower).match(/pack|set|building|shed|tank|object|asset|prop|marker|hangar|storage|factory|production|station|barn|stable|silo|shop|market|scale|collection|prefab|kit|part/i);
 
 			// 1. Determine Map Status (Promotion vs Absolute Demotion)
-			let isActuallyMap = modObj.isMap || (isMapViaCategory && (modObj.mapId || (isLargeFile && hasMapIndicators)));
-			if (hasNegativeIndicators) {
-				isActuallyMap = false; // Negative indicator always wins for UI clarity
+			// Explicit map signals (from modDesc XML <map>, mapId, or map icon) are authoritative.
+			// Negative indicators only prevent false-positive heuristic promotion of non-map mods.
+			let isActuallyMap = !!modObj.isMap || !!modObj.mapId || (iconBase64 === 'CATEGORY:map');
+			if (!isActuallyMap) {
+				if (isMapViaCategory || (isLargeFile && hasMapIndicators)) {
+					if (!hasNegativeIndicators) {
+						isActuallyMap = true;
+					}
+				}
 			}
 			
 			// 2. Globally Clean Title
@@ -2411,11 +2417,10 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 function isMapCategory(category) {
 	if (!category || typeof category !== 'string') return false;
 	const c = category.trim().toLowerCase();
-	// Any explicit non-map category is strictly false
+	if (c === 'category:map' || c === 'maps' || c === 'map' || c.startsWith('map/')) return true;
 	if (
 		c.includes('gameplay') ||
 		c.includes('prefab') ||
-		c.includes('package') ||
 		c.includes('object') ||
 		c.includes('placeable') ||
 		c.includes('drivable') ||
@@ -2423,17 +2428,11 @@ function isMapCategory(category) {
 		c.includes('tool') ||
 		c.includes('animal') ||
 		c.includes('baling') ||
-		c.includes('harvest') ||
 		c.includes('forestry') ||
 		c.includes('grassland') ||
-		c.includes('grape') ||
 		c.includes('loader') ||
-		c.includes('rootcrop') ||
 		c.includes('seeding') ||
 		c.includes('cultivation') ||
-		c.includes('crop') ||
-		c.includes('vegetable') ||
-		c.includes('yield') ||
 		c.includes('misc')
 	) {
 		return false;
