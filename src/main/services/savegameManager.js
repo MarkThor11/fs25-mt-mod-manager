@@ -4555,13 +4555,15 @@ async function cleanupBridgeModFromSavegame(savePath) {
 function findMapModInSavegame(xmlData, localMods = []) {
     if (!xmlData || !localMods || localMods.length === 0) return null;
 
+    const isMapMod = (m) => m && (m.isMap || isMapCategory(m.category));
+
     // 1. Check <careerSavegame><mod modName="..." .../></careerSavegame> list
     // In FS25, every mod map is recorded as an active mod tag in careerSavegame.xml
     const modMatches = [...xmlData.matchAll(/<mod\s+[^>]*modName=["']([^"']+)["']/gi)];
     const saveModNames = modMatches.map(m => m[1]);
 
     for (const sName of saveModNames) {
-        const matched = localMods.find(m => m.isMap && m.modName && m.modName.toLowerCase() === sName.toLowerCase());
+        const matched = localMods.find(m => isMapMod(m) && m.modName && m.modName.toLowerCase() === sName.toLowerCase());
         if (matched) return matched;
     }
 
@@ -4580,7 +4582,7 @@ function findMapModInSavegame(xmlData, localMods = []) {
     if (rawMapId) {
         // If mapId is "FS25_Courtright_Line.CourtrightLineModMap", split('.')[0] gives "FS25_Courtright_Line"
         const prefix = rawMapId.split('.')[0];
-        const matchByPrefix = localMods.find(m => m.isMap && m.modName && m.modName.toLowerCase() === prefix.toLowerCase());
+        const matchByPrefix = localMods.find(m => isMapMod(m) && m.modName && m.modName.toLowerCase() === prefix.toLowerCase());
         if (matchByPrefix) return matchByPrefix;
 
         // Try exact mapId match (ignoring generic placeholder IDs used by many modders)
@@ -4590,28 +4592,51 @@ function findMapModInSavegame(xmlData, localMods = []) {
             'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek'
         ]);
         if (!GENERIC_MAP_IDS.has(rawMapId.toLowerCase())) {
-            const matchByMapId = localMods.find(m => m.isMap && m.mapId && m.mapId.toLowerCase() === rawMapId.toLowerCase());
+            const matchByMapId = localMods.find(m => isMapMod(m) && m.mapId && m.mapId.toLowerCase() === rawMapId.toLowerCase());
             if (matchByMapId) return matchByMapId;
         }
     }
 
     if (rawMapTitle) {
-        const titleLower = rawMapTitle.toLowerCase();
-        const matchByTitle = localMods.find(m => m.isMap && (
-            (m.title && m.title.toLowerCase() === titleLower) ||
-            (m.mapTitle && m.mapTitle.toLowerCase() === titleLower)
+        const titleLower = rawMapTitle.toLowerCase().trim();
+        const matchByTitle = localMods.find(m => isMapMod(m) && (
+            (m.title && m.title.toLowerCase().trim() === titleLower) ||
+            (m.mapTitle && m.mapTitle.toLowerCase().trim() === titleLower) ||
+            (m.folder && m.folder.toLowerCase().trim() === titleLower)
         ));
         if (matchByTitle) return matchByTitle;
+
+        // Fuzzy title match
+        const matchByTitleFuzzy = localMods.find(m => isMapMod(m) && (
+            (m.title && (m.title.toLowerCase().includes(titleLower) || titleLower.includes(m.title.toLowerCase()))) ||
+            (m.folder && (m.folder.toLowerCase().includes(titleLower) || titleLower.includes(m.folder.toLowerCase())))
+        ));
+        if (matchByTitleFuzzy) return matchByTitleFuzzy;
     }
 
-    // Fallback: match by file basename or modName
+    // Fallback: match by file basename or modName or folder name
     if (rawMapId) {
         const rawLower = rawMapId.toLowerCase();
-        const fallbackMatch = localMods.find(m => m.isMap && (
+        const prefixLower = rawMapId.split('.')[0].toLowerCase();
+        const fallbackMatch = localMods.find(m => isMapMod(m) && (
             (m.modName && m.modName.toLowerCase() === rawLower) ||
-            (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === rawLower)
+            (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === rawLower) ||
+            (m.folder && m.folder.toLowerCase() === prefixLower)
         ));
         if (fallbackMatch) return fallbackMatch;
+    }
+
+    // Ultimate fallback for map mods: match by normalized alphanumeric key
+    if (rawMapId || rawMapTitle) {
+        const keyStr = (rawMapId || rawMapTitle).toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (keyStr.length >= 3) {
+            const ultraMatch = localMods.find(m => isMapMod(m) && (
+                (m.modName && keyStr.includes(m.modName.toLowerCase().replace(/[^a-z0-9]/g, ''))) ||
+                (m.title && keyStr.includes(m.title.toLowerCase().replace(/[^a-z0-9]/g, ''))) ||
+                (m.folder && keyStr.includes(m.folder.toLowerCase().replace(/[^a-z0-9]/g, '')))
+            ));
+            if (ultraMatch) return ultraMatch;
+        }
     }
 
     return null;
