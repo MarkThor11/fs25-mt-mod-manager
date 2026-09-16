@@ -204,8 +204,8 @@ async function getMapTemplates() {
                 const AdmZip = require('adm-zip');
                 const zip = new AdmZip(folderPath);
                 const heightmap = zip.getEntry('terrain.heightmap.png');
-                const hasCore = zip.getEntry('economy.xml') || zip.getEntry('densityMap_fruits.gdm') || zip.getEntry('careerSavegame.xml') || zip.getEntry('placeables.xml');
-                if (!heightmap || !hasCore) return null;
+                const economyFile = zip.getEntry('economy.xml');
+                if (!heightmap || !economyFile) return null;
 
                 const careerEntry = zip.getEntry('careerSavegame.xml');
                 if (careerEntry) {
@@ -218,11 +218,8 @@ async function getMapTemplates() {
                 filesCount = zip.getEntries().length;
             } else {
                 const heightmap = path.join(folderPath, 'terrain.heightmap.png');
-                const hasCore = fs.existsSync(path.join(folderPath, 'economy.xml')) ||
-                                fs.existsSync(path.join(folderPath, 'densityMap_fruits.gdm')) ||
-                                fs.existsSync(path.join(folderPath, 'careerSavegame.xml')) ||
-                                fs.existsSync(path.join(folderPath, 'placeables.xml'));
-                if (!fs.existsSync(heightmap) || !hasCore) return null;
+                const economyFile = path.join(folderPath, 'economy.xml');
+                if (!fs.existsSync(heightmap) || !fs.existsSync(economyFile)) return null;
 
                 const careerPath = path.join(folderPath, 'careerSavegame.xml');
                 if (fs.existsSync(careerPath)) {
@@ -4555,15 +4552,13 @@ async function cleanupBridgeModFromSavegame(savePath) {
 function findMapModInSavegame(xmlData, localMods = []) {
     if (!xmlData || !localMods || localMods.length === 0) return null;
 
-    const isMapMod = (m) => m && (m.isMap || isMapCategory(m.category));
-
     // 1. Check <careerSavegame><mod modName="..." .../></careerSavegame> list
     // In FS25, every mod map is recorded as an active mod tag in careerSavegame.xml
     const modMatches = [...xmlData.matchAll(/<mod\s+[^>]*modName=["']([^"']+)["']/gi)];
     const saveModNames = modMatches.map(m => m[1]);
 
     for (const sName of saveModNames) {
-        const matched = localMods.find(m => isMapMod(m) && m.modName && m.modName.toLowerCase() === sName.toLowerCase());
+        const matched = localMods.find(m => m.isMap && m.modName && m.modName.toLowerCase() === sName.toLowerCase());
         if (matched) return matched;
     }
 
@@ -4582,7 +4577,7 @@ function findMapModInSavegame(xmlData, localMods = []) {
     if (rawMapId) {
         // If mapId is "FS25_Courtright_Line.CourtrightLineModMap", split('.')[0] gives "FS25_Courtright_Line"
         const prefix = rawMapId.split('.')[0];
-        const matchByPrefix = localMods.find(m => isMapMod(m) && m.modName && m.modName.toLowerCase() === prefix.toLowerCase());
+        const matchByPrefix = localMods.find(m => m.isMap && m.modName && m.modName.toLowerCase() === prefix.toLowerCase());
         if (matchByPrefix) return matchByPrefix;
 
         // Try exact mapId match (ignoring generic placeholder IDs used by many modders)
@@ -4592,29 +4587,26 @@ function findMapModInSavegame(xmlData, localMods = []) {
             'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek'
         ]);
         if (!GENERIC_MAP_IDS.has(rawMapId.toLowerCase())) {
-            const matchByMapId = localMods.find(m => isMapMod(m) && m.mapId && m.mapId.toLowerCase() === rawMapId.toLowerCase());
+            const matchByMapId = localMods.find(m => m.isMap && m.mapId && m.mapId.toLowerCase() === rawMapId.toLowerCase());
             if (matchByMapId) return matchByMapId;
         }
     }
 
     if (rawMapTitle) {
-        const titleLower = rawMapTitle.toLowerCase().trim();
-        const matchByTitle = localMods.find(m => isMapMod(m) && (
-            (m.title && m.title.toLowerCase().trim() === titleLower) ||
-            (m.mapTitle && m.mapTitle.toLowerCase().trim() === titleLower) ||
-            (m.folder && m.folder.toLowerCase().trim() === titleLower)
+        const titleLower = rawMapTitle.toLowerCase();
+        const matchByTitle = localMods.find(m => m.isMap && (
+            (m.title && m.title.toLowerCase() === titleLower) ||
+            (m.mapTitle && m.mapTitle.toLowerCase() === titleLower)
         ));
         if (matchByTitle) return matchByTitle;
     }
 
-    // Fallback: exact match by file basename, modName, or folder name
+    // Fallback: match by file basename or modName
     if (rawMapId) {
         const rawLower = rawMapId.toLowerCase();
-        const prefixLower = rawMapId.split('.')[0].toLowerCase();
-        const fallbackMatch = localMods.find(m => isMapMod(m) && (
+        const fallbackMatch = localMods.find(m => m.isMap && (
             (m.modName && m.modName.toLowerCase() === rawLower) ||
-            (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === rawLower) ||
-            (m.folder && m.folder.toLowerCase() === prefixLower)
+            (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === rawLower)
         ));
         if (fallbackMatch) return fallbackMatch;
     }

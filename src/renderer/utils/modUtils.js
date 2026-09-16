@@ -28,10 +28,11 @@ export const normalizeForMatching = (str) => {
 export const isMapCategory = (category) => {
   if (!category || typeof category !== 'string') return false;
   const c = category.trim().toLowerCase();
-  if (c === 'category:map' || c === 'maps' || c === 'map' || c.startsWith('map/')) return true;
+  // Any explicit non-map category is strictly false
   if (
     c.includes('gameplay') ||
     c.includes('prefab') ||
+    c.includes('package') ||
     c.includes('object') ||
     c.includes('placeable') ||
     c.includes('drivable') ||
@@ -39,11 +40,17 @@ export const isMapCategory = (category) => {
     c.includes('tool') ||
     c.includes('animal') ||
     c.includes('baling') ||
+    c.includes('harvest') ||
     c.includes('forestry') ||
     c.includes('grassland') ||
+    c.includes('grape') ||
     c.includes('loader') ||
+    c.includes('rootcrop') ||
     c.includes('seeding') ||
     c.includes('cultivation') ||
+    c.includes('crop') ||
+    c.includes('vegetable') ||
+    c.includes('yield') ||
     c.includes('misc')
   ) {
     return false;

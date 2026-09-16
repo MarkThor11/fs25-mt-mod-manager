@@ -476,7 +476,7 @@
   },
   "304790": {
     "modId": "304790",
-    "title": "G\u00fcttler Avant 45",
+    "title": "Güttler Avant 45",
     "author": "VertexDezign",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00304790/iconBig.jpg",
@@ -601,7 +601,7 @@
   },
   "305098": {
     "modId": "305098",
-    "title": "Sn\u00fcfelst\u00fcck",
+    "title": "Snüfelstück",
     "author": "MTL Modding Team",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00305098/iconBig.jpg",
@@ -651,7 +651,7 @@
   },
   "305143": {
     "modId": "305143",
-    "title": "G\u00fcttler Matador 610S",
+    "title": "Güttler Matador 610S",
     "author": "VertexDezign",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00305143/iconBig.jpg",
@@ -901,7 +901,7 @@
   },
   "305416": {
     "modId": "305416",
-    "title": "P\u00f6ttinger Terradisc 3001",
+    "title": "Pöttinger Terradisc 3001",
     "author": "Despo93",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00305416/iconBig.jpg",
@@ -1451,7 +1451,7 @@
   },
   "306679": {
     "modId": "306679",
-    "title": "V\u00e4derstad Rollex 450-620",
+    "title": "Väderstad Rollex 450-620",
     "author": "DR_Modding",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00306679/iconBig.jpg",
@@ -1701,7 +1701,7 @@
   },
   "306885": {
     "modId": "306885",
-    "title": "M\u00fcthing Mulcher Pack",
+    "title": "Müthing Mulcher Pack",
     "author": "Agrar Design Austria",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00306885/iconBig.jpg",
@@ -2176,7 +2176,7 @@
   },
   "307825": {
     "modId": "307825",
-    "title": "Sch\u00e4ffer Miniloader 23e + Wallbox",
+    "title": "Schäffer Miniloader 23e + Wallbox",
     "author": "Moppel",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00307825/iconBig.jpg",
@@ -2302,7 +2302,7 @@
   "307961": {
     "modId": "307961",
     "title": "International 1455/1255 XL",
-    "author": "GMaster,HerrKrupp,FarmingDud\u00b4s",
+    "author": "GMaster,HerrKrupp,FarmingDud´s",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00307961/iconBig.jpg",
     "candidates": [
@@ -2452,7 +2452,7 @@
   "308068": {
     "modId": "308068",
     "title": "CaseIH 1455/1255 XL 2.Gen",
-    "author": "GMaster,HerrKrupp,FarmingDud\u00b4s",
+    "author": "GMaster,HerrKrupp,FarmingDud´s",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00308068/iconBig.jpg",
     "candidates": [
@@ -2501,7 +2501,7 @@
   },
   "308184": {
     "modId": "308184",
-    "title": "Schl\u00fcter 2500 VL",
+    "title": "Schlüter 2500 VL",
     "author": "MTL Modding Team",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00308184/iconBig.jpg",
@@ -2701,8 +2701,8 @@
   },
   "308527": {
     "modId": "308527",
-    "title": "K\u00f6ckerling Rebell Classic 600T",
-    "author": "Gro\u00dffl\u00e4chendesign - Simon",
+    "title": "Köckerling Rebell Classic 600T",
+    "author": "Großflächendesign - Simon",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00308527/iconBig.jpg",
     "candidates": [
@@ -3501,7 +3501,7 @@
   },
   "309481": {
     "modId": "309481",
-    "title": "P\u00f6ttinger NOVADISC Pack",
+    "title": "Pöttinger NOVADISC Pack",
     "author": "Agrar Design Austria",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00309481/iconBig.jpg",
@@ -4347,8 +4347,7 @@
       "hpIsRequirement": false
     },
     "dependencies": [],
-    "description": "Pre-cached map metadata.",
-    "isMap": true
+    "description": "Pre-cached map metadata."
   },
   "311217": {
     "modId": "311217",
@@ -4548,8 +4547,7 @@
       "hpIsRequirement": false
     },
     "dependencies": [],
-    "description": "Pre-cached map metadata.",
-    "isMap": true
+    "description": "Pre-cached map metadata."
   },
   "311624": {
     "modId": "311624",
@@ -5624,8 +5622,7 @@
       "hpIsRequirement": false
     },
     "dependencies": [],
-    "description": "Pre-cached map metadata.",
-    "isMap": true
+    "description": "Pre-cached map metadata."
   },
   "313526": {
     "modId": "313526",
@@ -5879,7 +5876,7 @@
   },
   "313723": {
     "modId": "313723",
-    "title": "Stara H\u00e9rcules 6.0 2016",
+    "title": "Stara Hércules 6.0 2016",
     "author": "Agro Tonho",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00313723/iconBig.jpg",
@@ -6054,7 +6051,7 @@
   },
   "314050": {
     "modId": "314050",
-    "title": "P\u00f6ttinger Servo 25 3+1",
+    "title": "Pöttinger Servo 25 3+1",
     "author": "DB Modding",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00314050/iconBig.jpg",
@@ -6479,7 +6476,7 @@
   },
   "314500": {
     "modId": "314500",
-    "title": "T\u00e4ssi Farm",
+    "title": "Tässi Farm",
     "author": "Carl-TG",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00314500/iconBig.jpg",
@@ -7054,7 +7051,7 @@
   },
   "315249": {
     "modId": "315249",
-    "title": "P\u00f6ttinger Aerosem 3002/Lion303",
+    "title": "Pöttinger Aerosem 3002/Lion303",
     "author": "Hispano",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00315249/iconBig.jpg",
@@ -7129,7 +7126,7 @@
   },
   "315262": {
     "modId": "315262",
-    "title": "V\u00e4derstad Carrier 820",
+    "title": "Väderstad Carrier 820",
     "author": "Wireframe Modding",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00315262/iconBig.jpg",
@@ -7404,7 +7401,7 @@
   },
   "315477": {
     "modId": "315477",
-    "title": "Schwarzm\u00fcller Semi Lowloader 3A",
+    "title": "Schwarzmüller Semi Lowloader 3A",
     "author": "GIANTS Software",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00315477/iconBig.jpg",
@@ -8579,7 +8576,7 @@
   },
   "316686": {
     "modId": "316686",
-    "title": "P\u00f6ttinger SERVO 25 Pack",
+    "title": "Pöttinger SERVO 25 Pack",
     "author": "Agrar Design Austria",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00316686/iconBig.jpg",
@@ -9129,7 +9126,7 @@
   },
   "317417": {
     "modId": "317417",
-    "title": "Case IH Concord\u2122 Air Drill System",
+    "title": "Case IH Concord™ Air Drill System",
     "author": "Casearias Modding",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00317417/iconBig.jpg",
@@ -9354,7 +9351,7 @@
   },
   "317639": {
     "modId": "317639",
-    "title": "K\u00f6ckerling Vector 5.70",
+    "title": "Köckerling Vector 5.70",
     "author": "GIANTS Software",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00317639/iconBig.jpg",
@@ -9750,8 +9747,7 @@
       "hpIsRequirement": false
     },
     "dependencies": [],
-    "description": "Pre-cached map metadata.",
-    "isMap": true
+    "description": "Pre-cached map metadata."
   },
   "318081": {
     "modId": "318081",
@@ -10255,7 +10251,7 @@
   },
   "319147": {
     "modId": "319147",
-    "title": "P\u00f6ttinger NovaAlpin 261",
+    "title": "Pöttinger NovaAlpin 261",
     "author": "Hispano",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00319147/iconBig.jpg",
@@ -11356,7 +11352,7 @@
   "321380": {
     "modId": "321380",
     "title": "Volvo FH16 South-America",
-    "author": "Farm Centro-Sul/Lu\u00eds73_sound",
+    "author": "Farm Centro-Sul/Luís73_sound",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00321380/iconBig.jpg",
     "candidates": [
@@ -11655,7 +11651,7 @@
   },
   "322073": {
     "modId": "322073",
-    "title": "K\u00f6ckerling Drawbar",
+    "title": "Köckerling Drawbar",
     "author": "Michi",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00322073/iconBig.jpg",
@@ -13556,7 +13552,7 @@
   "326671": {
     "modId": "326671",
     "title": "Unimog U1250, U1450, U1650",
-    "author": "AlexL353_modding,ModdingWelt, bm-modding,Maxter,\u00a0Puma,Bremi",
+    "author": "AlexL353_modding,ModdingWelt, bm-modding,Maxter, Puma,Bremi",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00326671/iconBig.jpg",
     "candidates": [
@@ -13705,7 +13701,7 @@
   },
   "326962": {
     "modId": "326962",
-    "title": "V\u00e4derstad Rapid 300C/400C",
+    "title": "Väderstad Rapid 300C/400C",
     "author": "Matt26",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00326962/iconBig.jpg",
@@ -13856,7 +13852,7 @@
   "327341": {
     "modId": "327341",
     "title": "Gyrax G760",
-    "author": "Agridesignmodding / Nico Du 55 / Natha\u00ebl",
+    "author": "Agridesignmodding / Nico Du 55 / Nathaël",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00327341/iconBig.jpg",
     "candidates": [
@@ -14081,7 +14077,7 @@
   "327657": {
     "modId": "327657",
     "title": "Gyrax Gyramax 512",
-    "author": "AgriDesignModding /Nico Du 55 / Natha\u00ebl",
+    "author": "AgriDesignModding /Nico Du 55 / Nathaël",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00327657/iconBig.jpg",
     "candidates": [
@@ -14755,7 +14751,7 @@
   },
   "328931": {
     "modId": "328931",
-    "title": "P\u00f6ttinger Terrasem C6F",
+    "title": "Pöttinger Terrasem C6F",
     "author": "Hispano",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00328931/iconBig.jpg",
@@ -15055,7 +15051,7 @@
   },
   "329692": {
     "modId": "329692",
-    "title": "P\u00f6ttinger NOVAALPIN Pack",
+    "title": "Pöttinger NOVAALPIN Pack",
     "author": "Agrar Design Austria",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00329692/iconBig.jpg",
@@ -15555,7 +15551,7 @@
   },
   "330627": {
     "modId": "330627",
-    "title": "Ron\u00eeda Island 4x",
+    "title": "Ronîda Island 4x",
     "author": "CapAro",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00330627/iconBig.jpg",
@@ -15806,7 +15802,7 @@
   "331020": {
     "modId": "331020",
     "title": "Pichon B-MIX80",
-    "author": "AgriDesignModding / Natha\u00ebl / Nico Du 55",
+    "author": "AgriDesignModding / Nathaël / Nico Du 55",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00331020/iconBig.jpg",
     "candidates": [
@@ -15930,7 +15926,7 @@
   },
   "331296": {
     "modId": "331296",
-    "title": "K\u00f6ckerling Jockey 600",
+    "title": "Köckerling Jockey 600",
     "author": "ARM-Team",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00331296/iconBig.jpg",
@@ -16155,7 +16151,7 @@
   },
   "331545": {
     "modId": "331545",
-    "title": "Past\u00f2 Thor 300",
+    "title": "Pastò Thor 300",
     "author": "A-ndrea - Andrea AGV - Daniele",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00331545/iconBig.jpg",
@@ -17080,7 +17076,7 @@
   },
   "333031": {
     "modId": "333031",
-    "title": "Stara H\u00e9rcules 10000",
+    "title": "Stara Hércules 10000",
     "author": "Stara and Connect Modding LTDA",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00333031/iconBig.jpg",
@@ -17126,8 +17122,7 @@
       "hpIsRequirement": false
     },
     "dependencies": [],
-    "description": "Pre-cached map metadata.",
-    "isMap": true
+    "description": "Pre-cached map metadata."
   },
   "333141": {
     "modId": "333141",
@@ -17381,7 +17376,7 @@
   },
   "333592": {
     "modId": "333592",
-    "title": "Ron\u00eeda Island",
+    "title": "Ronîda Island",
     "author": "CapAro",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00333592/iconBig.jpg",
@@ -18281,7 +18276,7 @@
   },
   "335213": {
     "modId": "335213",
-    "title": "P\u00f6ttinger NOVA-/EUROCAT Pack",
+    "title": "Pöttinger NOVA-/EUROCAT Pack",
     "author": "Agrar Design Austria",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00335213/iconBig.jpg",
@@ -18832,7 +18827,7 @@
   "335985": {
     "modId": "335985",
     "title": "Kuhn HR 4004 + BTF 4000 + TF1512",
-    "author": "Nico Du 55 / Natha\u00ebl",
+    "author": "Nico Du 55 / Nathaël",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00335985/iconBig.jpg",
     "candidates": [
@@ -19802,8 +19797,7 @@
       "hpIsRequirement": false
     },
     "dependencies": [],
-    "description": "Pre-cached map metadata.",
-    "isMap": true
+    "description": "Pre-cached map metadata."
   },
   "337165": {
     "modId": "337165",
@@ -20458,7 +20452,7 @@
   "338725": {
     "modId": "338725",
     "title": "Triangulo Pegasus",
-    "author": "Industrial Tri\u00e2ngulo, ML Studio",
+    "author": "Industrial Triângulo, ML Studio",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00338725/iconBig.jpg",
     "candidates": [
@@ -20482,8 +20476,8 @@
   },
   "338730": {
     "modId": "338730",
-    "title": "Tri\u00e2ngulo Ventania 4000 Knife Roller",
-    "author": "Industrial Tri\u00e2ngulo, ML Studio",
+    "title": "Triângulo Ventania 4000 Knife Roller",
+    "author": "Industrial Triângulo, ML Studio",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00338730/iconBig.jpg",
     "candidates": [
@@ -20507,7 +20501,7 @@
   },
   "338820": {
     "modId": "338820",
-    "title": "V\u00e4derstad Rapid A800S BD",
+    "title": "Väderstad Rapid A800S BD",
     "author": "DS-Power",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00338820/iconBig.jpg",
@@ -20957,7 +20951,7 @@
   },
   "339442": {
     "modId": "339442",
-    "title": "M\u00fcnsinger Alb",
+    "title": "Münsinger Alb",
     "author": "Jogi",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00339442/iconBig.jpg",
@@ -22607,7 +22601,7 @@
   },
   "342386": {
     "modId": "342386",
-    "title": "P\u00f6ttinger NOVADISC Butterfly Pack",
+    "title": "Pöttinger NOVADISC Butterfly Pack",
     "author": "Agrar Design Austria",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00342386/iconBig.jpg",
@@ -23183,7 +23177,7 @@
   "343628": {
     "modId": "343628",
     "title": "Klattenhof",
-    "author": "Gro\u00dffl\u00e4chendesign - Mappi724",
+    "author": "Großflächendesign - Mappi724",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00343628/iconBig.jpg",
     "candidates": [
@@ -23232,7 +23226,7 @@
   },
   "343677": {
     "modId": "343677",
-    "title": "M\u00fcthing MU-M/F 600 Vario",
+    "title": "Müthing MU-M/F 600 Vario",
     "author": "Agrar Design Austria",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00343677/iconBig.jpg",
@@ -23278,8 +23272,7 @@
       "hpIsRequirement": false
     },
     "dependencies": [],
-    "description": "Pre-cached map metadata.",
-    "isMap": true
+    "description": "Pre-cached map metadata."
   },
   "343695": {
     "modId": "343695",
@@ -23758,7 +23751,7 @@
   },
   "344736": {
     "modId": "344736",
-    "title": "Kivi K\u00fcla",
+    "title": "Kivi Küla",
     "author": "Carl-TG",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00344736/iconBig.jpg",
@@ -24358,7 +24351,7 @@
   },
   "346911": {
     "modId": "346911",
-    "title": "H\u00fcrlimann H 488",
+    "title": "Hürlimann H 488",
     "author": "MTL Modding Team",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00346911/iconBig.jpg",
@@ -24508,7 +24501,7 @@
   },
   "347324": {
     "modId": "347324",
-    "title": "FM\u017b Bizon Gigant",
+    "title": "FMŻ Bizon Gigant",
     "author": "Deus_Volt",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00347324/iconBig.jpg",
@@ -24609,7 +24602,7 @@
   "347632": {
     "modId": "347632",
     "title": "BTz-2 U-201/0 \"Wars\"",
-    "author": "Szaweu, Dymitri, Radwa\u0144czykModsCompany",
+    "author": "Szaweu, Dymitri, RadwańczykModsCompany",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00347632/iconBig.jpg",
     "candidates": [
@@ -24809,7 +24802,7 @@
   "347897": {
     "modId": "347897",
     "title": "TIM Weeder 4 Row",
-    "author": "VuleX, \u0160piko",
+    "author": "VuleX, Špiko",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00347897/iconBig.jpg",
     "candidates": [
@@ -25259,7 +25252,7 @@
   "348643": {
     "modId": "348643",
     "title": "Kuhn Deltis2 MTA3",
-    "author": "\u0141osio\u0142",
+    "author": "Łosioł",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00348643/iconBig.jpg",
     "candidates": [
@@ -25283,7 +25276,7 @@
   },
   "348674": {
     "modId": "348674",
-    "title": "Chapad\u00e3o Farm",
+    "title": "Chapadão Farm",
     "author": "Lostgamer/Pedro Cavalet",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00348674/iconBig.jpg",
@@ -26134,7 +26127,7 @@
   "350840": {
     "modId": "350840",
     "title": "Kuhn Mower Pack",
-    "author": "Farming Dud\u00b4s - [FD] Vassili_k98",
+    "author": "Farming Dud´s - [FD] Vassili_k98",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00350840/iconBig.jpg",
     "candidates": [
@@ -27284,7 +27277,7 @@
   "352973": {
     "modId": "352973",
     "title": "JW 4x4",
-    "author": "Hispano / 82\u00b2 Studio",
+    "author": "Hispano / 82² Studio",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00352973/iconBig.jpg",
     "candidates": [
@@ -27533,7 +27526,7 @@
   },
   "353727": {
     "modId": "353727",
-    "title": "Schwarzm\u00fcller 4-Axle LowLoader",
+    "title": "Schwarzmüller 4-Axle LowLoader",
     "author": "LsAgrarModding",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00353727/iconBig.jpg",
@@ -27608,7 +27601,7 @@
   },
   "353794": {
     "modId": "353794",
-    "title": "Ga\u00facho Fieds",
+    "title": "Gaúcho Fieds",
     "author": "SamuelBatistaModding",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00353794/iconBig.jpg",
@@ -27708,7 +27701,7 @@
   },
   "353978": {
     "modId": "353978",
-    "title": "\u0160\u00e1lek PN2-300/PN3-300 Pack",
+    "title": "Šálek PN2-300/PN3-300 Pack",
     "author": "Puszkap",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00353978/iconBig.jpg",
@@ -28033,7 +28026,7 @@
   },
   "354414": {
     "modId": "354414",
-    "title": "Schl\u00fcter 2500 VL",
+    "title": "Schlüter 2500 VL",
     "author": "[BFM] Xorzi-Manu",
     "authorId": null,
     "image": "https://cdn19.giants-software.com/modHub/storage/00354414/iconBig.jpg",
@@ -29358,7 +29351,7 @@
   },
   "357324": {
     "modId": "357324",
-    "title": "G\u00fclzow",
+    "title": "Gülzow",
     "author": "AgrarlohnVirtual",
     "authorId": null,
     "image": "https://cdn18.giants-software.com/modHub/storage/00357324/iconBig.jpg",
