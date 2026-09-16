@@ -4605,16 +4605,9 @@ function findMapModInSavegame(xmlData, localMods = []) {
             (m.folder && m.folder.toLowerCase().trim() === titleLower)
         ));
         if (matchByTitle) return matchByTitle;
-
-        // Fuzzy title match
-        const matchByTitleFuzzy = localMods.find(m => isMapMod(m) && (
-            (m.title && (m.title.toLowerCase().includes(titleLower) || titleLower.includes(m.title.toLowerCase()))) ||
-            (m.folder && (m.folder.toLowerCase().includes(titleLower) || titleLower.includes(m.folder.toLowerCase())))
-        ));
-        if (matchByTitleFuzzy) return matchByTitleFuzzy;
     }
 
-    // Fallback: match by file basename or modName or folder name
+    // Fallback: exact match by file basename, modName, or folder name
     if (rawMapId) {
         const rawLower = rawMapId.toLowerCase();
         const prefixLower = rawMapId.split('.')[0].toLowerCase();
@@ -4624,19 +4617,6 @@ function findMapModInSavegame(xmlData, localMods = []) {
             (m.folder && m.folder.toLowerCase() === prefixLower)
         ));
         if (fallbackMatch) return fallbackMatch;
-    }
-
-    // Ultimate fallback for map mods: match by normalized alphanumeric key
-    if (rawMapId || rawMapTitle) {
-        const keyStr = (rawMapId || rawMapTitle).toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (keyStr.length >= 3) {
-            const ultraMatch = localMods.find(m => isMapMod(m) && (
-                (m.modName && keyStr.includes(m.modName.toLowerCase().replace(/[^a-z0-9]/g, ''))) ||
-                (m.title && keyStr.includes(m.title.toLowerCase().replace(/[^a-z0-9]/g, ''))) ||
-                (m.folder && keyStr.includes(m.folder.toLowerCase().replace(/[^a-z0-9]/g, '')))
-            ));
-            if (ultraMatch) return ultraMatch;
-        }
     }
 
     return null;
