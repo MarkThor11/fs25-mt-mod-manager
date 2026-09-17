@@ -234,26 +234,37 @@ async function getMapTemplates() {
             }
 
             // Attempt a "Rich Match" using installed mods or DLCs
-            const matchedMod = mapMods.find(m => {
-                const mId = m.mapId;
-                const mTitle = m.title;
-                const mName = m.modName;
-                const fLower = baseName.toLowerCase();
+            const GENERIC_MAP_IDS = new Set([
+                'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
+                'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
+                'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek'
+            ]);
 
-                if (mId && mId === mapId) return true;
-                if (mTitle && mTitle === mapTitle) return true;
-                if (mTitle && mapTitle && mTitle.toLowerCase().trim() === mapTitle.toLowerCase().trim()) return true;
-                if (mName && mName === baseName) return true;
-                if (mId && mId.replace(/[^a-z0-9]/gi, '_') === baseName) return true;
-                if (mapId && mName && mapId.toLowerCase().startsWith(mName.toLowerCase() + '.')) return true;
-                if (mapId && mId && mapId.toLowerCase().endsWith('.' + mId.toLowerCase())) return true;
-                if (mName && fLower.includes(mName.toLowerCase())) return true;
-                
-                if (mName && mId) {
-                    const cleanMName = mName.toLowerCase().replace('pdlc_', '').replace(/[^a-z0-9]/gi, '_');
-                    const cleanMId = mId.toLowerCase().replace(/[^a-z0-9]/gi, '_');
-                    if (fLower.includes(cleanMName) && fLower.includes(cleanMId)) return true;
+            const templateModName = (mapId && mapId.includes('.')) ? mapId.split('.')[0] : null;
+            const tTitleClean = (mapTitle || '').toLowerCase().trim();
+            const tModClean = (templateModName || '').toLowerCase();
+            const fLower = baseName.toLowerCase();
+
+            const matchedMod = mapMods.find(m => {
+                const mName = (m.modName || '').toLowerCase();
+                const mTitle = (m.title || '').toLowerCase().trim();
+                const mId = (m.mapId || '').toLowerCase();
+
+                // 1. Exact modName match via templateModName (e.g. FS25_Blue_Island_Forest)
+                if (tModClean && mName === tModClean) return true;
+
+                // 2. Exact Title match
+                if (mTitle && tTitleClean && mTitle === tTitleClean) return true;
+
+                // 3. modName matches baseName prefix or exact baseName
+                if (mName && (fLower === mName || fLower.startsWith(mName + '_'))) return true;
+
+                // 4. Non-generic mapId match (NEVER match generic IDs like 'samplemodmap')
+                if (mId && !GENERIC_MAP_IDS.has(mId)) {
+                    if (mId === mapId.toLowerCase()) return true;
+                    if (mapId.toLowerCase().endsWith('.' + mId)) return true;
                 }
+
                 return false;
             });
 
@@ -4961,7 +4972,9 @@ async function adoptSaveAsTemplate(saveIndex) {
         let templateFolder = mapId.replace(/[^a-z0-9]/gi, '_');
         if (mapModName) {
             const cleanMod = mapModName.replace(/[^a-z0-9]/gi, '_');
-            templateFolder = `${cleanMod}_${templateFolder}`;
+            if (!templateFolder.toLowerCase().startsWith(cleanMod.toLowerCase())) {
+                templateFolder = `${cleanMod}_${templateFolder}`;
+            }
         }
         
         const templatesDir = getTemplatesPath();
