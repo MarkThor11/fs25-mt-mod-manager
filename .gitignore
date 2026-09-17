@@ -68,6 +68,7 @@ out/
 *.exe
 *.dmg
 *.zip
+!src/main/resources/internalMods/*.zip
 
 # Database
 *.db

@@ -36,12 +36,39 @@ export const useRadioStore = create((set, get) => ({
     set({ spotifyAccount: null });
   },
 
+  // Companion script & override state
+  overrideBuiltins: true,
+  isCompanionInstalled: false,
+
+  fetchRadioSettings: async () => {
+    if (!window.api?.radio?.getSettings) return;
+    try {
+      const res = await window.api.radio.getSettings();
+      if (res) {
+        set({
+          overrideBuiltins: res.overrideBuiltins !== false,
+          isCompanionInstalled: !!res.isCompanionInstalled
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to fetch radio settings:', e);
+    }
+  },
+
+  setOverrideBuiltins: async (override) => {
+    set({ overrideBuiltins: override });
+    if (window.api?.radio?.saveSettings) {
+      await window.api.radio.saveSettings({ overrideBuiltins: override });
+    }
+  },
+
   fetchRadios: async () => {
     if (!window.api?.radio) return;
     set({ isLoading: true });
     try {
       const stations = await window.api.radio.getRadios();
       set({ stations });
+      get().fetchRadioSettings();
     } finally {
       set({ isLoading: false });
     }

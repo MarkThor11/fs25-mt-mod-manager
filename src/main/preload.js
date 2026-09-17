@@ -87,6 +87,9 @@ contextBridge.exposeInMainWorld('api', {
     remove: (href) => ipcRenderer.invoke('radio:remove', href),
     search: (query) => ipcRenderer.invoke('radio:search', query),
     launchSpotify: () => ipcRenderer.invoke('radio:launchSpotify'),
+    getSettings: () => ipcRenderer.invoke('radio:getSettings'),
+    saveSettings: (settings) => ipcRenderer.invoke('radio:saveSettings', settings),
+    deployCompanion: () => ipcRenderer.invoke('radio:deployCompanion'),
   },
 
   // Savegames

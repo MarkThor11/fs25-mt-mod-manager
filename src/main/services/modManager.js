@@ -793,6 +793,19 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 			console.warn('[VIRTUAL] Could not inject FS25_QuietLoadingScreen:', qErr.message);
 		}
 
+		// Inject internal MTRadioManager helper mod to guarantee in-game radio station overrides
+		try {
+			const internalRadioMod = path.join(__dirname, '..', 'resources', 'internalMods', 'FS25_MTRadioManager.zip');
+			if (fs.existsSync(internalRadioMod)) {
+				const destRadioPath = path.join(virtualPath, 'FS25_MTRadioManager.zip');
+				if (fs.existsSync(destRadioPath)) await fs.remove(destRadioPath);
+				await fs.copyFile(internalRadioMod, destRadioPath);
+				debugLog('[VIRTUAL] Injected internal helper mod: FS25_MTRadioManager.zip');
+			}
+		} catch (rErr) {
+			console.warn('[VIRTUAL] Could not inject FS25_MTRadioManager:', rErr.message);
+		}
+
 		debugLog(`[VIRTUAL] Successfully synthesized ${linkedCount} mods for launch.`);
 		return virtualPath;
 	} catch (err) {
@@ -1941,7 +1954,7 @@ async function performScan(manualPaths = null) {
 	let finalMods = Array.from(new Set(uniqueModsMap.values()));
 
 	// Filter out internal background logic mods so they don't appear in UI
-	const internalMods = ['fs25_rememberpositions', 'fs25_managerpersistencebridge'];
+	const internalMods = ['fs25_rememberpositions', 'fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
 	finalMods = finalMods.filter(m => !internalMods.includes((m.modName || '').toLowerCase()));
 
 function getTemplatesPath() {

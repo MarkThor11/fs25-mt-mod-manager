@@ -14,18 +14,19 @@ const PRESET_COUNTRIES = [
 ];
 
 const OFFICIAL_PRESETS = [
-    { name: 'Simulation Radio', url: 'http://217.151.151.144:8000/stream', tags: 'Official, Simulation, Pop', language: 'English', country: 'Germany' },
-    { name: 'Farming Simulator Radio', url: 'http://217.151.151.144:8001/stream', tags: 'Official, Country, Folk', language: 'English', country: 'Germany' },
+    { name: 'Simulator Radio', url: 'https://simulatorradio.stream/stream.mp3', tags: 'Official, Simulation, Pop', language: 'English', country: 'United Kingdom' },
+    { name: 'Truckers FM', url: 'https://live.truckers.fm/', tags: 'Official, Simulation, Variety', language: 'English', country: 'United Kingdom' },
+    { name: 'TruckStopRadio Country', url: 'https://oreo.truckstopradio.co.uk/listen/tsr_country/radio.mp3', tags: 'Simulation, Country', language: 'English', country: 'United Kingdom' },
+    { name: 'TruckStopRadio Rock', url: 'https://oreo.truckstopradio.co.uk/listen/tsr_rock/radio.mp3', tags: 'Simulation, Rock', language: 'English', country: 'United Kingdom' },
 ];
-
-const SPOTIFY_STATION_URL = 'http://localhost:8000/spotify_account';
 
 const RadioPage = () => {
     const { 
         stations, searchResults, isSearching, 
         fetchRadios, searchStations, addStation, removeStation,
         playingStationUrl, setPlayingStation,
-        spotifyAccount, setSpotifyAccount, clearSpotifyAccount
+        spotifyAccount, setSpotifyAccount, clearSpotifyAccount,
+        overrideBuiltins, isCompanionInstalled, setOverrideBuiltins
     } = useRadioStore();
     const { toast } = useToastStore();
     
@@ -50,7 +51,13 @@ const RadioPage = () => {
         };
     }, []);
 
-    const isSpotifyAdded = stations.some(s => s.href === SPOTIFY_STATION_URL || s.href.toLowerCase().includes('spotify'));
+    // Automatically purge broken localhost/spotify placeholder streams if present
+    useEffect(() => {
+        if (stations && stations.length > 0) {
+            const broken = stations.filter(s => s.href && (s.href.includes('localhost:8000') || s.href.includes('/spotify_account')));
+            broken.forEach(s => removeStation(s.href));
+        }
+    }, [stations]);
 
     const toggleTag = (t) => {
         const newTag = tag === t.toLowerCase() ? '' : t.toLowerCase();
@@ -99,16 +106,6 @@ const RadioPage = () => {
         else toast.error(result.error || 'Failed to add station');
     };
 
-    const handleAddSpotifyStation = async () => {
-        const result = await addStation(SPOTIFY_STATION_URL);
-        if (result.success) {
-            toast.success('Spotify Radio channel added to FS25 in-game radios!');
-            fetchRadios();
-        } else {
-            toast.error(result.error || 'Failed to add Spotify station');
-        }
-    };
-
     const handleSaveSpotifyAccount = async () => {
         if (!spotifyInput.trim()) {
             toast.error('Please enter your Spotify profile URL or username.');
@@ -122,11 +119,6 @@ const RadioPage = () => {
         setSpotifyAccount(accountData);
         setSpotifyInput('');
         toast.success(`Spotify account linked (${accountData.username})!`);
-
-        // Automatically add station to FS25 if not already added
-        if (!isSpotifyAdded) {
-            await handleAddSpotifyStation();
-        }
     };
 
     const handleRemove = async (href) => {
@@ -216,6 +208,54 @@ const RadioPage = () => {
                 </div>
             </div>
 
+            {/* In-Game Companion Mod & Station Override Card */}
+            <div style={{ 
+                background: 'var(--bg-card)', 
+                borderRadius: '16px', 
+                padding: '18px 20px', 
+                border: overrideBuiltins ? '1px solid var(--accent)' : '1px solid var(--border)', 
+                boxShadow: overrideBuiltins ? '0 0 20px rgba(var(--accent-rgb, 59, 130, 246), 0.12)' : '0 4px 16px rgba(0, 0, 0, 0.08)', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '14px' 
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <RadioIcon size={22} />
+                        </div>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>In-Game Radio Station Override</h3>
+                                <span style={{ padding: '2px 10px', borderRadius: '12px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <Check size={12} /> Companion Script Active
+                                </span>
+                            </div>
+                            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                Automatically overrides built-in game stations so pressing Next/Previous station in-game cycles strictly through your custom stations.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', background: 'var(--bg-tertiary)', padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '600', color: overrideBuiltins ? 'var(--accent)' : 'var(--text-secondary)' }}>
+                                {overrideBuiltins ? 'Override Active (Custom Only)' : 'Default (Appended to Built-ins)'}
+                            </span>
+                            <input 
+                                type="checkbox"
+                                checked={overrideBuiltins}
+                                onChange={(e) => {
+                                    setOverrideBuiltins(e.target.checked);
+                                    toast.success(e.target.checked ? 'In-game radio override enabled' : 'In-game radio override disabled');
+                                }}
+                                style={{ width: '18px', height: '18px', accentColor: 'var(--accent)', cursor: 'pointer' }}
+                            />
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             {/* Spotify Account Sign-In & Link Box */}
             <div style={{ 
                 background: 'var(--bg-card)', 
@@ -224,8 +264,8 @@ const RadioPage = () => {
                 border: spotifyAccount ? '1px solid #1DB954' : '1px solid rgba(29, 185, 84, 0.35)', 
                 boxShadow: spotifyAccount ? '0 0 20px rgba(29, 185, 84, 0.15)' : '0 8px 32px rgba(0, 0, 0, 0.15)', 
                 display: 'flex', 
-                flexDirection: 'column',
-                gap: '16px'
+                flexDirection: 'column', 
+                gap: '16px' 
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -234,7 +274,7 @@ const RadioPage = () => {
                         </div>
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Spotify Account & In-Game Radio Channel</h3>
+                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Spotify Integration (External App)</h3>
                                 {spotifyAccount ? (
                                     <span style={{ padding: '2px 10px', borderRadius: '12px', background: 'rgba(29, 185, 84, 0.2)', color: '#1DB954', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                         <UserCheck size={12} /> Account Linked
@@ -246,30 +286,29 @@ const RadioPage = () => {
                                 )}
                             </div>
                             <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                Link your Spotify account to add a dedicated Spotify station channel to FS25. You operate playback separately in your external Spotify app.
+                                Operate your Spotify playback in the desktop app while playing FS25.
                             </p>
                         </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <button 
-                            onClick={handleAddSpotifyStation}
-                            disabled={isSpotifyAdded}
+                            onClick={handleOpenSpotifyApp}
                             style={{ 
-                                padding: '8px 14px', 
+                                padding: '8px 16px', 
                                 borderRadius: '10px', 
                                 border: 'none', 
-                                background: isSpotifyAdded ? 'var(--bg-tertiary)' : '#1DB954',
-                                color: isSpotifyAdded ? 'var(--text-secondary)' : 'white',
-                                fontWeight: '700',
-                                fontSize: '12px',
-                                cursor: isSpotifyAdded ? 'default' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
+                                background: '#1DB954', 
+                                color: 'white', 
+                                fontWeight: '700', 
+                                fontSize: '12px', 
+                                cursor: 'pointer', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '6px' 
                             }}
                         >
-                            {isSpotifyAdded ? <Check size={14} /> : <Plus size={14} />} {isSpotifyAdded ? 'Added to FS25 Radio' : 'Add Spotify Radio to Game'}
+                            <ExternalLink size={14} /> Open Spotify Player
                         </button>
                     </div>
                 </div>
@@ -440,7 +479,7 @@ const RadioPage = () => {
                         )}
                         {stations.length > 0 ? (
                             stations.map((station, idx) => {
-                                const isSpotify = station.href === SPOTIFY_STATION_URL || station.href.toLowerCase().includes('spotify');
+                                const isSpotify = station.href && station.href.toLowerCase().includes('spotify');
                                 return (
                                     <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--bg-card)', borderRadius: '12px', border: isSpotify ? '1px solid #1DB954' : '1px solid var(--border)' }}>
                                         <div style={{ width: '40px', height: '40px', background: isSpotify ? 'rgba(29, 185, 84, 0.15)' : 'var(--accent-dim)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isSpotify ? '#1DB954' : 'var(--accent)' }}>

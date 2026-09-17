@@ -94,10 +94,11 @@ async function getRadios() {
 async function saveRadios(radios) {
     const filePath = getRadioFilePath();
     
-    // Sanitize radios: ensure they are valid URLs
+    // Sanitize radios: ensure they are valid URLs and remove dummy/broken URLs like localhost:8000
     const sanitizedRadios = (Array.isArray(radios) ? radios : [])
         .filter(r => r && (r.href || r['@_href']))
-        .map(r => (r.href || r['@_href']).trim());
+        .map(r => (r.href || r['@_href']).trim())
+        .filter(href => !href.includes('localhost:8000') && !href.includes('/spotify_account'));
 
     // Build XML manually for absolute control (Giants Engine is very picky)
     let xml = '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n\n';
@@ -114,6 +115,8 @@ async function saveRadios(radios) {
     try {
         await fs.ensureDir(path.dirname(filePath));
         await fs.writeFile(filePath, xml, 'utf-8');
+        // Keep companion mod deployed and sync settings
+        await deployCompanionMod();
         return { success: true };
     } catch (err) {
         console.error('[RADIO] Failed to save radios:', err);
@@ -138,6 +141,81 @@ async function removeRadio(href) {
     const radios = await getRadios();
     const filtered = radios.filter(r => r.href !== href);
     return await saveRadios(filtered);
+}
+
+function getRadioSettingsPath() {
+    const dataRoot = pathProvider.getFS25DataRoot();
+    return path.join(dataRoot, 'modSettings', 'MTRadioManager.xml');
+}
+
+async function getRadioSettings() {
+    const filePath = getRadioSettingsPath();
+    const companionPath = path.join(pathProvider.getDefaultModsPath(), 'FS25_MTRadioManager.zip');
+    const isCompanionInstalled = fs.existsSync(companionPath);
+
+    if (!fs.existsSync(filePath)) {
+        return {
+            overrideBuiltins: true,
+            isCompanionInstalled
+        };
+    }
+
+    try {
+        const xml = await fs.readFile(filePath, 'utf-8');
+        const jsonObj = parser.parse(xml);
+        const overrideBuiltins = jsonObj?.MTRadioSettings?.overrideBuiltins !== false && jsonObj?.MTRadioSettings?.overrideBuiltins !== 'false';
+        return {
+            overrideBuiltins,
+            isCompanionInstalled
+        };
+    } catch (err) {
+        console.error('[RADIO] Failed to read settings:', err);
+        return {
+            overrideBuiltins: true,
+            isCompanionInstalled
+        };
+    }
+}
+
+async function saveRadioSettings(settings) {
+    const filePath = getRadioSettingsPath();
+    const overrideBuiltins = settings?.overrideBuiltins !== false;
+
+    let xml = '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n\n';
+    xml += '<MTRadioSettings>\n';
+    xml += `    <overrideBuiltins>${overrideBuiltins}</overrideBuiltins>\n`;
+    xml += '</MTRadioSettings>';
+
+    try {
+        await fs.ensureDir(path.dirname(filePath));
+        await fs.writeFile(filePath, xml, 'utf-8');
+        await deployCompanionMod();
+        return { success: true };
+    } catch (err) {
+        console.error('[RADIO] Failed to save settings:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+async function deployCompanionMod() {
+    try {
+        const internalMod = path.join(__dirname, '..', 'resources', 'internalMods', 'FS25_MTRadioManager.zip');
+        if (!fs.existsSync(internalMod)) {
+            console.warn('[RADIO] Internal FS25_MTRadioManager.zip not found at:', internalMod);
+            return { success: false, error: 'Internal companion mod not found' };
+        }
+
+        const modsDir = pathProvider.getDefaultModsPath();
+        if (modsDir && fs.existsSync(modsDir)) {
+            const destPath = path.join(modsDir, 'FS25_MTRadioManager.zip');
+            await fs.copyFile(internalMod, destPath);
+            console.log('[RADIO] Companion mod successfully deployed to:', destPath);
+        }
+        return { success: true };
+    } catch (err) {
+        console.error('[RADIO] Failed to deploy companion mod:', err);
+        return { success: false, error: err.message };
+    }
 }
 
 /**
@@ -176,5 +254,8 @@ module.exports = {
     getRadios,
     addRadio,
     removeRadio,
-    searchStations
+    searchStations,
+    getRadioSettings,
+    saveRadioSettings,
+    deployCompanionMod
 };
