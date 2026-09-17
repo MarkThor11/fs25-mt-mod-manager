@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   TrendingUp, Package, Download, RefreshCw, ArrowRight, Globe, Star, Users, Share2, Clipboard, DownloadCloud, Activity, Pencil, Palette, Camera, Move
@@ -11,6 +11,7 @@ import { useSavegameStore } from '../store/useSavegameStore';
 import { useToastStore } from '../store/useToastStore';
 import { useModHubStore } from '../store/useModHubStore';
 import { useInstalledLookup } from '../hooks/useInstalledLookup';
+import { getQuoteOfTheDay, getQuoteByIndex } from '../utils/dailyQuotes';
 import mapUs from '../assets/maps/map_us.png';
 import mapEu from '../assets/maps/map_eu.png';
 import mapAs from '../assets/maps/map_as.png';
@@ -45,8 +46,18 @@ export default function HomePage() {
     heroTextShadow,
     heroShowText,
     heroShowSubtitle,
+    heroSubtitleMode,
+    heroQuoteIndex,
     updateHeroBannerSettings
   } = useSettingsStore();
+
+  const activeSubtitleMode = heroSubtitleMode || (heroShowSubtitle === false ? 'off' : 'quote');
+  const displayQuote = useMemo(() => {
+    if (heroQuoteIndex !== null && heroQuoteIndex !== undefined) {
+      return getQuoteByIndex(heroQuoteIndex);
+    }
+    return getQuoteOfTheDay();
+  }, [heroQuoteIndex]);
 
   const getInstalledVersion = useInstalledLookup();
   const { exportCollection, importCollection, batchProgress } = useLocalModsStore();
@@ -279,24 +290,37 @@ export default function HomePage() {
                   </span>
                 )}
               </h1>
-              {heroShowSubtitle && (
+              {heroShowSubtitle && activeSubtitleMode !== 'off' && (
                 <div 
                   className="home-hero__subtitle"
                   style={{
                     color: heroTextColor || 'var(--text-secondary)',
-                    opacity: 0.9,
+                    opacity: 0.92,
                     textShadow: heroTextShadow ? '0 1px 8px rgba(0,0,0,0.85)' : 'none',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '4px'
+                    gap: activeSubtitleMode === 'quote' ? '3px' : '4px'
                   }}
                 >
-                  <span style={{ display: 'block' }}>
-                    Browse, install, and manage your Farming Simulator 25 mods — all from one place.
-                  </span>
-                  <span style={{ display: 'block' }}>
-                    Use the sidebar to navigate between sections.
-                  </span>
+                  {activeSubtitleMode === 'quote' ? (
+                    <>
+                      <span style={{ fontStyle: 'italic', display: 'block', fontSize: 'var(--fs-sm)', letterSpacing: '0.01em' }}>
+                        “{displayQuote.quote}”
+                      </span>
+                      <span style={{ fontSize: '11px', opacity: 0.8, fontWeight: '600', display: 'block' }}>
+                        — {displayQuote.author}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ display: 'block' }}>
+                        Browse, install, and manage your Farming Simulator 25 mods — all from one place.
+                      </span>
+                      <span style={{ display: 'block' }}>
+                        Use the sidebar to navigate between sections.
+                      </span>
+                    </>
+                  )}
                 </div>
               )}
             </div>

@@ -28,6 +28,8 @@ export const useSettingsStore = create((set) => ({
   heroTextShadow: true,
   heroShowText: true,
   heroShowSubtitle: true,
+  heroSubtitleMode: 'quote', // 'quote' | 'helper' | 'off'
+  heroQuoteIndex: null,
   homeShowStats: true,
   homeShowLatest: true,
   homeShowDownloaded: true,
@@ -133,6 +135,8 @@ export const useSettingsStore = create((set) => ({
         heroTextShadow: settings.heroTextShadow !== 'false',
         heroShowText: settings.heroShowText !== 'false',
         heroShowSubtitle: settings.heroShowSubtitle !== 'false',
+        heroSubtitleMode: settings.heroSubtitleMode || (settings.heroShowSubtitle === 'false' ? 'off' : 'quote'),
+        heroQuoteIndex: settings.heroQuoteIndex !== undefined && settings.heroQuoteIndex !== '' ? parseInt(settings.heroQuoteIndex, 10) : null,
         homeShowStats: settings.homeShowStats !== 'false',
         homeShowLatest: settings.homeShowLatest !== 'false',
         homeShowDownloaded: settings.homeShowDownloaded !== 'false',
@@ -330,7 +334,9 @@ export const useSettingsStore = create((set) => ({
       heroTextColor: '#ffffff',
       heroTextShadow: true,
       heroShowText: true,
-      heroShowSubtitle: true
+      heroShowSubtitle: true,
+      heroSubtitleMode: 'quote',
+      heroQuoteIndex: null
     };
     set(defaults);
     if (window.api?.settings) {

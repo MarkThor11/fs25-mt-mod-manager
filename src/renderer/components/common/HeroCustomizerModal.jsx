@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, Palette, Image as ImageIcon, Upload, Check, RotateCcw, 
-  AlignLeft, AlignCenter, AlignRight, Type, Eye, EyeOff, Sparkles, Sliders, Move
+  AlignLeft, AlignCenter, AlignRight, Type, Eye, EyeOff, Sparkles, Sliders, Move,
+  Quote, HelpCircle, Shuffle, Calendar
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useToastStore } from '../../store/useToastStore';
 import ImageCropModal from './ImageCropModal';
+import { getQuoteOfTheDay, getQuoteByIndex, FARMING_QUOTES } from '../../utils/dailyQuotes';
 import mapUs from '../../assets/maps/map_us.png';
 import mapEu from '../../assets/maps/map_eu.png';
 import mapAs from '../../assets/maps/map_as.png';
@@ -42,9 +44,14 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     heroBgType, heroCustomBg, heroDimmer, heroAlignment,
     heroTextPosX, heroTextPosY,
     heroFont, heroTextSize, heroTextColor, heroTextShadow,
-    heroShowText, heroShowSubtitle,
+    heroShowText, heroShowSubtitle, heroSubtitleMode, heroQuoteIndex,
     updateHeroBannerSettings, resetHeroBannerSettings, setCustomHeroBanner
   } = useSettingsStore();
+
+  const activeSubtitleMode = heroSubtitleMode || (heroShowSubtitle === false ? 'off' : 'quote');
+  const currentQuote = (heroQuoteIndex !== null && heroQuoteIndex !== undefined)
+    ? getQuoteByIndex(heroQuoteIndex)
+    : getQuoteOfTheDay();
 
   const handleSelectPreset = (type) => {
     updateHeroBannerSettings({ heroBgType: type });
@@ -675,19 +682,136 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                 />
               </div>
 
-              {/* Subtitle Description Toggle */}
-              <div style={{ background: 'var(--bg-tertiary)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>Show Subtitle Description</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Show the status helper text beneath your farm greeting</div>
+              {/* Subtitle / Tagline Options */}
+              <div style={{ background: 'var(--bg-tertiary)', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>Banner Subtitle / Tagline</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Choose what appears beneath your farmer greeting</div>
+                  </div>
                 </div>
-                <input 
-                  type="checkbox"
-                  checked={heroShowSubtitle}
-                  disabled={!heroShowText}
-                  onChange={(e) => updateHeroBannerSettings({ heroShowSubtitle: e.target.checked })}
-                  style={{ width: '18px', height: '18px', accentColor: 'var(--accent)', cursor: 'pointer' }}
-                />
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: activeSubtitleMode === 'quote' ? '10px' : '0' }}>
+                  {[
+                    { id: 'quote', label: 'Quote of the Day', icon: Quote, sub: 'Daily inspiring & farming quotes' },
+                    { id: 'helper', label: 'Help Guide', icon: HelpCircle, sub: 'App navigation and mod tips' },
+                    { id: 'off', label: 'Hidden / Off', icon: EyeOff, sub: 'Clean minimalist look' },
+                  ].map((mode) => {
+                    const Icon = mode.icon;
+                    const isSelected = activeSubtitleMode === mode.id;
+                    return (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => {
+                          updateHeroBannerSettings({
+                            heroSubtitleMode: mode.id,
+                            heroShowSubtitle: mode.id !== 'off'
+                          });
+                        }}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
+                          background: isSelected ? 'var(--accent-dim)' : 'var(--bg-secondary)',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', marginBottom: '2px' }}>
+                          <Icon size={14} style={{ color: isSelected ? 'var(--accent)' : 'var(--text-secondary)' }} />
+                          <span style={{ fontSize: '12px', fontWeight: '700', color: isSelected ? 'var(--accent)' : 'var(--text-primary)' }}>
+                            {mode.label}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', lineHeight: 1.3 }}>
+                          {mode.sub}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Quote details & shuffle controls when 'quote' mode is active */}
+                {activeSubtitleMode === 'quote' && (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '8px 12px',
+                    background: 'var(--bg-secondary)',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '600', color: 'var(--accent)' }}>
+                        <Sparkles size={13} />
+                        <span>{heroQuoteIndex === null || heroQuoteIndex === undefined ? "Today's Featured Quote" : "Shuffled Quote"}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {heroQuoteIndex !== null && heroQuoteIndex !== undefined && (
+                          <button
+                            type="button"
+                            onClick={() => updateHeroBannerSettings({ heroQuoteIndex: null })}
+                            title="Reset to today's scheduled quote"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '2px 7px',
+                              fontSize: '10px',
+                              fontWeight: '600',
+                              borderRadius: '4px',
+                              border: '1px solid var(--border)',
+                              background: 'var(--bg-tertiary)',
+                              color: 'var(--text-secondary)',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Calendar size={11} />
+                            <span>Today</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentIdx = heroQuoteIndex ?? getQuoteOfTheDay().index;
+                            const nextIdx = (currentIdx + 1) % FARMING_QUOTES.length;
+                            updateHeroBannerSettings({ heroQuoteIndex: nextIdx });
+                          }}
+                          title="Preview another quote"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '2px 7px',
+                            fontSize: '10px',
+                            fontWeight: '600',
+                            borderRadius: '4px',
+                            border: '1px solid var(--accent)',
+                            background: 'var(--accent-dim)',
+                            color: 'var(--accent)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Shuffle size={11} />
+                          <span>Shuffle</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '11px', fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                      “{currentQuote.quote}”
+                    </div>
+                    <div style={{ fontSize: '10px', fontWeight: '600', color: 'var(--text-tertiary)', textAlign: 'right' }}>
+                      — {currentQuote.author}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Show Entire Hero Card Toggle */}
