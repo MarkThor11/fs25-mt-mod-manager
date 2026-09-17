@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Trash2, RefreshCw, Info, Sliders, Eye, HelpCircle, Plus, Folder, ShieldAlert,
-  ChevronDown, ChevronRight, Zap, Settings, FolderOpen, Palette, Monitor, Gamepad2
+  ChevronDown, ChevronRight, Zap, Settings, FolderOpen, Palette, Monitor, Gamepad2, X
 } from 'lucide-react';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useToastStore } from '../store/useToastStore';
@@ -771,12 +771,22 @@ export default function SettingsPage() {
         <div className="settings-row">
           <div>
             <div className="settings-row__label">Cloud Backup Path</div>
-            <div className="settings-row__desc">Select a folder to manually sync your savegames (e.g. OneDrive, Dropbox)</div>
+            <div className="settings-row__desc">Select a cloud-synced folder (e.g. OneDrive, Dropbox, Google Drive) or any local/external drive to automatically backup your savegames on game exit.</div>
             <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', wordBreak: 'break-all', marginTop: 4 }}>
               {cloudBackupPath || 'Path not set'}
             </div>
           </div>
-          <div className="settings-row__control">
+          <div className="settings-row__control" style={{ display: 'flex', gap: 6 }}>
+            {cloudBackupPath && (
+              <button 
+                className="btn btn--ghost btn--sm" 
+                onClick={() => setCloudBackupPath('')}
+                title="Clear backup path"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <X size={14} /> Clear
+              </button>
+            )}
             <button 
               className="btn btn--secondary btn--sm" 
               onClick={async () => {
