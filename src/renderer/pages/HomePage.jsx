@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  TrendingUp, Package, Download, RefreshCw, ArrowRight, Globe, Star, Users, Share2, Clipboard, DownloadCloud, Activity, Pencil, Palette, Camera, Move
+  TrendingUp, Package, Download, RefreshCw, ArrowRight, Globe, Star, Users, Share2, Clipboard, DownloadCloud, Activity, Pencil, Palette, Camera, Move,
+  ChevronLeft, ChevronRight, Images, Shuffle
 } from 'lucide-react';
 import ModCard from '../components/modhub/ModCard';
 import HeroCustomizerModal from '../components/common/HeroCustomizerModal';
@@ -49,6 +50,11 @@ export default function HomePage() {
     heroShowSubtitle,
     heroSubtitleMode,
     heroQuoteIndex,
+    heroSlideshowSource,
+    heroSlideshowFolder,
+    heroSlideshowImages,
+    heroSlideshowInterval,
+    heroSlideshowShuffle,
     updateHeroBannerSettings
   } = useSettingsStore();
 
@@ -180,6 +186,171 @@ export default function HomePage() {
     setIsEditingName(false);
   };
 
+  // Slideshow State & Engine
+  const [slideshowList, setSlideshowList] = useState([]);
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [activeLayer, setActiveLayer] = useState(0); // 0 or 1
+  const [layer0Url, setLayer0Url] = useState('');
+  const [layer1Url, setLayer1Url] = useState('');
+
+  const slideIndexRef = useRef(0);
+  const activeLayerRef = useRef(0);
+  const slideshowListRef = useRef([]);
+  const slideCacheRef = useRef(new Map());
+  const isTransitioningRef = useRef(false);
+
+  useEffect(() => {
+    slideIndexRef.current = slideIndex;
+  }, [slideIndex]);
+
+  useEffect(() => {
+    activeLayerRef.current = activeLayer;
+  }, [activeLayer]);
+
+  useEffect(() => {
+    slideshowListRef.current = slideshowList;
+  }, [slideshowList]);
+
+  // Read image file as Base64 Data URL with local cache
+  const getSlideDataUrl = async (filePath) => {
+    if (!filePath) return null;
+    if (slideCacheRef.current.has(filePath)) {
+      return slideCacheRef.current.get(filePath);
+    }
+    if (window.api?.images?.readLocalAsDataUrl) {
+      try {
+        const dataUrl = await window.api.images.readLocalAsDataUrl(filePath);
+        if (dataUrl) {
+          if (slideCacheRef.current.size > 25) {
+            const firstKey = slideCacheRef.current.keys().next().value;
+            slideCacheRef.current.delete(firstKey);
+          }
+          slideCacheRef.current.set(filePath, dataUrl);
+          return dataUrl;
+        }
+      } catch (err) {
+        console.error('Failed to read slide image:', filePath, err);
+      }
+    }
+    return null;
+  };
+
+  // Switch to specific slide index with smooth crossfade
+  const goToSlide = async (targetIdx) => {
+    const list = slideshowListRef.current;
+    if (!list || list.length === 0) return;
+    const safeIdx = ((targetIdx % list.length) + list.length) % list.length;
+    const nextPath = list[safeIdx];
+    if (!nextPath) return;
+
+    if (isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+
+    try {
+      const dataUrl = await getSlideDataUrl(nextPath);
+      if (!dataUrl) {
+        isTransitioningRef.current = false;
+        return;
+      }
+
+      if (activeLayerRef.current === 0) {
+        setLayer1Url(dataUrl);
+        setActiveLayer(1);
+      } else {
+        setLayer0Url(dataUrl);
+        setActiveLayer(0);
+      }
+      setSlideIndex(safeIdx);
+
+      // Preload the next upcoming slide
+      const nextNextIdx = (safeIdx + 1) % list.length;
+      if (list[nextNextIdx]) {
+        getSlideDataUrl(list[nextNextIdx]).catch(() => {});
+      }
+    } finally {
+      setTimeout(() => {
+        isTransitioningRef.current = false;
+      }, 850);
+    }
+  };
+
+  const handleNextSlide = (e) => {
+    e?.stopPropagation();
+    goToSlide(slideIndexRef.current + 1);
+  };
+
+  const handlePrevSlide = (e) => {
+    e?.stopPropagation();
+    goToSlide(slideIndexRef.current - 1);
+  };
+
+  // Load and scan file list when heroBgType is 'slideshow' or source changes
+  useEffect(() => {
+    if (heroBgType !== 'slideshow') return;
+
+    let isMounted = true;
+    const scanAndInit = async () => {
+      let files = [];
+      if (heroSlideshowSource === 'selection') {
+        files = Array.isArray(heroSlideshowImages) ? [...heroSlideshowImages] : [];
+      } else {
+        if (heroSlideshowFolder && window.api?.images?.scanFolder) {
+          try {
+            files = await window.api.images.scanFolder(heroSlideshowFolder);
+          } catch (err) {
+            console.error('Failed to scan slideshow folder:', err);
+            files = [];
+          }
+        }
+      }
+
+      if (!isMounted) return;
+
+      if (heroSlideshowShuffle && files.length > 1) {
+        const shuffled = [...files];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        files = shuffled;
+      }
+
+      setSlideshowList(files);
+      setSlideIndex(0);
+
+      if (files.length > 0) {
+        const firstUrl = await getSlideDataUrl(files[0]);
+        if (isMounted && firstUrl) {
+          setLayer0Url(firstUrl);
+          setActiveLayer(0);
+          if (files[1]) {
+            getSlideDataUrl(files[1]).catch(() => {});
+          }
+        }
+      } else {
+        setLayer0Url('');
+        setLayer1Url('');
+      }
+    };
+
+    scanAndInit();
+    return () => {
+      isMounted = false;
+    };
+  }, [heroBgType, heroSlideshowSource, heroSlideshowFolder, heroSlideshowImages, heroSlideshowShuffle]);
+
+  // Slideshow auto-rotation timer
+  useEffect(() => {
+    if (heroBgType !== 'slideshow' || slideshowList.length <= 1) return;
+
+    const intervalSec = Math.max(5, heroSlideshowInterval || 30);
+    const timer = setInterval(() => {
+      goToSlide(slideIndexRef.current + 1);
+    }, intervalSec * 1000);
+
+    return () => clearInterval(timer);
+  }, [heroBgType, slideshowList, heroSlideshowInterval]);
+
   const getBannerBackground = () => {
     switch (heroBgType) {
       case 'riverbend': return `url(${mapUs})`;
@@ -187,12 +358,15 @@ export default function HomePage() {
       case 'hutan': return `url(${mapAs})`;
       case 'kinlaig': return `url(${mapKinlaig})`;
       case 'custom': return heroCustomBg ? `url(${heroCustomBg})` : null;
+      case 'slideshow': return null;
       default: return null;
     }
   };
 
   const bannerBgUrl = getBannerBackground();
-  const hasCustomBackground = !!bannerBgUrl;
+  const hasCustomBackground = heroBgType === 'slideshow'
+    ? (slideshowList.length > 0 && !!(layer0Url || layer1Url))
+    : !!bannerBgUrl;
 
   return (
     <div className="page animate-fade-in-up">
@@ -202,7 +376,7 @@ export default function HomePage() {
           ref={bannerRef}
           className={`home-hero home-hero--align-${heroAlignment || 'left'} home-hero--font-${heroFont || 'modern'} home-hero--size-${heroTextSize || 'standard'} ${!heroShowText ? 'home-hero--photo-mode' : ''}`}
           style={{
-            ...(hasCustomBackground ? {
+            ...(hasCustomBackground && heroBgType !== 'slideshow' ? {
               backgroundImage: bannerBgUrl,
               backgroundSize: 'cover',
               backgroundPosition: 'center'
@@ -210,12 +384,68 @@ export default function HomePage() {
             zIndex: showCustomizer ? 1120 : undefined
           }}
         >
+          {/* Double-buffered Slideshow Layers */}
+          {heroBgType === 'slideshow' && (
+            <>
+              <div 
+                className="home-hero__slide"
+                style={{
+                  backgroundImage: layer0Url ? `url(${layer0Url})` : undefined,
+                  opacity: activeLayer === 0 && layer0Url ? 1 : 0
+                }}
+              />
+              <div 
+                className="home-hero__slide"
+                style={{
+                  backgroundImage: layer1Url ? `url(${layer1Url})` : undefined,
+                  opacity: activeLayer === 1 && layer1Url ? 1 : 0
+                }}
+              />
+            </>
+          )}
+
           {/* Dimmer overlay for text contrast */}
           {hasCustomBackground && (
             <div 
               className="home-hero__dimmer" 
               style={{ opacity: (heroDimmer !== undefined ? heroDimmer : 50) / 100 }}
             />
+          )}
+
+          {/* Slideshow Previous / Next Navigation Chevrons */}
+          {heroBgType === 'slideshow' && slideshowList.length > 1 && (
+            <>
+              <button 
+                type="button"
+                className="home-hero__slide-btn home-hero__slide-btn--prev"
+                onClick={handlePrevSlide}
+                title="Previous photo"
+                aria-label="Previous photo"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button 
+                type="button"
+                className="home-hero__slide-btn home-hero__slide-btn--next"
+                onClick={handleNextSlide}
+                title="Next photo"
+                aria-label="Next photo"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </>
+          )}
+
+          {/* Slideshow Status & Count Badge */}
+          {heroBgType === 'slideshow' && slideshowList.length > 0 && (
+            <div 
+              className="home-hero__slideshow-badge"
+              title={heroSlideshowShuffle ? "Slideshow: Shuffle ON" : "Slideshow: Sequential"}
+            >
+              <Images size={12} />
+              <span>{slideIndex + 1} / {slideshowList.length}</span>
+              {heroSlideshowShuffle && <Shuffle size={10} style={{ opacity: 0.75 }} />}
+            </div>
           )}
 
           {/* Customize Button (glassmorphic on top right) */}

@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('api', {
     getHeroBanner: () => ipcRenderer.invoke('images:getHeroBanner'),
     saveHeroBannerOriginal: (dataUrl) => ipcRenderer.invoke('images:saveHeroBannerOriginal', dataUrl),
     getHeroBannerOriginal: () => ipcRenderer.invoke('images:getHeroBannerOriginal'),
+    scanFolder: (folderPath) => ipcRenderer.invoke('images:scanFolder', folderPath),
+    getFsScreenshotsPath: () => ipcRenderer.invoke('images:getFsScreenshotsPath'),
   },
 
   // Categories
@@ -201,6 +203,7 @@ contextBridge.exposeInMainWorld('api', {
   dialog: {
     selectFolder: () => ipcRenderer.invoke('dialog:selectFolder'),
     selectFile: (params) => ipcRenderer.invoke('dialog:selectFile', params),
+    selectImages: () => ipcRenderer.invoke('dialog:selectImages'),
   },
 
   // Cache

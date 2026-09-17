@@ -32,6 +32,12 @@ export const useSettingsStore = create((set) => ({
   heroShowSubtitle: true,
   heroSubtitleMode: 'quote', // 'quote' | 'helper' | 'off'
   heroQuoteIndex: null,
+  heroSlideshowSource: 'folder', // 'folder' | 'selection'
+  heroSlideshowFolder: '',
+  heroSlideshowImages: [],
+  heroSlideshowInterval: 30,
+  heroSlideshowShuffle: true,
+  heroSlideshowTransition: 'crossfade',
   homeShowStats: true,
   homeShowLatest: true,
   homeShowDownloaded: true,
@@ -152,6 +158,12 @@ export const useSettingsStore = create((set) => ({
         heroQuoteIndex: (settings.heroQuoteIndex !== undefined && settings.heroQuoteIndex !== '' && settings.heroQuoteIndex !== 'null' && settings.heroQuoteIndex !== 'undefined' && !isNaN(parseInt(settings.heroQuoteIndex, 10)))
           ? parseInt(settings.heroQuoteIndex, 10)
           : null,
+        heroSlideshowSource: settings.heroSlideshowSource || 'folder',
+        heroSlideshowFolder: settings.heroSlideshowFolder || '',
+        heroSlideshowImages: settings.heroSlideshowImages ? JSON.parse(settings.heroSlideshowImages) : [],
+        heroSlideshowInterval: settings.heroSlideshowInterval ? parseInt(settings.heroSlideshowInterval, 10) : 30,
+        heroSlideshowShuffle: settings.heroSlideshowShuffle !== 'false',
+        heroSlideshowTransition: settings.heroSlideshowTransition || 'crossfade',
         homeShowStats: settings.homeShowStats !== 'false',
         homeShowLatest: settings.homeShowLatest !== 'false',
         homeShowDownloaded: settings.homeShowDownloaded !== 'false',
@@ -356,7 +368,13 @@ export const useSettingsStore = create((set) => ({
       heroShowText: true,
       heroShowSubtitle: true,
       heroSubtitleMode: 'quote',
-      heroQuoteIndex: null
+      heroQuoteIndex: null,
+      heroSlideshowSource: 'folder',
+      heroSlideshowFolder: '',
+      heroSlideshowImages: [],
+      heroSlideshowInterval: 30,
+      heroSlideshowShuffle: true,
+      heroSlideshowTransition: 'crossfade'
     };
     set(defaults);
     if (window.api?.settings) {
@@ -417,6 +435,30 @@ export const useSettingsStore = create((set) => ({
       console.error('Failed to revert hero banner crop:', err);
       return false;
     }
+  },
+
+  setHeroSlideshowFolder: async (folderPath) => {
+    set({ heroSlideshowFolder: folderPath });
+    if (window.api?.settings) await window.api.settings.set('heroSlideshowFolder', folderPath);
+  },
+
+  setHeroSlideshowImages: async (images) => {
+    set({ heroSlideshowImages: images });
+    if (window.api?.settings) await window.api.settings.set('heroSlideshowImages', JSON.stringify(images));
+  },
+
+  addHeroSlideshowImages: async (newImages) => {
+    const current = useSettingsStore.getState().heroSlideshowImages || [];
+    const combined = Array.from(new Set([...current, ...newImages]));
+    set({ heroSlideshowImages: combined });
+    if (window.api?.settings) await window.api.settings.set('heroSlideshowImages', JSON.stringify(combined));
+  },
+
+  removeHeroSlideshowImage: async (imagePath) => {
+    const current = useSettingsStore.getState().heroSlideshowImages || [];
+    const filtered = current.filter(p => p !== imagePath);
+    set({ heroSlideshowImages: filtered });
+    if (window.api?.settings) await window.api.settings.set('heroSlideshowImages', JSON.stringify(filtered));
   },
 
   setHomeShowStats: async (val) => {

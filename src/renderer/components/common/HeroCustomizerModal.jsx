@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, Palette, Image as ImageIcon, Upload, Check, RotateCcw, 
   AlignLeft, AlignCenter, AlignRight, Type, Eye, EyeOff, Sparkles, Sliders, Move,
-  Quote, HelpCircle, Shuffle, Calendar, GripHorizontal
+  Quote, HelpCircle, Shuffle, Calendar, GripHorizontal,
+  Folder, FolderSearch, Images, Clock, Trash2, RefreshCw, Plus
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useToastStore } from '../../store/useToastStore';
@@ -22,6 +23,87 @@ const COLOR_SWATCHES = [
   { name: 'Crimson Red', value: '#ef4444' },
   { name: 'Violet Accent', value: '#a855f7' },
 ];
+
+const SLIDESHOW_INTERVALS = [
+  { label: '15s', value: 15 },
+  { label: '30s', value: 30 },
+  { label: '1 min', value: 60 },
+  { label: '5 min', value: 300 },
+  { label: '15 min', value: 900 },
+  { label: '1 hr', value: 3600 },
+];
+
+const thumbCache = new Map();
+function SlideshowThumbnail({ path: imgPath, onRemove }) {
+  const [src, setSrc] = useState(() => thumbCache.get(imgPath) || null);
+
+  useEffect(() => {
+    if (thumbCache.has(imgPath)) {
+      setSrc(thumbCache.get(imgPath));
+      return;
+    }
+    let isMounted = true;
+    if (window.api?.images?.readLocalAsDataUrl) {
+      window.api.images.readLocalAsDataUrl(imgPath).then(dataUrl => {
+        if (isMounted && dataUrl) {
+          thumbCache.set(imgPath, dataUrl);
+          setSrc(dataUrl);
+        }
+      });
+    }
+    return () => { isMounted = false; };
+  }, [imgPath]);
+
+  const filename = imgPath ? imgPath.split(/[\\/]/).pop() : '';
+
+  return (
+    <div 
+      style={{
+        position: 'relative',
+        height: '62px',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        border: '1px solid var(--border)',
+        background: src ? `url(${src}) center/cover no-repeat` : 'var(--bg-tertiary)',
+        display: 'flex',
+        alignItems: 'flex-end',
+        userSelect: 'none'
+      }}
+      title={imgPath}
+    >
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%)' }} />
+      <span style={{ position: 'relative', zIndex: 2, fontSize: '9px', color: '#fff', padding: '3px 6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: onRemove ? '75%' : '95%' }}>
+        {filename}
+      </span>
+      {onRemove && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onRemove(imgPath); }}
+          style={{
+            position: 'absolute',
+            top: '3px',
+            right: '3px',
+            zIndex: 3,
+            width: '18px',
+            height: '18px',
+            borderRadius: '50%',
+            background: 'rgba(239, 68, 68, 0.85)',
+            color: '#fff',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            padding: 0
+          }}
+          title="Remove from slideshow"
+        >
+          <Trash2 size={10} />
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function HeroCustomizerModal({ isOpen, onClose }) {
   if (!isOpen) return null;
@@ -127,8 +209,93 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     heroTextPosX, heroTextPosY,
     heroFont, heroTextSize, heroTextScale, heroTextColor, heroTextShadow,
     heroShowText, heroShowSubtitle, heroSubtitleMode, heroQuoteIndex,
+    heroSlideshowSource, heroSlideshowFolder, heroSlideshowImages, heroSlideshowInterval, heroSlideshowShuffle,
+    setHeroSlideshowFolder, setHeroSlideshowImages, addHeroSlideshowImages, removeHeroSlideshowImage,
     updateHeroBannerSettings, resetHeroBannerSettings, setCustomHeroBanner, revertHeroBannerCrop
   } = useSettingsStore();
+
+  const [folderImageCount, setFolderImageCount] = useState(0);
+  const [folderPreviews, setFolderPreviews] = useState([]);
+  const [isScanningFolder, setIsScanningFolder] = useState(false);
+
+  // Scan folder for images whenever heroSlideshowFolder changes
+  const scanSlideshowFolder = async (folderPath) => {
+    const target = folderPath || heroSlideshowFolder;
+    if (!target || !window.api?.images?.scanFolder) {
+      setFolderImageCount(0);
+      setFolderPreviews([]);
+      return;
+    }
+    setIsScanningFolder(true);
+    try {
+      const files = await window.api.images.scanFolder(target);
+      const list = files || [];
+      setFolderImageCount(list.length);
+      
+      const previewFiles = list.slice(0, 6);
+      const loadedPreviews = [];
+      for (const f of previewFiles) {
+        if (window.api?.images?.readLocalAsDataUrl) {
+          const dataUrl = await window.api.images.readLocalAsDataUrl(f);
+          if (dataUrl) loadedPreviews.push({ path: f, dataUrl });
+        }
+      }
+      setFolderPreviews(loadedPreviews);
+    } catch (e) {
+      console.warn('Failed to scan folder:', e);
+    } finally {
+      setIsScanningFolder(false);
+    }
+  };
+
+  useEffect(() => {
+    if (heroSlideshowFolder) {
+      scanSlideshowFolder(heroSlideshowFolder);
+    }
+  }, [heroSlideshowFolder]);
+
+  const handleDetectFsScreenshots = async () => {
+    if (!window.api?.images?.getFsScreenshotsPath) return;
+    try {
+      const detected = await window.api.images.getFsScreenshotsPath();
+      if (detected) {
+        await setHeroSlideshowFolder(detected);
+        await scanSlideshowFolder(detected);
+        toast.success('Found FS25 Screenshots folder!');
+      } else {
+        toast.info('Could not automatically detect FS25 screenshots. Please browse to your folder.');
+      }
+    } catch (err) {
+      toast.error('Error detecting folder: ' + err.message);
+    }
+  };
+
+  const handlePickSlideshowFolder = async () => {
+    if (!window.api?.dialog?.selectFolder) return;
+    try {
+      const folder = await window.api.dialog.selectFolder();
+      if (folder) {
+        await setHeroSlideshowFolder(folder);
+        await scanSlideshowFolder(folder);
+        toast.success('Folder selected for slideshow!');
+      }
+    } catch (err) {
+      toast.error('Error selecting folder: ' + err.message);
+    }
+  };
+
+  const handleAddHandpickedImages = async () => {
+    if (!window.api?.dialog?.selectImages) return;
+    try {
+      const selected = await window.api.dialog.selectImages();
+      if (selected && selected.length > 0) {
+        await addHeroSlideshowImages(selected);
+        toast.success(`Added ${selected.length} image${selected.length > 1 ? 's' : ''} to slideshow!`);
+      }
+    } catch (err) {
+      toast.error('Error adding images: ' + err.message);
+    }
+  };
 
   const activeSubtitleMode = heroSubtitleMode || (heroShowSubtitle === false ? 'off' : 'quote');
   const currentQuote = (typeof heroQuoteIndex === 'number' && !isNaN(heroQuoteIndex))
@@ -237,7 +404,8 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
 
   const presets = [
     { id: 'default', name: 'Default Glow', preview: null, isDefault: true },
-    { id: 'riverbend', name: 'Riverbend Springs (US)', preview: mapUs },
+    { id: 'slideshow', name: 'Slideshow', preview: null, isSlideshow: true },
+    { id: 'riverbend', name: 'Riverbend (US)', preview: mapUs },
     { id: 'zielonka', name: 'Zielonka (EU)', preview: mapEu },
     { id: 'hutan', name: 'Hutan Pantai (Asia)', preview: mapAs },
     { id: 'kinlaig', name: 'Kinlaig (Highlands)', preview: mapKinlaig },
@@ -432,9 +600,43 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                   <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '6px', display: 'block' }}>
                     Choose Wallpaper Preset
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px' }}>
                     {presets.map((p) => {
                       const isSelected = heroBgType === p.id;
+                      if (p.isSlideshow) {
+                        return (
+                          <div
+                            key={p.id}
+                            onClick={() => handleSelectPreset('slideshow')}
+                            style={{
+                              height: '68px',
+                              borderRadius: '10px',
+                              border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
+                              cursor: 'pointer',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%), var(--bg-tertiary)',
+                              transition: 'all 0.15s ease',
+                              boxShadow: isSelected ? '0 0 14px rgba(var(--accent-rgb, 59, 130, 246), 0.3)' : 'none',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <Images size={20} style={{ color: isSelected ? 'var(--accent)' : 'var(--text-secondary)' }} />
+                            <span style={{ fontSize: '10px', fontWeight: '700', color: isSelected ? 'var(--accent)' : 'var(--text-primary)' }}>
+                              Slideshow
+                            </span>
+                            {isSelected && (
+                              <div style={{ position: 'absolute', top: '4px', right: '4px', width: '18px', height: '18px', borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Check size={10} strokeWidth={3} />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
                       return (
                         <div
                           key={p.id}
@@ -523,39 +725,269 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                   </div>
                 </div>
 
-                {/* Upload, Recrop & Undo Crop Buttons */}
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <button 
-                    type="button"
-                    className="btn btn--secondary" 
-                    onClick={handlePickFile}
-                    style={{ flex: 1, minWidth: '140px', gap: '6px', justifyContent: 'center', padding: '8px 12px', fontSize: '12px' }}
-                  >
-                    <Upload size={14} /> Choose Image...
-                  </button>
-                  {heroCustomBg && (
+                {/* Custom Photo Controls */}
+                {heroBgType === 'custom' && (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button 
                       type="button"
                       className="btn btn--secondary" 
-                      onClick={handleRecrop}
+                      onClick={handlePickFile}
                       style={{ flex: 1, minWidth: '140px', gap: '6px', justifyContent: 'center', padding: '8px 12px', fontSize: '12px' }}
-                      title="Adjust framing, zoom and positioning of your custom wallpaper"
                     >
-                      <Move size={14} /> Reposition & Crop
+                      <Upload size={14} /> Choose Image...
                     </button>
-                  )}
-                  {heroCustomBg && (
-                    <button 
-                      type="button"
-                      className="btn btn--secondary" 
-                      onClick={handleUndoCrop}
-                      style={{ flex: 1, minWidth: '140px', gap: '6px', justifyContent: 'center', padding: '8px 12px', fontSize: '12px' }}
-                      title="Restore full uncropped original photo"
-                    >
-                      <RotateCcw size={14} /> Undo Crop (Original)
-                    </button>
-                  )}
-                </div>
+                    {heroCustomBg && (
+                      <button 
+                        type="button"
+                        className="btn btn--secondary" 
+                        onClick={handleRecrop}
+                        style={{ flex: 1, minWidth: '140px', gap: '6px', justifyContent: 'center', padding: '8px 12px', fontSize: '12px' }}
+                        title="Adjust framing, zoom and positioning of your custom wallpaper"
+                      >
+                        <Move size={14} /> Reposition & Crop
+                      </button>
+                    )}
+                    {heroCustomBg && (
+                      <button 
+                        type="button"
+                        className="btn btn--secondary" 
+                        onClick={handleUndoCrop}
+                        style={{ flex: 1, minWidth: '140px', gap: '6px', justifyContent: 'center', padding: '8px 12px', fontSize: '12px' }}
+                        title="Restore full uncropped original photo"
+                      >
+                        <RotateCcw size={14} /> Undo Crop (Original)
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Slideshow Controls Panel ── */}
+                {heroBgType === 'slideshow' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'var(--bg-tertiary)', padding: '14px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    {/* Header & Source Mode Selector */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Images size={15} style={{ color: 'var(--accent)' }} />
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>Slideshow Source</span>
+                      </div>
+                      
+                      <div style={{ display: 'flex', background: 'var(--bg-secondary)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        <button
+                          type="button"
+                          onClick={() => updateHeroBannerSettings({ heroSlideshowSource: 'folder' })}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: (heroSlideshowSource || 'folder') === 'folder' ? 'var(--accent)' : 'transparent',
+                            color: (heroSlideshowSource || 'folder') === 'folder' ? '#fff' : 'var(--text-secondary)',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Folder size={12} /> Entire Folder
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateHeroBannerSettings({ heroSlideshowSource: 'selection' })}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: heroSlideshowSource === 'selection' ? 'var(--accent)' : 'transparent',
+                            color: heroSlideshowSource === 'selection' ? '#fff' : 'var(--text-secondary)',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Images size={12} /> Handpicked Photos ({heroSlideshowImages?.length || 0})
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Mode A: Folder Selection */}
+                    {(heroSlideshowSource || 'folder') === 'folder' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            className="btn btn--secondary"
+                            onClick={handleDetectFsScreenshots}
+                            style={{ flex: 1, minWidth: '180px', gap: '6px', fontSize: '12px', padding: '8px 12px' }}
+                            title="Automatically detect Documents\My Games\FarmingSimulator2025\screenshots"
+                          >
+                            <Sparkles size={14} style={{ color: 'var(--accent)' }} /> Auto-Detect FS25 Screenshots
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn--secondary"
+                            onClick={handlePickSlideshowFolder}
+                            style={{ flex: 1, minWidth: '150px', gap: '6px', fontSize: '12px', padding: '8px 12px' }}
+                          >
+                            <Folder size={14} /> Browse Folder...
+                          </button>
+                        </div>
+
+                        {heroSlideshowFolder ? (
+                          <div style={{ background: 'var(--bg-secondary)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                                <Folder size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {heroSlideshowFolder}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                                <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--accent)', background: 'var(--accent-dim)', padding: '2px 8px', borderRadius: '6px' }}>
+                                  {folderImageCount} photos found
+                                </span>
+                                <button
+                                  type="button"
+                                  className="btn btn--icon btn--ghost"
+                                  onClick={() => scanSlideshowFolder(heroSlideshowFolder)}
+                                  title="Re-scan folder for new photos"
+                                  style={{ width: '24px', height: '24px', padding: 0 }}
+                                >
+                                  <RefreshCw size={12} className={isScanningFolder ? 'animate-spin' : ''} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Thumbnail strip of first several photos */}
+                            {folderPreviews.length > 0 && (
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px', marginTop: '2px' }}>
+                                {folderPreviews.map((p, idx) => (
+                                  <div
+                                    key={idx}
+                                    style={{
+                                      height: '52px',
+                                      borderRadius: '6px',
+                                      overflow: 'hidden',
+                                      background: `url(${p.dataUrl}) center/cover no-repeat`,
+                                      border: '1px solid var(--border)'
+                                    }}
+                                    title={p.path}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div style={{ padding: '12px', textAlign: 'center', fontSize: '11px', color: 'var(--text-tertiary)', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
+                            No folder selected yet. Click <strong>Auto-Detect FS25 Screenshots</strong> or <strong>Browse Folder</strong> to select your screenshot library.
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Mode B: Handpicked Selection */}
+                    {heroSlideshowSource === 'selection' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            className="btn btn--secondary"
+                            onClick={handleAddHandpickedImages}
+                            style={{ gap: '6px', fontSize: '12px', padding: '8px 14px' }}
+                          >
+                            <Plus size={14} /> Add Photos from PC...
+                          </button>
+                          
+                          {heroSlideshowImages && heroSlideshowImages.length > 0 && (
+                            <button
+                              type="button"
+                              className="btn btn--ghost"
+                              onClick={() => setHeroSlideshowImages([])}
+                              style={{ fontSize: '11px', color: 'var(--danger)', gap: '4px' }}
+                            >
+                              <Trash2 size={12} /> Clear All ({heroSlideshowImages.length})
+                            </button>
+                          )}
+                        </div>
+
+                        {heroSlideshowImages && heroSlideshowImages.length > 0 ? (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '8px', maxHeight: '180px', overflowY: 'auto', padding: '4px 0' }}>
+                            {heroSlideshowImages.map((p, idx) => (
+                              <SlideshowThumbnail
+                                key={`${p}-${idx}`}
+                                path={p}
+                                onRemove={removeHeroSlideshowImage}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ padding: '16px', textAlign: 'center', fontSize: '11px', color: 'var(--text-tertiary)', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
+                            No handpicked photos yet. Click <strong>Add Photos from PC...</strong> to pick your favorite screenshots and wallpapers.
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Shared Rotation & Interval Settings */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '2px', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Clock size={14} style={{ color: 'var(--accent)' }} />
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)' }}>Cycle Every:</span>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          {SLIDESHOW_INTERVALS.map((intv) => {
+                            const isAct = (heroSlideshowInterval || 30) === intv.value;
+                            return (
+                              <button
+                                key={intv.value}
+                                type="button"
+                                onClick={() => updateHeroBannerSettings({ heroSlideshowInterval: intv.value })}
+                                style={{
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  border: isAct ? '1px solid var(--accent)' : '1px solid var(--border)',
+                                  background: isAct ? 'var(--accent-dim)' : 'var(--bg-secondary)',
+                                  color: isAct ? 'var(--accent)' : 'var(--text-secondary)',
+                                  fontSize: '11px',
+                                  fontWeight: isAct ? '700' : '500',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {intv.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Shuffle Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => updateHeroBannerSettings({ heroSlideshowShuffle: heroSlideshowShuffle === false ? true : false })}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border)',
+                          background: heroSlideshowShuffle !== false ? 'var(--accent-dim)' : 'var(--bg-secondary)',
+                          color: heroSlideshowShuffle !== false ? 'var(--accent)' : 'var(--text-tertiary)',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Shuffle size={12} />
+                        <span>Shuffle: {heroSlideshowShuffle !== false ? 'ON' : 'OFF'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Dimmer Overlay Slider */}
                 <div style={{ background: 'var(--bg-tertiary)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>

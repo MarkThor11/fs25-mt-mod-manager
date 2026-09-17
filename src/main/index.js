@@ -445,6 +445,41 @@ ipcMain.handle('images:getHeroBannerOriginal', async () => {
   }
 });
 
+ipcMain.handle('images:scanFolder', async (_, folderPath) => {
+  try {
+    if (!folderPath || !fs.existsSync(folderPath)) return [];
+    const entries = await fs.readdir(folderPath, { withFileTypes: true });
+    const imageExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp']);
+    const imagePaths = [];
+    for (const entry of entries) {
+      if (entry.isFile()) {
+        const ext = path.extname(entry.name).toLowerCase();
+        if (imageExtensions.has(ext)) {
+          imagePaths.push(path.join(folderPath, entry.name));
+        }
+      }
+    }
+    return imagePaths;
+  } catch (err) {
+    console.error('[IMAGES] Failed to scan folder for images:', err.message);
+    return [];
+  }
+});
+
+ipcMain.handle('images:getFsScreenshotsPath', async () => {
+  try {
+    const docs = app.getPath('documents');
+    const standardPath = path.join(docs, 'My Games', 'FarmingSimulator2025', 'screenshots');
+    if (fs.existsSync(standardPath)) return standardPath;
+    const parentPath = path.join(docs, 'My Games', 'FarmingSimulator2025');
+    if (fs.existsSync(parentPath)) return parentPath;
+    return null;
+  } catch (err) {
+    console.error('[IMAGES] Failed to get FS25 screenshots path:', err.message);
+    return null;
+  }
+});
+
 // ── Categories ──
 ipcMain.handle('categories:getAll', () => {
   console.log(`[IPC] Serving ${CATEGORIES.length} categories to renderer.`);
@@ -1590,6 +1625,17 @@ ipcMain.handle('dialog:selectFile', async (_, { filters } = {}) => {
     filters: filters || [],
   });
   return result.canceled ? null : result.filePaths[0];
+});
+
+ipcMain.handle('dialog:selectImages', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile', 'multiSelections', 'dontAddToRecent'],
+    filters: [
+      { name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  });
+  return result.canceled ? [] : result.filePaths;
 });
 
 // ── Cache ──
