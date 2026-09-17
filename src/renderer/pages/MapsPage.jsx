@@ -52,7 +52,7 @@ export default function MapsPage() {
         return clean;
     };
 
-    const installedMaps = mods.filter(m => m.isMap);
+    const installedMaps = mods.filter(m => m.isMap && !m.isDLC);
 
     const filteredTemplates = templates.filter(t => 
         t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 

@@ -123,7 +123,7 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
   // Format modded maps list
   const moddedMaps = useMemo(() => {
     return mods
-      .filter((m) => m.isMap)
+      .filter((m) => m.isMap && !m.isDLC)
       .map((m) => {
         const isCP =
           m.isCrossplay ||
