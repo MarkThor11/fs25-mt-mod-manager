@@ -374,6 +374,19 @@ ipcMain.handle('images:proxy', async (_, url) => {
   return await fetchImage(url);
 });
 
+ipcMain.handle('images:readLocalAsDataUrl', async (_, filePath) => {
+  try {
+    if (!filePath || !fs.existsSync(filePath)) return null;
+    const ext = path.extname(filePath).toLowerCase().replace('.', '');
+    const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
+    const buffer = await fs.readFile(filePath);
+    return `data:${mime};base64,${buffer.toString('base64')}`;
+  } catch (err) {
+    console.error('[IMAGES] Failed to read local image:', err.message);
+    return null;
+  }
+});
+
 // ── Categories ──
 ipcMain.handle('categories:getAll', () => {
   console.log(`[IPC] Serving ${CATEGORIES.length} categories to renderer.`);

@@ -16,6 +16,16 @@ export const useSettingsStore = create((set) => ({
   rememberModHubPage: false,
   hiddenFolders: [],
   homeShowHero: true,
+  heroBgType: 'default',
+  heroCustomBg: '',
+  heroDimmer: 50,
+  heroAlignment: 'left',
+  heroFont: 'modern',
+  heroTextSize: 'standard',
+  heroTextColor: '#ffffff',
+  heroTextShadow: true,
+  heroShowText: true,
+  heroShowSubtitle: true,
   homeShowStats: true,
   homeShowLatest: true,
   homeShowDownloaded: true,
@@ -100,6 +110,16 @@ export const useSettingsStore = create((set) => ({
         rememberModHubPage: settings.rememberModHubPage === 'true',
         hiddenFolders: settings.hiddenFolders ? JSON.parse(settings.hiddenFolders) : [],
         homeShowHero: settings.homeShowHero !== 'false',
+        heroBgType: settings.heroBgType || 'default',
+        heroCustomBg: settings.heroCustomBg || '',
+        heroDimmer: settings.heroDimmer !== undefined && settings.heroDimmer !== null ? parseInt(settings.heroDimmer, 10) : 50,
+        heroAlignment: settings.heroAlignment || 'left',
+        heroFont: settings.heroFont || 'modern',
+        heroTextSize: settings.heroTextSize || 'standard',
+        heroTextColor: settings.heroTextColor || '#ffffff',
+        heroTextShadow: settings.heroTextShadow !== 'false',
+        heroShowText: settings.heroShowText !== 'false',
+        heroShowSubtitle: settings.heroShowSubtitle !== 'false',
         homeShowStats: settings.homeShowStats !== 'false',
         homeShowLatest: settings.homeShowLatest !== 'false',
         homeShowDownloaded: settings.homeShowDownloaded !== 'false',
@@ -273,6 +293,36 @@ export const useSettingsStore = create((set) => ({
   setHomeShowHero: async (val) => {
     set({ homeShowHero: val });
     if (window.api?.settings) await window.api.settings.set('homeShowHero', String(val));
+  },
+
+  updateHeroBannerSettings: async (updates) => {
+    set(updates);
+    if (window.api?.settings) {
+      for (const [k, v] of Object.entries(updates)) {
+        await window.api.settings.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+      }
+    }
+  },
+
+  resetHeroBannerSettings: async () => {
+    const defaults = {
+      heroBgType: 'default',
+      heroCustomBg: '',
+      heroDimmer: 50,
+      heroAlignment: 'left',
+      heroFont: 'modern',
+      heroTextSize: 'standard',
+      heroTextColor: '#ffffff',
+      heroTextShadow: true,
+      heroShowText: true,
+      heroShowSubtitle: true
+    };
+    set(defaults);
+    if (window.api?.settings) {
+      for (const [k, v] of Object.entries(defaults)) {
+        await window.api.settings.set(k, String(v));
+      }
+    }
   },
 
   setHomeShowStats: async (val) => {

@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('api', {
   // Images
   images: {
     proxy: (url) => ipcRenderer.invoke('images:proxy', url),
+    readLocalAsDataUrl: (filePath) => ipcRenderer.invoke('images:readLocalAsDataUrl', filePath),
   },
 
   // Categories

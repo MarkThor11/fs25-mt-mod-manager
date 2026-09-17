@@ -1,15 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  TrendingUp, Package, Download, RefreshCw, ArrowRight, Globe, Star, Users, Share2, Clipboard, DownloadCloud, Activity, Pencil
+  TrendingUp, Package, Download, RefreshCw, ArrowRight, Globe, Star, Users, Share2, Clipboard, DownloadCloud, Activity, Pencil, Palette, Camera
 } from 'lucide-react';
 import ModCard from '../components/modhub/ModCard';
+import HeroCustomizerModal from '../components/common/HeroCustomizerModal';
 import { useLocalModsStore } from '../store/useLocalModsStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useSavegameStore } from '../store/useSavegameStore';
 import { useToastStore } from '../store/useToastStore';
 import { useModHubStore } from '../store/useModHubStore';
 import { useInstalledLookup } from '../hooks/useInstalledLookup';
+import mapUs from '../assets/maps/map_us.png';
+import mapEu from '../assets/maps/map_eu.png';
+import mapAs from '../assets/maps/map_as.png';
+import mapKinlaig from '../assets/maps/map_kinlaig.jpg';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -27,13 +32,24 @@ export default function HomePage() {
     homeShowDownloaded, 
     homeShowUpdates,
     nickname,
-    setNickname 
+    setNickname,
+    heroBgType,
+    heroCustomBg,
+    heroDimmer,
+    heroAlignment,
+    heroFont,
+    heroTextSize,
+    heroTextColor,
+    heroTextShadow,
+    heroShowText,
+    heroShowSubtitle
   } = useSettingsStore();
 
   const getInstalledVersion = useInstalledLookup();
   const { exportCollection, importCollection, batchProgress } = useLocalModsStore();
   const [importKey, setImportKey] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showCustomizer, setShowCustomizer] = useState(false);
   const [loadingFeatured, setLoadingFeatured] = useState(homeFeatured.length === 0);
   const [loadingTopDownloaded, setLoadingTopDownloaded] = useState(homeTopDownloaded.length === 0);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -90,44 +106,109 @@ export default function HomePage() {
     setIsEditingName(false);
   };
 
+  const getBannerBackground = () => {
+    switch (heroBgType) {
+      case 'riverbend': return `url(${mapUs})`;
+      case 'zielonka': return `url(${mapEu})`;
+      case 'hutan': return `url(${mapAs})`;
+      case 'kinlaig': return `url(${mapKinlaig})`;
+      case 'custom': return heroCustomBg ? `url(${heroCustomBg})` : null;
+      default: return null;
+    }
+  };
+
+  const bannerBgUrl = getBannerBackground();
+  const hasCustomBackground = !!bannerBgUrl;
+
   return (
     <div className="page animate-fade-in-up">
       {/* Hero */}
       {homeShowHero && (
-        <div className="home-hero">
-          <h1 className="home-hero__title">
-            Welcome {isEditingName ? (
-              <input 
-                autoFocus
-                className="home-hero__name-input"
-                value={tempName}
-                onChange={e => setTempName(e.target.value)}
-                onBlur={handleSaveName}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') handleSaveName();
-                  if (e.key === 'Escape') setIsEditingName(false);
+        <div 
+          className={`home-hero home-hero--align-${heroAlignment || 'left'} home-hero--font-${heroFont || 'modern'} home-hero--size-${heroTextSize || 'standard'} ${!heroShowText ? 'home-hero--photo-mode' : ''}`}
+          style={hasCustomBackground ? {
+            backgroundImage: bannerBgUrl,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          } : undefined}
+        >
+          {/* Dimmer overlay for text contrast */}
+          {hasCustomBackground && (
+            <div 
+              className="home-hero__dimmer" 
+              style={{ opacity: (heroDimmer !== undefined ? heroDimmer : 50) / 100 }}
+            />
+          )}
+
+          {/* Customize Button (glassmorphic on top right) */}
+          <button 
+            className="home-hero__customize-btn"
+            onClick={() => setShowCustomizer(true)}
+            title="Customize Banner Wallpaper & Typography"
+          >
+            <Palette size={14} />
+            <span>Customize</span>
+          </button>
+
+          {heroShowText ? (
+            <div className="home-hero__content">
+              <h1 
+                className="home-hero__title"
+                style={{
+                  color: heroTextColor || '#ffffff',
+                  textShadow: heroTextShadow ? '0 2px 14px rgba(0,0,0,0.9), 0 1px 4px rgba(0,0,0,0.95)' : 'none'
                 }}
-                onClick={e => e.stopPropagation()}
-              />
-            ) : (
-              <span 
-                className="home-hero__editable-name" 
-                onClick={(e) => { 
-                  e.stopPropagation();
-                  setTempName(rawName); 
-                  setIsEditingName(true); 
-                }}
-                title="Click to change your nickname"
               >
-                '{rawName}'
-                <Pencil size={20} className="home-hero__edit-icon" />
-              </span>
-            )}
-          </h1>
-          <p className="home-hero__subtitle">
-            Browse, install, and manage your Farming Simulator 25 mods — all from one place. 
-            Use the sidebar to navigate between sections.
-          </p>
+                Welcome {isEditingName ? (
+                  <input 
+                    autoFocus
+                    className="home-hero__name-input"
+                    value={tempName}
+                    onChange={e => setTempName(e.target.value)}
+                    onBlur={handleSaveName}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleSaveName();
+                      if (e.key === 'Escape') setIsEditingName(false);
+                    }}
+                    onClick={e => e.stopPropagation()}
+                    style={{ color: heroTextColor || '#ffffff' }}
+                  />
+                ) : (
+                  <span 
+                    className="home-hero__editable-name" 
+                    onClick={(e) => { 
+                      e.stopPropagation();
+                      setTempName(rawName); 
+                      setIsEditingName(true); 
+                    }}
+                    title="Click to change your nickname"
+                    style={{ color: heroTextColor || '#ffffff' }}
+                  >
+                    '{rawName}'
+                    <Pencil size={20} className="home-hero__edit-icon" />
+                  </span>
+                )}
+              </h1>
+              {heroShowSubtitle && (
+                <p 
+                  className="home-hero__subtitle"
+                  style={{
+                    color: heroTextColor || 'var(--text-secondary)',
+                    opacity: 0.9,
+                    textShadow: heroTextShadow ? '0 1px 8px rgba(0,0,0,0.85)' : 'none'
+                  }}
+                >
+                  Browse, install, and manage your Farming Simulator 25 mods — all from one place. 
+                  Use the sidebar to navigate between sections.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="home-hero__photo-badge">
+              <Camera size={14} />
+              <span>Photo Mode</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -359,6 +440,12 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      {/* Hero Banner Studio Customizer Modal */}
+      <HeroCustomizerModal 
+        isOpen={showCustomizer} 
+        onClose={() => setShowCustomizer(false)} 
+      />
     </div>
   );
 }
