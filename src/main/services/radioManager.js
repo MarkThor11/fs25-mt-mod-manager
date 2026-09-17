@@ -83,8 +83,10 @@ async function getRadios() {
         let radios = jsonObj.streamingInternetRadios.streamingInternetRadio;
         if (!Array.isArray(radios)) radios = [radios];
 
-        // Map from XML attributes (@_href) back to simple href
-        return radios.map(r => ({ href: r['@_href'] || r.href }));
+        // Map from XML attributes (@_href) back to simple href and filter out broken dummy links
+        return radios
+            .map(r => ({ href: r['@_href'] || r.href }))
+            .filter(r => r.href && typeof r.href === 'string' && !r.href.includes('localhost:8000') && !r.href.includes('/spotify_account'));
     } catch (err) {
         console.error('[RADIO] Failed to read radios:', err);
         return [];

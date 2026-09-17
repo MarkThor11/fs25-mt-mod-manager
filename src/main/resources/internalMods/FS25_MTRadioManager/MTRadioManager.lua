@@ -1,4 +1,4 @@
-﻿-- FS25_MTRadioManager
+-- FS25_MTRadioManager
 -- Built-in companion mod for MT Mod Manager
 -- Overrides built-in GIANTS radio stations so in-game playback cycles exclusively through your custom added radio stations.
 
@@ -185,6 +185,13 @@ function MTRadioManager:initHooks()
 
     print("[MTRadioManager] SoundPlayer radio hooks initialized successfully.")
 end
+
+function MTRadioManager:loadMap(mapName)
+    self:loadConfiguration()
+end
+
+-- Register mod event listener so loadMap triggers on map load
+addModEventListener(MTRadioManager)
 
 -- Immediately initialize hooks
 MTRadioManager:initHooks()

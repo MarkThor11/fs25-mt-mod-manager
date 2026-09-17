@@ -398,7 +398,7 @@ const RadioPage = () => {
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
                             <span style={{ fontSize: '12px', color: 'var(--accent)', marginRight: '8px', fontWeight: '700' }}>Official Game Presets:</span>
                             {OFFICIAL_PRESETS.map(p => {
-                                const isAdded = stations.some(s => s.href === p.url);
+                                const isAdded = stations.some(s => s.href && s.href.replace(/^https?:\/\//, '').replace(/\/$/, '') === p.url.replace(/^https?:\/\//, '').replace(/\/$/, ''));
                                 return (
                                     <button 
                                         key={p.name}
@@ -455,8 +455,8 @@ const RadioPage = () => {
                             ) : searchResults.length > 0 ? (
                                 searchResults.map((station) => {
                                     const resolvedUrl = station.url_resolved || station.url;
-                                    const normalizedUrl = resolvedUrl.replace('https://', 'http://');
-                                    const isAdded = stations.some(s => s.href.replace('https://', 'http://') === normalizedUrl);
+                                    const normalizedUrl = resolvedUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+                                    const isAdded = stations.some(s => s.href && s.href.replace(/^https?:\/\//, '').replace(/\/$/, '') === normalizedUrl);
                                     return (
                                         <StationCard key={station.stationuuid} station={station} isAdded={isAdded} isPlaying={playingStationUrl === resolvedUrl} isBuffering={isBuffering && playingStationUrl === resolvedUrl} onPreview={() => setPlayingStation(playingStationUrl === resolvedUrl ? null : resolvedUrl)} onAdd={() => handleAdd(station)} />
                                     );
