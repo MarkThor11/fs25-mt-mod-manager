@@ -1518,7 +1518,29 @@ async function performScan(manualPaths = null) {
 					// Skip symbolic links in root ONLY if they point to an internal subfolder (an internal mirror)
 					// If they point to an external drive (e.g. F:\mods4, D:\mods), WE MUST SCAN THEM!
 					try {
-						const real = await fs.realpath(fullPath);
+						let real = null;
+						try {
+							real = await fs.realpath(fullPath);
+						} catch (e) {
+							// Check if the symlink target path was in an old subfolder that was reorganized
+							const rawTarget = await fs.readlink(fullPath).catch(() => null);
+							if (rawTarget) {
+								const baseTarget = path.basename(rawTarget);
+								const candidatePaths = [
+									path.join(path.dirname(path.dirname(rawTarget)), baseTarget),
+									path.join('D:\\mods', baseTarget),
+									path.join('F:\\mods4', baseTarget)
+								];
+								for (const cp of candidatePaths) {
+									if (await fs.pathExists(cp)) {
+										real = cp;
+										break;
+									}
+								}
+							}
+						}
+						if (!real) return;
+
 						const isInternalMirror = real.toLowerCase().startsWith(modRootPath.toLowerCase());
 						if (isInternalMirror) {
 							debugLog(`[SCAN] Skipping mirror link in root: ${entryName}`);

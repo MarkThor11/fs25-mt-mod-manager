@@ -234,13 +234,6 @@ async function getMapTemplates() {
             }
 
             // Attempt a "Rich Match" using installed mods or DLCs
-            const GENERIC_MAP_IDS = new Set([
-                'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
-                'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
-                'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
-                'farmerbobsstartmap'
-            ]);
-
             const templateModName = (mapId && mapId.includes('.')) ? mapId.split('.')[0] : null;
             const tTitleClean = (mapTitle || '').toLowerCase().trim();
             const tModClean = (templateModName || '').toLowerCase();
@@ -249,22 +242,20 @@ async function getMapTemplates() {
             const matchedMod = mapMods.find(m => {
                 const mName = (m.modName || '').toLowerCase();
                 const mTitle = (m.title || '').toLowerCase().trim();
-                const mId = (m.mapId || '').toLowerCase();
 
-                // 1. Exact modName match via templateModName (e.g. FS25_Blue_Island_Forest)
+                // 1. Exact modName match via templateModName (e.g. FS25_Blue_Island_Forest, FS25_BackRoadsCounty4x)
                 if (tModClean && mName === tModClean) return true;
 
-                // 2. Exact Title match
-                if (mTitle && tTitleClean && mTitle === tTitleClean) return true;
-
-                // 3. modName matches baseName prefix or exact baseName
+                // 2. modName matches baseName prefix or exact baseName
                 if (mName && (fLower === mName || fLower.startsWith(mName + '_'))) return true;
 
-                // 4. Non-generic mapId match (NEVER match generic IDs like 'samplemodmap')
-                if (mId && !GENERIC_MAP_IDS.has(mId)) {
-                    if (mId === mapId.toLowerCase()) return true;
-                    if (mapId.toLowerCase().endsWith('.' + mId)) return true;
-                }
+                // 3. Ultra-normalized modName (e.g. krebach vs fs25_krebach_crossplay, or nordkirchenx4 vs nordkirchenmap4x)
+                const uM = mName.replace(/^(?:fs\d{2}|pdlc)/i, '').replace(/[_ -](?:crossplay|cp)/gi, '').replace(/[^a-z0-9]/gi, '');
+                const uT = (templateModName || baseName).replace(/^(?:fs\d{2}|pdlc)/i, '').replace(/[_ -](?:crossplay|cp)/gi, '').replace(/[^a-z0-9]/gi, '');
+                if (uM && uT && uM.length >= 4 && (uM === uT || uM.replace(/_/g, '') === uT.replace(/_/g, ''))) return true;
+
+                // 4. Exact Title match fallback
+                if (mTitle && tTitleClean && mTitle === tTitleClean) return true;
 
                 return false;
             });
