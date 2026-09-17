@@ -576,48 +576,6 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                 </div>
 
                 <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                  Quick Snap Presets
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px', marginBottom: '10px' }}>
-                  {[
-                    { label: 'Left', x: 10, y: 50, align: 'left' },
-                    { label: 'Top Left', x: 10, y: 25, align: 'left' },
-                    { label: 'Center', x: 50, y: 50, align: 'center' },
-                    { label: 'Right', x: 88, y: 50, align: 'right' },
-                    { label: 'Bottom Left', x: 10, y: 75, align: 'left' },
-                  ].map((preset) => {
-                    const isPreset = Math.round(heroTextPosX ?? 10) === preset.x && Math.round(heroTextPosY ?? 50) === preset.y;
-                    return (
-                      <button
-                        key={preset.label}
-                        type="button"
-                        onClick={() => updateHeroBannerSettings({
-                          heroTextPosX: preset.x,
-                          heroTextPosY: preset.y,
-                          heroAlignment: preset.align
-                        })}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: '6px 8px',
-                          borderRadius: '6px',
-                          border: isPreset ? '1.5px solid var(--accent)' : '1px solid var(--border)',
-                          background: isPreset ? 'var(--accent-dim)' : 'var(--bg-tertiary)',
-                          color: isPreset ? 'var(--accent)' : 'var(--text-primary)',
-                          fontWeight: isPreset ? '700' : '500',
-                          fontSize: '11px',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        {preset.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '6px' }}>
                   Text Justification
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
