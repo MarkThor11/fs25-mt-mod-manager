@@ -161,8 +161,9 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
           onClick={(e) => e.stopPropagation()}
           style={{ 
             width: '94%',
-            maxWidth: '880px', 
-            maxHeight: '44vh', 
+            maxWidth: '900px', 
+            height: '52vh',
+            maxHeight: '56vh', 
             display: 'flex', 
             flexDirection: 'column',
             boxShadow: '0 -8px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--border)'
@@ -246,7 +247,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
           </div>
 
           {/* Modal Body */}
-          <div className="modal__body" style={{ padding: '14px 18px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="modal__body" style={{ padding: '16px 20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
             
             {/* ══ TAB 1: BACKGROUND ══ */}
             {activeTab === 'background' && (
