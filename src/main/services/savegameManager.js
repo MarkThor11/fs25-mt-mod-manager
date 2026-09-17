@@ -2634,6 +2634,31 @@ async function importSavegame(sourcePath, targetIndex) {
     }
 }
 
+async function exportSavegame(savePath, targetZipPath) {
+    const AdmZip = require('adm-zip');
+    try {
+        if (!fs.existsSync(savePath)) {
+            throw new Error(`Savegame folder not found: ${savePath}`);
+        }
+        const careerPath = path.join(savePath, 'careerSavegame.xml');
+        if (!fs.existsSync(careerPath)) {
+            throw new Error('Savegame is missing careerSavegame.xml');
+        }
+
+        const zip = new AdmZip();
+        zip.addLocalFolder(savePath);
+        
+        await fs.ensureDir(path.dirname(targetZipPath));
+        zip.writeZip(targetZipPath);
+
+        console.log(`[EXPORT] Successfully exported savegame from ${savePath} to ${targetZipPath}`);
+        return { success: true, filePath: targetZipPath };
+    } catch (err) {
+        console.error('[EXPORT] Failed to export savegame:', err);
+        return { success: false, error: err.message };
+    }
+}
+
 async function renameSavegame(savePath, newName) {
     const careerPath = path.join(savePath, 'careerSavegame.xml');
     if (!fs.existsSync(careerPath)) return { success: false, error: 'careerSavegame.xml not found' };
@@ -5013,6 +5038,7 @@ module.exports = {
     getUsedModsInSavegame,
     createSavegameWithMods,
     importSavegame,
+    exportSavegame,
     isSavegame,
     renameSavegame,
     deleteSavegame,

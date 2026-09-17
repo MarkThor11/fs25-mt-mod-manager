@@ -13,6 +13,7 @@ const discovery = require('./services/discovery');
 const { getSystemSpecs, optimize, optimizeRevert, setHighPerformancePlan } = require('./services/systemOptimizer');
 const radioManager = require('./services/radioManager');
 const inputBindingManager = require('./services/inputBindingManager');
+const pathProvider = require('./services/pathProvider');
 const { initAppUpdater } = require('./services/appUpdater');
 const CATEGORIES = require('./resources/data/categories');
 const isDev = !app.isPackaged;
@@ -1295,6 +1296,23 @@ ipcMain.handle('savegames:import', async (_, { sourcePath, targetIndex }) => {
   return await savegameManager.importSavegame(sourcePath, targetIndex);
 });
 
+ipcMain.handle('savegames:export', async (_, { savePath, defaultName }) => {
+  try {
+    const cleanName = (defaultName || path.basename(savePath)).replace(/[\\/:*?"<>|]/g, '_');
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export Savegame',
+      defaultPath: `${cleanName}.zip`,
+      filters: [{ name: 'ZIP Archive', extensions: ['zip'] }]
+    });
+    
+    if (result.canceled || !result.filePath) return { canceled: true };
+    return await savegameManager.exportSavegame(savePath, result.filePath);
+  } catch (err) {
+    console.error('[EXPORT] IPC savegames:export error:', err);
+    return { success: false, error: err.message };
+  }
+});
+
 ipcMain.handle('savegames:isSavegame', async (_, filePath) => {
   return await savegameManager.isSavegame(filePath);
 });
@@ -1359,6 +1377,31 @@ ipcMain.handle('game:launch', async (_, options) => {
           await savegameManager.getAllSavegames();
         } catch (harvestErr) {
           console.error('[LAUNCH] Auto-harvesting failed on game exit:', harvestErr);
+        }
+
+        // Automatic Cloud Backup if cloudBackupPath is configured
+        try {
+          const cloudBackupPath = cache.getSetting('cloudBackupPath');
+          if (cloudBackupPath && fs.existsSync(cloudBackupPath)) {
+            const fs25DataRoot = pathProvider.getFS25DataRoot();
+            if (fs25DataRoot) {
+              const savePath = path.join(fs25DataRoot, `savegame${options.savegameIndex}`);
+              if (fs.existsSync(savePath)) {
+                console.log(`[CLOUD] Auto-syncing savegame${options.savegameIndex} to cloud: ${cloudBackupPath}`);
+                const folderName = `savegame${options.savegameIndex}`;
+                const destPath = path.join(cloudBackupPath, folderName);
+                if (fs.existsSync(destPath)) {
+                  const backupPath = `${destPath}_backup_${Date.now()}`;
+                  try { fs.renameSync(destPath, backupPath); } catch (_) {}
+                }
+                await fs.copy(savePath, destPath);
+                console.log(`[CLOUD] Successfully auto-synced savegame${options.savegameIndex} to cloud`);
+                mainWindow?.webContents.send('cloud:sync-complete', { savegameIndex: options.savegameIndex, cloudBackupPath });
+              }
+            }
+          }
+        } catch (cloudErr) {
+          console.error('[CLOUD] Auto-sync failed on game exit:', cloudErr);
         }
       }
 

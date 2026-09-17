@@ -126,6 +126,7 @@ contextBridge.exposeInMainWorld('api', {
     executeTransfer: (params) => ipcRenderer.invoke('savegames:executeTransfer', params),
     syncToCloud: (params) => ipcRenderer.invoke('savegames:syncToCloud', params),
     import: (params) => ipcRenderer.invoke('savegames:import', params),
+    export: (params) => ipcRenderer.invoke('savegames:export', params),
     isSavegame: (filePath) => ipcRenderer.invoke('savegames:isSavegame', filePath),
     downloadStoreDeliveries: () => ipcRenderer.invoke('savegames:downloadStoreDeliveries'),
   },
@@ -219,6 +220,11 @@ contextBridge.exposeInMainWorld('api', {
       const handler = (_, data) => callback(data);
       ipcRenderer.on('game:exited', handler);
       return () => ipcRenderer.removeListener('game:exited', handler);
+    },
+    cloudSyncComplete: (callback) => {
+      const handler = (_, data) => callback(data);
+      ipcRenderer.on('cloud:sync-complete', handler);
+      return () => ipcRenderer.removeListener('cloud:sync-complete', handler);
     },
     dependencyProgress: (callback) => {
       const handler = (_, data) => callback(data);

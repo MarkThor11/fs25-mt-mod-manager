@@ -5,7 +5,7 @@ import {
   Save, Play, RefreshCw, Edit3, MapPin,
   Clock, DollarSign, Package, Check, X,
   Plus, ChevronDown, ChevronRight, Gamepad2, Trash2, TrendingUp, Shield,
-  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft, Anchor, Truck, Tractor, Car, Wheat
+  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft, Anchor, Truck, Tractor, Car, Wheat, Share2
 } from 'lucide-react';
 import { useSavegameStore } from '../store/useSavegameStore';
 import { useToastStore } from '../store/useToastStore';
@@ -1914,7 +1914,7 @@ const [activeTab, setActiveTab] = useState('general');
   );
 }
 
-function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop, isPlaying, isGameRunning }) {
+function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, onExport, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop, isPlaying, isGameRunning }) {
     const isEmpty = save.modCount === 0 && (save.farmName || '').startsWith('Empty');
     const [isDragOver, setIsDragOver] = useState(false);
     
@@ -2140,6 +2140,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                   </>
                 )}
                 <button className="btn btn--ghost btn--sm" onClick={onRollback} title="Rollback from Engine Backup" style={{ color: 'rgba(255,255,255,0.7)' }}><RotateCcw size={16} /></button>
+                <button className="btn btn--ghost btn--sm" onClick={onExport} title={save.isGhost ? "Initialize map to export" : "Export Savegame (ZIP)"} disabled={save.isGhost} style={{ color: 'var(--accent)' }}><Share2 size={16} /></button>
                 <button className="btn btn--ghost btn--sm" onClick={onArchive} title={save.isGhost ? "Initialize map to archive" : "Archive"} disabled={save.isGhost} style={{ color: 'rgba(255,255,255,0.7)' }}><Archive size={16} /></button>
                 <button className="btn btn--ghost btn--sm" onClick={onDelete} title="Delete Permamently" style={{ color: 'var(--danger)' }}><Trash2 size={16} /></button>
             </div>
@@ -2271,7 +2272,17 @@ export default function SavegamesPage() {
     isGameRunning, playingSlot
   } = useSavegameStore();
 
-  const { skipIntro } = useSettingsStore();
+  const { skipIntro, cloudBackupPath } = useSettingsStore();
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+
+  useEffect(() => {
+    const unsub = window.api?.on?.cloudSyncComplete?.((data) => {
+      useToastStore.getState().success(`Cloud Backup: Auto-synced Slot ${data.savegameIndex} to cloud!`);
+    });
+    return () => {
+      if (typeof unsub === 'function') unsub();
+    };
+  }, []);
 
   const {
     archives, isLoading: isArchivesLoading, fetchArchives, deleteArchive, archiveSavegame, restoreSavegame
@@ -2563,6 +2574,49 @@ export default function SavegamesPage() {
       } else {
         useToastStore.getState().error(result.error);
       }
+    }
+  };
+
+  const handleExportSave = async (save) => {
+    try {
+      const cleanTitle = (save.farmName || `Slot${save.index || ''}`).replace(/[\\/:*?"<>|]/g, '_');
+      const defaultName = save.index ? `${cleanTitle}_Slot${save.index}` : cleanTitle;
+      useToastStore.getState().info(`Preparing export for ${defaultName}...`);
+      const result = await window.api.savegames.export({ savePath: save.path, defaultName });
+      if (result.success) {
+        useToastStore.getState().success(`Savegame exported successfully to ${result.filePath}`);
+      } else if (!result.canceled) {
+        useToastStore.getState().error(result.error || 'Failed to export savegame');
+      }
+    } catch (err) {
+      useToastStore.getState().error(`Export failed: ${err.message}`);
+    }
+  };
+
+  const handleManualCloudSync = async () => {
+    if (!cloudBackupPath) {
+      useToastStore.getState().warning("No Cloud Backup Path set. Configure it in Settings.");
+      return;
+    }
+    setIsCloudSyncing(true);
+    try {
+      const activeSaves = allSlots.filter(s => !s.isGhost && !s.isEmpty && s.path);
+      if (activeSaves.length === 0) {
+        useToastStore.getState().info("No active savegames to sync.");
+        setIsCloudSyncing(false);
+        return;
+      }
+      useToastStore.getState().info(`Syncing ${activeSaves.length} savegame(s) to cloud...`);
+      let syncedCount = 0;
+      for (const save of activeSaves) {
+        const res = await window.api.savegames.syncToCloud({ savePath: save.path, cloudPath: cloudBackupPath });
+        if (res.success) syncedCount++;
+      }
+      useToastStore.getState().success(`Cloud Sync complete: ${syncedCount} of ${activeSaves.length} save(s) backed up to ${cloudBackupPath}`);
+    } catch (err) {
+      useToastStore.getState().error(`Cloud sync error: ${err.message}`);
+    } finally {
+      setIsCloudSyncing(false);
     }
   };
 
@@ -3033,6 +3087,18 @@ export default function SavegamesPage() {
               <label htmlFor="select-all-main" style={{ fontSize: 11, fontWeight: 700, cursor: 'pointer', color: 'var(--text-secondary)' }}>SELECT ALL</label>
           </div>
 
+          {cloudBackupPath && (
+            <button 
+              className="btn btn--secondary btn--sm" 
+              onClick={handleManualCloudSync} 
+              disabled={isCloudSyncing}
+              title={`Cloud Backup configured: ${cloudBackupPath}. Click to sync all active saves now.`}
+              style={{ borderColor: 'rgba(56, 189, 248, 0.4)' }}
+            >
+              <Cloud size={14} style={{ color: '#38bdf8' }} /> 
+              {isCloudSyncing ? 'Syncing...' : 'Cloud Sync'}
+            </button>
+          )}
           <button className="btn btn--secondary btn--sm" onClick={() => navigate('/save-transfer')} title="Transfer data between saves">
             <ArrowRightLeft size={14} /> Save Transfer
           </button>
@@ -3049,6 +3115,7 @@ export default function SavegamesPage() {
                 key={save.index}
                 save={save}
                 onPlay={() => handleLaunch(save.index)}
+                onExport={() => handleExportSave(save)}
                 onArchive={() => handleArchive(save)}
                 onRollback={() => openRollback(save)}
                 onCreate={() => openCreateModal(save.index)}
@@ -3166,6 +3233,9 @@ export default function SavegamesPage() {
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: 4 }}>
+                            <button className="btn btn--ghost btn--sm" style={{ color: 'var(--accent)', padding: '6px' }} onClick={() => handleExportSave(archive)} title="Export Archive (ZIP)">
+                                <Share2 size={14} />
+                            </button>
                             <button className="btn btn--primary btn--sm" style={{ padding: '6px' }} onClick={() => { 
                                 setShowRestoreModal(archive.folderName); 
                                 setRestoreSlot('auto');
