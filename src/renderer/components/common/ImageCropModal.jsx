@@ -1,29 +1,135 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, ZoomIn, ZoomOut, Move, Check, RotateCcw, Image as ImageIcon } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, Move, Check, RotateCcw, Image as ImageIcon, Eye, EyeOff, Grid } from 'lucide-react';
 
-const ASPECT_RATIOS = [
-  { id: '2.5', label: '2.5:1 Banner', ratioValue: 2.5, width: 1600, height: 640, desc: 'Taller balanced banner — ideal for machinery & landscapes' },
-  { id: '2.33', label: '21:9 Ultrawide', ratioValue: 21 / 9, width: 1680, height: 720, desc: 'Cinematic widescreen framing' },
-  { id: '1.78', label: '16:9 Full Photo', ratioValue: 16 / 9, width: 1600, height: 900, desc: 'Maximum height — captures full screenshot' },
-  { id: '3.0', label: '3:1 Wide Ribbon', ratioValue: 3.0, width: 1600, height: 533, desc: 'Slim horizontal ribbon' }
-];
+const FONT_FAMILIES = {
+  modern: 'inherit',
+  display: "'Rajdhani', 'Impact', 'Trebuchet MS', sans-serif",
+  rustic: "'Georgia', 'Cambria', 'Palatino', serif",
+  slab: "'Rockwell', 'Clarendon', 'Copperplate Gothic Bold', serif",
+  condensed: "'Impact', 'Arial Narrow', 'Franklin Gothic Medium', sans-serif",
+  handwriting: "'Segoe Script', 'Brush Script MT', 'Lucida Handwriting', cursive",
+  elegant: "'Garamond', 'Baskerville', 'Times New Roman', serif",
+  tech: "'Consolas', 'Fira Code', monospace"
+};
 
-export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
+export default function ImageCropModal({ isOpen, imageSrc, heroTextSize = 'standard', bannerProps = {}, onClose, onApply }) {
   if (!isOpen || !imageSrc) return null;
 
-  const [ratioId, setRatioId] = useState('2.5');
+  // Measure live banner element if present, or compute standard fallback
+  const getBannerDimensions = () => {
+    try {
+      const heroEl = document.querySelector('.home-hero');
+      if (heroEl) {
+        const rect = heroEl.getBoundingClientRect();
+        if (rect.width > 200 && rect.height > 100) {
+          return {
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+            ratioValue: rect.width / rect.height
+          };
+        }
+      }
+    } catch (_) {}
+
+    const heightMap = {
+      compact: 200,
+      standard: 280,
+      large: 380,
+      epic: 460
+    };
+    const h = heightMap[heroTextSize] || 280;
+    const w = 1600;
+    return {
+      width: w,
+      height: h,
+      ratioValue: w / h
+    };
+  };
+
+  const liveDim = getBannerDimensions();
+  const sizeLabels = {
+    compact: 'Compact (200px)',
+    standard: 'Standard (280px)',
+    large: 'Tall (380px)',
+    epic: 'Cinematic (460px)'
+  };
+  const activeSizeLabel = sizeLabels[heroTextSize] || 'Standard (280px)';
+
+  const ASPECT_RATIOS = [
+    {
+      id: 'active',
+      label: `Current (${activeSizeLabel.split(' ')[0]})`,
+      ratioValue: liveDim.ratioValue,
+      width: liveDim.width,
+      height: liveDim.height,
+      desc: `100% exact match to your active ${activeSizeLabel} banner (${liveDim.width}×${liveDim.height}px)`
+    },
+    {
+      id: 'epic',
+      label: 'Cinematic (460px)',
+      ratioValue: 1600 / 460,
+      width: 1600,
+      height: 460,
+      desc: 'Extra-tall 460px framing — ideal for expansive machinery & sky'
+    },
+    {
+      id: 'large',
+      label: 'Tall (380px)',
+      ratioValue: 1600 / 380,
+      width: 1600,
+      height: 380,
+      desc: '380px tall framing for scenic landscapes'
+    },
+    {
+      id: 'standard',
+      label: 'Standard (280px)',
+      ratioValue: 1600 / 280,
+      width: 1600,
+      height: 280,
+      desc: 'Standard 280px proportion'
+    },
+    {
+      id: 'compact',
+      label: 'Compact (200px)',
+      ratioValue: 1600 / 200,
+      width: 1600,
+      height: 200,
+      desc: 'Slim 200px ribbon view'
+    },
+    {
+      id: '2.5',
+      label: 'Full Photo (2.5:1)',
+      ratioValue: 2.5,
+      width: 1600,
+      height: 640,
+      desc: 'Generous 2.5:1 framing with maximum vertical coverage'
+    }
+  ];
+
+  const [ratioId, setRatioId] = useState('active');
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
-  const [containerSize, setContainerSize] = useState({ width: 600, height: 240 });
+  const [containerSize, setContainerSize] = useState({ width: 700, height: 260 });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showTextOverlay, setShowTextOverlay] = useState(true);
+  const [showGrid, setShowGrid] = useState(true);
 
   const containerRef = useRef(null);
   const imgRef = useRef(null);
 
   const activeRatio = ASPECT_RATIOS.find((r) => r.id === ratioId) || ASPECT_RATIOS[0];
+
+  // Sync ratio when modal opens or heroTextSize changes
+  useEffect(() => {
+    if (isOpen) {
+      setRatioId('active');
+      setZoom(1);
+      setOffset({ x: 0, y: 0 });
+    }
+  }, [isOpen, heroTextSize]);
 
   // Initialize image dimensions and center it
   useEffect(() => {
@@ -31,7 +137,6 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
     const img = new Image();
     img.onload = () => {
       setImageSize({ width: img.naturalWidth, height: img.naturalHeight });
-      // Reset zoom & offset
       setZoom(1);
       setOffset({ x: 0, y: 0 });
     };
@@ -57,8 +162,8 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
   }, [isOpen, ratioId]);
 
   // Compute base dimensions for "cover" fit
-  const displayWidth = containerSize.width || 600;
-  const displayHeight = containerSize.height || 240;
+  const displayWidth = containerSize.width || 700;
+  const displayHeight = containerSize.height || 260;
 
   let baseW = displayWidth;
   let baseH = displayHeight;
@@ -120,7 +225,6 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
 
       const img = new Image();
       img.onload = () => {
-        // Fill background with dark color
         ctx.fillStyle = '#111827';
         ctx.fillRect(0, 0, targetWidth, targetHeight);
 
@@ -135,8 +239,8 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
 
         ctx.drawImage(img, drawX, drawY, drawW, drawH);
 
-        // Convert to high-quality JPEG (~150-280KB)
-        const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.88);
+        // Convert to high-quality JPEG
+        const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.90);
         setIsProcessing(false);
         onApply(croppedDataUrl);
       };
@@ -148,38 +252,45 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1200 }}>
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 2000 }}>
       <div 
         className="modal modal--medium animate-scale-up"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '680px', display: 'flex', flexDirection: 'column' }}
+        style={{ maxWidth: '820px', width: '92%', display: 'flex', flexDirection: 'column' }}
       >
         {/* Header */}
-        <div className="modal__header" style={{ padding: '18px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="modal__header" style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Move size={20} />
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Move size={18} />
             </div>
             <div>
-              <h2 style={{ fontSize: '17px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>Crop & Position Banner</h2>
-              <p style={{ fontSize: '12px', margin: '2px 0 0 0', color: 'var(--text-tertiary)' }}>Drag to reposition the focal point • Zoom or switch aspect ratios</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>Crop & Position Banner</h2>
+                <span style={{ fontSize: '11px', background: 'var(--accent-dim)', color: 'var(--accent)', padding: '1px 8px', borderRadius: '6px', fontWeight: '700' }}>
+                  Tied to {activeSizeLabel}
+                </span>
+              </div>
+              <p style={{ fontSize: '11px', margin: '2px 0 0 0', color: 'var(--text-tertiary)' }}>
+                Drag your photo to place the focal point • Preview matches your live text placement
+              </p>
             </div>
           </div>
-          <button className="btn btn--icon btn--ghost" onClick={onClose}>
-            <X size={18} />
+          <button className="btn btn--icon btn--ghost" onClick={onClose} style={{ width: '28px', height: '28px', padding: 0 }}>
+            <X size={16} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="modal__body" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="modal__body" style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           
-          {/* Aspect Ratio Selector Pills */}
+          {/* Aspect Ratio Selector */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>Crop Aspect Ratio</span>
-              <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{activeRatio.desc}</span>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>Banner Framing Aspect Ratio</span>
+              <span style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: '600' }}>{activeRatio.desc}</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
               {ASPECT_RATIOS.map((r) => {
                 const isSelected = ratioId === r.id;
                 return (
@@ -192,17 +303,21 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
                       setOffset({ x: 0, y: 0 });
                     }}
                     style={{
-                      padding: '8px 6px',
+                      padding: '7px 4px',
                       borderRadius: '8px',
                       border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
                       background: isSelected ? 'var(--accent-dim)' : 'var(--bg-tertiary)',
                       color: isSelected ? 'var(--accent)' : 'var(--text-secondary)',
                       fontWeight: isSelected ? '700' : '500',
-                      fontSize: '12px',
+                      fontSize: '11px',
                       cursor: 'pointer',
                       textAlign: 'center',
-                      transition: 'all 0.15s ease'
+                      transition: 'all 0.15s ease',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
                     }}
+                    title={r.desc}
                   >
                     {r.label}
                   </button>
@@ -212,85 +327,195 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
           </div>
 
           {/* Interactive Crop Viewport Frame */}
-          <div 
-            ref={containerRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onWheel={handleWheel}
-            style={{
-              width: '100%',
-              aspectRatio: `${activeRatio.width} / ${activeRatio.height}`,
-              maxHeight: '340px',
-              borderRadius: '14px',
-              overflow: 'hidden',
-              position: 'relative',
-              background: '#0a0d14',
-              border: '2px solid var(--accent)',
-              cursor: isDragging ? 'grabbing' : 'grab',
-              userSelect: 'none',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1)'
-            }}
-          >
-            {/* Draggable & Scalable Image */}
-            <img 
-              ref={imgRef}
-              src={imageSrc}
-              alt="Crop target"
-              draggable={false}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>Live Banner Framing Preview</span>
+                <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>• Drag photo to position • Scroll wheel to zoom</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowGrid(!showGrid)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border)',
+                    background: showGrid ? 'var(--accent-dim)' : 'var(--bg-secondary)',
+                    color: showGrid ? 'var(--accent)' : 'var(--text-tertiary)',
+                    fontSize: '11px',
+                    cursor: 'pointer'
+                  }}
+                  title="Toggle rule-of-thirds grid"
+                >
+                  <Grid size={11} />
+                  <span>Grid</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowTextOverlay(!showTextOverlay)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border)',
+                    background: showTextOverlay ? 'var(--accent-dim)' : 'var(--bg-secondary)',
+                    color: showTextOverlay ? 'var(--accent)' : 'var(--text-tertiary)',
+                    fontSize: '11px',
+                    cursor: 'pointer'
+                  }}
+                  title="Toggle real banner text placement overlay"
+                >
+                  {showTextOverlay ? <Eye size={11} /> : <EyeOff size={11} />}
+                  <span>Text Preview: {showTextOverlay ? 'ON' : 'OFF'}</span>
+                </button>
+              </div>
+            </div>
+
+            <div 
+              ref={containerRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onWheel={handleWheel}
               style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                width: `${baseW}px`,
-                height: `${baseH}px`,
-                transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
-                transformOrigin: 'center center',
-                maxWidth: 'none',
-                maxHeight: 'none',
-                pointerEvents: 'none',
+                width: '100%',
+                aspectRatio: `${activeRatio.width} / ${activeRatio.height}`,
+                maxHeight: '380px',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                position: 'relative',
+                background: '#0a0d14',
+                border: '2px solid var(--accent)',
+                cursor: isDragging ? 'grabbing' : 'grab',
                 userSelect: 'none',
-                transition: isDragging ? 'none' : 'transform 0.05s ease-out'
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1)'
               }}
-            />
+            >
+              {/* Draggable & Scalable Image */}
+              <img 
+                ref={imgRef}
+                src={imageSrc}
+                alt="Crop target"
+                draggable={false}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  width: `${baseW}px`,
+                  height: `${baseH}px`,
+                  transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+                  transformOrigin: 'center center',
+                  maxWidth: 'none',
+                  maxHeight: 'none',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                  transition: isDragging ? 'none' : 'transform 0.05s ease-out'
+                }}
+              />
 
-            {/* Rule-of-Thirds Alignment Grid Overlay */}
-            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(3, 1fr)' }}>
-              <div style={{ borderRight: '1px dashed rgba(255,255,255,0.15)', borderBottom: '1px dashed rgba(255,255,255,0.15)' }} />
-              <div style={{ borderRight: '1px dashed rgba(255,255,255,0.15)', borderBottom: '1px dashed rgba(255,255,255,0.15)' }} />
-              <div style={{ borderBottom: '1px dashed rgba(255,255,255,0.15)' }} />
-              <div style={{ borderRight: '1px dashed rgba(255,255,255,0.15)', borderBottom: '1px dashed rgba(255,255,255,0.15)' }} />
-              <div style={{ borderRight: '1px dashed rgba(255,255,255,0.15)', borderBottom: '1px dashed rgba(255,255,255,0.15)' }} />
-              <div style={{ borderBottom: '1px dashed rgba(255,255,255,0.15)' }} />
-            </div>
+              {/* Rule-of-Thirds Alignment Grid Overlay */}
+              {showGrid && (
+                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(3, 1fr)' }}>
+                  <div style={{ borderRight: '1px dashed rgba(255,255,255,0.18)', borderBottom: '1px dashed rgba(255,255,255,0.18)' }} />
+                  <div style={{ borderRight: '1px dashed rgba(255,255,255,0.18)', borderBottom: '1px dashed rgba(255,255,255,0.18)' }} />
+                  <div style={{ borderBottom: '1px dashed rgba(255,255,255,0.18)' }} />
+                  <div style={{ borderRight: '1px dashed rgba(255,255,255,0.18)', borderBottom: '1px dashed rgba(255,255,255,0.18)' }} />
+                  <div style={{ borderRight: '1px dashed rgba(255,255,255,0.18)', borderBottom: '1px dashed rgba(255,255,255,0.18)' }} />
+                  <div style={{ borderBottom: '1px dashed rgba(255,255,255,0.18)' }} />
+                </div>
+              )}
 
-            {/* Subtle Greeting Mockup Overlay to test positioning */}
-            <div style={{ position: 'absolute', bottom: '16px', left: '18px', pointerEvents: 'none', zIndex: 2 }}>
-              <div style={{ fontSize: '15px', fontWeight: '800', color: '#ffffff', textShadow: '0 2px 8px rgba(0,0,0,0.9)' }}>
-                Welcome 'Farmer'
+              {/* Live Real-World Banner Text Overlay (matches HomePage positioning and styling) */}
+              {showTextOverlay && (bannerProps?.heroShowText ?? true) && (
+                <div 
+                  style={{ 
+                    position: 'absolute', 
+                    left: `${bannerProps?.heroTextPosX ?? 10}%`,
+                    top: `${bannerProps?.heroTextPosY ?? 50}%`,
+                    transform: `translate(-${bannerProps?.heroTextPosX ?? 10}%, -${bannerProps?.heroTextPosY ?? 50}%)`,
+                    textAlign: 'left',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    pointerEvents: 'none', 
+                    zIndex: 10,
+                    maxWidth: '85%',
+                    userSelect: 'none'
+                  }}
+                >
+                  <div 
+                    style={{ 
+                      fontSize: `calc(18px * ${(bannerProps?.heroTextScale || 100) / 100})`, 
+                      fontWeight: '800', 
+                      lineHeight: 1.15,
+                      color: bannerProps?.heroTextColor || '#ffffff', 
+                      textShadow: (bannerProps?.heroTextShadow !== false) 
+                        ? '0 2px 12px rgba(0,0,0,0.95), 0 1px 4px rgba(0,0,0,0.95)' 
+                        : 'none',
+                      fontFamily: FONT_FAMILIES[bannerProps?.heroFont] || 'inherit',
+                      textTransform: (bannerProps?.heroFont === 'display' || bannerProps?.heroFont === 'condensed') ? 'uppercase' : 'none',
+                      fontStyle: bannerProps?.heroFont === 'rustic' ? 'italic' : 'normal',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Welcome '{bannerProps?.nickname || 'Farmer'}'
+                  </div>
+                  {bannerProps?.heroSubtitleMode !== 'off' && (
+                    <div 
+                      style={{ 
+                        marginTop: '4px',
+                        fontSize: `calc(10.5px * ${Math.max(0.85, (bannerProps?.heroTextScale || 100) / 100)})`, 
+                        color: bannerProps?.heroTextColor || 'rgba(255,255,255,0.88)', 
+                        opacity: 0.92,
+                        textShadow: (bannerProps?.heroTextShadow !== false) 
+                          ? '0 1px 8px rgba(0,0,0,0.95)' 
+                          : 'none',
+                        lineHeight: 1.35,
+                        textAlign: 'left',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start'
+                      }}
+                    >
+                      {bannerProps?.heroSubtitleMode === 'quote' ? (
+                        <>
+                          <span style={{ fontStyle: 'italic', display: 'block' }}>“{bannerProps?.quoteText || "Don't judge each day by the harvest you reap, but by the seeds you plant."}”</span>
+                          <span style={{ fontSize: '9px', opacity: 0.8, fontWeight: '600', display: 'block', marginTop: '1px' }}>— {bannerProps?.quoteAuthor || 'Robert Louis Stevenson'}</span>
+                        </>
+                      ) : (
+                        <span>Browse, install, and manage your Farming Simulator 25 mods.</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Ratio badge */}
+              <div style={{ position: 'absolute', top: '8px', right: '10px', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', color: '#ffffff', pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.15)' }}>
+                {activeRatio.label} Frame
               </div>
-              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)', textShadow: '0 1px 4px rgba(0,0,0,0.9)' }}>
-                Sample positioning preview
-              </div>
-            </div>
-
-            {/* Focal Point Indicator */}
-            <div style={{ position: 'absolute', top: '10px', right: '12px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', padding: '3px 8px', borderRadius: '8px', fontSize: '10px', color: '#ffffff', pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.15)' }}>
-              {activeRatio.label.split(' ')[0]} Frame
             </div>
           </div>
 
           {/* Zoom & Positioning Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '12px 18px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, marginRight: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '10px 16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, marginRight: '16px' }}>
               <button 
+                type="button"
                 className="btn btn--icon btn--ghost" 
                 onClick={() => setZoom((prev) => Math.max(0.5, prev - 0.15))}
                 title="Zoom Out"
-                style={{ width: '30px', height: '30px', padding: 0 }}
+                style={{ width: '28px', height: '28px', padding: 0 }}
               >
-                <ZoomOut size={16} />
+                <ZoomOut size={15} />
               </button>
 
               <input 
@@ -304,49 +529,48 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
               />
 
               <button 
+                type="button"
                 className="btn btn--icon btn--ghost" 
                 onClick={() => setZoom((prev) => Math.min(3, prev + 0.15))}
                 title="Zoom In"
-                style={{ width: '30px', height: '30px', padding: 0 }}
+                style={{ width: '28px', height: '28px', padding: 0 }}
               >
-                <ZoomIn size={16} />
+                <ZoomIn size={15} />
               </button>
 
-              <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--accent)', minWidth: '40px', textAlign: 'right' }}>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--accent)', minWidth: '38px', textAlign: 'right' }}>
                 {Math.round(zoom * 100)}%
               </span>
             </div>
 
             <button 
+              type="button"
               className="btn btn--ghost"
               onClick={handleResetPosition}
-              style={{ fontSize: '12px', gap: '6px', height: '32px', padding: '0 10px', color: 'var(--text-secondary)' }}
-              title="Reset Zoom & Offset"
+              style={{ fontSize: '11px', gap: '6px', height: '28px', padding: '0 10px', color: 'var(--text-secondary)' }}
+              title="Reset Zoom & Offset back to center"
             >
-              <RotateCcw size={14} /> Center
+              <RotateCcw size={13} /> Center
             </button>
-          </div>
-
-          <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', textAlign: 'center' }}>
-            💡 Tip: Click and drag the image inside the frame to center your favorite tractor or landscape.
           </div>
         </div>
 
         {/* Footer */}
-        <div className="modal__footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-secondary)' }}>
-          <button className="btn btn--ghost" onClick={onClose}>
+        <div className="modal__footer" style={{ padding: '14px 22px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-secondary)' }}>
+          <button type="button" className="btn btn--ghost" onClick={onClose} style={{ fontSize: '12px' }}>
             Cancel
           </button>
           
           <button 
+            type="button"
             className="btn btn--primary"
             onClick={handleSaveCrop}
             disabled={isProcessing}
-            style={{ minWidth: '150px', gap: '8px' }}
+            style={{ minWidth: '150px', gap: '8px', fontSize: '12px', padding: '7px 18px' }}
           >
             {isProcessing ? 'Processing...' : (
               <>
-                <Check size={16} /> Apply Wallpaper
+                <Check size={15} /> Apply Wallpaper
               </>
             )}
           </button>

@@ -120,6 +120,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
   };
 
   const {
+    nickname,
     homeShowHero, setHomeShowHero,
     heroBgType, heroCustomBg, heroDimmer, heroAlignment,
     heroTextPosX, heroTextPosY,
@@ -207,12 +208,13 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
         className="modal-overlay" 
         onClick={onClose} 
         style={{ 
-          zIndex: 1100, 
+          zIndex: 1500, 
           alignItems: 'flex-end', 
           justifyContent: 'center', 
           paddingBottom: '16px',
-          background: 'linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.25) 35%, transparent 55%)',
-          backdropFilter: 'none'
+          background: 'linear-gradient(to top, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.15) 35%, transparent 55%)',
+          backdropFilter: 'none',
+          pointerEvents: 'none'
         }}
       >
         <div 
@@ -223,6 +225,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
             position: 'relative',
             left: `${modalPos.x}px`,
             top: `${modalPos.y}px`,
+            pointerEvents: 'auto',
             width: '94%',
             maxWidth: '920px', 
             height: modalHeight ? `${modalHeight}px` : '62vh',
@@ -992,6 +995,20 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     <ImageCropModal 
       isOpen={showCropper} 
       imageSrc={cropImageSrc} 
+      heroTextSize={heroTextSize || 'standard'}
+      bannerProps={{
+        nickname: nickname || 'Farmer',
+        heroFont: heroFont || 'modern',
+        heroTextScale: heroTextScale || 100,
+        heroTextColor: heroTextColor || '#ffffff',
+        heroTextShadow: heroTextShadow !== false,
+        heroTextPosX: heroTextPosX ?? 10,
+        heroTextPosY: heroTextPosY ?? 50,
+        heroSubtitleMode: activeSubtitleMode,
+        quoteText: currentQuote?.quote,
+        quoteAuthor: currentQuote?.author,
+        heroShowText: heroShowText !== false
+      }}
       onClose={() => setShowCropper(false)} 
       onApply={handleApplyCropped} 
     />
