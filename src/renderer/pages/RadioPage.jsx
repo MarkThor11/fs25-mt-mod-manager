@@ -227,12 +227,9 @@ const RadioPage = () => {
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>In-Game Radio Station Override</h3>
-                                <span style={{ padding: '2px 10px', borderRadius: '12px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <Check size={12} /> Companion Script Active
-                                </span>
                             </div>
                             <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                Automatically overrides built-in game stations so pressing Next/Previous station in-game cycles strictly through your custom stations.
+                                Overrides built-in game stations so pressing Next/Previous station in-game cycles strictly through your custom stations.
                             </p>
                         </div>
                     </div>

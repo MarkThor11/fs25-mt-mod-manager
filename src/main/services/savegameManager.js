@@ -481,9 +481,12 @@ async function getSavegameMods(savegamePath) {
         const mods = [];
         const modEntries = data.careerSavegame.mod || data.careerSavegame.mods?.mod || [];
         const entries = Array.isArray(modEntries) ? modEntries : [modEntries];
+        const internalMods = ['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
         
         for (const entry of entries) {
             if (entry && entry['@_modName']) {
+                const nameLow = entry['@_modName'].toLowerCase();
+                if (internalMods.includes(nameLow)) continue;
                 mods.push({
                     modName: entry['@_modName'],
                     title: entry['@_title'] || entry['@_modName'],
@@ -528,9 +531,15 @@ async function setSavegameMods(savegamePath, mods) {
         }
     });
 
-    // First, preserve all required existing mods (like map dependencies)
-    existingModsArray.filter(m => m['@_required'] === 'true').forEach(m => {
-        newModsMap.set(m['@_modName'], m);
+    // First, preserve all required existing mods and internal background helper mods
+    const internalMods = ['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
+    existingModsArray.forEach(m => {
+        if (m && m['@_modName']) {
+            const nameLow = m['@_modName'].toLowerCase();
+            if (m['@_required'] === 'true' || internalMods.includes(nameLow)) {
+                newModsMap.set(m['@_modName'], m);
+            }
+        }
     });
 
     // Then, add/update the user-selected mods
@@ -1958,7 +1967,8 @@ async function getAllSavegames() {
                 money: parseFloat(stats?.['@_money'] || stats?.money || 0),
                 playTime: parseFloat(stats?.['@_playTime'] || stats?.playTime || 0),
                 lastSaveDate: settings['@_saveDateFormatted'] || settings.saveDateFormatted,
-                modCount: (Array.isArray(data.careerSavegame.mod) ? data.careerSavegame.mod.length : (data.careerSavegame.mod ? 1 : (data.careerSavegame.mods?.mod?.length || 0))),
+                modCount: (Array.isArray(data.careerSavegame.mod) ? data.careerSavegame.mod : (data.careerSavegame.mod ? [data.careerSavegame.mod] : (data.careerSavegame.mods?.mod || [])))
+                    .filter(m => !['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'].includes((m['@_modName'] || m.modName || '').toLowerCase())).length,
                 // Add more settings for the editor
                 economicDifficulty: settings['@_economicDifficulty'] || settings.economicDifficulty,
                 autoSaveInterval: settings['@_autoSaveInterval'] || settings.autoSaveInterval,
@@ -1990,11 +2000,13 @@ async function getAllSavegames() {
                 voiceVolume,
                 isRadioEnabled,
                 radioVehicleOnly,
-                mods: (Array.isArray(data.careerSavegame.mod) ? data.careerSavegame.mod : (data.careerSavegame.mod ? [data.careerSavegame.mod] : (data.careerSavegame.mods?.mod || []))).map(m => ({
-                    modName: m['@_modName'] || m.modName,
-                    title: m['@_title'] || m.title,
-                    version: m['@_version'] || m.version
-                }))
+                mods: (Array.isArray(data.careerSavegame.mod) ? data.careerSavegame.mod : (data.careerSavegame.mod ? [data.careerSavegame.mod] : (data.careerSavegame.mods?.mod || [])))
+                    .filter(m => !['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'].includes((m['@_modName'] || m.modName || '').toLowerCase()))
+                    .map(m => ({
+                        modName: m['@_modName'] || m.modName,
+                        title: m['@_title'] || m.title,
+                        version: m['@_version'] || m.version
+                    }))
             });
         }
     }
