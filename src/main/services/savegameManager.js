@@ -237,7 +237,8 @@ async function getMapTemplates() {
             const GENERIC_MAP_IDS = new Set([
                 'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
                 'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
-                'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek'
+                'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
+                'farmerbobsstartmap'
             ]);
 
             const templateModName = (mapId && mapId.includes('.')) ? mapId.split('.')[0] : null;

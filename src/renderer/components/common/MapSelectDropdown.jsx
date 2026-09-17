@@ -78,7 +78,7 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
       'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
       'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
       'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
-      'mapus', 'mapeu', 'mapas', 'highlandsfishingmap'
+      'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'farmerbobsstartmap'
     ]);
 
     const OFFICIAL_TEMPLATES = new Set([
@@ -116,30 +116,29 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
         // 2. Normalized Title match
         const tTitle = norm(t.title);
         const utTitle = ultraNorm(t.title);
-        if (tTitle && (tTitle === mTitle || tTitle === mName || utTitle === uTitle || utTitle === uName)) return true;
+        if (tTitle && (tTitle === mTitle || tTitle === mName || (utTitle.length >= 4 && (utTitle === uTitle || utTitle === uName)))) return true;
 
         // 3. Normalized Mod Name match (including fallback from mapId if modName missing on template)
         const fallbackTMod = t.modName || (t.mapId && t.mapId.includes('.') ? t.mapId.split('.')[0] : null);
         const tMod = norm(fallbackTMod);
         const utMod = ultraNorm(fallbackTMod);
-        if (tMod && (tMod === mName || utMod === uName)) return true;
+        if (tMod && (tMod === mName || (utMod.length >= 4 && utMod === uName))) return true;
 
         // 4. Map ID matching (handling {modName}.{mapId} format from careerSavegame.xml)
         const tMapId = norm(t.mapId);
         if (tMapId) {
-          if (!isGenericOrBaseMapId && (tMapId === mMapId || tMapId.endsWith(mMapId) || mMapId.endsWith(tMapId))) return true;
-          if (mName && (tMapId.startsWith(mName) || tMapId.includes(mName))) return true;
-          if (uName && ultraNorm(tMapId).startsWith(uName)) return true;
+          if (!isGenericOrBaseMapId && (tMapId === mMapId || tMapId.endsWith('.' + mMapId) || mMapId.endsWith('.' + tMapId))) return true;
+          if (mName && (tMapId === mName || tMapId.startsWith(mName + '.'))) return true;
+          if (uName && uName.length >= 4 && ultraNorm(tMapId) === uName) return true;
         }
 
         // 5. Template ID / filename matching (e.g. FS25_BackRoadsCounty4x_...zip, FS25_Blue_Island_Forest_...)
         if (tId) {
-          if (mName && (tId === mName || tId.includes(mName) || tId.startsWith(mName))) return true;
-          if (uName && (utId.includes(uName) || utId.startsWith(uName))) return true;
-          if (mFolder && (tId.startsWith(mFolder) || utId.startsWith(uFolder))) return true;
-          if (mFileName && (tId.startsWith(mFileName) || utId.startsWith(uFileName))) return true;
-          if (!isGenericOrBaseMapId && (tId === mMapId || tId.includes(mMapId))) return true;
-          if (!isGenericOrBaseMapId && uMapId && utId.includes(uMapId)) return true;
+          if (mName && (tId === mName || tId.startsWith(mName + '_'))) return true;
+          if (uName && uName.length >= 4 && (utId === uName || utId.startsWith(uName + '_'))) return true;
+          if (mFolder && (tId === mFolder || tId.startsWith(mFolder + '_'))) return true;
+          if (mFileName && (tId === mFileName || tId.startsWith(mFileName + '_'))) return true;
+          if (!isGenericOrBaseMapId && tId === mMapId) return true;
         }
 
         return false;
