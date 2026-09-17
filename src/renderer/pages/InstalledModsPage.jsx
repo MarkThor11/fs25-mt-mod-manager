@@ -688,7 +688,7 @@ const LazyModList = ({
 
   return (
     <>
-      {installedModsViewMode === 'grid' ? (
+      {installedModsViewMode === 'grid' || installedModsViewMode === 'icons' ? (
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: `repeat(auto-fill, minmax(${folderZooms[folderName] || 180}px, 1fr))`, 
@@ -2206,20 +2206,20 @@ export default function InstalledModsPage() {
             LIST
           </button>
           <button 
-            className={`btn btn--xs ${installedModsViewMode === 'icons' ? 'btn--primary' : 'btn--secondary'}`}
-            onClick={() => setInstalledModsViewMode('icons')}
+            className={`btn btn--xs ${installedModsViewMode === 'grid' || installedModsViewMode === 'icons' ? 'btn--primary' : 'btn--secondary'}`}
+            onClick={() => setInstalledModsViewMode('grid')}
             style={{ 
               padding: '6px 14px', 
               borderRadius: 6,
-              background: installedModsViewMode === 'icons' ? 'var(--accent)' : 'var(--bg-surface)',
-              color: installedModsViewMode === 'icons' ? 'var(--bg-primary)' : 'var(--text-secondary)',
-              border: installedModsViewMode === 'icons' ? 'none' : '1px solid var(--border)',
+              background: (installedModsViewMode === 'grid' || installedModsViewMode === 'icons') ? 'var(--accent)' : 'var(--bg-surface)',
+              color: (installedModsViewMode === 'grid' || installedModsViewMode === 'icons') ? 'var(--bg-primary)' : 'var(--text-secondary)',
+              border: (installedModsViewMode === 'grid' || installedModsViewMode === 'icons') ? 'none' : '1px solid var(--border)',
               fontWeight: 800,
               fontSize: 10,
               letterSpacing: '0.05em'
             }}
           >
-            ICONS
+            GRID
           </button>
         </div>
 
@@ -3286,7 +3286,7 @@ export default function InstalledModsPage() {
                                   cursor: 'pointer',
                                   background: 'transparent'
                                 }}
-                                title={installedModsViewMode === 'grid' ? "Card Size" : "Icon Size"}
+                                title={(installedModsViewMode === 'grid' || installedModsViewMode === 'icons') ? "Card Size" : "Icon Size"}
                               />
                           </div>
                           <LayoutGrid size={16} style={{ opacity: 0.7 }} />
@@ -3346,7 +3346,7 @@ export default function InstalledModsPage() {
                 </div>
 
                 {isExpanded && (
-                <div style={{ padding: installedModsViewMode === 'grid' ? '16px' : '4px 0' }}>
+                <div style={{ padding: (installedModsViewMode === 'grid' || installedModsViewMode === 'icons') ? '16px' : '4px 0' }}>
                   {folderMods.length === 0 ? (
                     <div style={{ padding: '24px', textAlign: 'center', fontSize: 'var(--fs-xs)', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                       Empty Folder — move mods here to organize them.
