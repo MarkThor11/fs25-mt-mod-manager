@@ -1,19 +1,29 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, ZoomIn, ZoomOut, Move, Check, RotateCcw, Image as ImageIcon } from 'lucide-react';
 
+const ASPECT_RATIOS = [
+  { id: '2.5', label: '2.5:1 Banner', ratioValue: 2.5, width: 1600, height: 640, desc: 'Taller balanced banner — ideal for machinery & landscapes' },
+  { id: '2.33', label: '21:9 Ultrawide', ratioValue: 21 / 9, width: 1680, height: 720, desc: 'Cinematic widescreen framing' },
+  { id: '1.78', label: '16:9 Full Photo', ratioValue: 16 / 9, width: 1600, height: 900, desc: 'Maximum height — captures full screenshot' },
+  { id: '3.0', label: '3:1 Wide Ribbon', ratioValue: 3.0, width: 1600, height: 533, desc: 'Slim horizontal ribbon' }
+];
+
 export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
   if (!isOpen || !imageSrc) return null;
 
+  const [ratioId, setRatioId] = useState('2.5');
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
-  const [containerSize, setContainerSize] = useState({ width: 600, height: 150 });
+  const [containerSize, setContainerSize] = useState({ width: 600, height: 240 });
   const [isProcessing, setIsProcessing] = useState(false);
 
   const containerRef = useRef(null);
   const imgRef = useRef(null);
+
+  const activeRatio = ASPECT_RATIOS.find((r) => r.id === ratioId) || ASPECT_RATIOS[0];
 
   // Initialize image dimensions and center it
   useEffect(() => {
@@ -28,24 +38,27 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
     img.src = imageSrc;
   }, [imageSrc]);
 
-  // Update container size on mount/resize
+  // Update container size on mount/resize/ratio change
   useEffect(() => {
     if (containerRef.current) {
       const updateSize = () => {
         const rect = containerRef.current?.getBoundingClientRect();
-        if (rect && rect.width > 0) {
+        if (rect && rect.width > 0 && rect.height > 0) {
           setContainerSize({ width: rect.width, height: rect.height });
         }
       };
-      updateSize();
+      const raf = requestAnimationFrame(updateSize);
       window.addEventListener('resize', updateSize);
-      return () => window.removeEventListener('resize', updateSize);
+      return () => {
+        cancelAnimationFrame(raf);
+        window.removeEventListener('resize', updateSize);
+      };
     }
-  }, [isOpen]);
+  }, [isOpen, ratioId]);
 
   // Compute base dimensions for "cover" fit
   const displayWidth = containerSize.width || 600;
-  const displayHeight = containerSize.height || 150;
+  const displayHeight = containerSize.height || 240;
 
   let baseW = displayWidth;
   let baseH = displayHeight;
@@ -92,15 +105,15 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
     setOffset({ x: 0, y: 0 });
   };
 
-  // Render cropped image to canvas at 1600x400 (4:1)
+  // Render cropped image to canvas at current ratio resolution
   const handleSaveCrop = () => {
     if (!imageSrc || isProcessing) return;
     setIsProcessing(true);
 
     try {
       const canvas = document.createElement('canvas');
-      const targetWidth = 1600;
-      const targetHeight = 400; // 4:1 banner aspect ratio
+      const targetWidth = activeRatio.width;
+      const targetHeight = activeRatio.height;
       canvas.width = targetWidth;
       canvas.height = targetHeight;
       const ctx = canvas.getContext('2d');
@@ -122,7 +135,7 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
 
         ctx.drawImage(img, drawX, drawY, drawW, drawH);
 
-        // Convert to high-quality JPEG (~150-250KB)
+        // Convert to high-quality JPEG (~150-280KB)
         const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.88);
         setIsProcessing(false);
         onApply(croppedDataUrl);
@@ -149,7 +162,7 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
             </div>
             <div>
               <h2 style={{ fontSize: '17px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>Crop & Position Banner</h2>
-              <p style={{ fontSize: '12px', margin: '2px 0 0 0', color: 'var(--text-tertiary)' }}>Drag to reposition the focal point • Zoom to fit the 4:1 banner frame</p>
+              <p style={{ fontSize: '12px', margin: '2px 0 0 0', color: 'var(--text-tertiary)' }}>Drag to reposition the focal point • Zoom or switch aspect ratios</p>
             </div>
           </div>
           <button className="btn btn--icon btn--ghost" onClick={onClose}>
@@ -160,7 +173,45 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
         {/* Body */}
         <div className="modal__body" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
-          {/* Interactive Crop Viewport Frame (4:1 Banner Aspect Ratio) */}
+          {/* Aspect Ratio Selector Pills */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>Crop Aspect Ratio</span>
+              <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{activeRatio.desc}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+              {ASPECT_RATIOS.map((r) => {
+                const isSelected = ratioId === r.id;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => {
+                      setRatioId(r.id);
+                      setZoom(1);
+                      setOffset({ x: 0, y: 0 });
+                    }}
+                    style={{
+                      padding: '8px 6px',
+                      borderRadius: '8px',
+                      border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
+                      background: isSelected ? 'var(--accent-dim)' : 'var(--bg-tertiary)',
+                      color: isSelected ? 'var(--accent)' : 'var(--text-secondary)',
+                      fontWeight: isSelected ? '700' : '500',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {r.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Interactive Crop Viewport Frame */}
           <div 
             ref={containerRef}
             onMouseDown={handleMouseDown}
@@ -170,7 +221,8 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
             onWheel={handleWheel}
             style={{
               width: '100%',
-              aspectRatio: '4 / 1',
+              aspectRatio: `${activeRatio.width} / ${activeRatio.height}`,
+              maxHeight: '340px',
               borderRadius: '14px',
               overflow: 'hidden',
               position: 'relative',
@@ -225,7 +277,7 @@ export default function ImageCropModal({ isOpen, imageSrc, onClose, onApply }) {
 
             {/* Focal Point Indicator */}
             <div style={{ position: 'absolute', top: '10px', right: '12px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', padding: '3px 8px', borderRadius: '8px', fontSize: '10px', color: '#ffffff', pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.15)' }}>
-              4:1 Aspect Ratio
+              {activeRatio.label.split(' ')[0]} Frame
             </div>
           </div>
 

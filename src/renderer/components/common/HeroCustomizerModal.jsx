@@ -437,35 +437,41 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* Text Size */}
+              {/* Banner Scale & Height */}
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px', display: 'block' }}>
-                  Greeting Text Size
+                  Banner Height & Scale
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
                   {[
-                    { id: 'compact', label: 'Compact' },
-                    { id: 'standard', label: 'Standard' },
-                    { id: 'large', label: 'Heroic Large' },
+                    { id: 'compact', label: 'Compact', sub: '200px' },
+                    { id: 'standard', label: 'Standard', sub: '280px' },
+                    { id: 'large', label: 'Tall', sub: '380px' },
+                    { id: 'epic', label: 'Cinematic', sub: '460px' },
                   ].map((s) => {
-                    const isSelected = heroTextSize === s.id;
+                    const isSelected = (heroTextSize || 'standard') === s.id;
                     return (
                       <button
                         key={s.id}
                         onClick={() => updateHeroBannerSettings({ heroTextSize: s.id })}
                         style={{
-                          padding: '10px 14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '10px 8px',
                           borderRadius: '10px',
                           border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
                           background: isSelected ? 'var(--accent-dim)' : 'var(--bg-tertiary)',
                           color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
                           fontWeight: '600',
-                          fontSize: '13px',
+                          fontSize: '12px',
                           cursor: 'pointer',
                           transition: 'all 0.15s ease'
                         }}
                       >
-                        {s.label}
+                        <span>{s.label}</span>
+                        <span style={{ fontSize: '10px', opacity: 0.7, marginTop: '2px' }}>{s.sub}</span>
                       </button>
                     );
                   })}

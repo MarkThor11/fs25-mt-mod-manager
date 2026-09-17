@@ -1978,13 +1978,13 @@
    ═══════════════════════════════════════════ */
 .home-hero {
   position: relative;
-  padding: var(--sp-10) var(--sp-6);
+  padding: var(--sp-12) var(--sp-8);
   background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   margin-bottom: var(--sp-6);
   overflow: hidden;
-  min-height: 180px;
+  min-height: 280px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -2091,33 +2091,41 @@
 
 /* Size Modifiers */
 .home-hero--size-compact {
-  padding: var(--sp-6) var(--sp-6);
-  min-height: 140px;
+  padding: var(--sp-8) var(--sp-8);
+  min-height: 200px;
 }
 .home-hero--size-compact .home-hero__title {
   font-size: var(--fs-2xl);
   margin-bottom: 2px;
 }
 .home-hero--size-standard {
-  padding: var(--sp-10) var(--sp-6);
-  min-height: 180px;
+  padding: var(--sp-12) var(--sp-8);
+  min-height: 280px;
 }
 .home-hero--size-standard .home-hero__title {
   font-size: var(--fs-3xl);
   margin-bottom: var(--sp-2);
 }
 .home-hero--size-large {
-  padding: var(--sp-12) var(--sp-8);
-  min-height: 230px;
+  padding: var(--sp-14) var(--sp-10);
+  min-height: 380px;
 }
 .home-hero--size-large .home-hero__title {
   font-size: calc(var(--fs-3xl) * 1.3);
   margin-bottom: var(--sp-3);
 }
+.home-hero--size-epic {
+  padding: var(--sp-16) var(--sp-10);
+  min-height: 460px;
+}
+.home-hero--size-epic .home-hero__title {
+  font-size: calc(var(--fs-3xl) * 1.5);
+  margin-bottom: var(--sp-4);
+}
 
 /* Photo Mode */
 .home-hero--photo-mode {
-  min-height: 220px;
+  min-height: 350px;
 }
 .home-hero__photo-badge {
   position: absolute;
