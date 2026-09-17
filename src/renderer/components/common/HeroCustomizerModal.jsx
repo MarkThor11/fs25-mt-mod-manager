@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, Palette, Image as ImageIcon, Upload, Check, RotateCcw, 
   AlignLeft, AlignCenter, AlignRight, Type, Eye, EyeOff, Sparkles, Sliders, Move,
-  Quote, HelpCircle, Shuffle, Calendar
+  Quote, HelpCircle, Shuffle, Calendar, GripHorizontal
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useToastStore } from '../../store/useToastStore';
@@ -32,12 +32,105 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
   const fileInputRef = useRef(null);
   const toast = useToastStore();
 
+  const modalRef = useRef(null);
+  const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
+  const [modalHeight, setModalHeight] = useState(null);
+  const [isDraggingModal, setIsDraggingModal] = useState(false);
+  const [isResizingHeight, setIsResizingHeight] = useState(false);
+
+  const dragModalRef = useRef({ startX: 0, startY: 0, initX: 0, initY: 0 });
+  const resizeRef = useRef({ startY: 0, initHeight: 560 });
+
   useEffect(() => {
     if (isOpen) {
+      setModalPos({ x: 0, y: 0 });
       const main = document.querySelector('.main-content');
       if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [isOpen]);
+
+  const handleHeaderMouseDown = (e) => {
+    if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) {
+      return;
+    }
+    if (e.button !== 0) return;
+    e.preventDefault();
+    dragModalRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initX: modalPos.x,
+      initY: modalPos.y
+    };
+    setIsDraggingModal(true);
+  };
+
+  const handleTopResizeMouseDown = (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const currentHeight = modalRef.current ? modalRef.current.getBoundingClientRect().height : 560;
+    resizeRef.current = {
+      startY: e.clientY,
+      initHeight: currentHeight
+    };
+    setIsResizingHeight(true);
+  };
+
+  useEffect(() => {
+    if (!isDraggingModal) return;
+
+    const handleMouseMove = (e) => {
+      const dx = e.clientX - dragModalRef.current.startX;
+      const dy = e.clientY - dragModalRef.current.startY;
+      const maxDx = window.innerWidth * 0.46;
+      const minDx = -window.innerWidth * 0.46;
+      const minDy = -window.innerHeight * 0.42;
+      const maxDy = window.innerHeight * 0.45;
+
+      setModalPos({
+        x: Math.max(minDx, Math.min(maxDx, dragModalRef.current.initX + dx)),
+        y: Math.max(minDy, Math.min(maxDy, dragModalRef.current.initY + dy))
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingModal(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingModal]);
+
+  useEffect(() => {
+    if (!isResizingHeight) return;
+
+    const handleMouseMove = (e) => {
+      const dy = resizeRef.current.startY - e.clientY;
+      const minH = 340;
+      const maxH = window.innerHeight * 0.85;
+      const newHeight = Math.max(minH, Math.min(maxH, resizeRef.current.initHeight + dy));
+      setModalHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingHeight(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingHeight]);
+
+  const handleResetModalPos = () => {
+    setModalPos({ x: 0, y: 0 });
+    setModalHeight(null);
+  };
 
   const {
     homeShowHero, setHomeShowHero,
@@ -157,20 +250,68 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
         }}
       >
         <div 
+          ref={modalRef}
           className="modal animate-scale-up"
           onClick={(e) => e.stopPropagation()}
           style={{ 
+            position: 'relative',
             width: '94%',
-            maxWidth: '900px', 
-            height: '52vh',
-            maxHeight: '56vh', 
+            maxWidth: '920px', 
+            height: modalHeight ? `${modalHeight}px` : '62vh',
+            minHeight: '360px',
+            maxHeight: '85vh', 
+            transform: `translate(${modalPos.x}px, ${modalPos.y}px)`,
+            transition: (isDraggingModal || isResizingHeight) ? 'none' : 'box-shadow 0.2s ease, transform 0.15s ease',
             display: 'flex', 
             flexDirection: 'column',
-            boxShadow: '0 -8px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--border)'
+            boxShadow: isDraggingModal 
+              ? '0 20px 60px rgba(0, 0, 0, 0.9), 0 0 0 2px var(--accent)' 
+              : '0 -8px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--border)'
           }}
         >
+          {/* Top Edge Resize Bar */}
+          <div
+            onMouseDown={handleTopResizeMouseDown}
+            style={{
+              position: 'absolute',
+              top: '-8px',
+              left: '0',
+              right: '0',
+              height: '14px',
+              cursor: 'ns-resize',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 20
+            }}
+            title="Drag up or down to adjust studio height"
+          >
+            <div style={{
+              width: '44px',
+              height: '4px',
+              borderRadius: '2px',
+              background: isResizingHeight ? 'var(--accent)' : 'rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
+              transition: 'background 0.15s ease'
+            }} />
+          </div>
+
           {/* Modal Header */}
-          <div className="modal__header" style={{ padding: '10px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div 
+            className="modal__header" 
+            onMouseDown={handleHeaderMouseDown}
+            onDoubleClick={handleResetModalPos}
+            style={{ 
+              padding: '10px 18px', 
+              borderBottom: '1px solid var(--border)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              cursor: isDraggingModal ? 'grabbing' : 'grab',
+              userSelect: 'none'
+            }}
+            title="Click and drag to move studio anywhere • Double-click to reset position"
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Palette size={16} />
@@ -183,6 +324,28 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                 <p style={{ fontSize: '11px', margin: 0, color: 'var(--text-tertiary)' }}>Live controls — see the banner above update in real-time</p>
               </div>
             </div>
+
+            {/* Central Drag Grip Badge */}
+            <div 
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '3px 10px',
+                borderRadius: '8px',
+                background: isDraggingModal ? 'var(--accent-dim)' : 'var(--bg-secondary)',
+                border: isDraggingModal ? '1px solid var(--accent)' : '1px solid var(--border)',
+                color: isDraggingModal ? 'var(--accent)' : 'var(--text-tertiary)',
+                fontSize: '10px',
+                fontWeight: '600',
+                transition: 'all 0.15s ease'
+              }}
+              title="Click and drag to move modal anywhere on screen"
+            >
+              <GripHorizontal size={13} />
+              <span>Drag to move modal</span>
+            </div>
+
             <button className="btn btn--icon btn--ghost" onClick={onClose} style={{ width: '28px', height: '28px', padding: 0 }}>
               <X size={16} />
             </button>
@@ -834,13 +997,27 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
 
         {/* Modal Footer */}
         <div className="modal__footer" style={{ padding: '10px 18px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-secondary)' }}>
-          <button 
-            className="btn btn--ghost"
-            onClick={handleReset}
-            style={{ gap: '6px', fontSize: '12px', color: 'var(--text-tertiary)', padding: '6px 12px' }}
-          >
-            <RotateCcw size={14} /> Reset to Defaults
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button 
+              className="btn btn--ghost"
+              onClick={handleReset}
+              style={{ gap: '6px', fontSize: '12px', color: 'var(--text-tertiary)', padding: '6px 12px' }}
+            >
+              <RotateCcw size={14} /> Reset to Defaults
+            </button>
+
+            {(modalPos.x !== 0 || modalPos.y !== 0 || modalHeight !== null) && (
+              <button 
+                type="button"
+                className="btn btn--ghost"
+                onClick={handleResetModalPos}
+                style={{ fontSize: '11px', color: 'var(--accent)', padding: '4px 8px' }}
+                title="Reset window position and size back to dock"
+              >
+                Reset Position
+              </button>
+            )}
+          </div>
           
           <button 
             className="btn btn--primary"
