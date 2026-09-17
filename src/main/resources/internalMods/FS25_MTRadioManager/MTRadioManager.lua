@@ -69,6 +69,16 @@ function MTRadioManager:isOverrideActive()
     return self.overrideBuiltins and self.numUserStations > 0
 end
 
+function MTRadioManager:updateChannelBounds(soundPlayerSelf)
+    if soundPlayerSelf ~= nil and soundPlayerSelf.channels ~= nil and #soundPlayerSelf.channels > 0 then
+        local total = #soundPlayerSelf.channels
+        if self.numUserStations > 0 and total >= self.numUserStations then
+            self.firstUserChannel = total - self.numUserStations + 1
+            self.lastUserChannel = total
+        end
+    end
+end
+
 function MTRadioManager:clampOrWrapChannel(channel, movingForward)
     if not self:isOverrideActive() then
         return channel
@@ -102,6 +112,7 @@ function MTRadioManager:initHooks()
         SoundPlayer.initializeSoundPlayer = function(soundPlayerSelf, ...)
             local res = origInit(soundPlayerSelf, ...)
             if MTRadioManager:isOverrideActive() then
+                MTRadioManager:updateChannelBounds(soundPlayerSelf)
                 soundPlayerSelf.currentChannel = MTRadioManager.firstUserChannel
             end
             return res
@@ -111,17 +122,19 @@ function MTRadioManager:initHooks()
     -- Hook startChannel
     if SoundPlayer.startChannel ~= nil then
         local origStartChannel = SoundPlayer.startChannel
-        SoundPlayer.startChannel = function(soundPlayerSelf, ...)
+        SoundPlayer.startChannel = function(soundPlayerSelf, channel, ...)
             if MTRadioManager:isOverrideActive() then
-                local ch = soundPlayerSelf.currentChannel
+                MTRadioManager:updateChannelBounds(soundPlayerSelf)
+                local ch = channel or soundPlayerSelf.currentChannel
                 if ch == nil or ch < MTRadioManager.firstUserChannel or ch > MTRadioManager.lastUserChannel then
                     local isForward = (MTRadioManager.lastChannel == nil or ch == nil or ch > MTRadioManager.lastChannel)
                     ch = MTRadioManager:clampOrWrapChannel(ch or MTRadioManager.firstUserChannel, isForward)
-                    soundPlayerSelf.currentChannel = ch
                 end
-                MTRadioManager.lastChannel = soundPlayerSelf.currentChannel
+                soundPlayerSelf.currentChannel = ch
+                MTRadioManager.lastChannel = ch
+                return origStartChannel(soundPlayerSelf, ch, ...)
             end
-            return origStartChannel(soundPlayerSelf, ...)
+            return origStartChannel(soundPlayerSelf, channel, ...)
         end
     end
 
@@ -130,6 +143,7 @@ function MTRadioManager:initHooks()
         local origNext = SoundPlayer.nextChannel
         SoundPlayer.nextChannel = function(soundPlayerSelf, ...)
             if MTRadioManager:isOverrideActive() then
+                MTRadioManager:updateChannelBounds(soundPlayerSelf)
                 local current = soundPlayerSelf.currentChannel or (MTRadioManager.firstUserChannel - 1)
                 local nextCh = current + 1
                 if nextCh > MTRadioManager.lastUserChannel or nextCh < MTRadioManager.firstUserChannel then
@@ -138,7 +152,7 @@ function MTRadioManager:initHooks()
                 soundPlayerSelf.currentChannel = nextCh
                 MTRadioManager.lastChannel = nextCh
                 if SoundPlayer.startChannel ~= nil then
-                    return SoundPlayer.startChannel(soundPlayerSelf)
+                    return SoundPlayer.startChannel(soundPlayerSelf, nextCh)
                 end
             end
             return origNext(soundPlayerSelf, ...)
@@ -150,6 +164,7 @@ function MTRadioManager:initHooks()
         local origPrev = SoundPlayer.previousChannel
         SoundPlayer.previousChannel = function(soundPlayerSelf, ...)
             if MTRadioManager:isOverrideActive() then
+                MTRadioManager:updateChannelBounds(soundPlayerSelf)
                 local current = soundPlayerSelf.currentChannel or (MTRadioManager.lastUserChannel + 1)
                 local prevCh = current - 1
                 if prevCh < MTRadioManager.firstUserChannel or prevCh > MTRadioManager.lastUserChannel then
@@ -158,7 +173,7 @@ function MTRadioManager:initHooks()
                 soundPlayerSelf.currentChannel = prevCh
                 MTRadioManager.lastChannel = prevCh
                 if SoundPlayer.startChannel ~= nil then
-                    return SoundPlayer.startChannel(soundPlayerSelf)
+                    return SoundPlayer.startChannel(soundPlayerSelf, prevCh)
                 end
             end
             return origPrev(soundPlayerSelf, ...)
@@ -170,11 +185,12 @@ function MTRadioManager:initHooks()
         local origPlay = SoundPlayer.play
         SoundPlayer.play = function(soundPlayerSelf, ...)
             if MTRadioManager:isOverrideActive() then
+                MTRadioManager:updateChannelBounds(soundPlayerSelf)
                 if soundPlayerSelf.currentChannel == nil or soundPlayerSelf.currentChannel < MTRadioManager.firstUserChannel or soundPlayerSelf.currentChannel > MTRadioManager.lastUserChannel then
                     soundPlayerSelf.currentChannel = MTRadioManager.firstUserChannel
                     MTRadioManager.lastChannel = MTRadioManager.firstUserChannel
                     if SoundPlayer.startChannel ~= nil then
-                        SoundPlayer.startChannel(soundPlayerSelf)
+                        SoundPlayer.startChannel(soundPlayerSelf, MTRadioManager.firstUserChannel)
                         return
                     end
                 end
