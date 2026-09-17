@@ -770,8 +770,8 @@ export default function SettingsPage() {
 
         <div className="settings-row">
           <div>
-            <div className="settings-row__label">Cloud Backup Path</div>
-            <div className="settings-row__desc">Select a cloud-synced folder (e.g. OneDrive, Dropbox, Google Drive) or any local/external drive to automatically backup your savegames on game exit.</div>
+            <div className="settings-row__label">Backup Folder (Local / Cloud)</div>
+            <div className="settings-row__desc">Select a folder on your PC or cloud drive (e.g. OneDrive, Dropbox, external drive) to automatically backup your savegames on game exit.</div>
             <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', wordBreak: 'break-all', marginTop: 4 }}>
               {cloudBackupPath || 'Path not set'}
             </div>

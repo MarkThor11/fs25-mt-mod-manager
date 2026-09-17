@@ -3092,11 +3092,11 @@ export default function SavegamesPage() {
               className="btn btn--secondary btn--sm" 
               onClick={handleManualCloudSync} 
               disabled={isCloudSyncing}
-              title={`Cloud Backup configured: ${cloudBackupPath}. Click to sync all active saves now.`}
+              title={`Backup Folder configured: ${cloudBackupPath}. Click to sync all active saves now.`}
               style={{ borderColor: 'rgba(56, 189, 248, 0.4)' }}
             >
               <Cloud size={14} style={{ color: '#38bdf8' }} /> 
-              {isCloudSyncing ? 'Syncing...' : 'Cloud Sync'}
+              {isCloudSyncing ? 'Syncing...' : 'Backup Sync'}
             </button>
           )}
           <button className="btn btn--secondary btn--sm" onClick={() => navigate('/save-transfer')} title="Transfer data between saves">
