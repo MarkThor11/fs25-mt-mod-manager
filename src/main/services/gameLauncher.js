@@ -273,7 +273,7 @@ async function launch(options = {}) {
             console.log('[LAUNCH] Activated FS25_QuietLoadingScreen in careerSavegame.xml');
           }
           if (!careerXml.includes('FS25_MTRadioManager')) {
-            careerXml = careerXml.replace('</careerSavegame>', '  <mod modName="FS25_MTRadioManager" title="MT In-Game Radio Manager" version="1.0.0.0" required="false" fileHash=""/>\n</careerSavegame>');
+            careerXml = careerXml.replace('</careerSavegame>', '  <mod modName="FS25_MTRadioManager" title="In-Game Audio Subsystem" version="1.0.0.0" required="false" fileHash=""/>\n</careerSavegame>');
             modified = true;
             console.log('[LAUNCH] Activated FS25_MTRadioManager in careerSavegame.xml');
           }

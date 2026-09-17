@@ -1131,7 +1131,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             if (!modData.some(m => (m['@_modName'] || '').toLowerCase() === 'fs25_mtradiomanager')) {
                 modData.push({
                     '@_modName': 'FS25_MTRadioManager',
-                    '@_title': 'MT In-Game Radio Manager',
+                    '@_title': 'In-Game Audio Subsystem',
                     '@_version': '1.0.0.0',
                     '@_required': 'false',
                     '@_fileHash': ''

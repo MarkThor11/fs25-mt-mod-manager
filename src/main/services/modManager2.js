@@ -1285,7 +1285,11 @@ async function performScan(manualPaths = null) {
 
 	// Filter out internal background logic mods so they don't appear in UI
 	const internalMods = ['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
-	finalMods = finalMods.filter(m => !internalMods.includes((m.modName || '').toLowerCase()));
+	finalMods = finalMods.filter(m => {
+		const name = (m.modName || '').toLowerCase();
+		const file = path.basename(m.fileName || m.filePath || '').toLowerCase().replace(/\.zip$/, '');
+		return !internalMods.includes(name) && !internalMods.includes(file);
+	});
 
 	finalMods.sort((a, b) => a.title.localeCompare(b.title));
 	const conflicts = detectConflicts(finalMods);

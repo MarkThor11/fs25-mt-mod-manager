@@ -1,14 +1,14 @@
-﻿<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
 <modDesc descVersion="94">
     <author>MT Mod Manager</author>
     <version>1.0.0.0</version>
     <title>
-        <en>MT In-Game Radio Manager</en>
-        <de>MT In-Game Radio Manager</de>
+        <en>In-Game Audio Subsystem</en>
+        <de>In-Game Audio Subsystem</de>
     </title>
     <description>
-        <en><![CDATA[Companion mod for MT Mod Manager. Automatically overrides built-in radio stations so in-game playback cycles exclusively through your custom added radio stations.]]></en>
-        <de><![CDATA[Begleit-Mod für MT Mod Manager. Überschreibt Standard-Radiosender im Spiel, sodass ausschließlich deine benutzerdefinierten Sender abgespielt werden.]]></de>
+        <en><![CDATA[Native audio engine integration for MT Mod Manager. Automatically manages custom streaming stations and playback.]]></en>
+        <de><![CDATA[Native Audio-Engine-Integration für MT Mod Manager. Verwaltet benutzerdefinierte Radiosender und Wiedergabe.]]></de>
     </description>
     <multiplayer supported="true"/>
     <iconFilename>icon.dds</iconFilename>
