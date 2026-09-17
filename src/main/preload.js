@@ -201,7 +201,7 @@ contextBridge.exposeInMainWorld('api', {
   },
 
   dialog: {
-    selectFolder: () => ipcRenderer.invoke('dialog:selectFolder'),
+    selectFolder: (params) => ipcRenderer.invoke('dialog:selectFolder', params),
     selectFile: (params) => ipcRenderer.invoke('dialog:selectFile', params),
     selectImages: () => ipcRenderer.invoke('dialog:selectImages'),
   },

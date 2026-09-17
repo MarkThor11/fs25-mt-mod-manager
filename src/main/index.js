@@ -1612,8 +1612,10 @@ ipcMain.handle('clipboard:writeText', (_, text) => {
   clipboard.writeText(text);
 });
 
-ipcMain.handle('dialog:selectFolder', async () => {
+ipcMain.handle('dialog:selectFolder', async (_, options = {}) => {
   const result = await dialog.showOpenDialog(mainWindow, {
+    title: options?.title || 'Select Folder',
+    buttonLabel: options?.buttonLabel || 'Select Folder',
     properties: ['openDirectory', 'dontAddToRecent'],
   });
   return result.canceled ? null : result.filePaths[0];

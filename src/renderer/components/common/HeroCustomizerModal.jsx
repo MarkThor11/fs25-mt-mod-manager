@@ -4,7 +4,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, Type, Eye, EyeOff, Sparkles, Sliders, Move,
   Quote, HelpCircle, Shuffle, Calendar, GripHorizontal,
   Folder, FolderSearch, Images, Clock, Trash2, RefreshCw,
-  FolderOpen
+  FolderOpen, CheckSquare, Square
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useToastStore } from '../../store/useToastStore';
@@ -151,6 +151,99 @@ function SlideshowThumbnail({ path: imgPath, onRemove }) {
   );
 }
 
+function PickerPhotoCard({ imgPath, isSelected, onToggle }) {
+  const [src, setSrc] = useState(() => {
+    if (!imgPath) return null;
+    if (imgPath.startsWith('data:')) return imgPath;
+    return thumbCache.get(imgPath) || null;
+  });
+
+  useEffect(() => {
+    if (!imgPath) return;
+    if (imgPath.startsWith('data:')) {
+      setSrc(imgPath);
+      thumbCache.set(imgPath, imgPath);
+      return;
+    }
+    if (thumbCache.has(imgPath)) {
+      setSrc(thumbCache.get(imgPath));
+      return;
+    }
+    let isMounted = true;
+    if (window.api?.images?.readLocalAsDataUrl) {
+      window.api.images.readLocalAsDataUrl(imgPath).then(dataUrl => {
+        if (isMounted && dataUrl) {
+          thumbCache.set(imgPath, dataUrl);
+          setSrc(dataUrl);
+        }
+      });
+    }
+    return () => { isMounted = false; };
+  }, [imgPath]);
+
+  const filename = imgPath 
+    ? (imgPath.startsWith('data:') ? 'Custom Photo' : imgPath.split(/[\\/]/).pop()) 
+    : '';
+
+  return (
+    <div
+      onClick={onToggle}
+      style={{
+        position: 'relative',
+        height: '110px',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
+        boxShadow: isSelected ? '0 0 0 2px var(--accent-dim), 0 4px 14px rgba(0,0,0,0.5)' : 'none',
+        transform: isSelected ? 'scale(0.98)' : 'scale(1)',
+        transition: 'all 0.15s ease',
+        backgroundImage: src ? `url("${src}")` : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundColor: 'var(--bg-tertiary)',
+        userSelect: 'none'
+      }}
+      title={filename}
+    >
+      {/* Checkmark circle badge in top-right */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '6px',
+          right: '6px',
+          width: '24px',
+          height: '24px',
+          borderRadius: '50%',
+          background: isSelected ? 'var(--accent)' : 'rgba(0, 0, 0, 0.65)',
+          border: isSelected ? 'none' : '1.5px solid rgba(255, 255, 255, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#ffffff',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
+          transition: 'all 0.15s ease',
+          zIndex: 2
+        }}
+      >
+        {isSelected && <Check size={14} strokeWidth={3} />}
+      </div>
+
+      {/* Semi-transparent tint when selected */}
+      {isSelected && (
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(var(--accent-rgb, 59, 130, 246), 0.2)', pointerEvents: 'none' }} />
+      )}
+
+      {/* Bottom Filename Ribbon */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '4px 6px', background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)', pointerEvents: 'none' }}>
+        <span style={{ fontSize: '10px', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+          {filename}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function HeroCustomizerModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
@@ -160,6 +253,11 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
   const [showCropper, setShowCropper] = useState(false);
   const fileInputRef = useRef(null);
   const multipleFileInputRef = useRef(null);
+  const [showPhotoPicker, setShowPhotoPicker] = useState(false);
+  const [pickerFolder, setPickerFolder] = useState('');
+  const [pickerImages, setPickerImages] = useState([]);
+  const [selectedPickerPaths, setSelectedPickerPaths] = useState(new Set());
+  const [isScanningPickerFolder, setIsScanningPickerFolder] = useState(false);
   const [isDraggingOverGallery, setIsDraggingOverGallery] = useState(false);
   const toast = useToastStore();
 
@@ -330,6 +428,86 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     } catch (err) {
       toast.error('Error selecting folder: ' + err.message);
     }
+  };
+
+  const handleOpenPhotoPicker = async () => {
+    let folder = pickerFolder || heroSlideshowFolder;
+    if (!folder && window.api?.images?.getFsScreenshotsPath) {
+      folder = await window.api.images.getFsScreenshotsPath();
+    }
+
+    if (!folder && window.api?.dialog?.selectFolder) {
+      folder = await window.api.dialog.selectFolder({
+        title: 'Select Folder Containing Photos',
+        buttonLabel: 'Select Folder'
+      });
+    }
+
+    if (!folder) {
+      toast.info('Please select a folder containing photos.');
+      return;
+    }
+
+    await loadFolderIntoPicker(folder);
+  };
+
+  const loadFolderIntoPicker = async (folder) => {
+    setIsScanningPickerFolder(true);
+    setPickerFolder(folder);
+    setShowPhotoPicker(true);
+    try {
+      if (window.api?.images?.scanFolder) {
+        const found = await window.api.images.scanFolder(folder);
+        setPickerImages(found || []);
+        setSelectedPickerPaths(new Set());
+      }
+    } catch (err) {
+      toast.error('Failed to load photos: ' + err.message);
+    } finally {
+      setIsScanningPickerFolder(false);
+    }
+  };
+
+  const handleChangePickerFolder = async () => {
+    if (!window.api?.dialog?.selectFolder) return;
+    try {
+      const newFolder = await window.api.dialog.selectFolder({
+        title: 'Select Folder Containing Photos',
+        buttonLabel: 'Select Folder'
+      });
+      if (newFolder) {
+        await loadFolderIntoPicker(newFolder);
+      }
+    } catch (err) {
+      toast.error('Failed to switch folder: ' + err.message);
+    }
+  };
+
+  const togglePickerPath = (path) => {
+    setSelectedPickerPaths(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
+
+  const handleSelectAllPicker = () => {
+    setSelectedPickerPaths(new Set(pickerImages));
+  };
+
+  const handleClearPickerSelection = () => {
+    setSelectedPickerPaths(new Set());
+  };
+
+  const handleConfirmPickerSelection = async () => {
+    const chosen = Array.from(selectedPickerPaths);
+    if (chosen.length === 0) return;
+    
+    await addHeroSlideshowImages(chosen);
+    toast.success(`Added ${chosen.length} photo${chosen.length > 1 ? 's' : ''} to slideshow!`);
+    setShowPhotoPicker(false);
+    setSelectedPickerPaths(new Set());
   };
 
   const handleAddHandpickedImages = () => {
@@ -995,9 +1173,9 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                           <button
                             type="button"
                             className="btn btn--primary"
-                            onClick={handleAddHandpickedImages}
+                            onClick={handleOpenPhotoPicker}
                             style={{ gap: '6px', fontSize: '12px', padding: '8px 16px' }}
-                            title="Open folder to select photo files"
+                            title="Open in-app gallery to pick photos with mouse and click OK"
                           >
                             <FolderOpen size={14} /> Select Photos from Folder...
                           </button>
@@ -1602,6 +1780,164 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     />
 
 
+
+    {/* In-App Visual Photo Picker Modal (Select multiple photos with mouse clicks, no Ctrl/Shift, doesn't close on click, OK button) */}
+    {showPhotoPicker && (
+      <div 
+        className="modal-overlay" 
+        style={{ 
+          zIndex: 2200, 
+          background: 'rgba(0, 0, 0, 0.85)', 
+          backdropFilter: 'blur(10px)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          pointerEvents: 'auto'
+        }}
+        onClick={() => setShowPhotoPicker(false)}
+      >
+        <div 
+          className="modal" 
+          onClick={(e) => e.stopPropagation()} 
+          style={{ 
+            width: '94%', 
+            maxWidth: '920px', 
+            height: '82vh', 
+            maxHeight: '720px', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            padding: 0, 
+            overflow: 'hidden',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.9), 0 0 0 1px var(--border)'
+          }}
+        >
+          {/* Header */}
+          <div className="modal__header" style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-secondary)' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+                <Images size={16} style={{ color: 'var(--accent)' }} />
+                Select Photos for Slideshow
+              </h3>
+              <p style={{ margin: '3px 0 0 0', fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                Click photos to select or unselect with your mouse — no Ctrl or Shift needed! When done, click <strong>OK</strong>.
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button 
+                type="button" 
+                className="btn btn--secondary" 
+                onClick={handleSelectAllPicker}
+                disabled={pickerImages.length === 0}
+                style={{ fontSize: '11px', padding: '5px 12px', gap: '5px' }}
+              >
+                <CheckSquare size={13} /> Select All ({pickerImages.length})
+              </button>
+              <button 
+                type="button" 
+                className="btn btn--ghost" 
+                onClick={handleClearPickerSelection}
+                disabled={selectedPickerPaths.size === 0}
+                style={{ fontSize: '11px', padding: '5px 10px', gap: '5px' }}
+              >
+                <Square size={13} /> Clear
+              </button>
+              <button 
+                type="button" 
+                className="btn btn--icon btn--ghost" 
+                onClick={() => setShowPhotoPicker(false)}
+                style={{ width: '28px', height: '28px' }}
+                title="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Folder Location Bar */}
+          <div style={{ padding: '8px 20px', background: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+              <Folder size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {pickerFolder || 'No folder selected'}
+              </span>
+            </div>
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={handleChangePickerFolder}
+              style={{ fontSize: '11px', padding: '4px 10px', gap: '5px', flexShrink: 0 }}
+            >
+              <FolderOpen size={12} /> Change Folder...
+            </button>
+          </div>
+
+          {/* Photo Grid */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px', background: 'var(--bg-primary)' }}>
+            {isScanningPickerFolder ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '200px', gap: '10px', color: 'var(--text-secondary)' }}>
+                <RefreshCw size={24} className="animate-spin" style={{ color: 'var(--accent)' }} />
+                <span style={{ fontSize: '12px' }}>Loading photos from folder...</span>
+              </div>
+            ) : pickerImages.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '200px', gap: '12px', color: 'var(--text-tertiary)', textAlign: 'center' }}>
+                <Images size={36} style={{ opacity: 0.4 }} />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>No images found in this folder</div>
+                  <div style={{ fontSize: '11px', marginTop: '4px' }}>Supported formats: .jpg, .jpeg, .png, .webp, .bmp</div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  onClick={handleChangePickerFolder}
+                  style={{ fontSize: '12px', gap: '6px' }}
+                >
+                  <FolderOpen size={14} /> Browse a Different Folder...
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
+                {pickerImages.map((imgPath) => (
+                  <PickerPhotoCard
+                    key={imgPath}
+                    imgPath={imgPath}
+                    isSelected={selectedPickerPaths.has(imgPath)}
+                    onToggle={() => togglePickerPath(imgPath)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Footer with OK button */}
+          <div className="modal__footer" style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              <strong style={{ color: selectedPickerPaths.size > 0 ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>
+                {selectedPickerPaths.size}
+              </strong> of {pickerImages.length} photos selected
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <button 
+                type="button" 
+                className="btn btn--ghost" 
+                onClick={() => setShowPhotoPicker(false)}
+                style={{ padding: '7px 16px', fontSize: '12px' }}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="btn btn--primary" 
+                disabled={selectedPickerPaths.size === 0}
+                onClick={handleConfirmPickerSelection}
+                style={{ padding: '7px 24px', fontSize: '13px', fontWeight: '700', gap: '6px' }}
+              >
+                <Check size={15} strokeWidth={2.5} /> OK — Add Selected ({selectedPickerPaths.size})
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* Interactive Crop & Position Modal */}
     <ImageCropModal 
