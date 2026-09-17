@@ -172,29 +172,47 @@ export const FARMING_QUOTES = [
  * @returns {{ quote: string, author: string, index: number }}
  */
 export function getQuoteOfTheDay(date = new Date()) {
-  const year = date.getFullYear();
-  const startOfYear = new Date(year, 0, 0);
-  const diff = date - startOfYear;
-  const oneDay = 1000 * 60 * 60 * 24;
-  const dayOfYear = Math.floor(diff / oneDay);
-  
-  // Deterministic daily index
-  const index = Math.abs((year * 365 + dayOfYear) % FARMING_QUOTES.length);
-  return {
-    ...FARMING_QUOTES[index],
-    index
-  };
+  try {
+    const validDate = (date instanceof Date && !isNaN(date.getTime())) ? date : new Date();
+    const year = validDate.getFullYear();
+    const startOfYear = new Date(year, 0, 0);
+    const diff = validDate - startOfYear;
+    const oneDay = 1000 * 60 * 60 * 24;
+    const dayOfYear = Math.floor(diff / oneDay);
+    
+    // Deterministic daily index
+    const index = Math.abs((year * 365 + dayOfYear) % (FARMING_QUOTES.length || 1));
+    const item = FARMING_QUOTES[index] || FARMING_QUOTES[0];
+    return {
+      quote: item.quote,
+      author: item.author,
+      index
+    };
+  } catch (_) {
+    return {
+      quote: FARMING_QUOTES[0].quote,
+      author: FARMING_QUOTES[0].author,
+      index: 0
+    };
+  }
 }
 
 /**
- * Returns a quote by index (wraps around).
- * @param {number} index 
+ * Returns a quote by index (wraps around). Safe against NaN, null, and non-numbers.
+ * @param {number|string} index 
  * @returns {{ quote: string, author: string, index: number }}
  */
 export function getQuoteByIndex(index) {
-  const safeIndex = ((index % FARMING_QUOTES.length) + FARMING_QUOTES.length) % FARMING_QUOTES.length;
+  if (index === null || index === undefined || isNaN(Number(index))) {
+    return getQuoteOfTheDay();
+  }
+  const num = Math.floor(Number(index));
+  const len = FARMING_QUOTES.length || 1;
+  const safeIndex = ((num % len) + len) % len;
+  const item = FARMING_QUOTES[safeIndex] || FARMING_QUOTES[0];
   return {
-    ...FARMING_QUOTES[safeIndex],
+    quote: item.quote,
+    author: item.author,
     index: safeIndex
   };
 }

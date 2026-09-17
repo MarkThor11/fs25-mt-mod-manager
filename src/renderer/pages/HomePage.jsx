@@ -54,7 +54,7 @@ export default function HomePage() {
 
   const activeSubtitleMode = heroSubtitleMode || (heroShowSubtitle === false ? 'off' : 'quote');
   const displayQuote = useMemo(() => {
-    if (heroQuoteIndex !== null && heroQuoteIndex !== undefined) {
+    if (typeof heroQuoteIndex === 'number' && !isNaN(heroQuoteIndex)) {
       return getQuoteByIndex(heroQuoteIndex);
     }
     return getQuoteOfTheDay();
@@ -294,7 +294,7 @@ export default function HomePage() {
                   </span>
                 )}
               </h1>
-              {heroShowSubtitle && activeSubtitleMode !== 'off' && (
+              {(heroSubtitleMode ? heroSubtitleMode !== 'off' : heroShowSubtitle !== false) && (
                 <div 
                   className="home-hero__subtitle"
                   style={{
@@ -312,10 +312,10 @@ export default function HomePage() {
                   {activeSubtitleMode === 'quote' ? (
                     <>
                       <span style={{ fontStyle: 'italic', display: 'block', fontSize: `calc(13px * ${Math.max(0.85, (heroTextScale || 100) / 100)})`, letterSpacing: '0.01em' }}>
-                        “{displayQuote.quote}”
+                        “{displayQuote?.quote || getQuoteOfTheDay().quote}”
                       </span>
                       <span style={{ fontSize: `calc(11px * ${Math.max(0.85, (heroTextScale || 100) / 100)})`, opacity: 0.8, fontWeight: '600', display: 'block' }}>
-                        — {displayQuote.author}
+                        — {displayQuote?.author || getQuoteOfTheDay().author}
                       </span>
                     </>
                   ) : (

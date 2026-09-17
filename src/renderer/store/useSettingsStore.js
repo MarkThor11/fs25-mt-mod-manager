@@ -138,7 +138,9 @@ export const useSettingsStore = create((set) => ({
         heroShowText: settings.heroShowText !== 'false',
         heroShowSubtitle: settings.heroShowSubtitle !== 'false',
         heroSubtitleMode: settings.heroSubtitleMode || (settings.heroShowSubtitle === 'false' ? 'off' : 'quote'),
-        heroQuoteIndex: settings.heroQuoteIndex !== undefined && settings.heroQuoteIndex !== '' ? parseInt(settings.heroQuoteIndex, 10) : null,
+        heroQuoteIndex: (settings.heroQuoteIndex !== undefined && settings.heroQuoteIndex !== '' && settings.heroQuoteIndex !== 'null' && settings.heroQuoteIndex !== 'undefined' && !isNaN(parseInt(settings.heroQuoteIndex, 10)))
+          ? parseInt(settings.heroQuoteIndex, 10)
+          : null,
         homeShowStats: settings.homeShowStats !== 'false',
         homeShowLatest: settings.homeShowLatest !== 'false',
         homeShowDownloaded: settings.homeShowDownloaded !== 'false',
@@ -318,7 +320,10 @@ export const useSettingsStore = create((set) => ({
     set(updates);
     if (window.api?.settings) {
       for (const [k, v] of Object.entries(updates)) {
-        await window.api.settings.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+        const valToSave = (v === null || v === undefined || (typeof v === 'number' && isNaN(v))) 
+          ? '' 
+          : (typeof v === 'object' ? JSON.stringify(v) : String(v));
+        await window.api.settings.set(k, valToSave);
       }
     }
   },
@@ -344,7 +349,8 @@ export const useSettingsStore = create((set) => ({
     set(defaults);
     if (window.api?.settings) {
       for (const [k, v] of Object.entries(defaults)) {
-        await window.api.settings.set(k, String(v));
+        const valToSave = (v === null || v === undefined) ? '' : String(v);
+        await window.api.settings.set(k, valToSave);
       }
     }
   },

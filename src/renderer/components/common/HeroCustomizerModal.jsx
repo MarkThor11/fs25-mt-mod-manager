@@ -129,7 +129,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
   } = useSettingsStore();
 
   const activeSubtitleMode = heroSubtitleMode || (heroShowSubtitle === false ? 'off' : 'quote');
-  const currentQuote = (heroQuoteIndex !== null && heroQuoteIndex !== undefined)
+  const currentQuote = (typeof heroQuoteIndex === 'number' && !isNaN(heroQuoteIndex))
     ? getQuoteByIndex(heroQuoteIndex)
     : getQuoteOfTheDay();
 
@@ -881,10 +881,10 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '600', color: 'var(--accent)' }}>
                         <Sparkles size={13} />
-                        <span>{heroQuoteIndex === null || heroQuoteIndex === undefined ? "Today's Featured Quote" : "Shuffled Quote"}</span>
+                        <span>{typeof heroQuoteIndex === 'number' && !isNaN(heroQuoteIndex) ? "Shuffled Quote" : "Today's Featured Quote"}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {heroQuoteIndex !== null && heroQuoteIndex !== undefined && (
+                        {typeof heroQuoteIndex === 'number' && !isNaN(heroQuoteIndex) && (
                           <button
                             type="button"
                             onClick={() => updateHeroBannerSettings({ heroQuoteIndex: null })}
@@ -910,7 +910,9 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                         <button
                           type="button"
                           onClick={() => {
-                            const currentIdx = heroQuoteIndex ?? getQuoteOfTheDay().index;
+                            const currentIdx = (typeof heroQuoteIndex === 'number' && !isNaN(heroQuoteIndex))
+                              ? heroQuoteIndex
+                              : getQuoteOfTheDay().index;
                             const nextIdx = (currentIdx + 1) % FARMING_QUOTES.length;
                             updateHeroBannerSettings({ heroQuoteIndex: nextIdx });
                           }}
@@ -935,10 +937,10 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                       </div>
                     </div>
                     <div style={{ fontSize: '11px', fontStyle: 'italic', color: 'var(--text-primary)', lineHeight: 1.4 }}>
-                      “{currentQuote.quote}”
+                      “{currentQuote?.quote || getQuoteOfTheDay().quote}”
                     </div>
                     <div style={{ fontSize: '10px', fontWeight: '600', color: 'var(--text-tertiary)', textAlign: 'right' }}>
-                      — {currentQuote.author}
+                      — {currentQuote?.author || getQuoteOfTheDay().author}
                     </div>
                   </div>
                 )}
