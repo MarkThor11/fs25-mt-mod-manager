@@ -416,6 +416,35 @@ ipcMain.handle('images:getHeroBanner', async () => {
   }
 });
 
+ipcMain.handle('images:saveHeroBannerOriginal', async (_, dataUrl) => {
+  try {
+    if (!dataUrl) return { success: false, error: 'No image data provided' };
+    const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    const targetFile = path.join(app.getPath('userData'), 'custom_hero_banner_original.jpg');
+    await fs.writeFile(targetFile, buffer);
+    console.log('[IMAGES] Saved original hero banner to:', targetFile);
+    return { success: true, filePath: targetFile, dataUrl };
+  } catch (err) {
+    console.error('[IMAGES] Failed to save original hero banner:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('images:getHeroBannerOriginal', async () => {
+  try {
+    const targetFile = path.join(app.getPath('userData'), 'custom_hero_banner_original.jpg');
+    if (fs.existsSync(targetFile)) {
+      const buffer = await fs.readFile(targetFile);
+      return `data:image/jpeg;base64,${buffer.toString('base64')}`;
+    }
+    return null;
+  } catch (err) {
+    console.error('[IMAGES] Failed to get original hero banner:', err.message);
+    return null;
+  }
+});
+
 // ── Categories ──
 ipcMain.handle('categories:getAll', () => {
   console.log(`[IPC] Serving ${CATEGORIES.length} categories to renderer.`);

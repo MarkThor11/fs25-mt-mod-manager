@@ -28,6 +28,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
 
   const [activeTab, setActiveTab] = useState('background'); // 'background' | 'typography' | 'visibility'
   const [cropImageSrc, setCropImageSrc] = useState(null);
+  const [originalImageSrc, setOriginalImageSrc] = useState(null);
   const [showCropper, setShowCropper] = useState(false);
   const fileInputRef = useRef(null);
   const toast = useToastStore();
@@ -122,11 +123,11 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
   const {
     nickname,
     homeShowHero, setHomeShowHero,
-    heroBgType, heroCustomBg, heroDimmer, heroAlignment,
+    heroBgType, heroCustomBg, heroCustomOriginalBg, heroDimmer, heroAlignment,
     heroTextPosX, heroTextPosY,
     heroFont, heroTextSize, heroTextScale, heroTextColor, heroTextShadow,
     heroShowText, heroShowSubtitle, heroSubtitleMode, heroQuoteIndex,
-    updateHeroBannerSettings, resetHeroBannerSettings, setCustomHeroBanner
+    updateHeroBannerSettings, resetHeroBannerSettings, setCustomHeroBanner, revertHeroBannerCrop
   } = useSettingsStore();
 
   const activeSubtitleMode = heroSubtitleMode || (heroShowSubtitle === false ? 'off' : 'quote');
@@ -152,6 +153,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     reader.onload = (event) => {
       const dataUrl = event.target?.result;
       if (dataUrl) {
+        setOriginalImageSrc(dataUrl);
         setCropImageSrc(dataUrl);
         setShowCropper(true);
       }
@@ -160,32 +162,71 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     e.target.value = '';
   };
 
-  const handleApplyCropped = async (croppedDataUrl) => {
+  const handleApplyCropped = async (croppedDataUrl, targetSize) => {
     try {
-      await setCustomHeroBanner(croppedDataUrl);
+      if (targetSize && targetSize !== 'full') {
+        await updateHeroBannerSettings({ heroTextSize: targetSize });
+      }
+      await setCustomHeroBanner(croppedDataUrl, originalImageSrc);
       setShowCropper(false);
-      toast.success('Custom banner wallpaper cropped & applied!');
+      toast.success('Custom banner wallpaper & height applied!');
     } catch (err) {
       console.error('Failed to apply cropped banner:', err);
       toast.error('Failed to save cropped image: ' + err.message);
     }
   };
 
+  const handleUseFullPhoto = async (targetSize) => {
+    try {
+      if (targetSize && targetSize !== 'full') {
+        await updateHeroBannerSettings({ heroTextSize: targetSize });
+      }
+      const fullSrc = originalImageSrc || heroCustomOriginalBg || cropImageSrc;
+      await setCustomHeroBanner(fullSrc, fullSrc);
+      setShowCropper(false);
+      toast.success('Cropping undone — applied full uncropped photo!');
+    } catch (err) {
+      console.error('Failed to apply full photo:', err);
+      toast.error('Failed to apply photo: ' + err.message);
+    }
+  };
+
   const handleRecrop = async () => {
-    let src = heroCustomBg;
-    if ((!src || src === 'custom_hero_banner.jpg') && window.api?.images?.getHeroBanner) {
+    let src = heroCustomOriginalBg;
+    if (!src && window.api?.images?.getHeroBannerOriginal) {
       try {
-        const disk = await window.api.images.getHeroBanner();
-        if (disk) src = disk;
+        const diskOrig = await window.api.images.getHeroBannerOriginal();
+        if (diskOrig) src = diskOrig;
       } catch (e) {
-        console.warn('Failed to read hero banner from disk for recrop:', e);
+        console.warn('Failed to read original hero banner from disk for recrop:', e);
+      }
+    }
+    if (!src) {
+      src = heroCustomBg;
+      if ((!src || src === 'custom_hero_banner.jpg') && window.api?.images?.getHeroBanner) {
+        try {
+          const disk = await window.api.images.getHeroBanner();
+          if (disk) src = disk;
+        } catch (e) {
+          console.warn('Failed to read hero banner from disk for recrop:', e);
+        }
       }
     }
     if (src) {
+      setOriginalImageSrc(src);
       setCropImageSrc(src);
       setShowCropper(true);
     } else {
       handlePickFile();
+    }
+  };
+
+  const handleUndoCrop = async () => {
+    const success = await revertHeroBannerCrop();
+    if (success) {
+      toast.success('Cropping undone — restored original photo!');
+    } else {
+      toast.info('No original uncropped photo found to restore.');
     }
   };
 
@@ -482,25 +523,36 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                   </div>
                 </div>
 
-                {/* Upload & Crop Buttons */}
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {/* Upload, Recrop & Undo Crop Buttons */}
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button 
                     type="button"
                     className="btn btn--secondary" 
                     onClick={handlePickFile}
-                    style={{ flex: 1, minWidth: '160px', gap: '6px', justifyContent: 'center', padding: '8px 14px', fontSize: '12px' }}
+                    style={{ flex: 1, minWidth: '140px', gap: '6px', justifyContent: 'center', padding: '8px 12px', fontSize: '12px' }}
                   >
-                    <Upload size={14} /> Choose Image from PC...
+                    <Upload size={14} /> Choose Image...
                   </button>
                   {heroCustomBg && (
                     <button 
                       type="button"
                       className="btn btn--secondary" 
                       onClick={handleRecrop}
-                      style={{ flex: 1, minWidth: '160px', gap: '6px', justifyContent: 'center', padding: '8px 14px', fontSize: '12px' }}
+                      style={{ flex: 1, minWidth: '140px', gap: '6px', justifyContent: 'center', padding: '8px 12px', fontSize: '12px' }}
                       title="Adjust framing, zoom and positioning of your custom wallpaper"
                     >
                       <Move size={14} /> Reposition & Crop
+                    </button>
+                  )}
+                  {heroCustomBg && (
+                    <button 
+                      type="button"
+                      className="btn btn--secondary" 
+                      onClick={handleUndoCrop}
+                      style={{ flex: 1, minWidth: '140px', gap: '6px', justifyContent: 'center', padding: '8px 12px', fontSize: '12px' }}
+                      title="Restore full uncropped original photo"
+                    >
+                      <RotateCcw size={14} /> Undo Crop (Original)
                     </button>
                   )}
                 </div>
@@ -995,6 +1047,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     <ImageCropModal 
       isOpen={showCropper} 
       imageSrc={cropImageSrc} 
+      originalSrc={originalImageSrc || heroCustomOriginalBg}
       heroTextSize={heroTextSize || 'standard'}
       bannerProps={{
         nickname: nickname || 'Farmer',
@@ -1011,6 +1064,8 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
       }}
       onClose={() => setShowCropper(false)} 
       onApply={handleApplyCropped} 
+      onUseFullPhoto={handleUseFullPhoto}
+      onSizePreviewChange={(newSize) => updateHeroBannerSettings({ heroTextSize: newSize })}
     />
   </>
   );

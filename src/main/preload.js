@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld('api', {
     readLocalAsDataUrl: (filePath) => ipcRenderer.invoke('images:readLocalAsDataUrl', filePath),
     saveHeroBanner: (dataUrl) => ipcRenderer.invoke('images:saveHeroBanner', dataUrl),
     getHeroBanner: () => ipcRenderer.invoke('images:getHeroBanner'),
+    saveHeroBannerOriginal: (dataUrl) => ipcRenderer.invoke('images:saveHeroBannerOriginal', dataUrl),
+    getHeroBannerOriginal: () => ipcRenderer.invoke('images:getHeroBannerOriginal'),
   },
 
   // Categories

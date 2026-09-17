@@ -12,101 +12,59 @@ const FONT_FAMILIES = {
   tech: "'Consolas', 'Fira Code', monospace"
 };
 
-export default function ImageCropModal({ isOpen, imageSrc, heroTextSize = 'standard', bannerProps = {}, onClose, onApply }) {
+const BANNER_SIZES = [
+  {
+    id: 'compact',
+    label: 'Compact',
+    sub: '200px',
+    height: 200,
+    desc: '200px slim ribbon — minimal vertical footprint'
+  },
+  {
+    id: 'standard',
+    label: 'Standard',
+    sub: '280px',
+    height: 280,
+    desc: '280px standard — balanced view for titles and widgets'
+  },
+  {
+    id: 'large',
+    label: 'Tall',
+    sub: '380px',
+    height: 380,
+    desc: '380px tall framing — scenic landscapes and machinery'
+  },
+  {
+    id: 'epic',
+    label: 'Cinematic',
+    sub: '460px',
+    height: 460,
+    desc: '460px cinematic framing — maximum vertical showcase'
+  },
+  {
+    id: 'full',
+    label: 'Full Photo',
+    sub: '2.5:1',
+    height: 640,
+    desc: '2.5:1 generous framing with wide vertical coverage'
+  }
+];
+
+export default function ImageCropModal({
+  isOpen,
+  imageSrc,
+  originalSrc,
+  heroTextSize = 'standard',
+  bannerProps = {},
+  onClose,
+  onApply,
+  onUseFullPhoto,
+  onSizePreviewChange
+}) {
   if (!isOpen || !imageSrc) return null;
 
-  // Measure live banner element if present, or compute standard fallback
-  const getBannerDimensions = () => {
-    try {
-      const heroEl = document.querySelector('.home-hero');
-      if (heroEl) {
-        const rect = heroEl.getBoundingClientRect();
-        if (rect.width > 200 && rect.height > 100) {
-          return {
-            width: Math.round(rect.width),
-            height: Math.round(rect.height),
-            ratioValue: rect.width / rect.height
-          };
-        }
-      }
-    } catch (_) {}
-
-    const heightMap = {
-      compact: 200,
-      standard: 280,
-      large: 380,
-      epic: 460
-    };
-    const h = heightMap[heroTextSize] || 280;
-    const w = 1600;
-    return {
-      width: w,
-      height: h,
-      ratioValue: w / h
-    };
-  };
-
-  const liveDim = getBannerDimensions();
-  const sizeLabels = {
-    compact: 'Compact (200px)',
-    standard: 'Standard (280px)',
-    large: 'Tall (380px)',
-    epic: 'Cinematic (460px)'
-  };
-  const activeSizeLabel = sizeLabels[heroTextSize] || 'Standard (280px)';
-
-  const ASPECT_RATIOS = [
-    {
-      id: 'active',
-      label: `Current (${activeSizeLabel.split(' ')[0]})`,
-      ratioValue: liveDim.ratioValue,
-      width: liveDim.width,
-      height: liveDim.height,
-      desc: `100% exact match to your active ${activeSizeLabel} banner (${liveDim.width}×${liveDim.height}px)`
-    },
-    {
-      id: 'epic',
-      label: 'Cinematic (460px)',
-      ratioValue: 1600 / 460,
-      width: 1600,
-      height: 460,
-      desc: 'Extra-tall 460px framing — ideal for expansive machinery & sky'
-    },
-    {
-      id: 'large',
-      label: 'Tall (380px)',
-      ratioValue: 1600 / 380,
-      width: 1600,
-      height: 380,
-      desc: '380px tall framing for scenic landscapes'
-    },
-    {
-      id: 'standard',
-      label: 'Standard (280px)',
-      ratioValue: 1600 / 280,
-      width: 1600,
-      height: 280,
-      desc: 'Standard 280px proportion'
-    },
-    {
-      id: 'compact',
-      label: 'Compact (200px)',
-      ratioValue: 1600 / 200,
-      width: 1600,
-      height: 200,
-      desc: 'Slim 200px ribbon view'
-    },
-    {
-      id: '2.5',
-      label: 'Full Photo (2.5:1)',
-      ratioValue: 2.5,
-      width: 1600,
-      height: 640,
-      desc: 'Generous 2.5:1 framing with maximum vertical coverage'
-    }
-  ];
-
-  const [ratioId, setRatioId] = useState('active');
+  const [selectedSize, setSelectedSize] = useState(heroTextSize || 'standard');
+  const [initialSize, setInitialSize] = useState(heroTextSize || 'standard');
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -120,16 +78,48 @@ export default function ImageCropModal({ isOpen, imageSrc, heroTextSize = 'stand
   const containerRef = useRef(null);
   const imgRef = useRef(null);
 
-  const activeRatio = ASPECT_RATIOS.find((r) => r.id === ratioId) || ASPECT_RATIOS[0];
-
-  // Sync ratio when modal opens or heroTextSize changes
+  // Sync state when modal opens
   useEffect(() => {
     if (isOpen) {
-      setRatioId('active');
+      const activeSize = heroTextSize || 'standard';
+      setSelectedSize(activeSize);
+      setInitialSize(activeSize);
       setZoom(1);
       setOffset({ x: 0, y: 0 });
     }
   }, [isOpen, heroTextSize]);
+
+  // Measure live width of banner element on screen
+  const getBannerWidth = () => {
+    try {
+      const heroEl = document.querySelector('.home-hero');
+      if (heroEl) {
+        const rect = heroEl.getBoundingClientRect();
+        if (rect.width > 200) return Math.round(rect.width);
+      }
+    } catch (_) {}
+    return 1600;
+  };
+
+  const activePreset = BANNER_SIZES.find((s) => s.id === selectedSize) || BANNER_SIZES[1];
+  const targetBannerWidth = getBannerWidth();
+  const targetBannerHeight = activePreset.height;
+
+  // Handler for changing size preset
+  const handleSelectSize = (sizeId) => {
+    setSelectedSize(sizeId);
+    const targetHeroSize = sizeId === 'full' ? 'epic' : sizeId;
+    if (onSizePreviewChange) {
+      onSizePreviewChange(targetHeroSize);
+    }
+  };
+
+  const handleCancel = () => {
+    if (onSizePreviewChange && initialSize) {
+      onSizePreviewChange(initialSize);
+    }
+    onClose();
+  };
 
   // Initialize image dimensions and center it
   useEffect(() => {
@@ -159,7 +149,7 @@ export default function ImageCropModal({ isOpen, imageSrc, heroTextSize = 'stand
         window.removeEventListener('resize', updateSize);
       };
     }
-  }, [isOpen, ratioId]);
+  }, [isOpen, selectedSize]);
 
   // Compute base dimensions for "cover" fit
   const displayWidth = containerSize.width || 700;
@@ -217,8 +207,8 @@ export default function ImageCropModal({ isOpen, imageSrc, heroTextSize = 'stand
 
     try {
       const canvas = document.createElement('canvas');
-      const targetWidth = activeRatio.width;
-      const targetHeight = activeRatio.height;
+      const targetWidth = targetBannerWidth;
+      const targetHeight = targetBannerHeight;
       canvas.width = targetWidth;
       canvas.height = targetHeight;
       const ctx = canvas.getContext('2d');
@@ -242,7 +232,8 @@ export default function ImageCropModal({ isOpen, imageSrc, heroTextSize = 'stand
         // Convert to high-quality JPEG
         const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.90);
         setIsProcessing(false);
-        onApply(croppedDataUrl);
+        const finalSize = selectedSize === 'full' ? 'epic' : selectedSize;
+        onApply(croppedDataUrl, finalSize);
       };
       img.src = imageSrc;
     } catch (err) {
@@ -251,12 +242,20 @@ export default function ImageCropModal({ isOpen, imageSrc, heroTextSize = 'stand
     }
   };
 
+  // Skip/undo crop and apply full original photo
+  const handleUseFull = () => {
+    const finalSize = selectedSize === 'full' ? 'epic' : selectedSize;
+    if (onUseFullPhoto) {
+      onUseFullPhoto(finalSize);
+    }
+  };
+
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 2000 }}>
+    <div className="modal-overlay" onClick={handleCancel} style={{ zIndex: 2000 }}>
       <div 
         className="modal modal--medium animate-scale-up"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '820px', width: '92%', display: 'flex', flexDirection: 'column' }}
+        style={{ maxWidth: '840px', width: '94%', display: 'flex', flexDirection: 'column' }}
       >
         {/* Header */}
         <div className="modal__header" style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -268,15 +267,15 @@ export default function ImageCropModal({ isOpen, imageSrc, heroTextSize = 'stand
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <h2 style={{ fontSize: '16px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>Crop & Position Banner</h2>
                 <span style={{ fontSize: '11px', background: 'var(--accent-dim)', color: 'var(--accent)', padding: '1px 8px', borderRadius: '6px', fontWeight: '700' }}>
-                  Tied to {activeSizeLabel}
+                  {activePreset.label} ({activePreset.sub})
                 </span>
               </div>
               <p style={{ fontSize: '11px', margin: '2px 0 0 0', color: 'var(--text-tertiary)' }}>
-                Drag your photo to place the focal point • Preview matches your live text placement
+                Drag your photo to place the focal point • Preview and height are directly linked to your banner
               </p>
             </div>
           </div>
-          <button className="btn btn--icon btn--ghost" onClick={onClose} style={{ width: '28px', height: '28px', padding: 0 }}>
+          <button className="btn btn--icon btn--ghost" onClick={handleCancel} style={{ width: '28px', height: '28px', padding: 0 }}>
             <X size={16} />
           </button>
         </div>
@@ -284,42 +283,45 @@ export default function ImageCropModal({ isOpen, imageSrc, heroTextSize = 'stand
         {/* Body */}
         <div className="modal__body" style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           
-          {/* Aspect Ratio Selector */}
+          {/* Banner Height & Scale Linked Selector */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>Banner Framing Aspect Ratio</span>
-              <span style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: '600' }}>{activeRatio.desc}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>Banner Height & Scale</span>
+                <span style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: '600' }}>• {activePreset.desc}</span>
+              </div>
+              <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                Adjust in preview, applied on confirm
+              </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
-              {ASPECT_RATIOS.map((r) => {
-                const isSelected = ratioId === r.id;
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+              {BANNER_SIZES.map((s) => {
+                const isSelected = selectedSize === s.id;
                 return (
                   <button
-                    key={r.id}
+                    key={s.id}
                     type="button"
-                    onClick={() => {
-                      setRatioId(r.id);
-                      setZoom(1);
-                      setOffset({ x: 0, y: 0 });
-                    }}
+                    onClick={() => handleSelectSize(s.id)}
                     style={{
-                      padding: '7px 4px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '8px 6px',
                       borderRadius: '8px',
                       border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
                       background: isSelected ? 'var(--accent-dim)' : 'var(--bg-tertiary)',
-                      color: isSelected ? 'var(--accent)' : 'var(--text-secondary)',
+                      color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
                       fontWeight: isSelected ? '700' : '500',
                       fontSize: '11px',
                       cursor: 'pointer',
                       textAlign: 'center',
-                      transition: 'all 0.15s ease',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
+                      transition: 'all 0.15s ease'
                     }}
-                    title={r.desc}
+                    title={s.desc}
                   >
-                    {r.label}
+                    <span>{s.label}</span>
+                    <span style={{ fontSize: '9px', opacity: 0.7, marginTop: '2px' }}>{s.sub}</span>
                   </button>
                 );
               })}
@@ -387,7 +389,7 @@ export default function ImageCropModal({ isOpen, imageSrc, heroTextSize = 'stand
               onWheel={handleWheel}
               style={{
                 width: '100%',
-                aspectRatio: `${activeRatio.width} / ${activeRatio.height}`,
+                aspectRatio: `${targetBannerWidth} / ${targetBannerHeight}`,
                 maxHeight: '380px',
                 borderRadius: '12px',
                 overflow: 'hidden',
@@ -500,7 +502,7 @@ export default function ImageCropModal({ isOpen, imageSrc, heroTextSize = 'stand
 
               {/* Ratio badge */}
               <div style={{ position: 'absolute', top: '8px', right: '10px', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', padding: '2px 8px', borderRadius: '6px', fontSize: '10px', color: '#ffffff', pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.15)' }}>
-                {activeRatio.label} Frame
+                {activePreset.label} ({activePreset.sub}) Frame
               </div>
             </div>
           </div>
@@ -557,23 +559,35 @@ export default function ImageCropModal({ isOpen, imageSrc, heroTextSize = 'stand
 
         {/* Footer */}
         <div className="modal__footer" style={{ padding: '14px 22px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-secondary)' }}>
-          <button type="button" className="btn btn--ghost" onClick={onClose} style={{ fontSize: '12px' }}>
+          <button type="button" className="btn btn--ghost" onClick={handleCancel} style={{ fontSize: '12px' }}>
             Cancel
           </button>
           
-          <button 
-            type="button"
-            className="btn btn--primary"
-            onClick={handleSaveCrop}
-            disabled={isProcessing}
-            style={{ minWidth: '150px', gap: '8px', fontSize: '12px', padding: '7px 18px' }}
-          >
-            {isProcessing ? 'Processing...' : (
-              <>
-                <Check size={15} /> Apply Wallpaper
-              </>
-            )}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button 
+              type="button" 
+              className="btn btn--secondary" 
+              onClick={handleUseFull}
+              title="Apply the full uncropped photo without cutting any parts off"
+              style={{ fontSize: '12px', gap: '6px' }}
+            >
+              <RotateCcw size={14} /> Use Full Photo (Undo Crop)
+            </button>
+
+            <button 
+              type="button"
+              className="btn btn--primary"
+              onClick={handleSaveCrop}
+              disabled={isProcessing}
+              style={{ minWidth: '150px', gap: '8px', fontSize: '12px', padding: '7px 18px' }}
+            >
+              {isProcessing ? 'Processing...' : (
+                <>
+                  <Check size={15} /> Apply Wallpaper
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

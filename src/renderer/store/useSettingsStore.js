@@ -18,6 +18,7 @@ export const useSettingsStore = create((set) => ({
   homeShowHero: true,
   heroBgType: 'default',
   heroCustomBg: '',
+  heroCustomOriginalBg: '',
   heroDimmer: 50,
   heroAlignment: 'left',
   heroTextPosX: 10,
@@ -125,6 +126,16 @@ export const useSettingsStore = create((set) => ({
             } catch (_) {}
           }
           return bg;
+        })()),
+        heroCustomOriginalBg: (await (async () => {
+          let orig = settings.heroCustomOriginalBg || '';
+          if ((!orig || orig === 'custom_hero_banner_original.jpg') && window.api?.images?.getHeroBannerOriginal) {
+            try {
+              const diskOrig = await window.api.images.getHeroBannerOriginal();
+              if (diskOrig) return diskOrig;
+            } catch (_) {}
+          }
+          return orig;
         })()),
         heroDimmer: settings.heroDimmer !== undefined && settings.heroDimmer !== null ? parseInt(settings.heroDimmer, 10) : 50,
         heroAlignment: settings.heroAlignment || 'left',
@@ -332,6 +343,7 @@ export const useSettingsStore = create((set) => ({
     const defaults = {
       heroBgType: 'default',
       heroCustomBg: '',
+      heroCustomOriginalBg: '',
       heroDimmer: 50,
       heroAlignment: 'left',
       heroTextPosX: 10,
@@ -355,18 +367,55 @@ export const useSettingsStore = create((set) => ({
     }
   },
 
-  setCustomHeroBanner: async (dataUrl) => {
+  setCustomHeroBanner: async (dataUrl, originalDataUrl = null) => {
     try {
       if (window.api?.images?.saveHeroBanner) {
         await window.api.images.saveHeroBanner(dataUrl);
       }
-      set({ heroBgType: 'custom', heroCustomBg: dataUrl });
+      if (originalDataUrl && window.api?.images?.saveHeroBannerOriginal) {
+        await window.api.images.saveHeroBannerOriginal(originalDataUrl);
+      }
+      const updates = { 
+        heroBgType: 'custom', 
+        heroCustomBg: dataUrl,
+        ...(originalDataUrl ? { heroCustomOriginalBg: originalDataUrl } : {})
+      };
+      set(updates);
       if (window.api?.settings) {
         await window.api.settings.set('heroBgType', 'custom');
         await window.api.settings.set('heroCustomBg', 'custom_hero_banner.jpg');
+        if (originalDataUrl) {
+          await window.api.settings.set('heroCustomOriginalBg', 'custom_hero_banner_original.jpg');
+        }
       }
     } catch (err) {
       console.error('Failed to set custom hero banner:', err);
+    }
+  },
+
+  revertHeroBannerCrop: async () => {
+    try {
+      const state = useSettingsStore.getState();
+      let orig = state.heroCustomOriginalBg;
+      if (!orig && window.api?.images?.getHeroBannerOriginal) {
+        orig = await window.api.images.getHeroBannerOriginal();
+      }
+      if (orig) {
+        if (window.api?.images?.saveHeroBanner) {
+          await window.api.images.saveHeroBanner(orig);
+        }
+        set({ heroCustomBg: orig, heroCustomOriginalBg: orig, heroBgType: 'custom' });
+        if (window.api?.settings) {
+          await window.api.settings.set('heroBgType', 'custom');
+          await window.api.settings.set('heroCustomBg', 'custom_hero_banner.jpg');
+          await window.api.settings.set('heroCustomOriginalBg', 'custom_hero_banner_original.jpg');
+        }
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Failed to revert hero banner crop:', err);
+      return false;
     }
   },
 
