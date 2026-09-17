@@ -2594,9 +2594,12 @@ export default function SavegamesPage() {
   };
 
   const handleManualCloudSync = async () => {
-    if (!cloudBackupPath) {
-      useToastStore.getState().warning("No Cloud Backup Path set. Configure it in Settings.");
-      return;
+    let targetPath = cloudBackupPath;
+    if (!targetPath) {
+      const selected = await window.api.dialog.selectFolder();
+      if (!selected) return;
+      await useSettingsStore.getState().setCloudBackupPath(selected);
+      targetPath = selected;
     }
     setIsCloudSyncing(true);
     try {
@@ -2606,15 +2609,15 @@ export default function SavegamesPage() {
         setIsCloudSyncing(false);
         return;
       }
-      useToastStore.getState().info(`Syncing ${activeSaves.length} savegame(s) to cloud...`);
+      useToastStore.getState().info(`Syncing ${activeSaves.length} savegame(s) to backup folder...`);
       let syncedCount = 0;
       for (const save of activeSaves) {
-        const res = await window.api.savegames.syncToCloud({ savePath: save.path, cloudPath: cloudBackupPath });
+        const res = await window.api.savegames.syncToCloud({ savePath: save.path, cloudPath: targetPath });
         if (res.success) syncedCount++;
       }
-      useToastStore.getState().success(`Cloud Sync complete: ${syncedCount} of ${activeSaves.length} save(s) backed up to ${cloudBackupPath}`);
+      useToastStore.getState().success(`Backup complete: ${syncedCount} of ${activeSaves.length} save(s) backed up to ${targetPath}`);
     } catch (err) {
-      useToastStore.getState().error(`Cloud sync error: ${err.message}`);
+      useToastStore.getState().error(`Backup error: ${err.message}`);
     } finally {
       setIsCloudSyncing(false);
     }
@@ -3087,18 +3090,16 @@ export default function SavegamesPage() {
               <label htmlFor="select-all-main" style={{ fontSize: 11, fontWeight: 700, cursor: 'pointer', color: 'var(--text-secondary)' }}>SELECT ALL</label>
           </div>
 
-          {cloudBackupPath && (
-            <button 
-              className="btn btn--secondary btn--sm" 
-              onClick={handleManualCloudSync} 
-              disabled={isCloudSyncing}
-              title={`Backup Folder configured: ${cloudBackupPath}. Click to sync all active saves now.`}
-              style={{ borderColor: 'rgba(56, 189, 248, 0.4)' }}
-            >
-              <Cloud size={14} style={{ color: '#38bdf8' }} /> 
-              {isCloudSyncing ? 'Syncing...' : 'Backup Sync'}
-            </button>
-          )}
+          <button 
+            className="btn btn--secondary btn--sm" 
+            onClick={handleManualCloudSync} 
+            disabled={isCloudSyncing}
+            title={cloudBackupPath ? `Backup Folder: ${cloudBackupPath}. Click to sync all active saves now.` : "Click to select a Backup Folder and sync saves."}
+            style={{ borderColor: cloudBackupPath ? 'rgba(56, 189, 248, 0.4)' : 'inherit' }}
+          >
+            <Cloud size={14} style={{ color: cloudBackupPath ? '#38bdf8' : 'var(--text-muted)' }} /> 
+            {isCloudSyncing ? 'Syncing...' : 'Backup Sync'}
+          </button>
           <button className="btn btn--secondary btn--sm" onClick={() => navigate('/save-transfer')} title="Transfer data between saves">
             <ArrowRightLeft size={14} /> Save Transfer
           </button>
