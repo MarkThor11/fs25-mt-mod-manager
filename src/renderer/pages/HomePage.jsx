@@ -62,6 +62,7 @@ export default function HomePage() {
   const dragStartRef = useRef({ startX: 0, startY: 0, heroRect: null, origX: 10, origY: 50, hasMoved: false });
 
   const handleTextMouseDown = (e) => {
+    if (!showCustomizer) return;
     if (isEditingName || e.target.closest('.home-hero__editable-name') || e.target.closest('.home-hero__name-input')) {
       return;
     }
@@ -217,27 +218,29 @@ export default function HomePage() {
 
           {heroShowText ? (
             <div 
-              className={`home-hero__content ${isDraggingText ? 'home-hero__content--dragging' : ''}`}
+              className={`home-hero__content ${showCustomizer && isDraggingText ? 'home-hero__content--dragging' : ''} ${showCustomizer ? 'home-hero__content--customizing' : ''}`}
               onMouseDown={handleTextMouseDown}
               style={{
                 left: `${heroTextPosX ?? (heroAlignment === 'center' ? 50 : heroAlignment === 'right' ? 88 : 10)}%`,
                 top: `${heroTextPosY ?? 50}%`,
                 transform: `translate(-${heroTextPosX ?? (heroAlignment === 'center' ? 50 : heroAlignment === 'right' ? 88 : 10)}%, -${heroTextPosY ?? 50}%)`,
                 textAlign: heroAlignment || ((heroTextPosX ?? 10) < 35 ? 'left' : (heroTextPosX ?? 10) > 65 ? 'right' : 'center'),
-                maxWidth: '680px',
+                maxWidth: '850px',
                 width: 'max-content',
-                cursor: isDraggingText ? 'grabbing' : 'grab',
+                cursor: showCustomizer ? (isDraggingText ? 'grabbing' : 'grab') : 'default',
                 userSelect: isDraggingText ? 'none' : 'auto'
               }}
             >
-              {/* Drag Position Handle */}
-              <div 
-                className="home-hero__drag-handle"
-                title="Click and drag anywhere to move text position on the banner"
-              >
-                <Move size={11} />
-                <span>Drag to move</span>
-              </div>
+              {/* Drag Position Handle (Only visible during Banner Studio customization) */}
+              {showCustomizer && (
+                <div 
+                  className="home-hero__drag-handle"
+                  title="Click and drag anywhere to move text position on the banner"
+                >
+                  <Move size={11} />
+                  <span>Drag to move</span>
+                </div>
+              )}
 
               <h1 
                 className="home-hero__title"
@@ -277,17 +280,24 @@ export default function HomePage() {
                 )}
               </h1>
               {heroShowSubtitle && (
-                <p 
+                <div 
                   className="home-hero__subtitle"
                   style={{
                     color: heroTextColor || 'var(--text-secondary)',
                     opacity: 0.9,
-                    textShadow: heroTextShadow ? '0 1px 8px rgba(0,0,0,0.85)' : 'none'
+                    textShadow: heroTextShadow ? '0 1px 8px rgba(0,0,0,0.85)' : 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
                   }}
                 >
-                  Browse, install, and manage your Farming Simulator 25 mods — all from one place. 
-                  Use the sidebar to navigate between sections.
-                </p>
+                  <span style={{ display: 'block' }}>
+                    Browse, install, and manage your Farming Simulator 25 mods — all from one place.
+                  </span>
+                  <span style={{ display: 'block' }}>
+                    Use the sidebar to navigate between sections.
+                  </span>
+                </div>
               )}
             </div>
           ) : (
