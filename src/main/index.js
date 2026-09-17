@@ -381,10 +381,10 @@ ipcMain.handle('images:readLocalAsDataUrl', async (_, filePath, options = {}) =>
       const { nativeImage } = require('electron');
       const img = nativeImage.createFromPath(filePath);
       if (!img.isEmpty()) {
-        const targetWidth = options.width || 280;
+        const targetWidth = options.width || 560;
         const size = img.getSize();
         if (size.width > targetWidth) {
-          const resized = img.resize({ width: targetWidth, quality: 'good' });
+          const resized = img.resize({ width: targetWidth, quality: 'best' });
           return resized.toDataURL();
         }
         return img.toDataURL();

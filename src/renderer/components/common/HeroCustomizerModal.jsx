@@ -152,34 +152,35 @@ function SlideshowThumbnail({ path: imgPath, onRemove }) {
 }
 
 function PickerPhotoCard({ imgPath, isSelected, onToggle }) {
+  const cacheKey = 'hires_' + imgPath;
   const [src, setSrc] = useState(() => {
     if (!imgPath) return null;
     if (imgPath.startsWith('data:')) return imgPath;
-    return thumbCache.get(imgPath) || null;
+    return thumbCache.get(cacheKey) || null;
   });
 
   useEffect(() => {
     if (!imgPath) return;
     if (imgPath.startsWith('data:')) {
       setSrc(imgPath);
-      thumbCache.set(imgPath, imgPath);
+      thumbCache.set(cacheKey, imgPath);
       return;
     }
-    if (thumbCache.has(imgPath)) {
-      setSrc(thumbCache.get(imgPath));
+    if (thumbCache.has(cacheKey)) {
+      setSrc(thumbCache.get(cacheKey));
       return;
     }
     let isMounted = true;
     if (window.api?.images?.readLocalAsDataUrl) {
-      window.api.images.readLocalAsDataUrl(imgPath, { thumbnail: true, width: 280 }).then(dataUrl => {
+      window.api.images.readLocalAsDataUrl(imgPath, { thumbnail: true, width: 560 }).then(dataUrl => {
         if (isMounted && dataUrl) {
-          thumbCache.set(imgPath, dataUrl);
+          thumbCache.set(cacheKey, dataUrl);
           setSrc(dataUrl);
         }
       });
     }
     return () => { isMounted = false; };
-  }, [imgPath]);
+  }, [imgPath, cacheKey]);
 
   const filename = imgPath 
     ? (imgPath.startsWith('data:') ? 'Custom Photo' : imgPath.split(/[\\/]/).pop()) 
@@ -190,7 +191,7 @@ function PickerPhotoCard({ imgPath, isSelected, onToggle }) {
       onClick={onToggle}
       style={{
         position: 'relative',
-        height: '110px',
+        height: '118px',
         borderRadius: '8px',
         overflow: 'hidden',
         cursor: 'pointer',
@@ -202,6 +203,7 @@ function PickerPhotoCard({ imgPath, isSelected, onToggle }) {
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundColor: 'var(--bg-tertiary)',
+        imageRendering: 'auto',
         userSelect: 'none'
       }}
       title={filename}
@@ -1795,15 +1797,15 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
           className="modal" 
           onClick={(e) => e.stopPropagation()} 
           style={{ 
-            width: '94%', 
-            maxWidth: '920px', 
-            height: '82vh', 
-            maxHeight: '720px', 
+            width: '96%', 
+            maxWidth: '1280px', 
+            height: '88vh', 
+            maxHeight: '850px', 
             display: 'flex', 
             flexDirection: 'column', 
             padding: 0, 
             overflow: 'hidden',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.9), 0 0 0 1px var(--border)'
+            boxShadow: '0 25px 70px rgba(0,0,0,0.95), 0 0 0 1px var(--border)'
           }}
         >
           {/* Header */}
@@ -1867,7 +1869,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
           </div>
 
           {/* Photo Grid */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px', background: 'var(--bg-primary)' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '18px 24px', background: 'var(--bg-primary)' }}>
             {isScanningPickerFolder ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '200px', gap: '10px', color: 'var(--text-secondary)' }}>
                 <RefreshCw size={24} className="animate-spin" style={{ color: 'var(--accent)' }} />
@@ -1890,7 +1892,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))', gap: '14px' }}>
                 {pickerImages.map((imgPath) => (
                   <PickerPhotoCard
                     key={imgPath}
