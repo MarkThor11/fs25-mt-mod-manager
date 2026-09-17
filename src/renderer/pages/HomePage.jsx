@@ -117,8 +117,8 @@ export default function HomePage() {
       const deltaXPct = (deltaX / heroRect.width) * 100;
       const deltaYPct = (deltaY / heroRect.height) * 100;
 
-      const newX = Math.min(Math.max(5, Math.round(origX + deltaXPct)), 95);
-      const newY = Math.min(Math.max(10, Math.round(origY + deltaYPct)), 90);
+      const newX = Math.min(Math.max(0, Math.round(origX + deltaXPct)), 100);
+      const newY = Math.min(Math.max(0, Math.round(origY + deltaYPct)), 100);
 
       updateHeroBannerSettings({ heroTextPosX: newX, heroTextPosY: newY });
     };
@@ -482,6 +482,13 @@ export default function HomePage() {
                 <div 
                   className="home-hero__drag-handle"
                   title="Click and drag anywhere to move text position on the banner"
+                  style={{
+                    position: 'absolute',
+                    ...((heroTextPosY ?? 50) < 14 ? { top: 'calc(100% + 8px)' } : { bottom: 'calc(100% + 8px)' }),
+                    ...((heroTextPosX ?? 10) > 80 ? { right: 0 } : { left: 0 }),
+                    marginBottom: 0,
+                    zIndex: 10
+                  }}
                 >
                   <Move size={11} />
                   <span>Drag to move</span>

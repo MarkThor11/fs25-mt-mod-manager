@@ -67,7 +67,11 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
 
   // Check if a mod map has an automation template
   const checkModHasTemplate = useMemo(() => {
-    const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const clean = (s) => (s || '').toLowerCase()
+      .replace(/\s*[\(\[]\s*(?:crossplay|cp)\s*[\)\]]/gi, '')
+      .replace(/[_ -](?:crossplay|cp)(?=[_ -]|$)/gi, '')
+      .trim();
+    const norm = (s) => clean(s).replace(/[^a-z0-9]/g, '');
     const ultraNorm = (s) => norm(s).replace(/^(?:fs\d{2}|pdlc)/, '');
 
     const GENERIC_OR_BASE_IDS = new Set([
@@ -86,9 +90,13 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
       const mTitle = norm(mod.title);
       const mName = norm(mod.modName);
       const mMapId = norm(mod.mapId);
+      const mFolder = norm(mod.folder || '');
+      const mFileName = norm(mod.fileName?.replace(/\.zip$/i, '') || '');
       const uName = ultraNorm(mod.modName);
       const uTitle = ultraNorm(mod.title);
       const uMapId = ultraNorm(mod.mapId);
+      const uFolder = ultraNorm(mod.folder || '');
+      const uFileName = ultraNorm(mod.fileName?.replace(/\.zip$/i, '') || '');
 
       const isGenericOrBaseMapId = !mMapId || GENERIC_OR_BASE_IDS.has(mMapId);
 
@@ -101,18 +109,19 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
 
         // 1. Direct match
         if (!isGenericOrBaseMapId && t.mapId && mod.mapId && t.mapId.toLowerCase() === mod.mapId.toLowerCase()) return true;
-        if (t.title && mod.title && t.title.toLowerCase() === mod.title.toLowerCase()) return true;
-        if (t.modName && mod.modName && t.modName.toLowerCase() === mod.modName.toLowerCase()) return true;
-        if (t.id && mod.modName && t.id.toLowerCase() === mod.modName.toLowerCase()) return true;
+        if (t.title && mod.title && clean(t.title) === clean(mod.title)) return true;
+        if (t.modName && mod.modName && clean(t.modName) === clean(mod.modName)) return true;
+        if (t.id && mod.modName && clean(t.id) === clean(mod.modName)) return true;
 
         // 2. Normalized Title match
         const tTitle = norm(t.title);
         const utTitle = ultraNorm(t.title);
         if (tTitle && (tTitle === mTitle || tTitle === mName || utTitle === uTitle || utTitle === uName)) return true;
 
-        // 3. Normalized Mod Name match
-        const tMod = norm(t.modName);
-        const utMod = ultraNorm(t.modName);
+        // 3. Normalized Mod Name match (including fallback from mapId if modName missing on template)
+        const fallbackTMod = t.modName || (t.mapId && t.mapId.includes('.') ? t.mapId.split('.')[0] : null);
+        const tMod = norm(fallbackTMod);
+        const utMod = ultraNorm(fallbackTMod);
         if (tMod && (tMod === mName || utMod === uName)) return true;
 
         // 4. Map ID matching (handling {modName}.{mapId} format from careerSavegame.xml)
@@ -123,10 +132,12 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
           if (uName && ultraNorm(tMapId).startsWith(uName)) return true;
         }
 
-        // 5. Template ID / filename matching (e.g. FS25_BackRoadsCounty4x_...zip)
+        // 5. Template ID / filename matching (e.g. FS25_BackRoadsCounty4x_...zip, FS25_Blue_Island_Forest_...)
         if (tId) {
-          if (mName && (tId === mName || tId.includes(mName))) return true;
-          if (uName && utId.includes(uName)) return true;
+          if (mName && (tId === mName || tId.includes(mName) || tId.startsWith(mName))) return true;
+          if (uName && (utId.includes(uName) || utId.startsWith(uName))) return true;
+          if (mFolder && (tId.startsWith(mFolder) || utId.startsWith(uFolder))) return true;
+          if (mFileName && (tId.startsWith(mFileName) || utId.startsWith(uFileName))) return true;
           if (!isGenericOrBaseMapId && (tId === mMapId || tId.includes(mMapId))) return true;
           if (!isGenericOrBaseMapId && uMapId && utId.includes(uMapId)) return true;
         }
