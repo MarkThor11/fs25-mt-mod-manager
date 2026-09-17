@@ -960,14 +960,19 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                     {heroSlideshowSource === 'selection' && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            className="btn btn--secondary"
-                            onClick={handleAddHandpickedImages}
-                            style={{ gap: '6px', fontSize: '12px', padding: '8px 14px' }}
-                          >
-                            <Plus size={14} /> Add Photos from PC...
-                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              className="btn btn--secondary"
+                              onClick={handleAddHandpickedImages}
+                              style={{ gap: '6px', fontSize: '12px', padding: '8px 14px' }}
+                            >
+                              <Plus size={14} /> Add Photos from PC...
+                            </button>
+                            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                              💡 Tip: Hold <kbd style={{ padding: '1px 5px', borderRadius: '4px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', fontSize: '10px' }}>Ctrl</kbd> to select multiple photos at once
+                            </span>
+                          </div>
                           
                           {heroSlideshowImages && heroSlideshowImages.length > 0 && (
                             <button
