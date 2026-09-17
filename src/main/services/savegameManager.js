@@ -1118,6 +1118,17 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 });
             }
 
+            // Ensure MTRadioManager is included for in-game radio station overrides
+            if (!modData.some(m => (m['@_modName'] || '').toLowerCase() === 'fs25_mtradiomanager')) {
+                modData.push({
+                    '@_modName': 'FS25_MTRadioManager',
+                    '@_title': 'MT In-Game Radio Manager',
+                    '@_version': '1.0.0.0',
+                    '@_required': 'false',
+                    '@_fileHash': ''
+                });
+            }
+
             // Update careerSavegame mods list
             savegameData.careerSavegame.mod = modData;
 
@@ -4920,8 +4931,9 @@ async function getUsedModsInSavegame(savePath) {
             }
         } catch (e) {}
 
-        // Always preserve core helper mod if present
+        // Always preserve core helper mods if present
         usedModsMap.set('fs25_quietloadingscreen', 'FS25_QuietLoadingScreen');
+        usedModsMap.set('fs25_mtradiomanager', 'FS25_MTRadioManager');
 
         // 4. Resolve dependencies of used mods so required vehicle/script packs aren't broken
         try {

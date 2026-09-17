@@ -263,16 +263,25 @@ async function launch(options = {}) {
         args.push('-autoStartSavegameId', String(options.savegameIndex));
         args.push('-autoStart');
 
-        // Automatically activate QuietLoadingScreen helper mod so loading screens are completely silent
+        // Automatically activate QuietLoadingScreen and MTRadioManager helper mods
         try {
           let careerXml = fs.readFileSync(careerFile, 'utf8');
+          let modified = false;
           if (!careerXml.includes('FS25_QuietLoadingScreen')) {
             careerXml = careerXml.replace('</careerSavegame>', '  <mod modName="FS25_QuietLoadingScreen" title="Quiet Loading Screen" version="1.0.0.0" required="false" fileHash=""/>\n</careerSavegame>');
-            fs.writeFileSync(careerFile, careerXml, 'utf8');
+            modified = true;
             console.log('[LAUNCH] Activated FS25_QuietLoadingScreen in careerSavegame.xml');
           }
+          if (!careerXml.includes('FS25_MTRadioManager')) {
+            careerXml = careerXml.replace('</careerSavegame>', '  <mod modName="FS25_MTRadioManager" title="MT In-Game Radio Manager" version="1.0.0.0" required="false" fileHash=""/>\n</careerSavegame>');
+            modified = true;
+            console.log('[LAUNCH] Activated FS25_MTRadioManager in careerSavegame.xml');
+          }
+          if (modified) {
+            fs.writeFileSync(careerFile, careerXml, 'utf8');
+          }
         } catch (e) {
-          console.warn('[LAUNCH] Could not ensure QuietLoadingScreen in careerSavegame:', e.message);
+          console.warn('[LAUNCH] Could not ensure internal helper mods in careerSavegame:', e.message);
         }
       }
     }
