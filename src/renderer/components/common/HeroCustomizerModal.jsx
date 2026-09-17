@@ -3,8 +3,8 @@ import {
   X, Palette, Image as ImageIcon, Upload, Check, RotateCcw, 
   AlignLeft, AlignCenter, AlignRight, Type, Eye, EyeOff, Sparkles, Sliders, Move,
   Quote, HelpCircle, Shuffle, Calendar, GripHorizontal,
-  Folder, FolderSearch, Images, Clock, Trash2, RefreshCw, Plus,
-  FolderOpen, ImagePlus, CheckSquare, Square
+  Folder, FolderSearch, Images, Clock, Trash2, RefreshCw,
+  FolderOpen
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useToastStore } from '../../store/useToastStore';
@@ -160,11 +160,6 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
   const [showCropper, setShowCropper] = useState(false);
   const fileInputRef = useRef(null);
   const multipleFileInputRef = useRef(null);
-  const folderPickerInputRef = useRef(null);
-  const [showPhotoPicker, setShowPhotoPicker] = useState(false);
-  const [pickerPhotos, setPickerPhotos] = useState([]);
-  const [selectedPickerIndices, setSelectedPickerIndices] = useState(new Set());
-  const [isProcessingPicker, setIsProcessingPicker] = useState(false);
   const [isDraggingOverGallery, setIsDraggingOverGallery] = useState(false);
   const toast = useToastStore();
 
@@ -370,93 +365,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     e.target.value = '';
   };
 
-  const handleOpenFolderPicker = () => {
-    if (folderPickerInputRef.current) {
-      folderPickerInputRef.current.value = '';
-      folderPickerInputRef.current.click();
-    }
-  };
 
-  const handleFolderPickerChange = (e) => {
-    const rawFiles = Array.from(e.target.files || []);
-    const imgFiles = rawFiles.filter(f => /\.(jpe?g|png|webp|bmp)$/i.test(f.name));
-    if (imgFiles.length === 0) {
-      toast.info('No image files found in the selected folder.');
-      return;
-    }
-
-    const items = imgFiles.map(file => ({
-      file,
-      name: file.name,
-      previewUrl: URL.createObjectURL(file)
-    }));
-
-    setPickerPhotos(items);
-    setSelectedPickerIndices(new Set());
-    setShowPhotoPicker(true);
-    e.target.value = '';
-  };
-
-  const togglePickerPhoto = (idx) => {
-    setSelectedPickerIndices(prev => {
-      const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx);
-      else next.add(idx);
-      return next;
-    });
-  };
-
-  const handleSelectAllPickerPhotos = () => {
-    setSelectedPickerIndices(new Set(pickerPhotos.map((_, i) => i)));
-  };
-
-  const handleDeselectAllPickerPhotos = () => {
-    setSelectedPickerIndices(new Set());
-  };
-
-  const handleConfirmPickerSelection = async () => {
-    if (selectedPickerIndices.size === 0) return;
-    setIsProcessingPicker(true);
-
-    const chosen = Array.from(selectedPickerIndices).map(idx => pickerPhotos[idx]);
-    toast.info(`Adding ${chosen.length} selected photo${chosen.length > 1 ? 's' : ''}...`);
-
-    const newItems = [];
-    for (const item of chosen) {
-      try {
-        const dataUrl = await fileToDataUrl(item.file);
-        if (dataUrl) {
-          newItems.push(dataUrl);
-          thumbCache.set(dataUrl, dataUrl);
-        }
-      } catch (err) {
-        console.warn('Failed to process image:', item.name, err);
-      }
-    }
-
-    for (const p of pickerPhotos) {
-      if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
-    }
-
-    if (newItems.length > 0) {
-      await addHeroSlideshowImages(newItems);
-      toast.success(`Added ${newItems.length} photo${newItems.length > 1 ? 's' : ''} to slideshow!`);
-    }
-
-    setPickerPhotos([]);
-    setSelectedPickerIndices(new Set());
-    setIsProcessingPicker(false);
-    setShowPhotoPicker(false);
-  };
-
-  const handleClosePhotoPicker = () => {
-    for (const p of pickerPhotos) {
-      if (p.previewUrl) URL.revokeObjectURL(p.previewUrl);
-    }
-    setPickerPhotos([]);
-    setSelectedPickerIndices(new Set());
-    setShowPhotoPicker(false);
-  };
 
   const handleDropPhotos = async (e) => {
     e.preventDefault();
@@ -1083,27 +992,15 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                     {heroSlideshowSource === 'selection' && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <button
-                              type="button"
-                              className="btn btn--primary"
-                              onClick={handleOpenFolderPicker}
-                              style={{ gap: '6px', fontSize: '12px', padding: '8px 14px' }}
-                              title="Select a folder, see all photos in an in-app gallery, check the ones you want, and click OK!"
-                            >
-                              <FolderOpen size={14} /> Pick from Folder with OK Button...
-                            </button>
-
-                            <button
-                              type="button"
-                              className="btn btn--secondary"
-                              onClick={handleAddHandpickedImages}
-                              style={{ gap: '6px', fontSize: '12px', padding: '8px 12px' }}
-                              title="Add individual photo files directly"
-                            >
-                              <Plus size={14} /> Add Files...
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            className="btn btn--primary"
+                            onClick={handleAddHandpickedImages}
+                            style={{ gap: '6px', fontSize: '12px', padding: '8px 16px' }}
+                            title="Open folder to select photo files"
+                          >
+                            <FolderOpen size={14} /> Select Photos from Folder...
+                          </button>
                           
                           {heroSlideshowImages && heroSlideshowImages.length > 0 && (
                             <button
@@ -1704,184 +1601,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
       style={{ display: 'none' }} 
     />
 
-    {/* Hidden Folder Input for In-App Visual Photo Picker */}
-    <input 
-      type="file" 
-      ref={folderPickerInputRef} 
-      webkitdirectory="" 
-      directory="" 
-      multiple
-      onChange={handleFolderPickerChange} 
-      style={{ display: 'none' }} 
-    />
 
-    {/* In-App Visual Photo Picker Modal (Pick multiple photos with checkmarks and OK button, no Ctrl/Shift!) */}
-    {showPhotoPicker && (
-      <div 
-        className="modal-overlay" 
-        style={{ 
-          zIndex: 2200, 
-          background: 'rgba(0, 0, 0, 0.85)', 
-          backdropFilter: 'blur(10px)', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          pointerEvents: 'auto'
-        }}
-        onClick={handleClosePhotoPicker}
-      >
-        <div 
-          className="modal" 
-          onClick={(e) => e.stopPropagation()} 
-          style={{ 
-            width: '92%', 
-            maxWidth: '860px', 
-            height: '80vh', 
-            maxHeight: '680px', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            padding: 0, 
-            overflow: 'hidden',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.9), 0 0 0 1px var(--border)'
-          }}
-        >
-          {/* Header */}
-          <div className="modal__header" style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-secondary)' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
-                <Images size={16} style={{ color: 'var(--accent)' }} />
-                Select Photos for Slideshow
-              </h3>
-              <p style={{ margin: '3px 0 0 0', fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                Click photos to select or unselect with your mouse — no Ctrl or Shift needed! When done, click <strong>OK</strong>.
-              </p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button 
-                type="button" 
-                className="btn btn--secondary" 
-                onClick={handleSelectAllPickerPhotos}
-                style={{ fontSize: '11px', padding: '5px 12px', gap: '5px' }}
-              >
-                <CheckSquare size={13} /> Select All ({pickerPhotos.length})
-              </button>
-              <button 
-                type="button" 
-                className="btn btn--ghost" 
-                onClick={handleDeselectAllPickerPhotos}
-                style={{ fontSize: '11px', padding: '5px 10px', gap: '5px' }}
-              >
-                <Square size={13} /> Clear
-              </button>
-              <button 
-                type="button" 
-                className="btn btn--icon btn--ghost" 
-                onClick={handleClosePhotoPicker}
-                style={{ width: '28px', height: '28px' }}
-                title="Close"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          </div>
-
-          {/* Photo Grid */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px', alignContent: 'start', background: 'var(--bg-primary)' }}>
-            {pickerPhotos.map((photo, idx) => {
-              const isSelected = selectedPickerIndices.has(idx);
-              return (
-                <div
-                  key={idx}
-                  onClick={() => togglePickerPhoto(idx)}
-                  style={{
-                    position: 'relative',
-                    height: '96px',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
-                    boxShadow: isSelected ? '0 0 0 2px var(--accent-dim), 0 4px 14px rgba(0,0,0,0.5)' : 'none',
-                    transform: isSelected ? 'scale(0.98)' : 'scale(1)',
-                    transition: 'all 0.15s ease',
-                    backgroundImage: `url("${photo.previewUrl}")`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundColor: 'var(--bg-tertiary)'
-                  }}
-                  title={photo.name}
-                >
-                  {/* Checkmark circle badge in top-right */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '6px',
-                      right: '6px',
-                      width: '22px',
-                      height: '22px',
-                      borderRadius: '50%',
-                      background: isSelected ? 'var(--accent)' : 'rgba(0, 0, 0, 0.65)',
-                      border: isSelected ? 'none' : '1.5px solid rgba(255, 255, 255, 0.7)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#ffffff',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {isSelected && <Check size={14} strokeWidth={3} />}
-                  </div>
-
-                  {/* Semi-transparent tint when selected */}
-                  <div style={{ position: 'absolute', inset: 0, background: isSelected ? 'rgba(var(--accent-rgb, 59, 130, 246), 0.15)' : 'transparent', pointerEvents: 'none' }} />
-
-                  {/* Bottom Filename Ribbon */}
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '4px 6px', background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)', pointerEvents: 'none' }}>
-                    <span style={{ fontSize: '10px', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-                      {photo.name}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Footer with OK button */}
-          <div className="modal__footer" style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-              <strong style={{ color: selectedPickerIndices.size > 0 ? 'var(--accent)' : 'var(--text-primary)', fontSize: '13px' }}>
-                {selectedPickerIndices.size}
-              </strong> of {pickerPhotos.length} photos selected
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <button 
-                type="button" 
-                className="btn btn--ghost" 
-                onClick={handleClosePhotoPicker}
-                style={{ padding: '7px 16px', fontSize: '12px' }}
-              >
-                Cancel
-              </button>
-              <button 
-                type="button" 
-                className="btn btn--primary" 
-                disabled={selectedPickerIndices.size === 0 || isProcessingPicker}
-                onClick={handleConfirmPickerSelection}
-                style={{ padding: '7px 24px', fontSize: '13px', fontWeight: '700', gap: '6px' }}
-              >
-                {isProcessingPicker ? (
-                  <>Processing...</>
-                ) : (
-                  <>
-                    <Check size={15} strokeWidth={2.5} /> OK — Add Selected ({selectedPickerIndices.size})
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )}
 
     {/* Interactive Crop & Position Modal */}
     <ImageCropModal 
