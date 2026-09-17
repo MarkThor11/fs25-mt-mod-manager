@@ -137,32 +137,11 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     updateHeroBannerSettings({ heroBgType: type });
   };
 
-  const handlePickFile = async () => {
-    // 1. Try native dialog first
-    try {
-      if (window.api?.dialog?.selectFile) {
-        const filePath = await window.api.dialog.selectFile({
-          filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'] }]
-        });
-
-        if (filePath) {
-          let dataUrl = null;
-          if (window.api?.images?.readLocalAsDataUrl) {
-            dataUrl = await window.api.images.readLocalAsDataUrl(filePath);
-          }
-          if (dataUrl) {
-            setCropImageSrc(dataUrl);
-            setShowCropper(true);
-            return;
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Native dialog error, falling back to file input:', e);
+  const handlePickFile = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
     }
-
-    // 2. Fallback to HTML file input
-    fileInputRef.current?.click();
   };
 
   const handleFileInputChange = (e) => {
@@ -503,6 +482,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                 {/* Upload & Crop Buttons */}
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   <button 
+                    type="button"
                     className="btn btn--secondary" 
                     onClick={handlePickFile}
                     style={{ flex: 1, minWidth: '160px', gap: '6px', justifyContent: 'center', padding: '8px 14px', fontSize: '12px' }}
@@ -511,6 +491,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                   </button>
                   {heroCustomBg && (
                     <button 
+                      type="button"
                       className="btn btn--secondary" 
                       onClick={handleRecrop}
                       style={{ flex: 1, minWidth: '160px', gap: '6px', justifyContent: 'center', padding: '8px 14px', fontSize: '12px' }}
@@ -998,11 +979,11 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
       </div>
     </div>
 
-    {/* Hidden File Input for browser/fallback selection */}
+    {/* Hidden File Input for browser/file selection */}
     <input 
       type="file" 
       ref={fileInputRef} 
-      accept="image/*" 
+      accept="image/*,.jpg,.jpeg,.png,.webp,.bmp" 
       onChange={handleFileInputChange} 
       style={{ display: 'none' }} 
     />
