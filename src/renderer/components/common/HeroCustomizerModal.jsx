@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   X, Palette, Image as ImageIcon, Upload, Check, RotateCcw, 
-  AlignLeft, AlignCenter, AlignRight, Type, Eye, EyeOff, Sparkles, Sliders
+  AlignLeft, AlignCenter, AlignRight, Type, Eye, EyeOff, Sparkles, Sliders, Move
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useToastStore } from '../../store/useToastStore';
+import ImageCropModal from './ImageCropModal';
 import mapUs from '../../assets/maps/map_us.png';
 import mapEu from '../../assets/maps/map_eu.png';
 import mapAs from '../../assets/maps/map_as.png';
@@ -24,6 +25,9 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   const [activeTab, setActiveTab] = useState('background'); // 'background' | 'typography' | 'visibility'
+  const [cropImageSrc, setCropImageSrc] = useState(null);
+  const [showCropper, setShowCropper] = useState(false);
+  const fileInputRef = useRef(null);
   const toast = useToastStore();
 
   const {
@@ -31,39 +35,82 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     heroBgType, heroCustomBg, heroDimmer, heroAlignment,
     heroFont, heroTextSize, heroTextColor, heroTextShadow,
     heroShowText, heroShowSubtitle,
-    updateHeroBannerSettings, resetHeroBannerSettings
+    updateHeroBannerSettings, resetHeroBannerSettings, setCustomHeroBanner
   } = useSettingsStore();
 
   const handleSelectPreset = (type) => {
     updateHeroBannerSettings({ heroBgType: type });
   };
 
-  const handleUploadCustomImage = async () => {
+  const handlePickFile = async () => {
+    // 1. Try native dialog first
     try {
-      if (!window.api?.dialog?.selectFile) return;
-      const filePath = await window.api.dialog.selectFile({
-        filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'] }]
-      });
-
-      if (!filePath) return;
-
-      let dataUrl = null;
-      if (window.api?.images?.readLocalAsDataUrl) {
-        dataUrl = await window.api.images.readLocalAsDataUrl(filePath);
-      }
-
-      if (dataUrl) {
-        await updateHeroBannerSettings({
-          heroBgType: 'custom',
-          heroCustomBg: dataUrl
+      if (window.api?.dialog?.selectFile) {
+        const filePath = await window.api.dialog.selectFile({
+          filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'] }]
         });
-        toast.success('Custom banner wallpaper applied!');
-      } else {
-        toast.error('Could not load image file');
+
+        if (filePath) {
+          let dataUrl = null;
+          if (window.api?.images?.readLocalAsDataUrl) {
+            dataUrl = await window.api.images.readLocalAsDataUrl(filePath);
+          }
+          if (dataUrl) {
+            setCropImageSrc(dataUrl);
+            setShowCropper(true);
+            return;
+          }
+        }
       }
+    } catch (e) {
+      console.warn('Native dialog error, falling back to file input:', e);
+    }
+
+    // 2. Fallback to HTML file input
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result;
+      if (dataUrl) {
+        setCropImageSrc(dataUrl);
+        setShowCropper(true);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleApplyCropped = async (croppedDataUrl) => {
+    try {
+      await setCustomHeroBanner(croppedDataUrl);
+      setShowCropper(false);
+      toast.success('Custom banner wallpaper cropped & applied!');
     } catch (err) {
-      console.error('Failed to upload custom banner:', err);
-      toast.error('Failed to upload image: ' + err.message);
+      console.error('Failed to apply cropped banner:', err);
+      toast.error('Failed to save cropped image: ' + err.message);
+    }
+  };
+
+  const handleRecrop = async () => {
+    let src = heroCustomBg;
+    if ((!src || src === 'custom_hero_banner.jpg') && window.api?.images?.getHeroBanner) {
+      try {
+        const disk = await window.api.images.getHeroBanner();
+        if (disk) src = disk;
+      } catch (e) {
+        console.warn('Failed to read hero banner from disk for recrop:', e);
+      }
+    }
+    if (src) {
+      setCropImageSrc(src);
+      setShowCropper(true);
+    } else {
+      handlePickFile();
     }
   };
 
@@ -81,7 +128,8 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
   ];
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
+    <>
+      <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
       <div 
         className="modal modal--medium animate-scale-up"
         onClick={(e) => e.stopPropagation()}
@@ -213,7 +261,13 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
 
                   {/* Custom Upload Tile */}
                   <div
-                    onClick={handleUploadCustomImage}
+                    onClick={() => {
+                      if (heroCustomBg) {
+                        handleSelectPreset('custom');
+                      } else {
+                        handlePickFile();
+                      }
+                    }}
                     style={{
                       height: '90px',
                       borderRadius: '12px',
@@ -239,7 +293,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                         alignItems: 'flex-end', 
                         padding: '8px 10px' 
                       }}>
-                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#ffffff' }}>Custom Screenshot</span>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#ffffff' }}>Custom Photo</span>
                       </div>
                     ) : (
                       <>
@@ -256,15 +310,25 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* Upload Button */}
-              <div style={{ display: 'flex', gap: '12px' }}>
+              {/* Upload & Crop Buttons */}
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 <button 
                   className="btn btn--secondary" 
-                  onClick={handleUploadCustomImage}
-                  style={{ flex: 1, gap: '8px', justifyContent: 'center' }}
+                  onClick={handlePickFile}
+                  style={{ flex: 1, minWidth: '170px', gap: '8px', justifyContent: 'center' }}
                 >
                   <Upload size={16} /> Choose Image from PC...
                 </button>
+                {heroCustomBg && (
+                  <button 
+                    className="btn btn--secondary" 
+                    onClick={handleRecrop}
+                    style={{ flex: 1, minWidth: '170px', gap: '8px', justifyContent: 'center' }}
+                    title="Adjust framing, zoom and positioning of your custom wallpaper"
+                  >
+                    <Move size={16} /> Reposition & Crop
+                  </button>
+                )}
               </div>
 
               {/* Dimmer Overlay Slider */}
@@ -560,5 +624,23 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
         </div>
       </div>
     </div>
+
+    {/* Hidden File Input for browser/fallback selection */}
+    <input 
+      type="file" 
+      ref={fileInputRef} 
+      accept="image/*" 
+      onChange={handleFileInputChange} 
+      style={{ display: 'none' }} 
+    />
+
+    {/* Interactive Crop & Position Modal */}
+    <ImageCropModal 
+      isOpen={showCropper} 
+      imageSrc={cropImageSrc} 
+      onClose={() => setShowCropper(false)} 
+      onApply={handleApplyCropped} 
+    />
+  </>
   );
 }

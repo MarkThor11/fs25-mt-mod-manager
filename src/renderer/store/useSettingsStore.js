@@ -111,7 +111,16 @@ export const useSettingsStore = create((set) => ({
         hiddenFolders: settings.hiddenFolders ? JSON.parse(settings.hiddenFolders) : [],
         homeShowHero: settings.homeShowHero !== 'false',
         heroBgType: settings.heroBgType || 'default',
-        heroCustomBg: settings.heroCustomBg || '',
+        heroCustomBg: (await (async () => {
+          let bg = settings.heroCustomBg || '';
+          if ((!bg || bg === 'custom_hero_banner.jpg') && window.api?.images?.getHeroBanner) {
+            try {
+              const diskBanner = await window.api.images.getHeroBanner();
+              if (diskBanner) return diskBanner;
+            } catch (_) {}
+          }
+          return bg;
+        })()),
         heroDimmer: settings.heroDimmer !== undefined && settings.heroDimmer !== null ? parseInt(settings.heroDimmer, 10) : 50,
         heroAlignment: settings.heroAlignment || 'left',
         heroFont: settings.heroFont || 'modern',
@@ -322,6 +331,21 @@ export const useSettingsStore = create((set) => ({
       for (const [k, v] of Object.entries(defaults)) {
         await window.api.settings.set(k, String(v));
       }
+    }
+  },
+
+  setCustomHeroBanner: async (dataUrl) => {
+    try {
+      if (window.api?.images?.saveHeroBanner) {
+        await window.api.images.saveHeroBanner(dataUrl);
+      }
+      set({ heroBgType: 'custom', heroCustomBg: dataUrl });
+      if (window.api?.settings) {
+        await window.api.settings.set('heroBgType', 'custom');
+        await window.api.settings.set('heroCustomBg', 'custom_hero_banner.jpg');
+      }
+    } catch (err) {
+      console.error('Failed to set custom hero banner:', err);
     }
   },
 
