@@ -159,9 +159,16 @@ export const useSettingsStore = create((set) => ({
           ? parseInt(settings.heroQuoteIndex, 10)
           : null,
         heroSlideshowSource: settings.heroSlideshowSource || 'folder',
-        heroSlideshowFolder: settings.heroSlideshowFolder || '',
-        heroSlideshowImages: settings.heroSlideshowImages ? JSON.parse(settings.heroSlideshowImages) : [],
-        heroSlideshowInterval: settings.heroSlideshowInterval ? parseInt(settings.heroSlideshowInterval, 10) : 30,
+        heroSlideshowImages: (() => {
+          try {
+            if (!settings.heroSlideshowImages) return [];
+            return Array.isArray(settings.heroSlideshowImages) 
+              ? settings.heroSlideshowImages 
+              : JSON.parse(settings.heroSlideshowImages);
+          } catch (e) {
+            return [];
+          }
+        })(),
         heroSlideshowShuffle: settings.heroSlideshowShuffle !== 'false',
         heroSlideshowTransition: settings.heroSlideshowTransition || 'crossfade',
         homeShowStats: settings.homeShowStats !== 'false',

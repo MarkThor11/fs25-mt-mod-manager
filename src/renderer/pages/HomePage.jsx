@@ -214,6 +214,9 @@ export default function HomePage() {
   // Read image file as Base64 Data URL with local cache
   const getSlideDataUrl = async (filePath) => {
     if (!filePath) return null;
+    if (filePath.startsWith('data:')) {
+      return filePath;
+    }
     if (slideCacheRef.current.has(filePath)) {
       return slideCacheRef.current.get(filePath);
     }
@@ -390,14 +393,14 @@ export default function HomePage() {
               <div 
                 className="home-hero__slide"
                 style={{
-                  backgroundImage: layer0Url ? `url(${layer0Url})` : undefined,
+                  backgroundImage: layer0Url ? `url("${layer0Url}")` : undefined,
                   opacity: activeLayer === 0 && layer0Url ? 1 : 0
                 }}
               />
               <div 
                 className="home-hero__slide"
                 style={{
-                  backgroundImage: layer1Url ? `url(${layer1Url})` : undefined,
+                  backgroundImage: layer1Url ? `url("${layer1Url}")` : undefined,
                   opacity: activeLayer === 1 && layer1Url ? 1 : 0
                 }}
               />

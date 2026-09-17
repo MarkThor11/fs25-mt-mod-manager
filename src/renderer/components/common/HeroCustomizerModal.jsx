@@ -34,10 +34,50 @@ const SLIDESHOW_INTERVALS = [
 ];
 
 const thumbCache = new Map();
+
+const fileToDataUrl = (file, maxWidth = 1920, maxHeight = 1080) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const rawUrl = e.target?.result;
+      if (!rawUrl) return resolve(null);
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.max(1, Math.round(width * ratio));
+          height = Math.max(1, Math.round(height * ratio));
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.86));
+      };
+      img.onerror = () => resolve(rawUrl);
+      img.src = rawUrl;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+};
+
 function SlideshowThumbnail({ path: imgPath, onRemove }) {
-  const [src, setSrc] = useState(() => thumbCache.get(imgPath) || null);
+  const [src, setSrc] = useState(() => {
+    if (!imgPath) return null;
+    if (imgPath.startsWith('data:')) return imgPath;
+    return thumbCache.get(imgPath) || null;
+  });
 
   useEffect(() => {
+    if (!imgPath) return;
+    if (imgPath.startsWith('data:')) {
+      setSrc(imgPath);
+      thumbCache.set(imgPath, imgPath);
+      return;
+    }
     if (thumbCache.has(imgPath)) {
       setSrc(thumbCache.get(imgPath));
       return;
@@ -54,7 +94,9 @@ function SlideshowThumbnail({ path: imgPath, onRemove }) {
     return () => { isMounted = false; };
   }, [imgPath]);
 
-  const filename = imgPath ? imgPath.split(/[\\/]/).pop() : '';
+  const filename = imgPath 
+    ? (imgPath.startsWith('data:') ? 'Custom Photo' : imgPath.split(/[\\/]/).pop()) 
+    : '';
 
   return (
     <div 
@@ -64,12 +106,15 @@ function SlideshowThumbnail({ path: imgPath, onRemove }) {
         borderRadius: '8px',
         overflow: 'hidden',
         border: '1px solid var(--border)',
-        background: src ? `url(${src}) center/cover no-repeat` : 'var(--bg-tertiary)',
+        backgroundImage: src ? `url("${src}")` : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundColor: 'var(--bg-tertiary)',
         display: 'flex',
         alignItems: 'flex-end',
         userSelect: 'none'
       }}
-      title={imgPath}
+      title={filename}
     >
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%)' }} />
       <span style={{ position: 'relative', zIndex: 2, fontSize: '9px', color: '#fff', padding: '3px 6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: onRemove ? '75%' : '95%' }}>
@@ -113,6 +158,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
   const [originalImageSrc, setOriginalImageSrc] = useState(null);
   const [showCropper, setShowCropper] = useState(false);
   const fileInputRef = useRef(null);
+  const multipleFileInputRef = useRef(null);
   const toast = useToastStore();
 
   const modalRef = useRef(null);
@@ -284,17 +330,37 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     }
   };
 
-  const handleAddHandpickedImages = async () => {
-    if (!window.api?.dialog?.selectImages) return;
-    try {
-      const selected = await window.api.dialog.selectImages();
-      if (selected && selected.length > 0) {
-        await addHeroSlideshowImages(selected);
-        toast.success(`Added ${selected.length} image${selected.length > 1 ? 's' : ''} to slideshow!`);
-      }
-    } catch (err) {
-      toast.error('Error adding images: ' + err.message);
+  const handleAddHandpickedImages = () => {
+    if (multipleFileInputRef.current) {
+      multipleFileInputRef.current.value = '';
+      multipleFileInputRef.current.click();
     }
+  };
+
+  const handleMultipleFileInputChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    toast.info(`Adding ${files.length} photo${files.length > 1 ? 's' : ''}...`);
+
+    const newItems = [];
+    for (const file of files) {
+      try {
+        const dataUrl = await fileToDataUrl(file);
+        if (dataUrl) {
+          newItems.push(dataUrl);
+          thumbCache.set(dataUrl, dataUrl);
+        }
+      } catch (err) {
+        console.warn('Failed to process image:', file.name, err);
+      }
+    }
+
+    if (newItems.length > 0) {
+      await addHeroSlideshowImages(newItems);
+      toast.success(`Added ${newItems.length} photo${newItems.length > 1 ? 's' : ''} to slideshow!`);
+    }
+    e.target.value = '';
   };
 
   const activeSubtitleMode = heroSubtitleMode || (heroShowSubtitle === false ? 'off' : 'quote');
@@ -1472,6 +1538,16 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
       ref={fileInputRef} 
       accept="image/*,.jpg,.jpeg,.png,.webp,.bmp" 
       onChange={handleFileInputChange} 
+      style={{ display: 'none' }} 
+    />
+
+    {/* Hidden Multi-File Input for slideshow handpicked selection */}
+    <input 
+      type="file" 
+      ref={multipleFileInputRef} 
+      multiple
+      accept="image/*,.jpg,.jpeg,.png,.webp,.bmp" 
+      onChange={handleMultipleFileInputChange} 
       style={{ display: 'none' }} 
     />
 
