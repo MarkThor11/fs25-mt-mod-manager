@@ -338,7 +338,12 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
     const GENERIC_MAP_IDS = new Set([
         'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
         'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
-        'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek'
+        'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
+        'mapus', 'mapeu', 'mapas', 'highlandsfishingmap'
+    ]);
+
+    const OFFICIAL_MASTER_TEMPLATES = new Set([
+        'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap'
     ]);
 
     const isGenericMapId = GENERIC_MAP_IDS.has(targetMapIdNorm);
@@ -377,6 +382,10 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
 
         const cleanFolder = folder.replace(/\.zip$/i, '');
         const fNorm = ultraNorm(cleanFolder);
+
+        // A custom mod map can NEVER use an official base game template (MapUS, MapEU, MapAS, Kinlaig)
+        if (targetModNorm && (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolder.toLowerCase()))) continue;
+
         // Exact normalized modName match (e.g. "birgland" === "birgland")
         if (targetModNorm && fNorm === targetModNorm) return folder;
         // Template named with pattern: {modName}_{mapId} or {modName}_{modName}_{mapId}
@@ -396,6 +405,10 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         if (!stat.isDirectory() && !isZip) continue;
 
         if (await isCompleteTemplate(folderPath, isZip)) {
+            const cleanFolder = folder.replace(/\.zip$/i, '');
+            const fNorm = ultraNorm(cleanFolder);
+            if (targetModNorm && (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolder.toLowerCase()))) continue;
+
             try {
                 let xml = null;
                 if (isZip) {

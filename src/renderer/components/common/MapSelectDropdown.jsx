@@ -70,6 +70,17 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
     const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const ultraNorm = (s) => norm(s).replace(/^(?:fs\d{2}|pdlc)/, '');
 
+    const GENERIC_OR_BASE_IDS = new Set([
+      'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
+      'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
+      'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
+      'mapus', 'mapeu', 'mapas', 'highlandsfishingmap'
+    ]);
+
+    const OFFICIAL_TEMPLATES = new Set([
+      'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap'
+    ]);
+
     return (mod) => {
       if (!templates || templates.length === 0) return false;
       const mTitle = norm(mod.title);
@@ -79,9 +90,17 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
       const uTitle = ultraNorm(mod.title);
       const uMapId = ultraNorm(mod.mapId);
 
+      const isGenericOrBaseMapId = !mMapId || GENERIC_OR_BASE_IDS.has(mMapId);
+
       return templates.some((t) => {
+        const tId = norm(t.id);
+        const utId = ultraNorm(t.id);
+
+        // A community mod map can NEVER match an official base game template
+        if (OFFICIAL_TEMPLATES.has(tId) || OFFICIAL_TEMPLATES.has(utId)) return false;
+
         // 1. Direct match
-        if (t.mapId && mod.mapId && t.mapId === mod.mapId) return true;
+        if (!isGenericOrBaseMapId && t.mapId && mod.mapId && t.mapId.toLowerCase() === mod.mapId.toLowerCase()) return true;
         if (t.title && mod.title && t.title.toLowerCase() === mod.title.toLowerCase()) return true;
         if (t.modName && mod.modName && t.modName.toLowerCase() === mod.modName.toLowerCase()) return true;
         if (t.id && mod.modName && t.id.toLowerCase() === mod.modName.toLowerCase()) return true;
@@ -99,20 +118,17 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
         // 4. Map ID matching (handling {modName}.{mapId} format from careerSavegame.xml)
         const tMapId = norm(t.mapId);
         if (tMapId) {
-          if (mMapId && (tMapId === mMapId || tMapId.endsWith(mMapId) || mMapId.endsWith(tMapId))) return true;
+          if (!isGenericOrBaseMapId && (tMapId === mMapId || tMapId.endsWith(mMapId) || mMapId.endsWith(tMapId))) return true;
           if (mName && (tMapId.startsWith(mName) || tMapId.includes(mName))) return true;
-          if (uMapId && ultraNorm(tMapId).endsWith(uMapId)) return true;
           if (uName && ultraNorm(tMapId).startsWith(uName)) return true;
         }
 
         // 5. Template ID / filename matching (e.g. FS25_BackRoadsCounty4x_...zip)
-        const tId = norm(t.id);
-        const utId = ultraNorm(t.id);
         if (tId) {
           if (mName && (tId === mName || tId.includes(mName))) return true;
           if (uName && utId.includes(uName)) return true;
-          if (mMapId && (tId === mMapId || tId.includes(mMapId))) return true;
-          if (uMapId && utId.includes(uMapId)) return true;
+          if (!isGenericOrBaseMapId && (tId === mMapId || tId.includes(mMapId))) return true;
+          if (!isGenericOrBaseMapId && uMapId && utId.includes(uMapId)) return true;
         }
 
         return false;
