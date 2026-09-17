@@ -42,6 +42,7 @@ export default function HomePage() {
     heroTextPosY,
     heroFont,
     heroTextSize,
+    heroTextScale,
     heroTextColor,
     heroTextShadow,
     heroShowText,
@@ -232,10 +233,11 @@ export default function HomePage() {
               className={`home-hero__content ${showCustomizer && isDraggingText ? 'home-hero__content--dragging' : ''} ${showCustomizer ? 'home-hero__content--customizing' : ''}`}
               onMouseDown={handleTextMouseDown}
               style={{
-                left: `${heroTextPosX ?? (heroAlignment === 'center' ? 50 : heroAlignment === 'right' ? 88 : 10)}%`,
+                left: `${heroTextPosX ?? 10}%`,
                 top: `${heroTextPosY ?? 50}%`,
-                transform: `translate(-${heroTextPosX ?? (heroAlignment === 'center' ? 50 : heroAlignment === 'right' ? 88 : 10)}%, -${heroTextPosY ?? 50}%)`,
-                textAlign: heroAlignment || ((heroTextPosX ?? 10) < 35 ? 'left' : (heroTextPosX ?? 10) > 65 ? 'right' : 'center'),
+                transform: `translate(-${heroTextPosX ?? 10}%, -${heroTextPosY ?? 50}%)`,
+                textAlign: 'left',
+                alignItems: 'flex-start',
                 maxWidth: '850px',
                 width: 'max-content',
                 cursor: showCustomizer ? (isDraggingText ? 'grabbing' : 'grab') : 'default',
@@ -257,6 +259,8 @@ export default function HomePage() {
                 className="home-hero__title"
                 style={{
                   color: heroTextColor || '#ffffff',
+                  fontSize: `calc(var(--fs-3xl, 2.2rem) * ${(heroTextScale || 100) / 100})`,
+                  lineHeight: 1.15,
                   textShadow: heroTextShadow ? '0 2px 14px rgba(0,0,0,0.9), 0 1px 4px rgba(0,0,0,0.95)' : 'none'
                 }}
               >
@@ -295,19 +299,22 @@ export default function HomePage() {
                   className="home-hero__subtitle"
                   style={{
                     color: heroTextColor || 'var(--text-secondary)',
+                    fontSize: `calc(13px * ${Math.max(0.85, (heroTextScale || 100) / 100)})`,
                     opacity: 0.92,
                     textShadow: heroTextShadow ? '0 1px 8px rgba(0,0,0,0.85)' : 'none',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: activeSubtitleMode === 'quote' ? '3px' : '4px'
+                    gap: activeSubtitleMode === 'quote' ? '3px' : '4px',
+                    textAlign: 'left',
+                    alignItems: 'flex-start'
                   }}
                 >
                   {activeSubtitleMode === 'quote' ? (
                     <>
-                      <span style={{ fontStyle: 'italic', display: 'block', fontSize: 'var(--fs-sm)', letterSpacing: '0.01em' }}>
+                      <span style={{ fontStyle: 'italic', display: 'block', fontSize: `calc(13px * ${Math.max(0.85, (heroTextScale || 100) / 100)})`, letterSpacing: '0.01em' }}>
                         “{displayQuote.quote}”
                       </span>
-                      <span style={{ fontSize: '11px', opacity: 0.8, fontWeight: '600', display: 'block' }}>
+                      <span style={{ fontSize: `calc(11px * ${Math.max(0.85, (heroTextScale || 100) / 100)})`, opacity: 0.8, fontWeight: '600', display: 'block' }}>
                         — {displayQuote.author}
                       </span>
                     </>

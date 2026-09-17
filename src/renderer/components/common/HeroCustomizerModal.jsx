@@ -123,7 +123,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     homeShowHero, setHomeShowHero,
     heroBgType, heroCustomBg, heroDimmer, heroAlignment,
     heroTextPosX, heroTextPosY,
-    heroFont, heroTextSize, heroTextColor, heroTextShadow,
+    heroFont, heroTextSize, heroTextScale, heroTextColor, heroTextShadow,
     heroShowText, heroShowSubtitle, heroSubtitleMode, heroQuoteIndex,
     updateHeroBannerSettings, resetHeroBannerSettings, setCustomHeroBanner
   } = useSettingsStore();
@@ -574,40 +574,54 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                     <strong>Free-form move:</strong> Click and drag the welcome greeting directly on the banner above to place it anywhere!
                   </span>
                 </div>
+              </div>
 
-                <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                  Text Justification
+              {/* Text Size & Scale */}
+              <div style={{ background: 'var(--bg-tertiary)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Type size={14} style={{ color: 'var(--accent)' }} />
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>Text Size & Scale</span>
+                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--accent)', background: 'var(--accent-dim)', padding: '1px 8px', borderRadius: '6px' }}>
+                    {heroTextScale || 100}%
+                  </span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                <input 
+                  type="range"
+                  min="75"
+                  max="150"
+                  step="5"
+                  value={heroTextScale || 100}
+                  onChange={(e) => updateHeroBannerSettings({ heroTextScale: parseInt(e.target.value, 10) })}
+                  style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer', marginBottom: '8px' }}
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
                   {[
-                    { id: 'left', label: 'Left Aligned', icon: AlignLeft },
-                    { id: 'center', label: 'Centered', icon: AlignCenter },
-                    { id: 'right', label: 'Right Aligned', icon: AlignRight },
-                  ].map((a) => {
-                    const Icon = a.icon;
-                    const isSelected = heroAlignment === a.id;
+                    { label: 'Compact', scale: 85 },
+                    { label: 'Standard', scale: 100 },
+                    { label: 'Large', scale: 120 },
+                    { label: 'Cinematic', scale: 140 },
+                  ].map((s) => {
+                    const isSelected = (heroTextScale || 100) === s.scale;
                     return (
                       <button
-                        key={a.id}
+                        key={s.label}
                         type="button"
-                        onClick={() => updateHeroBannerSettings({ heroAlignment: a.id })}
+                        onClick={() => updateHeroBannerSettings({ heroTextScale: s.scale })}
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          padding: '6px 10px',
-                          borderRadius: '8px',
-                          border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
-                          background: isSelected ? 'var(--accent-dim)' : 'var(--bg-tertiary)',
+                          padding: '4px 6px',
+                          borderRadius: '6px',
+                          border: isSelected ? '1.5px solid var(--accent)' : '1px solid var(--border)',
+                          background: isSelected ? 'var(--accent-dim)' : 'var(--bg-secondary)',
                           color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
-                          fontWeight: '600',
                           fontSize: '11px',
+                          fontWeight: isSelected ? '700' : '500',
                           cursor: 'pointer',
                           transition: 'all 0.15s ease'
                         }}
                       >
-                        <Icon size={13} /> {a.label}
+                        {s.label}
                       </button>
                     );
                   })}
@@ -624,9 +638,13 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                     { id: 'modern', name: 'Modern Sans', preview: 'Inter' },
                     { id: 'display', name: 'AAA Display', preview: 'Cinematic' },
                     { id: 'rustic', name: 'Rustic Farm', preview: 'Classic' },
+                    { id: 'slab', name: 'Western Slab', preview: 'Machinery' },
+                    { id: 'condensed', name: 'Tall Poster', preview: 'Impact' },
+                    { id: 'handwriting', name: 'Farm Script', preview: 'Cursive' },
+                    { id: 'elegant', name: 'Editorial', preview: 'Baskerville' },
                     { id: 'tech', name: 'Industrial', preview: 'Mono' },
                   ].map((f) => {
-                    const isSelected = heroFont === f.id;
+                    const isSelected = (heroFont || 'modern') === f.id;
                     return (
                       <div
                         key={f.id}

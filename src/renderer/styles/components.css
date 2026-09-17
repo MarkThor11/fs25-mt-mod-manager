@@ -2087,39 +2087,21 @@
   border-radius: 10px;
 }
 
-/* Alignment Modifiers */
-.home-hero--align-left .home-hero__content {
-  align-items: flex-start;
-  text-align: left;
+/* Layout Alignment (Left-Aligned Standard) */
+.home-hero__content {
+  align-items: flex-start !important;
+  text-align: left !important;
 }
-.home-hero--align-left .home-hero__subtitle {
-  align-items: flex-start;
-  text-align: left;
-}
-.home-hero--align-center .home-hero__content {
-  align-items: center;
-  text-align: center;
-}
-.home-hero--align-center .home-hero__subtitle {
-  align-items: center;
-  text-align: center;
-  margin-left: auto;
-  margin-right: auto;
-}
-.home-hero--align-right .home-hero__content {
-  align-items: flex-end;
-  text-align: right;
-}
-.home-hero--align-right .home-hero__subtitle {
-  align-items: flex-end;
-  text-align: right;
-  margin-left: auto;
-  margin-right: 0;
+.home-hero__subtitle {
+  align-items: flex-start !important;
+  text-align: left !important;
+  margin-left: 0 !important;
 }
 
 /* Typography Modifiers */
 .home-hero--font-modern .home-hero__title {
   font-family: inherit;
+  letter-spacing: -0.01em;
 }
 .home-hero--font-display .home-hero__title {
   font-family: 'Rajdhani', 'Impact', 'Trebuchet MS', sans-serif;
@@ -2128,9 +2110,30 @@
   text-transform: uppercase;
 }
 .home-hero--font-rustic .home-hero__title {
-  font-family: 'Georgia', 'Cambria', 'Merriweather', serif;
+  font-family: 'Georgia', 'Cambria', 'Palatino', serif;
   font-weight: 700;
   font-style: italic;
+}
+.home-hero--font-slab .home-hero__title {
+  font-family: 'Rockwell', 'Clarendon', 'Copperplate Gothic Bold', serif;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.home-hero--font-condensed .home-hero__title {
+  font-family: 'Impact', 'Arial Narrow', 'Franklin Gothic Medium', sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.home-hero--font-handwriting .home-hero__title {
+  font-family: 'Segoe Script', 'Brush Script MT', 'Lucida Handwriting', cursive;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.home-hero--font-elegant .home-hero__title {
+  font-family: 'Garamond', 'Baskerville', 'Times New Roman', serif;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
 .home-hero--font-tech .home-hero__title {
   font-family: 'Consolas', 'Fira Code', monospace;

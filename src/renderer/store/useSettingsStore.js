@@ -24,6 +24,7 @@ export const useSettingsStore = create((set) => ({
   heroTextPosY: 50,
   heroFont: 'modern',
   heroTextSize: 'standard',
+  heroTextScale: 100, // percentage 75-150%
   heroTextColor: '#ffffff',
   heroTextShadow: true,
   heroShowText: true,
@@ -131,6 +132,7 @@ export const useSettingsStore = create((set) => ({
         heroTextPosY: settings.heroTextPosY !== undefined && settings.heroTextPosY !== null ? parseInt(settings.heroTextPosY, 10) : 50,
         heroFont: settings.heroFont || 'modern',
         heroTextSize: settings.heroTextSize || 'standard',
+        heroTextScale: settings.heroTextScale ? parseInt(settings.heroTextScale, 10) : 100,
         heroTextColor: settings.heroTextColor || '#ffffff',
         heroTextShadow: settings.heroTextShadow !== 'false',
         heroShowText: settings.heroShowText !== 'false',
@@ -331,6 +333,7 @@ export const useSettingsStore = create((set) => ({
       heroTextPosY: 50,
       heroFont: 'modern',
       heroTextSize: 'standard',
+      heroTextScale: 100,
       heroTextColor: '#ffffff',
       heroTextShadow: true,
       heroShowText: true,
