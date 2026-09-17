@@ -1510,33 +1510,48 @@ async function performScan(manualPaths = null) {
 			let stats = await fs.lstat(fullPath).catch(() => null);
 			if (!stats) return;
 
-			// CRITICAL: Skip symbolic links in the root folder. 
-			// These are likely mirrors created by the manager. We only scan the sources.
-			if (stats.isSymbolicLink() && !subFolder) {
-				debugLog(`[SCAN] Skipping mirror link in root: ${entryName}`);
-				return;
-			}
-
 			let targetPath = fullPath;
-			if (stats.isSymbolicLink() && subFolder) {
-				try {
-					targetPath = await fs.realpath(fullPath);
-					const realStats = await fs.stat(targetPath).catch(() => null);
-					if (realStats && realStats.size > 1000) {
-						stats = realStats;
-					} else {
-						// Link target might be broken or 0 bytes, check if root zip exists
+
+			// Handle symbolic links
+			if (stats.isSymbolicLink()) {
+				if (!subFolder) {
+					// Skip symbolic links in root ONLY if they point to an internal subfolder (an internal mirror)
+					// If they point to an external drive (e.g. F:\mods4, D:\mods), WE MUST SCAN THEM!
+					try {
+						const real = await fs.realpath(fullPath);
+						const isInternalMirror = real.toLowerCase().startsWith(modRootPath.toLowerCase());
+						if (isInternalMirror) {
+							debugLog(`[SCAN] Skipping mirror link in root: ${entryName}`);
+							return;
+						}
+						targetPath = real;
+						const realStats = await fs.stat(real).catch(() => null);
+						if (realStats) {
+							stats = realStats;
+						}
+					} catch (e) {
+						return;
+					}
+				} else {
+					try {
+						targetPath = await fs.realpath(fullPath);
+						const realStats = await fs.stat(targetPath).catch(() => null);
+						if (realStats && realStats.size > 1000) {
+							stats = realStats;
+						} else {
+							// Link target might be broken or 0 bytes, check if root zip exists
+							const rootZipPath = path.join(modRootPath, entryName);
+							if (fs.existsSync(rootZipPath) && !fs.lstatSync(rootZipPath).isSymbolicLink()) {
+								targetPath = rootZipPath;
+								stats = await fs.stat(targetPath).catch(() => stats);
+							}
+						}
+					} catch (e) {
 						const rootZipPath = path.join(modRootPath, entryName);
 						if (fs.existsSync(rootZipPath) && !fs.lstatSync(rootZipPath).isSymbolicLink()) {
 							targetPath = rootZipPath;
 							stats = await fs.stat(targetPath).catch(() => stats);
 						}
-					}
-				} catch (e) {
-					const rootZipPath = path.join(modRootPath, entryName);
-					if (fs.existsSync(rootZipPath) && !fs.lstatSync(rootZipPath).isSymbolicLink()) {
-						targetPath = rootZipPath;
-						stats = await fs.stat(targetPath).catch(() => stats);
 					}
 				}
 			}
@@ -1822,7 +1837,7 @@ async function performScan(manualPaths = null) {
 			
 			for (const entry of entries) {
 				const entryName = entry.name;
-				if (entryName.startsWith('.') || entryName.toLowerCase() === 'backups' || entry.isSymbolicLink()) continue;
+				if (entryName.startsWith('.') || entryName.toLowerCase() === 'backups') continue;
 
 				if (entry.isDirectory()) {
 					const subPath = path.join(modsPath, entryName);
@@ -1855,7 +1870,7 @@ async function performScan(manualPaths = null) {
 							allFolders.push(entryName);
 						}
 					}
-				} else if (entry.isFile() && entryName.toLowerCase().endsWith('.zip')) {
+				} else if ((entry.isFile() || entry.isSymbolicLink()) && entryName.toLowerCase().endsWith('.zip')) {
 					potentialRootEntries.push({ root: modsPath, name: entryName, sub: '' });
 				}
 			}
