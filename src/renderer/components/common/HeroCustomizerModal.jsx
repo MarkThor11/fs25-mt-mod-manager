@@ -171,7 +171,7 @@ function PickerPhotoCard({ imgPath, isSelected, onToggle }) {
     }
     let isMounted = true;
     if (window.api?.images?.readLocalAsDataUrl) {
-      window.api.images.readLocalAsDataUrl(imgPath).then(dataUrl => {
+      window.api.images.readLocalAsDataUrl(imgPath, { thumbnail: true, width: 280 }).then(dataUrl => {
         if (isMounted && dataUrl) {
           thumbCache.set(imgPath, dataUrl);
           setSrc(dataUrl);
@@ -436,11 +436,15 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
       folder = await window.api.images.getFsScreenshotsPath();
     }
 
-    if (!folder && window.api?.dialog?.selectFolder) {
-      folder = await window.api.dialog.selectFolder({
-        title: 'Select Folder Containing Photos',
-        buttonLabel: 'Select Folder'
-      });
+    if (!folder) {
+      if (window.api?.dialog?.selectFolderOrImage) {
+        folder = await window.api.dialog.selectFolderOrImage();
+      } else if (window.api?.dialog?.selectFolder) {
+        folder = await window.api.dialog.selectFolder({
+          title: 'Select Folder Containing Photos',
+          buttonLabel: 'Select Folder'
+        });
+      }
     }
 
     if (!folder) {
@@ -469,12 +473,16 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
   };
 
   const handleChangePickerFolder = async () => {
-    if (!window.api?.dialog?.selectFolder) return;
     try {
-      const newFolder = await window.api.dialog.selectFolder({
-        title: 'Select Folder Containing Photos',
-        buttonLabel: 'Select Folder'
-      });
+      let newFolder = null;
+      if (window.api?.dialog?.selectFolderOrImage) {
+        newFolder = await window.api.dialog.selectFolderOrImage();
+      } else if (window.api?.dialog?.selectFolder) {
+        newFolder = await window.api.dialog.selectFolder({
+          title: 'Select Folder Containing Photos',
+          buttonLabel: 'Select Folder'
+        });
+      }
       if (newFolder) {
         await loadFolderIntoPicker(newFolder);
       }

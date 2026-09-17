@@ -374,9 +374,22 @@ ipcMain.handle('images:proxy', async (_, url) => {
   return await fetchImage(url);
 });
 
-ipcMain.handle('images:readLocalAsDataUrl', async (_, filePath) => {
+ipcMain.handle('images:readLocalAsDataUrl', async (_, filePath, options = {}) => {
   try {
     if (!filePath || !fs.existsSync(filePath)) return null;
+    if (options?.thumbnail) {
+      const { nativeImage } = require('electron');
+      const img = nativeImage.createFromPath(filePath);
+      if (!img.isEmpty()) {
+        const targetWidth = options.width || 280;
+        const size = img.getSize();
+        if (size.width > targetWidth) {
+          const resized = img.resize({ width: targetWidth, quality: 'good' });
+          return resized.toDataURL();
+        }
+        return img.toDataURL();
+      }
+    }
     const ext = path.extname(filePath).toLowerCase().replace('.', '');
     const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'gif' ? 'image/gif' : 'image/jpeg';
     const buffer = await fs.readFile(filePath);
@@ -468,11 +481,42 @@ ipcMain.handle('images:scanFolder', async (_, folderPath) => {
 
 ipcMain.handle('images:getFsScreenshotsPath', async () => {
   try {
-    const docs = app.getPath('documents');
-    const standardPath = path.join(docs, 'My Games', 'FarmingSimulator2025', 'screenshots');
-    if (fs.existsSync(standardPath)) return standardPath;
-    const parentPath = path.join(docs, 'My Games', 'FarmingSimulator2025');
-    if (fs.existsSync(parentPath)) return parentPath;
+    const candidates = [];
+
+    // 1. Check pathProvider service
+    try {
+      const { getFS25DataRoot } = require('./services/pathProvider');
+      const root = getFS25DataRoot();
+      if (root) {
+        candidates.push(path.join(root, 'screenshots'));
+        candidates.push(root);
+      }
+    } catch (_) {}
+
+    // 2. Direct USERPROFILE Documents check (handles OneDrive redirect issues)
+    if (process.env.USERPROFILE) {
+      candidates.push(path.join(process.env.USERPROFILE, 'Documents', 'My Games', 'FarmingSimulator2025', 'screenshots'));
+      candidates.push(path.join(process.env.USERPROFILE, 'Documents', 'My Games', 'FarmingSimulator2025'));
+    }
+
+    // 3. Electron standard documents path
+    try {
+      const docs = app.getPath('documents');
+      candidates.push(path.join(docs, 'My Games', 'FarmingSimulator2025', 'screenshots'));
+      candidates.push(path.join(docs, 'My Games', 'FarmingSimulator2025'));
+    } catch (_) {}
+
+    // 4. OneDrive Documents check
+    if (process.env.USERPROFILE) {
+      candidates.push(path.join(process.env.USERPROFILE, 'OneDrive', 'Documents', 'My Games', 'FarmingSimulator2025', 'screenshots'));
+      candidates.push(path.join(process.env.USERPROFILE, 'OneDrive', 'Documents', 'My Games', 'FarmingSimulator2025'));
+    }
+
+    for (const p of candidates) {
+      if (p && fs.existsSync(p)) {
+        return p;
+      }
+    }
     return null;
   } catch (err) {
     console.error('[IMAGES] Failed to get FS25 screenshots path:', err.message);
@@ -1638,6 +1682,20 @@ ipcMain.handle('dialog:selectImages', async () => {
     ]
   });
   return result.canceled ? [] : result.filePaths;
+});
+
+ipcMain.handle('dialog:selectFolderOrImage', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select Any Photo in the Folder to load all photos from it',
+    buttonLabel: 'Load This Folder',
+    properties: ['openFile', 'dontAddToRecent'],
+    filters: [
+      { name: 'Photos / Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  });
+  if (result.canceled || !result.filePaths || result.filePaths.length === 0) return null;
+  return path.dirname(result.filePaths[0]);
 });
 
 // ── Cache ──

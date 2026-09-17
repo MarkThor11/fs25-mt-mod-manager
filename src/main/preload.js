@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld('api', {
   // Images
   images: {
     proxy: (url) => ipcRenderer.invoke('images:proxy', url),
-    readLocalAsDataUrl: (filePath) => ipcRenderer.invoke('images:readLocalAsDataUrl', filePath),
+    readLocalAsDataUrl: (filePath, options) => ipcRenderer.invoke('images:readLocalAsDataUrl', filePath, options),
     saveHeroBanner: (dataUrl) => ipcRenderer.invoke('images:saveHeroBanner', dataUrl),
     getHeroBanner: () => ipcRenderer.invoke('images:getHeroBanner'),
     saveHeroBannerOriginal: (dataUrl) => ipcRenderer.invoke('images:saveHeroBannerOriginal', dataUrl),
@@ -204,6 +204,7 @@ contextBridge.exposeInMainWorld('api', {
     selectFolder: (params) => ipcRenderer.invoke('dialog:selectFolder', params),
     selectFile: (params) => ipcRenderer.invoke('dialog:selectFile', params),
     selectImages: () => ipcRenderer.invoke('dialog:selectImages'),
+    selectFolderOrImage: () => ipcRenderer.invoke('dialog:selectFolderOrImage'),
   },
 
   // Cache
