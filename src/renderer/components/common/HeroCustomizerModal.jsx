@@ -40,6 +40,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
   const {
     homeShowHero, setHomeShowHero,
     heroBgType, heroCustomBg, heroDimmer, heroAlignment,
+    heroTextPosX, heroTextPosY,
     heroFont, heroTextSize, heroTextColor, heroTextShadow,
     heroShowText, heroShowSubtitle,
     updateHeroBannerSettings, resetHeroBannerSettings, setCustomHeroBanner
@@ -384,11 +385,80 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
           {/* ══ TAB 2: TYPOGRAPHY & LAYOUT ══ */}
           {activeTab === 'typography' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {/* Text Alignment */}
+              {/* Text Placement & Alignment */}
               <div>
-                <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '6px', display: 'block' }}>
-                  Text Placement & Alignment
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
+                    Text Placement & Alignment
+                  </label>
+                  <span style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: '700', background: 'var(--accent-dim)', padding: '2px 8px', borderRadius: '6px' }}>
+                    X: {Math.round(heroTextPosX ?? 10)}% • Y: {Math.round(heroTextPosY ?? 50)}%
+                  </span>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  background: 'rgba(59, 130, 246, 0.08)',
+                  border: '1px dashed rgba(59, 130, 246, 0.3)',
+                  borderRadius: '8px',
+                  marginBottom: '10px',
+                  fontSize: '11px',
+                  color: 'var(--text-secondary)'
+                }}>
+                  <Move size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                  <span>
+                    <strong>Free-form move:</strong> Click and drag the welcome greeting directly on the banner above to place it anywhere!
+                  </span>
+                </div>
+
+                <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Quick Snap Presets
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px', marginBottom: '10px' }}>
+                  {[
+                    { label: 'Left', x: 10, y: 50, align: 'left' },
+                    { label: 'Top Left', x: 10, y: 25, align: 'left' },
+                    { label: 'Center', x: 50, y: 50, align: 'center' },
+                    { label: 'Right', x: 88, y: 50, align: 'right' },
+                    { label: 'Bottom Left', x: 10, y: 75, align: 'left' },
+                  ].map((preset) => {
+                    const isPreset = Math.round(heroTextPosX ?? 10) === preset.x && Math.round(heroTextPosY ?? 50) === preset.y;
+                    return (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => updateHeroBannerSettings({
+                          heroTextPosX: preset.x,
+                          heroTextPosY: preset.y,
+                          heroAlignment: preset.align
+                        })}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '6px 8px',
+                          borderRadius: '6px',
+                          border: isPreset ? '1.5px solid var(--accent)' : '1px solid var(--border)',
+                          background: isPreset ? 'var(--accent-dim)' : 'var(--bg-tertiary)',
+                          color: isPreset ? 'var(--accent)' : 'var(--text-primary)',
+                          fontWeight: isPreset ? '700' : '500',
+                          fontSize: '11px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Text Justification
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                   {[
                     { id: 'left', label: 'Left Aligned', icon: AlignLeft },
@@ -400,24 +470,25 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                     return (
                       <button
                         key={a.id}
+                        type="button"
                         onClick={() => updateHeroBannerSettings({ heroAlignment: a.id })}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: '6px',
-                          padding: '7px 10px',
+                          padding: '6px 10px',
                           borderRadius: '8px',
                           border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
                           background: isSelected ? 'var(--accent-dim)' : 'var(--bg-tertiary)',
                           color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
                           fontWeight: '600',
-                          fontSize: '12px',
+                          fontSize: '11px',
                           cursor: 'pointer',
                           transition: 'all 0.15s ease'
                         }}
                       >
-                        <Icon size={14} /> {a.label}
+                        <Icon size={13} /> {a.label}
                       </button>
                     );
                   })}

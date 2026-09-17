@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  TrendingUp, Package, Download, RefreshCw, ArrowRight, Globe, Star, Users, Share2, Clipboard, DownloadCloud, Activity, Pencil, Palette, Camera
+  TrendingUp, Package, Download, RefreshCw, ArrowRight, Globe, Star, Users, Share2, Clipboard, DownloadCloud, Activity, Pencil, Palette, Camera, Move
 } from 'lucide-react';
 import ModCard from '../components/modhub/ModCard';
 import HeroCustomizerModal from '../components/common/HeroCustomizerModal';
@@ -37,12 +37,15 @@ export default function HomePage() {
     heroCustomBg,
     heroDimmer,
     heroAlignment,
+    heroTextPosX,
+    heroTextPosY,
     heroFont,
     heroTextSize,
     heroTextColor,
     heroTextShadow,
     heroShowText,
-    heroShowSubtitle
+    heroShowSubtitle,
+    updateHeroBannerSettings
   } = useSettingsStore();
 
   const getInstalledVersion = useInstalledLookup();
@@ -54,6 +57,64 @@ export default function HomePage() {
   const [loadingTopDownloaded, setLoadingTopDownloaded] = useState(homeTopDownloaded.length === 0);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState('');
+  const [isDraggingText, setIsDraggingText] = useState(false);
+  const bannerRef = useRef(null);
+  const dragStartRef = useRef({ startX: 0, startY: 0, heroRect: null, origX: 10, origY: 50, hasMoved: false });
+
+  const handleTextMouseDown = (e) => {
+    if (isEditingName || e.target.closest('.home-hero__editable-name') || e.target.closest('.home-hero__name-input')) {
+      return;
+    }
+    if (e.button !== 0) return;
+
+    const heroRect = bannerRef.current?.getBoundingClientRect();
+    if (!heroRect) return;
+
+    e.preventDefault();
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      heroRect,
+      origX: heroTextPosX ?? (heroAlignment === 'center' ? 50 : heroAlignment === 'right' ? 88 : 10),
+      origY: heroTextPosY ?? 50,
+      hasMoved: false
+    };
+
+    setIsDraggingText(true);
+  };
+
+  useEffect(() => {
+    if (!isDraggingText) return;
+
+    const handleMouseMove = (e) => {
+      const { startX, startY, heroRect, origX, origY } = dragStartRef.current;
+      const deltaX = e.clientX - startX;
+      const deltaY = e.clientY - startY;
+
+      if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+        dragStartRef.current.hasMoved = true;
+      }
+
+      const deltaXPct = (deltaX / heroRect.width) * 100;
+      const deltaYPct = (deltaY / heroRect.height) * 100;
+
+      const newX = Math.min(Math.max(5, Math.round(origX + deltaXPct)), 95);
+      const newY = Math.min(Math.max(10, Math.round(origY + deltaYPct)), 90);
+
+      updateHeroBannerSettings({ heroTextPosX: newX, heroTextPosY: newY });
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingText(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingText]);
 
   useEffect(() => {
     fetchSavegames();
@@ -125,12 +186,16 @@ export default function HomePage() {
       {/* Hero */}
       {homeShowHero && (
         <div 
+          ref={bannerRef}
           className={`home-hero home-hero--align-${heroAlignment || 'left'} home-hero--font-${heroFont || 'modern'} home-hero--size-${heroTextSize || 'standard'} ${!heroShowText ? 'home-hero--photo-mode' : ''}`}
-          style={hasCustomBackground ? {
-            backgroundImage: bannerBgUrl,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          } : undefined}
+          style={{
+            ...(hasCustomBackground ? {
+              backgroundImage: bannerBgUrl,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            } : {}),
+            zIndex: showCustomizer ? 1120 : undefined
+          }}
         >
           {/* Dimmer overlay for text contrast */}
           {hasCustomBackground && (
@@ -151,7 +216,29 @@ export default function HomePage() {
           </button>
 
           {heroShowText ? (
-            <div className="home-hero__content">
+            <div 
+              className={`home-hero__content ${isDraggingText ? 'home-hero__content--dragging' : ''}`}
+              onMouseDown={handleTextMouseDown}
+              style={{
+                left: `${heroTextPosX ?? (heroAlignment === 'center' ? 50 : heroAlignment === 'right' ? 88 : 10)}%`,
+                top: `${heroTextPosY ?? 50}%`,
+                transform: `translate(-${heroTextPosX ?? (heroAlignment === 'center' ? 50 : heroAlignment === 'right' ? 88 : 10)}%, -${heroTextPosY ?? 50}%)`,
+                textAlign: heroAlignment || ((heroTextPosX ?? 10) < 35 ? 'left' : (heroTextPosX ?? 10) > 65 ? 'right' : 'center'),
+                maxWidth: '680px',
+                width: 'max-content',
+                cursor: isDraggingText ? 'grabbing' : 'grab',
+                userSelect: isDraggingText ? 'none' : 'auto'
+              }}
+            >
+              {/* Drag Position Handle */}
+              <div 
+                className="home-hero__drag-handle"
+                title="Click and drag anywhere to move text position on the banner"
+              >
+                <Move size={11} />
+                <span>Drag to move</span>
+              </div>
+
               <h1 
                 className="home-hero__title"
                 style={{
