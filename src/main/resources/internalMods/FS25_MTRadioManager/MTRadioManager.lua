@@ -200,6 +200,92 @@ function MTRadioManager:initHooks()
     end
 
     print("[MTRadioManager] SoundPlayer radio hooks initialized successfully.")
+    
+    self:checkAutoNavigation()
+    self:setupAutoNavigationHooks()
+end
+
+MTRadioManager.targetNavScreen = nil
+MTRadioManager.hasNavigated = false
+
+function MTRadioManager:checkAutoNavigation()
+    local appPath = getAppPath()
+    local navFile = appPath .. "modSettings/MTMultiplayerNavigation.xml"
+    
+    if fileExists ~= nil and fileExists(navFile) then
+        local xml = loadXMLFile("MTNavXML", navFile)
+        if xml ~= nil and xml ~= 0 then
+            local target = getXMLString(xml, "MTMultiplayerNavigation.targetScreen")
+            delete(xml)
+            
+            if target ~= nil and target ~= "" and target ~= "NONE" then
+                self.targetNavScreen = target
+                print("[MTRadioManager] MultiPlayer Auto-Navigation target found: " .. tostring(target))
+                
+                -- Reset the XML file so it doesn't trigger on subsequent menu visits
+                local resetXml = '<?xml version="1.0" encoding="utf-8" ?>\n<MTMultiplayerNavigation>\n  <targetScreen>NONE</targetScreen>\n</MTMultiplayerNavigation>'
+                local f = io.open(navFile, "w")
+                if f then
+                    f:write(resetXml)
+                    f:close()
+                end
+            end
+        end
+    end
+end
+
+function MTRadioManager:setupAutoNavigationHooks()
+    local function executeNav(screenSelf)
+        if MTRadioManager.targetNavScreen ~= nil and not MTRadioManager.hasNavigated then
+            MTRadioManager.hasNavigated = true
+            local target = MTRadioManager.targetNavScreen
+            print("[MTRadioManager] Auto-navigating MP menu to: " .. tostring(target))
+            
+            if target == "CREATE_GAME" then
+                if screenSelf.onClickCreateGame ~= nil then
+                    screenSelf:onClickCreateGame()
+                elseif screenSelf.onClickCreate ~= nil then
+                    screenSelf:onClickCreate()
+                elseif screenSelf.onClickHost ~= nil then
+                    screenSelf:onClickHost()
+                elseif screenSelf.boxCreate ~= nil and screenSelf.boxCreate.onClick ~= nil then
+                    screenSelf.boxCreate:onClick()
+                end
+            elseif target == "JOIN_GAME" then
+                if screenSelf.onClickJoinGame ~= nil then
+                    screenSelf:onClickJoinGame()
+                elseif screenSelf.onClickJoin ~= nil then
+                    screenSelf:onClickJoin()
+                elseif screenSelf.boxJoin ~= nil and screenSelf.boxJoin.onClick ~= nil then
+                    screenSelf.boxJoin:onClick()
+                end
+            end
+        end
+    end
+
+    if MPMenu ~= nil then
+        local origOnOpen = MPMenu.onOpen
+        MPMenu.onOpen = function(self, ...)
+            if origOnOpen ~= nil then origOnOpen(self, ...) end
+            executeNav(self)
+        end
+    end
+
+    if MultiplayerScreen ~= nil then
+        local origOnOpen = MultiplayerScreen.onOpen
+        MultiplayerScreen.onOpen = function(self, ...)
+            if origOnOpen ~= nil then origOnOpen(self, ...) end
+            executeNav(self)
+        end
+    end
+
+    if MainMenu ~= nil then
+        local origOnOpen = MainMenu.onOpen
+        MainMenu.onOpen = function(self, ...)
+            if origOnOpen ~= nil then origOnOpen(self, ...) end
+            executeNav(self)
+        end
+    end
 end
 
 function MTRadioManager:loadMap(mapName)

@@ -220,6 +220,22 @@ async function launch(options = {}) {
             targetModsPath = serverPrep.targetFolder;
             console.log(`[LAUNCH] Dedicated Server Save detected (Slot ${options.savegameIndex}). Using isolated mods folder: ${targetModsPath}`);
           }
+          // Configure in-game auto navigation: Player saves -> JOIN_GAME, Host/Create saves -> CREATE_GAME
+          let targetScreen = 'CREATE_GAME';
+          try {
+            const serverMeta = await fs.readJson(serverMetaPath).catch(() => ({}));
+            if (serverMeta.accessLevel === 'player' || serverMeta.isImportedPlayerZip) {
+              targetScreen = 'JOIN_GAME';
+            }
+          } catch (e) {}
+
+          const modSettingsDir = path.join(fs25Path, 'modSettings');
+          await fs.ensureDir(modSettingsDir);
+          const navXmlPath = path.join(modSettingsDir, 'MTMultiplayerNavigation.xml');
+          const navXmlContent = `<?xml version="1.0" encoding="utf-8" ?>\n<MTMultiplayerNavigation>\n  <targetScreen>${targetScreen}</targetScreen>\n</MTMultiplayerNavigation>`;
+          await fs.writeFile(navXmlPath, navXmlContent, 'utf8');
+          console.log(`[LAUNCH] Configured Multiplayer auto-navigation target: ${targetScreen}`);
+
           // Automatically stash single player saves into quarantine so in-game Host Game menu ONLY displays multiplayer saves
           console.log(`[LAUNCH] Quarantining Single Player saves so in-game multiplayer menu only lists MP saves...`);
           await savegameManager.stashSinglePlayerSaves();
