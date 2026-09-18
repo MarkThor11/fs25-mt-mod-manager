@@ -1992,26 +1992,29 @@ async function getAllSavegames() {
                         }) || instances[0];
                         if (activeInst && activeInst['@_typeName']) {
                             currentWeather = activeInst['@_typeName'].toUpperCase();
-                        } else if (parseFloat(env.weather?.ground?.['@_wetness'] || 0) > 0.5) {
-                            currentWeather = 'RAIN';
                         }
                     }
                 } catch (e) {}
             }
+
             // Read server metadata if this is a multiplayer server save
             let serverMeta = null;
             const serverMetaPath = path.join(savePath, 'server_meta.json');
             if (fs.existsSync(serverMetaPath)) {
                 try {
                     serverMeta = await fs.readJson(serverMetaPath);
+                    // Auto-heal local host saves: host on their own machine always has admin rights
+                    if (serverMeta && serverMeta.accessLevel === 'player' && !serverMeta.isImportedPlayerZip) {
+                        serverMeta.accessLevel = 'admin';
+                        serverMeta.isLocked = false;
+                        try { fs.writeJsonSync(serverMetaPath, serverMeta, { spaces: 2 }); } catch (e) {}
+                    }
                 } catch (e) {
                     debugLog('[SAVEGAMES] Error reading server_meta.json: ' + e.message);
                 }
             }
 
             savegames.push({
-                index: i,
-                path: savePath,
                 folderName: `savegame${i}`,
                 farmName: settings['@_savegameName'] || settings.savegameName || 'Unnamed Farm',
                 playerName: settings['@_playerName'] || settings.playerName || 'Farmer',
