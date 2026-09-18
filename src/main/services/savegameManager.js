@@ -5315,7 +5315,9 @@ async function prepareServerModsFolder(slotIndex, savePath) {
 
         const xml = await fs.readFile(careerPath, 'utf8');
         const data = parser.parse(xml);
+        const APP_HELPER_MODS = ['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
         const requiredMods = (Array.isArray(data.careerSavegame?.mod) ? data.careerSavegame.mod : (data.careerSavegame?.mod ? [data.careerSavegame.mod] : (data.careerSavegame?.mods?.mod || [])))
+            .filter(m => !APP_HELPER_MODS.includes((m['@_modName'] || m.modName || '').toLowerCase()))
             .map(m => ({
                 modName: m['@_modName'] || m.modName,
                 version: m['@_version'] || m.version
