@@ -1,6 +1,6 @@
 import { CustomSlider } from '../components/common/CustomSlider';
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Radio as RadioIcon, ExternalLink, Music, Globe, Check, Volume2, AlertCircle, RefreshCw, Disc, LogIn, Play, Pause, UserCheck, Link2, X } from 'lucide-react';
+import { Search, Plus, Trash2, Radio as RadioIcon, Music, Globe, Check, Volume2, AlertCircle, RefreshCw, Disc, LogIn, Play, Pause, UserCheck, Link2, X } from 'lucide-react';
 import { useRadioStore } from '../store/useRadioStore';
 import { useToastStore } from '../store/useToastStore';
 
@@ -286,27 +286,6 @@ const RadioPage = () => {
                                 Operate your Spotify playback in the desktop app while playing FS25.
                             </p>
                         </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button 
-                            onClick={handleOpenSpotifyApp}
-                            style={{ 
-                                padding: '8px 16px', 
-                                borderRadius: '10px', 
-                                border: 'none', 
-                                background: '#1DB954', 
-                                color: 'white', 
-                                fontWeight: '700', 
-                                fontSize: '12px', 
-                                cursor: 'pointer', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '6px' 
-                            }}
-                        >
-                            <ExternalLink size={14} /> Open Spotify Player
-                        </button>
                     </div>
                 </div>
 
