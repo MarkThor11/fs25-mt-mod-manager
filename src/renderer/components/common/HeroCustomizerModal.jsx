@@ -1184,16 +1184,6 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                             >
                               <Images size={14} /> Select Photos for Slideshow...
                             </button>
-
-                            <button
-                              type="button"
-                              className="btn btn--secondary"
-                              onClick={handleAddHandpickedImages}
-                              style={{ gap: '6px', fontSize: '12px', padding: '8px 12px' }}
-                              title="Browse individual files directly from Windows File Explorer"
-                            >
-                              <Upload size={14} /> Add from PC...
-                            </button>
                           </div>
                           
                           {heroSlideshowImages && heroSlideshowImages.length > 0 && (
@@ -1220,7 +1210,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                           </div>
                         ) : (
                           <div style={{ padding: '16px', textAlign: 'center', fontSize: '11px', color: 'var(--text-tertiary)', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
-                            No handpicked photos yet. Click <strong>Add Photos from PC...</strong> to pick your favorite screenshots and wallpapers.
+                            No handpicked photos yet. Click <strong>Select Photos for Slideshow...</strong> to pick your favorite screenshots and wallpapers.
                           </div>
                         )}
                       </div>
