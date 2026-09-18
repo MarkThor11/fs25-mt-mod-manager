@@ -5266,7 +5266,6 @@ async function prepareServerModsFolder(slotIndex, savePath) {
         const xml = await fs.readFile(careerPath, 'utf8');
         const data = parser.parse(xml);
         const requiredMods = (Array.isArray(data.careerSavegame?.mod) ? data.careerSavegame.mod : (data.careerSavegame?.mod ? [data.careerSavegame.mod] : (data.careerSavegame?.mods?.mod || [])))
-            .filter(m => !['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'].includes((m['@_modName'] || m.modName || '').toLowerCase()))
             .map(m => ({
                 modName: m['@_modName'] || m.modName,
                 version: m['@_version'] || m.version
@@ -5362,7 +5361,17 @@ async function prepareServerModsFolder(slotIndex, savePath) {
                     mismatchedCount++;
                 }
             } else {
-                missingCount++;
+                const internalZipPath = path.join(__dirname, '..', 'resources', 'internalMods', `${req.modName}.zip`);
+                if (fs.existsSync(internalZipPath)) {
+                    if (!fs.existsSync(targetFilePath)) {
+                        try {
+                            await fs.copy(internalZipPath, targetFilePath);
+                        } catch (e) {}
+                    }
+                    linkedCount++;
+                } else {
+                    missingCount++;
+                }
             }
         }
 
