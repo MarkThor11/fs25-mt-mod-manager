@@ -33,6 +33,44 @@ const parser = new XMLParser({
     parseTagValue: false
 });
 
+function sanitizeCareerSavegameXml(xmlContent) {
+    if (!xmlContent) return xmlContent;
+    // Fix malformed <mod .../> tags with extra attribute garbage caused by quotes in mod titles
+    return xmlContent.replace(/<mod\s+([^>]+)\/?>/gi, (match, attrString) => {
+        const modNameMatch = attrString.match(/modName=["']([^"']+)["']/i);
+        if (!modNameMatch) return match;
+        const modName = modNameMatch[1];
+
+        let title = modName;
+        const titleMatch = attrString.match(/title=["']([^"']+)["']/i);
+        if (titleMatch) {
+            title = titleMatch[1];
+        }
+
+        let version = '1.0.0.0';
+        const versionMatch = attrString.match(/version=["']([^"']+)["']/i);
+        if (versionMatch) {
+            version = versionMatch[1];
+        }
+
+        let required = 'false';
+        const reqMatch = attrString.match(/required=["']([^"']+)["']/i);
+        if (reqMatch) {
+            required = reqMatch[1];
+        }
+
+        let fileHash = '';
+        const hashMatch = attrString.match(/fileHash=["']([^"']+)["']/i);
+        if (hashMatch) {
+            fileHash = hashMatch[1];
+        }
+
+        const safeTitle = title.replace(/"/g, "'").replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        return `<mod modName="${modName}" title="${safeTitle}" version="${version}" required="${required}" fileHash="${fileHash}"/>`;
+    });
+}
+
 // Helper to safely extract arrays from parsed XML
 const getXMLArray = (obj, rootTag, itemTag) => {
     if (!obj) return [];
@@ -537,7 +575,13 @@ async function setSavegameMods(savegamePath, mods) {
         if (m && m['@_modName']) {
             const nameLow = m['@_modName'].toLowerCase();
             if (m['@_required'] === 'true' || internalMods.includes(nameLow)) {
-                newModsMap.set(m['@_modName'], m);
+                newModsMap.set(m['@_modName'], {
+                    '@_modName': m['@_modName'],
+                    '@_title': String(m['@_title'] || m['@_modName']).replace(/"/g, "'"),
+                    '@_version': m['@_version'] || '1.0.0.0',
+                    '@_required': m['@_required'] || 'false',
+                    '@_fileHash': m['@_fileHash'] || ''
+                });
             }
         }
     });
@@ -545,12 +589,12 @@ async function setSavegameMods(savegamePath, mods) {
     // Then, add/update the user-selected mods
     mods.forEach(m => {
         const isMap = m.required || (mapId && m.modName === mapId.split('.')[0]) || (mapTitle && m.title === mapTitle);
-        // Exclude the Player Positions mod if we want to hide it completely from being listed, BUT wait, if we don't list it, it won't load! 
-        // We will keep it but maybe set something else? Actually let's just add it normally here.
         const existing = existingLookup.get(m.modName.toLowerCase());
+        const rawTitle = m.title || (existing && existing['@_title']) || m.modName || '';
+        const cleanTitle = String(rawTitle).replace(/"/g, "'");
         newModsMap.set(m.modName, {
             '@_modName': m.modName,
-            '@_title': String(m.title || (existing && existing['@_title']) || m.modName || '').replace(/"/g, '&quot;'),
+            '@_title': cleanTitle,
             '@_version': m.version || (existing && existing['@_version']) || '1.0.0.0',
             '@_required': isMap ? 'true' : (existing && existing['@_required'] ? existing['@_required'] : 'false'),
             '@_fileHash': (existing && existing['@_fileHash']) || m.fileHash || ''
@@ -566,6 +610,7 @@ async function setSavegameMods(savegamePath, mods) {
     data.careerSavegame['@_valid'] = 'true';
 
     let newXml = builder.build(data);
+    newXml = sanitizeCareerSavegameXml(newXml);
     
     // Ensure XML declaration is strictly formatted so the engine accepts it
     if (!newXml.startsWith('<?xml')) {
