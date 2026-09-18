@@ -1,6 +1,6 @@
 import { CustomSlider } from '../components/common/CustomSlider';
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Radio as RadioIcon, Music, Globe, Check, Volume2, AlertCircle, RefreshCw, Disc, LogIn, Play, Pause, UserCheck, Link2, X } from 'lucide-react';
+import { Search, Plus, Trash2, Radio as RadioIcon, Music, Globe, Check, Volume2, AlertCircle, RefreshCw, Play, Pause } from 'lucide-react';
 import { useRadioStore } from '../store/useRadioStore';
 import { useToastStore } from '../store/useToastStore';
 
@@ -25,7 +25,6 @@ const RadioPage = () => {
         stations, searchResults, isSearching, 
         fetchRadios, searchStations, addStation, removeStation,
         playingStationUrl, setPlayingStation,
-        spotifyAccount, setSpotifyAccount, clearSpotifyAccount,
         overrideBuiltins, isCompanionInstalled, setOverrideBuiltins
     } = useRadioStore();
     const { toast } = useToastStore();
@@ -36,7 +35,6 @@ const RadioPage = () => {
     const [viewMode, setViewMode] = useState('search'); // 'search' or 'mine'
     const [isBuffering, setIsBuffering] = useState(false);
     const [volume, setVolume] = useState(0.8);
-    const [spotifyInput, setSpotifyInput] = useState('');
 
     const audioRef = React.useRef(null);
 
@@ -106,21 +104,6 @@ const RadioPage = () => {
         else toast.error(result.error || 'Failed to add station');
     };
 
-    const handleSaveSpotifyAccount = async () => {
-        if (!spotifyInput.trim()) {
-            toast.error('Please enter your Spotify profile URL or username.');
-            return;
-        }
-        const accountData = {
-            username: spotifyInput.trim().replace('https://open.spotify.com/user/', '').split('?')[0],
-            url: spotifyInput.trim().startsWith('http') ? spotifyInput.trim() : `https://open.spotify.com/user/${spotifyInput.trim()}`,
-            linkedAt: new Date().toISOString()
-        };
-        setSpotifyAccount(accountData);
-        setSpotifyInput('');
-        toast.success(`Spotify account linked (${accountData.username})!`);
-    };
-
     const handleRemove = async (href) => {
         if (!confirm('Remove this station from your game?')) return;
         const result = await removeStation(href);
@@ -137,37 +120,6 @@ const RadioPage = () => {
         toast.success('All custom stations cleared');
     };
 
-    const handleOpenSpotifyApp = async () => {
-        try {
-            if (window.api?.radio?.launchSpotify) {
-                const res = await window.api.radio.launchSpotify();
-                if (res?.success) {
-                    if (res.method === 'app') {
-                        toast.success('Opening Spotify App...');
-                    } else {
-                        toast.info('Spotify desktop app not found. Opened Spotify in browser.');
-                    }
-                    return;
-                }
-            }
-            if (window.api?.shell?.openExternal) {
-                await window.api.shell.openExternal('https://open.spotify.com');
-            } else {
-                window.open('https://open.spotify.com', '_blank');
-            }
-        } catch (e) {
-            console.error('Failed to launch Spotify:', e);
-            window.open('https://open.spotify.com', '_blank');
-        }
-    };
-
-    const handleOpenSpotifyWeb = () => {
-        try {
-            if (window.api?.shell?.openExternal) window.api.shell.openExternal('https://open.spotify.com');
-            else window.open('https://open.spotify.com', '_blank');
-        } catch (e) {}
-    };
-
     return (
         <div className="page animate-fade-in custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', overflowY: 'auto' }}>
             {/* Header Area */}
@@ -177,34 +129,11 @@ const RadioPage = () => {
                         <div style={{ padding: '10px', background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: '12px' }}>
                             <RadioIcon size={24} />
                         </div>
-                        <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Radio Stations & Spotify</h1>
+                        <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>FS25 Radio Stations</h1>
                     </div>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '650px', margin: 0 }}>
-                        Link your Spotify account, add in-game radio channels to FS25, and operate playback externally.
+                        Search, preview, and add live internet radio stations directly into your Farming Simulator 25 tractor radio.
                     </p>
-                </div>
-
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    <button 
-                        onClick={handleOpenSpotifyApp} 
-                        style={{ 
-                            padding: '10px 18px', 
-                            background: '#1DB954', 
-                            color: 'white', 
-                            border: 'none', 
-                            borderRadius: '10px', 
-                            fontWeight: '700', 
-                            fontSize: '13px', 
-                            cursor: 'pointer', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '8px', 
-                            boxShadow: '0 4px 14px rgba(29, 185, 84, 0.3)' 
-                        }} 
-                        title="Open Spotify Desktop App (falls back to web if not installed)"
-                    >
-                        <Disc size={18} /> Launch Spotify App
-                    </button>
                 </div>
             </div>
 
@@ -251,93 +180,6 @@ const RadioPage = () => {
                         </label>
                     </div>
                 </div>
-            </div>
-
-            {/* Spotify Account Sign-In & Link Box */}
-            <div style={{ 
-                background: 'var(--bg-card)', 
-                borderRadius: '16px', 
-                padding: '20px', 
-                border: spotifyAccount ? '1px solid #1DB954' : '1px solid rgba(29, 185, 84, 0.35)', 
-                boxShadow: spotifyAccount ? '0 0 20px rgba(29, 185, 84, 0.15)' : '0 8px 32px rgba(0, 0, 0, 0.15)', 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: '16px' 
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(29, 185, 84, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1DB954', flexShrink: 0 }}>
-                            <Disc size={24} />
-                        </div>
-                        <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Spotify Integration (External App)</h3>
-                                {spotifyAccount ? (
-                                    <span style={{ padding: '2px 10px', borderRadius: '12px', background: 'rgba(29, 185, 84, 0.2)', color: '#1DB954', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <UserCheck size={12} /> Account Linked
-                                    </span>
-                                ) : (
-                                    <span style={{ padding: '2px 10px', borderRadius: '12px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '600' }}>
-                                        Not Linked
-                                    </span>
-                                )}
-                            </div>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                Operate your Spotify playback in the desktop app while playing FS25.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {spotifyAccount ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(29, 185, 84, 0.08)', borderRadius: '12px', border: '1px solid rgba(29, 185, 84, 0.2)', flexWrap: 'wrap', gap: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Link2 size={16} style={{ color: '#1DB954' }} />
-                            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>Linked Account:</span>
-                            <a href={spotifyAccount.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#1DB954', fontWeight: '700', textDecoration: 'underline' }}>
-                                {spotifyAccount.username}
-                            </a>
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <button onClick={clearSpotifyAccount} style={{ padding: '6px 10px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <X size={14} /> Unlink
-                            </button>
-                        </div>
-                    </div>
-                ) : (
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        <input 
-                            type="text"
-                            placeholder="Enter Spotify Profile URL or Username (e.g. https://open.spotify.com/user/...)"
-                            value={spotifyInput}
-                            onChange={(e) => setSpotifyInput(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSaveSpotifyAccount()}
-                            style={{
-                                flex: 1,
-                                minWidth: '280px',
-                                padding: '10px 14px',
-                                background: 'var(--bg-tertiary)',
-                                border: '1px solid var(--border)',
-                                borderRadius: '10px',
-                                color: 'var(--text-primary)',
-                                outline: 'none',
-                                fontSize: '13px'
-                            }}
-                        />
-                        <button 
-                            onClick={handleSaveSpotifyAccount}
-                            style={{ padding: '10px 18px', background: '#1DB954', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                        >
-                            <Link2 size={16} /> Save & Link Account
-                        </button>
-                        <button 
-                            onClick={handleOpenSpotifyWeb}
-                            style={{ padding: '10px 14px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: '10px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                        >
-                            <LogIn size={16} /> Sign In on Web
-                        </button>
-                    </div>
-                )}
             </div>
 
             {/* In-Game Radio Section */}
@@ -455,28 +297,19 @@ const RadioPage = () => {
                         )}
                         {stations.length > 0 ? (
                             stations.map((station, idx) => {
-                                const isSpotify = station.href && station.href.toLowerCase().includes('spotify');
                                 return (
-                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--bg-card)', borderRadius: '12px', border: isSpotify ? '1px solid #1DB954' : '1px solid var(--border)' }}>
-                                        <div style={{ width: '40px', height: '40px', background: isSpotify ? 'rgba(29, 185, 84, 0.15)' : 'var(--accent-dim)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isSpotify ? '#1DB954' : 'var(--accent)' }}>
-                                            {isSpotify ? <Disc size={20} /> : <Music size={20} />}
+                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                        <div style={{ width: '40px', height: '40px', background: 'var(--accent-dim)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                                            <Music size={20} />
                                         </div>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', wordBreak: 'break-all' }}>
-                                                {isSpotify ? 'Spotify Account Radio Channel (External App)' : station.href}
+                                                {station.name || station.href}
                                             </div>
                                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                                {isSpotify ? (spotifyAccount ? `Linked Account: ${spotifyAccount.username}` : 'External Spotify App Control') : 'Internet Stream'}
+                                                {station.href}
                                             </div>
                                         </div>
-                                        {isSpotify && (
-                                            <button 
-                                                onClick={handleOpenSpotifyApp}
-                                                style={{ padding: '8px 14px', background: '#1DB954', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                            >
-                                                <ExternalLink size={14} /> Open Spotify
-                                            </button>
-                                        )}
                                         <button onClick={() => handleRemove(station.href)} style={{ padding: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', cursor: 'pointer' }} title="Remove from Game"><Trash2 size={18} /></button>
                                     </div>
                                 );
