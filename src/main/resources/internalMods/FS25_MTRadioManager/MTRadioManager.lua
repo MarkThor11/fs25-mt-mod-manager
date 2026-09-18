@@ -234,48 +234,48 @@ function MTRadioManager:checkAutoNavigation()
     end
 end
 
+MTRadioManager.hasNavigatedToMP = false
+
 function MTRadioManager:setupAutoNavigationHooks()
-    local function executeNav(screenSelf)
-        if MTRadioManager.targetNavScreen ~= nil and not MTRadioManager.hasNavigated then
-            MTRadioManager.hasNavigated = true
-            local target = MTRadioManager.targetNavScreen
-            print("[MTRadioManager] Auto-navigating MP menu to: " .. tostring(target))
-            
-            if target == "CREATE_GAME" then
-                if screenSelf.onClickCreateGame ~= nil then
-                    screenSelf:onClickCreateGame()
-                elseif screenSelf.onClickCreate ~= nil then
-                    screenSelf:onClickCreate()
-                elseif screenSelf.onClickHost ~= nil then
-                    screenSelf:onClickHost()
-                elseif screenSelf.boxCreate ~= nil and screenSelf.boxCreate.onClick ~= nil then
-                    screenSelf.boxCreate:onClick()
-                end
-            elseif target == "JOIN_GAME" then
-                if screenSelf.onClickJoinGame ~= nil then
-                    screenSelf:onClickJoinGame()
-                elseif screenSelf.onClickJoin ~= nil then
-                    screenSelf:onClickJoin()
-                elseif screenSelf.boxJoin ~= nil and screenSelf.boxJoin.onClick ~= nil then
-                    screenSelf.boxJoin:onClick()
-                end
+    local function navFromMainMenu(mainMenuSelf)
+        if MTRadioManager.targetNavScreen ~= nil and MTRadioManager.targetNavScreen ~= "NONE" and not MTRadioManager.hasNavigatedToMP then
+            MTRadioManager.hasNavigatedToMP = true
+            print("[MTRadioManager] MainMenu opened: Triggering Multiplayer menu transition...")
+            if mainMenuSelf.onClickMultiplayer ~= nil then
+                mainMenuSelf:onClickMultiplayer()
+            elseif mainMenuSelf.onClickMP ~= nil then
+                mainMenuSelf:onClickMP()
+            elseif mainMenuSelf.buttonMultiplayer ~= nil and mainMenuSelf.buttonMultiplayer.onClick ~= nil then
+                mainMenuSelf.buttonMultiplayer:onClick()
             end
         end
     end
 
-    if MPMenu ~= nil then
-        local origOnOpen = MPMenu.onOpen
-        MPMenu.onOpen = function(self, ...)
-            if origOnOpen ~= nil then origOnOpen(self, ...) end
-            executeNav(self)
-        end
-    end
-
-    if MultiplayerScreen ~= nil then
-        local origOnOpen = MultiplayerScreen.onOpen
-        MultiplayerScreen.onOpen = function(self, ...)
-            if origOnOpen ~= nil then origOnOpen(self, ...) end
-            executeNav(self)
+    local function navFromMPMenu(mpSelf)
+        if MTRadioManager.targetNavScreen ~= nil and MTRadioManager.targetNavScreen ~= "NONE" and not MTRadioManager.hasNavigated then
+            MTRadioManager.hasNavigated = true
+            local target = MTRadioManager.targetNavScreen
+            print("[MTRadioManager] MPMenu opened: Auto-navigating to: " .. tostring(target))
+            
+            if target == "CREATE_GAME" then
+                if mpSelf.onClickCreateGame ~= nil then
+                    mpSelf:onClickCreateGame()
+                elseif mpSelf.onClickCreate ~= nil then
+                    mpSelf:onClickCreate()
+                elseif mpSelf.onClickHost ~= nil then
+                    mpSelf:onClickHost()
+                elseif mpSelf.boxCreate ~= nil and mpSelf.boxCreate.onClick ~= nil then
+                    mpSelf.boxCreate:onClick()
+                end
+            elseif target == "JOIN_GAME" then
+                if mpSelf.onClickJoinGame ~= nil then
+                    mpSelf:onClickJoinGame()
+                elseif mpSelf.onClickJoin ~= nil then
+                    mpSelf:onClickJoin()
+                elseif mpSelf.boxJoin ~= nil and mpSelf.boxJoin.onClick ~= nil then
+                    mpSelf.boxJoin:onClick()
+                end
+            end
         end
     end
 
@@ -283,7 +283,23 @@ function MTRadioManager:setupAutoNavigationHooks()
         local origOnOpen = MainMenu.onOpen
         MainMenu.onOpen = function(self, ...)
             if origOnOpen ~= nil then origOnOpen(self, ...) end
-            executeNav(self)
+            navFromMainMenu(self)
+        end
+    end
+
+    if MPMenu ~= nil then
+        local origOnOpen = MPMenu.onOpen
+        MPMenu.onOpen = function(self, ...)
+            if origOnOpen ~= nil then origOnOpen(self, ...) end
+            navFromMPMenu(self)
+        end
+    end
+
+    if MultiplayerScreen ~= nil then
+        local origOnOpen = MultiplayerScreen.onOpen
+        MultiplayerScreen.onOpen = function(self, ...)
+            if origOnOpen ~= nil then origOnOpen(self, ...) end
+            navFromMPMenu(self)
         end
     end
 end
