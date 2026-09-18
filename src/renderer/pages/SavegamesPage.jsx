@@ -2512,89 +2512,79 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 <MapImage mapTitle={getLocalizedString(save.mapTitle, 'Unknown Map')} mapId={save.mapId} mods={mods} />
             </div>
 
-            {/* Top Badges */}
-            {save.isServerSave && (
-              <div style={{ 
-                position: 'absolute', 
-                top: 8, 
-                right: isPlaying ? 116 : ((save.hasTemplate || save.isGhost) ? 96 : 8), 
-                background: save.serverAccessLevel === 'admin' ? 'rgba(234, 179, 8, 0.2)' : 'rgba(6, 182, 212, 0.2)', 
-                border: `1px solid ${save.serverAccessLevel === 'admin' ? '#eab308' : '#06b6d4'}`, 
-                color: save.serverAccessLevel === 'admin' ? '#fde047' : '#22d3ee', 
-                fontSize: 8, 
-                fontWeight: 900, 
-                padding: '2px 8px', 
-                borderRadius: 4, 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 4, 
-                boxShadow: `0 0 10px ${save.serverAccessLevel === 'admin' ? 'rgba(234, 179, 8, 0.4)' : 'rgba(6, 182, 212, 0.4)'}`, 
-                letterSpacing: 0.5, 
-                zIndex: 5 
-              }}>
-                {save.serverAccessLevel === 'admin' ? <Crown size={10} /> : <Lock size={10} />}
-                {save.serverAccessLevel === 'admin' ? 'MP SERVER (ADMIN)' : 'MP SERVER (PLAYER)'}
-              </div>
-            )}
+            {/* Top Badges Container */}
+            <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', gap: 6, zIndex: 5 }}>
+              {isPlaying && (
+                <div style={{ 
+                  background: 'rgba(34, 197, 94, 0.25)', 
+                  border: '1px solid #22c55e', 
+                  color: '#4ade80', 
+                  fontSize: 8, 
+                  fontWeight: 900, 
+                  padding: '2px 8px', 
+                  borderRadius: 4, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 5, 
+                  boxShadow: '0 0 12px rgba(34, 197, 94, 0.6)', 
+                  letterSpacing: 0.5 
+                }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 6px #22c55e' }} />
+                  ACTIVE IN-GAME
+                </div>
+              )}
 
-            {save.isGhost && (
-              <div style={{ 
-                position: 'absolute', 
-                top: 8, 
-                right: save.isServerSave ? 140 : 8, 
-                background: 'var(--accent)', 
-                color: 'white', 
-                fontSize: 8, 
-                fontWeight: 900, 
-                padding: '2px 6px', 
-                borderRadius: 4, 
-                letterSpacing: 0.5, 
-                boxShadow: '0 0 10px var(--accent)'
-              }}>
-                READY FOR FIRST LAUNCH
-              </div>
-            )}
-            {isPlaying && (
-              <div style={{ 
-                position: 'absolute', 
-                top: 8, 
-                right: (save.hasTemplate || save.isGhost || save.isServerSave) ? 96 : 8, 
-                background: 'rgba(34, 197, 94, 0.25)', 
-                border: '1px solid #22c55e', 
-                color: '#4ade80', 
-                fontSize: 8, 
-                fontWeight: 900, 
-                padding: '2px 8px', 
-                borderRadius: 4, 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 5, 
-                boxShadow: '0 0 12px rgba(34, 197, 94, 0.6)', 
-                letterSpacing: 0.5, 
-                zIndex: 5
-              }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 6px #22c55e' }} />
-                ACTIVE IN-GAME
-              </div>
-            )}
-            {save.hasTemplate && !save.isGhost && !save.isServerSave && (
-              <div style={{ 
-                position: 'absolute', 
-                top: 8, 
-                right: 8, 
-                background: 'var(--accent-dim)', 
-                color: 'var(--accent)', 
-                fontSize: 8, 
-                fontWeight: 900, 
-                padding: '2px 6px', 
-                borderRadius: 4, 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 4
-              }}>
-                <Zap size={12} fill="var(--accent)" /> AUTOMATED
-              </div>
-            )}
+              {save.isServerSave && (
+                <div style={{ 
+                  background: save.serverAccessLevel === 'admin' ? 'rgba(234, 179, 8, 0.2)' : 'rgba(6, 182, 212, 0.2)', 
+                  border: `1px solid ${save.serverAccessLevel === 'admin' ? '#eab308' : '#06b6d4'}`, 
+                  color: save.serverAccessLevel === 'admin' ? '#fde047' : '#22d3ee', 
+                  fontSize: 8, 
+                  fontWeight: 900, 
+                  padding: '2px 8px', 
+                  borderRadius: 4, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 4, 
+                  boxShadow: `0 0 10px ${save.serverAccessLevel === 'admin' ? 'rgba(234, 179, 8, 0.4)' : 'rgba(6, 182, 212, 0.4)'}`, 
+                  letterSpacing: 0.5 
+                }}>
+                  {save.serverAccessLevel === 'admin' ? <Crown size={10} /> : <Lock size={10} />}
+                  {save.serverAccessLevel === 'admin' ? 'MP SERVER (ADMIN)' : 'MP SERVER (PLAYER)'}
+                </div>
+              )}
+
+              {save.hasTemplate && !save.isGhost && (
+                <div style={{ 
+                  background: 'var(--accent-dim)', 
+                  color: 'var(--accent)', 
+                  fontSize: 8, 
+                  fontWeight: 900, 
+                  padding: '2px 6px', 
+                  borderRadius: 4, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 4 
+                }}>
+                  <Zap size={12} fill="var(--accent)" /> AUTOMATED
+                </div>
+              )}
+
+              {save.isGhost && (
+                <div style={{ 
+                  background: 'var(--accent)', 
+                  color: 'white', 
+                  fontSize: 8, 
+                  fontWeight: 900, 
+                  padding: '2px 6px', 
+                  borderRadius: 4, 
+                  letterSpacing: 0.5, 
+                  boxShadow: '0 0 10px var(--accent)' 
+                }}>
+                  READY FOR FIRST LAUNCH
+                </div>
+              )}
+            </div>
             <div style={{ flex: 1, zIndex: 1, paddingLeft: 34 }}>
                 {editingName === save.folderName ? (
                     <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
