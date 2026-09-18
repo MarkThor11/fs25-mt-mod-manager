@@ -2018,6 +2018,7 @@ async function getAllSavegames() {
             }
 
             savegames.push({
+                index: i,
                 folderName: `savegame${i}`,
                 farmName: settings['@_savegameName'] || settings.savegameName || 'Unnamed Farm',
                 playerName: settings['@_playerName'] || settings.playerName || 'Farmer',
