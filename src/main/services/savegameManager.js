@@ -1873,13 +1873,16 @@ async function getAllSavegames() {
     const savegames = [];
     debugLog(`[SAVEGAMES] Scanning slots 1-20 in ${fs25Path}...`);
     for (let i = 1; i <= 20; i++) {
-        const savePath = path.join(fs25Path, `savegame${i}`);
-        if (fs.existsSync(savePath) && fs.existsSync(path.join(savePath, 'careerSavegame.xml'))) {
+        try {
+            const savePath = path.join(fs25Path, `savegame${i}`);
+            if (!fs.existsSync(savePath) || !fs.existsSync(path.join(savePath, 'careerSavegame.xml'))) continue;
+
             const xml = await fs.readFile(path.join(savePath, 'careerSavegame.xml'), 'utf8');
             const data = parser.parse(xml);
+            if (!data || !data.careerSavegame) continue;
             debugLog(`[SAVEGAMES] Found slot ${i}: size=${xml.length} bytes`);
-            const settings = data.careerSavegame.settings;
-            const stats = data.careerSavegame.statistics;
+            const settings = data.careerSavegame.settings || {};
+            const stats = data.careerSavegame.statistics || {};
 
             // Read global gameSettings.xml and game.xml for audio volumes
             let masterVolume = 1.0;
@@ -2072,6 +2075,8 @@ async function getAllSavegames() {
                         version: m['@_version'] || m.version
                     }))
             });
+        } catch (slotErr) {
+            console.error(`[SAVEGAMES] Error scanning savegame slot ${i}:`, slotErr);
         }
     }
     debugLog(`[SAVEGAMES] Scan complete. Total slots found: ${savegames.length}`);
