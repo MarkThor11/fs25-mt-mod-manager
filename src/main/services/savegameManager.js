@@ -1952,6 +1952,7 @@ async function getAllSavegames() {
                         }
                     }
                 } catch (e) {}
+            }
             // Read server metadata if this is a multiplayer server save
             let serverMeta = null;
             const serverMetaPath = path.join(savePath, 'server_meta.json');
