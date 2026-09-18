@@ -2020,7 +2020,7 @@ async function getAllSavegames() {
                 isInitialized,
                 hasTemplate,
                 isServerSave: !!serverMeta,
-                serverAccessLevel: serverMeta?.accessLevel || (serverMeta ? 'player' : null),
+                serverAccessLevel: serverMeta?.accessLevel || (serverMeta ? 'admin' : null),
                 isEditorLocked: serverMeta ? (serverMeta.accessLevel === 'player' || serverMeta.isLocked === true) : false,
                 serverName: serverMeta?.serverName || null,
                 serverModUrl: serverMeta?.serverModUrl || null,
@@ -5482,8 +5482,8 @@ async function toggleServerMode(savePath, enableServerMode, options = {}) {
             }
             const serverMeta = {
                 isServerSave: true,
-                accessLevel: options.accessLevel || existingMeta.accessLevel || 'player',
-                isLocked: (options.accessLevel || existingMeta.accessLevel || 'player') === 'player',
+                accessLevel: options.accessLevel || existingMeta.accessLevel || 'admin',
+                isLocked: (options.accessLevel || existingMeta.accessLevel || 'admin') === 'player',
                 serverName: options.serverName || existingMeta.serverName || 'Multiplayer Server',
                 serverModUrl: options.serverModUrl !== undefined ? options.serverModUrl : (existingMeta.serverModUrl || ''),
                 updatedAt: new Date().toISOString()
