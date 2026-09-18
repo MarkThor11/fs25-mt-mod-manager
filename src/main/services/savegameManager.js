@@ -17,6 +17,8 @@ function ultraNormalize(str) {
     s = s.replace(/(?:mod|pack|prefab|map)+/g, '');
     return s;
 }
+const INTERNAL_HELPER_MODS = ['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
+
 // 🛠️ DIAGNOSTIC UTILITY 🛠️
 const logFile = (app && typeof app.getPath === 'function') 
     ? path.join(app.getPath('userData'), 'download_debug.log')
@@ -600,6 +602,25 @@ async function setSavegameMods(savegamePath, mods) {
             '@_fileHash': (existing && existing['@_fileHash']) || m.fileHash || ''
         });
     });
+
+    // Ensure internal app companion mods are declared in careerSavegame.xml so the engine loads their lua subsystems
+    const appHelpers = [
+        { modName: 'FS25_MTRadioManager', title: 'MT Radio Manager Subsystem' },
+        { modName: 'FS25_storeDeliveries', title: 'Store Delivery Subsystem' },
+        { modName: 'FS25_rememberPositions', title: 'Vehicle Position Persistence' },
+        { modName: 'FS25_QuietLoadingScreen', title: 'Quiet Loading Screen' }
+    ];
+    for (const h of appHelpers) {
+        if (!newModsMap.has(h.modName)) {
+            newModsMap.set(h.modName, {
+                '@_modName': h.modName,
+                '@_title': h.title,
+                '@_version': '1.0.0.0',
+                '@_required': 'false',
+                '@_fileHash': ''
+            });
+        }
+    }
 
     data.careerSavegame.mod = Array.from(newModsMap.values());
     
@@ -5423,6 +5444,18 @@ async function prepareServerModsFolder(slotIndex, savePath) {
                     linkedCount++;
                 } else {
                     missingCount++;
+                }
+            }
+        }
+
+        // Copy internal companion helper mods into server isolated mods folder
+        const companionMods = ['FS25_MTRadioManager.zip', 'FS25_storeDeliveries.zip', 'FS25_rememberPositions.zip', 'FS25_QuietLoadingScreen.zip'];
+        for (const compMod of companionMods) {
+            const internalModPath = path.join(__dirname, '..', 'resources', 'internalMods', compMod);
+            if (fs.existsSync(internalModPath)) {
+                const destPath = path.join(targetFolder, compMod);
+                if (!fs.existsSync(destPath)) {
+                    try { await fs.copy(internalModPath, destPath); } catch (e) {}
                 }
             }
         }
