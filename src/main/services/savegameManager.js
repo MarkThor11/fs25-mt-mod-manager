@@ -5230,6 +5230,57 @@ async function prepareServerModsFolder(slotIndex, savePath) {
         const modManager = require('./modManager');
         const { mods: allInstalledMods } = await modManager.scanLocalMods();
 
+        // 1. Resolve custom map mod and add to requiredMods if not present
+        const mapModObj = findMapModInSavegame(xml, allInstalledMods);
+        if (mapModObj && mapModObj.modName) {
+            const alreadyInReq = requiredMods.some(m => (m.modName || '').toLowerCase() === mapModObj.modName.toLowerCase());
+            if (!alreadyInReq) {
+                requiredMods.unshift({
+                    modName: mapModObj.modName,
+                    version: mapModObj.version || null
+                });
+            }
+
+            // Also include non-map sibling mods in map's dedicated subfolder if applicable
+            if (mapModObj.filePath) {
+                try {
+                    const mapDir = path.dirname(mapModObj.filePath);
+                    const configuredRoots = modManager.getModsPaths().map(p => path.resolve(p).toLowerCase());
+                    const mapDirResolved = path.resolve(mapDir).toLowerCase();
+                    const parentOfMapDir = path.resolve(path.dirname(mapDir)).toLowerCase();
+                    if (configuredRoots.includes(parentOfMapDir) && !configuredRoots.includes(mapDirResolved)) {
+                        const siblingMods = allInstalledMods.filter(m => {
+                            if (!m.filePath) return false;
+                            const mDir = path.resolve(path.dirname(m.filePath)).toLowerCase();
+                            return mDir === mapDirResolved && !m.isMap && m.modName;
+                        });
+                        for (const sib of siblingMods) {
+                            if (!requiredMods.some(m => (m.modName || '').toLowerCase() === sib.modName.toLowerCase())) {
+                                requiredMods.push({
+                                    modName: sib.modName,
+                                    version: sib.version || null
+                                });
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+
+        // 2. Direct fallback for mapId setting (e.g. FS25_JasperRiverValley.JRV)
+        const settings = data.careerSavegame?.settings || {};
+        const mapIdSetting = settings.mapId || settings['@_mapId'];
+        if (mapIdSetting && typeof mapIdSetting === 'string' && !isOfficialMap(mapIdSetting)) {
+            const mapPrefix = mapIdSetting.includes('.') ? mapIdSetting.split('.')[0] : mapIdSetting;
+            const alreadyInReq = requiredMods.some(m => (m.modName || '').toLowerCase() === mapPrefix.toLowerCase());
+            if (!alreadyInReq) {
+                requiredMods.unshift({
+                    modName: mapPrefix,
+                    version: null
+                });
+            }
+        }
+
         let linkedCount = 0;
         let serverSpecificCount = 0;
         let mismatchedCount = 0;
