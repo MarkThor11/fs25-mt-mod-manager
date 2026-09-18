@@ -93,7 +93,7 @@ app.whenReady().then(() => {
 
     // In-memory icon buffer cache to avoid repetitive SQLite disk reads during fast scrolling
     const iconBufferCache = new Map();
-    const MAX_ICON_CACHE_SIZE = 1500;
+    const MAX_ICON_CACHE_SIZE = 3000;
 
     // Mod icon local stream protocol
     protocol.handle('mod-icon', async (request) => {
@@ -105,26 +105,27 @@ app.whenReady().then(() => {
            return new Response('Not Found', { status: 404 });
         }
 
+        const iconHeaders = {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=31536000, immutable'
+        };
+
         // 0. Check In-Memory Fast Cache
         if (iconBufferCache.has(filePath)) {
-          return new Response(iconBufferCache.get(filePath), {
-            headers: { 'Content-Type': 'image/png' }
-          });
+          return new Response(iconBufferCache.get(filePath), { headers: iconHeaders });
         }
 
-        // 1. Check SQLite Cache
-        const cached = cache.getLocalModCache(filePath);
-        if (cached && cached.icon_base64 && !cached.icon_base64.startsWith('CATEGORY:')) {
-          const base64Data = cached.icon_base64.replace(/^data:image\/\w+;base64,/, '');
+        // 1. Check SQLite Cache (optimized: read only icon_base64 without loading huge JSON/store columns)
+        const iconBase64 = cache.getLocalModIconOnly ? cache.getLocalModIconOnly(filePath) : cache.getLocalModCache(filePath)?.icon_base64;
+        if (iconBase64 && !iconBase64.startsWith('CATEGORY:')) {
+          const base64Data = iconBase64.replace(/^data:image\/\w+;base64,/, '');
           const buffer = Buffer.from(base64Data, 'base64');
           if (iconBufferCache.size >= MAX_ICON_CACHE_SIZE) {
             const firstKey = iconBufferCache.keys().next().value;
             iconBufferCache.delete(firstKey);
           }
           iconBufferCache.set(filePath, buffer);
-          return new Response(buffer, {
-            headers: { 'Content-Type': 'image/png' }
-          });
+          return new Response(buffer, { headers: iconHeaders });
         }
 
         // 2. Extract on the fly if not in cache (Browser lazy-loading naturally staggers this)
@@ -139,9 +140,7 @@ app.whenReady().then(() => {
               iconBufferCache.delete(firstKey);
             }
             iconBufferCache.set(filePath, buffer);
-            return new Response(buffer, {
-              headers: { 'Content-Type': 'image/png' }
-            });
+            return new Response(buffer, { headers: iconHeaders });
           }
         }
         

@@ -2199,7 +2199,21 @@ const [activeTab, setActiveTab] = useState('general');
                                   <div
                                     key={m.modName}
                                     onClick={() => toggleMod(m.modName)}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px', fontSize: 14, cursor: 'pointer', borderRadius: 10, background: isConflicting ? 'rgba(255, 100, 0, 0.05)' : (selectedMods.has(m.modName) ? 'var(--accent-dim)' : 'var(--bg-card)'), border: `2px solid ${isConflicting ? 'rgba(255, 100, 0, 0.6)' : (selectedMods.has(m.modName) ? 'var(--accent)' : 'var(--border-light)')}`, transition: 'all 0.15s' }} className="hover-bg-subtle"
+                                    style={{ 
+                                      display: 'flex', 
+                                      alignItems: 'center', 
+                                      gap: 12, 
+                                      padding: '8px', 
+                                      fontSize: 14, 
+                                      cursor: 'pointer', 
+                                      borderRadius: 10, 
+                                      background: isConflicting ? 'rgba(255, 100, 0, 0.05)' : (selectedMods.has(m.modName) ? 'var(--accent-dim)' : 'var(--bg-card)'), 
+                                      border: `2px solid ${isConflicting ? 'rgba(255, 100, 0, 0.6)' : (selectedMods.has(m.modName) ? 'var(--accent)' : 'var(--border-light)')}`, 
+                                      transition: 'all 0.15s',
+                                      contentVisibility: 'auto',
+                                      containIntrinsicSize: '64px 80px'
+                                    }} 
+                                    className="hover-bg-subtle"
                                   >
                                     <MiniModIcon mod={m} size={64} />
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12, overflow: 'hidden' }}>
@@ -2698,14 +2712,24 @@ const MiniModIcon = React.memo(({ mod, size = 64 }) => {
     
     if (mod?.iconData && !mod.iconData.startsWith('CATEGORY:')) {
         imageUrl = mod.iconData.startsWith('http') || mod.iconData.startsWith('data:') ? mod.iconData : `data:image/png;base64,${mod.iconData}`;
-    } else if (mod?.filePath) {
-        imageUrl = `mod-icon://icon?path=${encodeURIComponent(mod.filePath)}`;
+    } else {
+        const filePath = mod?.filePath || (mod?.fileName ? useLocalModsStore.getState().mods.find(m => m.fileName === mod.fileName || m.modName === mod.modName)?.filePath : null);
+        if (filePath) {
+            imageUrl = `mod-icon://icon?path=${encodeURIComponent(filePath)}`;
+        }
     }
     
     return (
         <div style={{ width: size, height: size, borderRadius: 8, overflow: 'hidden', background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             {imageUrl && !error ? (
-                <img src={imageUrl} alt={mod?.title || mod?.modName || ""} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={() => setError(true)} />
+                <img 
+                    src={imageUrl} 
+                    alt={mod?.title || mod?.modName || ""} 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                    loading="lazy"
+                    decoding="async"
+                    onError={() => setError(true)} 
+                />
             ) : (
                 <div style={{ fontSize: size * 0.4, fontWeight: 900, color: 'var(--text-secondary)' }}>
                     {(mod?.title || mod?.modName || 'M').charAt(0).toUpperCase()}
@@ -4259,7 +4283,21 @@ export default function SavegamesPage() {
                                               return (
                                               <div 
                                                 key={m.modName} 
-                                                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px', fontSize: 14, cursor: 'default', borderRadius: 10, background: isConflicting ? 'rgba(255, 100, 0, 0.05)' : 'rgba(var(--accent-rgb), 0.1)', border: `2px solid ${isConflicting ? 'rgba(255, 100, 0, 0.5)' : 'var(--accent)'}`, opacity: isConflicting ? 1 : 0.8, marginBottom: 4 }} 
+                                                style={{ 
+                                                    display: 'flex', 
+                                                    alignItems: 'center', 
+                                                    gap: 12, 
+                                                    padding: '8px', 
+                                                    fontSize: 14, 
+                                                    cursor: 'default', 
+                                                    borderRadius: 10, 
+                                                    background: isConflicting ? 'rgba(255, 100, 0, 0.05)' : 'rgba(var(--accent-rgb), 0.1)', 
+                                                    border: `2px solid ${isConflicting ? 'rgba(255, 100, 0, 0.5)' : 'var(--accent)'}`, 
+                                                    opacity: isConflicting ? 1 : 0.8, 
+                                                    marginBottom: 4,
+                                                    contentVisibility: 'auto',
+                                                    containIntrinsicSize: '64px 80px'
+                                                }} 
                                                 title={`Version: ${m.version}`}
                                               >
                                                 <div style={{ flexShrink: 0 }}>
@@ -4285,7 +4323,21 @@ export default function SavegamesPage() {
                                             <div 
   key={m.modName} 
   onClick={() => toggleModalModSelection(m.modName)}
-  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px', fontSize: 14, cursor: 'pointer', borderRadius: 10, background: (activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'rgba(255, 100, 0, 0.05)' : (modalSelectedMods.has(m.modName) ? 'var(--accent-dim)' : 'transparent'), border: `2px solid ${(activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'rgba(255, 100, 0, 0.6)' : (modalSelectedMods.has(m.modName) ? 'var(--accent)' : 'transparent')}`, transition: 'all 0.15s' }} className="hover-bg-subtle"
+  style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: 12, 
+      padding: '8px', 
+      fontSize: 14, 
+      cursor: 'pointer', 
+      borderRadius: 10, 
+      background: (activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'rgba(255, 100, 0, 0.05)' : (modalSelectedMods.has(m.modName) ? 'var(--accent-dim)' : 'transparent'), 
+      border: `2px solid ${(activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'rgba(255, 100, 0, 0.6)' : (modalSelectedMods.has(m.modName) ? 'var(--accent)' : 'transparent')}`, 
+      transition: 'all 0.15s',
+      contentVisibility: 'auto',
+      containIntrinsicSize: '64px 80px'
+  }} 
+  className="hover-bg-subtle"
 >
     <div style={{ flexShrink: 0 }}>
       <MiniModIcon mod={m} size={64} />

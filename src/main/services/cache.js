@@ -502,6 +502,12 @@ function getLocalModCache(filePath) {
   return db.prepare('SELECT * FROM local_mod_cache WHERE file_path = ?').get(filePath);
 }
 
+function getLocalModIconOnly(filePath) {
+  if (!db) return null;
+  const row = db.prepare('SELECT icon_base64 FROM local_mod_cache WHERE file_path = ?').get(filePath);
+  return row ? row.icon_base64 : null;
+}
+
 function getAllLocalModCache() {
   if (!db) return [];
   // Exclude heavy icon_base64 and store_base64 columns to keep memory usage at ~2MB instead of 1.6GB
@@ -630,7 +636,7 @@ module.exports = {
   getModTracking, setModTracking, removeModTracking, removeModTrackingByFile, getAllModTracking, getModTrackingByFile, getModTrackingByBaseName, getAllModTrackingMap,
   getModHubTotalCount,
   setModTags, setModLocation,
-  getLocalModCache, getAllLocalModCache, setLocalModCache, removeLocalModCache, clearLocalModCache, updateLocalModIcon,
+  getLocalModCache, getLocalModIconOnly, getAllLocalModCache, setLocalModCache, removeLocalModCache, clearLocalModCache, updateLocalModIcon,
   updateLocalModCachePath, updateModTrackingFileInfo,
   getModHubMetadataPool,
   getRemoteImage, setRemoteImage,
