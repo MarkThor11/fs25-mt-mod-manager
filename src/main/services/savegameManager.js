@@ -2020,6 +2020,7 @@ async function getAllSavegames() {
             savegames.push({
                 index: i,
                 folderName: `savegame${i}`,
+                path: savePath,
                 farmName: settings['@_savegameName'] || settings.savegameName || 'Unnamed Farm',
                 playerName: settings['@_playerName'] || settings.playerName || 'Farmer',
                 mapId,

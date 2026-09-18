@@ -3201,10 +3201,25 @@ export default function SavegamesPage() {
   };
 
   const handleToggleServerMode = async (targetSave, enableServerMode, options = {}) => {
-    if (!window.api?.savegames?.toggleServerMode || !targetSave?.path) return;
+    if (!window.api?.savegames?.toggleServerMode || !targetSave) return;
+    let savePath = targetSave.path;
+    if (!savePath && targetSave.index) {
+      // Fallback path resolution if targetSave.path is missing
+      const allSaves = useSavegameStore.getState().savegames;
+      const match = allSaves.find(s => s.index === targetSave.index);
+      savePath = match?.path;
+    }
+    if (!savePath && targetSave.folderName) {
+      const fs25Path = await window.api.savegames.getFs25Path?.().catch(() => null);
+      if (fs25Path) savePath = `${fs25Path}/${targetSave.folderName}`;
+    }
+    if (!savePath) {
+      useToastStore.getState().error('Could not locate save folder path.');
+      return;
+    }
     try {
       const res = await window.api.savegames.toggleServerMode({
-        savePath: targetSave.path,
+        savePath,
         enableServerMode,
         options
       });
@@ -3214,14 +3229,14 @@ export default function SavegamesPage() {
             ? `Converted Slot ${targetSave.index} to Multiplayer Server Mode` 
             : `Converted Slot ${targetSave.index} to Single Player Mode`
         );
-        fetchSavegames();
+        await fetchSavegames();
         if (showEditor && showEditor.index === targetSave.index) {
-          setShowEditor({
-            ...showEditor,
+          setShowEditor(prev => prev ? {
+            ...prev,
             isServerSave: enableServerMode,
             isEditorLocked: enableServerMode ? (res.serverMeta?.accessLevel === 'player') : false,
             serverAccessLevel: enableServerMode ? (res.serverMeta?.accessLevel || 'player') : null
-          });
+          } : null);
         }
       } else {
         useToastStore.getState().error(res?.error || 'Failed to toggle mode');
