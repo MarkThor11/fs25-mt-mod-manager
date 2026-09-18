@@ -1466,6 +1466,56 @@ ipcMain.handle('savegames:export', async (_, { savePath, defaultName }) => {
   }
 });
 
+ipcMain.handle('savegames:exportServerSave', async (_, { savePath, defaultName, accessLevel, serverName, serverModUrl }) => {
+  try {
+    const cleanName = (defaultName || path.basename(savePath)).replace(/[\\/:*?"<>|]/g, '_');
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: `Export Multiplayer Server Package (${accessLevel === 'player' ? 'Player Locked' : 'Admin'})`,
+      defaultPath: `${cleanName}_${accessLevel === 'player' ? 'Player' : 'Admin'}.zip`,
+      filters: [{ name: 'ZIP Archive', extensions: ['zip'] }]
+    });
+    
+    if (result.canceled || !result.filePath) return { canceled: true };
+    return await savegameManager.exportServerSavegame({
+      savePath,
+      accessLevel,
+      serverName,
+      serverModUrl,
+      targetZipPath: result.filePath
+    });
+  } catch (err) {
+    console.error('[EXPORT-SERVER] IPC savegames:exportServerSave error:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('savegames:getFarmPermissions', async (_, savePath) => {
+  try {
+    return await savegameManager.getFarmPermissions(savePath);
+  } catch (err) {
+    console.error('[FARMS] IPC savegames:getFarmPermissions error:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('savegames:updateFarmPermissions', async (_, { savePath, permissions }) => {
+  try {
+    return await savegameManager.updateFarmPermissions(savePath, permissions);
+  } catch (err) {
+    console.error('[FARMS] IPC savegames:updateFarmPermissions error:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('savegames:prepareServerModsFolder', async (_, { slotIndex, savePath }) => {
+  try {
+    return await savegameManager.prepareServerModsFolder(slotIndex, savePath);
+  } catch (err) {
+    console.error('[SERVER-MODS] IPC savegames:prepareServerModsFolder error:', err);
+    return { success: false, error: err.message };
+  }
+});
+
 ipcMain.handle('savegames:isSavegame', async (_, filePath) => {
   return await savegameManager.isSavegame(filePath);
 });

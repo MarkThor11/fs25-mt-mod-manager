@@ -5,7 +5,7 @@ import {
   Save, Play, RefreshCw, Edit3, MapPin,
   Clock, DollarSign, Package, Check, X,
   Plus, ChevronDown, ChevronRight, Gamepad2, Trash2, TrendingUp, Shield,
-  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft, Anchor, Truck, Tractor, Car, Wheat, Share2
+  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft, Anchor, Truck, Tractor, Car, Wheat, Share2, Lock, Unlock, Crown, Server
 } from 'lucide-react';
 import { useSavegameStore } from '../store/useSavegameStore';
 import { useToastStore } from '../store/useToastStore';
@@ -235,6 +235,23 @@ function ModAuditModal({ save, allInstalledMods, onClose, onRefresh }) {
           <div style={{ fontSize: 11, opacity: 0.6 }}>{save.modCount} Mods Required</div>
         </div>
 
+        {/* Server Mod Download Link Banner */}
+        {save.serverModUrl && (
+          <div style={{ padding: '10px 24px', background: 'rgba(6, 182, 212, 0.12)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+              <Globe size={16} style={{ color: '#06b6d4' }} />
+              <span><strong>Server Mod Host:</strong> Download server-specific mods provided by the host.</span>
+            </div>
+            <button 
+              className="btn btn--primary btn--xs"
+              onClick={() => window.api?.shell?.openExternal ? window.api.shell.openExternal(save.serverModUrl) : window.open(save.serverModUrl, '_blank')}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, background: '#06b6d4', borderColor: '#0891b2' }}
+            >
+              <Globe size={13} /> Open Server Mod Page
+            </button>
+          </div>
+        )}
+
         {/* Mod List */}
         <div style={{ maxHeight: '50vh', overflowY: 'auto', padding: '12px 24px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -277,7 +294,227 @@ function ModAuditModal({ save, allInstalledMods, onClose, onRefresh }) {
         {/* Footer */}
         <div style={{ padding: '24px', background: 'var(--bg-tertiary)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
           <button className="btn btn--secondary" onClick={onClose} disabled={resolving}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
+/**
+ * Server Export & Sharing Modal
+ */
+function ServerExportModal({ save, onClose, onExportComplete }) {
+  const [exportType, setExportType] = useState('player'); // 'player' | 'admin' | 'standard'
+  const [serverName, setServerName] = useState(save.serverName || save.farmName || `Slot ${save.index} Server`);
+  const [serverModUrl, setServerModUrl] = useState(save.serverModUrl || '');
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const cleanTitle = (serverName || save.farmName || `Slot${save.index || ''}`).replace(/[\\/:*?"<>|]/g, '_');
+      const defaultName = save.index ? `${cleanTitle}_Slot${save.index}` : cleanTitle;
+
+      if (exportType === 'standard') {
+        useToastStore.getState().info(`Preparing standard backup for ${defaultName}...`);
+        const result = await window.api.savegames.export({ savePath: save.path, defaultName });
+        if (result.success) {
+          useToastStore.getState().success(`Savegame exported successfully to ${result.filePath}`);
+          if (onExportComplete) onExportComplete();
+          onClose();
+        } else if (!result.canceled) {
+          useToastStore.getState().error(result.error || 'Failed to export savegame');
+        }
+      } else {
+        useToastStore.getState().info(`Packaging multiplayer server save (${exportType === 'player' ? 'Player Locked' : 'Admin'})...`);
+        const result = await window.api.savegames.exportServerSave({
+          savePath: save.path,
+          defaultName,
+          accessLevel: exportType,
+          serverName: serverName.trim(),
+          serverModUrl: serverModUrl.trim()
+        });
+        if (result.success) {
+          useToastStore.getState().success(`Multiplayer server save (${exportType.toUpperCase()}) exported to ${result.filePath}`);
+          if (onExportComplete) onExportComplete();
+          onClose();
+        } else if (!result.canceled) {
+          useToastStore.getState().error(result.error || 'Failed to export server save');
+        }
+      }
+    } catch (err) {
+      useToastStore.getState().error(`Export failed: ${err.message}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={onClose}>
+      <div className="modal-content animate-zoom-in" style={{ width: 640, padding: 0, overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ background: 'var(--bg-tertiary)', padding: '24px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(6, 182, 212, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#06b6d4' }}>
+                <Share2 size={24} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: 'var(--fs-lg)', fontWeight: 800 }}>Export & Share Savegame</h2>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)' }}>Slot {save.index} • {save.farmName}</div>
+              </div>
+            </div>
+            <button className="btn btn--ghost btn--sm" onClick={onClose}><X size={20} /></button>
+          </div>
+        </div>
+
+        {/* Form Body */}
+        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Target Audience / Access Mode Selection */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-secondary)', marginBottom: 8, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Select Package Format & Access Rights
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Option 1: Player Version (Locked) */}
+              <div 
+                onClick={() => setExportType('player')}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'flex-start', 
+                  gap: 14, 
+                  padding: '14px 16px', 
+                  borderRadius: 10, 
+                  border: exportType === 'player' ? '2px solid #06b6d4' : '1px solid var(--border)',
+                  background: exportType === 'player' ? 'rgba(6, 182, 212, 0.08)' : 'var(--bg-tertiary)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(6, 182, 212, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22d3ee', flexShrink: 0, marginTop: 2 }}>
+                  <Lock size={18} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Multiplayer Server (Player Version - Locked)</span>
+                    <span style={{ fontSize: 9, fontWeight: 900, background: 'rgba(6, 182, 212, 0.2)', color: '#22d3ee', padding: '2px 6px', borderRadius: 4 }}>RECOMMENDED FOR MEMBERS</span>
+                  </div>
+                  <p style={{ margin: '4px 0 0 0', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                    Ideal for distributing to general server members. Savegame editor is set to View-Only mode so players cannot tamper with money, difficulty, or cheats, preserving fair multiplayer gameplay.
+                  </p>
+                </div>
+              </div>
+
+              {/* Option 2: Admin Version */}
+              <div 
+                onClick={() => setExportType('admin')}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'flex-start', 
+                  gap: 14, 
+                  padding: '14px 16px', 
+                  borderRadius: 10, 
+                  border: exportType === 'admin' ? '2px solid #eab308' : '1px solid var(--border)',
+                  background: exportType === 'admin' ? 'rgba(234, 179, 8, 0.08)' : 'var(--bg-tertiary)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(234, 179, 8, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fde047', flexShrink: 0, marginTop: 2 }}>
+                  <Crown size={18} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Multiplayer Server (Admin Version - Full Rights)</span>
+                    <span style={{ fontSize: 9, fontWeight: 900, background: 'rgba(234, 179, 8, 0.2)', color: '#fde047', padding: '2px 6px', borderRadius: 4 }}>CO-HOSTS & ADMINS</span>
+                  </div>
+                  <p style={{ margin: '4px 0 0 0', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                    Provides full Save Editor privileges and farm permissions management to trusted co-administrators or dedicated server managers.
+                  </p>
+                </div>
+              </div>
+
+              {/* Option 3: Standard Backup */}
+              <div 
+                onClick={() => setExportType('standard')}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'flex-start', 
+                  gap: 14, 
+                  padding: '14px 16px', 
+                  borderRadius: 10, 
+                  border: exportType === 'standard' ? '2px solid var(--accent)' : '1px solid var(--border)',
+                  background: exportType === 'standard' ? 'var(--accent-dim)' : 'var(--bg-tertiary)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0, marginTop: 2 }}>
+                  <Save size={18} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Standard Career Backup (Single Player)</span>
+                  </div>
+                  <p style={{ margin: '4px 0 0 0', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                    Standard ZIP archive of your savegame folder without multiplayer server metadata tags.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Multiplayer Details (Only if Player or Admin package selected) */}
+          {exportType !== 'standard' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, background: 'var(--bg-base)', padding: 16, borderRadius: 10, border: '1px solid var(--border)' }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6, display: 'block' }}>
+                  Server Display Name
+                </label>
+                <input 
+                  type="text"
+                  value={serverName}
+                  onChange={e => setServerName(e.target.value)}
+                  placeholder="e.g. Dedicated Farm Server US-1"
+                  style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 13 }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>Server Mod Host Link (Optional)</span>
+                  <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 400 }}>Direct URL or cloud folder (Google Drive, Mega, Web host)</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Globe size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
+                  <input 
+                    type="url"
+                    value={serverModUrl}
+                    onChange={e => setServerModUrl(e.target.value)}
+                    placeholder="https://example.com/fs25-mods or drive link"
+                    style={{ width: '100%', padding: '8px 12px 8px 32px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 13 }}
+                  />
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
+                  If players have missing or out-of-date mod versions, the launcher will guard against joining and provide this direct link.
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 24px', background: 'var(--bg-tertiary)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+          <button className="btn btn--secondary" onClick={onClose} disabled={isExporting}>Cancel</button>
+          <button 
+            className="btn btn--primary" 
+            onClick={handleExport}
+            disabled={isExporting}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}
+          >
+            <Share2 size={16} />
+            {isExporting ? 'Exporting Package...' : (exportType === 'standard' ? 'Export Standard ZIP' : `Export ${exportType === 'player' ? 'Player' : 'Admin'} Package`)}
+          </button>
         </div>
       </div>
     </div>
@@ -524,7 +761,55 @@ const [activeTab, setActiveTab] = useState('general');
     }
   }, [activeTab, save.path, save.mods]);
 
+  // Farm Permissions State
+  const [farmData, setFarmData] = useState(null);
+  const [loadingFarm, setLoadingFarm] = useState(false);
+  const [savingFarm, setSavingFarm] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'multiplayer' && window.api?.savegames?.getFarmPermissions && save?.path) {
+      setLoadingFarm(true);
+      window.api.savegames.getFarmPermissions(save.path).then(res => {
+        setLoadingFarm(false);
+        if (res && res.success) {
+          setFarmData(res);
+        }
+      }).catch(err => {
+        setLoadingFarm(false);
+        console.error('[FARMS] Error loading farm permissions:', err);
+      });
+    }
+  }, [activeTab, save?.path]);
+
+  const handleSaveFarmPermissions = async () => {
+    if (save.isEditorLocked) {
+      useToastStore.getState().error('Save editing is locked by the server host.');
+      return;
+    }
+    if (!farmData?.permissions || !window.api?.savegames?.updateFarmPermissions) return;
+    setSavingFarm(true);
+    try {
+      const res = await window.api.savegames.updateFarmPermissions({
+        savePath: save.path,
+        permissions: farmData.permissions
+      });
+      if (res && res.success) {
+        useToastStore.getState().success('In-game farm permissions updated successfully!');
+      } else {
+        useToastStore.getState().error(res?.error || 'Failed to update farm permissions');
+      }
+    } catch (err) {
+      useToastStore.getState().error(err.message);
+    } finally {
+      setSavingFarm(false);
+    }
+  };
+
   const handleUpdate = async (fileType, attribute, value) => {
+    if (save.isEditorLocked) {
+      useToastStore.getState().error('Save editing is locked by the server host (Player Version).');
+      return;
+    }
     setLoading(true);
     if (!window.api?.savegames) return;
     
@@ -638,10 +923,31 @@ const [activeTab, setActiveTab] = useState('general');
           <button className={`tab-btn ${activeTab === 'mods' ? 'tab-btn--active' : ''}`} title="Choose exactly which mods are active for this save." onClick={() => setActiveTab('mods')}>
             <Package size={14} /> Selective Mods
           </button>
+          <button className={`tab-btn ${activeTab === 'multiplayer' ? 'tab-btn--active' : ''}`} title="In-game farm permissions and server rights." onClick={() => setActiveTab('multiplayer')}>
+            <Users size={14} /> Farm Permissions
+          </button>
         </div>
 
         {/* Content */}
         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', flex: 1, overflowY: 'auto', minHeight: 0 }}>
+          
+          {save.isEditorLocked && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 14, 
+              padding: '14px 20px', 
+              background: 'rgba(6, 182, 212, 0.12)', 
+              border: '1px solid #06b6d4', 
+              borderRadius: 12, 
+              color: 'var(--text-primary)' 
+            }}>
+              <Lock size={22} style={{ color: '#06b6d4', flexShrink: 0 }} />
+              <div style={{ flex: 1, fontSize: 13, lineHeight: 1.5 }}>
+                <strong style={{ color: '#22d3ee' }}>Server Locked (Player Version):</strong> This savegame was configured and locked by the server host. Savegame editing (money, realism, vehicles, parameters) is set to View-Only mode to preserve server integrity and fairness.
+              </div>
+            </div>
+          )}
           
           {activeTab === 'general' && (
             <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
@@ -1892,6 +2198,144 @@ const [activeTab, setActiveTab] = useState('general');
                       </div>
                     </div>
                   )}
+
+          {activeTab === 'multiplayer' && (
+            <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
+              {loadingFarm ? (
+                <div style={{ padding: 40, textAlign: 'center', opacity: 0.6 }}>Loading farm permissions from farms.xml...</div>
+              ) : farmData ? (
+                <>
+                  {/* Farm Overview Card */}
+                  <div className="settings-panel">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+                      <div>
+                        <h3 className="section-title" style={{ marginBottom: 4 }}><Users size={16} /> {farmData.farmName}</h3>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Farm ID {farmData.farmId} • {farmData.playersCount || 1} Registered Member(s)</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        <div style={{ background: 'var(--bg-tertiary)', padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border)' }}>
+                          <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'block' }}>FARM BALANCE</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>{formatMoney(farmData.money)}</span>
+                        </div>
+                        <div style={{ background: 'var(--bg-tertiary)', padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border)' }}>
+                          <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'block' }}>OUTSTANDING LOAN</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#fca5a5' }}>{formatMoney(farmData.loan)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                      Set the baseline permissions for players who join your farm in multiplayer. Farm Managers always retain full access, while standard farm hands adhere to the toggles below.
+                    </p>
+                  </div>
+
+                  {/* Permissions Toggles Grid */}
+                  <div className="settings-panel">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                      <h3 className="section-title" style={{ margin: 0 }}><Shield size={16} /> Member Access Rights</h3>
+                      {!save.isEditorLocked && (
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button 
+                            className="btn btn--ghost btn--xs"
+                            onClick={() => {
+                              const allTrue = {};
+                              Object.keys(farmData.permissions).forEach(k => allTrue[k] = true);
+                              setFarmData({ ...farmData, permissions: allTrue });
+                            }}
+                          >
+                            Grant All
+                          </button>
+                          <button 
+                            className="btn btn--ghost btn--xs"
+                            onClick={() => {
+                              const allFalse = {};
+                              Object.keys(farmData.permissions).forEach(k => allFalse[k] = false);
+                              setFarmData({ ...farmData, permissions: allFalse });
+                            }}
+                          >
+                            Revoke All
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
+                      {[
+                        { key: 'buyVehicle', title: 'Buy Vehicles & Tools', desc: 'Allow members to buy machinery from the dealership' },
+                        { key: 'sellVehicle', title: 'Sell Vehicles & Tools', desc: 'Allow members to sell owned machinery' },
+                        { key: 'buyPlaceable', title: 'Buy Buildings & Placeables', desc: 'Allow placing sheds, silos, fences, and productions' },
+                        { key: 'sellPlaceable', title: 'Sell Buildings & Placeables', desc: 'Allow selling or demolishing owned farm structures' },
+                        { key: 'manageContracts', title: 'Manage Field Contracts', desc: 'Allow accepting and completing NPC field missions' },
+                        { key: 'tradeAnimals', title: 'Trade Livestock', desc: 'Allow buying, selling, and breeding animals' },
+                        { key: 'createFields', title: 'Create Fields', desc: 'Allow plows to cut new fields into the landscape' },
+                        { key: 'landscaping', title: 'Landscaping & Sculpting', desc: 'Allow terrain sculpting and ground painting' },
+                        { key: 'hireAssistant', title: 'Hire AI Helpers', desc: 'Allow hiring automated workers' },
+                        { key: 'resetVehicle', title: 'Reset Vehicles', desc: 'Allow teleporting stuck vehicles back to the shop' },
+                        { key: 'manageProductions', title: 'Manage Productions', desc: 'Allow changing recipes and activating production chains' },
+                        { key: 'cutTrees', title: 'Cut Trees & Forestry', desc: 'Allow chainsaws and forestry harvesters to fell timber' },
+                        { key: 'transferMoney', title: 'Transfer Money', desc: 'Allow sending money to other farms or players' },
+                        { key: 'updateFarm', title: 'Update Farm Profile', desc: 'Allow renaming the farm or altering farm branding' },
+                        { key: 'manageContracting', title: 'Contracting Rights', desc: 'Allow granting contractor access to other farms' },
+                      ].map(item => {
+                        const isAllowed = farmData.permissions[item.key] !== false;
+                        return (
+                          <div 
+                            key={item.key} 
+                            style={{ 
+                              background: 'var(--bg-tertiary)', 
+                              padding: '12px 14px', 
+                              borderRadius: 10, 
+                              border: isAllowed ? '1px solid rgba(var(--accent-rgb), 0.3)' : '1px solid var(--border)',
+                              display: 'flex', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'center', 
+                              gap: 12,
+                              opacity: save.isEditorLocked ? 0.7 : 1
+                            }}
+                          >
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 700, fontSize: 13, color: isAllowed ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{item.title}</div>
+                              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{item.desc}</div>
+                            </div>
+                            <input 
+                              type="checkbox"
+                              checked={isAllowed}
+                              disabled={save.isEditorLocked}
+                              onChange={(e) => {
+                                setFarmData({
+                                  ...farmData,
+                                  permissions: {
+                                    ...farmData.permissions,
+                                    [item.key]: e.target.checked
+                                  }
+                                });
+                              }}
+                              style={{ width: 18, height: 18, accentColor: 'var(--accent)', cursor: save.isEditorLocked ? 'not-allowed' : 'pointer' }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {!save.isEditorLocked && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                        <button 
+                          className="btn btn--primary btn--sm" 
+                          onClick={handleSaveFarmPermissions}
+                          disabled={savingFarm}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
+                        >
+                          <Save size={14} /> {savingFarm ? 'Saving Permissions...' : 'Save Permissions to farms.xml'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div style={{ padding: 40, textAlign: 'center', opacity: 0.6 }}>No farms.xml found for this savegame.</div>
+              )}
+            </div>
+          )}
                   <div style={{ background: 'rgba(var(--accent-rgb), 0.05)', padding: '16px', borderRadius: 12, border: '1px solid var(--border)', fontSize: 'var(--fs-xs)', display: 'flex', gap: 12 }}>
             <Info size={16} className="text-accent" style={{ flexShrink: 0 }} />
             <p style={{ margin: 0, opacity: 0.8 }}>Changes are applied instantly to the XML files. We recommend archiving your savegame first as a manual backup.</p>
@@ -1918,6 +2362,19 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
     const isEmpty = save.modCount === 0 && (save.farmName || '').startsWith('Empty');
     const [isDragOver, setIsDragOver] = useState(false);
     
+    const versionMismatches = React.useMemo(() => {
+        if (!save.mods || !mods) return 0;
+        let mismatches = 0;
+        for (const req of save.mods) {
+            if (!req.version) continue;
+            const installed = mods.find(m => (m.modName || '').toLowerCase() === (req.modName || '').toLowerCase());
+            if (installed && installed.version && installed.version !== req.version) {
+                mismatches++;
+            }
+        }
+        return mismatches;
+    }, [save.mods, mods]);
+
     const handleDragOver = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1981,11 +2438,11 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                     minHeight: 180, 
                     padding: 'var(--sp-4)', 
                     position: 'relative', 
-                    border: isPlaying ? '1px solid #22c55e' : (isDragOver ? '2px solid var(--accent)' : (isSelected ? '1px solid var(--accent)' : (save.hasTemplate ? '1px solid var(--accent-dim)' : '1px solid transparent'))), 
-                    boxShadow: isPlaying ? '0 0 20px rgba(34, 197, 94, 0.25)' : (isSelected ? '0 0 15px rgba(var(--accent-rgb), 0.2)' : 'none'),
+                    border: isPlaying ? '1px solid #22c55e' : (isDragOver ? '2px solid var(--accent)' : (isSelected ? '1px solid var(--accent)' : (save.isServerSave ? (save.serverAccessLevel === 'admin' ? '1px solid #eab308' : '1px solid #06b6d4') : (save.hasTemplate ? '1px solid var(--accent-dim)' : '1px solid transparent')))), 
+                    boxShadow: isPlaying ? '0 0 20px rgba(34, 197, 94, 0.25)' : (isSelected ? '0 0 15px rgba(var(--accent-rgb), 0.2)' : (save.isServerSave ? (save.serverAccessLevel === 'admin' ? '0 0 12px rgba(234, 179, 8, 0.15)' : '0 0 12px rgba(6, 182, 212, 0.15)') : 'none')), 
                     background: isDragOver ? 'rgba(var(--accent-rgb), 0.1)' : (isSelected ? 'var(--bg-tertiary)' : ''),
                     transition: 'all 0.2s ease'
-                }}
+                }} 
             >
             {isDragOver && (
                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(var(--accent-rgb), 0.2)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20, borderRadius: 'inherit' }}>
@@ -2004,18 +2461,44 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.25, zIndex: 0, maskImage: 'linear-gradient(to bottom, black, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, black, transparent)' }}>
                 <MapImage mapTitle={getLocalizedString(save.mapTitle, 'Unknown Map')} mapId={save.mapId} mods={mods} />
             </div>
+
+            {/* Top Badges */}
+            {save.isServerSave && (
+              <div style={{ 
+                position: 'absolute', 
+                top: 8, 
+                right: isPlaying ? 116 : ((save.hasTemplate || save.isGhost) ? 96 : 8), 
+                background: save.serverAccessLevel === 'admin' ? 'rgba(234, 179, 8, 0.2)' : 'rgba(6, 182, 212, 0.2)', 
+                border: `1px solid ${save.serverAccessLevel === 'admin' ? '#eab308' : '#06b6d4'}`, 
+                color: save.serverAccessLevel === 'admin' ? '#fde047' : '#22d3ee', 
+                fontSize: 8, 
+                fontWeight: 900, 
+                padding: '2px 8px', 
+                borderRadius: 4, 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 4, 
+                boxShadow: `0 0 10px ${save.serverAccessLevel === 'admin' ? 'rgba(234, 179, 8, 0.4)' : 'rgba(6, 182, 212, 0.4)'}`, 
+                letterSpacing: 0.5, 
+                zIndex: 5 
+              }}>
+                {save.serverAccessLevel === 'admin' ? <Crown size={10} /> : <Lock size={10} />}
+                {save.serverAccessLevel === 'admin' ? 'MP SERVER (ADMIN)' : 'MP SERVER (PLAYER)'}
+              </div>
+            )}
+
             {save.isGhost && (
               <div style={{ 
                 position: 'absolute', 
                 top: 8, 
-                right: 8, 
+                right: save.isServerSave ? 140 : 8, 
                 background: 'var(--accent)', 
                 color: 'white', 
                 fontSize: 8, 
                 fontWeight: 900, 
                 padding: '2px 6px', 
-                borderRadius: 4,
-                letterSpacing: 0.5,
+                borderRadius: 4, 
+                letterSpacing: 0.5, 
                 boxShadow: '0 0 10px var(--accent)'
               }}>
                 READY FOR FIRST LAUNCH
@@ -2025,26 +2508,26 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
               <div style={{ 
                 position: 'absolute', 
                 top: 8, 
-                right: (save.hasTemplate || save.isGhost) ? 96 : 8, 
+                right: (save.hasTemplate || save.isGhost || save.isServerSave) ? 96 : 8, 
                 background: 'rgba(34, 197, 94, 0.25)', 
                 border: '1px solid #22c55e', 
                 color: '#4ade80', 
                 fontSize: 8, 
                 fontWeight: 900, 
                 padding: '2px 8px', 
-                borderRadius: 4,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-                boxShadow: '0 0 12px rgba(34, 197, 94, 0.6)',
-                letterSpacing: 0.5,
+                borderRadius: 4, 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 5, 
+                boxShadow: '0 0 12px rgba(34, 197, 94, 0.6)', 
+                letterSpacing: 0.5, 
                 zIndex: 5
               }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 6px #22c55e' }} />
                 ACTIVE IN-GAME
               </div>
             )}
-            {save.hasTemplate && !save.isGhost && (
+            {save.hasTemplate && !save.isGhost && !save.isServerSave && (
               <div style={{ 
                 position: 'absolute', 
                 top: 8, 
@@ -2054,9 +2537,9 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 fontSize: 8, 
                 fontWeight: 900, 
                 padding: '2px 6px', 
-                borderRadius: 4,
-                display: 'flex',
-                alignItems: 'center',
+                borderRadius: 4, 
+                display: 'flex', 
+                alignItems: 'center', 
                 gap: 4
               }}>
                 <Zap size={12} fill="var(--accent)" /> AUTOMATED
@@ -2100,6 +2583,25 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                         </span>
                       </span>
                     )}
+
+                    {save.isServerSave && (
+                      <span style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 4, 
+                        textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                        background: versionMismatches > 0 ? 'rgba(239, 68, 68, 0.25)' : 'rgba(34, 197, 94, 0.2)',
+                        border: `1px solid ${versionMismatches > 0 ? '#ef4444' : '#22c55e'}`,
+                        color: versionMismatches > 0 ? '#fca5a5' : '#86efac',
+                        padding: '1px 6px',
+                        borderRadius: 4,
+                        fontSize: 9,
+                        fontWeight: 800
+                      }}>
+                        {versionMismatches > 0 ? <ShieldAlert size={10} /> : <Check size={10} />}
+                        {versionMismatches > 0 ? `${versionMismatches} OUT OF DATE` : 'MODS SYNCED'}
+                      </span>
+                    )}
                 </div>
             </div>
             <div style={{ display: 'flex', gap: 2, marginTop: 'auto', width: '100%', zIndex: 1, padding: 'var(--sp-2) 0 0 0', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
@@ -2136,7 +2638,14 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 {!save.isGhost && (
                   <>
                     <button className="btn btn--ghost btn--sm" onClick={onAudit} title="Audit Mods & Versions" style={{ color: 'rgba(255,255,255,0.7)' }}><ShieldAlert size={16} /></button>
-                    <button className="btn btn--ghost btn--sm" onClick={onEdit} title="Surgical Editor" style={{ color: 'rgba(255,255,255,0.7)' }}><Sliders size={16} /></button>
+                    <button 
+                      className="btn btn--ghost btn--sm" 
+                      onClick={onEdit} 
+                      title={save.isEditorLocked ? "View Server Save (Editor Locked by Host)" : "Surgical Editor"} 
+                      style={{ color: save.isEditorLocked ? '#22d3ee' : 'rgba(255,255,255,0.7)' }}
+                    >
+                      {save.isEditorLocked ? <Lock size={16} /> : <Sliders size={16} />}
+                    </button>
                   </>
                 )}
                 <button className="btn btn--ghost btn--sm" onClick={onRollback} title="Rollback from Engine Backup" style={{ color: 'rgba(255,255,255,0.7)' }}><RotateCcw size={16} /></button>
@@ -2349,6 +2858,8 @@ export default function SavegamesPage() {
   // Savegame Editor state
   const [showEditor, setShowEditor] = useState(null); // Save object
   const [showAudit, setShowAudit] = useState(null); // Save object
+  const [serverExportSave, setServerExportSave] = useState(null); // Save object for export modal
+  const [saveFilter, setSaveFilter] = useState('all'); // 'all' | 'single' | 'multiplayer'
   const [showRollback, setShowRollback] = useState(null); // Save object
   const [engineBackups, setEngineBackups] = useState([]);
   const [loadingBackups, setLoadingBackups] = useState(false);
@@ -2509,10 +3020,25 @@ export default function SavegamesPage() {
       console.warn('[LAUNCH] Could not re-apply spawn position:', e);
     }
 
+    const allSaves = useSavegameStore.getState().savegames;
+    const saveToLaunch = allSaves.find(sg => sg.index === slotIndex);
+
+    // Strict Multiplayer Server Mod Version Audit & Guard
+    if (saveToLaunch && saveToLaunch.isServerSave) {
+      try {
+        const serverPrep = await window.api.savegames.prepareServerModsFolder({ slotIndex, savePath: saveToLaunch.path });
+        if (serverPrep && serverPrep.stats && (serverPrep.stats.mismatchedCount > 0 || serverPrep.stats.missingCount > 0)) {
+          useToastStore.getState().warning(`Cannot launch server save: ${serverPrep.stats.mismatchedCount} mod version mismatch(es) and ${serverPrep.stats.missingCount} missing mod(s). Mod audit required.`);
+          setShowAudit(saveToLaunch);
+          return; // Abort launch!
+        }
+      } catch (err) {
+        console.error('[LAUNCH-GUARD] Failed to verify server mods:', err);
+      }
+    }
+
     const { conflictSensitivity } = useSettingsStore.getState();
     if (conflictSensitivity !== 'off') {
-      const allSaves = useSavegameStore.getState().savegames;
-      const saveToLaunch = allSaves.find(sg => sg.index === slotIndex);
       if (saveToLaunch && saveToLaunch.mods) {
         const allConflicts = useLocalModsStore.getState().conflicts;
         const activeConflictsMap = getActiveConflictsForSave(saveToLaunch.mods, allConflicts);
@@ -2577,20 +3103,8 @@ export default function SavegamesPage() {
     }
   };
 
-  const handleExportSave = async (save) => {
-    try {
-      const cleanTitle = (save.farmName || `Slot${save.index || ''}`).replace(/[\\/:*?"<>|]/g, '_');
-      const defaultName = save.index ? `${cleanTitle}_Slot${save.index}` : cleanTitle;
-      useToastStore.getState().info(`Preparing export for ${defaultName}...`);
-      const result = await window.api.savegames.export({ savePath: save.path, defaultName });
-      if (result.success) {
-        useToastStore.getState().success(`Savegame exported successfully to ${result.filePath}`);
-      } else if (!result.canceled) {
-        useToastStore.getState().error(result.error || 'Failed to export savegame');
-      }
-    } catch (err) {
-      useToastStore.getState().error(`Export failed: ${err.message}`);
-    }
+  const handleExportSave = (save) => {
+    setServerExportSave(save);
   };
 
   const handleManualCloudSync = async () => {
@@ -2993,6 +3507,13 @@ export default function SavegamesPage() {
       return savegames.find(s => s.index === idx) || { index: idx, folderName: `savegame${idx}`, farmName: `Empty Slot ${idx}`, modCount: 0, isEmpty: true };
   });
 
+  const displayedSlots = React.useMemo(() => {
+    if (saveFilter === 'all') return allSlots;
+    if (saveFilter === 'single') return allSlots.filter(s => !s.isServerSave && !s.isEmpty);
+    if (saveFilter === 'multiplayer') return allSlots.filter(s => s.isServerSave);
+    return allSlots;
+  }, [allSlots, saveFilter]);
+
   const [isDragging, setIsDragging] = useState(false);
 
   const handleDragOver = (e) => {
@@ -3109,8 +3630,65 @@ export default function SavegamesPage() {
         </div>
       </div>
 
+      {/* Top Filter Tabs: Option 1 (All Saves | Single Player | Multiplayer Servers) */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sp-4)', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 6, background: 'var(--bg-secondary)', padding: '4px', borderRadius: 10, border: '1px solid var(--border)' }}>
+          <button 
+            className={`btn btn--xs ${saveFilter === 'all' ? 'btn--primary' : 'btn--ghost'}`}
+            onClick={() => setSaveFilter('all')}
+            style={{ fontWeight: 700, padding: '6px 14px' }}
+          >
+            All Saves ({allSlots.length})
+          </button>
+          <button 
+            className={`btn btn--xs ${saveFilter === 'single' ? 'btn--primary' : 'btn--ghost'}`}
+            onClick={() => setSaveFilter('single')}
+            style={{ fontWeight: 700, padding: '6px 14px' }}
+          >
+            Single Player ({allSlots.filter(s => !s.isServerSave && !s.isEmpty).length})
+          </button>
+          <button 
+            className={`btn btn--xs ${saveFilter === 'multiplayer' ? 'btn--primary' : 'btn--ghost'}`}
+            onClick={() => setSaveFilter('multiplayer')}
+            style={{ 
+              fontWeight: 700, 
+              padding: '6px 14px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 6,
+              ...(saveFilter === 'multiplayer' ? { background: '#06b6d4', borderColor: '#0891b2', color: '#ffffff' } : {}) 
+            }}
+          >
+            <Server size={13} /> Multiplayer Servers ({allSlots.filter(s => s.isServerSave).length})
+          </button>
+        </div>
+
+        {saveFilter === 'multiplayer' && (
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#06b6d4' }} />
+            Dedicated Server Folders & Symlinked Mods Active
+          </div>
+        )}
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: 'var(--sp-4)', paddingBottom: 'var(--sp-8)' }}>
-        {allSlots.map(save => (
+        {displayedSlots.length === 0 ? (
+          <div style={{ gridColumn: '1 / -1', padding: '48px 24px', textAlign: 'center', background: 'var(--bg-secondary)', borderRadius: 16, border: '1px dashed var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+            <Server size={40} style={{ color: 'var(--text-tertiary)' }} />
+            <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
+              {saveFilter === 'multiplayer' ? 'No Multiplayer Server Saves' : 'No Single Player Saves'}
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 460, margin: 0, lineHeight: 1.5 }}>
+              {saveFilter === 'multiplayer' 
+                ? 'No multiplayer server saves found. You can export any existing career as a server package with admin or player rights, or drag-and-drop a server save ZIP onto any slot.'
+                : 'No active single player careers found. Click "New Career" to start one or switch to "All Saves".'}
+            </p>
+            <button className="btn btn--secondary btn--sm" onClick={() => setSaveFilter('all')} style={{ marginTop: 8 }}>
+              View All Saves
+            </button>
+          </div>
+        ) : (
+          displayedSlots.map(save => (
             <SaveSlotCard 
                 key={save.index}
                 save={save}
@@ -3144,7 +3722,8 @@ export default function SavegamesPage() {
                 mods={mods}
                 onDrop={handleDrop}
             />
-        ))}
+          ))
+        )}
       </div>
 
       {/* Pop-out Archive Panel Backdrop */}
@@ -3817,6 +4396,14 @@ export default function SavegamesPage() {
              onRefresh={() => { fetchSavegames(); setShowAudit(null); }} 
            />
        )}
+
+      {serverExportSave && (
+          <ServerExportModal 
+            save={serverExportSave} 
+            onClose={() => setServerExportSave(null)} 
+            onExportComplete={fetchSavegames} 
+          />
+      )}
 
       {missingDeps && (
           <DependencyDownloadModal 

@@ -207,12 +207,33 @@ async function launch(options = {}) {
   }
 
   if (!targetModsPath) {
-    const cache = require('./cache');
-    const isSelectiveEnabled = cache.getSetting('selectiveLoading') !== 'false';
-    const effectiveIndex = isSelectiveEnabled ? options.savegameIndex : null;
-    
-    console.log(`[LAUNCH] ${effectiveIndex ? `Selective (Savegame ${effectiveIndex})` : 'Global'} Mod Synthesis...`);
-    targetModsPath = await modManager.prepareVirtualModsFolder(effectiveIndex);
+    // Check if this savegame is a dedicated multiplayer server save
+    if (options.savegameIndex) {
+      try {
+        const fs25Path = pathProvider.getFS25DataRoot();
+        const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
+        const serverMetaPath = path.join(savePath, 'server_meta.json');
+        if (fs.existsSync(serverMetaPath)) {
+          const savegameManager = require('./savegameManager');
+          const serverPrep = await savegameManager.prepareServerModsFolder(options.savegameIndex, savePath);
+          if (serverPrep && serverPrep.success && serverPrep.targetFolder) {
+            targetModsPath = serverPrep.targetFolder;
+            console.log(`[LAUNCH] Dedicated Server Save detected (Slot ${options.savegameIndex}). Using isolated mods folder: ${targetModsPath}`);
+          }
+        }
+      } catch (srvErr) {
+        console.warn('[LAUNCH] Server save mods preparation warning:', srvErr.message);
+      }
+    }
+
+    if (!targetModsPath) {
+      const cache = require('./cache');
+      const isSelectiveEnabled = cache.getSetting('selectiveLoading') !== 'false';
+      const effectiveIndex = isSelectiveEnabled ? options.savegameIndex : null;
+      
+      console.log(`[LAUNCH] ${effectiveIndex ? `Selective (Savegame ${effectiveIndex})` : 'Global'} Mod Synthesis...`);
+      targetModsPath = await modManager.prepareVirtualModsFolder(effectiveIndex);
+    }
   }
 
   const defaultModsPath = modManager.getDefaultModsPath();

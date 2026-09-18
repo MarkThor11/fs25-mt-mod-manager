@@ -1952,6 +1952,15 @@ async function getAllSavegames() {
                         }
                     }
                 } catch (e) {}
+            // Read server metadata if this is a multiplayer server save
+            let serverMeta = null;
+            const serverMetaPath = path.join(savePath, 'server_meta.json');
+            if (fs.existsSync(serverMetaPath)) {
+                try {
+                    serverMeta = await fs.readJson(serverMetaPath);
+                } catch (e) {
+                    debugLog('[SAVEGAMES] Error reading server_meta.json: ' + e.message);
+                }
             }
 
             savegames.push({
@@ -1964,6 +1973,12 @@ async function getAllSavegames() {
                 mapTitle,
                 isInitialized,
                 hasTemplate,
+                isServerSave: !!serverMeta,
+                serverAccessLevel: serverMeta?.accessLevel || (serverMeta ? 'player' : null),
+                isEditorLocked: serverMeta ? (serverMeta.accessLevel === 'player' || serverMeta.isLocked === true) : false,
+                serverName: serverMeta?.serverName || null,
+                serverModUrl: serverMeta?.serverModUrl || null,
+                serverExportedAt: serverMeta?.exportedAt || null,
                 money: parseFloat(stats?.['@_money'] || stats?.money || 0),
                 playTime: parseFloat(stats?.['@_playTime'] || stats?.playTime || 0),
                 lastSaveDate: settings['@_saveDateFormatted'] || settings.saveDateFormatted,
@@ -5063,6 +5078,251 @@ async function adoptSaveAsTemplate(saveIndex) {
     }
 }
 
+/**
+ * Reads farm permissions from farms.xml for a given savegame.
+ */
+async function getFarmPermissions(savePath) {
+    try {
+        const farmsPath = path.join(savePath, 'farms.xml');
+        if (!fs.existsSync(farmsPath)) {
+            return { success: false, error: 'farms.xml not found' };
+        }
+        const xml = await fs.readFile(farmsPath, 'utf8');
+        const parsed = parser.parse(xml);
+        const farms = getXMLArray(parsed, 'farms', 'farm');
+        const mainFarm = farms[0] || {};
+        
+        const farmId = parseInt(mainFarm['@_farmId'] || 1);
+        const farmName = mainFarm['@_name'] || 'My Farm';
+        const loan = parseFloat(mainFarm['@_loan'] || 0);
+        const money = parseFloat(mainFarm['@_money'] || 0);
+        
+        let players = [];
+        if (mainFarm.players) {
+            const raw = mainFarm.players.player;
+            players = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+        }
+
+        const permKeys = [
+            'buyVehicle', 'sellVehicle', 'buyPlaceable', 'sellPlaceable',
+            'manageContracts', 'tradeAnimals', 'createFields', 'landscaping',
+            'hireAssistant', 'resetVehicle', 'manageProductions', 'cutTrees',
+            'manageRights', 'transferMoney', 'updateFarm', 'manageContracting',
+            'farmManager'
+        ];
+
+        const primaryPlayer = players[0] || {};
+        const permissions = {};
+        for (const k of permKeys) {
+            const val = primaryPlayer['@_' + k] !== undefined ? primaryPlayer['@_' + k] : primaryPlayer[k];
+            permissions[k] = val !== 'false' && val !== false;
+        }
+
+        return {
+            success: true,
+            farmId,
+            farmName,
+            loan,
+            money,
+            permissions,
+            playersCount: players.length
+        };
+    } catch (err) {
+        console.error('[FARMS] Failed to get farm permissions:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * Updates player permission flags in farms.xml for a given savegame.
+ */
+async function updateFarmPermissions(savePath, permissions) {
+    try {
+        const farmsPath = path.join(savePath, 'farms.xml');
+        if (!fs.existsSync(farmsPath)) {
+            return { success: false, error: 'farms.xml not found' };
+        }
+        const xml = await fs.readFile(farmsPath, 'utf8');
+        const parsed = parser.parse(xml);
+        
+        if (!parsed.farms) {
+            return { success: false, error: 'Invalid farms.xml structure' };
+        }
+
+        let farmsList = parsed.farms.farm;
+        if (!Array.isArray(farmsList)) {
+            farmsList = farmsList ? [farmsList] : [];
+            parsed.farms.farm = farmsList;
+        }
+
+        if (farmsList.length === 0) {
+            farmsList.push({ '@_farmId': '1', '@_name': 'My Farm', '@_money': '500000', '@_loan': '0' });
+        }
+
+        const mainFarm = farmsList[0];
+        if (!mainFarm.players) {
+            mainFarm.players = { player: [] };
+        }
+        if (!Array.isArray(mainFarm.players.player)) {
+            mainFarm.players.player = mainFarm.players.player ? [mainFarm.players.player] : [];
+        }
+        if (mainFarm.players.player.length === 0) {
+            mainFarm.players.player.push({
+                '@_uniqueUserId': 'master',
+                '@_farmManager': 'true',
+                '@_lastNickname': 'Farm Member'
+            });
+        }
+
+        // Apply permission updates to all registered players on the farm
+        for (const player of mainFarm.players.player) {
+            for (const [key, value] of Object.entries(permissions)) {
+                player['@_' + key] = value ? 'true' : 'false';
+            }
+        }
+
+        const updatedXml = builder.build(parsed);
+        await fs.writeFile(farmsPath, updatedXml, 'utf8');
+        console.log(`[FARMS] Successfully updated farm permissions in ${farmsPath}`);
+        return { success: true };
+    } catch (err) {
+        console.error('[FARMS] Failed to update farm permissions:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * Prepares a dedicated, isolated mod directory for a multiplayer server save.
+ * Uses symlinks for matching versions from main library, preventing duplication and keeping original mods safe.
+ */
+async function prepareServerModsFolder(slotIndex, savePath) {
+    try {
+        const fs25Path = getFs25Path();
+        const serverMetaPath = path.join(savePath, 'server_meta.json');
+        let serverMeta = null;
+        if (fs.existsSync(serverMetaPath)) {
+            try {
+                serverMeta = await fs.readJson(serverMetaPath);
+            } catch (e) {}
+        }
+
+        const rawName = serverMeta?.serverName || `Server_Slot${slotIndex}`;
+        const safeServerName = rawName.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const targetFolder = path.join(fs25Path, 'mods', 'Server_Saves', `Slot_${slotIndex}_${safeServerName}`);
+        await fs.ensureDir(targetFolder);
+
+        // Get required mods from careerSavegame.xml
+        const careerPath = path.join(savePath, 'careerSavegame.xml');
+        if (!fs.existsSync(careerPath)) {
+            return { success: true, targetFolder, serverMeta, linkedCount: 0 };
+        }
+
+        const xml = await fs.readFile(careerPath, 'utf8');
+        const data = parser.parse(xml);
+        const requiredMods = (Array.isArray(data.careerSavegame?.mod) ? data.careerSavegame.mod : (data.careerSavegame?.mod ? [data.careerSavegame.mod] : (data.careerSavegame?.mods?.mod || [])))
+            .filter(m => !['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'].includes((m['@_modName'] || m.modName || '').toLowerCase()))
+            .map(m => ({
+                modName: m['@_modName'] || m.modName,
+                version: m['@_version'] || m.version
+            }));
+
+        const modManager = require('./modManager');
+        const { mods: allInstalledMods } = await modManager.scanLocalMods();
+
+        let linkedCount = 0;
+        let serverSpecificCount = 0;
+        let mismatchedCount = 0;
+        let missingCount = 0;
+
+        for (const req of requiredMods) {
+            const reqNameLower = (req.modName || '').toLowerCase();
+            const installed = allInstalledMods.find(m => (m.modName || '').toLowerCase() === reqNameLower);
+            const targetFilePath = path.join(targetFolder, `${req.modName}.zip`);
+
+            // If a server-specific file already exists in target folder, leave it intact
+            if (fs.existsSync(targetFilePath) && !fs.lstatSync(targetFilePath).isSymbolicLink()) {
+                serverSpecificCount++;
+                continue;
+            }
+
+            if (installed && installed.filePath && fs.existsSync(installed.filePath)) {
+                const versionMatches = !req.version || !installed.version || req.version === installed.version;
+                if (versionMatches) {
+                    // Safe symlink to original mod in main library (or hardlink/copy fallback)
+                    if (!fs.existsSync(targetFilePath)) {
+                        try {
+                            await fs.symlink(installed.filePath, targetFilePath, 'file');
+                        } catch (symErr) {
+                            try {
+                                await fs.link(installed.filePath, targetFilePath);
+                            } catch (linkErr) {
+                                await fs.copy(installed.filePath, targetFilePath);
+                            }
+                        }
+                    }
+                    linkedCount++;
+                } else {
+                    mismatchedCount++;
+                }
+            } else {
+                missingCount++;
+            }
+        }
+
+        return {
+            success: true,
+            targetFolder,
+            serverMeta,
+            stats: {
+                totalRequired: requiredMods.length,
+                linkedCount,
+                serverSpecificCount,
+                mismatchedCount,
+                missingCount
+            }
+        };
+    } catch (err) {
+        console.error('[SERVER-MODS] Failed to prepare server mods folder:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * Exports a savegame as a dedicated multiplayer server pack.
+ */
+async function exportServerSavegame({ savePath, accessLevel, serverName, serverModUrl, targetZipPath }) {
+    const AdmZip = require('adm-zip');
+    try {
+        if (!fs.existsSync(savePath)) {
+            throw new Error(`Savegame folder not found: ${savePath}`);
+        }
+
+        const serverMeta = {
+            isServerSave: true,
+            accessLevel: accessLevel || 'player',
+            isLocked: accessLevel === 'player',
+            serverName: serverName || 'Multiplayer Server',
+            serverModUrl: serverModUrl || '',
+            exportedAt: new Date().toISOString()
+        };
+
+        // Write server_meta.json into savegame folder before zipping
+        await fs.writeJson(path.join(savePath, 'server_meta.json'), serverMeta, { spaces: 2 });
+
+        const zip = new AdmZip();
+        zip.addLocalFolder(savePath);
+
+        await fs.ensureDir(path.dirname(targetZipPath));
+        zip.writeZip(targetZipPath);
+
+        console.log(`[EXPORT-SERVER] Exported server package (${accessLevel}) to ${targetZipPath}`);
+        return { success: true, filePath: targetZipPath, serverMeta };
+    } catch (err) {
+        console.error('[EXPORT-SERVER] Export server save failed:', err);
+        return { success: false, error: err.message };
+    }
+}
+
 module.exports = {
     adoptSaveAsTemplate,
     cleanupBridgeModFromSavegame,
@@ -5089,6 +5349,10 @@ module.exports = {
     createSavegameWithMods,
     importSavegame,
     exportSavegame,
+    exportServerSavegame,
+    getFarmPermissions,
+    updateFarmPermissions,
+    prepareServerModsFolder,
     isSavegame,
     renameSavegame,
     deleteSavegame,
