@@ -569,12 +569,11 @@ async function setSavegameMods(savegamePath, mods) {
         }
     });
 
-    // First, preserve all required existing mods and internal background helper mods
-    const internalMods = ['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
+    // Preserve required existing mods (excluding internal app helper mods)
     existingModsArray.forEach(m => {
         if (m && m['@_modName']) {
             const nameLow = m['@_modName'].toLowerCase();
-            if (m['@_required'] === 'true' || internalMods.includes(nameLow)) {
+            if (m['@_required'] === 'true' && !INTERNAL_HELPER_MODS.includes(nameLow)) {
                 newModsMap.set(m['@_modName'], {
                     '@_modName': m['@_modName'],
                     '@_title': String(m['@_title'] || m['@_modName']).replace(/"/g, "'"),
@@ -586,8 +585,9 @@ async function setSavegameMods(savegamePath, mods) {
         }
     });
 
-    // Then, add/update the user-selected mods
+    // Add/update user-selected mods (excluding internal app helper mods)
     mods.forEach(m => {
+        if (m && m.modName && INTERNAL_HELPER_MODS.includes(m.modName.toLowerCase())) return;
         const isMap = m.required || (mapId && m.modName === mapId.split('.')[0]) || (mapTitle && m.title === mapTitle);
         const existing = existingLookup.get(m.modName.toLowerCase());
         const rawTitle = m.title || (existing && existing['@_title']) || m.modName || '';
@@ -3376,6 +3376,46 @@ async function ensureStoreDeliveries() {
     return { success: false, error: 'Store Deliveries mod is not installed. Please download it from ModHub.' };
 }
 
+const INTERNAL_HELPER_MODS = [
+    'fs25_rememberpositions', 
+    'fs25_storedeliveries', 
+    'fs25_managerpersistencebridge', 
+    'fs25_quietloadingscreen', 
+    'fs25_mtradiomanager'
+];
+
+async function cleanInternalHelperModsFromSavegame(savePath) {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const xmlPath = path.join(savePath, 'careerSavegame.xml');
+        if (!fs.existsSync(xmlPath)) return;
+        
+        let xmlData = fs.readFileSync(xmlPath, 'utf8');
+        const modRegex = /<mod\s+[^>]*modName=["']([^"']+)["'][^>]*\/>\r?\n?/gi;
+        let modified = false;
+
+        xmlData = xmlData.replace(modRegex, (match, modName) => {
+            if (INTERNAL_HELPER_MODS.includes((modName || '').toLowerCase())) {
+                modified = true;
+                return '';
+            }
+            return match;
+        });
+
+        if (modified) {
+            fs.writeFileSync(xmlPath, xmlData, 'utf8');
+            console.log(`[CLEANUP] Stripped internal helper mods from careerSavegame.xml in ${savePath}`);
+        }
+    } catch (e) {
+        console.error('[CLEANUP] Failed to strip internal helper mods:', e.message);
+    }
+}
+
+async function cleanupBridgeModFromSavegame(savePath) {
+    return cleanInternalHelperModsFromSavegame(savePath);
+}
+
 async function updateNativeEnhancement(savePath, includeBridge, includeDeliveries) {
     try {
         const path = require('path');
@@ -4649,7 +4689,7 @@ async function autoInjectDependencies(savegamePath) {
     }
 }
 
-async function cleanupBridgeModFromSavegame(savePath) {
+async function _legacyCleanupBridgeModFromSavegame(savePath) {
     try {
         const path = require('path');
         const fs = require('fs');

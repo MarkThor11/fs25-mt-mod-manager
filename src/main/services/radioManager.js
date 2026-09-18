@@ -214,33 +214,6 @@ async function deployCompanionMod() {
             console.log('[RADIO] Native audio subsystem deployed to:', destPath);
         }
 
-        // Also ensure registered in existing savegame slots
-        const fs25Path = pathProvider.getFS25DataRoot();
-        if (fs25Path && fs.existsSync(fs25Path)) {
-            const entries = await fs.readdir(fs25Path);
-            for (const entry of entries) {
-                if (entry.toLowerCase().startsWith('savegame')) {
-                    const careerFile = path.join(fs25Path, entry, 'careerSavegame.xml');
-                    if (fs.existsSync(careerFile)) {
-                        try {
-                            let xml = await fs.readFile(careerFile, 'utf8');
-                            let modified = false;
-                            if (!xml.includes('FS25_MTRadioManager')) {
-                                xml = xml.replace('</careerSavegame>', '  <mod modName="FS25_MTRadioManager" title="In-Game Audio Subsystem" version="1.0.0.0" required="false" fileHash=""/>\n</careerSavegame>');
-                                modified = true;
-                            }
-                            if (!xml.includes('FS25_QuietLoadingScreen')) {
-                                xml = xml.replace('</careerSavegame>', '  <mod modName="FS25_QuietLoadingScreen" title="Quiet Loading Screen" version="1.0.0.0" required="false" fileHash=""/>\n</careerSavegame>');
-                                modified = true;
-                            }
-                            if (modified) {
-                                await fs.writeFile(careerFile, xml, 'utf8');
-                            }
-                        } catch (e) {}
-                    }
-                }
-            }
-        }
         return { success: true };
     } catch (err) {
         console.error('[RADIO] Failed to deploy companion mod:', err);
