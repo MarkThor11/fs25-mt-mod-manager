@@ -55,6 +55,8 @@ export default function HomePage() {
     heroSlideshowImages,
     heroSlideshowInterval,
     heroSlideshowShuffle,
+    heroSlideshowFit,
+    heroSlideshowFocus,
     updateHeroBannerSettings
   } = useSettingsStore();
 
@@ -391,19 +393,64 @@ export default function HomePage() {
           {heroBgType === 'slideshow' && (
             <>
               <div 
-                className="home-hero__slide"
+                className={`home-hero__slide ${heroSlideshowFit === 'fill' ? 'home-hero__slide--fill' : 'home-hero__slide--ambient'}`}
                 style={{
-                  backgroundImage: layer0Url ? `url("${layer0Url}")` : undefined,
                   opacity: activeLayer === 0 && layer0Url ? 1 : 0
                 }}
-              />
+              >
+                {layer0Url && (
+                  heroSlideshowFit === 'fill' ? (
+                    <div 
+                      className="home-hero__slide-fill"
+                      style={{ 
+                        backgroundImage: `url("${layer0Url}")`,
+                        backgroundPosition: `center ${heroSlideshowFocus || '65%'}`
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <div 
+                        className="home-hero__slide-backdrop" 
+                        style={{ backgroundImage: `url("${layer0Url}")` }} 
+                      />
+                      <div 
+                        className="home-hero__slide-foreground" 
+                        style={{ backgroundImage: `url("${layer0Url}")` }} 
+                      />
+                    </>
+                  )
+                )}
+              </div>
+
               <div 
-                className="home-hero__slide"
+                className={`home-hero__slide ${heroSlideshowFit === 'fill' ? 'home-hero__slide--fill' : 'home-hero__slide--ambient'}`}
                 style={{
-                  backgroundImage: layer1Url ? `url("${layer1Url}")` : undefined,
                   opacity: activeLayer === 1 && layer1Url ? 1 : 0
                 }}
-              />
+              >
+                {layer1Url && (
+                  heroSlideshowFit === 'fill' ? (
+                    <div 
+                      className="home-hero__slide-fill"
+                      style={{ 
+                        backgroundImage: `url("${layer1Url}")`,
+                        backgroundPosition: `center ${heroSlideshowFocus || '65%'}`
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <div 
+                        className="home-hero__slide-backdrop" 
+                        style={{ backgroundImage: `url("${layer1Url}")` }} 
+                      />
+                      <div 
+                        className="home-hero__slide-foreground" 
+                        style={{ backgroundImage: `url("${layer1Url}")` }} 
+                      />
+                    </>
+                  )
+                )}
+              </div>
             </>
           )}
 

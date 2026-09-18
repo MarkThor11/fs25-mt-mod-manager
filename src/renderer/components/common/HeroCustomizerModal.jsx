@@ -4,7 +4,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, Type, Eye, EyeOff, Sparkles, Sliders, Move,
   Quote, HelpCircle, Shuffle, Calendar, GripHorizontal,
   Folder, FolderSearch, Images, Clock, Trash2, RefreshCw, Plus,
-  FolderOpen, CheckSquare, Square
+  FolderOpen, CheckSquare, Square, Maximize, Crop
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useToastStore } from '../../store/useToastStore';
@@ -358,6 +358,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     heroFont, heroTextSize, heroTextScale, heroTextColor, heroTextShadow,
     heroShowText, heroShowSubtitle, heroSubtitleMode, heroQuoteIndex,
     heroSlideshowSource, heroSlideshowFolder, heroSlideshowImages, heroSlideshowInterval, heroSlideshowShuffle,
+    heroSlideshowFit, heroSlideshowFocus,
     setHeroSlideshowFolder, setHeroSlideshowImages, addHeroSlideshowImages, removeHeroSlideshowImage,
     updateHeroBannerSettings, resetHeroBannerSettings, setCustomHeroBanner, revertHeroBannerCrop
   } = useSettingsStore();
@@ -1268,6 +1269,100 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                         <Shuffle size={12} />
                         <span>Shuffle: {heroSlideshowShuffle !== false ? 'ON' : 'OFF'}</span>
                       </button>
+                    </div>
+
+                    {/* Picture Framing & Auto-Fit Mode */}
+                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-primary)' }}>Slideshow Picture Fit & Framing:</span>
+                        {heroSlideshowFit === 'fill' && (
+                          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>Focus:</span>
+                            {[
+                              { label: 'Ground & Machinery', value: '65%' },
+                              { label: 'Center', value: '50%' },
+                              { label: 'Sky', value: '35%' }
+                            ].map((f) => {
+                              const isFocusAct = (heroSlideshowFocus || '65%') === f.value;
+                              return (
+                                <button
+                                  key={f.value}
+                                  type="button"
+                                  onClick={() => updateHeroBannerSettings({ heroSlideshowFocus: f.value })}
+                                  style={{
+                                    padding: '2px 7px',
+                                    borderRadius: '5px',
+                                    border: isFocusAct ? '1px solid var(--accent)' : '1px solid var(--border)',
+                                    background: isFocusAct ? 'var(--accent-dim)' : 'var(--bg-secondary)',
+                                    color: isFocusAct ? 'var(--accent)' : 'var(--text-secondary)',
+                                    fontSize: '10px',
+                                    fontWeight: isFocusAct ? '700' : '500',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  {f.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => updateHeroBannerSettings({ heroSlideshowFit: 'ambient' })}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 10px',
+                            borderRadius: '8px',
+                            border: (heroSlideshowFit || 'ambient') === 'ambient' ? '2px solid var(--accent)' : '1px solid var(--border)',
+                            background: (heroSlideshowFit || 'ambient') === 'ambient' ? 'var(--accent-dim)' : 'var(--bg-secondary)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Maximize size={16} style={{ color: (heroSlideshowFit || 'ambient') === 'ambient' ? 'var(--accent)' : 'var(--text-secondary)', flexShrink: 0 }} />
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: (heroSlideshowFit || 'ambient') === 'ambient' ? 'var(--accent)' : 'var(--text-primary)' }}>
+                              Ambient Fit (Full Photo)
+                            </div>
+                            <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', lineHeight: 1.2 }}>
+                              100% uncropped with ambient blurred backdrop
+                            </div>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => updateHeroBannerSettings({ heroSlideshowFit: 'fill' })}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 10px',
+                            borderRadius: '8px',
+                            border: heroSlideshowFit === 'fill' ? '2px solid var(--accent)' : '1px solid var(--border)',
+                            background: heroSlideshowFit === 'fill' ? 'var(--accent-dim)' : 'var(--bg-secondary)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Crop size={16} style={{ color: heroSlideshowFit === 'fill' ? 'var(--accent)' : 'var(--text-secondary)', flexShrink: 0 }} />
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: heroSlideshowFit === 'fill' ? 'var(--accent)' : 'var(--text-primary)' }}>
+                              Fill Banner (Panoramic)
+                            </div>
+                            <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', lineHeight: 1.2 }}>
+                              Edge-to-edge fill with customizable focus
+                            </div>
+                          </div>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

@@ -2014,12 +2014,39 @@
 .home-hero__slide {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
   pointer-events: none;
   transition: opacity 0.8s ease-in-out;
   z-index: 0;
+  overflow: hidden;
+}
+
+.home-hero__slide-backdrop {
+  position: absolute;
+  inset: -25px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(24px) brightness(0.65) saturate(1.2);
+  transform: scale(1.1);
+  pointer-events: none;
+}
+
+.home-hero__slide-foreground {
+  position: absolute;
+  inset: 0;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.75));
+  pointer-events: none;
+}
+
+.home-hero__slide-fill {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-repeat: no-repeat;
+  pointer-events: none;
 }
 
 .home-hero__slide-btn {

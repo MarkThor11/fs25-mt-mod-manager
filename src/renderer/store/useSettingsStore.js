@@ -38,6 +38,8 @@ export const useSettingsStore = create((set) => ({
   heroSlideshowInterval: 30,
   heroSlideshowShuffle: true,
   heroSlideshowTransition: 'crossfade',
+  heroSlideshowFit: 'ambient', // 'ambient' | 'fill'
+  heroSlideshowFocus: '65%', // '65%' | '50%' | '35%'
   homeShowStats: true,
   homeShowLatest: true,
   homeShowDownloaded: true,
@@ -171,6 +173,8 @@ export const useSettingsStore = create((set) => ({
         })(),
         heroSlideshowShuffle: settings.heroSlideshowShuffle !== 'false',
         heroSlideshowTransition: settings.heroSlideshowTransition || 'crossfade',
+        heroSlideshowFit: settings.heroSlideshowFit || 'ambient',
+        heroSlideshowFocus: settings.heroSlideshowFocus || '65%',
         homeShowStats: settings.homeShowStats !== 'false',
         homeShowLatest: settings.homeShowLatest !== 'false',
         homeShowDownloaded: settings.homeShowDownloaded !== 'false',
@@ -381,7 +385,9 @@ export const useSettingsStore = create((set) => ({
       heroSlideshowImages: [],
       heroSlideshowInterval: 30,
       heroSlideshowShuffle: true,
-      heroSlideshowTransition: 'crossfade'
+      heroSlideshowTransition: 'crossfade',
+      heroSlideshowFit: 'ambient',
+      heroSlideshowFocus: '65%'
     };
     set(defaults);
     if (window.api?.settings) {
