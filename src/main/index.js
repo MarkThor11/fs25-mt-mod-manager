@@ -1515,6 +1515,15 @@ ipcMain.handle('savegames:prepareServerModsFolder', async (_, { slotIndex, saveP
   }
 });
 
+ipcMain.handle('savegames:toggleServerMode', async (_, { savePath, enableServerMode, options }) => {
+  try {
+    return await savegameManager.toggleServerMode(savePath, enableServerMode, options);
+  } catch (err) {
+    console.error('[SERVER-MODE] IPC savegames:toggleServerMode error:', err);
+    return { success: false, error: err.message };
+  }
+});
+
 ipcMain.handle('savegames:isSavegame', async (_, filePath) => {
   return await savegameManager.isSavegame(filePath);
 });

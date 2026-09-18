@@ -5,7 +5,7 @@ import {
   Save, Play, RefreshCw, Edit3, MapPin,
   Clock, DollarSign, Package, Check, X,
   Plus, ChevronDown, ChevronRight, Gamepad2, Trash2, TrendingUp, Shield,
-  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft, Anchor, Truck, Tractor, Car, Wheat, Share2, Lock, Unlock, Crown, Server
+  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft, Anchor, Truck, Tractor, Car, Wheat, Share2, Lock, Unlock, Crown, Server, User
 } from 'lucide-react';
 import { useSavegameStore } from '../store/useSavegameStore';
 import { useToastStore } from '../store/useToastStore';
@@ -531,7 +531,7 @@ function ServerExportModal({ save, onClose, onExportComplete }) {
 /**
  * Savegame Editor Modal Component
  */
-function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
+function SavegameEditorModal({ save, onClose, onRefresh, onLaunch, onToggleMode }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
     const [pendingLaunchSlot, setPendingLaunchSlot] = useState(null)
@@ -967,6 +967,40 @@ const [activeTab, setActiveTab] = useState('general');
           
           {activeTab === 'general' && (
             <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
+              {/* Save Mode Selector Panel */}
+              <div className="settings-panel" style={{ background: save.isServerSave ? 'rgba(6, 182, 212, 0.05)' : 'rgba(var(--accent-rgb), 0.05)', border: `1px solid ${save.isServerSave ? '#06b6d4' : 'var(--border)'}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                  <div>
+                    <h3 className="section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {save.isServerSave ? <Globe size={18} style={{ color: '#06b6d4' }} /> : <User size={18} className="text-accent" />}
+                      {save.isServerSave ? 'Multiplayer Server Mode' : 'Single Player Career Mode'}
+                    </h3>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+                      {save.isServerSave 
+                        ? 'Tagged as a Multiplayer Server save. Launches to MP menu with dedicated server mods active.' 
+                        : 'Standard Single Player save. Auto-starts directly into your career map with full Save Editor privileges.'}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      className={`btn btn--sm ${!save.isServerSave ? 'btn--primary' : 'btn--ghost'}`}
+                      onClick={() => onToggleMode && onToggleMode(save, false)}
+                      style={{ fontWeight: 700 }}
+                    >
+                      <User size={14} /> Single Player Mode
+                    </button>
+                    <button
+                      className={`btn btn--sm ${save.isServerSave ? 'btn--primary' : 'btn--ghost'}`}
+                      onClick={() => onToggleMode && onToggleMode(save, true)}
+                      style={{ fontWeight: 700, background: save.isServerSave ? '#06b6d4' : undefined, borderColor: save.isServerSave ? '#0891b2' : undefined }}
+                    >
+                      <Globe size={14} /> Multiplayer Server Mode
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div className="settings-panel">
                 <h3 className="section-title"><MapIcon size={16} /> Base Information</h3>
                 <div className="settings-grid">
@@ -2408,7 +2442,7 @@ const [activeTab, setActiveTab] = useState('general');
   );
 }
 
-function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, onExport, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop, isPlaying, isGameRunning }) {
+function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, onExport, onToggleMode, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop, isPlaying, isGameRunning }) {
     const isEmpty = save.modCount === 0 && (save.farmName || '').startsWith('Empty');
     const [isDragOver, setIsDragOver] = useState(false);
     
@@ -2689,6 +2723,15 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                   </>
                 )}
                 <button className="btn btn--ghost btn--sm" onClick={onRollback} title="Rollback from Engine Backup" style={{ color: 'rgba(255,255,255,0.7)' }}><RotateCcw size={16} /></button>
+                <button 
+                  className="btn btn--ghost btn--sm" 
+                  onClick={onToggleMode} 
+                  title={save.isGhost ? "Initialize save to toggle mode" : (save.isServerSave ? "Convert Slot to Single Player Mode" : "Convert Slot to Multiplayer Server Mode")} 
+                  disabled={save.isGhost} 
+                  style={{ color: save.isServerSave ? '#06b6d4' : 'rgba(255,255,255,0.7)' }}
+                >
+                  {save.isServerSave ? (<Globe size={16} />) : (<User size={16} />)}
+                </button>
                 <button className="btn btn--ghost btn--sm" onClick={onExport} title={save.isGhost ? "Initialize map to export" : "Export Savegame (ZIP)"} disabled={save.isGhost} style={{ color: 'var(--accent)' }}><Share2 size={16} /></button>
                 <button className="btn btn--ghost btn--sm" onClick={onArchive} title={save.isGhost ? "Initialize map to archive" : "Archive"} disabled={save.isGhost} style={{ color: 'rgba(255,255,255,0.7)' }}><Archive size={16} /></button>
                 <button className="btn btn--ghost btn--sm" onClick={onDelete} title="Delete Permamently" style={{ color: 'var(--danger)' }}><Trash2 size={16} /></button>
@@ -3155,6 +3198,37 @@ export default function SavegamesPage() {
 
   const handleExportSave = (save) => {
     setServerExportSave(save);
+  };
+
+  const handleToggleServerMode = async (targetSave, enableServerMode, options = {}) => {
+    if (!window.api?.savegames?.toggleServerMode || !targetSave?.path) return;
+    try {
+      const res = await window.api.savegames.toggleServerMode({
+        savePath: targetSave.path,
+        enableServerMode,
+        options
+      });
+      if (res && res.success) {
+        useToastStore.getState().success(
+          enableServerMode 
+            ? `Converted Slot ${targetSave.index} to Multiplayer Server Mode` 
+            : `Converted Slot ${targetSave.index} to Single Player Mode`
+        );
+        fetchSavegames();
+        if (showEditor && showEditor.index === targetSave.index) {
+          setShowEditor({
+            ...showEditor,
+            isServerSave: enableServerMode,
+            isEditorLocked: enableServerMode ? (res.serverMeta?.accessLevel === 'player') : false,
+            serverAccessLevel: enableServerMode ? (res.serverMeta?.accessLevel || 'player') : null
+          });
+        }
+      } else {
+        useToastStore.getState().error(res?.error || 'Failed to toggle mode');
+      }
+    } catch (err) {
+      useToastStore.getState().error(err.message);
+    }
   };
 
   const handleManualCloudSync = async () => {
@@ -3737,6 +3811,7 @@ export default function SavegamesPage() {
                 save={save}
                 onPlay={() => handleLaunch(save.index)}
                 onExport={() => handleExportSave(save)}
+                onToggleMode={() => handleToggleServerMode(save, !save.isServerSave)}
                 onArchive={() => handleArchive(save)}
                 onRollback={() => openRollback(save)}
                 onCreate={() => openCreateModal(save.index)}
@@ -4456,6 +4531,7 @@ export default function SavegamesPage() {
             onClose={() => setShowEditor(null)} 
             onRefresh={fetchSavegames}
             onLaunch={handleLaunch}
+            onToggleMode={handleToggleServerMode}
           />
       )}
 

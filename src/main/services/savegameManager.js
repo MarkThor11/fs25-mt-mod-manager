@@ -5324,6 +5324,41 @@ async function exportServerSavegame({ savePath, accessLevel, serverName, serverM
     }
 }
 
+/**
+ * Toggles a savegame slot between Single Player and Multiplayer Server mode.
+ */
+async function toggleServerMode(savePath, enableServerMode, options = {}) {
+    try {
+        const serverMetaPath = path.join(savePath, 'server_meta.json');
+        if (enableServerMode) {
+            let existingMeta = {};
+            if (fs.existsSync(serverMetaPath)) {
+                try { existingMeta = await fs.readJson(serverMetaPath); } catch (e) {}
+            }
+            const serverMeta = {
+                isServerSave: true,
+                accessLevel: options.accessLevel || existingMeta.accessLevel || 'player',
+                isLocked: (options.accessLevel || existingMeta.accessLevel || 'player') === 'player',
+                serverName: options.serverName || existingMeta.serverName || 'Multiplayer Server',
+                serverModUrl: options.serverModUrl !== undefined ? options.serverModUrl : (existingMeta.serverModUrl || ''),
+                updatedAt: new Date().toISOString()
+            };
+            await fs.writeJson(serverMetaPath, serverMeta, { spaces: 2 });
+            console.log(`[SERVER-MODE] Enabled server mode for save: ${savePath}`);
+            return { success: true, isServerSave: true, serverMeta };
+        } else {
+            if (fs.existsSync(serverMetaPath)) {
+                await fs.remove(serverMetaPath);
+            }
+            console.log(`[SERVER-MODE] Disabled server mode (converted to single player) for save: ${savePath}`);
+            return { success: true, isServerSave: false };
+        }
+    } catch (err) {
+        console.error('[SERVER-MODE] Failed to toggle server mode:', err);
+        return { success: false, error: err.message };
+    }
+}
+
 module.exports = {
     adoptSaveAsTemplate,
     cleanupBridgeModFromSavegame,
@@ -5351,6 +5386,7 @@ module.exports = {
     importSavegame,
     exportSavegame,
     exportServerSavegame,
+    toggleServerMode,
     getFarmPermissions,
     updateFarmPermissions,
     prepareServerModsFolder,

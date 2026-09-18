@@ -141,6 +141,7 @@ contextBridge.exposeInMainWorld('api', {
     getFarmPermissions: (savePath) => ipcRenderer.invoke('savegames:getFarmPermissions', savePath),
     updateFarmPermissions: (params) => ipcRenderer.invoke('savegames:updateFarmPermissions', params),
     prepareServerModsFolder: (params) => ipcRenderer.invoke('savegames:prepareServerModsFolder', params),
+    toggleServerMode: (params) => ipcRenderer.invoke('savegames:toggleServerMode', params),
     isSavegame: (filePath) => ipcRenderer.invoke('savegames:isSavegame', filePath),
     downloadStoreDeliveries: () => ipcRenderer.invoke('savegames:downloadStoreDeliveries'),
   },
