@@ -542,6 +542,15 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch }) {
     voiceVolume:       parseFloat(save.voiceVolume       ?? 1.0),
   });
 
+  // Local controls state so labels update live as sliders are dragged
+  const [controlsSettings, setControlsSettings] = useState({
+    steeringSensitivity: parseFloat(save.steeringSensitivity || 1.0),
+    steeringBackSpeed: parseFloat(save.steeringBackSpeed ?? 7.0),
+    vehicleArmSensitivity: parseFloat(save.vehicleArmSensitivity || 1.0),
+    forceFeedback: parseFloat(save.forceFeedback ?? 0.5),
+    cameraSensitivity: parseFloat(save.cameraSensitivity || 1.0),
+  });
+
 
   const handleResolveConflicts = async (modsToDisableSet) => {
       const data = conflictResolutionData;
@@ -1238,8 +1247,15 @@ const [activeTab, setActiveTab] = useState('general');
                 <h3 className="section-title"><Video size={16} /> Camera & Visuals</h3>
                 <div className="settings-grid">
                   <div className="setting">
-                    <label title="Mouse and controller look sensitivity.">Camera Sensitivity ({Math.round((parseFloat(save.cameraSensitivity) || 1.0) * 100)}%)</label>
-                    <CustomSlider min="0.5" max="2.0" step="0.1" defaultValue={parseFloat(save.cameraSensitivity || 1.0)} onBlur={e => handleUpdate('career', 'cameraSensitivity', e.target.value)} />
+                    <label title="Mouse and controller look sensitivity.">Camera Sensitivity ({Math.round(controlsSettings.cameraSensitivity * 100)}%)</label>
+                    <CustomSlider 
+                      min="0.5" 
+                      max="2.0" 
+                      step="0.1" 
+                      value={controlsSettings.cameraSensitivity} 
+                      onChange={e => setControlsSettings(s => ({ ...s, cameraSensitivity: parseFloat(e.target.value) }))}
+                      onBlur={e => handleUpdate('career', 'cameraSensitivity', e.target.value)} 
+                    />
                   </div>
                   <label className="checkbox-setting" title="Camera snaps back to center when you enter."><input type="checkbox" defaultChecked={save.resetVehicleCamera} onChange={e => handleUpdate('career', 'resetVehicleCamera', e.target.checked)} /><span>Reset Vehicle Camera</span></label>
                   <label className="checkbox-setting" title="Camera bounces with the vehicle seat."><input type="checkbox" defaultChecked={save.indoorCameraSuspension} onChange={e => handleUpdate('career', 'indoorCameraSuspension', e.target.checked)} /><span>Indoor Camera Suspension</span></label>
@@ -1285,17 +1301,6 @@ const [activeTab, setActiveTab] = useState('general');
                     </label>
                   </div>
 
-                  <div className="setting" style={{ marginTop: 8 }}>
-                    <label title="Manual or automatic transmission mode.">Gear Shift Mode</label>
-                    <div className="input-with-icon">
-                      <Settings2 size={14} />
-                      <select defaultValue={save.gearShiftMode || 0} onChange={e => handleUpdate('career', 'gearShiftMode', e.target.value)}>
-                        <option value="0">Automatic</option>
-                        <option value="1">Manual with Clutch</option>
-                        <option value="2">Manual</option>
-                      </select>
-                    </div>
-                  </div>
                   <div className="setting" style={{ marginTop: 8 }}>
                     <label title="How quickly vehicles consume fuel.">Fuel Usage</label>
                     <div className="input-with-icon">
@@ -1430,20 +1435,48 @@ const [activeTab, setActiveTab] = useState('general');
                     </select>
                   </div>
                   <div className="setting">
-                    <label title="How sensitive vehicle steering is.">Steering Sensitivity ({Math.round((parseFloat(save.steeringSensitivity) || 1.0) * 100)}%)</label>
-                    <CustomSlider min="0.5" max="2.0" step="0.05" defaultValue={parseFloat(save.steeringSensitivity || 1.0)} onBlur={e => handleUpdate('career', 'steeringSensitivity', e.target.value)} />
+                    <label title="How sensitive vehicle steering is.">Steering Sensitivity ({Math.round(controlsSettings.steeringSensitivity * 100)}%)</label>
+                    <CustomSlider 
+                      min="0.5" 
+                      max="2.0" 
+                      step="0.05" 
+                      value={controlsSettings.steeringSensitivity} 
+                      onChange={e => setControlsSettings(s => ({ ...s, steeringSensitivity: parseFloat(e.target.value) }))}
+                      onBlur={e => handleUpdate('career', 'steeringSensitivity', e.target.value)} 
+                    />
                   </div>
                   <div className="setting">
-                    <label title="How fast the steering wheel centers after turning.">Steering Return Speed ({parseFloat(save.steeringBackSpeed ?? 7.0).toFixed(1)})</label>
-                    <CustomSlider min="1.0" max="15.0" step="0.5" defaultValue={parseFloat(save.steeringBackSpeed ?? 7.0)} onBlur={e => handleUpdate('career', 'steeringBackSpeed', e.target.value)} />
+                    <label title="How fast the steering wheel centers after turning.">Steering Return Speed ({controlsSettings.steeringBackSpeed.toFixed(1)})</label>
+                    <CustomSlider 
+                      min="1.0" 
+                      max="15.0" 
+                      step="0.5" 
+                      value={controlsSettings.steeringBackSpeed} 
+                      onChange={e => setControlsSettings(s => ({ ...s, steeringBackSpeed: parseFloat(e.target.value) }))}
+                      onBlur={e => handleUpdate('career', 'steeringBackSpeed', e.target.value)} 
+                    />
                   </div>
                   <div className="setting">
-                    <label title="Sensitivity when operating cranes, loaders, and excavator arms.">Vehicle Arm Sensitivity ({Math.round((parseFloat(save.vehicleArmSensitivity) || 1.0) * 100)}%)</label>
-                    <CustomSlider min="0.5" max="2.0" step="0.05" defaultValue={parseFloat(save.vehicleArmSensitivity || 1.0)} onBlur={e => handleUpdate('career', 'vehicleArmSensitivity', e.target.value)} />
+                    <label title="Sensitivity when operating cranes, loaders, and excavator arms.">Vehicle Arm Sensitivity ({Math.round(controlsSettings.vehicleArmSensitivity * 100)}%)</label>
+                    <CustomSlider 
+                      min="0.5" 
+                      max="2.0" 
+                      step="0.05" 
+                      value={controlsSettings.vehicleArmSensitivity} 
+                      onChange={e => setControlsSettings(s => ({ ...s, vehicleArmSensitivity: parseFloat(e.target.value) }))}
+                      onBlur={e => handleUpdate('career', 'vehicleArmSensitivity', e.target.value)} 
+                    />
                   </div>
                   <div className="setting">
-                    <label title="Force feedback strength on wheels and controllers.">Force Feedback ({Math.round((parseFloat(save.forceFeedback) || 0.5) * 100)}%)</label>
-                    <CustomSlider min="0" max="1" step="0.05" defaultValue={parseFloat(save.forceFeedback ?? 0.5)} onBlur={e => handleUpdate('career', 'forceFeedback', e.target.value)} />
+                    <label title="Force feedback strength on wheels and controllers.">Force Feedback ({Math.round(controlsSettings.forceFeedback * 100)}%)</label>
+                    <CustomSlider 
+                      min="0" 
+                      max="1" 
+                      step="0.05" 
+                      value={controlsSettings.forceFeedback} 
+                      onChange={e => setControlsSettings(s => ({ ...s, forceFeedback: parseFloat(e.target.value) }))}
+                      onBlur={e => handleUpdate('career', 'forceFeedback', e.target.value)} 
+                    />
                   </div>
                   <label className="checkbox-setting" title="Shows GPS guidance and steering assist lines on the field.">
                     <input type="checkbox" defaultChecked={save.steeringAssistLines !== false} onChange={e => handleUpdate('career', 'steeringAssistLines', e.target.checked)} />
@@ -1456,10 +1489,6 @@ const [activeTab, setActiveTab] = useState('general');
                   <label className="checkbox-setting" title="Simplified crane and front loader arm control scheme.">
                     <input type="checkbox" defaultChecked={save.easyArmControl !== false} onChange={e => handleUpdate('career', 'easyArmControl', e.target.checked)} />
                     <span>Easy Arm Control</span>
-                  </label>
-                  <label className="checkbox-setting" title="Steer using motion sensor / gyroscope on supported gamepads.">
-                    <input type="checkbox" defaultChecked={save.gyroscopeSteering} onChange={e => handleUpdate('career', 'gyroscopeSteering', e.target.checked)} />
-                    <span>Gyroscope Steering</span>
                   </label>
                 </div>
               </div>

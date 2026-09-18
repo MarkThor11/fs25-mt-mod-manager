@@ -136,7 +136,6 @@ export default function ProfilesPage() {
     steeringAssistLines: true,
     steeringAssistCruiseControl: false,
     easyArmControl: true,
-    gyroscopeSteering: false,
     switchToTrainsEnabled: true,
     woodHarvesterAutomaticCutting: true,
   });
@@ -964,12 +963,6 @@ export default function ProfilesPage() {
                           <label className="checkbox-setting">
                             <input type="checkbox" checked={options.easyArmControl !== false} onChange={e => setOptions(prev => ({ ...prev, easyArmControl: e.target.checked }))} />
                             <span>Easy Arm Control</span>
-                          </label>
-                        </div>
-                        <div className="setting">
-                          <label className="checkbox-setting">
-                            <input type="checkbox" checked={options.gyroscopeSteering || false} onChange={e => setOptions(prev => ({ ...prev, gyroscopeSteering: e.target.checked }))} />
-                            <span>Gyroscope Steering</span>
                           </label>
                         </div>
                         <div className="setting">
