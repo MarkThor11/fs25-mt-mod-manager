@@ -130,6 +130,13 @@ const WheelLoaderIcon = ({ size = 24, color = 'currentColor', style = {} }) => (
   </svg>
 );
 
+const formatMoney = (amount) => Math.round(amount || 0).toLocaleString();
+const formatPlayTime = (minutes) => {
+  const hours = Math.floor((minutes || 0) / 60);
+  const mins = Math.round((minutes || 0) % 60);
+  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+};
+
 /**
  * Mod Audit Modal - Checks versions and missing mods for a savegame
  */
@@ -3547,13 +3554,6 @@ export default function SavegamesPage() {
         setModalSelectedMods(next);
     }
 };
-
-  const formatMoney = (amount) => Math.round(amount || 0).toLocaleString();
-  const formatPlayTime = (minutes) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.round(minutes % 60);
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-  };
 
   const allSlots = [...Array(20)].map((_, i) => {
       const idx = i + 1;
