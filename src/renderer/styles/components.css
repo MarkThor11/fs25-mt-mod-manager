@@ -2104,12 +2104,15 @@
 }
 
 .home-hero__slide-btn--paused {
-  opacity: 0.95 !important;
-  pointer-events: auto !important;
   background: rgba(34, 197, 94, 0.45);
   border-color: #22c55e;
   color: #ffffff;
   box-shadow: 0 0 12px rgba(34, 197, 94, 0.35);
+}
+
+.home-hero__slide-btn--paused-active {
+  opacity: 0.95 !important;
+  pointer-events: auto !important;
 }
 
 .home-hero__slide-btn--paused:hover {

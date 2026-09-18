@@ -280,6 +280,8 @@ export default function HomePage() {
   };
 
   const [isSlideshowPaused, setIsSlideshowPaused] = useState(false);
+  const [showPausedButton, setShowPausedButton] = useState(false);
+  const pauseTimerRef = useRef(null);
 
   const handleNextSlide = (e) => {
     e?.stopPropagation();
@@ -293,8 +295,28 @@ export default function HomePage() {
 
   const handleTogglePause = (e) => {
     e?.stopPropagation();
-    setIsSlideshowPaused(prev => !prev);
+    setIsSlideshowPaused((prev) => {
+      const next = !prev;
+      if (next) {
+        // Just paused: show temporarily for 3 seconds then fade out
+        setShowPausedButton(true);
+        if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+        pauseTimerRef.current = setTimeout(() => {
+          setShowPausedButton(false);
+        }, 3000);
+      } else {
+        setShowPausedButton(false);
+        if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+      }
+      return next;
+    });
   };
+
+  useEffect(() => {
+    return () => {
+      if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+    };
+  }, []);
 
   // Load and scan file list when heroBgType is 'slideshow' or source changes
   useEffect(() => {
@@ -492,7 +514,7 @@ export default function HomePage() {
               </button>
               <button 
                 type="button"
-                className={`home-hero__slide-btn home-hero__slide-btn--pause ${isSlideshowPaused ? 'home-hero__slide-btn--paused' : ''}`}
+                className={`home-hero__slide-btn home-hero__slide-btn--pause ${isSlideshowPaused ? 'home-hero__slide-btn--paused' : ''} ${showPausedButton ? 'home-hero__slide-btn--paused-active' : ''}`}
                 onClick={handleTogglePause}
                 title={isSlideshowPaused ? "Resume slideshow rotation" : "Pause slideshow on this photo"}
                 aria-label={isSlideshowPaused ? "Resume slideshow" : "Pause slideshow"}
