@@ -274,9 +274,13 @@ async function launch(options = {}) {
       const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
       const farmsFile = path.join(savePath, 'farms.xml');
       const careerFile = path.join(savePath, 'careerSavegame.xml');
-      let isValidSavegame = fs.existsSync(farmsFile) && fs.existsSync(careerFile);
+      const serverMetaPath = path.join(savePath, 'server_meta.json');
+      const isServerSave = fs.existsSync(serverMetaPath);
+      let isValidSavegame = fs.existsSync(farmsFile) && fs.existsSync(careerFile) && !isServerSave;
       
-      if (!isValidSavegame) {
+      if (isServerSave) {
+        console.log(`[LAUNCH] Savegame ${options.savegameIndex} is a Multiplayer Server save. Bypassing singleplayer autoStart so game launches to Multiplayer menu.`);
+      } else if (!isValidSavegame) {
         console.log(`[LAUNCH] Savegame ${options.savegameIndex} does not have valid savegame XML files. Bypassing autoStart.`);
         needsManualInit = true;
       } else {
