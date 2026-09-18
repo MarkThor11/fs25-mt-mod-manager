@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   TrendingUp, Package, Download, RefreshCw, ArrowRight, Globe, Star, Users, Share2, Clipboard, DownloadCloud, Activity, Pencil, Palette, Camera, Move,
-  ChevronLeft, ChevronRight, Images, Shuffle
+  ChevronLeft, ChevronRight, Images, Shuffle, Pause, Play
 } from 'lucide-react';
 import ModCard from '../components/modhub/ModCard';
 import HeroCustomizerModal from '../components/common/HeroCustomizerModal';
@@ -279,6 +279,8 @@ export default function HomePage() {
     }
   };
 
+  const [isSlideshowPaused, setIsSlideshowPaused] = useState(false);
+
   const handleNextSlide = (e) => {
     e?.stopPropagation();
     goToSlide(slideIndexRef.current + 1);
@@ -287,6 +289,11 @@ export default function HomePage() {
   const handlePrevSlide = (e) => {
     e?.stopPropagation();
     goToSlide(slideIndexRef.current - 1);
+  };
+
+  const handleTogglePause = (e) => {
+    e?.stopPropagation();
+    setIsSlideshowPaused(prev => !prev);
   };
 
   // Load and scan file list when heroBgType is 'slideshow' or source changes
@@ -346,7 +353,7 @@ export default function HomePage() {
 
   // Slideshow auto-rotation timer
   useEffect(() => {
-    if (heroBgType !== 'slideshow' || slideshowList.length <= 1) return;
+    if (heroBgType !== 'slideshow' || slideshowList.length <= 1 || isSlideshowPaused) return;
 
     const intervalSec = Math.max(5, heroSlideshowInterval || 30);
     const timer = setInterval(() => {
@@ -354,7 +361,7 @@ export default function HomePage() {
     }, intervalSec * 1000);
 
     return () => clearInterval(timer);
-  }, [heroBgType, slideshowList, heroSlideshowInterval]);
+  }, [heroBgType, slideshowList, heroSlideshowInterval, isSlideshowPaused]);
 
   const getBannerBackground = () => {
     switch (heroBgType) {
@@ -482,6 +489,15 @@ export default function HomePage() {
                 aria-label="Next photo"
               >
                 <ChevronRight size={20} />
+              </button>
+              <button 
+                type="button"
+                className={`home-hero__slide-btn home-hero__slide-btn--pause ${isSlideshowPaused ? 'home-hero__slide-btn--paused' : ''}`}
+                onClick={handleTogglePause}
+                title={isSlideshowPaused ? "Resume slideshow rotation" : "Pause slideshow on this photo"}
+                aria-label={isSlideshowPaused ? "Resume slideshow" : "Pause slideshow"}
+              >
+                {isSlideshowPaused ? <Play size={16} style={{ marginLeft: '2px' }} /> : <Pause size={16} />}
               </button>
             </>
           )}
