@@ -197,6 +197,8 @@ function MTRadioManager:initHooks()
             end
             return origPlay(soundPlayerSelf, ...)
         end
+    end
+
     print("[MTRadioManager] SoundPlayer radio hooks initialized successfully.")
 end
 

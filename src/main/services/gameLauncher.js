@@ -279,21 +279,17 @@ async function launch(options = {}) {
       const careerFile = path.join(savePath, 'careerSavegame.xml');
       const serverMetaPath = path.join(savePath, 'server_meta.json');
       const isServerSave = fs.existsSync(serverMetaPath);
-      let isValidSavegame = fs.existsSync(farmsFile) && fs.existsSync(careerFile);
+      let isValidSavegame = fs.existsSync(farmsFile) && fs.existsSync(careerFile) && !isServerSave;
       
-      if (!isValidSavegame) {
+      if (isServerSave) {
+        console.log(`[LAUNCH] Savegame ${options.savegameIndex} is a Multiplayer Server save. Bypassing singleplayer autoStart so game launches to Multiplayer menu.`);
+      } else if (!isValidSavegame) {
         console.log(`[LAUNCH] Savegame ${options.savegameIndex} does not have valid savegame XML files. Bypassing autoStart.`);
         needsManualInit = true;
       } else {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is valid. Pre-selecting save slot ${options.savegameIndex}.`);
+        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is valid. Enabling Auto-Start into map.`);
         args.push('-autoStartSavegameId', String(options.savegameIndex));
-        
-        // Only add -autoStart (direct load to 3D map) if NOT a multiplayer server save
-        if (!isServerSave) {
-          args.push('-autoStart');
-        } else {
-          console.log(`[LAUNCH] Multiplayer Server Save: Pre-selecting save slot ${options.savegameIndex} while staying on server setup screen.`);
-        }
+        args.push('-autoStart');
 
         // Ensure careerSavegame.xml is completely clean of internal helper mod entries
         try {

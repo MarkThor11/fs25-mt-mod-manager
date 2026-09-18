@@ -3408,6 +3408,14 @@ async function ensureStoreDeliveries() {
     return { success: false, error: 'Store Deliveries mod is not installed. Please download it from ModHub.' };
 }
 
+const INTERNAL_HELPER_MODS = [
+    'fs25_rememberpositions', 
+    'fs25_storedeliveries', 
+    'fs25_managerpersistencebridge', 
+    'fs25_quietloadingscreen', 
+    'fs25_mtradiomanager'
+];
+
 async function cleanInternalHelperModsFromSavegame(savePath) {
     try {
         const fs = require('fs');
