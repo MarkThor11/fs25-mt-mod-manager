@@ -220,6 +220,9 @@ async function launch(options = {}) {
             targetModsPath = serverPrep.targetFolder;
             console.log(`[LAUNCH] Dedicated Server Save detected (Slot ${options.savegameIndex}). Using isolated mods folder: ${targetModsPath}`);
           }
+          // Automatically stash single player saves into quarantine so in-game Host Game menu ONLY displays multiplayer saves
+          console.log(`[LAUNCH] Quarantining Single Player saves so in-game multiplayer menu only lists MP saves...`);
+          await savegameManager.stashSinglePlayerSaves();
         }
       } catch (srvErr) {
         console.warn('[LAUNCH] Server save mods preparation warning:', srvErr.message);
@@ -390,6 +393,12 @@ function disableModsDirectoryOverride() {
  */
 async function restoreGlobalGameSettings() {
   disableModsDirectoryOverride();
+  try {
+    const savegameManager = require('./savegameManager');
+    await savegameManager.restoreStashedSinglePlayerSaves();
+  } catch (e) {
+    console.error('[LAUNCH] Failed to restore stashed saves on game exit:', e.message);
+  }
 }
 
 let isMonitoringExit = false;

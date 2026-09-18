@@ -143,6 +143,8 @@ contextBridge.exposeInMainWorld('api', {
     prepareServerModsFolder: (params) => ipcRenderer.invoke('savegames:prepareServerModsFolder', params),
     toggleServerMode: (params) => ipcRenderer.invoke('savegames:toggleServerMode', params),
     isSavegame: (filePath) => ipcRenderer.invoke('savegames:isSavegame', filePath),
+    stashSinglePlayerSaves: () => ipcRenderer.invoke('savegames:stashSinglePlayerSaves'),
+    restoreStashedSinglePlayerSaves: () => ipcRenderer.invoke('savegames:restoreStashedSinglePlayerSaves'),
     downloadStoreDeliveries: () => ipcRenderer.invoke('savegames:downloadStoreDeliveries'),
   },
 

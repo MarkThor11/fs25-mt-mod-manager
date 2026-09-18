@@ -1528,6 +1528,14 @@ ipcMain.handle('savegames:isSavegame', async (_, filePath) => {
   return await savegameManager.isSavegame(filePath);
 });
 
+ipcMain.handle('savegames:stashSinglePlayerSaves', async () => {
+  return await savegameManager.stashSinglePlayerSaves();
+});
+
+ipcMain.handle('savegames:restoreStashedSinglePlayerSaves', async () => {
+  return await savegameManager.restoreStashedSinglePlayerSaves();
+});
+
 ipcMain.handle('savegames:renameArchive', async (_, { archivedFolderName, newName }) => {
   try {
     return await savegameManager.renameArchivedSavegame(archivedFolderName, newName);

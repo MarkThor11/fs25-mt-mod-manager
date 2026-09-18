@@ -1890,6 +1890,7 @@ async function updateFleetMaintenance(savePath, type, value) {
  * Get all savegame slots (re-implement for consistency)
  */
 async function getAllSavegames() {
+    await restoreStashedSinglePlayerSaves().catch(err => console.error('[SAVEGAMES] Auto-restore stashed saves failed:', err));
     const fs25Path = getFs25Path();
     const savegames = [];
     debugLog(`[SAVEGAMES] Scanning slots 1-20 in ${fs25Path}...`);
@@ -5549,6 +5550,78 @@ async function toggleServerMode(savePath, enableServerMode, options = {}) {
     }
 }
 
+/**
+ * Stashes all active Single Player save slots to a quarantine folder (stashed_sp_saves)
+ * so that when launching a Multiplayer Server save, in-game FS25 Host Game save menu
+ * ONLY displays multiplayer server saves.
+ */
+async function stashSinglePlayerSaves() {
+    try {
+        const fs25Path = getFs25Path();
+        const stashPath = path.join(fs25Path, 'stashed_sp_saves');
+        await fs.ensureDir(stashPath);
+
+        let stashedCount = 0;
+        for (let i = 1; i <= 20; i++) {
+            const savePath = path.join(fs25Path, `savegame${i}`);
+            const careerXml = path.join(savePath, 'careerSavegame.xml');
+            if (fs.existsSync(savePath) && fs.existsSync(careerXml)) {
+                const serverMetaPath = path.join(savePath, 'server_meta.json');
+                const isServerSave = fs.existsSync(serverMetaPath);
+                if (!isServerSave) {
+                    const targetStash = path.join(stashPath, `savegame${i}`);
+                    if (fs.existsSync(targetStash)) {
+                        await fs.remove(targetStash);
+                    }
+                    await fs.move(savePath, targetStash);
+                    stashedCount++;
+                    console.log(`[STASH-SAVES] Quarantined Single Player Save Slot ${i} -> ${targetStash}`);
+                }
+            }
+        }
+        return { success: true, stashedCount };
+    } catch (err) {
+        console.error('[STASH-SAVES] Error stashing single player saves:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * Restores all stashed Single Player save slots from quarantine (stashed_sp_saves)
+ * back to their active savegame1..20 slot folders in FS25 root.
+ */
+async function restoreStashedSinglePlayerSaves() {
+    try {
+        const fs25Path = getFs25Path();
+        const stashPath = path.join(fs25Path, 'stashed_sp_saves');
+        if (!fs.existsSync(stashPath)) return { success: true, restoredCount: 0 };
+
+        const items = await fs.readdir(stashPath);
+        let restoredCount = 0;
+
+        for (const item of items) {
+            if (/^savegame\d+$/i.test(item)) {
+                const sourceStash = path.join(stashPath, item);
+                const targetSave = path.join(fs25Path, item);
+                if (fs.existsSync(sourceStash)) {
+                    if (fs.existsSync(targetSave)) {
+                        await fs.remove(targetSave);
+                    }
+                    await fs.move(sourceStash, targetSave);
+                    restoredCount++;
+                    console.log(`[RESTORE-SAVES] Restored Single Player Save ${item} to active slots.`);
+                }
+            }
+        }
+
+        try { await fs.remove(stashPath); } catch (e) {}
+        return { success: true, restoredCount };
+    } catch (err) {
+        console.error('[RESTORE-SAVES] Error restoring stashed saves:', err);
+        return { success: false, error: err.message };
+    }
+}
+
 module.exports = {
     adoptSaveAsTemplate,
     cleanupBridgeModFromSavegame,
@@ -5599,5 +5672,7 @@ module.exports = {
     executeTransfer,
     autoInjectDependencies,
     findMapModInSavegame,
-    syncSubfolderMapDependencies
+    syncSubfolderMapDependencies,
+    stashSinglePlayerSaves,
+    restoreStashedSinglePlayerSaves
 };
