@@ -1131,7 +1131,7 @@
 .range-slider-wrap {
   position: relative;
   background: rgba(255,255,255,0.1);
-  border-radius: 2px;
+  border-radius: 7px;
   height: 4px;
   margin: 10px 0;
   display: flex;
@@ -1141,12 +1141,12 @@
 .range-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: 100%;
+  width: calc(100% + 16px);
   height: 4px;
   background: transparent;
   outline: none;
   position: absolute;
-  left: 0;
+  left: -8px;
   top: 0;
   pointer-events: none;
   margin: 0;
