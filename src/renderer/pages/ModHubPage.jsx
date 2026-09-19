@@ -193,25 +193,21 @@ export default function ModHubPage() {
       const sameType = isSmartMatching && (!!mod.techData.hpIsRequirement === !!powerReference.techData?.hpIsRequirement);
 
       // Technical data filters
-      if (mod.techData) {
-        if (mod.techData.price > 0) {
-          if (activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < globalMax.price) {
-            if (mod.techData.price < activeFilters.priceRange[0] || mod.techData.price > activeFilters.priceRange[1]) return false;
-          }
-        }
-        
-        // Manual HP filter only if NOT same-type smart matching
-        if (!sameType && mod.techData.hp > 0) {
-          if (activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < globalMax.hp) {
-            if (mod.techData.hp < activeFilters.hpRange[0] || mod.techData.hp > activeFilters.hpRange[1]) return false;
-          }
-        }
-        
-        if (mod.techData.capacity > 0) {
-          if (activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap) {
-            if (mod.techData.capacity < activeFilters.capRange[0] || mod.techData.capacity > activeFilters.capRange[1]) return false;
-          }
-        }
+      const modPrice = mod.techData?.price || 0;
+      const modHp = mod.techData?.hp || 0;
+      const modCap = mod.techData?.capacity || 0;
+
+      if (activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < globalMax.price) {
+        if (modPrice < activeFilters.priceRange[0] || modPrice > activeFilters.priceRange[1]) return false;
+      }
+      
+      // Manual HP filter only if NOT same-type smart matching
+      if (!sameType && (activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < globalMax.hp)) {
+        if (modHp < activeFilters.hpRange[0] || modHp > activeFilters.hpRange[1]) return false;
+      }
+      
+      if (activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap) {
+        if (modCap < activeFilters.capRange[0] || modCap > activeFilters.capRange[1]) return false;
       }
 
       // Smart Power Matching (Bi-directional Cross-Type only)
