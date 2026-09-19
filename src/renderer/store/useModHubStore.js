@@ -194,7 +194,7 @@ export const useModHubStore = create((set, get) => ({
     if (isDeepScanning || mods.length === 0) return;
     
     // Check if we already have tech data AND dependencies for all
-    const needsScan = mods.some(m => !m.techData || !m.dependencies);
+    const needsScan = mods.some(m => !m.techData || !m.techData.scraped || !m.dependencies);
     if (!needsScan) return;
 
     // Capture view state to prevent overwriting results if user navigates away
@@ -205,7 +205,7 @@ export const useModHubStore = create((set, get) => ({
     set({ isDeepScanning: true });
     try {
       const idsToFetch = mods
-        .filter(m => !m.techData || !m.dependencies)
+        .filter(m => !m.techData || !m.techData.scraped || !m.dependencies)
         .map(m => m.modId)
         .filter(Boolean);
 
@@ -219,9 +219,9 @@ export const useModHubStore = create((set, get) => ({
 
       updatedMods.forEach((mod, idx) => {
         const detail = batchResults[mod.modId];
-        if (detail) {
+        if (detail && detail.techData?.scraped) {
           updatedMods[idx] = get().enrichModWithDetail(mod, detail);
-        } else if (!mod.techData || !mod.dependencies) {
+        } else if (!mod.techData || !mod.techData.scraped || !mod.dependencies) {
           stillMissingIds.push(mod.modId);
         }
       });
@@ -1053,7 +1053,7 @@ export const useModHubStore = create((set, get) => ({
     const hpMin = uniqueHpValues[0] || 0;
     const hpMax = uniqueHpValues[uniqueHpValues.length - 1] || 0;
 
-    const techData = detail.techData || {
+    const rawTechData = detail.techData || {
       price: priceValue,
       hp: hpMax,
       hpMin: hpMin,
@@ -1063,6 +1063,7 @@ export const useModHubStore = create((set, get) => ({
       isDrivable: isVehicleCategory,
       techSpecs: detail.techSpecs || {}
     };
+    const techData = { ...rawTechData, scraped: true };
 
     let brand = detail.metadata?.['Manufacturer'] || detail.metadata?.['Brand'] || '';
     return { ...mod, ...detail, techData, brand };

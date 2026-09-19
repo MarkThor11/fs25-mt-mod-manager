@@ -722,6 +722,7 @@ async function fetchModDetail(modId) {
     capacity: 0,
     speed: 0,
     weight: 0,
+    scraped: true
   };
 
   Object.entries(metadata).forEach(([k, v]) => {

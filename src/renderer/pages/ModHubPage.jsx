@@ -140,6 +140,34 @@ export default function ModHubPage() {
     });
   }, [categoryAllMods, mods, modCache]);
 
+  // Calculate actual overall maximum bounds scraped across ALL mods in the cache/list
+  const globalMax = useMemo(() => {
+    let maxPrice = 0;
+    let maxHp = 0;
+    let maxCap = 0;
+
+    const allModsPool = [...sourceMods, ...Object.values(modCache || {})];
+
+    allModsPool.forEach(m => {
+      if (m?.techData) {
+        if (m.techData.price > maxPrice) maxPrice = m.techData.price;
+        if (m.techData.hp > maxHp) maxHp = m.techData.hp;
+        if (m.techData.capacity > maxCap) maxCap = m.techData.capacity;
+      }
+    });
+
+    return {
+      price: maxPrice > 0 ? maxPrice : 1500000,
+      hp: maxHp > 0 ? maxHp : 1500,
+      cap: maxCap > 0 ? maxCap : 500000
+    };
+  }, [sourceMods, modCache]);
+
+  const brands = useMemo(() => {
+    const scannedBrands = sourceMods.map(m => m.brand).filter(Boolean);
+    return Array.from(new Set([...hardcodedBrands, ...scannedBrands])).sort();
+  }, [sourceMods, hardcodedBrands]);
+
   // Filter mods based on active filters
   const filteredMods = useMemo(() => {
     return sourceMods.filter(mod => {
@@ -235,35 +263,7 @@ export default function ModHubPage() {
 
       return true;
     }).filter(Boolean);
-  }, [sourceMods, hiddenMods, activeFilters, authorFilter, isSmartMatchEnabled, powerReference, selectedHP, getInstalledVersion]);
-
-  const brands = useMemo(() => {
-    const scannedBrands = sourceMods.map(m => m.brand).filter(Boolean);
-    return Array.from(new Set([...hardcodedBrands, ...scannedBrands])).sort();
-  }, [sourceMods, hardcodedBrands]);
-
-  // Calculate actual overall maximum bounds scraped across ALL mods in the cache/list
-  const globalMax = useMemo(() => {
-    let maxPrice = 0;
-    let maxHp = 0;
-    let maxCap = 0;
-
-    const allModsPool = [...sourceMods, ...Object.values(modCache || {})];
-
-    allModsPool.forEach(m => {
-      if (m?.techData) {
-        if (m.techData.price > maxPrice) maxPrice = m.techData.price;
-        if (m.techData.hp > maxHp) maxHp = m.techData.hp;
-        if (m.techData.capacity > maxCap) maxCap = m.techData.capacity;
-      }
-    });
-
-    return {
-      price: maxPrice > 0 ? maxPrice : 1500000,
-      hp: maxHp > 0 ? maxHp : 1500,
-      cap: maxCap > 0 ? maxCap : 500000
-    };
-  }, [sourceMods, modCache]);
+  }, [sourceMods, hiddenMods, activeFilters, authorFilter, isSmartMatchEnabled, powerReference, selectedHP, getInstalledVersion, globalMax]);
 
   const handleBrandToggle = (brand) => {
     const newBrands = activeFilters.brands.includes(brand)
