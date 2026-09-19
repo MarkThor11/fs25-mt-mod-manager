@@ -546,6 +546,7 @@ const RadioPage = () => {
 
 const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAdd, onRemove, onPreview, onHide }) => {
     const [imgError, setImgError] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
 
     useEffect(() => {
         setImgError(false);
@@ -585,21 +586,61 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAd
             boxShadow: isPlaying ? '0 0 20px rgba(var(--accent-rgb), 0.2)' : '0 4px 12px rgba(0,0,0,0.1)'
         }}>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--bg-tertiary)', flexShrink: 0, overflow: 'hidden', position: 'relative', cursor: 'pointer' }} onClick={onPreview}>
+                <div 
+                    style={{ 
+                        width: '48px', 
+                        height: '48px', 
+                        borderRadius: '12px', 
+                        background: 'var(--bg-tertiary)', 
+                        flexShrink: 0, 
+                        overflow: 'hidden', 
+                        position: 'relative', 
+                        cursor: 'pointer' 
+                    }} 
+                    onClick={onPreview}
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                    title={isPlaying ? "Pause preview" : "Click to preview station"}
+                >
                     {station.favicon && !imgError ? (
                         <img 
                             src={station.favicon} 
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: (isPlaying || isBuffering) ? 0.3 : 1 }} 
+                            style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'cover', 
+                                opacity: (isPlaying || isBuffering || isHovered) ? 0.35 : 1,
+                                transition: 'opacity 0.2s ease'
+                            }} 
                             alt="" 
                             onError={() => setImgError(true)} 
                         />
                     ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', opacity: (isPlaying || isBuffering) ? 0.3 : 0.8 }}>
+                        <div style={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            color: 'var(--accent)', 
+                            opacity: (isPlaying || isBuffering || isHovered) ? 0.35 : 0.8,
+                            transition: 'opacity 0.2s ease'
+                        }}>
                             <RadioIcon size={24} />
                         </div>
                     )}
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', opacity: (isPlaying || isBuffering) ? 1 : 0, transition: 'opacity 0.2s' }}>
-                        {isBuffering ? <RefreshCw size={24} className="animate-spin" /> : isPlaying ? <Pause size={24} /> : <Play size={24} />}
+                    <div style={{ 
+                        position: 'absolute', 
+                        inset: 0, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        background: 'rgba(0,0,0,0.3)',
+                        color: 'var(--accent)', 
+                        opacity: (isPlaying || isBuffering || isHovered) ? 1 : 0, 
+                        transition: 'opacity 0.2s ease' 
+                    }}>
+                        {isBuffering ? <RefreshCw size={22} className="animate-spin" /> : isPlaying ? <Pause size={22} /> : <Play size={22} fill="var(--accent)" />}
                     </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -641,46 +682,37 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAd
                         {tags.length > 0 ? tags.join(', ') : (station.country || 'Unknown')}
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                {onHide && (
                     <button 
-                        onClick={onPreview}
-                        style={{ padding: '8px', borderRadius: '8px', background: isPlaying ? 'var(--accent)' : 'var(--bg-tertiary)', color: isPlaying ? 'white' : 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        title={isPlaying ? "Pause preview" : "Preview station stream"}
+                        onClick={onHide}
+                        style={{ 
+                            padding: '4px', 
+                            borderRadius: '6px', 
+                            background: 'transparent', 
+                            color: 'var(--text-secondary)', 
+                            border: 'none', 
+                            cursor: 'pointer', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            opacity: 0.4,
+                            transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.opacity = '1';
+                            e.currentTarget.style.color = '#ef4444';
+                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = '0.4';
+                            e.currentTarget.style.color = 'var(--text-secondary)';
+                            e.currentTarget.style.background = 'transparent';
+                        }}
+                        title="Remove non-working station from search results"
                     >
-                        {isBuffering ? <RefreshCw size={16} className="animate-spin" /> : isPlaying ? <Pause size={16} /> : <Play size={16} />}
+                        <X size={12} />
                     </button>
-                    {onHide && (
-                        <button 
-                            onClick={onHide}
-                            style={{ 
-                                padding: '4px', 
-                                borderRadius: '6px', 
-                                background: 'transparent', 
-                                color: 'var(--text-secondary)', 
-                                border: 'none', 
-                                cursor: 'pointer', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center',
-                                opacity: 0.4,
-                                transition: 'all 0.15s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.opacity = '1';
-                                e.currentTarget.style.color = '#ef4444';
-                                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.opacity = '0.4';
-                                e.currentTarget.style.color = 'var(--text-secondary)';
-                                e.currentTarget.style.background = 'transparent';
-                            }}
-                            title="Remove non-working station from search results"
-                        >
-                            <X size={12} />
-                        </button>
-                    )}
-                </div>
+                )}
             </div>
 
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
