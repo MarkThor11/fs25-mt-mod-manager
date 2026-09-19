@@ -296,9 +296,9 @@ const RadioPage = () => {
                                         onClick={() => toggleTag(t)}
                                         style={{ 
                                             flex: '1 1 auto',
-                                            padding: '7px 4px', 
+                                            padding: '8px 6px', 
                                             borderRadius: '20px', 
-                                            fontSize: 'clamp(11px, 0.9vw, 14px)', 
+                                            fontSize: 'clamp(13px, 1.05vw, 15px)', 
                                             fontWeight: '700',
                                             whiteSpace: 'nowrap',
                                             textAlign: 'center',
