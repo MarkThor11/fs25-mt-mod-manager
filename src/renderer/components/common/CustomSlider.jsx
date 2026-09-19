@@ -1,28 +1,53 @@
 import React, { useState } from 'react';
 
-export const CustomSlider = ({ value, min, max, step, onChange, width = '100%', title, onBlur, defaultValue, className = "perfect-pill-slider", ...props }) => {
+export const CustomSlider = ({ value, min, max, step, onChange, width = '100%', title, onBlur, defaultValue, useLog = false, className = "perfect-pill-slider", ...props }) => {
   const isControlled = value !== undefined;
   const [internalVal, setInternalVal] = useState(defaultValue !== undefined ? defaultValue : min);
   
-  const val = isControlled ? value : internalVal;
+  const rawVal = isControlled ? value : internalVal;
   
-  const numVal = parseFloat(val) || 0;
+  const numVal = parseFloat(rawVal) || 0;
   const numMin = parseFloat(min) || 0;
   const numMax = parseFloat(max) || 100;
   
   let percentage = 0;
-  if (numMax > numMin) {
+  if (useLog && numMax > numMin) {
+    // Square root mapping: percentage = sqrt( (val - min)/(max - min) ) * 100
+    // Gives 70% of horizontal slider width to the bottom 50% of the range for granular control
+    const ratio = Math.max(0, Math.min(1, (numVal - numMin) / (numMax - numMin)));
+    percentage = Math.sqrt(ratio) * 100;
+  } else if (numMax > numMin) {
     percentage = ((numVal - numMin) / (numMax - numMin)) * 100;
   }
   
   percentage = Math.max(0, Math.min(100, percentage));
 
-  const handleChange = (e) => {
-    if (!isControlled) {
-      setInternalVal(e.target.value);
+  // Convert linear slider input (0-1000 slider steps) back to actual value using inverse power curve
+  const handleSliderInput = (e) => {
+    let newActualVal;
+    if (useLog) {
+      const sliderPct = parseFloat(e.target.value) / 1000; // 0.0 to 1.0
+      // Inverse: ratio = sliderPct^2
+      const ratio = sliderPct * sliderPct;
+      newActualVal = Math.round(numMin + ratio * (numMax - numMin));
+    } else {
+      newActualVal = e.target.value;
     }
-    if (onChange) onChange(e);
+
+    if (!isControlled) {
+      setInternalVal(newActualVal);
+    }
+    if (onChange) {
+      // Create synthetic event with calculated actual value
+      const syntheticEvent = { ...e, target: { ...e.target, value: newActualVal } };
+      onChange(syntheticEvent);
+    }
   };
+
+  const sliderMin = useLog ? 0 : min;
+  const sliderMax = useLog ? 1000 : max;
+  const sliderStep = useLog ? 'any' : step;
+  const sliderVal = useLog ? (percentage * 10) : (isControlled ? value : internalVal);
 
   return (
     <>
@@ -66,11 +91,11 @@ export const CustomSlider = ({ value, min, max, step, onChange, width = '100%', 
       <input
         type="range"
         className={className}
-        min={min}
-        max={max}
-        step={step}
-        value={isControlled ? value : internalVal}
-        onChange={handleChange}
+        min={sliderMin}
+        max={sliderMax}
+        step={sliderStep}
+        value={sliderVal}
+        onChange={handleSliderInput}
         onBlur={onBlur}
         title={title}
         style={{

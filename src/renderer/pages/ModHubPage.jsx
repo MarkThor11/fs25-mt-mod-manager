@@ -881,7 +881,7 @@ export default function ModHubPage() {
                     </label>
                     <div style={{ position: 'relative', width: 'calc(100% - 14px)', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', margin: '12px 7px 8px 7px' }}>
                       <CustomSlider 
-                        min="0" max={dynamicMax.price} step="any" 
+                        min="0" max="10000000" useLog={true}
                         value={activeFilters.priceRange[0]} 
                         onChange={(e) => {
                           const val = Math.round(parseFloat(e.target.value) || 0);
@@ -890,7 +890,7 @@ export default function ModHubPage() {
                         style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                       <CustomSlider 
-                        min="0" max={dynamicMax.price} step="any" 
+                        min="0" max="10000000" useLog={true}
                         value={activeFilters.priceRange[1]} 
                         onChange={(e) => {
                           const val = Math.round(parseFloat(e.target.value) || 0);
@@ -912,7 +912,7 @@ export default function ModHubPage() {
                     </label>
                     <div style={{ position: 'relative', width: 'calc(100% - 14px)', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', margin: '12px 7px 8px 7px' }}>
                       <CustomSlider 
-                        min="0" max={dynamicMax.hp} step="any" 
+                        min="0" max="2000" useLog={true}
                         value={activeFilters.hpRange[0]} 
                         onChange={(e) => {
                           const val = Math.round(parseFloat(e.target.value) || 0);
@@ -921,7 +921,7 @@ export default function ModHubPage() {
                         style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                       <CustomSlider 
-                        min="0" max={dynamicMax.hp} step="any" 
+                        min="0" max="2000" useLog={true}
                         value={activeFilters.hpRange[1]} 
                         onChange={(e) => {
                           const val = Math.round(parseFloat(e.target.value) || 0);
@@ -943,7 +943,7 @@ export default function ModHubPage() {
                     </label>
                     <div style={{ position: 'relative', width: 'calc(100% - 14px)', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', margin: '12px 7px 8px 7px' }}>
                       <CustomSlider 
-                        min="0" max={dynamicMax.cap} step="any" 
+                        min="0" max="10000000" useLog={true}
                         value={activeFilters.capRange[0]} 
                         onChange={(e) => {
                           const val = Math.round(parseFloat(e.target.value) || 0);
@@ -952,7 +952,7 @@ export default function ModHubPage() {
                         style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                       <CustomSlider 
-                        min="0" max={dynamicMax.cap} step="any" 
+                        min="0" max="10000000" useLog={true}
                         value={activeFilters.capRange[1]} 
                         onChange={(e) => {
                           const val = Math.round(parseFloat(e.target.value) || 0);
