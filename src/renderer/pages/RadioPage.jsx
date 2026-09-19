@@ -637,20 +637,31 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAd
                         <button 
                             onClick={onHide}
                             style={{ 
-                                padding: '8px', 
-                                borderRadius: '8px', 
-                                background: 'rgba(239, 68, 68, 0.08)', 
-                                color: '#ef4444', 
-                                border: '1px solid rgba(239, 68, 68, 0.2)', 
+                                padding: '4px', 
+                                borderRadius: '6px', 
+                                background: 'transparent', 
+                                color: 'var(--text-secondary)', 
+                                border: 'none', 
                                 cursor: 'pointer', 
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 justifyContent: 'center',
+                                opacity: 0.4,
                                 transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.opacity = '1';
+                                e.currentTarget.style.color = '#ef4444';
+                                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.opacity = '0.4';
+                                e.currentTarget.style.color = 'var(--text-secondary)';
+                                e.currentTarget.style.background = 'transparent';
                             }}
                             title="Remove non-working station from search results"
                         >
-                            <X size={16} />
+                            <X size={12} />
                         </button>
                     )}
                 </div>
