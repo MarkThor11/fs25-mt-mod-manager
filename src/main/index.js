@@ -1681,13 +1681,19 @@ ipcMain.handle('game:launch', async (_, options) => {
     if (result.success && result.child) {
       result.child.on('close', async (code) => {
         // Steam DRM / Detached process guard:
-        // When launched via Steam, the initial spawned child often exits immediately (code 0)
-        // after delegating to the running Steam client / game instance.
-        // Wait briefly and verify whether the game is actually running before declaring exit.
-        await new Promise(res => setTimeout(res, 2500));
-        const stillRunning = await gameLauncher.isGameRunning();
-        if (stillRunning) {
-          console.log('[LAUNCH] Initial process detached to background game instance. Deferring exit handling.');
+        // When launched via Steam/Epic, the initial spawned child often exits immediately (code 0)
+        // after delegating to the running Steam client / background game process.
+        // Poll for up to 15 seconds to ensure the main game process has time to initialize
+        // before concluding that the game exited.
+        let isRunning = false;
+        for (let i = 0; i < 6; i++) {
+          await new Promise(res => setTimeout(res, 2500));
+          isRunning = await gameLauncher.isGameRunning();
+          if (isRunning) break;
+        }
+
+        if (isRunning) {
+          console.log('[LAUNCH] Initial process handed off to background game instance. Deferring exit handling.');
           return;
         }
         await handleGameExit(code);
