@@ -289,19 +289,21 @@ const RadioPage = () => {
                         {/* Genre Preset Tags */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '4px 0 10px 0' }}>
                             <span style={{ fontSize: '15px', color: 'var(--text-primary)', fontWeight: '700', letterSpacing: '0.01em' }}>Genres</span>
-                            <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '4px', alignItems: 'center', width: '100%', justifyContent: 'space-between', overflow: 'hidden' }}>
+                            <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '2px', alignItems: 'center', width: '100%', overflow: 'hidden' }}>
                                 {PRESET_TAGS.map(t => (
                                     <button 
                                         key={t} 
                                         onClick={() => toggleTag(t)}
                                         style={{ 
-                                            flex: '0 1 auto',
-                                            padding: '6px 10px', 
+                                            flex: '1 1 auto',
+                                            padding: '7px 4px', 
                                             borderRadius: '20px', 
-                                            fontSize: 'clamp(10px, 0.8vw, 13px)', 
+                                            fontSize: 'clamp(11px, 0.9vw, 14px)', 
                                             fontWeight: '700',
                                             whiteSpace: 'nowrap',
                                             textAlign: 'center',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
                                             background: tag === t.toLowerCase() ? 'var(--accent)' : 'var(--bg-tertiary)',
                                             color: tag === t.toLowerCase() ? 'white' : 'var(--text-secondary)',
                                             border: tag === t.toLowerCase() ? '1px solid var(--accent)' : '1px solid var(--border)',
