@@ -176,6 +176,11 @@ const RadioPage = () => {
         toast.success('All custom stations cleared');
     };
 
+    const filteredSearchResults = searchResults.filter(station => {
+        const href = station.url_resolved || station.url || station.href;
+        return !hiddenStations.some(h => (h.url_resolved || h.url || h.href) === href);
+    });
+
     return (
         <div className="page animate-fade-in custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', overflowY: 'auto' }}>
             {/* Header Area */}
@@ -198,7 +203,15 @@ const RadioPage = () => {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <RadioIcon size={20} style={{ color: 'var(--accent)' }} />
-                        <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>FS25 Internet Radio Stations</h2>
+                        <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>
+                            {viewMode === 'search' ? (
+                                isSearching ? 'Searching Stations...' : `${filteredSearchResults.length} Station${filteredSearchResults.length === 1 ? '' : 's'} Found`
+                            ) : viewMode === 'mine' ? (
+                                `${stations.length} In-Game Station${stations.length === 1 ? '' : 's'}`
+                            ) : (
+                                `${hiddenStations.length} Hidden Station${hiddenStations.length === 1 ? '' : 's'}`
+                            )}
+                        </h2>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={() => setViewMode('search')} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: viewMode === 'search' ? 'var(--accent)' : 'var(--bg-tertiary)', color: viewMode === 'search' ? 'white' : 'var(--text-secondary)', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Discover Stations</button>
