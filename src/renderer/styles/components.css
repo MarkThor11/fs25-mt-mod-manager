@@ -862,8 +862,10 @@
 .filter-chips {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--sp-2);
-  padding: 0 var(--sp-4) var(--sp-4);
+  min-height: 32px;
+  padding: 0 var(--sp-4) var(--sp-2);
   animation: fadeIn var(--duration-fast) ease;
 }
 
