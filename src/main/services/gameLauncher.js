@@ -186,6 +186,15 @@ async function launch(options = {}) {
     };
   }
 
+  // Ensure radio settings and base game music.xml override are applied
+  try {
+    const radioManager = require('./radioManager');
+    const radioSettings = await radioManager.getRadioSettings();
+    await radioManager.applyGameMusicOverride(radioSettings.overrideBuiltins);
+  } catch (rErr) {
+    console.warn('[LAUNCH] Failed to apply radio music override:', rErr.message);
+  }
+
   const args = [];
 
   // ── OPTIMIZED MODS PATH ──

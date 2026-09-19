@@ -63,61 +63,157 @@ function MTRadioManager:loadConfiguration()
 end
 
 function MTRadioManager:isOverrideActive()
-    return self.overrideBuiltins and self.numUserStations > 0
+    return self.overrideBuiltins
 end
 
-function MTRadioManager:filterChannels(soundPlayerSelf)
-    if soundPlayerSelf == nil or soundPlayerSelf.channels == nil then return end
-    if not self:isOverrideActive() then return end
+function MTRadioManager:filterChannels(playerSelf)
+    if playerSelf == nil or playerSelf.channels == nil then return end
+    if not self.overrideBuiltins then return end
     
-    -- If already filtered, ensure currentChannel is within valid 1..#channels bounds
-    if soundPlayerSelf.mtFiltered then
-        local total = #soundPlayerSelf.channels
-        if total > 0 then
-            if soundPlayerSelf.currentChannel == nil or soundPlayerSelf.currentChannel < 1 or soundPlayerSelf.currentChannel > total then
-                soundPlayerSelf.currentChannel = 1
-            end
-        end
+    if playerSelf.rawChannels == nil or #playerSelf.rawChannels < #playerSelf.channels then
+        playerSelf.rawChannels = playerSelf.channels
+    end
+
+    local raw = playerSelf.rawChannels or playerSelf.channels
+    local totalRaw = #raw
+
+    if playerSelf.mtFiltered and playerSelf.mtLastRawCount == totalRaw then
         return
     end
 
-    local total = #soundPlayerSelf.channels
+    print(string.format("[MTRadioManager] Filtering radio channels from %d raw channels...", totalRaw))
 
-    -- Strategy 1: Look for channel objects explicitly flagged as streams
     local userChannels = {}
-    for idx, ch in ipairs(soundPlayerSelf.channels) do
+    for idx, ch in ipairs(raw) do
         if ch ~= nil then
-            local isStream = ch.isStream or ch.isStreaming or ch.isInternet or ch.isInternetStream or (ch.url ~= nil and ch.url ~= "") or (ch.streamUrl ~= nil and ch.streamUrl ~= "") or (ch.href ~= nil and ch.href ~= "")
+            local isStream = false
+            if ch.isStream or ch.isStreaming or ch.isInternet or ch.isInternetStream or ch.isWebStream then
+                isStream = true
+            end
+            local urlStr = tostring(ch.url or ch.streamUrl or ch.href or ch.filename or ch.path or "")
+            if string.find(urlStr, "^http://") or string.find(urlStr, "^https://") then
+                isStream = true
+            end
+            if not isStream and (ch.tracks == nil or (type(ch.tracks) == "table" and #ch.tracks == 0)) then
+                if ch.name ~= nil and ch.name ~= "" and (ch.url ~= nil or ch.href ~= nil or ch.streamUrl ~= nil) then
+                    isStream = true
+                end
+            end
+
             if isStream then
                 table.insert(userChannels, ch)
+                print(string.format("[MTRadioManager] Custom stream #%d: '%s' (%s)", idx, tostring(ch.name or "Unnamed"), urlStr))
             end
         end
     end
 
-    if #userChannels > 0 and #userChannels <= self.numUserStations then
-        soundPlayerSelf.channels = userChannels
-        soundPlayerSelf.mtFiltered = true
-        soundPlayerSelf.currentChannel = 1
-        print(string.format("[MTRadioManager] Filtered channels by stream property: kept %d custom stations out of %d total", #userChannels, total))
+    if #userChannels > 0 then
+        playerSelf.channels = userChannels
+        playerSelf.mtFiltered = true
+        playerSelf.mtLastRawCount = totalRaw
+        if playerSelf.currentChannel == nil or playerSelf.currentChannel < 1 or playerSelf.currentChannel > #userChannels then
+            playerSelf.currentChannel = 1
+        end
+        print(string.format("[MTRadioManager] Kept %d custom stream channels out of %d raw channels.", #userChannels, totalRaw))
         return
     end
 
-    -- Strategy 2: GIANTS Engine loads 8 built-in stations first, then appends custom user stations.
-    -- Wait until total channels >= (8 + numUserStations) so we don't prematurely slice built-in channels before user channels finish loading.
-    if self.numUserStations > 0 then
-        if total >= (8 + self.numUserStations) or (total > 8 and total >= self.numUserStations) then
-            userChannels = {}
-            local firstIdx = total - self.numUserStations + 1
-            for i = firstIdx, total do
-                table.insert(userChannels, soundPlayerSelf.channels[i])
-            end
-            soundPlayerSelf.channels = userChannels
-            soundPlayerSelf.mtFiltered = true
-            soundPlayerSelf.currentChannel = 1
-            print(string.format("[MTRadioManager] Filtered channels by index offset: kept %d custom stations out of %d total (removed %d built-in stations)", 
-                #userChannels, total, total - self.numUserStations))
+    -- Slicing fallbacks
+    if totalRaw > 26 then
+        userChannels = {}
+        for i = 27, totalRaw do
+            table.insert(userChannels, raw[i])
+        end
+        playerSelf.channels = userChannels
+        playerSelf.mtFiltered = true
+        playerSelf.mtLastRawCount = totalRaw
+        if playerSelf.currentChannel == nil or playerSelf.currentChannel < 1 or playerSelf.currentChannel > #userChannels then
+            playerSelf.currentChannel = 1
+        end
+        print(string.format("[MTRadioManager] Sliced indices 27..%d (kept %d custom channels out of %d total).", totalRaw, #userChannels, totalRaw))
+        return
+    end
+
+    if self.numUserStations > 0 and totalRaw >= self.numUserStations then
+        userChannels = {}
+        local firstIdx = totalRaw - self.numUserStations + 1
+        for i = firstIdx, totalRaw do
+            table.insert(userChannels, raw[i])
+        end
+        playerSelf.channels = userChannels
+        playerSelf.mtFiltered = true
+        playerSelf.mtLastRawCount = totalRaw
+        if playerSelf.currentChannel == nil or playerSelf.currentChannel < 1 or playerSelf.currentChannel > #userChannels then
+            playerSelf.currentChannel = 1
+        end
+        print(string.format("[MTRadioManager] Sliced last %d channels out of %d total.", #userChannels, totalRaw))
+        return
+    end
+
+    if self.overrideBuiltins then
+        playerSelf.channels = {}
+        playerSelf.mtFiltered = true
+        playerSelf.mtLastRawCount = totalRaw
+        playerSelf.currentChannel = 1
+        print("[MTRadioManager] Suppressed all built-in radio channels.")
+    end
+end
+
+function MTRadioManager:hookClass(className, classObj)
+    if classObj == nil then return end
+    print(string.format("[MTRadioManager] Inspecting class '%s'...", className))
+    for k, v in pairs(classObj) do
+        if type(v) == "function" then
+            print(string.format("[MTRadioManager] Found function %s.%s", className, tostring(k)))
         end
     end
+
+    local function wrapMethod(methodName)
+        if classObj[methodName] ~= nil and type(classObj[methodName]) == "function" then
+            local orig = classObj[methodName]
+            classObj[methodName] = function(selfObj, ...)
+                print(string.format("[MTRadioManager] Hook invoked: %s.%s", className, methodName))
+                MTRadioManager:filterChannels(selfObj)
+                if MTRadioManager:isOverrideActive() and selfObj ~= nil and selfObj.channels ~= nil then
+                    local total = #selfObj.channels
+                    if total == 0 then
+                        if selfObj.stop ~= nil then selfObj:stop() end
+                        return
+                    end
+                    if methodName == "startChannel" or methodName == "setChannel" or methodName == "playChannel" then
+                        local arg1 = select(1, ...)
+                        local ch = arg1 or selfObj.currentChannel or 1
+                        if type(ch) ~= "number" or ch < 1 or ch > total then ch = 1 end
+                        selfObj.currentChannel = ch
+                        return orig(selfObj, ch, select(2, ...))
+                    elseif methodName == "nextChannel" then
+                        local curr = selfObj.currentChannel or 0
+                        local nextCh = curr + 1
+                        if nextCh > total or nextCh < 1 then nextCh = 1 end
+                        selfObj.currentChannel = nextCh
+                        if selfObj.startChannel ~= nil then return selfObj:startChannel(nextCh) end
+                    elseif methodName == "previousChannel" then
+                        local curr = selfObj.currentChannel or (total + 1)
+                        local prevCh = curr - 1
+                        if prevCh < 1 or prevCh > total then prevCh = total end
+                        selfObj.currentChannel = prevCh
+                        if selfObj.startChannel ~= nil then return selfObj:startChannel(prevCh) end
+                    end
+                end
+                return orig(selfObj, ...)
+            end
+            print(string.format("[MTRadioManager] Wrapped %s.%s successfully.", className, methodName))
+        end
+    end
+
+    wrapMethod("startChannel")
+    wrapMethod("setChannel")
+    wrapMethod("playChannel")
+    wrapMethod("nextChannel")
+    wrapMethod("previousChannel")
+    wrapMethod("play")
+    wrapMethod("update")
+    wrapMethod("initializeSoundPlayer")
 end
 
 function MTRadioManager:initHooks()
@@ -126,123 +222,44 @@ function MTRadioManager:initHooks()
 
     self:loadConfiguration()
 
-    if SoundPlayer == nil then
-        print("[MTRadioManager] SoundPlayer not available.")
-        return
-    end
-
-    -- Hook initializeSoundPlayer
-    if SoundPlayer.initializeSoundPlayer ~= nil then
-        local origInit = SoundPlayer.initializeSoundPlayer
-        SoundPlayer.initializeSoundPlayer = function(soundPlayerSelf, ...)
-            local res = origInit(soundPlayerSelf, ...)
-            soundPlayerSelf.mtFiltered = nil
-            MTRadioManager:filterChannels(soundPlayerSelf)
-            return res
-        end
-    end
-
-    -- Hook startChannel
-    if SoundPlayer.startChannel ~= nil then
-        local origStartChannel = SoundPlayer.startChannel
-        SoundPlayer.startChannel = function(soundPlayerSelf, channel, ...)
-            MTRadioManager:filterChannels(soundPlayerSelf)
-            if MTRadioManager:isOverrideActive() and soundPlayerSelf.channels ~= nil and #soundPlayerSelf.channels > 0 then
-                local ch = channel or soundPlayerSelf.currentChannel or 1
-                if ch < 1 or ch > #soundPlayerSelf.channels then
-                    ch = 1
-                end
-                soundPlayerSelf.currentChannel = ch
-                return origStartChannel(soundPlayerSelf, ch, ...)
-            end
-            return origStartChannel(soundPlayerSelf, channel, ...)
-        end
-    end
-
-    -- Hook nextChannel
-    if SoundPlayer.nextChannel ~= nil then
-        local origNext = SoundPlayer.nextChannel
-        SoundPlayer.nextChannel = function(soundPlayerSelf, ...)
-            MTRadioManager:filterChannels(soundPlayerSelf)
-            if MTRadioManager:isOverrideActive() and soundPlayerSelf.channels ~= nil and #soundPlayerSelf.channels > 0 then
-                local total = #soundPlayerSelf.channels
-                local current = soundPlayerSelf.currentChannel or 0
-                local nextCh = current + 1
-                if nextCh > total or nextCh < 1 then
-                    nextCh = 1
-                end
-                soundPlayerSelf.currentChannel = nextCh
-                if SoundPlayer.startChannel ~= nil then
-                    return SoundPlayer.startChannel(soundPlayerSelf, nextCh)
+    print("[MTRadioManager] Scanning Lua global environment for Radio & Sound symbols...")
+    if _G ~= nil then
+        for k, v in pairs(_G) do
+            local kStr = tostring(k)
+            local kLower = string.lower(kStr)
+            if string.find(kLower, "radio") or string.find(kLower, "sound") then
+                print(string.format("[MTRadioManager] Global found: %s (%s)", kStr, type(v)))
+                if type(v) == "table" then
+                    self:hookClass(kStr, v)
                 end
             end
-            return origNext(soundPlayerSelf, ...)
         end
     end
 
-    -- Hook previousChannel
-    if SoundPlayer.previousChannel ~= nil then
-        local origPrev = SoundPlayer.previousChannel
-        SoundPlayer.previousChannel = function(soundPlayerSelf, ...)
-            MTRadioManager:filterChannels(soundPlayerSelf)
-            if MTRadioManager:isOverrideActive() and soundPlayerSelf.channels ~= nil and #soundPlayerSelf.channels > 0 then
-                local total = #soundPlayerSelf.channels
-                local current = soundPlayerSelf.currentChannel or (total + 1)
-                local prevCh = current - 1
-                if prevCh < 1 or prevCh > total then
-                    prevCh = total
-                end
-                soundPlayerSelf.currentChannel = prevCh
-                if SoundPlayer.startChannel ~= nil then
-                    return SoundPlayer.startChannel(soundPlayerSelf, prevCh)
-                end
-            end
-            return origPrev(soundPlayerSelf, ...)
-        end
-    end
+    if SoundPlayer ~= nil then self:hookClass("SoundPlayer", SoundPlayer) end
+    if RadioManager ~= nil then self:hookClass("RadioManager", RadioManager) end
+    if Radio ~= nil then self:hookClass("Radio", Radio) end
 
-    -- Hook play
-    if SoundPlayer.play ~= nil then
-        local origPlay = SoundPlayer.play
-        SoundPlayer.play = function(soundPlayerSelf, ...)
-            MTRadioManager:filterChannels(soundPlayerSelf)
-            if MTRadioManager:isOverrideActive() and soundPlayerSelf.channels ~= nil and #soundPlayerSelf.channels > 0 then
-                local total = #soundPlayerSelf.channels
-                if soundPlayerSelf.currentChannel == nil or soundPlayerSelf.currentChannel < 1 or soundPlayerSelf.currentChannel > total then
-                    soundPlayerSelf.currentChannel = 1
-                    if SoundPlayer.startChannel ~= nil then
-                        SoundPlayer.startChannel(soundPlayerSelf, 1)
-                        return
-                    end
-                end
-            end
-            return origPlay(soundPlayerSelf, ...)
-        end
-    end
-
-    -- Hook update if available
-    if SoundPlayer.update ~= nil then
-        local origUpdate = SoundPlayer.update
-        SoundPlayer.update = function(soundPlayerSelf, ...)
-            MTRadioManager:filterChannels(soundPlayerSelf)
-            return origUpdate(soundPlayerSelf, ...)
-        end
-    end
-
-    print("[MTRadioManager] SoundPlayer radio hooks initialized successfully.")
+    print("[MTRadioManager] Radio & Sound subsystem hooks initialization completed.")
 end
 
 function MTRadioManager:loadMap(mapName)
     self:loadConfiguration()
     if g_soundPlayer ~= nil then
+        g_soundPlayer.mtFiltered = nil
         MTRadioManager:filterChannels(g_soundPlayer)
+    end
+    if g_currentMission ~= nil then
+        if g_currentMission.soundPlayer ~= nil then
+            g_currentMission.soundPlayer.mtFiltered = nil
+            MTRadioManager:filterChannels(g_currentMission.soundPlayer)
+        end
+        if g_currentMission.radio ~= nil then
+            g_currentMission.radio.mtFiltered = nil
+            MTRadioManager:filterChannels(g_currentMission.radio)
+        end
     end
 end
 
--- Register mod event listener so loadMap triggers on map load
 addModEventListener(MTRadioManager)
-
--- Immediately initialize hooks
 MTRadioManager:initHooks()
-
-

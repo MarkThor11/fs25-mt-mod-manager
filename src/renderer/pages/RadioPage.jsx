@@ -5,7 +5,7 @@ import { useRadioStore } from '../store/useRadioStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useToastStore } from '../store/useToastStore';
 
-const PRESET_TAGS = ['Rock', 'Pop', 'Country', 'Jazz', 'Dance', 'Metal', 'Classical', 'Oldies', 'News', 'Chill'];
+const PRESET_TAGS = ['Rock', 'Pop', 'Country', 'Jazz', 'Dance', 'Metal', 'Classical', 'Oldies', 'News', 'Chill', '80s', '90s', 'Electronic', 'House', 'Hip Hop', 'Rap', 'Blues', 'Folk', 'Reggae', 'Indie', 'Ambient', 'Talk', 'Top 40', 'Other'];
 
 const PRESET_LANGUAGES = [
     { code: 'english', name: 'English' },
@@ -320,58 +320,62 @@ const RadioPage = () => {
                         </div>
 
                         {/* Presets */}
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', color: 'var(--accent)', marginRight: '8px', fontWeight: '700' }}>Official Game Presets:</span>
-                            {OFFICIAL_PRESETS.map(p => {
-                                const matchedStation = stations.find(s => s.href && s.href.replace(/^https?:\/\//, '').replace(/\/$/, '') === p.url.replace(/^https?:\/\//, '').replace(/\/$/, ''));
-                                const isAdded = !!matchedStation;
-                                return (
-                                    <button 
-                                        key={p.name}
-                                        onClick={() => isAdded ? handleRemove(matchedStation.href) : handleAdd(p)}
-                                        style={{ 
-                                            padding: '6px 12px', 
-                                            borderRadius: '20px', 
-                                            fontSize: '11px', 
-                                            fontWeight: '700',
-                                            background: isAdded ? 'rgba(239, 68, 68, 0.12)' : 'var(--accent-dim)',
-                                            color: isAdded ? '#ef4444' : 'var(--accent)',
-                                            border: isAdded ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid var(--accent-dim)',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '6px',
-                                            transition: 'all 0.2s'
-                                        }}
-                                        title={isAdded ? "Click to remove from game" : "Click to add to game"}
-                                    >
-                                        {isAdded ? <Trash2 size={12} /> : <Plus size={12} />} {p.name}
-                                    </button>
-                                );
-                            })}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <span style={{ fontSize: '14px', color: 'var(--accent)', fontWeight: '700' }}>Official Game Presets</span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                                {OFFICIAL_PRESETS.map(p => {
+                                    const matchedStation = stations.find(s => s.href && s.href.replace(/^https?:\/\//, '').replace(/\/$/, '') === p.url.replace(/^https?:\/\//, '').replace(/\/$/, ''));
+                                    const isAdded = !!matchedStation;
+                                    return (
+                                        <button 
+                                            key={p.name}
+                                            onClick={() => isAdded ? handleRemove(matchedStation.href) : handleAdd(p)}
+                                            style={{ 
+                                                padding: '6px 12px', 
+                                                borderRadius: '20px', 
+                                                fontSize: '11px', 
+                                                fontWeight: '700',
+                                                background: isAdded ? 'rgba(239, 68, 68, 0.12)' : 'var(--accent-dim)',
+                                                color: isAdded ? '#ef4444' : 'var(--accent)',
+                                                border: isAdded ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid var(--accent-dim)',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                transition: 'all 0.2s'
+                                            }}
+                                            title={isAdded ? "Click to remove from game" : "Click to add to game"}
+                                        >
+                                            {isAdded ? <Trash2 size={12} /> : <Plus size={12} />} {p.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
 
                         {/* Genre Filter Pills */}
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginRight: '8px', fontWeight: '600' }}>Genres:</span>
-                            {PRESET_TAGS.map(t => (
-                                <button 
-                                    key={t}
-                                    onClick={() => toggleTag(t)}
-                                    style={{ 
-                                        padding: '6px 12px', 
-                                        borderRadius: '20px', 
-                                        fontSize: '12px', 
-                                        fontWeight: '600',
-                                        background: tag === t.toLowerCase() ? 'var(--accent)' : 'var(--bg-tertiary)',
-                                        color: tag === t.toLowerCase() ? 'white' : 'var(--text-secondary)',
-                                        border: tag === t.toLowerCase() ? '1px solid var(--accent)' : '1px solid var(--border)',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    {t}
-                                </button>
-                            ))}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: '700' }}>Genres</span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                                {PRESET_TAGS.map(t => (
+                                    <button 
+                                        key={t}
+                                        onClick={() => toggleTag(t)}
+                                        style={{ 
+                                            padding: '6px 12px', 
+                                            borderRadius: '20px', 
+                                            fontSize: '12px', 
+                                            fontWeight: '600',
+                                            background: tag === t.toLowerCase() ? 'var(--accent)' : 'var(--bg-tertiary)',
+                                            color: tag === t.toLowerCase() ? 'white' : 'var(--text-secondary)',
+                                            border: tag === t.toLowerCase() ? '1px solid var(--accent)' : '1px solid var(--border)',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {t}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
@@ -391,6 +395,7 @@ const RadioPage = () => {
                                             key={station.stationuuid} 
                                             station={station} 
                                             isAdded={isAdded} 
+                                            activeTag={tag}
                                             isPlaying={playingStationUrl === resolvedUrl} 
                                             isBuffering={isBuffering && playingStationUrl === resolvedUrl} 
                                             onPreview={() => setPlayingStation(playingStationUrl === resolvedUrl ? null : resolvedUrl)} 
@@ -461,12 +466,29 @@ const RadioPage = () => {
     );
 };
 
-const StationCard = ({ station, isAdded, isPlaying, isBuffering, onAdd, onRemove, onPreview }) => {
+const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAdd, onRemove, onPreview }) => {
     const [imgError, setImgError] = useState(false);
 
     useEffect(() => {
         setImgError(false);
     }, [station.favicon]);
+
+    const formatTags = () => {
+        if (!station.tags) return station.country || 'Unknown';
+        const tagList = station.tags.split(',').map(t => t.trim()).filter(Boolean);
+        if (tagList.length === 0) return station.country || 'Unknown';
+
+        let sorted = [...tagList];
+        if (activeTag) {
+            const lowerFilter = activeTag.toLowerCase();
+            const idx = sorted.findIndex(t => t.toLowerCase() === lowerFilter);
+            if (idx > 0) {
+                const [matched] = sorted.splice(idx, 1);
+                sorted.unshift(matched);
+            }
+        }
+        return sorted.slice(0, 4).join(', ');
+    };
 
     return (
         <div className="station-card" style={{ 
@@ -505,7 +527,7 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, onAdd, onRemove
                         {station.name}
                     </h3>
                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {station.tags ? station.tags.split(',').slice(0, 2).join(', ') : station.country || 'Unknown'}
+                        {formatTags()}
                     </div>
                 </div>
                 <button 

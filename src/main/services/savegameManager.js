@@ -17,7 +17,7 @@ function ultraNormalize(str) {
     s = s.replace(/(?:mod|pack|prefab|map)+/g, '');
     return s;
 }
-const INTERNAL_HELPER_MODS = ['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
+const INTERNAL_HELPER_MODS = ['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge'];
 
 // 🛠️ DIAGNOSTIC UTILITY 🛠️
 const logFile = (app && typeof app.getPath === 'function') 

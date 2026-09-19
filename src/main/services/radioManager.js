@@ -223,14 +223,35 @@ async function saveRadios(radios) {
         })
         .filter(r => !r.href.includes('localhost:8000') && !r.href.includes('/spotify_account'));
 
+    // Deduplicate by normalized href
+    const seenHrefs = new Set();
+    const uniqueRadios = [];
+    for (const r of sanitizedRadios) {
+        let norm = (r.href || '').trim().toLowerCase();
+        if (norm.endsWith('/;')) norm = norm.slice(0, -2);
+        else if (norm.endsWith(';')) norm = norm.slice(0, -1);
+        if (norm.endsWith('/')) norm = norm.slice(0, -1);
+        
+        if (norm && !seenHrefs.has(norm)) {
+            seenHrefs.add(norm);
+            uniqueRadios.push(r);
+        }
+    }
+
     // Build XML manually for absolute control (Giants Engine is very picky)
     let xml = '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n\n';
     xml += '<streamingInternetRadios>\n';
     
-    for (const item of sanitizedRadios) {
-        const escapedHref = item.href.replace(/&/g, '&amp;');
-        const nameAttr = item.name ? ` name="${item.name.replace(/"/g, '&quot;')}"` : '';
-        xml += `    <streamingInternetRadio href="${escapedHref}"${nameAttr} />\n`;
+    for (const item of uniqueRadios) {
+        let cleanHref = item.href ? item.href.trim() : '';
+        if (cleanHref.endsWith('/;')) {
+            cleanHref = cleanHref.slice(0, -2);
+        } else if (cleanHref.endsWith(';')) {
+            cleanHref = cleanHref.slice(0, -1);
+        }
+        const escapedHref = cleanHref.replace(/&/g, '&amp;');
+        const replacementAttr = item.name ? ` replacement="${item.name.replace(/"/g, '&quot;')}"` : '';
+        xml += `    <streamingInternetRadio href="${escapedHref}"${replacementAttr} />\n`;
         if (item.name || item.favicon) {
             metadata[item.href] = { ...metadata[item.href], name: item.name, favicon: item.favicon };
         }
@@ -327,6 +348,49 @@ async function getRadioSettings() {
     }
 }
 
+async function getGameMusicXmlPath() {
+    try {
+        const gameLauncher = require('./gameLauncher');
+        const detected = await gameLauncher.detectGamePath();
+        if (detected && detected.path) {
+            const gameDir = path.dirname(detected.path);
+            const musicXml = path.join(gameDir, '..', 'data', 'music', 'music.xml');
+            if (fs.existsSync(musicXml) || fs.existsSync(musicXml + '.original')) {
+                return musicXml;
+            }
+        }
+    } catch (e) {
+        console.error('[RADIO] Failed to resolve game music.xml path:', e.message);
+    }
+    return null;
+}
+
+async function applyGameMusicOverride(overrideBuiltins) {
+    try {
+        const musicXmlPath = await getGameMusicXmlPath();
+        if (!musicXmlPath) return;
+
+        const backupPath = musicXmlPath + '.original';
+
+        if (overrideBuiltins) {
+            if (!fs.existsSync(backupPath) && fs.existsSync(musicXmlPath)) {
+                await fs.copyFile(musicXmlPath, backupPath);
+                console.log('[RADIO] Created backup of original base game music.xml:', backupPath);
+            }
+            const overrideXml = `<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n<music>\n    <radio>\n        <channels>\n        </channels>\n    </radio>\n</music>\n`;
+            await fs.writeFile(musicXmlPath, overrideXml, 'utf-8');
+            console.log('[RADIO] Applied base game music.xml override: 0 built-in channels configured.');
+        } else {
+            if (fs.existsSync(backupPath)) {
+                await fs.copyFile(backupPath, musicXmlPath);
+                console.log('[RADIO] Restored original base game music.xml from backup.');
+            }
+        }
+    } catch (err) {
+        console.error('[RADIO] Failed to apply game music.xml override:', err.message);
+    }
+}
+
 async function saveRadioSettings(settings) {
     const filePath = getRadioSettingsPath();
     const overrideBuiltins = settings?.overrideBuiltins !== false;
@@ -339,6 +403,7 @@ async function saveRadioSettings(settings) {
     try {
         await fs.ensureDir(path.dirname(filePath));
         await fs.writeFile(filePath, xml, 'utf-8');
+        await applyGameMusicOverride(overrideBuiltins);
         await deployCompanionMod();
         return { success: true };
     } catch (err) {
@@ -385,14 +450,18 @@ async function searchStations(filters = {}) {
             name: query?.trim() || undefined,
             countrycode: country?.trim() || undefined,
             language: language?.trim() || undefined,
-            tag: tag?.trim() || undefined
+            tag: tag?.trim() || undefined,
+            tagExact: tag ? true : undefined
         };
 
-        // Using de1 as primary stable node
-        return await apiGet(`https://de1.api.radio-browser.info/json/stations/search`, params);
+        let res = await apiGet(`https://de1.api.radio-browser.info/json/stations/search`, params);
+        if (tag && (!Array.isArray(res) || res.length === 0)) {
+            delete params.tagExact;
+            res = await apiGet(`https://de1.api.radio-browser.info/json/stations/search`, params);
+        }
+        return Array.isArray(res) ? res : [];
     } catch (err) {
         console.error('[RADIO] Search failed:', err);
-        // Fallback to another node if de1 fails
         try {
             return await apiGet(`https://at1.api.radio-browser.info/json/stations/search`, params);
         } catch (err2) {
@@ -409,5 +478,6 @@ module.exports = {
     searchStations,
     getRadioSettings,
     saveRadioSettings,
+    applyGameMusicOverride,
     deployCompanionMod
 };

@@ -624,6 +624,10 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 
 		// Initialize as an empty set if we are in selective mode
 		let activeModNames = savegameIndex !== null ? new Set() : null;
+		if (activeModNames) {
+			activeModNames.add('fs25_mtradiomanager');
+			activeModNames.add('fs25_quietloadingscreen');
+		}
 		let mapModName = null;
 		let mapModObj = null;
 

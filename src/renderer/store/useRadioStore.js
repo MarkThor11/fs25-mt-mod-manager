@@ -1,5 +1,28 @@
 import { create } from 'zustand';
 
+const loadSavedFilters = () => {
+  try {
+    const raw = localStorage.getItem('radio_filters');
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+};
+
+const saveFiltersToStorage = (state) => {
+  try {
+    localStorage.setItem('radio_filters', JSON.stringify({
+      query: state.query,
+      country: state.country,
+      language: state.language,
+      tag: state.tag,
+      viewMode: state.viewMode
+    }));
+  } catch (e) {}
+};
+
+const savedFilters = loadSavedFilters();
+
 export const useRadioStore = create((set, get) => ({
   stations: [],
   searchResults: [],
@@ -8,19 +31,37 @@ export const useRadioStore = create((set, get) => ({
 
   playingStationUrl: null,
 
-  // Persistent search filters & view mode
-  query: '',
-  country: '',
-  language: '',
-  tag: '',
-  viewMode: 'search',
+  // Persistent search filters & view mode across app restarts
+  query: savedFilters.query || '',
+  country: savedFilters.country || '',
+  language: savedFilters.language || '',
+  tag: savedFilters.tag || '',
+  viewMode: savedFilters.viewMode || 'search',
 
-  setFilterQuery: (query) => set({ query }),
-  setFilterCountry: (country) => set({ country }),
-  setFilterLanguage: (language) => set({ language }),
-  setFilterTag: (tag) => set({ tag }),
-  setViewMode: (viewMode) => set({ viewMode }),
-  resetFilters: () => set({ query: '', country: '', language: '', tag: '' }),
+  setFilterQuery: (query) => {
+    set({ query });
+    saveFiltersToStorage(get());
+  },
+  setFilterCountry: (country) => {
+    set({ country });
+    saveFiltersToStorage(get());
+  },
+  setFilterLanguage: (language) => {
+    set({ language });
+    saveFiltersToStorage(get());
+  },
+  setFilterTag: (tag) => {
+    set({ tag });
+    saveFiltersToStorage(get());
+  },
+  setViewMode: (viewMode) => {
+    set({ viewMode });
+    saveFiltersToStorage(get());
+  },
+  resetFilters: () => {
+    set({ query: '', country: '', language: '', tag: '' });
+    saveFiltersToStorage(get());
+  },
 
   // Companion script & override state
   overrideBuiltins: true,
