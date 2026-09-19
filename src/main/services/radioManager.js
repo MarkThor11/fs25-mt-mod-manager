@@ -574,22 +574,19 @@ async function searchStations(filters = {}) {
         combined = radioBrowserResults;
     }
 
-    // Deduplicate by normalized station name and normalized stream URL
-    const seenNames = new Set();
+    // Deduplicate by normalized stream URL to filter out redundant stream mirrors while preserving distinct streams
     const seenUrls = new Set();
     const deduped = [];
 
     for (const station of combined) {
         if (!station || !station.name) continue;
-        const normName = station.name.trim().toLowerCase().replace(/\s+/g, ' ');
         const rawUrl = (station.url_resolved || station.url || station.href || '').trim().toLowerCase();
-        const normUrl = rawUrl.replace(/^https?:\/\//, '').replace(/\/$/, '').replace(/;$/, '');
+        const normUrl = rawUrl.replace(/^https?:\/\//, '').replace(/\/$/, '').replace(/;$/, '').replace(/;stream\.mp3$/, '');
 
-        if (seenNames.has(normName) || (normUrl && seenUrls.has(normUrl))) {
+        if (normUrl && seenUrls.has(normUrl)) {
             continue;
         }
 
-        seenNames.add(normName);
         if (normUrl) seenUrls.add(normUrl);
         deduped.push(station);
     }

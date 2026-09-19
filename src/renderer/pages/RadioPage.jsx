@@ -330,10 +330,6 @@ const RadioPage = () => {
                                         const href = station.url_resolved || station.url || station.href;
                                         return !hiddenStations.some(h => (h.url_resolved || h.url || h.href) === href);
                                     })
-                                    .filter((station, index, self) => {
-                                        const nameKey = (station.name || '').trim().toLowerCase().replace(/\s+/g, ' ');
-                                        return index === self.findIndex(s => (s.name || '').trim().toLowerCase().replace(/\s+/g, ' ') === nameKey);
-                                    })
                                     .sort((a, b) => {
                                         if (sortOrder === 'name') {
                                             const nameA = (a.name || '').trim().replace(/^[^a-zA-Z0-9]+/, '');
