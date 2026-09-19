@@ -82,19 +82,41 @@ function MTRadioManager:filterChannels(soundPlayerSelf)
     end
 
     local total = #soundPlayerSelf.channels
-    if self.numUserStations > 0 and total > self.numUserStations then
-        local userChannels = {}
-        local firstIdx = total - self.numUserStations + 1
-        for i = firstIdx, total do
-            table.insert(userChannels, soundPlayerSelf.channels[i])
+
+    -- Strategy 1: Look for channel objects explicitly flagged as streams
+    local userChannels = {}
+    for idx, ch in ipairs(soundPlayerSelf.channels) do
+        if ch ~= nil then
+            local isStream = ch.isStream or ch.isStreaming or ch.isInternet or ch.isInternetStream or (ch.url ~= nil and ch.url ~= "") or (ch.streamUrl ~= nil and ch.streamUrl ~= "") or (ch.href ~= nil and ch.href ~= "")
+            if isStream then
+                table.insert(userChannels, ch)
+            end
         end
+    end
+
+    if #userChannels > 0 and #userChannels <= self.numUserStations then
         soundPlayerSelf.channels = userChannels
         soundPlayerSelf.mtFiltered = true
         soundPlayerSelf.currentChannel = 1
-        print(string.format("[MTRadioManager] Filtered channels: kept %d custom stations out of %d total (removed %d built-in stations)", 
-            #userChannels, total, total - self.numUserStations))
-    elseif total == self.numUserStations and total > 0 then
-        soundPlayerSelf.mtFiltered = true
+        print(string.format("[MTRadioManager] Filtered channels by stream property: kept %d custom stations out of %d total", #userChannels, total))
+        return
+    end
+
+    -- Strategy 2: GIANTS Engine loads 8 built-in stations first, then appends custom user stations.
+    -- Wait until total channels >= (8 + numUserStations) so we don't prematurely slice built-in channels before user channels finish loading.
+    if self.numUserStations > 0 then
+        if total >= (8 + self.numUserStations) or (total > 8 and total >= self.numUserStations) then
+            userChannels = {}
+            local firstIdx = total - self.numUserStations + 1
+            for i = firstIdx, total do
+                table.insert(userChannels, soundPlayerSelf.channels[i])
+            end
+            soundPlayerSelf.channels = userChannels
+            soundPlayerSelf.mtFiltered = true
+            soundPlayerSelf.currentChannel = 1
+            print(string.format("[MTRadioManager] Filtered channels by index offset: kept %d custom stations out of %d total (removed %d built-in stations)", 
+                #userChannels, total, total - self.numUserStations))
+        end
     end
 end
 
@@ -198,6 +220,15 @@ function MTRadioManager:initHooks()
         end
     end
 
+    -- Hook update if available
+    if SoundPlayer.update ~= nil then
+        local origUpdate = SoundPlayer.update
+        SoundPlayer.update = function(soundPlayerSelf, ...)
+            MTRadioManager:filterChannels(soundPlayerSelf)
+            return origUpdate(soundPlayerSelf, ...)
+        end
+    end
+
     print("[MTRadioManager] SoundPlayer radio hooks initialized successfully.")
 end
 
@@ -213,4 +244,5 @@ addModEventListener(MTRadioManager)
 
 -- Immediately initialize hooks
 MTRadioManager:initHooks()
+
 
