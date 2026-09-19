@@ -248,11 +248,22 @@ async function launch(options = {}) {
     }
   }
 
+  // ── ENFORCE MENU MUSIC OVERRIDE IN GAMESETTINGS.XML ──
+  const fs25DataRoot = pathProvider.getFS25DataRoot();
+  const gameSettingsPath = path.join(fs25DataRoot, 'gameSettings.xml');
+  if (fs.existsSync(gameSettingsPath)) {
+    let settingsXml = fs.readFileSync(gameSettingsPath, 'utf8');
+    if (/<music>[^<]*<\/music>/i.test(settingsXml)) {
+      settingsXml = settingsXml.replace(/<music>[^<]*<\/music>/ig, '<music>0.000000</music>');
+    } else if (settingsXml.includes('<volume>')) {
+      settingsXml = settingsXml.replace('<volume>', '<volume>\n        <music>0.000000</music>');
+    }
+    fs.writeFileSync(gameSettingsPath, settingsXml, 'utf8');
+  }
+
   const defaultModsPath = modManager.getDefaultModsPath();
   
   if (targetModsPath && targetModsPath.toLowerCase() !== defaultModsPath.toLowerCase()) {
-    const fs25DataRoot = pathProvider.getFS25DataRoot();
-    const gameSettingsPath = path.join(fs25DataRoot, 'gameSettings.xml');
     if (fs.existsSync(gameSettingsPath)) {
       let settingsXml = fs.readFileSync(gameSettingsPath, 'utf8');
       const overrideRegex = /<modsDirectoryOverride[^>]*\/>/i;
@@ -267,8 +278,6 @@ async function launch(options = {}) {
       console.log('[LAUNCH] Enabled modsDirectoryOverride in gameSettings.xml:', targetModsPath);
     }
   } else {
-    const fs25DataRoot = pathProvider.getFS25DataRoot();
-    const gameSettingsPath = path.join(fs25DataRoot, 'gameSettings.xml');
     if (fs.existsSync(gameSettingsPath)) {
       let settingsXml = fs.readFileSync(gameSettingsPath, 'utf8');
       settingsXml = settingsXml.replace(/<modsDirectoryOverride[^>]*\/>/ig, '<modsDirectoryOverride active="false" directory=""/>');

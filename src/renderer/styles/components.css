@@ -1561,10 +1561,11 @@
   align-items: center;
   gap: var(--sp-3);
   padding: var(--sp-3) var(--sp-4);
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
   min-width: 300px;
   max-width: 420px;
   pointer-events: all;

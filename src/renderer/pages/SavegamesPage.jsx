@@ -3079,6 +3079,12 @@ export default function SavegamesPage() {
   };
 
   const handleLaunch = async (slotIndex, extraOptions = {}) => {
+    // Optimistically mark the slot as active and notify immediately so the user knows it's launching
+    const numericSlot = parseInt(slotIndex, 10);
+    useSavegameStore.setState({ isGameRunning: true, playingSlot: numericSlot });
+    useSettingsStore.getState().setSavegameSlot(numericSlot);
+    useToastStore.getState().info(`Preparing & Launching Slot ${slotIndex}...`);
+
     // Re-apply spawn position right before launch so game always reads the latest choice
     try {
       const fs25Root = await window.api.savegames.getAll().then(saves => saves).catch(() => null);
@@ -3120,6 +3126,7 @@ export default function SavegamesPage() {
       try {
         const serverPrep = await window.api.savegames.prepareServerModsFolder({ slotIndex, savePath: saveToLaunch.path });
         if (serverPrep && serverPrep.stats && (serverPrep.stats.mismatchedCount > 0 || serverPrep.stats.missingCount > 0)) {
+          useSavegameStore.setState({ isGameRunning: false, playingSlot: null });
           useToastStore.getState().warning(`Cannot launch server save: ${serverPrep.stats.mismatchedCount} mod version mismatch(es) and ${serverPrep.stats.missingCount} missing mod(s). Mod audit required.`);
           setShowAudit(saveToLaunch);
           return; // Abort launch!
@@ -3137,6 +3144,7 @@ export default function SavegamesPage() {
         
         if (activeConflictsMap.size > 0) {
           if (conflictSensitivity === 'resolve') {
+            useSavegameStore.setState({ isGameRunning: false, playingSlot: null });
             setPendingLaunchSlot(slotIndex);
             setLaunchExtraOptions(extraOptions);
             setConflictResolutionData({
@@ -3147,18 +3155,13 @@ export default function SavegamesPage() {
             });
             return;
           } else if (conflictSensitivity === 'warn' || conflictSensitivity === 'resolve') {
+            useSavegameStore.setState({ isGameRunning: false, playingSlot: null });
             import('../store/useToastStore').then(module => module.useToastStore.getState().error(`Launch prevented: Found ${activeConflictsMap.size} active script conflicts.`));
             return; // ABORT LAUNCH
           }
         }
       }
     }
-
-    // Optimistically mark the slot as active immediately so the UI responds
-    // without waiting for the game process to actually start.
-    const numericSlot = parseInt(slotIndex, 10);
-    useSavegameStore.setState({ isGameRunning: true, playingSlot: numericSlot });
-    useSettingsStore.getState().setSavegameSlot(numericSlot);
 
     const result = await window.api.game.launch({ 
         savegameIndex: slotIndex,
@@ -3171,7 +3174,7 @@ export default function SavegamesPage() {
       if (result.needsManualInit) {
         useToastStore.getState().info(`GHOST SLOT: Slot ${slotIndex} is preparing for first-time load. Once the map loads, SAVE ONCE in-game to initialize.`, 20000);
       } else {
-        useToastStore.getState().success(`Launching Slot ${slotIndex}...`);
+        useToastStore.getState().success(`Game launched into Slot ${slotIndex}!`);
       }
     } else {
       // Launch failed — revert the optimistic state so the UI doesn't appear stuck

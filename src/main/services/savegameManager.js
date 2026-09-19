@@ -1740,10 +1740,7 @@ async function updateSavegameAttribute(savePath, fileType, attribute, value) {
                 // All other volumes go into gameSettings.xml <volume> section
                 const gsPath = path.join(fs25Path, 'gameSettings.xml');
                 if (fs.existsSync(gsPath)) {
-                    const gsXml = await fs.readFile(gsPath, 'utf8');
-                    const gsData = parser.parse(gsXml);
-                    if (!gsData.gameSettings) gsData.gameSettings = {};
-                    if (!gsData.gameSettings.volume) gsData.gameSettings.volume = {};
+                    let gsXml = await fs.readFile(gsPath, 'utf8');
                     const volKey = {
                         vehicleVolume: 'vehicle',
                         environmentVolume: 'environment',
@@ -1753,8 +1750,13 @@ async function updateSavegameAttribute(savePath, fileType, attribute, value) {
                         voiceVolume: 'voice',
                     }[attribute];
                     if (volKey) {
-                        gsData.gameSettings.volume[volKey] = floatVal.toFixed(6);
-                        await fs.writeFile(gsPath, builder.build(gsData));
+                        const regex = new RegExp(`<${volKey}>[^<]*</${volKey}>`, 'i');
+                        if (regex.test(gsXml)) {
+                            gsXml = gsXml.replace(regex, `<${volKey}>${floatVal.toFixed(6)}</${volKey}>`);
+                        } else if (gsXml.includes('<volume>')) {
+                            gsXml = gsXml.replace('<volume>', `<volume>\n        <${volKey}>${floatVal.toFixed(6)}</${volKey}>`);
+                        }
+                        await fs.writeFile(gsPath, gsXml, 'utf8');
                     }
                 }
             }

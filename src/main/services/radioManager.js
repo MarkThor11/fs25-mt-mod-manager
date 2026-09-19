@@ -464,17 +464,36 @@ async function getGameMusicXmlPath() {
     return null;
 }
 
-async function applyGameMusicOverride() {
+async function applyGameMusicOverride(overrideBuiltins = true) {
     try {
-        const musicXmlPath = path.join('C:', 'Program Files (x86)', 'Steam', 'steamapps', 'common', 'Farming Simulator 25', 'data', 'music', 'music.xml');
-        const backupPath = path.join('C:', 'Program Files (x86)', 'Steam', 'steamapps', 'common', 'Farming Simulator 25', 'data', 'music', 'music.xml.original');
-        if (fs.existsSync(backupPath)) {
-            await fs.copyFile(backupPath, musicXmlPath);
-            await fs.remove(backupPath);
-            console.log('[RADIO] Restored original base game music.xml from backup.');
+        const musicXmlPath = await getGameMusicXmlPath();
+        if (!musicXmlPath) return;
+
+        const backupPath = musicXmlPath + '.original';
+
+        if (!overrideBuiltins) {
+            // User disabled override -> restore original base game music.xml if backup exists
+            if (fs.existsSync(backupPath)) {
+                await fs.copyFile(backupPath, musicXmlPath);
+                await fs.remove(backupPath);
+                console.log('[RADIO] Restored original base game music.xml from backup.');
+            }
+            return;
+        }
+
+        // Override enabled: mute/replace base game menu music XML items
+        if (fs.existsSync(musicXmlPath)) {
+            if (!fs.existsSync(backupPath)) {
+                await fs.copyFile(musicXmlPath, backupPath);
+            }
+            const content = await fs.readFile(musicXmlPath, 'utf-8');
+            // Mute or strip music tracks in music.xml
+            const mutedContent = content.replace(/<music[^>]*>/gi, '<music volume="0.0">');
+            await fs.writeFile(musicXmlPath, mutedContent, 'utf-8');
+            console.log('[RADIO] Applied zero-volume menu music override in music.xml');
         }
     } catch (err) {
-        console.error('[RADIO] Restore music.xml failed:', err.message);
+        console.error('[RADIO] Restore/apply music.xml failed:', err.message);
     }
 }
 
