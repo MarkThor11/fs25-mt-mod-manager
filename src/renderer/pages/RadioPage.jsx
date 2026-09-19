@@ -33,10 +33,6 @@ const OFFICIAL_PRESETS = [
     { name: 'Truckers FM', url: 'https://live.truckers.fm/', tags: 'Official, Simulation, Variety', language: 'English', country: 'United Kingdom' },
     { name: 'TruckStopRadio Country', url: 'https://oreo.truckstopradio.co.uk/listen/tsr_country/radio.mp3', tags: 'Simulation, Country', language: 'English', country: 'United Kingdom' },
     { name: 'TruckStopRadio Rock', url: 'https://oreo.truckstopradio.co.uk/listen/tsr_rock/radio.mp3', tags: 'Simulation, Rock', language: 'English', country: 'United Kingdom' },
-    { name: 'Harmony FM (80s)', url: 'https://mp3.ffh.de/harmonyfm/hq80s.mp3', tags: 'Pop, 80s', language: 'German', country: 'Germany' },
-    { name: 'Synthwave Radio', url: 'https://stream.synthwaveradio.eu/live', tags: 'Synthwave, Electronic', language: 'English', country: 'United Kingdom' },
-    { name: 'Country One', url: 'https://stream.countryone.net/stream', tags: 'Country', language: 'English', country: 'United States' },
-    { name: 'Capital FM UK', url: 'https://media-ssl.musicradio.com/CapitalUK', tags: 'Pop, Top40', language: 'English', country: 'United Kingdom' }
 ];
 
 const RadioPage = () => {
