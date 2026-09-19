@@ -593,6 +593,11 @@ async function searchStations(filters = {}) {
         if (!station || !station.name) continue;
         const lowerName = station.name.trim().toLowerCase();
         
+        // Filter out BBC Radio 6 Music as requested
+        if (lowerName.includes('6 music') || lowerName.includes('6music') || lowerName.includes('bbc radio 6')) {
+            continue;
+        }
+
         // Brand rule for Caroline
         let nameKey = lowerName.replace(/\s+/g, ' ');
         if (lowerName.includes('caroline')) {
