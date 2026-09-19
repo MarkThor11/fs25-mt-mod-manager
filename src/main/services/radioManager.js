@@ -576,11 +576,18 @@ async function searchStations(filters = {}) {
 
     function canonicalStationKey(name) {
         if (!name) return '';
-        return name
+        let lower = name.toLowerCase().trim();
+
+        if (lower.includes('caroline')) {
+            if (lower.includes('flashback')) return 'caroline-flashback';
+            return 'caroline-main';
+        }
+
+        return lower
             .replace(/\s*[\(\[\{].*?[\)\]\}]/g, '')
             .replace(/\b\d+\s*k(?:bps)?\b/gi, '')
             .replace(/\b(aac\+?|mp3|ogg|flac|stream|hd)\b/gi, '')
-            .toLowerCase()
+            .replace(/\b(north|south|east|west|community|live|broadcasts?|online|hq|sd|mobile)\b/gi, '')
             .replace(/^radio\s+/gi, '')
             .replace(/\s+radio$/gi, '')
             .replace(/[^a-z0-9]/g, '');
