@@ -866,7 +866,7 @@ export default function ModHubPage() {
                           const val = parseInt(e.target.value) || 0;
                           setFilters({ priceRange: [val, Math.max(val, activeFilters.priceRange[1])] });
                         }}
-                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent', zIndex: 3 }}
+                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                       <CustomSlider 
                         min="0" max="10000000" step="5000" 
@@ -875,7 +875,7 @@ export default function ModHubPage() {
                           const val = parseInt(e.target.value) || 0;
                           setFilters({ priceRange: [Math.min(val, activeFilters.priceRange[0]), val] });
                         }}
-                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent', zIndex: activeFilters.priceRange[1] === activeFilters.priceRange[0] ? 4 : 2 }}
+                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                     </div>
                   </div>
@@ -897,7 +897,7 @@ export default function ModHubPage() {
                           const val = parseInt(e.target.value) || 0;
                           setFilters({ hpRange: [val, Math.max(val, activeFilters.hpRange[1])] });
                         }}
-                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent', zIndex: 3 }}
+                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                       <CustomSlider 
                         min="0" max="10000" step="5" 
@@ -906,7 +906,7 @@ export default function ModHubPage() {
                           const val = parseInt(e.target.value) || 0;
                           setFilters({ hpRange: [Math.min(val, activeFilters.hpRange[0]), val] });
                         }}
-                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent', zIndex: activeFilters.hpRange[1] === activeFilters.hpRange[0] ? 4 : 2 }}
+                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                     </div>
                   </div>
@@ -928,7 +928,7 @@ export default function ModHubPage() {
                           const val = parseInt(e.target.value) || 0;
                           setFilters({ capRange: [val, Math.max(val, activeFilters.capRange[1])] });
                         }}
-                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent', zIndex: 3 }}
+                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                       <CustomSlider 
                         min="0" max="10000000" step="5000" 
@@ -937,7 +937,7 @@ export default function ModHubPage() {
                           const val = parseInt(e.target.value) || 0;
                           setFilters({ capRange: [Math.min(val, activeFilters.capRange[0]), val] });
                         }}
-                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent', zIndex: activeFilters.capRange[1] === activeFilters.capRange[0] ? 4 : 2 }}
+                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                     </div>
                   </div>
