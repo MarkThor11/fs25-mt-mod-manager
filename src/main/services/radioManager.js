@@ -574,19 +574,34 @@ async function searchStations(filters = {}) {
         combined = radioBrowserResults;
     }
 
-    // Deduplicate by normalized stream URL to filter out redundant stream mirrors while preserving distinct streams
+    function canonicalStationKey(name) {
+        if (!name) return '';
+        return name
+            .replace(/\s*[\(\[\{].*?[\)\]\}]/g, '')
+            .replace(/\b\d+\s*k(?:bps)?\b/gi, '')
+            .replace(/\b(aac\+?|mp3|ogg|flac|stream|hd)\b/gi, '')
+            .toLowerCase()
+            .replace(/^radio\s+/gi, '')
+            .replace(/\s+radio$/gi, '')
+            .replace(/[^a-z0-9]/g, '');
+    }
+
+    // Deduplicate by canonical station key and normalized stream URL
+    const seenKeys = new Set();
     const seenUrls = new Set();
     const deduped = [];
 
     for (const station of combined) {
         if (!station || !station.name) continue;
+        const key = canonicalStationKey(station.name);
         const rawUrl = (station.url_resolved || station.url || station.href || '').trim().toLowerCase();
         const normUrl = rawUrl.replace(/^https?:\/\//, '').replace(/\/$/, '').replace(/;$/, '').replace(/;stream\.mp3$/, '');
 
-        if (normUrl && seenUrls.has(normUrl)) {
+        if ((key && seenKeys.has(key)) || (normUrl && seenUrls.has(normUrl))) {
             continue;
         }
 
+        if (key) seenKeys.add(key);
         if (normUrl) seenUrls.add(normUrl);
         deduped.push(station);
     }
