@@ -537,7 +537,7 @@ async function searchStations(filters = {}) {
 
     try {
         const params = {
-            limit: 100,
+            limit: 5000,
             hidebroken: true,
             order: order,
             reverse: order === 'name' ? false : true,
@@ -558,7 +558,7 @@ async function searchStations(filters = {}) {
         console.error('[RADIO] Search failed:', err);
         try {
             const params = {
-                limit: 100,
+                limit: 5000,
                 hidebroken: true,
                 order: order,
                 reverse: order === 'name' ? false : true,
@@ -580,41 +580,29 @@ async function searchStations(filters = {}) {
         combined = radioBrowserResults;
     }
 
-    function canonicalStationKey(name) {
-        if (!name) return '';
-        let lower = name.toLowerCase().trim();
-
-        if (lower.includes('caroline')) {
-            if (lower.includes('flashback')) return 'caroline-flashback';
-            return 'caroline-main';
-        }
-
-        return lower
-            .replace(/\s*[\(\[\{].*?[\)\]\}]/g, '')
-            .replace(/\b\d+\s*k(?:bps)?\b/gi, '')
-            .replace(/\b(aac\+?|mp3|ogg|flac|stream|hd)\b/gi, '')
-            .replace(/\b(north|south|east|west|community|live|broadcasts?|online|hq|sd|mobile)\b/gi, '')
-            .replace(/^radio\s+/gi, '')
-            .replace(/\s+radio$/gi, '')
-            .replace(/[^a-z0-9]/g, '');
-    }
-
-    // Deduplicate by canonical station key and normalized stream URL
-    const seenKeys = new Set();
+    // Deduplicate by station name key and normalized stream URL
+    const seenNames = new Set();
     const seenUrls = new Set();
     const deduped = [];
 
     for (const station of combined) {
         if (!station || !station.name) continue;
-        const key = canonicalStationKey(station.name);
+        const lowerName = station.name.trim().toLowerCase();
+        
+        // Brand rule for Caroline
+        let nameKey = lowerName.replace(/\s+/g, ' ');
+        if (lowerName.includes('caroline')) {
+            nameKey = lowerName.includes('flashback') ? 'caroline-flashback' : 'caroline-main';
+        }
+
         const rawUrl = (station.url_resolved || station.url || station.href || '').trim().toLowerCase();
         const normUrl = rawUrl.replace(/^https?:\/\//, '').replace(/\/$/, '').replace(/;$/, '').replace(/;stream\.mp3$/, '');
 
-        if ((key && seenKeys.has(key)) || (normUrl && seenUrls.has(normUrl))) {
+        if (seenNames.has(nameKey) || (normUrl && seenUrls.has(normUrl))) {
             continue;
         }
 
-        if (key) seenKeys.add(key);
+        seenNames.add(nameKey);
         if (normUrl) seenUrls.add(normUrl);
         deduped.push(station);
     }
