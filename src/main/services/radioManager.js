@@ -413,25 +413,8 @@ async function saveRadioSettings(settings) {
 }
 
 async function deployCompanionMod() {
-    try {
-        const internalMod = path.join(__dirname, '..', 'resources', 'internalMods', 'FS25_MTRadioManager.zip');
-        if (!fs.existsSync(internalMod)) {
-            console.warn('[RADIO] Internal FS25_MTRadioManager.zip not found at:', internalMod);
-            return { success: false, error: 'Internal companion mod not found' };
-        }
-
-        const modsDir = pathProvider.getDefaultModsPath();
-        if (modsDir && fs.existsSync(modsDir)) {
-            const destPath = path.join(modsDir, 'FS25_MTRadioManager.zip');
-            await fs.copyFile(internalMod, destPath);
-            console.log('[RADIO] Native audio subsystem deployed to:', destPath);
-        }
-
-        return { success: true };
-    } catch (err) {
-        console.error('[RADIO] Failed to deploy companion mod:', err);
-        return { success: false, error: err.message };
-    }
+    // Disabled automatic mod folder injection
+    return { success: true };
 }
 
 /**

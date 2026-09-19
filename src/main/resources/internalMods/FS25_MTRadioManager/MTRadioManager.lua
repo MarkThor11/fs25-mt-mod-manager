@@ -1,10 +1,11 @@
 -- FS25_MTRadioManager
 -- Built-in companion mod for MT Mod Manager
--- Overrides built-in GIANTS radio stations so in-game playback cycles exclusively through your custom added radio stations.
+-- Overrides built-in GIANTS radio stations and applies custom station replacement titles.
 
 MTRadioManager = {}
 MTRadioManager.overrideBuiltins = true
 MTRadioManager.numUserStations = 0
+MTRadioManager.customNames = {} -- href -> replacement name mapping
 MTRadioManager.isInitialized = false
 
 local function getAppPath()
@@ -37,20 +38,33 @@ function MTRadioManager:loadConfiguration()
         end
     end
 
-    -- Count user stations in streamingInternetRadios.xml
+    -- Parse user stations & replacement titles in streamingInternetRadios.xml
     local streamFile = appPath .. "music/streamingInternetRadios.xml"
     streamFile = string.gsub(streamFile, "\\", "/")
     self.numUserStations = 0
+    self.customNames = {}
+
     if fileExists ~= nil and fileExists(streamFile) then
         local xml = loadXMLFile("MTRadioStreamsXML", streamFile)
         if xml ~= nil and xml ~= 0 then
             local count = 0
             while true do
-                local key = string.format("streamingInternetRadios.streamingInternetRadio(%d)#href", count)
-                local href = getXMLString(xml, key)
+                local keyHref = string.format("streamingInternetRadios.streamingInternetRadio(%d)#href", count)
+                local href = getXMLString(xml, keyHref)
                 if href == nil or href == "" then
                     break
                 end
+
+                local keyRepl = string.format("streamingInternetRadios.streamingInternetRadio(%d)#replacement", count)
+                local replacement = getXMLString(xml, keyRepl)
+                if replacement ~= nil and replacement ~= "" then
+                    self.customNames[href] = replacement
+                    -- Also store normalized href without trailing slash or semicolon
+                    local norm = string.gsub(href, ";$", "")
+                    norm = string.gsub(norm, "/$", "")
+                    self.customNames[norm] = replacement
+                end
+
                 count = count + 1
             end
             self.numUserStations = count
@@ -58,16 +72,39 @@ function MTRadioManager:loadConfiguration()
         end
     end
 
-    print(string.format("[MTRadioManager] Config loaded: overrideBuiltins=%s, customStationsCount=%d",
-        tostring(self.overrideBuiltins), self.numUserStations))
+    print(string.format("[MTRadioManager] Config loaded: overrideBuiltins=%s, customStationsCount=%d, customNamesCount=%d",
+        tostring(self.overrideBuiltins), self.numUserStations, TableUtils ~= nil and TableUtils.size(self.customNames) or 0))
 end
 
 function MTRadioManager:isOverrideActive()
     return self.overrideBuiltins
 end
 
+function MTRadioManager:applyCustomNamesToPlayer(playerSelf)
+    if playerSelf == nil or playerSelf.channels == nil then return end
+    for idx, ch in ipairs(playerSelf.channels) do
+        if ch ~= nil then
+            local urlStr = tostring(ch.url or ch.streamUrl or ch.href or ch.filename or ch.path or "")
+            local norm = string.gsub(urlStr, ";$", "")
+            norm = string.gsub(norm, "/$", "")
+
+            local customTitle = self.customNames[urlStr] or self.customNames[norm]
+            if customTitle ~= nil and customTitle ~= "" then
+                ch.name = customTitle
+                ch.replacement = customTitle
+                ch.title = customTitle
+                ch.stationName = customTitle
+            end
+        end
+    end
+end
+
 function MTRadioManager:filterChannels(playerSelf)
     if playerSelf == nil or playerSelf.channels == nil then return end
+    
+    -- Always apply custom title overrides to active channels
+    self:applyCustomNamesToPlayer(playerSelf)
+
     if not self.overrideBuiltins then return end
     
     if playerSelf.rawChannels == nil or #playerSelf.rawChannels < #playerSelf.channels then
@@ -101,8 +138,19 @@ function MTRadioManager:filterChannels(playerSelf)
             end
 
             if isStream then
+                -- Apply title override directly to channel object
+                local norm = string.gsub(urlStr, ";$", "")
+                norm = string.gsub(norm, "/$", "")
+                local customTitle = self.customNames[urlStr] or self.customNames[norm]
+                if customTitle ~= nil and customTitle ~= "" then
+                    ch.name = customTitle
+                    ch.replacement = customTitle
+                    ch.title = customTitle
+                    ch.stationName = customTitle
+                end
+
                 table.insert(userChannels, ch)
-                print(string.format("[MTRadioManager] Custom stream #%d: '%s' (%s)", idx, tostring(ch.name or "Unnamed"), urlStr))
+                print(string.format("[MTRadioManager] Custom stream #%d: '%s' (%s)", #userChannels, tostring(ch.name or "Unnamed"), urlStr))
             end
         end
     end
@@ -118,27 +166,25 @@ function MTRadioManager:filterChannels(playerSelf)
         return
     end
 
-    -- Slicing fallbacks
-    if totalRaw > 26 then
-        userChannels = {}
-        for i = 27, totalRaw do
-            table.insert(userChannels, raw[i])
-        end
-        playerSelf.channels = userChannels
-        playerSelf.mtFiltered = true
-        playerSelf.mtLastRawCount = totalRaw
-        if playerSelf.currentChannel == nil or playerSelf.currentChannel < 1 or playerSelf.currentChannel > #userChannels then
-            playerSelf.currentChannel = 1
-        end
-        print(string.format("[MTRadioManager] Sliced indices 27..%d (kept %d custom channels out of %d total).", totalRaw, #userChannels, totalRaw))
-        return
-    end
-
+    -- Fallback: slice custom streams from bottom if detector missed flags
     if self.numUserStations > 0 and totalRaw >= self.numUserStations then
         userChannels = {}
         local firstIdx = totalRaw - self.numUserStations + 1
         for i = firstIdx, totalRaw do
-            table.insert(userChannels, raw[i])
+            local ch = raw[i]
+            if ch ~= nil then
+                local urlStr = tostring(ch.url or ch.streamUrl or ch.href or ch.filename or ch.path or "")
+                local norm = string.gsub(urlStr, ";$", "")
+                norm = string.gsub(norm, "/$", "")
+                local customTitle = self.customNames[urlStr] or self.customNames[norm]
+                if customTitle ~= nil and customTitle ~= "" then
+                    ch.name = customTitle
+                    ch.replacement = customTitle
+                    ch.title = customTitle
+                    ch.stationName = customTitle
+                end
+                table.insert(userChannels, ch)
+            end
         end
         playerSelf.channels = userChannels
         playerSelf.mtFiltered = true
@@ -162,18 +208,23 @@ end
 function MTRadioManager:hookClass(className, classObj)
     if classObj == nil then return end
     print(string.format("[MTRadioManager] Inspecting class '%s'...", className))
-    for k, v in pairs(classObj) do
-        if type(v) == "function" then
-            print(string.format("[MTRadioManager] Found function %s.%s", className, tostring(k)))
-        end
-    end
 
     local function wrapMethod(methodName)
         if classObj[methodName] ~= nil and type(classObj[methodName]) == "function" then
             local orig = classObj[methodName]
             classObj[methodName] = function(selfObj, ...)
-                print(string.format("[MTRadioManager] Hook invoked: %s.%s", className, methodName))
                 MTRadioManager:filterChannels(selfObj)
+
+                if methodName == "getChannelName" or methodName == "getItemName" then
+                    local chIdx = select(1, ...) or (selfObj ~= nil and selfObj.currentChannel) or 1
+                    if selfObj ~= nil and selfObj.channels ~= nil and selfObj.channels[chIdx] ~= nil then
+                        local ch = selfObj.channels[chIdx]
+                        if ch.name ~= nil and ch.name ~= "" then
+                            return ch.name
+                        end
+                    end
+                end
+
                 if MTRadioManager:isOverrideActive() and selfObj ~= nil and selfObj.channels ~= nil then
                     local total = #selfObj.channels
                     if total == 0 then
@@ -213,6 +264,8 @@ function MTRadioManager:hookClass(className, classObj)
     wrapMethod("previousChannel")
     wrapMethod("play")
     wrapMethod("update")
+    wrapMethod("getChannelName")
+    wrapMethod("getItemName")
     wrapMethod("initializeSoundPlayer")
 end
 
@@ -222,14 +275,12 @@ function MTRadioManager:initHooks()
 
     self:loadConfiguration()
 
-    print("[MTRadioManager] Scanning Lua global environment for Radio & Sound symbols...")
     if _G ~= nil then
         for k, v in pairs(_G) do
             local kStr = tostring(k)
             local kLower = string.lower(kStr)
             if string.find(kLower, "radio") or string.find(kLower, "sound") then
-                print(string.format("[MTRadioManager] Global found: %s (%s)", kStr, type(v)))
-                if type(v) == "table" then
+                if type(v) == "table" and kStr ~= "MTRadioManager" then
                     self:hookClass(kStr, v)
                 end
             end
@@ -263,3 +314,4 @@ end
 
 addModEventListener(MTRadioManager)
 MTRadioManager:initHooks()
+
