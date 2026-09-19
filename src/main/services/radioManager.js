@@ -271,9 +271,98 @@ async function saveRadios(radios) {
     }
 }
 
+let cachedRadioFeeds = null;
+let lastRadioFeedsFetch = 0;
+
+async function resolvePlaylistUrl(url) {
+    if (!url || typeof url !== 'string') return url;
+    if (!url.includes('.pls') && !url.includes('.m3u')) return url;
+    return new Promise((resolve) => {
+        const client = url.startsWith('https') ? https : require('http');
+        client.get(url, (res) => {
+            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                return resolve(resolvePlaylistUrl(new URL(res.headers.location, url).toString()));
+            }
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                const plsMatch = data.match(/File1=(http[s]?:\/\/[^\r\n]+)/i);
+                if (plsMatch) return resolve(plsMatch[1].trim());
+                const m3uMatch = data.split('\n').map(l => l.trim()).find(l => l.startsWith('http://') || l.startsWith('https://'));
+                if (m3uMatch) return resolve(m3uMatch);
+                resolve(url);
+            });
+        }).on('error', () => resolve(url));
+    });
+}
+
+async function fetchRadioFeedsStations() {
+    const NOW = Date.now();
+    if (cachedRadioFeeds && (NOW - lastRadioFeedsFetch < 3600000)) {
+        return cachedRadioFeeds;
+    }
+
+    return new Promise((resolve) => {
+        const http = require('http');
+        http.get('http://www.radiofeeds.co.uk/mp3.asp', (res) => {
+            let html = '';
+            res.on('data', chunk => html += chunk);
+            res.on('end', () => {
+                const stations = [];
+                const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+                let match;
+                let idx = 0;
+                while ((match = trRegex.exec(html)) !== null) {
+                    const trContent = match[1];
+                    const nameMatch = trContent.match(/&#149;\s*<a [^>]*>([^<]+)<\/a>/i) || trContent.match(/<a [^>]*target="NEW"[^>]*>([^<]+)<\/a>/i);
+                    const streamMatch = trContent.match(/href=[\"'](http[s]?:\/\/[^\"'\s>]+\.(?:pls|m3u|asx|mp3)[^\"'\s>]*)[\"']/i) || trContent.match(/href=[\"'](http[s]?:\/\/[^\"'\s>]*(?:stream|listen|\/live)[^\"'\s>]*)[\"']/i);
+                    
+                    if (nameMatch && streamMatch) {
+                        const name = nameMatch[1].trim();
+                        const url = streamMatch[1].trim();
+                        
+                        const tdCells = [...trContent.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(c => c[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
+                        let genre = '';
+                        if (tdCells.length >= 4) {
+                            genre = tdCells[3] || tdCells[2] || '';
+                        }
+
+                        stations.push({
+                            stationuuid: `rf-${idx++}`,
+                            name,
+                            url,
+                            url_resolved: url,
+                            tags: genre ? `UK, RadioFeeds, ${genre}` : 'UK, RadioFeeds',
+                            country: 'United Kingdom',
+                            countrycode: 'GB',
+                            votes: 200,
+                            source: 'RadioFeeds UK'
+                        });
+                    }
+                }
+                if (stations.length > 0) {
+                    cachedRadioFeeds = stations;
+                    lastRadioFeedsFetch = NOW;
+                }
+                resolve(stations);
+            });
+        }).on('error', (err) => {
+            console.error('[RADIO] RadioFeeds fetch error:', err.message);
+            resolve(cachedRadioFeeds || []);
+        });
+    });
+}
+
 async function addRadio(stationObj) {
-    const href = typeof stationObj === 'string' ? stationObj : (stationObj?.url_resolved || stationObj?.url || stationObj?.href);
+    let href = typeof stationObj === 'string' ? stationObj : (stationObj?.url_resolved || stationObj?.url || stationObj?.href);
     if (!href) return { success: false, error: 'Invalid station URL' };
+
+    // Automatically resolve PLS/M3U playlist URLs to direct audio stream before adding
+    try {
+        href = await resolvePlaylistUrl(href);
+    } catch (e) {
+        console.warn('[RADIO] Could not resolve playlist URL, proceeding with raw URL:', href);
+    }
 
     const name = typeof stationObj === 'object' ? stationObj.name : undefined;
     const favicon = typeof stationObj === 'object' ? stationObj.favicon : undefined;
@@ -406,13 +495,41 @@ async function deployCompanionMod() {
 }
 
 /**
- * Search for radio stations using the Radio Browser API.
- * Mirror: all.api.radio-browser.info (automatic load balancing)
+ * Search for radio stations using Radio Browser API and RadioFeeds UK.
  */
 async function searchStations(filters = {}) {
+    const { query, country, language, tag, order = 'votes', source } = filters;
+
+    let radioBrowserResults = [];
+    let radioFeedsResults = [];
+
+    // Fetch RadioFeeds UK stations if requested, or if UK/GB is selected or source is radiofeeds
+    const shouldFetchRadioFeeds = source === 'radiofeeds' || country === 'GB' || (source !== 'radiobrowser' && (!country || country === 'GB'));
+
+    if (shouldFetchRadioFeeds) {
+        try {
+            const rfAll = await fetchRadioFeedsStations();
+            let filteredRf = [...rfAll];
+
+            if (query && query.trim()) {
+                const qLower = query.trim().toLowerCase();
+                filteredRf = filteredRf.filter(s => s.name.toLowerCase().includes(qLower) || s.tags.toLowerCase().includes(qLower));
+            }
+            if (tag && tag.trim()) {
+                const tLower = tag.trim().toLowerCase();
+                filteredRf = filteredRf.filter(s => s.tags.toLowerCase().includes(tLower) || s.name.toLowerCase().includes(tLower));
+            }
+            radioFeedsResults = filteredRf;
+        } catch (e) {
+            console.warn('[RADIO] RadioFeeds search failed:', e.message);
+        }
+    }
+
+    if (source === 'radiofeeds') {
+        return radioFeedsResults;
+    }
+
     try {
-        const { query, country, language, tag, order = 'votes' } = filters;
-        
         const params = {
             limit: 100,
             hidebroken: true,
@@ -430,15 +547,34 @@ async function searchStations(filters = {}) {
             delete params.tagExact;
             res = await apiGet(`https://de1.api.radio-browser.info/json/stations/search`, params);
         }
-        return Array.isArray(res) ? res : [];
+        radioBrowserResults = Array.isArray(res) ? res : [];
     } catch (err) {
         console.error('[RADIO] Search failed:', err);
         try {
-            return await apiGet(`https://at1.api.radio-browser.info/json/stations/search`, params);
+            const params = {
+                limit: 100,
+                hidebroken: true,
+                order: order,
+                reverse: order === 'name' ? false : true,
+                name: query?.trim() || undefined,
+                countrycode: country?.trim() || undefined,
+                language: language?.trim() || undefined,
+                tag: tag?.trim() || undefined
+            };
+            radioBrowserResults = await apiGet(`https://at1.api.radio-browser.info/json/stations/search`, params);
         } catch (err2) {
-            return [];
+            radioBrowserResults = [];
         }
     }
+
+    // Combine results if both available, avoiding exact URL duplicates
+    if (radioFeedsResults.length > 0) {
+        const seenUrls = new Set(radioBrowserResults.map(s => (s.url_resolved || s.url || '').toLowerCase()));
+        const uniqueRf = radioFeedsResults.filter(rf => !seenUrls.has((rf.url_resolved || rf.url || '').toLowerCase()));
+        return [...uniqueRf, ...radioBrowserResults];
+    }
+
+    return radioBrowserResults;
 }
 
 module.exports = {
@@ -450,5 +586,8 @@ module.exports = {
     getRadioSettings,
     saveRadioSettings,
     applyGameMusicOverride,
-    deployCompanionMod
+    deployCompanionMod,
+    fetchRadioFeedsStations,
+    resolvePlaylistUrl
 };
+
