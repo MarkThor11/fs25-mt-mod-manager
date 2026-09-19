@@ -86,5 +86,14 @@ export const useRadioStore = create((set, get) => ({
       await get().fetchRadios();
     }
     return result;
+  },
+
+  updateStationName: async (href, newName) => {
+    if (!window.api?.radio?.updateName) return { success: false };
+    const result = await window.api.radio.updateName({ href, newName });
+    if (result.success) {
+      await get().fetchRadios();
+    }
+    return result;
   }
 }));

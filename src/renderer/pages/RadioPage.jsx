@@ -1,6 +1,6 @@
 import { CustomSlider } from '../components/common/CustomSlider';
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Radio as RadioIcon, Music, Globe, Check, Volume2, AlertCircle, RefreshCw, Play, Pause, Filter, X } from 'lucide-react';
+import { Search, Plus, Trash2, Radio as RadioIcon, Music, Globe, Check, Volume2, AlertCircle, RefreshCw, Play, Pause, Filter, X, Edit2 } from 'lucide-react';
 import { useRadioStore } from '../store/useRadioStore';
 import { useToastStore } from '../store/useToastStore';
 
@@ -38,7 +38,7 @@ const OFFICIAL_PRESETS = [
 const RadioPage = () => {
     const { 
         stations, searchResults, isSearching, 
-        fetchRadios, searchStations, addStation, removeStation,
+        fetchRadios, searchStations, addStation, removeStation, updateStationName,
         playingStationUrl, setPlayingStation,
         overrideBuiltins, isCompanionInstalled, setOverrideBuiltins
     } = useRadioStore();
@@ -140,7 +140,7 @@ const RadioPage = () => {
     };
 
     const handleAdd = async (station) => {
-        const result = await addStation(station.url_resolved || station.url || station.href);
+        const result = await addStation(station);
         if (result.success) toast.success(`Added ${station.name || 'Station'} to game!`);
         else toast.error(result.error || 'Failed to add station');
     };
@@ -151,6 +151,15 @@ const RadioPage = () => {
         if (result.success) {
             fetchRadios();
             toast.success('Station removed');
+        }
+    };
+
+    const handleRename = async (href, currentName) => {
+        const newName = prompt('Enter new station name:', currentName);
+        if (newName && newName.trim() && newName.trim() !== currentName) {
+            const res = await updateStationName(href, newName.trim());
+            if (res.success) toast.success('Station renamed');
+            else toast.error(res.error || 'Failed to rename station');
         }
     };
 
@@ -389,18 +398,25 @@ const RadioPage = () => {
                             stations.map((station, idx) => {
                                 return (
                                     <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                                        <div style={{ width: '40px', height: '40px', background: 'var(--accent-dim)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
-                                            <Music size={20} />
+                                        <div style={{ width: '44px', height: '44px', background: 'var(--accent-dim)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0, overflow: 'hidden' }}>
+                                            {station.favicon ? (
+                                                <img src={station.favicon} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" onError={(e) => e.target.style.display = 'none'} />
+                                            ) : (
+                                                <Music size={20} />
+                                            )}
                                         </div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', wordBreak: 'break-all' }}>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                 {station.name || station.href}
                                             </div>
-                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                 {station.href}
                                             </div>
                                         </div>
-                                        <button onClick={() => handleRemove(station.href)} style={{ padding: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', cursor: 'pointer' }} title="Remove from Game"><Trash2 size={18} /></button>
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                            <button onClick={() => handleRename(station.href, station.name || station.href)} style={{ padding: '8px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Rename Station"><Edit2 size={16} /></button>
+                                            <button onClick={() => handleRemove(station.href)} style={{ padding: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Remove from Game"><Trash2 size={16} /></button>
+                                        </div>
                                     </div>
                                 );
                             })

@@ -66,6 +66,109 @@ async function apiGet(url, params = {}) {
     });
 }
 
+function getRadioMetadataPath() {
+    const dataRoot = pathProvider.getFS25DataRoot();
+    return path.join(dataRoot, 'modSettings', 'MTRadioMetadata.json');
+}
+
+async function getRadioMetadata() {
+    const filePath = getRadioMetadataPath();
+    if (!fs.existsSync(filePath)) return {};
+    try {
+        const content = await fs.readFile(filePath, 'utf-8');
+        return JSON.parse(content) || {};
+    } catch (e) {
+        return {};
+    }
+}
+
+async function saveRadioMetadata(metadata) {
+    const filePath = getRadioMetadataPath();
+    try {
+        await fs.ensureDir(path.dirname(filePath));
+        await fs.writeFile(filePath, JSON.stringify(metadata, null, 2), 'utf-8');
+    } catch (e) {
+        console.error('[RADIO] Failed to save metadata:', e);
+    }
+}
+
+function inferStationNameFromUrl(href) {
+    if (!href) return 'Radio Station';
+    try {
+        const urlObj = new URL(href);
+        const pathname = urlObj.pathname.replace(/^\//, '').replace(/\/$/, '');
+        const filename = path.basename(pathname, path.extname(pathname));
+        
+        if (filename && filename !== ';' && filename !== 'stream' && filename !== 'radio' && filename.length > 2) {
+            const name = filename
+                .replace(/[-_]/g, ' ')
+                .replace(/([a-z])([A-Z])/g, '$1 $2')
+                .replace(/\b\w/g, c => c.toUpperCase());
+            return name.trim();
+        }
+        
+        const host = urlObj.hostname.replace(/^www\./, '');
+        return `Radio (${host})`;
+    } catch (e) {
+        return href;
+    }
+}
+
+async function resolveMissingStationMetadata(radios) {
+    if (!Array.isArray(radios) || radios.length === 0) return radios;
+
+    const metadata = await getRadioMetadata();
+    let metadataChanged = false;
+
+    const knownPresets = {
+        'https://simulatorradio.stream/stream.mp3': { name: 'Simulator Radio' },
+        'https://live.truckers.fm/': { name: 'Truckers FM' },
+        'https://oreo.truckstopradio.co.uk/listen/tsr_country/radio.mp3': { name: 'TruckStopRadio Country' },
+        'https://oreo.truckstopradio.co.uk/listen/tsr_rock/radio.mp3': { name: 'TruckStopRadio Rock' }
+    };
+
+    for (const r of radios) {
+        if (!r.href) continue;
+
+        const normalizedHref = r.href.replace(/\/$/, '');
+        const presetMatch = Object.entries(knownPresets).find(([k]) => k.replace(/\/$/, '') === normalizedHref);
+        if (presetMatch && (!metadata[r.href] || !metadata[r.href].name)) {
+            r.name = presetMatch[1].name;
+            metadata[r.href] = { ...metadata[r.href], name: r.name };
+            metadataChanged = true;
+            continue;
+        }
+
+        // If metadata already has a clean custom name, keep it
+        if (metadata[r.href] && metadata[r.href].name && metadata[r.href].isCustomName) {
+            r.name = metadata[r.href].name;
+            if (metadata[r.href].favicon) r.favicon = metadata[r.href].favicon;
+            continue;
+        }
+
+        // Try Radio Browser byurl lookup for accurate exact station names
+        try {
+            const encodedUrl = encodeURIComponent(r.href);
+            const searchRes = await apiGet(`https://de1.api.radio-browser.info/json/stations/byurl?url=${encodedUrl}`);
+            if (Array.isArray(searchRes) && searchRes.length > 0 && searchRes[0].name) {
+                const found = searchRes[0];
+                r.name = found.name.trim();
+                if (found.favicon) r.favicon = found.favicon;
+                metadata[r.href] = { name: r.name, favicon: r.favicon };
+                metadataChanged = true;
+            }
+        } catch (e) {
+            // Silence lookup network errors
+        }
+    }
+
+    if (metadataChanged) {
+        await saveRadioMetadata(metadata);
+    }
+
+    return radios;
+}
+
 async function getRadios() {
     const filePath = getRadioFilePath();
     if (!fs.existsSync(filePath)) {
@@ -83,10 +186,20 @@ async function getRadios() {
         let radios = jsonObj.streamingInternetRadios.streamingInternetRadio;
         if (!Array.isArray(radios)) radios = [radios];
 
-        // Map from XML attributes (@_href) back to simple href and filter out broken dummy links
-        return radios
-            .map(r => ({ href: r['@_href'] || r.href }))
+        const metadata = await getRadioMetadata();
+
+        let parsed = radios
+            .map(r => {
+                const href = r['@_href'] || r.href;
+                const xmlName = r['@_name'] || r.name;
+                const meta = metadata[href] || {};
+                const name = meta.name || xmlName || inferStationNameFromUrl(href);
+                return { href, name, favicon: meta.favicon };
+            })
             .filter(r => r.href && typeof r.href === 'string' && !r.href.includes('localhost:8000') && !r.href.includes('/spotify_account'));
+
+        parsed = await resolveMissingStationMetadata(parsed);
+        return parsed;
     } catch (err) {
         console.error('[RADIO] Failed to read radios:', err);
         return [];
@@ -95,21 +208,32 @@ async function getRadios() {
 
 async function saveRadios(radios) {
     const filePath = getRadioFilePath();
+    const metadata = await getRadioMetadata();
     
     // Sanitize radios: ensure they are valid URLs and remove dummy/broken URLs like localhost:8000
     const sanitizedRadios = (Array.isArray(radios) ? radios : [])
-        .filter(r => r && (r.href || r['@_href']))
-        .map(r => (r.href || r['@_href']).trim())
-        .filter(href => !href.includes('localhost:8000') && !href.includes('/spotify_account'));
+        .filter(r => r && (r.href || r['@_href'] || typeof r === 'string'))
+        .map(r => {
+            if (typeof r === 'string') return { href: r.trim() };
+            return {
+                href: (r.href || r['@_href']).trim(),
+                name: r.name,
+                favicon: r.favicon
+            };
+        })
+        .filter(r => !r.href.includes('localhost:8000') && !r.href.includes('/spotify_account'));
 
     // Build XML manually for absolute control (Giants Engine is very picky)
     let xml = '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n\n';
     xml += '<streamingInternetRadios>\n';
     
-    for (const href of sanitizedRadios) {
-        // Escape & for XML compatibility
-        const escapedHref = href.replace(/&/g, '&amp;');
-        xml += `    <streamingInternetRadio href="${escapedHref}" />\n`;
+    for (const item of sanitizedRadios) {
+        const escapedHref = item.href.replace(/&/g, '&amp;');
+        const nameAttr = item.name ? ` name="${item.name.replace(/"/g, '&quot;')}"` : '';
+        xml += `    <streamingInternetRadio href="${escapedHref}"${nameAttr} />\n`;
+        if (item.name || item.favicon) {
+            metadata[item.href] = { ...metadata[item.href], name: item.name, favicon: item.favicon };
+        }
     }
     
     xml += '</streamingInternetRadios>';
@@ -117,7 +241,7 @@ async function saveRadios(radios) {
     try {
         await fs.ensureDir(path.dirname(filePath));
         await fs.writeFile(filePath, xml, 'utf-8');
-        // Keep companion mod deployed and sync settings
+        await saveRadioMetadata(metadata);
         await deployCompanionMod();
         return { success: true };
     } catch (err) {
@@ -126,14 +250,38 @@ async function saveRadios(radios) {
     }
 }
 
-async function addRadio(href) {
+async function addRadio(stationObj) {
+    const href = typeof stationObj === 'string' ? stationObj : (stationObj?.url_resolved || stationObj?.url || stationObj?.href);
+    if (!href) return { success: false, error: 'Invalid station URL' };
+
+    const name = typeof stationObj === 'object' ? stationObj.name : undefined;
+    const favicon = typeof stationObj === 'object' ? stationObj.favicon : undefined;
+
     const radios = await getRadios();
-    if (radios.some(r => r.href === href)) {
-        return { success: true, message: 'Already exists' };
+    const existingIdx = radios.findIndex(r => r.href === href);
+    
+    if (existingIdx >= 0) {
+        if (name) radios[existingIdx].name = name;
+        if (favicon) radios[existingIdx].favicon = favicon;
+        return await saveRadios(radios);
     }
 
-    radios.push({ href });
+    radios.push({ href, name: name || inferStationNameFromUrl(href), favicon });
     return await saveRadios(radios);
+}
+
+async function updateRadioName(href, newName) {
+    if (!href || !newName) return { success: false, error: 'Invalid arguments' };
+    const radios = await getRadios();
+    const station = radios.find(r => r.href === href);
+    if (station) {
+        station.name = newName.trim();
+        const metadata = await getRadioMetadata();
+        metadata[href] = { ...metadata[href], name: station.name, isCustomName: true };
+        await saveRadioMetadata(metadata);
+        return await saveRadios(radios);
+    }
+    return { success: false, error: 'Station not found' };
 }
 
 async function removeRadio(href) {
@@ -256,6 +404,7 @@ async function searchStations(filters = {}) {
 module.exports = {
     getRadios,
     addRadio,
+    updateRadioName,
     removeRadio,
     searchStations,
     getRadioSettings,

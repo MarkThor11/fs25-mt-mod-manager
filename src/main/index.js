@@ -1300,6 +1300,7 @@ ipcMain.handle('maps:checkTemplate', async (_, mapId, mapTitle, modName) => {
 // ── Radio Manager ──
 ipcMain.handle('radio:getRadios', async () => radioManager.getRadios());
 ipcMain.handle('radio:add', async (_, station) => radioManager.addRadio(station));
+ipcMain.handle('radio:updateName', async (_, data) => radioManager.updateRadioName(data?.href, data?.newName));
 ipcMain.handle('radio:remove', async (_, url) => radioManager.removeRadio(url));
 ipcMain.handle('radio:search', async (_, query) => radioManager.searchStations(query));
 ipcMain.handle('radio:getSettings', async () => radioManager.getRadioSettings());
