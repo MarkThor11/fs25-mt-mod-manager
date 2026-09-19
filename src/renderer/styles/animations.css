@@ -221,3 +221,10 @@
 .animate-smoke {
   animation: smoke-puff 2s ease-out infinite;
 }
+
+/* ── Radio Station Marquee ── */
+@keyframes radioMarquee {
+  0%, 15% { transform: translateX(0); }
+  85%, 100% { transform: translateX(calc(-100% + 100%)); }
+}
+

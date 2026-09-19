@@ -3620,3 +3620,12 @@
   border: 1px solid rgba(0, 0, 0, 0.15);
   box-shadow: 0 1px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
 }
+
+/* Station Card Title Hover Marquee */
+.station-card:hover .station-title-text {
+  text-overflow: clip !important;
+  display: inline-block !important;
+  width: auto !important;
+  animation: radioMarquee 6s linear infinite alternate !important;
+}
+

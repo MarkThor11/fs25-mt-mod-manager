@@ -525,9 +525,31 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAd
                     </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {station.name}
-                    </h3>
+                    <div 
+                        title={station.name}
+                        style={{ 
+                            margin: '0 0 4px 0', 
+                            overflow: 'hidden', 
+                            position: 'relative',
+                            cursor: 'default'
+                        }}
+                    >
+                        <h3 
+                            className="station-title-text"
+                            style={{ 
+                                margin: 0, 
+                                fontSize: '15px', 
+                                fontWeight: '700', 
+                                color: 'var(--text-primary)', 
+                                whiteSpace: 'nowrap', 
+                                overflow: 'hidden', 
+                                textOverflow: 'ellipsis',
+                                transition: 'transform 0.3s ease'
+                            }}
+                        >
+                            {station.name}
+                        </h3>
+                    </div>
                     <div style={{ 
                         fontSize: '12px', 
                         color: 'var(--text-secondary)', 
