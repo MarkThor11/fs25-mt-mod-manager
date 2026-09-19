@@ -859,19 +859,17 @@ export default function ModHubPage() {
                       </div>
                     </label>
                     <div style={{ position: 'relative', width: '100%', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', margin: '12px 0 8px 0' }}>
-                      <div style={{ position: 'absolute', height: '100%', background: 'var(--accent)', borderRadius: 7, pointerEvents: 'none',
-                                    left: `calc(7px + (${activeFilters.priceRange[0] / 10000000}) * (100% - 14px))`, right: `calc(100% - (7px + (${activeFilters.priceRange[1] / 10000000}) * (100% - 14px)))` }} />
                       <CustomSlider 
                         min="0" max="10000000" step="10000" 
                         value={activeFilters.priceRange[0]} 
                         onChange={(e) => setFilters({ priceRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.priceRange[1])] })}
-                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 16px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
+                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                       <CustomSlider 
                         min="0" max="10000000" step="10000" 
                         value={activeFilters.priceRange[1]} 
                         onChange={(e) => setFilters({ priceRange: [Math.min(parseInt(e.target.value), activeFilters.priceRange[0]), parseInt(e.target.value)] })}
-                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 16px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
+                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                     </div>
                   </div>
@@ -886,19 +884,17 @@ export default function ModHubPage() {
                       </div>
                     </label>
                     <div style={{ position: 'relative', width: '100%', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', margin: '12px 0 8px 0' }}>
-                      <div style={{ position: 'absolute', height: '100%', background: 'var(--accent)', borderRadius: 7, pointerEvents: 'none',
-                                    left: `calc(7px + (${activeFilters.hpRange[0] / 10000}) * (100% - 14px))`, right: `calc(100% - (7px + (${activeFilters.hpRange[1] / 10000}) * (100% - 14px)))` }} />
                       <CustomSlider 
                         min="0" max="10000" step="10" 
                         value={activeFilters.hpRange[0]} 
                         onChange={(e) => setFilters({ hpRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.hpRange[1])] })}
-                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 16px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
+                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                       <CustomSlider 
                         min="0" max="10000" step="10" 
                         value={activeFilters.hpRange[1]} 
                         onChange={(e) => setFilters({ hpRange: [Math.min(parseInt(e.target.value), activeFilters.hpRange[0]), parseInt(e.target.value)] })}
-                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 16px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
+                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                     </div>
                   </div>
@@ -913,19 +909,17 @@ export default function ModHubPage() {
                       </div>
                     </label>
                     <div style={{ position: 'relative', width: '100%', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', margin: '12px 0 8px 0' }}>
-                      <div style={{ position: 'absolute', height: '100%', background: 'var(--accent)', borderRadius: 7, pointerEvents: 'none',
-                                    left: `calc(7px + (${activeFilters.capRange[0] / 10000000}) * (100% - 14px))`, right: `calc(100% - (7px + (${activeFilters.capRange[1] / 10000000}) * (100% - 14px)))` }} />
                       <CustomSlider 
                         min="0" max="10000000" step="10000" 
                         value={activeFilters.capRange[0]} 
                         onChange={(e) => setFilters({ capRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.capRange[1])] })}
-                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 16px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
+                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                       <CustomSlider 
                         min="0" max="10000000" step="10000" 
                         value={activeFilters.capRange[1]} 
                         onChange={(e) => setFilters({ capRange: [Math.min(parseInt(e.target.value), activeFilters.capRange[0]), parseInt(e.target.value)] })}
-                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 16px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
+                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                     </div>
                   </div>
