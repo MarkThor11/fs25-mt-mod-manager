@@ -1086,16 +1086,17 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     // Extract true map id from the mod's modDesc.xml if available
-    let internalMapId = mapId;
+    let internalMapId = matchedMapMod?.mapId || mapId;
     if (modZipPath && fs.existsSync(modZipPath)) {
         try {
             const AdmZip = require('adm-zip');
             const zip = new AdmZip(modZipPath);
             const entry = zip.getEntry('modDesc.xml');
             if (entry) {
-                const mMatch = xml.match(/<map\s+[^>]*id=(["'])(.*?)\1/i);
-                if (mMatch && mMatch[2]) {
-                    internalMapId = mMatch[2];
+                const xmlContent = entry.getData().toString('utf8');
+                const mMatch = xmlContent.match(/<map\s+[^>]*id=(["'])(.*?)\1/i) || xmlContent.match(/<mapId>(.*?)<\/mapId>/i);
+                if (mMatch && (mMatch[2] || mMatch[1])) {
+                    internalMapId = mMatch[2] || mMatch[1];
                     console.log(`[CREATE] Extracted real internal mapId "${internalMapId}" from ${path.basename(modZipPath)}`);
                 }
             }
@@ -1104,18 +1105,26 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         }
     }
 
-    // FS25 engine requires mod maps to have their mapId prefixed with the mod name (e.g. FS25_MapMod.MapId)
-    // If we don't do this, the engine can't find the map, marking the save as corrupted and greying out the Continue button.
+    // Determine engineMapId:
+    // For official base maps, use canonical base ID (MapUS, MapEU, MapAS, pdlc_highlandsFishingPack...).
+    // For custom mod maps, FS25 engine REQUIRES {mapModName}.{internalMapId} (e.g. FS25_BackRoadsCounty4x.mapUS)
+    const isOfficialBaseMap = !mapModName || ['mapus', 'mapeu', 'mapas'].includes((mapModName || '').toLowerCase()) || (mapModName || '').toLowerCase().includes('highlandsfishing');
     let engineMapId = internalMapId || mapId;
-    const lowEngineId = (engineMapId || '').toLowerCase();
-    if (lowEngineId === 'mapus') engineMapId = 'MapUS';
-    else if (lowEngineId === 'mapeu') engineMapId = 'MapEU';
-    else if (lowEngineId === 'mapas') engineMapId = 'MapAS';
-    else if (lowEngineId.includes('highlandsfishing') || mapModName === 'pdlc_highlandsFishingPack') {
-        engineMapId = 'pdlc_highlandsFishingPack.HighlandsFishingMap';
-    } else if (mapModName && !['MapUS', 'MapEU', 'MapAS'].includes(engineMapId)) {
+
+    if (isOfficialBaseMap) {
+        const lowEngineId = (engineMapId || '').toLowerCase();
+        if (lowEngineId === 'mapus') engineMapId = 'MapUS';
+        else if (lowEngineId === 'mapeu') engineMapId = 'MapEU';
+        else if (lowEngineId === 'mapas') engineMapId = 'MapAS';
+        else if (lowEngineId.includes('highlandsfishing') || (mapModName || '').toLowerCase().includes('highlandsfishing')) {
+            engineMapId = 'pdlc_highlandsFishingPack.HighlandsFishingMap';
+        }
+    } else if (mapModName) {
+        // Strip any previous mod prefix if mismatched
         if (!engineMapId.startsWith(mapModName + '.')) {
-            engineMapId = `${mapModName}.${engineMapId}`;
+            const dotIdx = engineMapId.indexOf('.');
+            const cleanId = dotIdx !== -1 ? engineMapId.substring(dotIdx + 1) : engineMapId;
+            engineMapId = `${mapModName}.${cleanId || 'mapUS'}`;
         }
     }
 
@@ -3520,6 +3529,90 @@ async function updateNativeEnhancement(savePath, includeBridge, includeDeliverie
     } catch (e) { return { success: false, error: e.message }; }
 }
 
+async function repairSavegameMapId(savePath) {
+    try {
+        const careerPath = path.join(savePath, 'careerSavegame.xml');
+        if (!fs.existsSync(careerPath)) return;
+        const xmlContent = fs.readFileSync(careerPath, 'utf8');
+        const { XMLParser, XMLBuilder } = require('fast-xml-parser');
+        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
+        const obj = parser.parse(xmlContent);
+        if (!obj?.careerSavegame?.settings) return;
+
+        const currentMapId = obj.careerSavegame.settings.mapId || '';
+        const rawMods = obj.careerSavegame.mod;
+        const modsList = Array.isArray(rawMods) ? rawMods : (rawMods ? [rawMods] : []);
+
+        const modManager = require('./modManager');
+        const { mods: allMods } = await modManager.scanLocalMods();
+
+        let customMapMod = null;
+        for (const mEntry of modsList) {
+            const mName = mEntry['@_modName'];
+            if (!mName) continue;
+            const found = allMods.find(m => (m.modName || '').toLowerCase() === mName.toLowerCase() && m.isMap);
+            if (found) {
+                customMapMod = found;
+                break;
+            }
+        }
+
+        if (!customMapMod) {
+            for (const mEntry of modsList) {
+                const mName = mEntry['@_modName'];
+                if (!mName) continue;
+                if (!['MapUS', 'MapEU', 'MapAS', 'FS25_QuietLoadingScreen', 'FS25_MTRadioManager', 'FS25_storeDeliveries'].includes(mName)) {
+                    const found = allMods.find(m => (m.modName || '').toLowerCase() === mName.toLowerCase());
+                    if (found && (found.isMap || found.mapId)) {
+                        customMapMod = found;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (customMapMod) {
+            const mapModName = customMapMod.modName;
+            const officialIds = ['mapus', 'mapeu', 'mapas', 'pdlc_highlandsfishingpack.highlandsfishingmap'];
+            const curLow = (currentMapId || '').toLowerCase();
+
+            // If careerSavegame.xml currently points to an official base map ID (like MapUS) BUT this save belongs to a custom map mod!
+            if (officialIds.includes(curLow) || !currentMapId.startsWith(mapModName + '.')) {
+                let internalId = customMapMod.mapId || 'mapUS';
+                if (internalId.startsWith(mapModName + '.')) {
+                    internalId = internalId.substring(mapModName.length + 1);
+                }
+                const correctEngineMapId = `${mapModName}.${internalId}`;
+
+                console.log(`[MAP-REPAIR] Repairing mapId in ${path.basename(savePath)}: "${currentMapId}" -> "${correctEngineMapId}" for custom map ${mapModName}`);
+
+                obj.careerSavegame.settings.mapId = correctEngineMapId;
+                if (customMapMod.title) {
+                    obj.careerSavegame.settings.mapTitle = customMapMod.title;
+                }
+
+                // If Riverbend/Zielonka spawn coordinates were mistakenly set on this custom map, clear them so engine uses custom map spawn
+                if (obj.careerSavegame.player) {
+                    const posX = obj.careerSavegame.player['@_spawnPositionX'];
+                    if (posX === '-128.000' || posX === '-263.000' || posX === '-528.800') {
+                        delete obj.careerSavegame.player['@_spawnPositionX'];
+                        delete obj.careerSavegame.player['@_spawnPositionY'];
+                        delete obj.careerSavegame.player['@_spawnPositionZ'];
+                    }
+                }
+
+                delete obj['?xml'];
+                const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
+                const updatedXml = builder.build(obj);
+                fs.writeFileSync(careerPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + updatedXml, 'utf8');
+                console.log(`[MAP-REPAIR] Successfully repaired ${path.basename(savePath)}!`);
+            }
+        }
+    } catch (err) {
+        console.warn(`[MAP-REPAIR] Could not repair savegame mapId for ${savePath}:`, err.message);
+    }
+}
+
 async function getMapDefaultStartCoordinates(savePath, allowFallback = true) {
     try {
         const fs = require('fs-extra');
@@ -5663,10 +5756,206 @@ module.exports = {
     updateSavegameAttribute,
     updateFleetMaintenance,
     getSavegameTransferData,
+        console.error('[SERVER-MODS] Failed to prepare server mods folder:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * Exports a savegame as a dedicated multiplayer server pack.
+ */
+async function exportServerSavegame({ savePath, accessLevel, serverName, serverModUrl, targetZipPath }) {
+    const AdmZip = require('adm-zip');
+    try {
+        if (!fs.existsSync(savePath)) {
+            throw new Error(`Savegame folder not found: ${savePath}`);
+        }
+
+        const serverMeta = {
+            isServerSave: true,
+            accessLevel: accessLevel || 'player',
+            isLocked: accessLevel === 'player',
+            serverName: serverName || 'Multiplayer Server',
+            serverModUrl: serverModUrl || '',
+            exportedAt: new Date().toISOString()
+        };
+
+        // Write server_meta.json into savegame folder before zipping
+        await fs.writeJson(path.join(savePath, 'server_meta.json'), serverMeta, { spaces: 2 });
+
+        const zip = new AdmZip();
+        zip.addLocalFolder(savePath);
+
+        await fs.ensureDir(path.dirname(targetZipPath));
+        zip.writeZip(targetZipPath);
+
+        console.log(`[EXPORT-SERVER] Exported server package (${accessLevel}) to ${targetZipPath}`);
+        return { success: true, filePath: targetZipPath, serverMeta };
+    } catch (err) {
+        console.error('[EXPORT-SERVER] Export server save failed:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * Toggles a savegame slot between Single Player and Multiplayer Server mode.
+ */
+async function toggleServerMode(savePath, enableServerMode, options = {}) {
+    try {
+        const serverMetaPath = path.join(savePath, 'server_meta.json');
+        if (enableServerMode) {
+            let existingMeta = {};
+            if (fs.existsSync(serverMetaPath)) {
+                try { existingMeta = await fs.readJson(serverMetaPath); } catch (e) {}
+            }
+            const serverMeta = {
+                isServerSave: true,
+                accessLevel: options.accessLevel || existingMeta.accessLevel || 'admin',
+                isLocked: (options.accessLevel || existingMeta.accessLevel || 'admin') === 'player',
+                serverName: options.serverName || existingMeta.serverName || 'Multiplayer Server',
+                serverModUrl: options.serverModUrl !== undefined ? options.serverModUrl : (existingMeta.serverModUrl || ''),
+                updatedAt: new Date().toISOString()
+            };
+            await fs.writeJson(serverMetaPath, serverMeta, { spaces: 2 });
+            console.log(`[SERVER-MODE] Enabled server mode for save: ${savePath}`);
+            return { success: true, isServerSave: true, serverMeta };
+        } else {
+            if (fs.existsSync(serverMetaPath)) {
+                await fs.remove(serverMetaPath);
+            }
+            console.log(`[SERVER-MODE] Disabled server mode (converted to single player) for save: ${savePath}`);
+            return { success: true, isServerSave: false };
+        }
+    } catch (err) {
+        console.error('[SERVER-MODE] Failed to toggle server mode:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * Stashes all active Single Player save slots to a quarantine folder (stashed_sp_saves)
+ * so that when launching a Multiplayer Server save, in-game FS25 Host Game save menu
+ * ONLY displays multiplayer server saves.
+ */
+async function stashSinglePlayerSaves() {
+    try {
+        const fs25Path = getFs25Path();
+        const stashPath = path.join(fs25Path, 'stashed_sp_saves');
+        await fs.ensureDir(stashPath);
+
+        let stashedCount = 0;
+        for (let i = 1; i <= 20; i++) {
+            const savePath = path.join(fs25Path, `savegame${i}`);
+            const careerXml = path.join(savePath, 'careerSavegame.xml');
+            if (fs.existsSync(savePath) && fs.existsSync(careerXml)) {
+                const serverMetaPath = path.join(savePath, 'server_meta.json');
+                const isServerSave = fs.existsSync(serverMetaPath);
+                if (!isServerSave) {
+                    const targetStash = path.join(stashPath, `savegame${i}`);
+                    if (fs.existsSync(targetStash)) {
+                        await fs.remove(targetStash);
+                    }
+                    await fs.move(savePath, targetStash);
+                    stashedCount++;
+                    console.log(`[STASH-SAVES] Quarantined Single Player Save Slot ${i} -> ${targetStash}`);
+                }
+            }
+        }
+        return { success: true, stashedCount };
+    } catch (err) {
+        console.error('[STASH-SAVES] Error stashing single player saves:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * Restores all stashed Single Player save slots from quarantine (stashed_sp_saves)
+ * back to their active savegame1..20 slot folders in FS25 root.
+ */
+async function restoreStashedSinglePlayerSaves() {
+    try {
+        const fs25Path = getFs25Path();
+        const stashPath = path.join(fs25Path, 'stashed_sp_saves');
+        if (!fs.existsSync(stashPath)) return { success: true, restoredCount: 0 };
+
+        const items = await fs.readdir(stashPath);
+        let restoredCount = 0;
+
+        for (const item of items) {
+            if (/^savegame\d+$/i.test(item)) {
+                const sourceStash = path.join(stashPath, item);
+                const targetSave = path.join(fs25Path, item);
+                if (fs.existsSync(sourceStash)) {
+                    if (fs.existsSync(targetSave)) {
+                        await fs.remove(targetSave);
+                    }
+                    await fs.move(sourceStash, targetSave);
+                    restoredCount++;
+                    console.log(`[RESTORE-SAVES] Restored Single Player Save ${item} to active slots.`);
+                }
+            }
+        }
+
+        try { await fs.remove(stashPath); } catch (e) {}
+        return { success: true, restoredCount };
+    } catch (err) {
+        console.error('[RESTORE-SAVES] Error restoring stashed saves:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+module.exports = {
+    adoptSaveAsTemplate,
+    cleanupBridgeModFromSavegame,
+    syncSubfolderMapDependencies,
+    getPlayerPosition,
+    setPlayerPosition,
+    resetPlayerSpawn,
+    getMapDefaultStartCoordinates,
+    getMapHomeCoordinates,
+    getMapShopCoordinates,
+    getFleetPositions,
+    activatePlayerPersistence,
+    deactivatePlayerPersistence,
+    checkStoreDeliveries,
+    ensureStoreDeliveries,
+    updateNativeEnhancement,
+    getStoreDeliveryCoordinates,
+    getMapTemplates,
+    deleteMapTemplate,
+    hasMapTemplate,
+    getSavegameMods,
+    setSavegameMods,
+    getUsedModsInSavegame,
+    createSavegameWithMods,
+    importSavegame,
+    exportSavegame,
+    exportServerSavegame,
+    toggleServerMode,
+    getFarmPermissions,
+    updateFarmPermissions,
+    prepareServerModsFolder,
+    isSavegame,
+    renameSavegame,
+    deleteSavegame,
+    getInstalledMods,
+    archiveSavegame,
+    getArchivedSavegames,
+    restoreSavegame,
+    getEngineBackups,
+    restoreEngineBackup,
+    swapArchiveToSlot,
+    deleteArchivedSavegame,
+    renameArchivedSavegame,
+    getAllSavegames,
+    updateSavegameAttribute,
+    updateFleetMaintenance,
+    getSavegameTransferData,
     executeTransfer,
     autoInjectDependencies,
     findMapModInSavegame,
     syncSubfolderMapDependencies,
     stashSinglePlayerSaves,
-    restoreStashedSinglePlayerSaves
+    restoreStashedSinglePlayerSaves,
+    repairSavegameMapId
 };

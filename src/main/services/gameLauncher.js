@@ -210,6 +210,7 @@ async function launch(options = {}) {
       const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
       await savegameManager.cleanupBridgeModFromSavegame(savePath);
       await savegameManager.syncSubfolderMapDependencies(savePath);
+      await savegameManager.repairSavegameMapId(savePath);
     } catch (e) {
       console.error('[LAUNCH] Failed to pre-process savegame files:', e.message);
     }
