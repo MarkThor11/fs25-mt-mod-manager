@@ -74,7 +74,9 @@ export const CustomSlider = ({ value, min, max, step, onChange, width = '100%', 
         title={title}
         style={{
           width,
-          background: `linear-gradient(to right, var(--accent) calc(7px + ${percentage} * (100% - 14px) / 100), rgba(255,255,255,0.1) calc(7px + ${percentage} * (100% - 14px) / 100))`,
+          background: props.style?.background !== 'transparent' 
+            ? `linear-gradient(to right, var(--accent) calc(7px + ${percentage} * (100% - 14px) / 100), rgba(255,255,255,0.1) calc(7px + ${percentage} * (100% - 14px) / 100))`
+            : 'transparent',
           ...props.style
         }}
         {...props}
