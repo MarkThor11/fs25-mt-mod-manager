@@ -625,12 +625,35 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAd
                         {tags.length > 0 ? tags.join(', ') : (station.country || 'Unknown')}
                     </div>
                 </div>
-                <button 
-                    onClick={onPreview}
-                    style={{ padding: '8px', borderRadius: '8px', background: isPlaying ? 'var(--accent)' : 'var(--bg-tertiary)', color: isPlaying ? 'white' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                    {isBuffering ? <RefreshCw size={16} className="animate-spin" /> : isPlaying ? <Pause size={16} /> : <Play size={16} />}
-                </button>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <button 
+                        onClick={onPreview}
+                        style={{ padding: '8px', borderRadius: '8px', background: isPlaying ? 'var(--accent)' : 'var(--bg-tertiary)', color: isPlaying ? 'white' : 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        title={isPlaying ? "Pause preview" : "Preview station stream"}
+                    >
+                        {isBuffering ? <RefreshCw size={16} className="animate-spin" /> : isPlaying ? <Pause size={16} /> : <Play size={16} />}
+                    </button>
+                    {onHide && (
+                        <button 
+                            onClick={onHide}
+                            style={{ 
+                                padding: '8px', 
+                                borderRadius: '8px', 
+                                background: 'rgba(239, 68, 68, 0.08)', 
+                                color: '#ef4444', 
+                                border: '1px solid rgba(239, 68, 68, 0.2)', 
+                                cursor: 'pointer', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                transition: 'all 0.15s ease'
+                            }}
+                            title="Remove non-working station from search results"
+                        >
+                            <X size={16} />
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
