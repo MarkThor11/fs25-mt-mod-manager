@@ -579,7 +579,7 @@ function SavegameEditorModal({ save, onClose, onRefresh, onLaunch, onToggleMode 
       
       if (data.action === 'launch' && pendingLaunchSlot) {
           const numericSlot = parseInt(pendingLaunchSlot, 10);
-          useSavegameStore.setState({ isGameRunning: true, playingSlot: numericSlot });
+          useSavegameStore.setState({ isGameRunning: true, playingSlot: numericSlot, launchGraceUntil: Date.now() + 25000 });
           useSettingsStore.getState().setSavegameSlot(numericSlot);
           
           await window.api.game.launch({
@@ -3081,7 +3081,7 @@ export default function SavegamesPage() {
   const handleLaunch = async (slotIndex, extraOptions = {}) => {
     // Optimistically mark the slot as active and notify immediately so the user knows it's launching
     const numericSlot = parseInt(slotIndex, 10);
-    useSavegameStore.setState({ isGameRunning: true, playingSlot: numericSlot });
+    useSavegameStore.setState({ isGameRunning: true, playingSlot: numericSlot, launchGraceUntil: Date.now() + 25000 });
     useSettingsStore.getState().setSavegameSlot(numericSlot);
     useToastStore.getState().info(`Preparing & Launching Slot ${slotIndex}...`);
 
@@ -3126,7 +3126,7 @@ export default function SavegamesPage() {
       try {
         const serverPrep = await window.api.savegames.prepareServerModsFolder({ slotIndex, savePath: saveToLaunch.path });
         if (serverPrep && serverPrep.stats && (serverPrep.stats.mismatchedCount > 0 || serverPrep.stats.missingCount > 0)) {
-          useSavegameStore.setState({ isGameRunning: false, playingSlot: null });
+          useSavegameStore.setState({ isGameRunning: false, playingSlot: null, launchGraceUntil: 0 });
           useToastStore.getState().warning(`Cannot launch server save: ${serverPrep.stats.mismatchedCount} mod version mismatch(es) and ${serverPrep.stats.missingCount} missing mod(s). Mod audit required.`);
           setShowAudit(saveToLaunch);
           return; // Abort launch!
@@ -3144,7 +3144,7 @@ export default function SavegamesPage() {
         
         if (activeConflictsMap.size > 0) {
           if (conflictSensitivity === 'resolve') {
-            useSavegameStore.setState({ isGameRunning: false, playingSlot: null });
+            useSavegameStore.setState({ isGameRunning: false, playingSlot: null, launchGraceUntil: 0 });
             setPendingLaunchSlot(slotIndex);
             setLaunchExtraOptions(extraOptions);
             setConflictResolutionData({
@@ -3155,7 +3155,7 @@ export default function SavegamesPage() {
             });
             return;
           } else if (conflictSensitivity === 'warn' || conflictSensitivity === 'resolve') {
-            useSavegameStore.setState({ isGameRunning: false, playingSlot: null });
+            useSavegameStore.setState({ isGameRunning: false, playingSlot: null, launchGraceUntil: 0 });
             import('../store/useToastStore').then(module => module.useToastStore.getState().error(`Launch prevented: Found ${activeConflictsMap.size} active script conflicts.`));
             return; // ABORT LAUNCH
           }
@@ -3178,7 +3178,7 @@ export default function SavegamesPage() {
       }
     } else {
       // Launch failed — revert the optimistic state so the UI doesn't appear stuck
-      useSavegameStore.setState({ isGameRunning: false, playingSlot: null });
+      useSavegameStore.setState({ isGameRunning: false, playingSlot: null, launchGraceUntil: 0 });
       useSettingsStore.getState().setSavegameSlot(null);
       useToastStore.getState().error(result.error);
     }

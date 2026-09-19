@@ -294,9 +294,15 @@ export default function App() {
     const pollGameState = async () => {
       try {
         const status = window.api.game.getStatus ? await window.api.game.getStatus() : { isRunning: await window.api.game.isRunning(), playingSlot: null };
-        const { isGameRunning, playingSlot } = useSavegameStore.getState();
+        const { isGameRunning, playingSlot, launchGraceUntil } = useSavegameStore.getState();
         
         const isRunning = !!status.isRunning;
+
+        // If the game process is not yet detected, but we are within an active launch grace window, keep optimistic launch state
+        if (!isRunning && isGameRunning && Date.now() < (launchGraceUntil || 0)) {
+          return;
+        }
+
         // Prioritize the existing playingSlot while the game is running so the highlighted slot never flickers or switches
         let currentSlot = null;
         if (isRunning) {
@@ -304,9 +310,10 @@ export default function App() {
         }
 
         if (isRunning !== isGameRunning || currentSlot !== playingSlot) {
-          useSavegameStore.setState({ isGameRunning: isRunning, playingSlot: currentSlot });
+          useSavegameStore.setState({ isGameRunning: isRunning, playingSlot: currentSlot, launchGraceUntil: isRunning ? 0 : launchGraceUntil });
           // If the game just stopped, clear the playing slot and refresh saves to trigger auto-harvesting
           if (!isRunning && playingSlot !== null) {
+            useSavegameStore.setState({ launchGraceUntil: 0 });
             useSavegameStore.getState().fetchSavegames();
             useMapStore.getState().fetchTemplates();
           }
@@ -323,7 +330,7 @@ export default function App() {
     if (window.api?.on?.gameExited) {
       unsubscribeGameExited = window.api.on.gameExited(() => {
         console.log('[APP] Game exited event received. Refreshing savegames and templates...');
-        useSavegameStore.setState({ isGameRunning: false, playingSlot: null });
+        useSavegameStore.setState({ isGameRunning: false, playingSlot: null, launchGraceUntil: 0 });
         useSavegameStore.getState().fetchSavegames();
         useMapStore.getState().fetchTemplates();
       });

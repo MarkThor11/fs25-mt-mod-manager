@@ -58,7 +58,10 @@ export default function Sidebar() {
     try {
       const { savegameSlot, enableCheats, skipModDialog, skipIntro, autoStart } = useSettingsStore.getState();
       const options = {};
-      if (savegameSlot) options.savegameIndex = savegameSlot;
+      if (savegameSlot) {
+        options.savegameIndex = savegameSlot;
+        useSavegameStore.setState({ isGameRunning: true, playingSlot: parseInt(savegameSlot, 10), launchGraceUntil: Date.now() + 25000 });
+      }
       if (enableCheats) options.cheats = true;
       options.skipModUpdateDialog = skipModDialog !== false;
       options.skipIntro = skipIntro !== false;
@@ -66,16 +69,18 @@ export default function Sidebar() {
       
       const result = await window.api.game.launch(options);
       if (result.success) {
-        if (savegameSlot) useSavegameStore.setState({ isGameRunning: true, playingSlot: parseInt(savegameSlot, 10) });
         if (result.needsManualInit) {
           useToastStore.getState().info(`GHOST SLOT: Slot ${savegameSlot} is preparing for first-time load. Once the map loads, SAVE ONCE in-game to initialize.`, { duration: 10000 });
         } else {
           useToastStore.getState().success(`Launching Slot ${savegameSlot}...`);
         }
       } else {
+        if (savegameSlot) useSavegameStore.setState({ isGameRunning: false, playingSlot: null, launchGraceUntil: 0 });
         useToastStore.getState().error(result.error || 'Failed to launch game');
       }
     } catch (err) {
+      const { savegameSlot } = useSettingsStore.getState();
+      if (savegameSlot) useSavegameStore.setState({ isGameRunning: false, playingSlot: null, launchGraceUntil: 0 });
       useToastStore.getState().error('Failed to launch game: ' + err.message);
     }
   };
