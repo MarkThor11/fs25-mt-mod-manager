@@ -289,18 +289,19 @@ const RadioPage = () => {
                         {/* Genre Preset Tags */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', margin: '4px 0 10px 0' }}>
                             <span style={{ fontSize: '15px', color: 'var(--text-primary)', fontWeight: '700', letterSpacing: '0.01em' }}>Genres</span>
-                            <div className="custom-scrollbar" style={{ display: 'flex', flexWrap: 'nowrap', gap: '8px', alignItems: 'center', overflowX: 'auto', paddingBottom: '6px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', width: '100%' }}>
                                 {PRESET_TAGS.map(t => (
                                     <button 
                                         key={t} 
                                         onClick={() => toggleTag(t)}
                                         style={{ 
-                                            padding: '8px 16px', 
+                                            flex: '1 1 auto',
+                                            padding: '10px 18px', 
                                             borderRadius: '24px', 
-                                            fontSize: '14px', 
-                                            fontWeight: '600',
+                                            fontSize: '15px', 
+                                            fontWeight: '700',
                                             whiteSpace: 'nowrap',
-                                            flexShrink: 0,
+                                            textAlign: 'center',
                                             background: tag === t.toLowerCase() ? 'var(--accent)' : 'var(--bg-tertiary)',
                                             color: tag === t.toLowerCase() ? 'white' : 'var(--text-secondary)',
                                             border: tag === t.toLowerCase() ? '1px solid var(--accent)' : '1px solid var(--border)',
