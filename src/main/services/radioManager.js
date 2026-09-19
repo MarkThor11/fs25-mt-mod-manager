@@ -446,7 +446,7 @@ async function searchStations(filters = {}) {
             limit: 100,
             hidebroken: true,
             order: order,
-            reverse: true,
+            reverse: order === 'name' ? false : true,
             name: query?.trim() || undefined,
             countrycode: country?.trim() || undefined,
             language: language?.trim() || undefined,

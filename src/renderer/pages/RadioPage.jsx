@@ -418,6 +418,7 @@ const RadioPage = () => {
                                             onPreview={() => setPlayingStation(playingStationUrl === resolvedUrl ? null : resolvedUrl)} 
                                             onAdd={() => handleAdd(station)} 
                                             onRemove={() => handleRemove(matchedStation ? matchedStation.href : resolvedUrl)} 
+                                            onSelectPopularity={() => handleSortChange('votes')}
                                         />
                                     );
                                 })
@@ -483,7 +484,7 @@ const RadioPage = () => {
     );
 };
 
-const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAdd, onRemove, onPreview }) => {
+const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAdd, onRemove, onPreview, onSelectPopularity }) => {
     const [imgError, setImgError] = useState(false);
 
     useEffect(() => {
@@ -592,7 +593,32 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAd
                 {station.language && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--accent)', fontWeight: '600' }}>{station.language.split(',')[0]}</span>}
                 {station.countrycode && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}>{station.countrycode}</span>}
                 {station.bitrate && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}>{station.bitrate}kbps</span>}
-                {station.votes && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}>{station.votes} votes</span>}
+                {station.votes !== undefined && station.votes !== null && (
+                    <span 
+                        onClick={onSelectPopularity}
+                        title="Click to sort stations by popularity (votes)"
+                        style={{ 
+                            padding: '2px 6px', 
+                            background: 'var(--bg-tertiary)', 
+                            borderRadius: '4px', 
+                            fontSize: '10px', 
+                            color: 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            transition: 'all 0.15s'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--accent-dim)';
+                            e.currentTarget.style.color = 'var(--accent)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'var(--bg-tertiary)';
+                            e.currentTarget.style.color = 'var(--text-secondary)';
+                        }}
+                    >
+                        {station.votes} votes
+                    </span>
+                )}
             </div>
 
             <button 
