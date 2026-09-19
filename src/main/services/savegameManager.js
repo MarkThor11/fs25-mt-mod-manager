@@ -5703,60 +5703,8 @@ async function restoreStashedSinglePlayerSaves() {
 
         try { await fs.remove(stashPath); } catch (e) {}
         return { success: true, restoredCount };
-                            await fs.symlink(installed.filePath, targetFilePath, 'file');
-                        } catch (symErr) {
-                            try {
-                                await fs.link(installed.filePath, targetFilePath);
-                            } catch (linkErr) {
-                                await fs.copy(installed.filePath, targetFilePath);
-                            }
-                        }
-                    }
-                    linkedCount++;
-                } else {
-                    mismatchedCount++;
-                }
-            } else {
-                const internalZipPath = path.join(__dirname, '..', 'resources', 'internalMods', `${req.modName}.zip`);
-                if (fs.existsSync(internalZipPath)) {
-                    if (!fs.existsSync(targetFilePath)) {
-                        try {
-                            await fs.copy(internalZipPath, targetFilePath);
-                        } catch (e) {}
-                    }
-                    linkedCount++;
-                } else {
-                    missingCount++;
-                }
-            }
-        }
-
-        // Copy internal companion helper mods into server isolated mods folder
-        const companionMods = ['FS25_MTRadioManager.zip', 'FS25_storeDeliveries.zip', 'FS25_rememberPositions.zip', 'FS25_QuietLoadingScreen.zip'];
-        for (const compMod of companionMods) {
-            const internalModPath = path.join(__dirname, '..', 'resources', 'internalMods', compMod);
-            if (fs.existsSync(internalModPath)) {
-                const destPath = path.join(targetFolder, compMod);
-                if (!fs.existsSync(destPath)) {
-                    try { await fs.copy(internalModPath, destPath); } catch (e) {}
-                }
-            }
-        }
-
-        return {
-            success: true,
-            targetFolder,
-            serverMeta,
-            stats: {
-                totalRequired: requiredMods.length,
-                linkedCount,
-                serverSpecificCount,
-                mismatchedCount,
-                missingCount
-            }
-        };
     } catch (err) {
-        console.error('[SERVER-MODS] Failed to prepare server mods folder:', err);
+        console.error('[RESTORE-SAVES] Error restoring single player saves:', err);
         return { success: false, error: err.message };
     }
 }
