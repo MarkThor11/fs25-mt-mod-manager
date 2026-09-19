@@ -319,7 +319,13 @@ async function fetchRadioFeedsStations() {
                     
                     if (nameMatch && streamMatch) {
                         const name = nameMatch[1].trim();
-                        const url = streamMatch[1].trim();
+                        let url = streamMatch[1].trim();
+                        let url_resolved = url;
+
+                        if (name.toLowerCase().includes('flashback') || url.includes('carolineflashback') || url.includes('10568')) {
+                            url_resolved = 'http://sc2.radiocaroline.net:10558/';
+                            url = 'http://sc2.radiocaroline.net:10558/';
+                        }
                         
                         const tdCells = [...trContent.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(c => c[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
                         let genre = '';
@@ -331,7 +337,7 @@ async function fetchRadioFeedsStations() {
                             stationuuid: `rf-${idx++}`,
                             name,
                             url,
-                            url_resolved: url,
+                            url_resolved,
                             tags: genre ? `UK, RadioFeeds, ${genre}` : 'UK, RadioFeeds',
                             country: 'United Kingdom',
                             countrycode: 'GB',

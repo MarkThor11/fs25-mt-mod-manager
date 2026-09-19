@@ -78,6 +78,13 @@ app.whenReady().then(() => {
         else if (url.startsWith('http/')) url = url.replace('http/', 'http://');
         
         console.log('[RADIO-PROXY] Streaming:', url);
+
+        if (url.includes('.pls') || url.includes('.m3u')) {
+          try {
+            url = await radioManager.resolvePlaylistUrl(url);
+            console.log('[RADIO-PROXY] Resolved playlist stream URL:', url);
+          } catch (e) {}
+        }
         
         const response = await net.fetch(url, {
           headers: { 'User-Agent': 'FS25-MT-Mod-Manager/1.1.0' },
