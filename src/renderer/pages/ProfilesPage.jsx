@@ -1170,18 +1170,38 @@ export default function ProfilesPage() {
                                     {/* Zoom Slider */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 4, background: 'rgba(0,0,0,0.05)' }}>
                                       <LayoutGrid size={12} style={{ opacity: 0.4 }} />
-                                      <CustomSlider
-                                        min="120"
-                                        max="350"
-                                        step="10"
-                                        value={zoom}
-                                        onChange={(e) => {
-                                          const val = parseInt(e.target.value);
-                                          setFolderZooms(prev => ({ ...prev, [folderName]: val }));
-                                        }}
-                                        width="60px"
-                                        title="Adjust Grid Size"
-                                      />
+                                      <div style={{ 
+                                        position: 'relative', 
+                                        width: 60, 
+                                        height: 4, 
+                                        background: 'rgba(255,255,255,0.1)', 
+                                        borderRadius: 2, 
+                                        display: 'flex', 
+                                        alignItems: 'center',
+                                        margin: '0 4px'
+                                      }}>
+                                        <CustomSlider
+                                          min="120"
+                                          max="350"
+                                          step="10"
+                                          value={zoom}
+                                          onChange={(e) => {
+                                            const val = parseInt(e.target.value);
+                                            setFolderZooms(prev => ({ ...prev, [folderName]: val }));
+                                          }}
+                                          style={{ 
+                                            position: 'absolute',
+                                            left: '50%',
+                                            top: '50%',
+                                            transform: 'translate(-50%, -50%)',
+                                            width: 'calc(100% + 16px)', 
+                                            margin: 0,
+                                            cursor: 'pointer',
+                                            background: 'transparent'
+                                          }}
+                                          title="Adjust Grid Size"
+                                        />
+                                      </div>
                                       <LayoutGrid size={16} style={{ opacity: 0.7 }} />
                                     </div>
 

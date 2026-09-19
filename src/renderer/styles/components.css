@@ -1141,12 +1141,12 @@
 .range-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: 100%;
+  width: calc(100% + 12px);
   height: 6px;
   background: transparent;
   outline: none;
   position: absolute;
-  left: 0;
+  left: -6px;
   top: 0;
   pointer-events: none;
   margin: 0;
