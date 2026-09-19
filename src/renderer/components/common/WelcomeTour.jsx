@@ -29,6 +29,13 @@ const SLIDES = [
     targetId: "tour-nav-home"
   },
   {
+    title: "Banner Studio & Wallpapers",
+    description: "Personalize your homepage hero banner! Choose custom wallpapers, crop & position photos, set dynamic screenshot slideshows, or display daily farming quotes.",
+    icon: <Palette className="w-12 h-12 text-amber-400" />,
+    color: "#f59e0b",
+    targetId: "tour-nav-home"
+  },
+  {
     title: "ModHub Browser",
     description: "Access thousands of mods directly from the GIANTS ModHub. Browse categories, check for updates, and install content with a single click.",
     icon: <LayoutGrid className="w-12 h-12 text-accent" />,
