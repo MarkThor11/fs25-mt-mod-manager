@@ -127,7 +127,7 @@ export const useSettingsStore = create((set) => ({
         heroBgType: settings.heroBgType || 'default',
         heroCustomBg: (await (async () => {
           let bg = settings.heroCustomBg || '';
-          if ((!bg || bg === 'custom_hero_banner.jpg') && window.api?.images?.getHeroBanner) {
+          if (window.api?.images?.getHeroBanner) {
             try {
               const diskBanner = await window.api.images.getHeroBanner();
               if (diskBanner) return diskBanner;
@@ -137,7 +137,7 @@ export const useSettingsStore = create((set) => ({
         })()),
         heroCustomOriginalBg: (await (async () => {
           let orig = settings.heroCustomOriginalBg || '';
-          if ((!orig || orig === 'custom_hero_banner_original.jpg') && window.api?.images?.getHeroBannerOriginal) {
+          if (window.api?.images?.getHeroBannerOriginal) {
             try {
               const diskOrig = await window.api.images.getHeroBannerOriginal();
               if (diskOrig) return diskOrig;
@@ -161,6 +161,7 @@ export const useSettingsStore = create((set) => ({
           ? parseInt(settings.heroQuoteIndex, 10)
           : null,
         heroSlideshowSource: settings.heroSlideshowSource || 'folder',
+        heroSlideshowFolder: settings.heroSlideshowFolder || '',
         heroSlideshowImages: (() => {
           try {
             if (!settings.heroSlideshowImages) return [];
@@ -171,6 +172,7 @@ export const useSettingsStore = create((set) => ({
             return [];
           }
         })(),
+        heroSlideshowInterval: settings.heroSlideshowInterval ? parseInt(settings.heroSlideshowInterval, 10) : 30,
         heroSlideshowShuffle: settings.heroSlideshowShuffle !== 'false',
         heroSlideshowTransition: settings.heroSlideshowTransition || 'crossfade',
         heroSlideshowFit: settings.heroSlideshowFit || 'ambient',
@@ -354,10 +356,16 @@ export const useSettingsStore = create((set) => ({
     set(updates);
     if (window.api?.settings) {
       for (const [k, v] of Object.entries(updates)) {
-        const valToSave = (v === null || v === undefined || (typeof v === 'number' && isNaN(v))) 
-          ? '' 
-          : (typeof v === 'object' ? JSON.stringify(v) : String(v));
-        await window.api.settings.set(k, valToSave);
+        if (k === 'heroCustomBg') {
+          await window.api.settings.set(k, 'custom_hero_banner.jpg');
+        } else if (k === 'heroCustomOriginalBg') {
+          await window.api.settings.set(k, 'custom_hero_banner_original.jpg');
+        } else {
+          const valToSave = (v === null || v === undefined || (typeof v === 'number' && isNaN(v))) 
+            ? '' 
+            : (typeof v === 'object' ? JSON.stringify(v) : String(v));
+          await window.api.settings.set(k, valToSave);
+        }
       }
     }
   },
