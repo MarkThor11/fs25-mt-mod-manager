@@ -286,39 +286,6 @@ const RadioPage = () => {
                             )}
                         </div>
 
-                        {/* Presets */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <span style={{ fontSize: '14px', color: 'var(--accent)', fontWeight: '700' }}>Official Game Presets</span>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                                {OFFICIAL_PRESETS.map(p => {
-                                    const matchedStation = stations.find(s => s.href && s.href.replace(/^https?:\/\//, '').replace(/\/$/, '') === p.url.replace(/^https?:\/\//, '').replace(/\/$/, ''));
-                                    const isAdded = !!matchedStation;
-                                    return (
-                                        <button 
-                                            key={p.name}
-                                            onClick={() => isAdded ? handleRemove(matchedStation.href) : handleAdd(p)}
-                                            style={{ 
-                                                padding: '6px 12px', 
-                                                borderRadius: '20px', 
-                                                fontSize: '11px', 
-                                                fontWeight: '700',
-                                                background: isAdded ? 'rgba(239, 68, 68, 0.12)' : 'var(--accent-dim)',
-                                                color: isAdded ? '#ef4444' : 'var(--accent)',
-                                                border: isAdded ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid var(--accent-dim)',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '6px'
-                                            }}
-                                        >
-                                            {isAdded ? <Check size={12} /> : <Plus size={12} />}
-                                            {p.name}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
                         {/* Genre Preset Tags */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
                             <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: '700' }}>Genres</span>
