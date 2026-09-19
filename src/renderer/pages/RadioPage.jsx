@@ -473,10 +473,10 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAd
         setImgError(false);
     }, [station.favicon]);
 
-    const formatTags = () => {
-        if (!station.tags) return station.country || 'Unknown';
+    const getTagList = () => {
+        if (!station.tags) return [];
         const tagList = station.tags.split(',').map(t => t.trim()).filter(Boolean);
-        if (tagList.length === 0) return station.country || 'Unknown';
+        if (tagList.length === 0) return [];
 
         let sorted = [...tagList];
         if (activeTag) {
@@ -487,8 +487,10 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAd
                 sorted.unshift(matched);
             }
         }
-        return sorted.slice(0, 4).join(', ');
+        return sorted.slice(0, 6);
     };
+
+    const tags = getTagList();
 
     return (
         <div className="station-card" style={{ 
@@ -523,11 +525,20 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAd
                     </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 style={{ margin: '0 0 2px 0', fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <h3 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {station.name}
                     </h3>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {formatTags()}
+                    <div style={{ 
+                        fontSize: '12px', 
+                        color: 'var(--text-secondary)', 
+                        lineHeight: '1.4',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        wordBreak: 'break-word'
+                    }}>
+                        {tags.length > 0 ? tags.join(', ') : (station.country || 'Unknown')}
                     </div>
                 </div>
                 <button 
