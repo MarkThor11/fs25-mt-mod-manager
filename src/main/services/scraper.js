@@ -729,45 +729,75 @@ async function fetchModDetail(modId) {
     const valStr = (v || '').toString().toLowerCase();
     
     // Pattern 1: Standard numeric extraction
-    const numMatch = valStr.match(/\d+/);
-    const val = numMatch ? parseInt(numMatch[0], 10) : 0;
-    
-    if (key.includes('price')) techData.price = val;
+    // Helper to extract full clean integer from formatted numeric strings like "125,000 €", "125 000 $", "1,500 L"
+    const parseCleanInt = (str) => {
+      if (!str) return 0;
+      // Strip currency symbols and letters, replace spaces/commas used as thousand separators
+      const cleaned = str.replace(/[$€£]/g, '').replace(/(\d+)[\s,.](\d{3})/g, '$1$2').replace(/[^0-9]/g, '');
+      return parseInt(cleaned, 10) || 0;
+    };
+
+    if (key.includes('price') || key.includes('preis') || key.includes('prix')) {
+      techData.price = parseCleanInt(valStr);
+    }
     
     // Improved Horsepower/Power extraction (Table)
     if (key.includes('power') || key.includes('hp') || key.includes('performance') || key.includes('cv') || key.includes('ps') || key.includes('leistung') || key.includes('puissance')) {
       const explicitEngine = key.includes('engine') || key.includes('motor') || key.includes('motorleistung');
       
       // Look for explicit numbers followed by a power unit (e.g. "150 hp", "200 ps", "425 cv")
-      const hpMatches = valStr.match(/(\d+)\s*(hp|cv|ps|pk|ch|kw|bhp|le)(?!\/)/gi);
+      const hpMatches = valStr.match(/(\d[\d\s,.]*)\s*(hp|cv|ps|pk|ch|kw|bhp|le)(?!\/)/gi);
       if (hpMatches) {
         const hpStr = hpMatches[0].toLowerCase();
-        const hpNum = parseInt(hpStr.match(/\d+/)[0], 10);
+        const hpNum = parseCleanInt(hpStr);
         techData.hp = (hpStr.includes('kw') || hpStr.includes(' kw')) ? Math.round(hpNum * 1.36) : hpNum;
-      } else if (val > 0) {
-        // Handle range strings "100 - 150" by taking the last (highest) value
-        const allNums = valStr.match(/\d+/g);
-        if (allNums && allNums.length > 1) {
-            techData.hp = parseInt(allNums[allNums.length - 1], 10);
-        } else {
-            // Standard single number
-            const isModelString = /[\/-]\d+/.test(valStr) || /[a-z]\s*\d+[\/-]/i.test(valStr);
-            if (explicitEngine || !isModelString) {
-                techData.hp = val;
-            }
+      } else {
+        const val = parseCleanInt(valStr);
+        if (val > 0) {
+          // Handle range strings "100 - 150" by taking the last (highest) value
+          const allNums = valStr.match(/\d+/g);
+          if (allNums && allNums.length > 1) {
+              techData.hp = parseInt(allNums[allNums.length - 1], 10);
+          } else {
+              // Standard single number
+              const isModelString = /[\/-]\d+/.test(valStr) || /[a-z]\s*\d+[\/-]/i.test(valStr);
+              if (explicitEngine || !isModelString) {
+                  techData.hp = val;
+              }
+          }
         }
       }
       
       if (key.includes('required') || key.includes('requirement')) techData.hpIsRequirement = true;
     }
-    else if (key.includes('capacity')) techData.capacity = val;
-    else if (key.includes('speed') || key.includes('km/h') || key.includes('mph')) techData.speed = val;
-    else if (key.includes('weight') || key.includes('kg') || key.includes(' t')) techData.weight = val;
+    else if (key.includes('capacity') || key.includes('kapazität') || key.includes('capacité')) {
+      techData.capacity = parseCleanInt(valStr);
+    }
+    else if (key.includes('speed') || key.includes('km/h') || key.includes('mph') || key.includes('geschwindigkeit')) {
+      techData.speed = parseCleanInt(valStr);
+    }
+    else if (key.includes('weight') || key.includes('gewicht') || key.includes('poids')) {
+      techData.weight = parseCleanInt(valStr);
+    }
   });
 
-  // ── Description Deep Scan (Secondary Fallback) ──
-  if (techData.hp === 0 && description) {
-    const descText = description.replace(/<[^>]*>/g, ' ').toLowerCase();
+  // ── Description Deep Scan for Price & HP Fallbacks ──
+  if (description) {
+    const descText = description.replace(/<[^>]*>/g, ' ');
+    
+    // Price regex fallback in description e.g. "Price: $125,000", "Preis: 150.000 €"
+    if (techData.price === 0) {
+      const priceMatch = descText.match(/(?:price|preis|prix)[:\-\s]*([$€£]?\s*\d[\d\s,.]*)/i);
+      if (priceMatch && priceMatch[1]) {
+        const parsedPrice = parseInt(priceMatch[1].replace(/[^0-9]/g, ''), 10) || 0;
+        if (parsedPrice > 0 && parsedPrice < 50000000) {
+          techData.price = parsedPrice;
+        }
+      }
+    }
+
+    if (techData.hp === 0) {
+      const descLower = descText.toLowerCase();
     
     // Catch common patterns in sentences: "Power: 150 hp", "425 Horsepower", "150 CV", etc.
     const leadPatterns = [
@@ -798,6 +828,7 @@ async function fetchModDetail(modId) {
                 break;
             }
         }
+    }
     }
   }
 
