@@ -636,7 +636,6 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAd
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                 {station.language && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--accent)', fontWeight: '600' }}>{station.language.split(',')[0]}</span>}
                 {station.countrycode && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}>{station.countrycode}</span>}
-                {station.bitrate && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}>{station.bitrate}kbps</span>}
             </div>
 
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>

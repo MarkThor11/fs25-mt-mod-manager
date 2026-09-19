@@ -86,10 +86,41 @@ app.whenReady().then(() => {
           } catch (e) {}
         }
         
-        const response = await net.fetch(url, {
-          headers: { 'User-Agent': 'FS25-MT-Mod-Manager/1.1.0' },
+        let response = await net.fetch(url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
           redirect: 'follow'
         });
+
+        // Handle HLS m3u8 manifest files by rewriting relative segment URLs to use radio-proxy
+        const contentType = response.headers.get('content-type') || '';
+        if (url.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('m3u8')) {
+          let text = await response.text();
+          const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
+          const rewrittenText = text.split('\n').map(line => {
+            const trimmed = line.trim();
+            if (trimmed && !trimmed.startsWith('#')) {
+              let segmentUrl = trimmed;
+              if (!segmentUrl.startsWith('http://') && !segmentUrl.startsWith('https://')) {
+                segmentUrl = baseUrl + segmentUrl;
+              }
+              if (segmentUrl.startsWith('https://')) {
+                return 'radio-proxy://https/' + segmentUrl.replace('https://', '');
+              } else if (segmentUrl.startsWith('http://')) {
+                return 'radio-proxy://http/' + segmentUrl.replace('http://', '');
+              }
+            }
+            return line;
+          }).join('\n');
+
+          return new Response(rewrittenText, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: {
+              'Content-Type': 'application/vnd.apple.mpegurl',
+              'Access-Control-Allow-Origin': '*'
+            }
+          });
+        }
 
         return response;
       } catch (err) {

@@ -322,7 +322,11 @@ async function fetchRadioFeedsStations() {
                         let url = streamMatch[1].trim();
                         let url_resolved = url;
 
-                        if (name.toLowerCase().includes('flashback') || url.includes('carolineflashback') || url.includes('10568')) {
+                        const nameLower = name.toLowerCase();
+                        if (nameLower.includes('6 music') || nameLower.includes('6music')) {
+                            url_resolved = 'http://as-hls-ww-live.akamaized.net/pool_904/live/ww/bbc_6music/bbc_6music.isml/bbc_6music-audio%3d128000.norewind.m3u8';
+                            url = url_resolved;
+                        } else if (nameLower.includes('flashback') || url.includes('carolineflashback') || url.includes('10568')) {
                             url_resolved = 'http://sc2.radiocaroline.net:10558/';
                             url = 'http://sc2.radiocaroline.net:10558/';
                         }
