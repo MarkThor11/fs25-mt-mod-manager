@@ -56,7 +56,6 @@ export const CustomSlider = ({ value, min, max, step, onChange, width = '100%', 
           border: 1px solid rgba(0, 0, 0, 0.15);
           box-shadow: 0 1px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
           margin-top: -5px;
-          transition: transform 0.1s ease;
         }
         .perfect-pill-slider::-webkit-slider-thumb:hover {
           transform: scale(1.15);
