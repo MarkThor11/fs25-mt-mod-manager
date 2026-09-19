@@ -166,17 +166,20 @@ export default function ModHubPage() {
 
       // Technical data filters
       if (mod.techData) {
-        if (mod.techData.price > 0) {
-          if (mod.techData.price < activeFilters.priceRange[0] || mod.techData.price > activeFilters.priceRange[1]) return false;
+        if (activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < globalMax.price) {
+          const modPrice = mod.techData.price || 0;
+          if (modPrice < activeFilters.priceRange[0] || modPrice > activeFilters.priceRange[1]) return false;
         }
         
         // Manual HP filter only if NOT same-type smart matching
-        if (!sameType && mod.techData.hp > 0) {
-          if (mod.techData.hp < activeFilters.hpRange[0] || mod.techData.hp > activeFilters.hpRange[1]) return false;
+        if (!sameType && (activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < globalMax.hp)) {
+          const modHp = mod.techData.hp || 0;
+          if (modHp < activeFilters.hpRange[0] || modHp > activeFilters.hpRange[1]) return false;
         }
         
-        if (mod.techData.capacity > 0) {
-          if (mod.techData.capacity < activeFilters.capRange[0] || mod.techData.capacity > activeFilters.capRange[1]) return false;
+        if (activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap) {
+          const modCap = mod.techData.capacity || 0;
+          if (modCap < activeFilters.capRange[0] || modCap > activeFilters.capRange[1]) return false;
         }
       }
 

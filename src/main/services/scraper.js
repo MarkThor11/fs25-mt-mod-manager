@@ -830,6 +830,16 @@ async function fetchModDetail(modId) {
         }
     }
     }
+
+    if (techData.capacity === 0) {
+      const capMatch = descText.match(/(?:capacity|kapazität|capacité|volume|inhalte)[:\-\s]*(\d[\d\s,.]*)\s*(?:l|liter|litres|liters)?/i) || descText.match(/(\d[\d\s,.]*)\s*(?:l|liter|litres|liters)\b/i);
+      if (capMatch && capMatch[1]) {
+        const parsedCap = parseInt(capMatch[1].replace(/[^0-9]/g, ''), 10) || 0;
+        if (parsedCap > 0 && parsedCap < 50000000) {
+          techData.capacity = parsedCap;
+        }
+      }
+    }
   }
 
   // ── Brand ──
