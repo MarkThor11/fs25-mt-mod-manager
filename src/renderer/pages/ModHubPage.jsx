@@ -859,8 +859,8 @@ export default function ModHubPage() {
                       </div>
                     </label>
                     <div className="range-slider-wrap">
-                      <div style={{ position: 'absolute', height: '100%', background: 'var(--accent)', borderRadius: 4, pointerEvents: 'none',
-                                    left: `calc(9px + (${activeFilters.priceRange[0] / 10000000}) * (100% - 18px))`, right: `calc(100% - (9px + (${activeFilters.priceRange[1] / 10000000}) * (100% - 18px)))` }} />
+                      <div style={{ position: 'absolute', height: '100%', background: 'var(--accent)', borderRadius: 3, pointerEvents: 'none',
+                                    left: `calc(6px + (${activeFilters.priceRange[0] / 10000000}) * (100% - 12px))`, right: `calc(100% - (6px + (${activeFilters.priceRange[1] / 10000000}) * (100% - 12px)))` }} />
                       <input type="range" className="range-slider" min="0" max="10000000" step="10000" value={activeFilters.priceRange[0]} onChange={(e) => setFilters({ priceRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.priceRange[1])] })} />
                       <input type="range" className="range-slider" min="0" max="10000000" step="10000" value={activeFilters.priceRange[1]} onChange={(e) => setFilters({ priceRange: [Math.min(parseInt(e.target.value), activeFilters.priceRange[0]), parseInt(e.target.value)] })} />
                     </div>
@@ -876,8 +876,8 @@ export default function ModHubPage() {
                       </div>
                     </label>
                     <div className="range-slider-wrap">
-                      <div style={{ position: 'absolute', height: '100%', background: 'var(--accent)', borderRadius: 4, pointerEvents: 'none',
-                                    left: `calc(9px + (${activeFilters.hpRange[0] / 10000}) * (100% - 18px))`, right: `calc(100% - (9px + (${activeFilters.hpRange[1] / 10000}) * (100% - 18px)))` }} />
+                      <div style={{ position: 'absolute', height: '100%', background: 'var(--accent)', borderRadius: 3, pointerEvents: 'none',
+                                    left: `calc(6px + (${activeFilters.hpRange[0] / 10000}) * (100% - 12px))`, right: `calc(100% - (6px + (${activeFilters.hpRange[1] / 10000}) * (100% - 12px)))` }} />
                       <input 
                         type="range" 
                         className="range-slider" 
@@ -905,8 +905,8 @@ export default function ModHubPage() {
                       </div>
                     </label>
                     <div className="range-slider-wrap">
-                      <div style={{ position: 'absolute', height: '100%', background: 'var(--accent)', borderRadius: 4, pointerEvents: 'none',
-                                    left: `calc(9px + (${activeFilters.capRange[0] / 10000000}) * (100% - 18px))`, right: `calc(100% - (9px + (${activeFilters.capRange[1] / 10000000}) * (100% - 18px)))` }} />
+                      <div style={{ position: 'absolute', height: '100%', background: 'var(--accent)', borderRadius: 3, pointerEvents: 'none',
+                                    left: `calc(6px + (${activeFilters.capRange[0] / 10000000}) * (100% - 12px))`, right: `calc(100% - (6px + (${activeFilters.capRange[1] / 10000000}) * (100% - 12px)))` }} />
                       <input type="range" className="range-slider" min="0" max="10000000" step="10000" value={activeFilters.capRange[0]} onChange={(e) => setFilters({ capRange: [parseInt(e.target.value), Math.max(parseInt(e.target.value), activeFilters.capRange[1])] })} />
                       <input type="range" className="range-slider" min="0" max="10000000" step="10000" value={activeFilters.capRange[1]} onChange={(e) => setFilters({ capRange: [Math.min(parseInt(e.target.value), activeFilters.capRange[0]), parseInt(e.target.value)] })} />
                     </div>

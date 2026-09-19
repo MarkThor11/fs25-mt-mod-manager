@@ -1168,18 +1168,8 @@ export default function ProfilesPage() {
                                     </button>
 
                                     {/* Zoom Slider */}
-                                    <div 
-                                      style={{ 
-                                        display: 'inline-flex', 
-                                        alignItems: 'center', 
-                                        gap: '6px', 
-                                        background: 'rgba(255, 255, 255, 0.05)', 
-                                        padding: '2px 8px', 
-                                        borderRadius: '4px',
-                                        border: '1px solid rgba(255,255,255,0.1)'
-                                      }}
-                                    >
-                                      <LayoutGrid size={11} style={{ opacity: 0.5 }} />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 4, background: 'rgba(0,0,0,0.05)' }}>
+                                      <LayoutGrid size={12} style={{ opacity: 0.4 }} />
                                       <CustomSlider
                                         min="120"
                                         max="350"
@@ -1192,7 +1182,7 @@ export default function ProfilesPage() {
                                         width="60px"
                                         title="Adjust Grid Size"
                                       />
-                                      <LayoutGrid size={14} style={{ opacity: 0.8 }} />
+                                      <LayoutGrid size={16} style={{ opacity: 0.7 }} />
                                     </div>
 
                                     {/* View Mode Toggle */}

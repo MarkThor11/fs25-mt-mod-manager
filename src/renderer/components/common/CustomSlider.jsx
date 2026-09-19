@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 
 export const CustomSlider = ({ value, min, max, step, onChange, width = '100%', title, onBlur, defaultValue, className = "perfect-pill-slider", ...props }) => {
-  // Use state for uncontrolled inputs so they still animate when dragged
   const isControlled = value !== undefined;
   const [internalVal, setInternalVal] = useState(defaultValue !== undefined ? defaultValue : min);
   
@@ -16,7 +15,6 @@ export const CustomSlider = ({ value, min, max, step, onChange, width = '100%', 
     percentage = ((numVal - numMin) / (numMax - numMin)) * 100;
   }
   
-  // Clamp between 0 and 100 to avoid CSS calc issues
   percentage = Math.max(0, Math.min(100, percentage));
 
   const handleChange = (e) => {
@@ -26,15 +24,14 @@ export const CustomSlider = ({ value, min, max, step, onChange, width = '100%', 
     if (onChange) onChange(e);
   };
 
-
   return (
     <>
       <style>{`
         .perfect-pill-slider {
           -webkit-appearance: none;
           appearance: none;
-          height: 14px;
-          border-radius: 7px;
+          height: 6px;
+          border-radius: 3px;
           outline: none;
           cursor: pointer;
           margin: 0;
@@ -42,36 +39,46 @@ export const CustomSlider = ({ value, min, max, step, onChange, width = '100%', 
           display: inline-block;
           vertical-align: middle;
         }
+        .perfect-pill-slider::-webkit-slider-runnable-track {
+          width: 100%;
+          height: 6px;
+          background: transparent;
+          border: none;
+        }
         .perfect-pill-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 14px;
-          height: 14px;
+          width: 12px;
+          height: 12px;
           border-radius: 50%;
           background: var(--accent);
           cursor: pointer;
-          border: 1px solid rgba(0, 0, 0, 0.15);
-          box-shadow: 0 1px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
+          border: 1px solid rgba(0, 0, 0, 0.2);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+          margin-top: -3px;
+          transition: transform 0.1s ease;
+        }
+        .perfect-pill-slider::-webkit-slider-thumb:hover {
+          transform: scale(1.2);
         }
       `}</style>
       <input
-
-      type="range"
-      className={className}
-      min={min}
-      max={max}
-      step={step}
-      value={isControlled ? value : internalVal}
-      onChange={handleChange}
-      onBlur={onBlur}
-      title={title}
-      style={{
-        width,
-        background: `linear-gradient(to right, var(--accent) calc(7px + ${percentage} * (100% - 14px) / 100), rgba(255,255,255,0.1) calc(7px + ${percentage} * (100% - 14px) / 100))`,
-        ...props.style
-      }}
-      {...props}
-    />
+        type="range"
+        className={className}
+        min={min}
+        max={max}
+        step={step}
+        value={isControlled ? value : internalVal}
+        onChange={handleChange}
+        onBlur={onBlur}
+        title={title}
+        style={{
+          width,
+          background: `linear-gradient(to right, var(--accent) calc(6px + ${percentage} * (100% - 12px) / 100), rgba(255,255,255,0.1) calc(6px + ${percentage} * (100% - 12px) / 100))`,
+          ...props.style
+        }}
+        {...props}
+      />
     </>
   );
 };
