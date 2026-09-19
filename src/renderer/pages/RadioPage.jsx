@@ -33,6 +33,10 @@ const OFFICIAL_PRESETS = [
     { name: 'Truckers FM', url: 'https://live.truckers.fm/', tags: 'Official, Simulation, Variety', language: 'English', country: 'United Kingdom' },
     { name: 'TruckStopRadio Country', url: 'https://oreo.truckstopradio.co.uk/listen/tsr_country/radio.mp3', tags: 'Simulation, Country', language: 'English', country: 'United Kingdom' },
     { name: 'TruckStopRadio Rock', url: 'https://oreo.truckstopradio.co.uk/listen/tsr_rock/radio.mp3', tags: 'Simulation, Rock', language: 'English', country: 'United Kingdom' },
+    { name: 'Harmony FM (80s)', url: 'https://mp3.ffh.de/harmonyfm/hq80s.mp3', tags: 'Pop, 80s', language: 'German', country: 'Germany' },
+    { name: 'Synthwave Radio', url: 'https://stream.synthwaveradio.eu/live', tags: 'Synthwave, Electronic', language: 'English', country: 'United Kingdom' },
+    { name: 'Country One', url: 'https://stream.countryone.net/stream', tags: 'Country', language: 'English', country: 'United States' },
+    { name: 'Capital FM UK', url: 'https://media-ssl.musicradio.com/CapitalUK', tags: 'Pop, Top40', language: 'English', country: 'United Kingdom' }
 ];
 
 const RadioPage = () => {
@@ -314,27 +318,29 @@ const RadioPage = () => {
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
                             <span style={{ fontSize: '12px', color: 'var(--accent)', marginRight: '8px', fontWeight: '700' }}>Official Game Presets:</span>
                             {OFFICIAL_PRESETS.map(p => {
-                                const isAdded = stations.some(s => s.href && s.href.replace(/^https?:\/\//, '').replace(/\/$/, '') === p.url.replace(/^https?:\/\//, '').replace(/\/$/, ''));
+                                const matchedStation = stations.find(s => s.href && s.href.replace(/^https?:\/\//, '').replace(/\/$/, '') === p.url.replace(/^https?:\/\//, '').replace(/\/$/, ''));
+                                const isAdded = !!matchedStation;
                                 return (
                                     <button 
                                         key={p.name}
-                                        onClick={() => handleAdd(p)}
-                                        disabled={isAdded}
+                                        onClick={() => isAdded ? handleRemove(matchedStation.href) : handleAdd(p)}
                                         style={{ 
                                             padding: '6px 12px', 
                                             borderRadius: '20px', 
                                             fontSize: '11px', 
                                             fontWeight: '700',
-                                            background: isAdded ? 'var(--bg-tertiary)' : 'var(--accent-dim)',
-                                            color: isAdded ? 'var(--text-tertiary)' : 'var(--accent)',
-                                            border: '1px solid var(--accent-dim)',
-                                            cursor: isAdded ? 'default' : 'pointer',
+                                            background: isAdded ? 'rgba(239, 68, 68, 0.12)' : 'var(--accent-dim)',
+                                            color: isAdded ? '#ef4444' : 'var(--accent)',
+                                            border: isAdded ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid var(--accent-dim)',
+                                            cursor: 'pointer',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '6px'
+                                            gap: '6px',
+                                            transition: 'all 0.2s'
                                         }}
+                                        title={isAdded ? "Click to remove from game" : "Click to add to game"}
                                     >
-                                        {isAdded ? <Check size={12} /> : <Plus size={12} />} {p.name}
+                                        {isAdded ? <Trash2 size={12} /> : <Plus size={12} />} {p.name}
                                     </button>
                                 );
                             })}
@@ -373,9 +379,19 @@ const RadioPage = () => {
                                 searchResults.map((station) => {
                                     const resolvedUrl = station.url_resolved || station.url;
                                     const normalizedUrl = resolvedUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-                                    const isAdded = stations.some(s => s.href && s.href.replace(/^https?:\/\//, '').replace(/\/$/, '') === normalizedUrl);
+                                    const matchedStation = stations.find(s => s.href && s.href.replace(/^https?:\/\//, '').replace(/\/$/, '') === normalizedUrl);
+                                    const isAdded = !!matchedStation;
                                     return (
-                                        <StationCard key={station.stationuuid} station={station} isAdded={isAdded} isPlaying={playingStationUrl === resolvedUrl} isBuffering={isBuffering && playingStationUrl === resolvedUrl} onPreview={() => setPlayingStation(playingStationUrl === resolvedUrl ? null : resolvedUrl)} onAdd={() => handleAdd(station)} />
+                                        <StationCard 
+                                            key={station.stationuuid} 
+                                            station={station} 
+                                            isAdded={isAdded} 
+                                            isPlaying={playingStationUrl === resolvedUrl} 
+                                            isBuffering={isBuffering && playingStationUrl === resolvedUrl} 
+                                            onPreview={() => setPlayingStation(playingStationUrl === resolvedUrl ? null : resolvedUrl)} 
+                                            onAdd={() => handleAdd(station)} 
+                                            onRemove={() => handleRemove(matchedStation ? matchedStation.href : resolvedUrl)} 
+                                        />
                                     );
                                 })
                             ) : (
@@ -440,7 +456,7 @@ const RadioPage = () => {
     );
 };
 
-const StationCard = ({ station, isAdded, isPlaying, isBuffering, onAdd, onPreview }) => {
+const StationCard = ({ station, isAdded, isPlaying, isBuffering, onAdd, onRemove, onPreview }) => {
     const [imgError, setImgError] = useState(false);
 
     useEffect(() => {
@@ -503,27 +519,27 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, onAdd, onPrevie
             </div>
 
             <button 
-                onClick={onAdd}
-                disabled={isAdded}
+                onClick={isAdded ? onRemove : onAdd}
                 style={{ 
                     marginTop: '4px',
                     padding: '10px', 
                     borderRadius: '10px', 
-                    border: 'none', 
-                    background: isAdded ? 'var(--bg-tertiary)' : 'var(--accent)',
-                    color: isAdded ? 'var(--text-secondary)' : 'white',
+                    border: isAdded ? '1px solid rgba(239, 68, 68, 0.4)' : 'none', 
+                    background: isAdded ? 'rgba(239, 68, 68, 0.12)' : 'var(--accent)',
+                    color: isAdded ? '#ef4444' : 'white',
                     fontWeight: '600',
                     fontSize: '13px',
-                    cursor: isAdded ? 'default' : 'pointer',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
                     transition: 'all 0.2s'
                 }}
+                title={isAdded ? "Click to remove station from game" : "Click to add station to game"}
             >
                 {isAdded ? (
-                    <><Check size={16} /> In Game</>
+                    <><Trash2 size={16} /> Remove from Game</>
                 ) : (
                     <><Plus size={16} /> Add to Game</>
                 )}
