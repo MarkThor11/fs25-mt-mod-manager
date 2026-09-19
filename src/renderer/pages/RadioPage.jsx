@@ -103,13 +103,19 @@ const RadioPage = () => {
         executeSearch(query, country, language, tag, newSort);
     };
 
+    const searchTimeoutRef = React.useRef(null);
+
     const handleQueryChange = (val) => {
         setFilterQuery(val);
+        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = setTimeout(() => {
+            executeSearch(val, country, language, tag, sortOrder);
+        }, 300);
     };
 
     const handleClearFilters = () => {
         resetFilters();
-        searchStations({ order: 'name', limit: 60 });
+        searchStations({ order: 'name', limit: 5000 });
     };
 
     const hasActiveFilters = query || country || language || tag;
@@ -304,8 +310,6 @@ const RadioPage = () => {
                                     <option value="votes">Sort: Most Popular</option>
                                 </select>
                             </div>
-
-                            <button onClick={handleSearch} style={{ padding: '10px 20px', background: 'var(--accent)', color: 'white', borderRadius: '10px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', border: 'none' }}>Search</button>
 
                             {hasActiveFilters && (
                                 <button 
