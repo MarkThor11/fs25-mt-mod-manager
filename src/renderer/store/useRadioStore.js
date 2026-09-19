@@ -9,6 +9,15 @@ const loadSavedFilters = () => {
   }
 };
 
+const loadHiddenStations = () => {
+  try {
+    const raw = localStorage.getItem('radio_hidden_stations');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
 const saveFiltersToStorage = (state) => {
   try {
     localStorage.setItem('radio_filters', JSON.stringify({
@@ -22,11 +31,18 @@ const saveFiltersToStorage = (state) => {
   } catch (e) {}
 };
 
+const saveHiddenStationsToStorage = (hiddenStations) => {
+  try {
+    localStorage.setItem('radio_hidden_stations', JSON.stringify(hiddenStations));
+  } catch (e) {}
+};
+
 const savedFilters = loadSavedFilters();
 
 export const useRadioStore = create((set, get) => ({
   stations: [],
   searchResults: [],
+  hiddenStations: loadHiddenStations(),
   isSearching: false,
   isLoading: false,
 
@@ -39,6 +55,30 @@ export const useRadioStore = create((set, get) => ({
   tag: savedFilters.tag || '',
   sortOrder: savedFilters.sortOrder || 'name', // 'name' (Alphabetical A-Z) or 'votes' (Popularity)
   viewMode: savedFilters.viewMode || 'search',
+
+  hideStation: (station) => {
+    const current = get().hiddenStations;
+    const href = station.url_resolved || station.url || station.href;
+    if (!href) return;
+    const exists = current.some(s => (s.url_resolved || s.url || s.href) === href);
+    if (!exists) {
+      const updated = [...current, { ...station, href, hiddenAt: Date.now() }];
+      set({ hiddenStations: updated });
+      saveHiddenStationsToStorage(updated);
+    }
+  },
+
+  unhideStation: (href) => {
+    const current = get().hiddenStations;
+    const updated = current.filter(s => (s.url_resolved || s.url || s.href) !== href);
+    set({ hiddenStations: updated });
+    saveHiddenStationsToStorage(updated);
+  },
+
+  unhideAllStations: () => {
+    set({ hiddenStations: [] });
+    saveHiddenStationsToStorage([]);
+  },
 
   setFilterQuery: (query) => {
     set({ query });

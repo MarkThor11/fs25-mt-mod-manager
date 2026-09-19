@@ -1,6 +1,6 @@
 import { CustomSlider } from '../components/common/CustomSlider';
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Radio as RadioIcon, Music, Globe, Check, Volume2, AlertCircle, RefreshCw, Play, Pause, Filter, X, Edit2 } from 'lucide-react';
+import { Search, Plus, Trash2, Radio as RadioIcon, Music, Globe, Check, Volume2, AlertCircle, RefreshCw, Play, Pause, Filter, X, Edit2, EyeOff, Eye } from 'lucide-react';
 import { useRadioStore } from '../store/useRadioStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useToastStore } from '../store/useToastStore';
@@ -46,8 +46,9 @@ const OFFICIAL_PRESETS = [
 
 const RadioPage = () => {
     const { 
-        stations, searchResults, isSearching, 
+        stations, searchResults, hiddenStations, isSearching, 
         fetchRadios, searchStations, addStation, removeStation, updateStationName,
+        hideStation, unhideStation, unhideAllStations,
         playingStationUrl, setPlayingStation,
         overrideBuiltins, isCompanionInstalled, setOverrideBuiltins,
         query, country, language, tag, sortOrder, viewMode,
@@ -256,6 +257,9 @@ const RadioPage = () => {
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={() => setViewMode('search')} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: viewMode === 'search' ? 'var(--accent)' : 'var(--bg-tertiary)', color: viewMode === 'search' ? 'white' : 'var(--text-secondary)', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Discover Stations</button>
                         <button onClick={() => setViewMode('mine')} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: viewMode === 'mine' ? 'var(--accent)' : 'var(--bg-tertiary)', color: viewMode === 'mine' ? 'white' : 'var(--text-secondary)', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>In-Game Stations ({stations.length})</button>
+                        <button onClick={() => setViewMode('hidden')} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: viewMode === 'hidden' ? 'var(--accent)' : 'var(--bg-tertiary)', color: viewMode === 'hidden' ? 'white' : 'var(--text-secondary)', fontWeight: '600', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <EyeOff size={14} /> Hidden ({hiddenStations.length})
+                        </button>
                     </div>
                 </div>
 
@@ -358,25 +362,24 @@ const RadioPage = () => {
                                                 cursor: 'pointer',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: '6px',
-                                                transition: 'all 0.2s'
+                                                gap: '6px'
                                             }}
-                                            title={isAdded ? "Click to remove from game" : "Click to add to game"}
                                         >
-                                            {isAdded ? <Trash2 size={12} /> : <Plus size={12} />} {p.name}
+                                            {isAdded ? <Check size={12} /> : <Plus size={12} />}
+                                            {p.name}
                                         </button>
                                     );
                                 })}
                             </div>
                         </div>
 
-                        {/* Genre Filter Pills */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {/* Genre Preset Tags */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
                             <span style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: '700' }}>Genres</span>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
                                 {PRESET_TAGS.map(t => (
                                     <button 
-                                        key={t}
+                                        key={t} 
                                         onClick={() => toggleTag(t)}
                                         style={{ 
                                             padding: '6px 12px', 
@@ -403,6 +406,10 @@ const RadioPage = () => {
                                 </div>
                             ) : searchResults.length > 0 ? (
                                 [...searchResults]
+                                    .filter(station => {
+                                        const href = station.url_resolved || station.url || station.href;
+                                        return !hiddenStations.some(h => (h.url_resolved || h.url || h.href) === href);
+                                    })
                                     .sort((a, b) => {
                                         if (sortOrder === 'name') {
                                             const nameA = (a.name || '').trim().replace(/^[^a-zA-Z0-9]+/, '');
@@ -428,6 +435,10 @@ const RadioPage = () => {
                                                 onPreview={() => setPlayingStation(playingStationUrl === resolvedUrl ? null : resolvedUrl)} 
                                                 onAdd={() => handleAdd(station)} 
                                                 onRemove={() => handleRemove(matchedStation ? matchedStation.href : resolvedUrl)} 
+                                                onHide={() => {
+                                                    hideStation(station);
+                                                    toast.success(`Hidden "${station.name || 'Station'}" from search`);
+                                                }}
                                             />
                                         );
                                     })
@@ -440,7 +451,7 @@ const RadioPage = () => {
                             )}
                         </div>
                     </div>
-                ) : (
+                ) : viewMode === 'mine' ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {stations.length > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
@@ -481,6 +492,66 @@ const RadioPage = () => {
                             </div>
                         )}
                     </div>
+                ) : (
+                    /* Hidden Stations View */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {hiddenStations.length > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>You have <strong>{hiddenStations.length}</strong> hidden radio station{hiddenStations.length === 1 ? '' : 's'}.</span>
+                                <button 
+                                    onClick={() => {
+                                        unhideAllStations();
+                                        toast.success('Restored all hidden stations');
+                                    }} 
+                                    style={{ padding: '6px 14px', borderRadius: '8px', background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent-dim)', fontWeight: '600', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                    <Eye size={14} /> Unhide All Stations
+                                </button>
+                            </div>
+                        )}
+                        {hiddenStations.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {hiddenStations.map((station, idx) => {
+                                    const href = station.url_resolved || station.url || station.href;
+                                    return (
+                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 16px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                                            <div style={{ width: '40px', height: '40px', background: 'var(--bg-tertiary)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexShrink: 0, overflow: 'hidden' }}>
+                                                {station.favicon ? (
+                                                    <img src={station.favicon} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" onError={(e) => e.target.style.display = 'none'} />
+                                                ) : (
+                                                    <EyeOff size={18} />
+                                                )}
+                                            </div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {station.name || href}
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {station.tags || href}
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={() => {
+                                                    unhideStation(href);
+                                                    toast.success(`Restored "${station.name || 'Station'}" to search`);
+                                                }} 
+                                                style={{ padding: '8px 14px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }} 
+                                                title="Unhide station"
+                                            >
+                                                <Eye size={14} /> Unhide Station
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', color: 'var(--text-secondary)', background: 'var(--bg-card)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
+                                <EyeOff size={40} style={{ marginBottom: '12px', opacity: 0.3 }} />
+                                <h3 style={{ margin: '0 0 4px 0', color: 'var(--text-primary)' }}>No Hidden Stations</h3>
+                                <p style={{ margin: 0 }}>Click the "Hide" icon on any station card to ignore it in search results.</p>
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
 
@@ -493,7 +564,7 @@ const RadioPage = () => {
     );
 };
 
-const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAdd, onRemove, onPreview, onSelectPopularity }) => {
+const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAdd, onRemove, onPreview, onHide }) => {
     const [imgError, setImgError] = useState(false);
 
     useEffect(() => {
@@ -604,35 +675,59 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAd
                 {station.bitrate && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}>{station.bitrate}kbps</span>}
             </div>
 
-            <button 
-                onClick={isAdded ? onRemove : onAdd}
-                style={{ 
-                    marginTop: '4px',
-                    padding: '10px', 
-                    borderRadius: '10px', 
-                    border: isAdded ? '1px solid rgba(239, 68, 68, 0.4)' : 'none', 
-                    background: isAdded ? 'rgba(239, 68, 68, 0.12)' : 'var(--accent)',
-                    color: isAdded ? '#ef4444' : 'white',
-                    fontWeight: '600',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s'
-                }}
-                title={isAdded ? "Click to remove station from game" : "Click to add station to game"}
-            >
-                {isAdded ? (
-                    <><Trash2 size={16} /> Remove from Game</>
-                ) : (
-                    <><Plus size={16} /> Add to Game</>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                <button 
+                    onClick={isAdded ? onRemove : onAdd}
+                    style={{ 
+                        flex: 1,
+                        padding: '10px', 
+                        borderRadius: '10px', 
+                        border: isAdded ? '1px solid rgba(239, 68, 68, 0.4)' : 'none', 
+                        background: isAdded ? 'rgba(239, 68, 68, 0.12)' : 'var(--accent)',
+                        color: isAdded ? '#ef4444' : 'white',
+                        fontWeight: '600',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        transition: 'all 0.2s'
+                    }}
+                    title={isAdded ? "Click to remove station from game" : "Click to add station to game"}
+                >
+                    {isAdded ? (
+                        <><Trash2 size={16} /> Remove</>
+                    ) : (
+                        <><Plus size={16} /> Add to Game</>
+                    )}
+                </button>
+                {onHide && (
+                    <button 
+                        onClick={onHide}
+                        style={{ 
+                            padding: '10px 14px', 
+                            borderRadius: '10px', 
+                            border: '1px solid var(--border)', 
+                            background: 'var(--bg-tertiary)',
+                            color: 'var(--text-secondary)',
+                            fontWeight: '600',
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            transition: 'all 0.2s'
+                        }}
+                        title="Hide station from search results"
+                    >
+                        <EyeOff size={16} /> Hide
+                    </button>
                 )}
-            </button>
+            </div>
         </div>
     );
 };
 
 export default RadioPage;
-
