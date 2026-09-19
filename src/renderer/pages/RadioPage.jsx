@@ -221,8 +221,35 @@ const RadioPage = () => {
                                     value={query} 
                                     onChange={(e) => handleQueryChange(e.target.value)} 
                                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()} 
-                                    style={{ width: '100%', padding: '10px 12px 10px 36px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px' }} 
+                                    style={{ width: '100%', padding: '10px 32px 10px 36px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px' }} 
                                 />
+                                {query && (
+                                    <button 
+                                        onClick={() => {
+                                            handleQueryChange('');
+                                            executeSearch('', country, language, tag, sortOrder);
+                                        }}
+                                        style={{ 
+                                            position: 'absolute', 
+                                            right: '10px', 
+                                            top: '50%', 
+                                            transform: 'translateY(-50%)', 
+                                            background: 'none', 
+                                            border: 'none', 
+                                            color: 'var(--text-secondary)', 
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '2px',
+                                            borderRadius: '50%',
+                                            transition: 'color 0.15s ease'
+                                        }}
+                                        title="Clear search"
+                                    >
+                                        <X size={15} />
+                                    </button>
+                                )}
                             </div>
 
                             {/* Language Filter */}
