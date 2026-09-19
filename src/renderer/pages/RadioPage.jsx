@@ -402,26 +402,35 @@ const RadioPage = () => {
                                     <span>Searching radio stations...</span>
                                 </div>
                             ) : searchResults.length > 0 ? (
-                                searchResults.map((station) => {
-                                    const resolvedUrl = station.url_resolved || station.url;
-                                    const normalizedUrl = resolvedUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-                                    const matchedStation = stations.find(s => s.href && s.href.replace(/^https?:\/\//, '').replace(/\/$/, '') === normalizedUrl);
-                                    const isAdded = !!matchedStation;
-                                    return (
-                                        <StationCard 
-                                            key={station.stationuuid} 
-                                            station={station} 
-                                            isAdded={isAdded} 
-                                            activeTag={tag}
-                                            isPlaying={playingStationUrl === resolvedUrl} 
-                                            isBuffering={isBuffering && playingStationUrl === resolvedUrl} 
-                                            onPreview={() => setPlayingStation(playingStationUrl === resolvedUrl ? null : resolvedUrl)} 
-                                            onAdd={() => handleAdd(station)} 
-                                            onRemove={() => handleRemove(matchedStation ? matchedStation.href : resolvedUrl)} 
-                                            onSelectPopularity={() => handleSortChange('votes')}
-                                        />
-                                    );
-                                })
+                                [...searchResults]
+                                    .sort((a, b) => {
+                                        if (sortOrder === 'name') {
+                                            const nameA = (a.name || '').trim().replace(/^[^a-zA-Z0-9]+/, '');
+                                            const nameB = (b.name || '').trim().replace(/^[^a-zA-Z0-9]+/, '');
+                                            return nameA.localeCompare(nameB, undefined, { sensitivity: 'base', numeric: true });
+                                        } else {
+                                            return (b.votes || 0) - (a.votes || 0);
+                                        }
+                                    })
+                                    .map((station) => {
+                                        const resolvedUrl = station.url_resolved || station.url;
+                                        const normalizedUrl = resolvedUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+                                        const matchedStation = stations.find(s => s.href && s.href.replace(/^https?:\/\//, '').replace(/\/$/, '') === normalizedUrl);
+                                        const isAdded = !!matchedStation;
+                                        return (
+                                            <StationCard 
+                                                key={station.stationuuid} 
+                                                station={station} 
+                                                isAdded={isAdded} 
+                                                activeTag={tag}
+                                                isPlaying={playingStationUrl === resolvedUrl} 
+                                                isBuffering={isBuffering && playingStationUrl === resolvedUrl} 
+                                                onPreview={() => setPlayingStation(playingStationUrl === resolvedUrl ? null : resolvedUrl)} 
+                                                onAdd={() => handleAdd(station)} 
+                                                onRemove={() => handleRemove(matchedStation ? matchedStation.href : resolvedUrl)} 
+                                            />
+                                        );
+                                    })
                             ) : (
                                 <div style={{ gridColumn: '1/-1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', color: 'var(--text-secondary)', background: 'var(--bg-card)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
                                     <Globe size={40} style={{ marginBottom: '12px', opacity: 0.3 }} />
@@ -593,32 +602,7 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, activeTag, onAd
                 {station.language && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--accent)', fontWeight: '600' }}>{station.language.split(',')[0]}</span>}
                 {station.countrycode && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}>{station.countrycode}</span>}
                 {station.bitrate && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}>{station.bitrate}kbps</span>}
-                {station.votes !== undefined && station.votes !== null && (
-                    <span 
-                        onClick={onSelectPopularity}
-                        title="Click to sort stations by popularity (votes)"
-                        style={{ 
-                            padding: '2px 6px', 
-                            background: 'var(--bg-tertiary)', 
-                            borderRadius: '4px', 
-                            fontSize: '10px', 
-                            color: 'var(--text-secondary)',
-                            cursor: 'pointer',
-                            userSelect: 'none',
-                            transition: 'all 0.15s'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--accent-dim)';
-                            e.currentTarget.style.color = 'var(--accent)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'var(--bg-tertiary)';
-                            e.currentTarget.style.color = 'var(--text-secondary)';
-                        }}
-                    >
-                        {station.votes} votes
-                    </span>
-                )}
+                {station.votes !== undefined && station.votes !== null && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}>{station.votes} votes</span>}
             </div>
 
             <button 
