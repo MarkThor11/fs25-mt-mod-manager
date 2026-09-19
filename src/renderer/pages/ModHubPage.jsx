@@ -860,19 +860,19 @@ export default function ModHubPage() {
                     </label>
                     <div style={{ position: 'relative', width: 'calc(100% - 14px)', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', margin: '12px 7px 8px 7px' }}>
                       <CustomSlider 
-                        min="0" max="10000000" step="5000" 
+                        min="0" max="10000000" step="any" 
                         value={activeFilters.priceRange[0]} 
                         onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
+                          const val = Math.round(parseFloat(e.target.value) || 0);
                           setFilters({ priceRange: [val, Math.max(val, activeFilters.priceRange[1])] });
                         }}
                         style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                       <CustomSlider 
-                        min="0" max="10000000" step="5000" 
+                        min="0" max="10000000" step="any" 
                         value={activeFilters.priceRange[1]} 
                         onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
+                          const val = Math.round(parseFloat(e.target.value) || 0);
                           setFilters({ priceRange: [Math.min(val, activeFilters.priceRange[0]), val] });
                         }}
                         style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
@@ -891,19 +891,19 @@ export default function ModHubPage() {
                     </label>
                     <div style={{ position: 'relative', width: 'calc(100% - 14px)', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', margin: '12px 7px 8px 7px' }}>
                       <CustomSlider 
-                        min="0" max="10000" step="5" 
+                        min="0" max="10000" step="any" 
                         value={activeFilters.hpRange[0]} 
                         onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
+                          const val = Math.round(parseFloat(e.target.value) || 0);
                           setFilters({ hpRange: [val, Math.max(val, activeFilters.hpRange[1])] });
                         }}
                         style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                       <CustomSlider 
-                        min="0" max="10000" step="5" 
+                        min="0" max="10000" step="any" 
                         value={activeFilters.hpRange[1]} 
                         onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
+                          const val = Math.round(parseFloat(e.target.value) || 0);
                           setFilters({ hpRange: [Math.min(val, activeFilters.hpRange[0]), val] });
                         }}
                         style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
@@ -922,19 +922,19 @@ export default function ModHubPage() {
                     </label>
                     <div style={{ position: 'relative', width: 'calc(100% - 14px)', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', margin: '12px 7px 8px 7px' }}>
                       <CustomSlider 
-                        min="0" max="10000000" step="5000" 
+                        min="0" max="10000000" step="any" 
                         value={activeFilters.capRange[0]} 
                         onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
+                          const val = Math.round(parseFloat(e.target.value) || 0);
                           setFilters({ capRange: [val, Math.max(val, activeFilters.capRange[1])] });
                         }}
                         style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
                       />
                       <CustomSlider 
-                        min="0" max="10000000" step="5000" 
+                        min="0" max="10000000" step="any" 
                         value={activeFilters.capRange[1]} 
                         onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
+                          const val = Math.round(parseFloat(e.target.value) || 0);
                           setFilters({ capRange: [Math.min(val, activeFilters.capRange[0]), val] });
                         }}
                         style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
