@@ -8,6 +8,20 @@ export const useRadioStore = create((set, get) => ({
 
   playingStationUrl: null,
 
+  // Persistent search filters & view mode
+  query: '',
+  country: '',
+  language: '',
+  tag: '',
+  viewMode: 'search',
+
+  setFilterQuery: (query) => set({ query }),
+  setFilterCountry: (country) => set({ country }),
+  setFilterLanguage: (language) => set({ language }),
+  setFilterTag: (tag) => set({ tag }),
+  setViewMode: (viewMode) => set({ viewMode }),
+  resetFilters: () => set({ query: '', country: '', language: '', tag: '' }),
+
   // Companion script & override state
   overrideBuiltins: true,
   isCompanionInstalled: false,

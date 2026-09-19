@@ -2,6 +2,7 @@ import { CustomSlider } from '../components/common/CustomSlider';
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Trash2, Radio as RadioIcon, Music, Globe, Check, Volume2, AlertCircle, RefreshCw, Play, Pause, Filter, X, Edit2 } from 'lucide-react';
 import { useRadioStore } from '../store/useRadioStore';
+import { useSettingsStore } from '../store/useSettingsStore';
 import { useToastStore } from '../store/useToastStore';
 
 const PRESET_TAGS = ['Rock', 'Pop', 'Country', 'Jazz', 'Dance', 'Metal', 'Classical', 'Oldies', 'News', 'Chill'];
@@ -48,23 +49,31 @@ const RadioPage = () => {
         stations, searchResults, isSearching, 
         fetchRadios, searchStations, addStation, removeStation, updateStationName,
         playingStationUrl, setPlayingStation,
-        overrideBuiltins, isCompanionInstalled, setOverrideBuiltins
+        overrideBuiltins, isCompanionInstalled, setOverrideBuiltins,
+        query, country, language, tag, viewMode,
+        setFilterQuery, setFilterCountry, setFilterLanguage, setFilterTag, setViewMode, resetFilters
     } = useRadioStore();
     const { toast } = useToastStore();
     
-    const [query, setQuery] = useState('');
-    const [country, setCountry] = useState('');
-    const [language, setLanguage] = useState('');
-    const [tag, setTag] = useState('');
-    const [viewMode, setViewMode] = useState('search'); // 'search' or 'mine'
     const [isBuffering, setIsBuffering] = useState(false);
     const [volume, setVolume] = useState(0.8);
 
     const audioRef = React.useRef(null);
 
+    const executeSearch = (newQuery = query, newCountry = country, newLanguage = language, newTag = tag) => {
+        searchStations({ 
+            query: newQuery, 
+            country: newCountry, 
+            language: newLanguage, 
+            tag: newTag, 
+            order: 'votes', 
+            limit: 60 
+        });
+    };
+
     useEffect(() => {
         fetchRadios();
-        searchStations({ order: 'votes', limit: 30 });
+        executeSearch(query, country, language, tag);
         
         return () => {
             if (audioRef.current) {
@@ -81,38 +90,28 @@ const RadioPage = () => {
         }
     }, [stations]);
 
-    const executeSearch = (newQuery = query, newCountry = country, newLanguage = language, newTag = tag) => {
-        searchStations({ 
-            query: newQuery, 
-            country: newCountry, 
-            language: newLanguage, 
-            tag: newTag, 
-            order: 'votes', 
-            limit: 60 
-        });
-    };
-
     const toggleTag = (t) => {
         const newTag = tag === t.toLowerCase() ? '' : t.toLowerCase();
-        setTag(newTag);
+        setFilterTag(newTag);
         executeSearch(query, country, language, newTag);
     };
 
     const handleLanguageChange = (langCode) => {
-        setLanguage(langCode);
+        setFilterLanguage(langCode);
         executeSearch(query, country, langCode, tag);
     };
 
     const handleCountryChange = (countryCode) => {
-        setCountry(countryCode);
+        setFilterCountry(countryCode);
         executeSearch(query, countryCode, language, tag);
     };
 
+    const handleQueryChange = (val) => {
+        setFilterQuery(val);
+    };
+
     const handleClearFilters = () => {
-        setQuery('');
-        setCountry('');
-        setLanguage('');
-        setTag('');
+        resetFilters();
         searchStations({ order: 'votes', limit: 30 });
     };
 
@@ -154,7 +153,8 @@ const RadioPage = () => {
     };
 
     const handleRemove = async (href) => {
-        if (!confirm('Remove this station from your game?')) return;
+        const skipConfirm = useSettingsStore.getState().skipDeleteConfirm;
+        if (!skipConfirm && !confirm('Remove this station from your game?')) return;
         const result = await removeStation(href);
         if (result.success) {
             fetchRadios();
@@ -172,7 +172,8 @@ const RadioPage = () => {
     };
 
     const handleClearAll = async () => {
-        if (!confirm('Remove ALL custom stations from FS25?')) return;
+        const skipConfirm = useSettingsStore.getState().skipDeleteConfirm;
+        if (!skipConfirm && !confirm('Remove ALL custom stations from FS25?')) return;
         await window.api.radio.remove('__ALL__');
         fetchRadios();
         toast.success('All custom stations cleared');
@@ -263,7 +264,7 @@ const RadioPage = () => {
                                     type="text" 
                                     placeholder="Search stations by name..." 
                                     value={query} 
-                                    onChange={(e) => setQuery(e.target.value)} 
+                                    onChange={(e) => handleQueryChange(e.target.value)} 
                                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()} 
                                     style={{ width: '100%', padding: '10px 12px 10px 36px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px' }} 
                                 />
