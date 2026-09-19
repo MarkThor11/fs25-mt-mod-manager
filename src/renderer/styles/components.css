@@ -1136,18 +1136,21 @@
   margin: 10px 0;
   display: flex;
   align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .range-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: calc(100% + 16px);
-  height: 4px;
+  width: calc(100% + 14px);
+  height: 14px;
   background: transparent;
   outline: none;
   position: absolute;
-  left: -8px;
-  top: 0;
+  left: -7px;
+  top: 50%;
+  transform: translateY(-50%);
   pointer-events: none;
   margin: 0;
   padding: 0;
@@ -1156,7 +1159,7 @@
 
 .range-slider::-webkit-slider-runnable-track {
   width: 100%;
-  height: 4px;
+  height: 14px;
   background: transparent;
   border: none;
 }
@@ -1175,7 +1178,7 @@
   pointer-events: all;
   position: relative;
   z-index: 2;
-  margin-top: -5px;
+  margin-top: 0;
 }
 
 .range-slider::-webkit-slider-thumb:hover {
