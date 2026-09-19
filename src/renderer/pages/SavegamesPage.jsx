@@ -2522,8 +2522,8 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                     minHeight: 180, 
                     padding: 'var(--sp-4)', 
                     position: 'relative', 
-                    border: isPlaying ? '1px solid #22c55e' : (isDragOver ? '2px solid var(--accent)' : (isSelected ? '1px solid var(--accent)' : (save.isServerSave ? (save.serverAccessLevel === 'admin' ? '1px solid #eab308' : '1px solid #06b6d4') : (save.hasTemplate ? '1px solid var(--accent-dim)' : '1px solid transparent')))), 
-                    boxShadow: isPlaying ? '0 0 20px rgba(34, 197, 94, 0.25)' : (isSelected ? '0 0 15px rgba(var(--accent-rgb), 0.2)' : (save.isServerSave ? (save.serverAccessLevel === 'admin' ? '0 0 12px rgba(234, 179, 8, 0.15)' : '0 0 12px rgba(6, 182, 212, 0.15)') : 'none')), 
+                    border: isPlaying ? '1px solid #22c55e' : (isDragOver ? '2px solid var(--accent)' : (isSelected ? '1px solid var(--accent)' : (save.hasTemplate ? '1px solid var(--accent-dim)' : '1px solid transparent'))), 
+                    boxShadow: isPlaying ? '0 0 20px rgba(34, 197, 94, 0.25)' : (isSelected ? '0 0 15px rgba(var(--accent-rgb), 0.2)' : 'none'), 
                     background: isDragOver ? 'rgba(var(--accent-rgb), 0.1)' : (isSelected ? 'var(--bg-tertiary)' : ''),
                     transition: 'all 0.2s ease'
                 }} 
@@ -2570,9 +2570,9 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
 
               {save.isServerSave && (
                 <div style={{ 
-                  background: save.serverAccessLevel === 'admin' ? 'rgba(234, 179, 8, 0.2)' : 'rgba(6, 182, 212, 0.2)', 
-                  border: `1px solid ${save.serverAccessLevel === 'admin' ? '#eab308' : '#06b6d4'}`, 
-                  color: save.serverAccessLevel === 'admin' ? '#fde047' : '#22d3ee', 
+                  background: isPlaying ? (save.serverAccessLevel === 'admin' ? 'rgba(234, 179, 8, 0.2)' : 'rgba(6, 182, 212, 0.2)') : 'var(--bg-tertiary)', 
+                  border: isPlaying ? `1px solid ${save.serverAccessLevel === 'admin' ? '#eab308' : '#06b6d4'}` : '1px solid var(--border)', 
+                  color: isPlaying ? (save.serverAccessLevel === 'admin' ? '#fde047' : '#22d3ee') : 'var(--text-secondary)', 
                   fontSize: 8, 
                   fontWeight: 900, 
                   padding: '2px 8px', 
@@ -2580,7 +2580,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: 4, 
-                  boxShadow: `0 0 10px ${save.serverAccessLevel === 'admin' ? 'rgba(234, 179, 8, 0.4)' : 'rgba(6, 182, 212, 0.4)'}`, 
+                  boxShadow: isPlaying ? `0 0 10px ${save.serverAccessLevel === 'admin' ? 'rgba(234, 179, 8, 0.4)' : 'rgba(6, 182, 212, 0.4)'}` : 'none', 
                   letterSpacing: 0.5 
                 }}>
                   {save.serverAccessLevel === 'admin' ? <Crown size={10} /> : <Lock size={10} />}
@@ -2657,28 +2657,27 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                         </span>
                       </span>
                     )}
-
-                    {save.isServerSave && (
-                      <span style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 4, 
-                        textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                        background: versionMismatches > 0 ? 'rgba(239, 68, 68, 0.25)' : 'rgba(34, 197, 94, 0.2)',
-                        border: `1px solid ${versionMismatches > 0 ? '#ef4444' : '#22c55e'}`,
-                        color: versionMismatches > 0 ? '#fca5a5' : '#86efac',
-                        padding: '1px 6px',
-                        borderRadius: 4,
-                        fontSize: 9,
-                        fontWeight: 800
-                      }}>
-                        {versionMismatches > 0 ? <ShieldAlert size={10} /> : <Check size={10} />}
-                        {versionMismatches > 0 ? `${versionMismatches} OUT OF DATE` : 'MODS SYNCED'}
-                      </span>
-                    )}
                 </div>
             </div>
-            <div style={{ display: 'flex', gap: 2, marginTop: 'auto', width: '100%', zIndex: 1, padding: 'var(--sp-2) 0 0 0', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'flex', gap: 2, alignItems: 'center', marginTop: 'auto', width: '100%', zIndex: 1, padding: 'var(--sp-2) 0 0 0', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                {save.isServerSave && (
+                  <span style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 4, 
+                    background: versionMismatches > 0 ? 'rgba(239, 68, 68, 0.25)' : 'rgba(34, 197, 94, 0.2)',
+                    border: `1px solid ${versionMismatches > 0 ? '#ef4444' : '#22c55e'}`,
+                    color: versionMismatches > 0 ? '#fca5a5' : '#86efac',
+                    padding: '2px 8px',
+                    borderRadius: 4,
+                    fontSize: 9,
+                    fontWeight: 800,
+                    marginRight: 4
+                  }}>
+                    {versionMismatches > 0 ? <ShieldAlert size={10} /> : <Check size={10} />}
+                    {versionMismatches > 0 ? `${versionMismatches} OUT OF DATE` : 'MODS SYNCED'}
+                  </span>
+                )}
                 {save.isInitialized && !save.hasTemplate && (
                     <button className="btn btn--ghost btn--sm" onClick={onAdopt} title="Save as Master Template" style={{ color: 'rgba(255,255,255,0.7)' }}>
                         <Zap size={16} />
