@@ -9,10 +9,10 @@ import { useNavigate } from 'react-router-dom';
 import { useLocalModsStore } from '../store/useLocalModsStore';
 
 const THEMES = [
-  { value: 'dark', label: 'Dark', desc: 'Default dark theme inspired by ModHub', color: '#4ade80' },
+  { value: 'glass-ocean', label: 'Ocean Glass (Default)', desc: 'Deep blue frosted glass aesthetic', color: '#0ea5e9' },
+  { value: 'dark', label: 'Dark', desc: 'Classic dark theme inspired by ModHub', color: '#4ade80' },
   { value: 'studio', label: 'Pro Studio', desc: 'Sleek, muted dark greys for professionals', color: '#007acc' },
-  { value: 'glass-ocean', label: 'Ocean Glass', desc: 'Deep blue frosted glass aesthetic', color: '#0ea5e9' },
-      { value: 'blackblue', label: 'Black & Blue', desc: 'Deep black with blue accents', color: '#3b82f6' },
+  { value: 'blackblue', label: 'Black & Blue', desc: 'Deep black with blue accents', color: '#3b82f6' },
   { value: 'highcontrast', label: 'High Contrast', desc: 'Maximum readability', color: '#00ff6a' },
   { value: 'light', label: 'Light', desc: 'Clean light theme', color: '#16a34a' },
   { value: 'minimal', label: 'Minimal', desc: 'Simple and clean monochrome', color: '#18181b' },

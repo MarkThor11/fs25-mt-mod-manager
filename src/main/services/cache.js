@@ -122,7 +122,7 @@ function init() {
   const defaults = {
     modsPath: pathProvider.getDefaultModsPath(),
     gamePath: '',
-    theme: 'dark',
+    theme: 'glass-ocean',
     autoCheckUpdates: 'true',
     launchPreference: 'default',
     appFullscreen: 'true',

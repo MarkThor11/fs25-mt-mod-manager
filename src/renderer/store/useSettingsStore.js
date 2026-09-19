@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 export const useSettingsStore = create((set) => ({
-  theme: 'dark',
+  theme: 'glass-ocean',
   modsPath: '',
   modsPaths: [],
   gamePath: '',
@@ -82,10 +82,10 @@ export const useSettingsStore = create((set) => ({
     try {
       if (!window.api?.settings) return set({ isLoaded: true });
       const settings = await window.api.settings.getAll();
-      let theme = settings.theme || 'dark';
+      let theme = settings.theme || 'glass-ocean';
       if (theme === 'glass') {
-        theme = 'dark';
-        window.api.settings.set('theme', 'dark').catch(console.error);
+        theme = 'glass-ocean';
+        window.api.settings.set('theme', 'glass-ocean').catch(console.error);
       }
       set({
         theme,
