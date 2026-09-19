@@ -5703,59 +5703,59 @@ async function restoreStashedSinglePlayerSaves() {
 
         try { await fs.remove(stashPath); } catch (e) {}
         return { success: true, restoredCount };
-    } catch (err) {
-        console.error('[RESTORE-SAVES] Error restoring stashed saves:', err);
-        return { success: false, error: err.message };
-    }
-}
+                            await fs.symlink(installed.filePath, targetFilePath, 'file');
+                        } catch (symErr) {
+                            try {
+                                await fs.link(installed.filePath, targetFilePath);
+                            } catch (linkErr) {
+                                await fs.copy(installed.filePath, targetFilePath);
+                            }
+                        }
+                    }
+                    linkedCount++;
+                } else {
+                    mismatchedCount++;
+                }
+            } else {
+                const internalZipPath = path.join(__dirname, '..', 'resources', 'internalMods', `${req.modName}.zip`);
+                if (fs.existsSync(internalZipPath)) {
+                    if (!fs.existsSync(targetFilePath)) {
+                        try {
+                            await fs.copy(internalZipPath, targetFilePath);
+                        } catch (e) {}
+                    }
+                    linkedCount++;
+                } else {
+                    missingCount++;
+                }
+            }
+        }
 
-module.exports = {
-    adoptSaveAsTemplate,
-    cleanupBridgeModFromSavegame,
-    syncSubfolderMapDependencies,
-    getPlayerPosition,
-    setPlayerPosition,
-    resetPlayerSpawn,
-    getMapDefaultStartCoordinates,
-    getMapHomeCoordinates,
-    getMapShopCoordinates,
-    getFleetPositions,
-    activatePlayerPersistence,
-    deactivatePlayerPersistence,
-    checkStoreDeliveries,
-    ensureStoreDeliveries,
-    updateNativeEnhancement,
-    getStoreDeliveryCoordinates,
-    getMapTemplates,
-    deleteMapTemplate,
-    hasMapTemplate,
-    getSavegameMods,
-    setSavegameMods,
-    getUsedModsInSavegame,
-    createSavegameWithMods,
-    importSavegame,
-    exportSavegame,
-    exportServerSavegame,
-    toggleServerMode,
-    getFarmPermissions,
-    updateFarmPermissions,
-    prepareServerModsFolder,
-    isSavegame,
-    renameSavegame,
-    deleteSavegame,
-    getInstalledMods,
-    archiveSavegame,
-    getArchivedSavegames,
-    restoreSavegame,
-    getEngineBackups,
-    restoreEngineBackup,
-    swapArchiveToSlot,
-    deleteArchivedSavegame,
-    renameArchivedSavegame,
-    getAllSavegames,
-    updateSavegameAttribute,
-    updateFleetMaintenance,
-    getSavegameTransferData,
+        // Copy internal companion helper mods into server isolated mods folder
+        const companionMods = ['FS25_MTRadioManager.zip', 'FS25_storeDeliveries.zip', 'FS25_rememberPositions.zip', 'FS25_QuietLoadingScreen.zip'];
+        for (const compMod of companionMods) {
+            const internalModPath = path.join(__dirname, '..', 'resources', 'internalMods', compMod);
+            if (fs.existsSync(internalModPath)) {
+                const destPath = path.join(targetFolder, compMod);
+                if (!fs.existsSync(destPath)) {
+                    try { await fs.copy(internalModPath, destPath); } catch (e) {}
+                }
+            }
+        }
+
+        return {
+            success: true,
+            targetFolder,
+            serverMeta,
+            stats: {
+                totalRequired: requiredMods.length,
+                linkedCount,
+                serverSpecificCount,
+                mismatchedCount,
+                missingCount
+            }
+        };
+    } catch (err) {
         console.error('[SERVER-MODS] Failed to prepare server mods folder:', err);
         return { success: false, error: err.message };
     }
