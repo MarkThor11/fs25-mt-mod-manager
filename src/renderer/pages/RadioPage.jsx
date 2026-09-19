@@ -5,7 +5,7 @@ import { useRadioStore } from '../store/useRadioStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useToastStore } from '../store/useToastStore';
 
-const PRESET_TAGS = ['Rock', 'Pop', 'Country', 'Jazz', 'Dance', 'Metal', 'Classical', 'Oldies', '80s', '90s', 'House', 'Chill', 'Talk', 'Top 40'];
+const PRESET_TAGS = ['Rock', 'Pop', 'Country', 'Jazz', 'Dance', 'Metal', 'Classical', 'Oldies', 'News', 'Chill', '80s', '90s', 'Electronic', 'House', 'Hip Hop', 'Rap', 'Blues', 'Folk', 'Reggae', 'Indie', 'Ambient', 'Talk', 'Top 40', 'Other'];
 
 const PRESET_LANGUAGES = [
     { code: 'english', name: 'English' },
@@ -287,9 +287,9 @@ const RadioPage = () => {
                         </div>
 
                         {/* Genre Preset Tags */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', margin: '4px 0 10px 0' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '4px 0 10px 0' }}>
                             <span style={{ fontSize: '15px', color: 'var(--text-primary)', fontWeight: '700', letterSpacing: '0.01em' }}>Genres</span>
-                            <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '6px', alignItems: 'center', width: '100%', overflow: 'hidden' }}>
+                            <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '3px', alignItems: 'center', width: '100%', overflow: 'hidden' }}>
                                 {PRESET_TAGS.map(t => (
                                     <button 
                                         key={t} 
@@ -297,9 +297,9 @@ const RadioPage = () => {
                                         style={{ 
                                             flex: '1 1 0px',
                                             minWidth: 0,
-                                            padding: '9px 4px', 
-                                            borderRadius: '24px', 
-                                            fontSize: '13px', 
+                                            padding: '7px 2px', 
+                                            borderRadius: '20px', 
+                                            fontSize: 'clamp(10px, 0.75vw, 13px)', 
                                             fontWeight: '700',
                                             whiteSpace: 'nowrap',
                                             overflow: 'hidden',
