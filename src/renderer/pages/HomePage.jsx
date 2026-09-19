@@ -391,9 +391,10 @@ export default function HomePage() {
       case 'zielonka': return `url(${mapEu})`;
       case 'hutan': return `url(${mapAs})`;
       case 'kinlaig': return `url(${mapKinlaig})`;
-      case 'custom': return heroCustomBg ? `url(${heroCustomBg})` : null;
+      case 'custom': return heroCustomBg ? `url(${heroCustomBg})` : `url(${mapUs})`;
       case 'slideshow': return null;
-      default: return null;
+      case 'default':
+      default: return `url(${mapUs})`;
     }
   };
 
