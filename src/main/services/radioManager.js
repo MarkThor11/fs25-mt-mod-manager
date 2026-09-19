@@ -567,14 +567,34 @@ async function searchStations(filters = {}) {
         }
     }
 
-    // Combine results if both available, avoiding exact URL duplicates
+    let combined = [];
     if (radioFeedsResults.length > 0) {
-        const seenUrls = new Set(radioBrowserResults.map(s => (s.url_resolved || s.url || '').toLowerCase()));
-        const uniqueRf = radioFeedsResults.filter(rf => !seenUrls.has((rf.url_resolved || rf.url || '').toLowerCase()));
-        return [...uniqueRf, ...radioBrowserResults];
+        combined = [...radioFeedsResults, ...radioBrowserResults];
+    } else {
+        combined = radioBrowserResults;
     }
 
-    return radioBrowserResults;
+    // Deduplicate by normalized station name and normalized stream URL
+    const seenNames = new Set();
+    const seenUrls = new Set();
+    const deduped = [];
+
+    for (const station of combined) {
+        if (!station || !station.name) continue;
+        const normName = station.name.trim().toLowerCase().replace(/\s+/g, ' ');
+        const rawUrl = (station.url_resolved || station.url || station.href || '').trim().toLowerCase();
+        const normUrl = rawUrl.replace(/^https?:\/\//, '').replace(/\/$/, '').replace(/;$/, '');
+
+        if (seenNames.has(normName) || (normUrl && seenUrls.has(normUrl))) {
+            continue;
+        }
+
+        seenNames.add(normName);
+        if (normUrl) seenUrls.add(normUrl);
+        deduped.push(station);
+    }
+
+    return deduped;
 }
 
 module.exports = {
