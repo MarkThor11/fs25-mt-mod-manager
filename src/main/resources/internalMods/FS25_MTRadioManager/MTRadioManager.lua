@@ -14,7 +14,8 @@ local function getAppPath()
     if getUserProfileAppPath ~= nil then
         local p = getUserProfileAppPath()
         if p ~= nil and p ~= "" then
-            if not string.find(p, "[/\\]$") then
+            p = string.gsub(p, "\\", "/")
+            if not string.find(p, "/$") then
                 p = p .. "/"
             end
             return p
@@ -26,6 +27,7 @@ end
 function MTRadioManager:loadConfiguration()
     local appPath = getAppPath()
     local settingsFile = appPath .. "modSettings/MTRadioManager.xml"
+    settingsFile = string.gsub(settingsFile, "\\", "/")
     
     if fileExists ~= nil and fileExists(settingsFile) then
         local xml = loadXMLFile("MTRadioSettingsXML", settingsFile)
@@ -40,6 +42,7 @@ function MTRadioManager:loadConfiguration()
 
     -- Count user stations in streamingInternetRadios.xml
     local streamFile = appPath .. "music/streamingInternetRadios.xml"
+    streamFile = string.gsub(streamFile, "\\", "/")
     self.numUserStations = 0
     if fileExists ~= nil and fileExists(streamFile) then
         local xml = loadXMLFile("MTRadioStreamsXML", streamFile)
