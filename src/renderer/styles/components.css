@@ -1131,8 +1131,8 @@
 .range-slider-wrap {
   position: relative;
   background: rgba(255,255,255,0.1);
-  border-radius: 7px;
-  height: 14px;
+  border-radius: 2px;
+  height: 4px;
   margin: 10px 0;
   display: flex;
   align-items: center;
@@ -1142,7 +1142,7 @@
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 14px;
+  height: 4px;
   background: transparent;
   outline: none;
   position: absolute;
@@ -1156,7 +1156,7 @@
 
 .range-slider::-webkit-slider-runnable-track {
   width: 100%;
-  height: 14px;
+  height: 4px;
   background: transparent;
   border: none;
 }
@@ -1175,7 +1175,7 @@
   pointer-events: all;
   position: relative;
   z-index: 2;
-  margin-top: 0;
+  margin-top: -5px;
 }
 
 .range-slider::-webkit-slider-thumb:hover {
