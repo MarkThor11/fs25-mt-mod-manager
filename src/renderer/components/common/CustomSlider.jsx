@@ -30,8 +30,8 @@ export const CustomSlider = ({ value, min, max, step, onChange, width = '100%', 
         .perfect-pill-slider {
           -webkit-appearance: none;
           appearance: none;
-          height: 6px;
-          border-radius: 3px;
+          height: 14px;
+          border-radius: 7px;
           outline: none;
           cursor: pointer;
           margin: 0;
@@ -41,25 +41,25 @@ export const CustomSlider = ({ value, min, max, step, onChange, width = '100%', 
         }
         .perfect-pill-slider::-webkit-slider-runnable-track {
           width: 100%;
-          height: 6px;
+          height: 14px;
           background: transparent;
           border: none;
         }
         .perfect-pill-slider::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 12px;
-          height: 12px;
+          width: 14px;
+          height: 14px;
           border-radius: 50%;
           background: var(--accent);
           cursor: pointer;
-          border: 1px solid rgba(0, 0, 0, 0.2);
-          box-shadow: 0 1px 3px rgba(0,0,0,0.5);
-          margin-top: -3px;
+          border: 1px solid rgba(0, 0, 0, 0.15);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
+          margin-top: 0;
           transition: transform 0.1s ease;
         }
         .perfect-pill-slider::-webkit-slider-thumb:hover {
-          transform: scale(1.2);
+          transform: scale(1.15);
         }
       `}</style>
       <input
@@ -74,7 +74,7 @@ export const CustomSlider = ({ value, min, max, step, onChange, width = '100%', 
         title={title}
         style={{
           width,
-          background: `linear-gradient(to right, var(--accent) calc(6px + ${percentage} * (100% - 12px) / 100), rgba(255,255,255,0.1) calc(6px + ${percentage} * (100% - 12px) / 100))`,
+          background: `linear-gradient(to right, var(--accent) calc(7px + ${percentage} * (100% - 14px) / 100), rgba(255,255,255,0.1) calc(7px + ${percentage} * (100% - 14px) / 100))`,
           ...props.style
         }}
         {...props}

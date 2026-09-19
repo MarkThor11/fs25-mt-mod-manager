@@ -1131,9 +1131,9 @@
 .range-slider-wrap {
   position: relative;
   background: rgba(255,255,255,0.1);
-  border-radius: 3px;
-  height: 6px;
-  margin: 12px 0 8px 0;
+  border-radius: 7px;
+  height: 14px;
+  margin: 10px 0;
   display: flex;
   align-items: center;
 }
@@ -1141,12 +1141,12 @@
 .range-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: calc(100% + 12px);
-  height: 6px;
+  width: 100%;
+  height: 14px;
   background: transparent;
   outline: none;
   position: absolute;
-  left: -6px;
+  left: 0;
   top: 0;
   pointer-events: none;
   margin: 0;
@@ -1156,7 +1156,7 @@
 
 .range-slider::-webkit-slider-runnable-track {
   width: 100%;
-  height: 6px;
+  height: 14px;
   background: transparent;
   border: none;
 }
@@ -1164,22 +1164,22 @@
 .range-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   background: var(--accent);
   border-radius: 50%;
   cursor: pointer;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2);
   transition: transform var(--duration-fast) ease;
   pointer-events: all;
   position: relative;
   z-index: 2;
-  margin-top: -3px;
+  margin-top: 0;
 }
 
 .range-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+  transform: scale(1.15);
 }
 
 .filter-chip--author {
