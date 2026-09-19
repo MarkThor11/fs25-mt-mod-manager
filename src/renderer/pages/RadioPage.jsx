@@ -50,8 +50,8 @@ const RadioPage = () => {
         fetchRadios, searchStations, addStation, removeStation, updateStationName,
         playingStationUrl, setPlayingStation,
         overrideBuiltins, isCompanionInstalled, setOverrideBuiltins,
-        query, country, language, tag, viewMode,
-        setFilterQuery, setFilterCountry, setFilterLanguage, setFilterTag, setViewMode, resetFilters
+        query, country, language, tag, sortOrder, viewMode,
+        setFilterQuery, setFilterCountry, setFilterLanguage, setFilterTag, setSortOrder, setViewMode, resetFilters
     } = useRadioStore();
     const { toast } = useToastStore();
     
@@ -60,20 +60,20 @@ const RadioPage = () => {
 
     const audioRef = React.useRef(null);
 
-    const executeSearch = (newQuery = query, newCountry = country, newLanguage = language, newTag = tag) => {
+    const executeSearch = (newQuery = query, newCountry = country, newLanguage = language, newTag = tag, newSort = sortOrder) => {
         searchStations({ 
             query: newQuery, 
             country: newCountry, 
             language: newLanguage, 
             tag: newTag, 
-            order: 'votes', 
+            order: newSort === 'name' ? 'name' : 'votes', 
             limit: 60 
         });
     };
 
     useEffect(() => {
         fetchRadios();
-        executeSearch(query, country, language, tag);
+        executeSearch(query, country, language, tag, sortOrder);
         
         return () => {
             if (audioRef.current) {
@@ -93,17 +93,22 @@ const RadioPage = () => {
     const toggleTag = (t) => {
         const newTag = tag === t.toLowerCase() ? '' : t.toLowerCase();
         setFilterTag(newTag);
-        executeSearch(query, country, language, newTag);
+        executeSearch(query, country, language, newTag, sortOrder);
     };
 
     const handleLanguageChange = (langCode) => {
         setFilterLanguage(langCode);
-        executeSearch(query, country, langCode, tag);
+        executeSearch(query, country, langCode, tag, sortOrder);
     };
 
     const handleCountryChange = (countryCode) => {
         setFilterCountry(countryCode);
-        executeSearch(query, countryCode, language, tag);
+        executeSearch(query, countryCode, language, tag, sortOrder);
+    };
+
+    const handleSortChange = (newSort) => {
+        setSortOrder(newSort);
+        executeSearch(query, country, language, tag, newSort);
     };
 
     const handleQueryChange = (val) => {
@@ -112,7 +117,7 @@ const RadioPage = () => {
 
     const handleClearFilters = () => {
         resetFilters();
-        searchStations({ order: 'votes', limit: 30 });
+        searchStations({ order: 'name', limit: 60 });
     };
 
     const hasActiveFilters = query || country || language || tag;
@@ -295,6 +300,18 @@ const RadioPage = () => {
                                     {PRESET_COUNTRIES.map(c => (
                                         <option key={c.code} value={c.code}>{c.name}</option>
                                     ))}
+                                </select>
+                            </div>
+
+                            {/* Sort Order Dropdown */}
+                            <div style={{ minWidth: '160px' }}>
+                                <select 
+                                    value={sortOrder} 
+                                    onChange={(e) => handleSortChange(e.target.value)}
+                                    style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}
+                                >
+                                    <option value="name">Sort: A to Z</option>
+                                    <option value="votes">Sort: Most Popular</option>
                                 </select>
                             </div>
 

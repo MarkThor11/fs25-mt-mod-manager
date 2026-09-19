@@ -16,6 +16,7 @@ const saveFiltersToStorage = (state) => {
       country: state.country,
       language: state.language,
       tag: state.tag,
+      sortOrder: state.sortOrder,
       viewMode: state.viewMode
     }));
   } catch (e) {}
@@ -36,6 +37,7 @@ export const useRadioStore = create((set, get) => ({
   country: savedFilters.country || '',
   language: savedFilters.language || '',
   tag: savedFilters.tag || '',
+  sortOrder: savedFilters.sortOrder || 'name', // 'name' (Alphabetical A-Z) or 'votes' (Popularity)
   viewMode: savedFilters.viewMode || 'search',
 
   setFilterQuery: (query) => {
@@ -54,12 +56,16 @@ export const useRadioStore = create((set, get) => ({
     set({ tag });
     saveFiltersToStorage(get());
   },
+  setSortOrder: (sortOrder) => {
+    set({ sortOrder });
+    saveFiltersToStorage(get());
+  },
   setViewMode: (viewMode) => {
     set({ viewMode });
     saveFiltersToStorage(get());
   },
   resetFilters: () => {
-    set({ query: '', country: '', language: '', tag: '' });
+    set({ query: '', country: '', language: '', tag: '', sortOrder: 'name' });
     saveFiltersToStorage(get());
   },
 
