@@ -365,29 +365,17 @@ async function getGameMusicXmlPath() {
     return null;
 }
 
-async function applyGameMusicOverride(overrideBuiltins) {
+async function applyGameMusicOverride() {
     try {
-        const musicXmlPath = await getGameMusicXmlPath();
-        if (!musicXmlPath) return;
-
-        const backupPath = musicXmlPath + '.original';
-
-        if (overrideBuiltins) {
-            if (!fs.existsSync(backupPath) && fs.existsSync(musicXmlPath)) {
-                await fs.copyFile(musicXmlPath, backupPath);
-                console.log('[RADIO] Created backup of original base game music.xml:', backupPath);
-            }
-            const overrideXml = `<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n<music>\n    <radio>\n        <channels>\n        </channels>\n    </radio>\n</music>\n`;
-            await fs.writeFile(musicXmlPath, overrideXml, 'utf-8');
-            console.log('[RADIO] Applied base game music.xml override: 0 built-in channels configured.');
-        } else {
-            if (fs.existsSync(backupPath)) {
-                await fs.copyFile(backupPath, musicXmlPath);
-                console.log('[RADIO] Restored original base game music.xml from backup.');
-            }
+        const musicXmlPath = path.join('C:', 'Program Files (x86)', 'Steam', 'steamapps', 'common', 'Farming Simulator 25', 'data', 'music', 'music.xml');
+        const backupPath = path.join('C:', 'Program Files (x86)', 'Steam', 'steamapps', 'common', 'Farming Simulator 25', 'data', 'music', 'music.xml.original');
+        if (fs.existsSync(backupPath)) {
+            await fs.copyFile(backupPath, musicXmlPath);
+            await fs.remove(backupPath);
+            console.log('[RADIO] Restored original base game music.xml from backup.');
         }
     } catch (err) {
-        console.error('[RADIO] Failed to apply game music.xml override:', err.message);
+        console.error('[RADIO] Restore music.xml failed:', err.message);
     }
 }
 

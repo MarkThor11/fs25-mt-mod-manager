@@ -30,14 +30,6 @@ const PRESET_COUNTRIES = [
 ];
 
 const OFFICIAL_PRESETS = [
-    { name: 'GIANTS Country', url: 'giants_preset_country', tags: 'Base Game, Country', language: 'English', country: 'GIANTS Engine' },
-    { name: 'GIANTS Rock', url: 'giants_preset_rock', tags: 'Base Game, Rock', language: 'English', country: 'GIANTS Engine' },
-    { name: 'GIANTS Pop', url: 'giants_preset_pop', tags: 'Base Game, Pop', language: 'English', country: 'GIANTS Engine' },
-    { name: 'GIANTS Dance', url: 'giants_preset_dance', tags: 'Base Game, Dance', language: 'English', country: 'GIANTS Engine' },
-    { name: 'GIANTS Hip Hop', url: 'giants_preset_hiphop', tags: 'Base Game, Hip-Hop', language: 'English', country: 'GIANTS Engine' },
-    { name: 'GIANTS Oldies', url: 'giants_preset_oldies', tags: 'Base Game, Oldies', language: 'English', country: 'GIANTS Engine' },
-    { name: 'GIANTS Classical', url: 'giants_preset_classical', tags: 'Base Game, Classical', language: 'English', country: 'GIANTS Engine' },
-    { name: 'GIANTS News', url: 'giants_preset_news', tags: 'Base Game, News', language: 'English', country: 'GIANTS Engine' },
     { name: 'Simulator Radio', url: 'https://simulatorradio.stream/stream.mp3', tags: 'Official, Simulation, Pop', language: 'English', country: 'United Kingdom' },
     { name: 'Truckers FM', url: 'https://live.truckers.fm/', tags: 'Official, Simulation, Variety', language: 'English', country: 'United Kingdom' },
     { name: 'TruckStopRadio Country', url: 'https://oreo.truckstopradio.co.uk/listen/tsr_country/radio.mp3', tags: 'Simulation, Country', language: 'English', country: 'United Kingdom' },
@@ -50,7 +42,6 @@ const RadioPage = () => {
         fetchRadios, searchStations, addStation, removeStation, updateStationName,
         hideStation, unhideStation, unhideAllStations,
         playingStationUrl, setPlayingStation,
-        overrideBuiltins, isCompanionInstalled, setOverrideBuiltins,
         query, country, language, tag, sortOrder, viewMode,
         setFilterQuery, setFilterCountry, setFilterLanguage, setFilterTag, setSortOrder, setViewMode, resetFilters
     } = useRadioStore();
@@ -149,7 +140,7 @@ const RadioPage = () => {
 
     const handleSearch = (e) => {
         if (e) e.preventDefault();
-        executeSearch(query, country, language, tag);
+        executeSearch(query, country, language, tag, sortOrder);
     };
 
     const handleAdd = async (station) => {
@@ -199,51 +190,6 @@ const RadioPage = () => {
                     <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '650px', margin: 0 }}>
                         Search, preview, and add live internet radio stations directly into your Farming Simulator 25 tractor radio.
                     </p>
-                </div>
-            </div>
-
-            {/* In-Game Companion Mod & Station Override Card */}
-            <div style={{ 
-                background: 'var(--bg-card)', 
-                borderRadius: '16px', 
-                padding: '18px 20px', 
-                border: overrideBuiltins ? '1px solid var(--accent)' : '1px solid var(--border)', 
-                boxShadow: overrideBuiltins ? '0 0 20px rgba(var(--accent-rgb, 59, 130, 246), 0.12)' : '0 4px 16px rgba(0, 0, 0, 0.08)', 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: '14px' 
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <RadioIcon size={22} />
-                        </div>
-                        <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>In-Game Radio Station Override</h3>
-                            </div>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                Overrides built-in game stations so pressing Next/Previous station in-game cycles strictly through your custom stations.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none', background: 'var(--bg-tertiary)', padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                            <span style={{ fontSize: '13px', fontWeight: '600', color: overrideBuiltins ? 'var(--accent)' : 'var(--text-secondary)' }}>
-                                {overrideBuiltins ? 'Override Active (Custom Only)' : 'Default (Appended to Built-ins)'}
-                            </span>
-                            <input 
-                                type="checkbox"
-                                checked={overrideBuiltins}
-                                onChange={(e) => {
-                                    setOverrideBuiltins(e.target.checked);
-                                    toast.success(e.target.checked ? 'In-game radio override enabled' : 'In-game radio override disabled');
-                                }}
-                                style={{ width: '18px', height: '18px', accentColor: 'var(--accent)', cursor: 'pointer' }}
-                            />
-                        </label>
-                    </div>
                 </div>
             </div>
 
