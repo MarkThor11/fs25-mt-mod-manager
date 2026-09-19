@@ -93,13 +93,22 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
         // A community mod map can NEVER match an official base game template
         if (OFFICIAL_TEMPLATES.has(tId) || OFFICIAL_TEMPLATES.has(utId)) return false;
 
-        // 1. Direct modName match (t.modName comes from careerSavegame.xml before the dot, or from matched mod)
+        // 1. Direct mapId match
+        if (t.mapId && mod.mapId && norm(t.mapId) === norm(mod.mapId)) return true;
+
+        // 2. Direct modName match (t.modName comes from careerSavegame.xml before the dot, or from matched mod)
         const tMod = norm(t.modName);
         const utMod = ultraNorm(t.modName);
         if (tMod && (tMod === mName || tMod === mFolder || tMod === mFileName)) return true;
         if (utMod && utMod.length >= 4 && (utMod === uName || utMod === ultraNorm(mFolder) || utMod === ultraNorm(mFileName))) return true;
 
-        // 2. Template ID / folder prefix matching (e.g. FS25_BackRoadsCounty4x_... or FS25_horschAgrovation_...)
+        // 3. Map ID prefix matching (e.g. FS25_MyMap.mapUS -> FS25_MyMap)
+        const tMapIdPrefix = norm(t.mapId?.split('.')[0]);
+        const utMapIdPrefix = ultraNorm(t.mapId?.split('.')[0]);
+        if (tMapIdPrefix && (tMapIdPrefix === mName || tMapIdPrefix === mFolder || tMapIdPrefix === mFileName)) return true;
+        if (utMapIdPrefix && utMapIdPrefix.length >= 4 && (utMapIdPrefix === uName || utMapIdPrefix === ultraNorm(mFolder))) return true;
+
+        // 4. Template ID / folder prefix matching (e.g. FS25_BackRoadsCounty4x_... or FS25_horschAgrovation_...)
         const cleanTId = (t.id || '').replace(/\.zip$/i, '').toLowerCase();
         const modNameLower = (mod.modName || '').toLowerCase();
         if (cleanTId === modNameLower || cleanTId.startsWith(modNameLower + '_')) return true;
@@ -109,9 +118,11 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
         if (mFolder && (tId === mFolder || tId.startsWith(mFolder + '_'))) return true;
         if (mFileName && (tId === mFileName || tId.startsWith(mFileName + '_'))) return true;
 
-        // 3. Exact Normalized Title match (fallback only)
+        // 5. Normalized Title match (fallback)
         const tTitle = norm(t.title);
+        const utTitle = ultraNorm(t.title);
         if (tTitle && mTitle && tTitle === mTitle) return true;
+        if (utTitle && utTitle.length >= 4 && ultraNorm(mod.title) && utTitle === ultraNorm(mod.title)) return true;
 
         return false;
       });
