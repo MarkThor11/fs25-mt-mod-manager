@@ -29,6 +29,14 @@ const PRESET_COUNTRIES = [
 ];
 
 const OFFICIAL_PRESETS = [
+    { name: 'GIANTS Country', url: 'giants_preset_country', tags: 'Base Game, Country', language: 'English', country: 'GIANTS Engine' },
+    { name: 'GIANTS Rock', url: 'giants_preset_rock', tags: 'Base Game, Rock', language: 'English', country: 'GIANTS Engine' },
+    { name: 'GIANTS Pop', url: 'giants_preset_pop', tags: 'Base Game, Pop', language: 'English', country: 'GIANTS Engine' },
+    { name: 'GIANTS Dance', url: 'giants_preset_dance', tags: 'Base Game, Dance', language: 'English', country: 'GIANTS Engine' },
+    { name: 'GIANTS Hip Hop', url: 'giants_preset_hiphop', tags: 'Base Game, Hip-Hop', language: 'English', country: 'GIANTS Engine' },
+    { name: 'GIANTS Oldies', url: 'giants_preset_oldies', tags: 'Base Game, Oldies', language: 'English', country: 'GIANTS Engine' },
+    { name: 'GIANTS Classical', url: 'giants_preset_classical', tags: 'Base Game, Classical', language: 'English', country: 'GIANTS Engine' },
+    { name: 'GIANTS News', url: 'giants_preset_news', tags: 'Base Game, News', language: 'English', country: 'GIANTS Engine' },
     { name: 'Simulator Radio', url: 'https://simulatorradio.stream/stream.mp3', tags: 'Official, Simulation, Pop', language: 'English', country: 'United Kingdom' },
     { name: 'Truckers FM', url: 'https://live.truckers.fm/', tags: 'Official, Simulation, Variety', language: 'English', country: 'United Kingdom' },
     { name: 'TruckStopRadio Country', url: 'https://oreo.truckstopradio.co.uk/listen/tsr_country/radio.mp3', tags: 'Simulation, Country', language: 'English', country: 'United Kingdom' },
