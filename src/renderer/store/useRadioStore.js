@@ -80,6 +80,13 @@ export const useRadioStore = create((set, get) => ({
     saveHiddenStationsToStorage([]);
   },
 
+  deleteHiddenStationPermanently: (href) => {
+    const current = get().hiddenStations;
+    const updated = current.filter(s => (s.url_resolved || s.url || s.href) !== href);
+    set({ hiddenStations: updated });
+    saveHiddenStationsToStorage(updated);
+  },
+
   setFilterQuery: (query) => {
     set({ query });
     saveFiltersToStorage(get());

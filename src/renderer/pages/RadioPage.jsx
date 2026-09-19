@@ -40,7 +40,7 @@ const RadioPage = () => {
     const { 
         stations, searchResults, hiddenStations, isSearching, 
         fetchRadios, searchStations, addStation, removeStation, updateStationName,
-        hideStation, unhideStation, unhideAllStations,
+        hideStation, unhideStation, unhideAllStations, deleteHiddenStationPermanently,
         playingStationUrl, setPlayingStation,
         query, country, language, tag, sortOrder, viewMode,
         setFilterQuery, setFilterCountry, setFilterLanguage, setFilterTag, setSortOrder, setViewMode, resetFilters
@@ -155,13 +155,17 @@ const RadioPage = () => {
         else toast.error(result.error || 'Failed to add station');
     };
 
-    const handleRemove = async (href) => {
+    const handleRemove = async (href, stationObj = null) => {
         const skipConfirm = useSettingsStore.getState().skipDeleteConfirm;
         if (!skipConfirm && !confirm('Remove this station from your game?')) return;
+        const targetStation = stationObj || stations.find(s => s.href === href) || searchResults.find(s => (s.url_resolved || s.url || s.href) === href);
         const result = await removeStation(href);
         if (result.success) {
+            if (targetStation) {
+                hideStation(targetStation);
+            }
             fetchRadios();
-            toast.success('Station removed');
+            toast.success('Station removed and moved to Hidden list');
         }
     };
 
@@ -494,16 +498,28 @@ const RadioPage = () => {
                                                     {station.tags || href}
                                                 </div>
                                             </div>
-                                            <button 
-                                                onClick={() => {
-                                                    unhideStation(href);
-                                                    toast.success(`Restored "${station.name || 'Station'}" to search`);
-                                                }} 
-                                                style={{ padding: '8px 14px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }} 
-                                                title="Unhide station"
-                                            >
-                                                <Eye size={14} /> Unhide Station
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <button 
+                                                    onClick={() => {
+                                                        unhideStation(href);
+                                                        toast.success(`Restored "${station.name || 'Station'}" to search`);
+                                                    }} 
+                                                    style={{ padding: '8px 14px', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }} 
+                                                    title="Unhide station & restore to search"
+                                                >
+                                                    <Eye size={14} /> Restore / Unhide
+                                                </button>
+                                                <button 
+                                                    onClick={() => {
+                                                        deleteHiddenStationPermanently(href);
+                                                        toast.success(`Permanently deleted "${station.name || 'Station'}"`);
+                                                    }} 
+                                                    style={{ padding: '8px 12px', background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }} 
+                                                    title="Delete permanently"
+                                                >
+                                                    <Trash2 size={14} /> Delete Permanently
+                                                </button>
+                                            </div>
                                         </div>
                                     );
                                 })}
