@@ -1,16 +1,31 @@
 import { CustomSlider } from '../components/common/CustomSlider';
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Radio as RadioIcon, Music, Globe, Check, Volume2, AlertCircle, RefreshCw, Play, Pause } from 'lucide-react';
+import { Search, Plus, Trash2, Radio as RadioIcon, Music, Globe, Check, Volume2, AlertCircle, RefreshCw, Play, Pause, Filter, X } from 'lucide-react';
 import { useRadioStore } from '../store/useRadioStore';
 import { useToastStore } from '../store/useToastStore';
 
 const PRESET_TAGS = ['Rock', 'Pop', 'Country', 'Jazz', 'Dance', 'Metal', 'Classical', 'Oldies', 'News', 'Chill'];
+
+const PRESET_LANGUAGES = [
+    { code: 'english', name: 'English' },
+    { code: 'german', name: 'German' },
+    { code: 'french', name: 'French' },
+    { code: 'spanish', name: 'Spanish' },
+    { code: 'italian', name: 'Italian' },
+    { code: 'polish', name: 'Polish' },
+    { code: 'russian', name: 'Russian' },
+    { code: 'ukrainian', name: 'Ukrainian' },
+    { code: 'dutch', name: 'Dutch' },
+];
+
 const PRESET_COUNTRIES = [
     { code: 'GB', name: 'United Kingdom' },
     { code: 'US', name: 'United States' },
     { code: 'DE', name: 'Germany' },
     { code: 'FR', name: 'France' },
     { code: 'CA', name: 'Canada' },
+    { code: 'PL', name: 'Poland' },
+    { code: 'AU', name: 'Australia' },
 ];
 
 const OFFICIAL_PRESETS = [
@@ -31,6 +46,7 @@ const RadioPage = () => {
     
     const [query, setQuery] = useState('');
     const [country, setCountry] = useState('');
+    const [language, setLanguage] = useState('');
     const [tag, setTag] = useState('');
     const [viewMode, setViewMode] = useState('search'); // 'search' or 'mine'
     const [isBuffering, setIsBuffering] = useState(false);
@@ -57,17 +73,42 @@ const RadioPage = () => {
         }
     }, [stations]);
 
+    const executeSearch = (newQuery = query, newCountry = country, newLanguage = language, newTag = tag) => {
+        searchStations({ 
+            query: newQuery, 
+            country: newCountry, 
+            language: newLanguage, 
+            tag: newTag, 
+            order: 'votes', 
+            limit: 60 
+        });
+    };
+
     const toggleTag = (t) => {
         const newTag = tag === t.toLowerCase() ? '' : t.toLowerCase();
         setTag(newTag);
-        searchStations({ query, country, tag: newTag });
+        executeSearch(query, country, language, newTag);
     };
 
-    const toggleCountry = (c) => {
-        const newCountry = country === c ? '' : c;
-        setCountry(newCountry);
-        searchStations({ query, country: newCountry, tag });
+    const handleLanguageChange = (langCode) => {
+        setLanguage(langCode);
+        executeSearch(query, country, langCode, tag);
     };
+
+    const handleCountryChange = (countryCode) => {
+        setCountry(countryCode);
+        executeSearch(query, countryCode, language, tag);
+    };
+
+    const handleClearFilters = () => {
+        setQuery('');
+        setCountry('');
+        setLanguage('');
+        setTag('');
+        searchStations({ order: 'votes', limit: 30 });
+    };
+
+    const hasActiveFilters = query || country || language || tag;
 
     useEffect(() => {
         if (playingStationUrl && audioRef.current) {
@@ -95,7 +136,7 @@ const RadioPage = () => {
 
     const handleSearch = (e) => {
         if (e) e.preventDefault();
-        searchStations({ query, country, tag });
+        executeSearch(query, country, language, tag);
     };
 
     const handleAdd = async (station) => {
@@ -197,12 +238,60 @@ const RadioPage = () => {
 
                 {viewMode === 'search' ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {/* Search & Volume Toolbar */}
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
                                 <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} size={16} />
-                                <input type="text" placeholder="Search stations by name..." value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} style={{ width: '100%', padding: '10px 12px 10px 36px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px' }} />
+                                <input 
+                                    type="text" 
+                                    placeholder="Search stations by name..." 
+                                    value={query} 
+                                    onChange={(e) => setQuery(e.target.value)} 
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()} 
+                                    style={{ width: '100%', padding: '10px 12px 10px 36px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px' }} 
+                                />
                             </div>
+
+                            {/* Language Filter */}
+                            <div style={{ minWidth: '140px' }}>
+                                <select 
+                                    value={language} 
+                                    onChange={(e) => handleLanguageChange(e.target.value)}
+                                    style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px', cursor: 'pointer' }}
+                                >
+                                    <option value="">All Languages</option>
+                                    {PRESET_LANGUAGES.map(l => (
+                                        <option key={l.code} value={l.code}>{l.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Country Filter */}
+                            <div style={{ minWidth: '150px' }}>
+                                <select 
+                                    value={country} 
+                                    onChange={(e) => handleCountryChange(e.target.value)}
+                                    style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)', outline: 'none', fontSize: '13px', cursor: 'pointer' }}
+                                >
+                                    <option value="">All Countries</option>
+                                    {PRESET_COUNTRIES.map(c => (
+                                        <option key={c.code} value={c.code}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             <button onClick={handleSearch} style={{ padding: '10px 20px', background: 'var(--accent)', color: 'white', borderRadius: '10px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', border: 'none' }}>Search</button>
+
+                            {hasActiveFilters && (
+                                <button 
+                                    onClick={handleClearFilters}
+                                    style={{ padding: '10px 14px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', borderRadius: '10px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                    title="Reset all filters"
+                                >
+                                    <X size={14} /> Reset
+                                </button>
+                            )}
+
                             {playingStationUrl && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--accent-dim)', padding: '6px 16px', borderRadius: '10px', marginLeft: 'auto' }}>
                                     <Volume2 size={16} style={{ color: 'var(--accent)' }} />
@@ -242,6 +331,7 @@ const RadioPage = () => {
                             })}
                         </div>
 
+                        {/* Genre Filter Pills */}
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
                             <span style={{ fontSize: '12px', color: 'var(--text-secondary)', marginRight: '8px', fontWeight: '600' }}>Genres:</span>
                             {PRESET_TAGS.map(t => (
@@ -283,7 +373,7 @@ const RadioPage = () => {
                                 <div style={{ gridColumn: '1/-1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', color: 'var(--text-secondary)', background: 'var(--bg-card)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
                                     <Globe size={40} style={{ marginBottom: '12px', opacity: 0.3 }} />
                                     <h3 style={{ margin: '0 0 4px 0', color: 'var(--text-primary)' }}>Find Radio Stations</h3>
-                                    <p style={{ margin: 0, textAlign: 'center' }}>Type a station name or genre to search.</p>
+                                    <p style={{ margin: 0, textAlign: 'center' }}>Type a station name or choose language/country/genre filters to search.</p>
                                 </div>
                             )}
                         </div>
@@ -335,6 +425,12 @@ const RadioPage = () => {
 };
 
 const StationCard = ({ station, isAdded, isPlaying, isBuffering, onAdd, onPreview }) => {
+    const [imgError, setImgError] = useState(false);
+
+    useEffect(() => {
+        setImgError(false);
+    }, [station.favicon]);
+
     return (
         <div className="station-card" style={{ 
             background: 'var(--bg-card)', 
@@ -351,10 +447,15 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, onAdd, onPrevie
         }}>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                 <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--bg-tertiary)', flexShrink: 0, overflow: 'hidden', position: 'relative', cursor: 'pointer' }} onClick={onPreview}>
-                    {station.favicon ? (
-                        <img src={station.favicon} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: (isPlaying || isBuffering) ? 0.3 : 1 }} alt="" onError={(e) => e.target.style.display='none'} />
+                    {station.favicon && !imgError ? (
+                        <img 
+                            src={station.favicon} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: (isPlaying || isBuffering) ? 0.3 : 1 }} 
+                            alt="" 
+                            onError={() => setImgError(true)} 
+                        />
                     ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', opacity: (isPlaying || isBuffering) ? 0.3 : 0.8 }}>
                             <RadioIcon size={24} />
                         </div>
                     )}
@@ -379,7 +480,8 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, onAdd, onPrevie
             </div>
 
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                {station.language && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}>{station.language.split(',')[0]}</span>}
+                {station.language && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--accent)', fontWeight: '600' }}>{station.language.split(',')[0]}</span>}
+                {station.countrycode && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}>{station.countrycode}</span>}
                 {station.bitrate && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}>{station.bitrate}kbps</span>}
                 {station.votes && <span style={{ padding: '2px 6px', background: 'var(--bg-tertiary)', borderRadius: '4px', fontSize: '10px', color: 'var(--text-secondary)' }}>{station.votes} votes</span>}
             </div>
@@ -415,3 +517,4 @@ const StationCard = ({ station, isAdded, isPlaying, isBuffering, onAdd, onPrevie
 };
 
 export default RadioPage;
+

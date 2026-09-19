@@ -50,7 +50,7 @@ export const useRadioStore = create((set, get) => ({
     if (!window.api?.radio) return;
     
     // Check if we have at least one filter
-    const hasFilters = Object.values(filters).some(v => v && v.trim() !== '');
+    const hasFilters = Object.values(filters || {}).some(v => v !== undefined && v !== null && (typeof v !== 'string' || v.trim() !== ''));
     if (!hasFilters) {
       set({ searchResults: [] });
       return;
