@@ -197,20 +197,23 @@ export default function ModHubPage() {
       
       // Price Range Check
       if (activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < globalMax.price) {
-        const price = mod.techData?.price || 0;
-        if (price < activeFilters.priceRange[0] || price > activeFilters.priceRange[1]) return false;
+        const pMin = mod.techData?.priceMin || mod.techData?.price || 0;
+        const pMax = mod.techData?.priceMax || mod.techData?.price || 0;
+        if (pMin > activeFilters.priceRange[1] || pMax < activeFilters.priceRange[0]) return false;
       }
       
       // HP Range Check
       if (!sameType && (activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < globalMax.hp)) {
-        const hp = mod.techData?.hp || 0;
-        if (hp < activeFilters.hpRange[0] || hp > activeFilters.hpRange[1]) return false;
+        const hMin = mod.techData?.hpMin || mod.techData?.hp || 0;
+        const hMax = mod.techData?.hpMax || mod.techData?.hp || 0;
+        if (hMin > activeFilters.hpRange[1] || hMax < activeFilters.hpRange[0]) return false;
       }
       
       // Capacity Range Check
       if (activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap) {
-        const cap = mod.techData?.capacity || 0;
-        if (cap < activeFilters.capRange[0] || cap > activeFilters.capRange[1]) return false;
+        const cMin = mod.techData?.capacityMin || mod.techData?.capacity || 0;
+        const cMax = mod.techData?.capacityMax || mod.techData?.capacity || 0;
+        if (cMin > activeFilters.capRange[1] || cMax < activeFilters.capRange[0]) return false;
       }
 
       // Smart Power Matching (Bi-directional Cross-Type only)

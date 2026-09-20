@@ -750,7 +750,7 @@ async function fetchModDetail(modId) {
     const valStr = (v || '').toString().toLowerCase();
 
     if (key.includes('price') || key.includes('preis') || key.includes('prix')) {
-      techData.price = parseCleanInt(valStr);
+      const p = parseRange(valStr); techData.price = p.max; techData.priceMin = p.min; techData.priceMax = p.max;
     }
     
     // Improved Horsepower/Power extraction (Table)
@@ -761,10 +761,10 @@ async function fetchModDetail(modId) {
       const hpMatches = valStr.match(/(\d[\d\s,.]*)\s*(hp|cv|ps|pk|ch|kw|bhp|le)(?!\/)/gi);
       if (hpMatches) {
         const hpStr = hpMatches[0].toLowerCase();
-        const hpNum = parseCleanInt(hpStr);
+        const hpNum = parseRange(hpStr).max;
         techData.hp = (hpStr.includes('kw') || hpStr.includes(' kw')) ? Math.round(hpNum * 1.36) : hpNum;
       } else {
-        const val = parseCleanInt(valStr);
+        const val = parseRange(valStr).max;
         if (val > 0) {
           // Handle range strings "100 - 150" by taking the last (highest) value
           const allNums = valStr.match(/\d+/g);
@@ -783,13 +783,13 @@ async function fetchModDetail(modId) {
       if (key.includes('required') || key.includes('requirement')) techData.hpIsRequirement = true;
     }
     else if (key.includes('capacity') || key.includes('kapazität') || key.includes('capacité')) {
-      techData.capacity = parseCleanInt(valStr);
+      const c = parseRange(valStr); techData.capacity = c.max; techData.capacityMin = c.min; techData.capacityMax = c.max;
     }
     else if (key.includes('speed') || key.includes('km/h') || key.includes('mph') || key.includes('geschwindigkeit')) {
-      techData.speed = parseCleanInt(valStr);
+      techData.speed = parseRange(valStr).max;
     }
     else if (key.includes('weight') || key.includes('gewicht') || key.includes('poids')) {
-      techData.weight = parseCleanInt(valStr);
+      techData.weight = parseRange(valStr).max;
     }
   });
 
@@ -844,11 +844,23 @@ async function fetchModDetail(modId) {
     }
 
     if (techData.capacity === 0) {
-      const capMatch = descText.match(/(?:capacity|kapazität|capacité|volume|inhalte).*?(\d[\d\s,.]*)\s*(?:l|liter|litres|liters|m³|m3)/i) || descText.match(/(\d[\d\s,.]*)\s*(?:l|liter|litres|liters|m³|m3)/i);
-      if (capMatch && capMatch[0]) {
-        const parsedCap = parseCleanInt(capMatch[0]);
-        if (parsedCap > 0 && parsedCap < 50000000) {
-          techData.capacity = parsedCap;
+      const lines = descText.replace(/<br[^>]*>/gi, '\n').split('\n');
+      for (const line of lines) {
+        if (/(capacity|kapazität|capacité|volume|inhalte)/i.test(line) && /(liters?|litres?|l\b|m³|m3|cubic)/i.test(line)) {
+            let isCubic = /(m³|m3|cubic)/i.test(line);
+            const nums = (line.match(/\d[\d,.]*\d|\d+/g) || []).map(n => parseInt(n.replace(/[,.]/g, ''), 10));
+            const valid = nums.filter(n => isCubic ? n > 0 : n >= 100);
+            if (valid.length > 0) {
+                let min = Math.min(...valid);
+                let max = Math.max(...valid);
+                if (isCubic && max < 1000) { min *= 1000; max *= 1000; }
+                if (max < 50000000) {
+                    techData.capacityMin = min;
+                    techData.capacityMax = max;
+                    techData.capacity = max;
+                }
+                break;
+            }
         }
       }
     }

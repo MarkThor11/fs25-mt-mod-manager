@@ -1113,7 +1113,9 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
               {showPrice && (
                 <div className="mod-card__tech-item" title="Price">
                   <span style={{ fontSize: 12 }}>$</span>
-                  {mod.techData.price.toLocaleString()}
+                  {mod.techData.priceMin && mod.techData.priceMax && mod.techData.priceMin !== mod.techData.priceMax
+                    ? `${mod.techData.priceMin.toLocaleString()} - ${mod.techData.priceMax.toLocaleString()}`
+                    : mod.techData.price.toLocaleString()}
                 </div>
               )}
               {hasHP && (
@@ -1126,14 +1128,18 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
                   }
                 >
                   <Zap size={14} />
-                  {mod.techData.hp} HP
+                  {mod.techData.hpMin && mod.techData.hpMax && mod.techData.hpMin !== mod.techData.hpMax
+                    ? `${mod.techData.hpMin} - ${mod.techData.hpMax}`
+                    : mod.techData.hp} HP
                   {mod.techData.hpIsRecommendation && <span className="mod-card__rec-badge">REC</span>}
                 </div>
               )}
               {showCap && (
                 <div className="mod-card__tech-item" title="Capacity">
                   <Layers size={14} />
-                  {mod.techData.capacity.toLocaleString()} L
+                  {mod.techData.capacityMin && mod.techData.capacityMax && mod.techData.capacityMin !== mod.techData.capacityMax
+                    ? `${mod.techData.capacityMin.toLocaleString()} - ${mod.techData.capacityMax.toLocaleString()}`
+                    : mod.techData.capacity.toLocaleString()} L
                 </div>
               )}
             </div>
