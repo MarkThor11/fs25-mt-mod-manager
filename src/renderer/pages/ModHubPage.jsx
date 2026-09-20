@@ -209,7 +209,12 @@ export default function ModHubPage() {
       
       const cap = mod.techData?.capacity || 0;
       if (activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap) {
-        if (cap < activeFilters.capRange[0] || cap > activeFilters.capRange[1]) {
+        if (cap > 0) {
+          if (cap < activeFilters.capRange[0] || cap > activeFilters.capRange[1]) {
+            return false;
+          }
+        } else if (activeFilters.capRange[0] > 0) {
+          // If min capacity filter is active (> 0), exclude items with no capacity
           return false;
         }
       }
