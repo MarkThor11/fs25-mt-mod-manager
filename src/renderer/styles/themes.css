@@ -288,3 +288,7 @@
 [data-theme^="glass"] .main-content {
   background: transparent;
 }
+
+[data-theme^='glass'] .sidebar__link-badge {
+  color: var(--text-primary);
+}

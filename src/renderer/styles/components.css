@@ -591,6 +591,7 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   height: 2.4em; /* Fixed height for 2 lines of text */
+  margin-bottom: var(--sp-2);
 }
 
 .mod-card-author-row {
@@ -598,7 +599,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-2);
-  height: 1.4em; /* Fixed height for author name */
+  min-height: 1.4em;
 }
 
 .mod-card-author {

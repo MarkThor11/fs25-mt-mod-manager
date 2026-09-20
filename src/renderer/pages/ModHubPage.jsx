@@ -157,9 +157,9 @@ export default function ModHubPage() {
     });
 
     return {
-      price: maxPrice > 0 ? maxPrice : 1500000,
-      hp: maxHp > 0 ? maxHp : 1500,
-      cap: maxCap > 0 ? maxCap : 500000
+      price: Math.min(maxPrice > 0 ? maxPrice : 500000, 500000), // Cap slider at 500k to prevent 30M cheat mods ruining scale
+      hp: Math.min(maxHp > 0 ? maxHp : 1000, 1000),             // Cap slider at 1000 HP
+      cap: Math.min(maxCap > 0 ? maxCap : 500000, 500000)        // Cap slider at 500k L to prevent 45M cheat mods ruining scale
     };
   }, [sourceMods, modCache]);
 
@@ -198,25 +198,19 @@ export default function ModHubPage() {
       // Price Range Check
       if (activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < globalMax.price) {
         const price = mod.techData?.price || 0;
-        if (price > 0) {
-          if (price < activeFilters.priceRange[0] || price > activeFilters.priceRange[1]) return false;
-        }
+        if (price < activeFilters.priceRange[0] || price > activeFilters.priceRange[1]) return false;
       }
       
       // HP Range Check
       if (!sameType && (activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < globalMax.hp)) {
         const hp = mod.techData?.hp || 0;
-        if (hp > 0) {
-          if (hp < activeFilters.hpRange[0] || hp > activeFilters.hpRange[1]) return false;
-        }
+        if (hp < activeFilters.hpRange[0] || hp > activeFilters.hpRange[1]) return false;
       }
       
       // Capacity Range Check
       if (activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap) {
         const cap = mod.techData?.capacity || 0;
-        if (cap > 0) {
-          if (cap < activeFilters.capRange[0] || cap > activeFilters.capRange[1]) return false;
-        }
+        if (cap < activeFilters.capRange[0] || cap > activeFilters.capRange[1]) return false;
       }
 
       // Smart Power Matching (Bi-directional Cross-Type only)
