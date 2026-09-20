@@ -730,12 +730,15 @@ async function fetchModDetail(modId) {
     const valStr = (v || '').toString().toLowerCase();
     
     // Pattern 1: Standard numeric extraction
-    // Helper to extract full clean integer from formatted numeric strings like "125,000 €", "125 000 $", "1,500 L"
+    // Helper to extract full clean integer from formatted numeric strings like "125,000 €", "125 000 $", "1,500 L", "32 m³"
     const parseCleanInt = (str) => {
       if (!str) return 0;
-      // Strip currency symbols and letters, replace spaces/commas used as thousand separators
-      const cleaned = str.replace(/[$€£]/g, '').replace(/(\d+)[\s,.](\d{3})/g, '$1$2').replace(/[^0-9]/g, '');
-      return parseInt(cleaned, 10) || 0;
+      const lower = str.toString().toLowerCase();
+      const isCubicMeter = lower.includes('m³') || lower.includes('m3');
+      // Strip currency symbols and letters (except numbers), replace spaces/commas used as thousand separators
+      const cleaned = lower.replace(/[$€£]/g, '').replace(/(\d+)[\s,.](\d{3})/g, '$1$2').replace(/[^0-9]/g, '');
+      const num = parseInt(cleaned, 10) || 0;
+      return isCubicMeter ? num * 1000 : num;
     };
 
     if (key.includes('price') || key.includes('preis') || key.includes('prix')) {
