@@ -735,10 +735,18 @@ async function fetchModDetail(modId) {
       if (!str) return 0;
       const lower = str.toString().toLowerCase();
       const isCubicMeter = lower.includes('m³') || lower.includes('m3');
-      // Strip currency symbols and letters (except numbers), replace spaces/commas used as thousand separators
+      
+      if (isCubicMeter) {
+          const match = lower.replace(/,/g, '.').match(/([\d.]+)/);
+          if (match && match[1]) {
+              const val = parseFloat(match[1]);
+              return Math.round(val * 1000);
+          }
+          return 0;
+      }
+      
       const cleaned = lower.replace(/[$€£]/g, '').replace(/(\d+)[\s,.](\d{3})/g, '$1$2').replace(/[^0-9]/g, '');
-      const num = parseInt(cleaned, 10) || 0;
-      return isCubicMeter ? num * 1000 : num;
+      return parseInt(cleaned, 10) || 0;
     };
 
     if (key.includes('price') || key.includes('preis') || key.includes('prix')) {
@@ -789,9 +797,9 @@ async function fetchModDetail(modId) {
   if (description) {
     const descText = description.replace(/<[^>]*>/g, ' ');
     
-    // Price regex fallback in description e.g. "Price: $125,000", "Preis: 150.000 €"
+    // Price regex fallback in description e.g. "Price: $125,000", "Preis: 150.000 €", "from $42,500"
     if (techData.price === 0) {
-      const priceMatch = descText.match(/(?:price|preis|prix)[:\-\s]*([$€£]?\s*\d[\d\s,.]*)/i);
+      const priceMatch = descText.match(/(?:price|preis|prix|from)[:\-\s]*([$€£]\s*\d[\d\s,.]*)/i) || descText.match(/([$€£]\s*\d[\d\s,.]*)/i);
       if (priceMatch && priceMatch[1]) {
         const parsedPrice = parseInt(priceMatch[1].replace(/[^0-9]/g, ''), 10) || 0;
         if (parsedPrice > 0 && parsedPrice < 50000000) {
@@ -836,9 +844,9 @@ async function fetchModDetail(modId) {
     }
 
     if (techData.capacity === 0) {
-      const capMatch = descText.match(/(?:capacity|kapazität|capacité|volume|inhalte)[:\-\s]*(\d[\d\s,.]*)\s*(?:l|liter|litres|liters)?/i) || descText.match(/(\d[\d\s,.]*)\s*(?:l|liter|litres|liters)\b/i);
-      if (capMatch && capMatch[1]) {
-        const parsedCap = parseInt(capMatch[1].replace(/[^0-9]/g, ''), 10) || 0;
+      const capMatch = descText.match(/(?:capacity|kapazität|capacité|volume|inhalte).*?(\d[\d\s,.]*)\s*(?:l|liter|litres|liters|m³|m3)/i) || descText.match(/(\d[\d\s,.]*)\s*(?:l|liter|litres|liters|m³|m3)/i);
+      if (capMatch && capMatch[0]) {
+        const parsedCap = parseCleanInt(capMatch[0]);
         if (parsedCap > 0 && parsedCap < 50000000) {
           techData.capacity = parsedCap;
         }

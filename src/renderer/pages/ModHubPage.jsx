@@ -200,9 +200,6 @@ export default function ModHubPage() {
         const price = mod.techData?.price || 0;
         if (price > 0) {
           if (price < activeFilters.priceRange[0] || price > activeFilters.priceRange[1]) return false;
-        } else if (hasTechData && activeFilters.priceRange[0] > 0) {
-          // If detailed specs were scraped and price is truly 0 or not set, but min filter is > 0
-          if (price < activeFilters.priceRange[0]) return false;
         }
       }
       
