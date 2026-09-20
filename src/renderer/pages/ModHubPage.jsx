@@ -219,7 +219,8 @@ export default function ModHubPage() {
         const cMax = mod.techData?.capacityMax || mod.techData?.capacity || 0;
         // Exclude mods with no capacity data when filter is active
         if (cMax === 0) return false;
-        if (cMin > activeFilters.capRange[1] || cMax < activeFilters.capRange[0]) return false;
+        // Exclude if mod's max exceeds filter max (too big) or mod's max is below filter min (too small)
+        if (cMax > activeFilters.capRange[1] || cMax < activeFilters.capRange[0]) return false;
       }
 
       // Unit Capacity Range Check (cows, bales, logs, etc.)

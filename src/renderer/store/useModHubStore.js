@@ -194,12 +194,18 @@ export const useModHubStore = create((set, get) => ({
     const { mods, isDeepScanning } = get();
     if (isDeepScanning || mods.length === 0) return;
     
-    // Re-scan mods scraped but with missing or suspiciously small capacity (scraper improvements)
+    // Re-scan mods scraped but with missing, suspiciously small, or model-bleed capacity
     const needsRescrape = (m) => {
       if (!m.techData?.scraped) return false;
       const cap = m.techData?.capacity ?? 0;
+      const capMin = m.techData?.capacityMin ?? 0;
+      const capMax = m.techData?.capacityMax ?? 0;
       const unitCap = m.techData?.unitCapacity ?? 0;
-      return (cap === 0 && unitCap === 0) || (cap > 0 && cap < 1000 && unitCap === 0);
+      return (
+        (cap === 0 && unitCap === 0) ||
+        (cap > 0 && cap < 1000 && unitCap === 0) ||
+        (capMin > 0 && capMin < 1000 && capMax > 10000) // model-number bleed (e.g. NX200 → cMin=200)
+      );
     };
     const needsScan = mods.some(m => !m.techData || !m.techData.scraped || !m.dependencies || needsRescrape(m));
     if (!needsScan) return;
@@ -927,10 +933,13 @@ export const useModHubStore = create((set, get) => ({
           const cachedMod = modCache[String(mod.modId)];
           // Don't apply stale or mis-parsed techData — let deep scan re-fetch
           const cachedCap = cachedMod?.techData?.capacity ?? 0;
+          const cachedCapMin = cachedMod?.techData?.capacityMin ?? 0;
+          const cachedCapMax = cachedMod?.techData?.capacityMax ?? 0;
           const cachedUnit = cachedMod?.techData?.unitCapacity ?? 0;
           const cachedIsStale = cachedMod?.techData?.scraped && (
             (cachedCap === 0 && cachedUnit === 0) ||
-            (cachedCap > 0 && cachedCap < 1000 && cachedUnit === 0)
+            (cachedCap > 0 && cachedCap < 1000 && cachedUnit === 0) ||
+            (cachedCapMin > 0 && cachedCapMin < 1000 && cachedCapMax > 10000)
           );
           const effectiveCached = (cachedMod && !cachedIsStale) ? cachedMod : cachedMod ? { ...cachedMod, techData: undefined } : null;
           let enriched = effectiveCached ? { ...mod, ...effectiveCached } : { ...mod };

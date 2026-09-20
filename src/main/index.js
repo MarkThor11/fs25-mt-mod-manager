@@ -654,13 +654,16 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
     if (!bustCache) {
       const cached = cache.get(cacheKey);
       if (cached && cached.downloadUrl) {
-        // Re-scrape if capacity is missing OR suspiciously small (likely a mis-parse from before scraper was fixed)
-        // Trailers/wagons won't have < 1000 L as a legitimate capacity — values like 26, 9, 600 are model-code bleeds
+        // Re-scrape if capacity is missing, suspiciously small, or capacityMin looks like a model-number bleed
+        // e.g. NX200 → capacityMin=200 while capacityMax=36000 — legitimate trailers don't have cMin < 1000 with cMax > 10000
         const cap = cached.techData?.capacity ?? 0;
+        const capMin = cached.techData?.capacityMin ?? 0;
+        const capMax = cached.techData?.capacityMax ?? 0;
         const unitCap = cached.techData?.unitCapacity ?? 0;
         const needsCapacityRescrape = cached.techData?.scraped && (
-          (cap === 0 && unitCap === 0) ||
-          (cap > 0 && cap < 1000 && unitCap === 0)  // tiny litre value with no unit cap = mis-parse
+          (cap === 0 && unitCap === 0) ||                              // no capacity at all
+          (cap > 0 && cap < 1000 && unitCap === 0) ||                 // tiny litre = mis-parse
+          (capMin > 0 && capMin < 1000 && capMax > 10000)             // model-number bleed in min
         );
 
         if (!needsCapacityRescrape) {
@@ -748,10 +751,13 @@ ipcMain.handle('modhub:getBatchDetails', async (_, modIds) => {
     if (cached) {
       // Don't serve stale or mis-parsed entries — they need a re-scrape
       const cap = cached.techData?.capacity ?? 0;
+      const capMin = cached.techData?.capacityMin ?? 0;
+      const capMax = cached.techData?.capacityMax ?? 0;
       const unitCap = cached.techData?.unitCapacity ?? 0;
       const needsRescrape = cached.techData?.scraped && (
         (cap === 0 && unitCap === 0) ||
-        (cap > 0 && cap < 1000 && unitCap === 0)
+        (cap > 0 && cap < 1000 && unitCap === 0) ||
+        (capMin > 0 && capMin < 1000 && capMax > 10000)
       );
       if (!needsRescrape) {
         results[id] = cached;
