@@ -1053,17 +1053,41 @@ export const useModHubStore = create((set, get) => ({
     const hpMin = uniqueHpValues[0] || 0;
     const hpMax = uniqueHpValues[uniqueHpValues.length - 1] || 0;
 
+    // Capacity extraction
+    let capacityValue = detail.techData?.capacity || 0;
+    if (!capacityValue && detail.metadata) {
+      Object.entries(detail.metadata).forEach(([k, v]) => {
+        const key = k.toLowerCase();
+        const valStr = (v || '').toString().toLowerCase();
+        if (key.includes('capacity') || key.includes('kapazität') || key.includes('capacité')) {
+          const isCubic = valStr.includes('m³') || valStr.includes('m3');
+          const cleanNum = parseInt(valStr.replace(/(\d+)[\s,.](\d{3})/g, '$1$2').replace(/[^0-9]/g, ''), 10) || 0;
+          capacityValue = isCubic ? cleanNum * 1000 : cleanNum;
+        }
+      });
+    }
+    if (!capacityValue && detail.description) {
+      const descText = detail.description.replace(/<[^>]*>/g, ' ');
+      const capMatch = descText.match(/(?:capacity|kapazität|capacité|volume|inhalte)[:\-\s]*(\d[\d\s,.]*)\s*(m³|m3|l|liter|liters)?/i);
+      if (capMatch && capMatch[1]) {
+        const isCubic = (capMatch[2] || '').toLowerCase().includes('m');
+        const num = parseInt(capMatch[1].replace(/[^0-9]/g, ''), 10) || 0;
+        capacityValue = isCubic ? num * 1000 : num;
+      }
+    }
+
     const rawTechData = detail.techData || {
       price: priceValue,
       hp: hpMax,
       hpMin: hpMin,
       hpMax: hpMax,
       hpValues: uniqueHpValues,
+      capacity: capacityValue,
       hpIsRequirement: !isVehicleCategory,
       isDrivable: isVehicleCategory,
       techSpecs: detail.techSpecs || {}
     };
-    const techData = { ...rawTechData, scraped: true };
+    const techData = { ...rawTechData, capacity: rawTechData.capacity || capacityValue, scraped: true };
 
     let brand = detail.metadata?.['Manufacturer'] || detail.metadata?.['Brand'] || '';
     return { ...mod, ...detail, techData, brand };
