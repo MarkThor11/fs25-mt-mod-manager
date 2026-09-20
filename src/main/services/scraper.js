@@ -725,29 +725,29 @@ async function fetchModDetail(modId) {
     scraped: true
   };
 
+  // Pattern 1: Standard numeric extraction
+  // Helper to extract full clean integer from formatted numeric strings like "125,000 €", "125 000 $", "1,500 L", "32 m³"
+  const parseCleanInt = (str) => {
+    if (!str) return 0;
+    const lower = str.toString().toLowerCase();
+    const isCubicMeter = lower.includes('m³') || lower.includes('m3');
+    
+    if (isCubicMeter) {
+        const match = lower.replace(/,/g, '.').match(/([\d.]+)/);
+        if (match && match[1]) {
+            const val = parseFloat(match[1]);
+            return Math.round(val * 1000);
+        }
+        return 0;
+    }
+    
+    const cleaned = lower.replace(/[$€£]/g, '').replace(/(\d+)[\s,.](\d{3})/g, '$1$2').replace(/[^0-9]/g, '');
+    return parseInt(cleaned, 10) || 0;
+  };
+
   Object.entries(metadata).forEach(([k, v]) => {
     const key = k.toLowerCase();
     const valStr = (v || '').toString().toLowerCase();
-    
-    // Pattern 1: Standard numeric extraction
-    // Helper to extract full clean integer from formatted numeric strings like "125,000 €", "125 000 $", "1,500 L", "32 m³"
-    const parseCleanInt = (str) => {
-      if (!str) return 0;
-      const lower = str.toString().toLowerCase();
-      const isCubicMeter = lower.includes('m³') || lower.includes('m3');
-      
-      if (isCubicMeter) {
-          const match = lower.replace(/,/g, '.').match(/([\d.]+)/);
-          if (match && match[1]) {
-              const val = parseFloat(match[1]);
-              return Math.round(val * 1000);
-          }
-          return 0;
-      }
-      
-      const cleaned = lower.replace(/[$€£]/g, '').replace(/(\d+)[\s,.](\d{3})/g, '$1$2').replace(/[^0-9]/g, '');
-      return parseInt(cleaned, 10) || 0;
-    };
 
     if (key.includes('price') || key.includes('preis') || key.includes('prix')) {
       techData.price = parseCleanInt(valStr);
@@ -797,9 +797,9 @@ async function fetchModDetail(modId) {
   if (description) {
     const descText = description.replace(/<[^>]*>/g, ' ');
     
-    // Price regex fallback in description e.g. "Price: $125,000", "Preis: 150.000 €", "from $42,500"
+    // Price regex fallback in description e.g. "Price: $125,000", "Preis: 150.000 €", "from $42,500", "Base price: 327500 $"
     if (techData.price === 0) {
-      const priceMatch = descText.match(/(?:price|preis|prix|from)[:\-\s]*([$€£]\s*\d[\d\s,.]*)/i) || descText.match(/([$€£]\s*\d[\d\s,.]*)/i);
+      const priceMatch = descText.match(/(?:price|preis|prix|cost|from|base price)[:\-\s]*([$€£]?\s*\d[\d\s,.]*\s*[$€£]?)/i) || descText.match(/([$€£]\s*\d[\d\s,.]*|\d[\d\s,.]*\s*[$€£])/i);
       if (priceMatch && priceMatch[1]) {
         const parsedPrice = parseInt(priceMatch[1].replace(/[^0-9]/g, ''), 10) || 0;
         if (parsedPrice > 0 && parsedPrice < 50000000) {
