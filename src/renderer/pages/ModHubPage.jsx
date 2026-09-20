@@ -193,26 +193,24 @@ export default function ModHubPage() {
       const sameType = isSmartMatching && (!!mod.techData.hpIsRequirement === !!powerReference.techData?.hpIsRequirement);
 
       // Technical data filters
-      if (mod.techData) {
-        // Price Filter: filter items whose scraped price falls outside active price range
-        if (activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < globalMax.price) {
-          if (mod.techData.price > 0 && (mod.techData.price < activeFilters.priceRange[0] || mod.techData.price > activeFilters.priceRange[1])) {
-            return false;
-          }
+      const price = mod.techData?.price || 0;
+      if (activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < globalMax.price) {
+        if (price < activeFilters.priceRange[0] || price > activeFilters.priceRange[1]) {
+          return false;
         }
-        
-        // Power Filter: filter items whose scraped HP falls outside active HP range
-        if (!sameType && (activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < globalMax.hp)) {
-          if (mod.techData.hp > 0 && (mod.techData.hp < activeFilters.hpRange[0] || mod.techData.hp > activeFilters.hpRange[1])) {
-            return false;
-          }
+      }
+      
+      const hp = mod.techData?.hp || 0;
+      if (!sameType && (activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < globalMax.hp)) {
+        if (hp < activeFilters.hpRange[0] || hp > activeFilters.hpRange[1]) {
+          return false;
         }
-        
-        // Capacity Filter: filter items whose scraped capacity falls outside active capacity range
-        if (activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap) {
-          if (mod.techData.capacity > 0 && (mod.techData.capacity < activeFilters.capRange[0] || mod.techData.capacity > activeFilters.capRange[1])) {
-            return false;
-          }
+      }
+      
+      const cap = mod.techData?.capacity || 0;
+      if (activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap) {
+        if (cap < activeFilters.capRange[0] || cap > activeFilters.capRange[1]) {
+          return false;
         }
       }
 
@@ -226,25 +224,21 @@ export default function ModHubPage() {
         const isTargetingDrivable = refIsReq && modIsDrivable;
         const isTargetingTool = refIsDrivable && modIsReq;
         
-        if (!isTargetingDrivable && !isTargetingTool) return true;
+        if (isTargetingDrivable || isTargetingTool) {
+          const modHPMin = mod.techData.hpMin || mod.techData.hp || 0;
+          const modHPMax = mod.techData.hpMax || mod.techData.hp || 0;
+          let refHPMin = powerReference.techData?.hpMin || powerReference.techData?.hp || 0;
+          let refHPMax = powerReference.techData?.hpMax || powerReference.techData?.hp || 0;
 
-        const modHPMin = mod.techData.hpMin || mod.techData.hp || 0;
-        const modHPMax = mod.techData.hpMax || mod.techData.hp || 0;
-        let refHPMin = powerReference.techData?.hpMin || powerReference.techData?.hp || 0;
-        let refHPMax = powerReference.techData?.hpMax || powerReference.techData?.hp || 0;
-
-        if (selectedHP > 0) {
-          refHPMin = selectedHP;
-          refHPMax = selectedHP;
-        }
-
-        if (!refIsReq) {
-          if (modIsReq) {
-            return modHPMin <= refHPMax;
+          if (selectedHP > 0) {
+            refHPMin = selectedHP;
+            refHPMax = selectedHP;
           }
-        } else {
-          if (!modIsReq) {
-            return modHPMax >= refHPMin;
+
+          if (!refIsReq) {
+            if (modIsReq && modHPMin > refHPMax) return false;
+          } else {
+            if (!modIsReq && modHPMax < refHPMin) return false;
           }
         }
       }
