@@ -195,7 +195,11 @@ export const useModHubStore = create((set, get) => ({
     if (isDeepScanning || mods.length === 0) return;
     
     // Check if we already have tech data AND dependencies for all
-    const needsScan = mods.some(m => !m.techData || !m.techData.scraped || !m.dependencies);
+    // Also re-scan mods that were scraped but have no capacity (scraper may have improved)
+    const needsRescrape = (m) => m.techData?.scraped &&
+      (m.techData?.capacity ?? 0) === 0 &&
+      (m.techData?.unitCapacity ?? 0) === 0;
+    const needsScan = mods.some(m => !m.techData || !m.techData.scraped || !m.dependencies || needsRescrape(m));
     if (!needsScan) return;
 
     // Capture view state to prevent overwriting results if user navigates away
@@ -206,7 +210,7 @@ export const useModHubStore = create((set, get) => ({
     set({ isDeepScanning: true });
     try {
       const idsToFetch = mods
-        .filter(m => !m.techData || !m.techData.scraped || !m.dependencies)
+        .filter(m => !m.techData || !m.techData.scraped || !m.dependencies || needsRescrape(m))
         .map(m => m.modId)
         .filter(Boolean);
 
@@ -916,7 +920,12 @@ export const useModHubStore = create((set, get) => ({
 
       const enrichedMods = uniqueAllMods.map(mod => {
           const cachedMod = modCache[String(mod.modId)];
-          let enriched = cachedMod ? { ...mod, ...cachedMod } : { ...mod };
+          // Don't apply stale capacity-0 techData — let deep scan re-fetch it
+          const cachedHasNoCapacity = cachedMod?.techData?.scraped &&
+            (cachedMod.techData?.capacity ?? 0) === 0 &&
+            (cachedMod.techData?.unitCapacity ?? 0) === 0;
+          const effectiveCached = (cachedMod && !cachedHasNoCapacity) ? cachedMod : cachedMod ? { ...cachedMod, techData: undefined } : null;
+          let enriched = effectiveCached ? { ...mod, ...effectiveCached } : { ...mod };
 
           // Badge First-Seen Tracking
           if (enriched.isNew || enriched.isUpdate) {

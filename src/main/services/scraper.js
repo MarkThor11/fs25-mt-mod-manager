@@ -846,54 +846,78 @@ async function fetchModDetail(modId) {
     }
 
     if (techData.capacity === 0) {
-      // Split raw HTML on visual line breaks BEFORE stripping tags, so each line is searchable
+      // Split raw HTML on visual line breaks BEFORE stripping tags
       const rawLines = description
         .replace(/<br[^>]*>/gi, '\n')
         .replace(/<\/p>/gi, '\n')
         .replace(/<\/li>/gi, '\n')
         .replace(/<\/div>/gi, '\n')
-        .replace(/<[^>]*>/g, '')   // strip remaining tags
+        .replace(/<[^>]*>/g, '')
         .split('\n')
         .map(l => l.trim())
         .filter(Boolean);
 
+      // Parse a numeric string with optional k-suffix (thousand). Preserves decimals for cubic m³.
+      const parseCapNum = (str, kSuffix) => {
+        const cleaned = str.replace(/[\s,]/g, '').replace(/\.(\d{3})/g, '$1');
+        let val = parseFloat(cleaned) || 0;
+        if (kSuffix && kSuffix.toLowerCase() === 'k') val *= 1000;
+        return val;
+      };
+
+      // Lines that mention capacity keyword AND a litre/cubic unit
+      const capLineRe  = /capaci(?:ty|ties)|kapazität|capacité|volume|inhalte|fassungsvermögen|inhalt|tank|load|configurations?/i;
+      const litreUnitRe = /liters?|litres?|\bl\b|m³|m3|cubic/i;
+
+      // Numbers: not preceded by a letter (avoids model codes like NX200),
+      // support space/comma thousand sep, optional trailing dot for decimals like "40."
+      const numTokenRe = /(?<![a-zA-Z])(\d[\d\s,]*(?:\.\d*)?)(k?)/gi;
+
+      let overallMin = null;
+      let overallMax = null;
+
       for (const line of rawLines) {
-        if (/(capacity|kapazität|capacité|volume|inhalte|fassungsvermögen|inhalt|tank|load)/i.test(line) &&
-            /(liters?|litres?|\bl\b|m³|m3|cubic|kl\b)/i.test(line)) {
-          const isCubic = /(m³|m3|cubic)/i.test(line);
-          const nums = (line.match(/\d[\d,.]*\d|\d+/g) || []).map(n => parseInt(n.replace(/[,.]/g, ''), 10));
-          const valid = nums.filter(n => isCubic ? n > 0 : n >= 100);
-          if (valid.length > 0) {
-            let min = Math.min(...valid);
-            let max = Math.max(...valid);
-            if (isCubic && max < 1000) { min *= 1000; max *= 1000; }
-            if (max < 50000000) {
-              techData.capacityMin = min;
-              techData.capacityMax = max;
-              techData.capacity = max;
-            }
-            break;
+        if (!capLineRe.test(line) || !litreUnitRe.test(line)) continue;
+        const isCubic = /(m³|m3|cubic)/i.test(line);
+        const lineNums = [];
+        numTokenRe.lastIndex = 0;
+        let nt;
+        while ((nt = numTokenRe.exec(line)) !== null) {
+          const val = parseCapNum(nt[1], nt[2]);
+          if (isCubic ? val > 0 : val >= 100) {
+            const litreVal = Math.round(isCubic && val < 1000 ? val * 1000 : val);
+            if (litreVal < 50000000) lineNums.push(litreVal);
           }
+        }
+        if (lineNums.length > 0) {
+          const lineMin = Math.min(...lineNums);
+          const lineMax = Math.max(...lineNums);
+          if (overallMin === null || lineMin < overallMin) overallMin = lineMin;
+          if (overallMax === null || lineMax > overallMax) overallMax = lineMax;
         }
       }
 
-      // Second fallback: scan full stripped text for any number directly followed by L/litre/m³
-      if (techData.capacity === 0) {
-        const fullText = description.replace(/<[^>]*>/g, ' ');
-        // Match patterns like "48,000 L", "18500 liters", "48 to 57 cubic meters"
-        const litreMatch = fullText.match(/capacity[:\s-]*(from\s+)?(\d[\d,. ]*\d|\d+)\s*(to\s+(\d[\d,. ]*\d|\d+)\s*)?(liters?|litres?|l\b|m³|m3|cubic)/i);
-        if (litreMatch) {
-          const rawMin = litreMatch[2].replace(/[,. ]/g, '');
-          const rawMax = litreMatch[4] ? litreMatch[4].replace(/[,. ]/g, '') : rawMin;
-          const isCubic = /(m³|m3|cubic)/i.test(litreMatch[5] || '');
-          let vMin = parseInt(rawMin, 10) || 0;
-          let vMax = parseInt(rawMax, 10) || vMin;
-          if (isCubic) { vMin *= 1000; vMax *= 1000; }
-          if (vMax >= 100 && vMax < 50000000) {
-            techData.capacityMin = vMin;
-            techData.capacityMax = vMax;
-            techData.capacity = vMax;
-          }
+      if (overallMin !== null && overallMax !== null) {
+        techData.capacityMin = overallMin;
+        techData.capacityMax = overallMax;
+        techData.capacity = overallMax;
+      }
+    }
+
+    // Second fallback on full stripped text
+    if (techData.capacity === 0) {
+      const fullText = description.replace(/<[^>]*>/g, ' ');
+      const litreMatch = fullText.match(/capacity[:\s-]*(from\s+)?(\d[\d\s,]*(?:\.\d*)?)(k?)\s*(?:[-–to]+\s*(\d[\d\s,]*(?:\.\d*)?)(k?))?\s*(liters?|litres?|l\b|m³|m3|cubic)/i);
+      if (litreMatch) {
+        const parseKNum = (s, k) => { const c = (s||'').replace(/[\s,]/g,'').replace(/\.(\d{3})/g,'$1'); let v = parseFloat(c)||0; if (k && k.toLowerCase()==='k') v*=1000; return v; };
+        const isCubic = /(m³|m3|cubic)/i.test(litreMatch[6] || '');
+        let vMin = parseKNum(litreMatch[2], litreMatch[3]);
+        let vMax = litreMatch[4] ? parseKNum(litreMatch[4], litreMatch[5]) : vMin;
+        if (isCubic) { vMin = Math.round(vMin * 1000); vMax = Math.round(vMax * 1000); }
+        if (vMax >= 100 && vMax < 50000000) {
+          techData.capacityMin = vMin;
+          techData.capacityMax = vMax;
+          techData.capacity = vMax;
         }
       }
     }
@@ -950,6 +974,14 @@ async function fetchModDetail(modId) {
         techData.unitCapacity = bestMatch.count;
         techData.unitCapacityType = bestMatch.type;
       }
+    }
+
+    // Guard: if unit capacity was found but litre capacity is tiny (< 1000 L),
+    // the litre value is almost certainly a mis-parse — discard it.
+    if (techData.unitCapacity > 0 && techData.capacity > 0 && techData.capacity < 1000) {
+      techData.capacity = 0;
+      techData.capacityMin = 0;
+      techData.capacityMax = 0;
     }
   }
 

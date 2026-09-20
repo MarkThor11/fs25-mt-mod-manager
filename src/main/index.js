@@ -742,7 +742,15 @@ ipcMain.handle('modhub:getBatchDetails', async (_, modIds) => {
   const results = {};
   modIds.forEach(id => {
     const cached = cache.get(`modDetail_${id}`);
-    if (cached) results[id] = cached;
+    if (cached) {
+      // Don't serve stale entries with no capacity — they need a re-scrape
+      const hasNoCapacity = cached.techData?.scraped &&
+        (cached.techData?.capacity ?? 0) === 0 &&
+        (cached.techData?.unitCapacity ?? 0) === 0;
+      if (!hasNoCapacity) {
+        results[id] = cached;
+      }
+    }
   });
   return results;
 });

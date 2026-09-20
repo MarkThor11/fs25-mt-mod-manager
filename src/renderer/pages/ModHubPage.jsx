@@ -217,12 +217,16 @@ export default function ModHubPage() {
       if (activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap) {
         const cMin = mod.techData?.capacityMin || mod.techData?.capacity || 0;
         const cMax = mod.techData?.capacityMax || mod.techData?.capacity || 0;
+        // Exclude mods with no capacity data when filter is active
+        if (cMax === 0) return false;
         if (cMin > activeFilters.capRange[1] || cMax < activeFilters.capRange[0]) return false;
       }
 
       // Unit Capacity Range Check (cows, bales, logs, etc.)
       if (activeFilters.unitRange[0] > 0 || activeFilters.unitRange[1] < globalMax.unit) {
         const uVal = mod.techData?.unitCapacity || 0;
+        // Exclude mods with no unit capacity data when filter is active
+        if (uVal === 0) return false;
         if (uVal < activeFilters.unitRange[0] || uVal > activeFilters.unitRange[1]) return false;
       }
 
