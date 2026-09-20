@@ -62,6 +62,7 @@ export default function ModHubPage() {
   const [searchTimeout, setSearchTimeout] = useState(null);
   const [sortOrder, setSortOrder] = useState('latest');
   const [showFilters, setShowFilters] = useState(false);
+  const [showUnits, setShowUnits] = useState(false);
 
   useEffect(() => {
     // Initial fetch of the active mods page 
@@ -145,6 +146,7 @@ export default function ModHubPage() {
     let maxPrice = 0;
     let maxHp = 0;
     let maxCap = 0;
+    let maxUnit = 0;
 
     const allModsPool = [...sourceMods, ...Object.values(modCache || {})];
 
@@ -153,13 +155,15 @@ export default function ModHubPage() {
         if (m.techData.price > maxPrice) maxPrice = m.techData.price;
         if (m.techData.hp > maxHp) maxHp = m.techData.hp;
         if (m.techData.capacity > maxCap) maxCap = m.techData.capacity;
+        if (m.techData.unitCapacity > maxUnit) maxUnit = m.techData.unitCapacity;
       }
     });
 
     return {
       price: Math.min(maxPrice > 0 ? maxPrice : 500000, 500000), // Cap slider at 500k to prevent 30M cheat mods ruining scale
       hp: Math.min(maxHp > 0 ? maxHp : 1000, 1000),             // Cap slider at 1000 HP
-      cap: Math.min(maxCap > 0 ? maxCap : 500000, 500000)        // Cap slider at 500k L to prevent 45M cheat mods ruining scale
+      cap: Math.min(maxCap > 0 ? maxCap : 500000, 500000),       // Cap slider at 500k L to prevent 45M cheat mods ruining scale
+      unit: maxUnit > 0 ? maxUnit : 1000                          // Max unit capacity (cows, bales, logs, etc.)
     };
   }, [sourceMods, modCache]);
 
@@ -214,6 +218,12 @@ export default function ModHubPage() {
         const cMin = mod.techData?.capacityMin || mod.techData?.capacity || 0;
         const cMax = mod.techData?.capacityMax || mod.techData?.capacity || 0;
         if (cMin > activeFilters.capRange[1] || cMax < activeFilters.capRange[0]) return false;
+      }
+
+      // Unit Capacity Range Check (cows, bales, logs, etc.)
+      if (activeFilters.unitRange[0] > 0 || activeFilters.unitRange[1] < globalMax.unit) {
+        const uVal = mod.techData?.unitCapacity || 0;
+        if (uVal < activeFilters.unitRange[0] || uVal > activeFilters.unitRange[1]) return false;
       }
 
       // Smart Power Matching (Bi-directional Cross-Type only)
@@ -572,7 +582,7 @@ export default function ModHubPage() {
               style={{ display: 'flex', alignItems: 'center', gap: 6 }}
             >
               <SlidersHorizontal size={14} /> Filters
-              {(activeFilters.brands.length > 0 || activeFilters.priceRange[0] > 0 || activeFilters.hpRange[0] > 0 || activeFilters.capRange[0] > 0) && (
+              {(activeFilters.brands.length > 0 || activeFilters.priceRange[0] > 0 || activeFilters.hpRange[0] > 0 || activeFilters.capRange[0] > 0 || activeFilters.unitRange[0] > 0 || activeFilters.unitRange[1] < globalMax.unit) && (
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
               )}
             </button>
@@ -819,6 +829,17 @@ export default function ModHubPage() {
                 </div>
               </div>
             )}
+            {(activeFilters.unitRange[0] > 0 || activeFilters.unitRange[1] < globalMax.unit) && (
+              <div className="filter-chip">
+                <Package size={12} />
+                <span className="filter-chip__label">Units:</span>
+                {activeFilters.unitRange[0] > 0 ? `${activeFilters.unitRange[0]}+` : ''}
+                {activeFilters.unitRange[1] < globalMax.unit ? ` <${activeFilters.unitRange[1]}` : ''}
+                <div className="filter-chip__close" onClick={() => setFilters({ unitRange: [0, Infinity] })}>
+                  <X size={10} />
+                </div>
+              </div>
+            )}
             {activeFilters.platforms?.map(p => (
               <div className="filter-chip" key={p}>
                 <Milestone size={12} />
@@ -962,37 +983,83 @@ export default function ModHubPage() {
                   </div>
 
                   <div className="form-group range-group">
-                    <label className="range-label">
-                      <span>Capacity Range (L)</span>
-                      <div className="range-values">
-                        <input type="number" value={activeFilters.capRange[0]} onChange={(e) => setFilters({ capRange: [parseInt(e.target.value) || 0, activeFilters.capRange[1]] })} />
-                        <span>-</span>
-                        <input type="number" value={activeFilters.capRange[1] >= globalMax.cap ? globalMax.cap : activeFilters.capRange[1]} onChange={(e) => {
-                          const val = parseInt(e.target.value) || globalMax.cap;
-                          setFilters({ capRange: [activeFilters.capRange[0], val >= globalMax.cap ? Infinity : val] });
-                        }} />
-                      </div>
+                    <label className="range-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>{showUnits ? 'Unit Capacity (items)' : 'Capacity Range (L)'}</span>
+                      <button
+                        className={`btn btn--sm ${showUnits ? 'btn--primary' : 'btn--secondary'}`}
+                        style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12 }}
+                        onClick={() => {
+                          setShowUnits(v => !v);
+                          setFilters({ capRange: [0, Infinity], unitRange: [0, Infinity] });
+                        }}
+                        title="Toggle between litre and unit capacity filter"
+                      >
+                        {showUnits ? '📦 Units' : '💧 Litres'}
+                      </button>
                     </label>
-                    <div style={{ position: 'relative', width: 'calc(100% - 14px)', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', margin: '12px 7px 8px 7px' }}>
-                      <CustomSlider 
-                        min="0" max={globalMax.cap} useLog={true}
-                        value={activeFilters.capRange[0]} 
-                        onChange={(e) => {
-                          const val = Math.round(parseFloat(e.target.value) || 0);
-                          setFilters({ capRange: [val, Math.max(val, activeFilters.capRange[1])] });
-                        }}
-                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
-                      />
-                      <CustomSlider 
-                        min="0" max={globalMax.cap} useLog={true}
-                        value={Math.min(activeFilters.capRange[1], globalMax.cap)} 
-                        onChange={(e) => {
-                          const val = Math.round(parseFloat(e.target.value) || 0);
-                          setFilters({ capRange: [Math.min(val, activeFilters.capRange[0]), val >= globalMax.cap ? Infinity : val] });
-                        }}
-                        style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
-                      />
-                    </div>
+                    {!showUnits ? (
+                      <>
+                        <div className="range-values" style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+                          <input type="number" value={activeFilters.capRange[0]} onChange={(e) => setFilters({ capRange: [parseInt(e.target.value) || 0, activeFilters.capRange[1]] })} />
+                          <span>-</span>
+                          <input type="number" value={activeFilters.capRange[1] >= globalMax.cap ? globalMax.cap : activeFilters.capRange[1]} onChange={(e) => {
+                            const val = parseInt(e.target.value) || globalMax.cap;
+                            setFilters({ capRange: [activeFilters.capRange[0], val >= globalMax.cap ? Infinity : val] });
+                          }} />
+                        </div>
+                        <div style={{ position: 'relative', width: 'calc(100% - 14px)', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', margin: '12px 7px 8px 7px' }}>
+                          <CustomSlider
+                            min="0" max={globalMax.cap} useLog={true}
+                            value={activeFilters.capRange[0]}
+                            onChange={(e) => {
+                              const val = Math.round(parseFloat(e.target.value) || 0);
+                              setFilters({ capRange: [val, Math.max(val, activeFilters.capRange[1])] });
+                            }}
+                            style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
+                          />
+                          <CustomSlider
+                            min="0" max={globalMax.cap} useLog={true}
+                            value={Math.min(activeFilters.capRange[1], globalMax.cap)}
+                            onChange={(e) => {
+                              const val = Math.round(parseFloat(e.target.value) || 0);
+                              setFilters({ capRange: [Math.min(val, activeFilters.capRange[0]), val >= globalMax.cap ? Infinity : val] });
+                            }}
+                            style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="range-values" style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+                          <input type="number" value={activeFilters.unitRange[0]} onChange={(e) => setFilters({ unitRange: [parseInt(e.target.value) || 0, activeFilters.unitRange[1]] })} />
+                          <span>-</span>
+                          <input type="number" value={activeFilters.unitRange[1] >= globalMax.unit ? globalMax.unit : activeFilters.unitRange[1]} onChange={(e) => {
+                            const val = parseInt(e.target.value) || globalMax.unit;
+                            setFilters({ unitRange: [activeFilters.unitRange[0], val >= globalMax.unit ? Infinity : val] });
+                          }} />
+                        </div>
+                        <div style={{ position: 'relative', width: 'calc(100% - 14px)', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 7, display: 'flex', alignItems: 'center', margin: '12px 7px 8px 7px' }}>
+                          <CustomSlider
+                            min="0" max={globalMax.unit}
+                            value={activeFilters.unitRange[0]}
+                            onChange={(e) => {
+                              const val = Math.round(parseFloat(e.target.value) || 0);
+                              setFilters({ unitRange: [val, Math.max(val, activeFilters.unitRange[1])] });
+                            }}
+                            style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
+                          />
+                          <CustomSlider
+                            min="0" max={globalMax.unit}
+                            value={Math.min(activeFilters.unitRange[1], globalMax.unit)}
+                            onChange={(e) => {
+                              const val = Math.round(parseFloat(e.target.value) || 0);
+                              setFilters({ unitRange: [Math.min(val, activeFilters.unitRange[0]), val >= globalMax.unit ? Infinity : val] });
+                            }}
+                            style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'calc(100% + 14px)', margin: 0, cursor: 'pointer', background: 'transparent' }}
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="filter-panel__section" style={{ borderTop: '1px solid var(--border-light)', paddingTop: 'var(--sp-4)', marginTop: 'var(--sp-4)' }}>

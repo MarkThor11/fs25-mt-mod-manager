@@ -654,11 +654,21 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
     if (!bustCache) {
       const cached = cache.get(cacheKey);
       if (cached && cached.downloadUrl) {
-        if (!cached.fileName) {
-          cached.fileName = cached.downloadUrl.split('/').pop().split('?')[0];
-          cache.set(cacheKey, cached, 7 * 24 * 60 * 60 * 1000);
+        // Re-scrape if capacity is missing — the scraper may have been improved since last cache
+        const needsCapacityRescrape = cached.techData &&
+          cached.techData.scraped &&
+          cached.techData.capacity === 0 &&
+          (!cached.techData.unitCapacity || cached.techData.unitCapacity === 0);
+
+        if (!needsCapacityRescrape) {
+          if (!cached.fileName) {
+            cached.fileName = cached.downloadUrl.split('/').pop().split('?')[0];
+            cache.set(cacheKey, cached, 7 * 24 * 60 * 60 * 1000);
+          }
+          return cached;
         }
-        return cached;
+        // Fall through to re-scrape below
+        console.log(`[IPC] Re-scraping mod ${modId} — cached capacity was 0`);
       }
     }
 

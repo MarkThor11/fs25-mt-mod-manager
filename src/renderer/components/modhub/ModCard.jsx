@@ -1105,8 +1105,9 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           const showEstimated = isSmartMatchEnabled || isTechFilterActive;
           const hasHP = mod.techData?.hp > 0 && !hideHP && !hidePower && (!mod.techData.hpIsRecommendation || showEstimated);
           const showCap = mod.techData?.capacity > 0 && !hideCapacity && !hidePower; // Capacity usually goes with power/tech
+          const showUnitCap = mod.techData?.unitCapacity > 0 && !hideCapacity;
 
-          if (!showPrice && !hasHP && !showCap) return null;
+          if (!showPrice && !hasHP && !showCap && !showUnitCap) return null;
 
           return (
             <div className="mod-card__tech-info" style={{ marginBottom: 12 }}>
@@ -1140,6 +1141,12 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
                   {mod.techData.capacityMin && mod.techData.capacityMax && mod.techData.capacityMin !== mod.techData.capacityMax
                     ? `${mod.techData.capacityMin.toLocaleString()} - ${mod.techData.capacityMax.toLocaleString()}`
                     : mod.techData.capacity.toLocaleString()} L
+                </div>
+              )}
+              {showUnitCap && (
+                <div className="mod-card__tech-item" title={`Unit Capacity: ${mod.techData.unitCapacity} ${mod.techData.unitCapacityType || 'units'}`}>
+                  <Package size={14} />
+                  {mod.techData.unitCapacity} {mod.techData.unitCapacityType || 'units'}
                 </div>
               )}
             </div>

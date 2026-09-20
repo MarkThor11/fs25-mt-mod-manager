@@ -720,6 +720,8 @@ async function fetchModDetail(modId) {
     hp: 0,
     hpIsRequirement: false,
     capacity: 0,
+    unitCapacity: 0,
+    unitCapacityType: '',
     speed: 0,
     weight: 0,
     scraped: true
@@ -844,10 +846,21 @@ async function fetchModDetail(modId) {
     }
 
     if (techData.capacity === 0) {
-      const lines = descText.replace(/<br[^>]*>/gi, '\n').split('\n');
-      for (const line of lines) {
-        if (/(capacity|kapazität|capacité|volume|inhalte)/i.test(line) && /(liters?|litres?|l\b|m³|m3|cubic)/i.test(line)) {
-          let isCubic = /(m³|m3|cubic)/i.test(line);
+      // Split raw HTML on visual line breaks BEFORE stripping tags, so each line is searchable
+      const rawLines = description
+        .replace(/<br[^>]*>/gi, '\n')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<\/li>/gi, '\n')
+        .replace(/<\/div>/gi, '\n')
+        .replace(/<[^>]*>/g, '')   // strip remaining tags
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean);
+
+      for (const line of rawLines) {
+        if (/(capacity|kapazität|capacité|volume|inhalte|fassungsvermögen|inhalt|tank|load)/i.test(line) &&
+            /(liters?|litres?|\bl\b|m³|m3|cubic|kl\b)/i.test(line)) {
+          const isCubic = /(m³|m3|cubic)/i.test(line);
           const nums = (line.match(/\d[\d,.]*\d|\d+/g) || []).map(n => parseInt(n.replace(/[,.]/g, ''), 10));
           const valid = nums.filter(n => isCubic ? n > 0 : n >= 100);
           if (valid.length > 0) {
@@ -863,18 +876,79 @@ async function fetchModDetail(modId) {
           }
         }
       }
-      // If still no capacity found, try unit-based capacity (e.g., cows, bales, logs)
-      if (!techData.unitCapacity) {
-        for (const line of lines) {
-          const unitMatch = line.match(/(\d[\d,.]*?)\s*(cows?|pigs?|bales?|logs?|pieces?|tonnes?)\b/i);
-          if (unitMatch) {
-            const count = parseFloat(unitMatch[1].replace(/,/g, ''));
-            const type = unitMatch[2].toLowerCase();
-            techData.unitCapacity = count;
-            techData.unitCapacityType = type;
-            break;
+
+      // Second fallback: scan full stripped text for any number directly followed by L/litre/m³
+      if (techData.capacity === 0) {
+        const fullText = description.replace(/<[^>]*>/g, ' ');
+        // Match patterns like "48,000 L", "18500 liters", "48 to 57 cubic meters"
+        const litreMatch = fullText.match(/capacity[:\s-]*(from\s+)?(\d[\d,. ]*\d|\d+)\s*(to\s+(\d[\d,. ]*\d|\d+)\s*)?(liters?|litres?|l\b|m³|m3|cubic)/i);
+        if (litreMatch) {
+          const rawMin = litreMatch[2].replace(/[,. ]/g, '');
+          const rawMax = litreMatch[4] ? litreMatch[4].replace(/[,. ]/g, '') : rawMin;
+          const isCubic = /(m³|m3|cubic)/i.test(litreMatch[5] || '');
+          let vMin = parseInt(rawMin, 10) || 0;
+          let vMax = parseInt(rawMax, 10) || vMin;
+          if (isCubic) { vMin *= 1000; vMax *= 1000; }
+          if (vMax >= 100 && vMax < 50000000) {
+            techData.capacityMin = vMin;
+            techData.capacityMax = vMax;
+            techData.capacity = vMax;
           }
         }
+      }
+    }
+
+    // Unit-based capacity — always attempt, runs independently of litre capacity
+    // Covers: animals, bales, logs, big bags, pallets, round bales, square bales etc.
+    if (!techData.unitCapacity) {
+      const UNIT_TYPES = [
+        'cows?', 'cattle', 'calves?', 'pigs?', 'piglets?', 'sheep', 'lambs?', 'horses?', 'chickens?',
+        'goats?', 'rabbits?', 'animals?', 'kühe?', 'tiere?', 'schweine?',
+        'bales?', 'round\\s*bales?', 'square\\s*bales?', 'rundballen', 'quader(?:ballen)?', 'ballen',
+        'logs?', 'trunks?', 'stämme?',
+        'bigbags?', 'big\\s*bags?', 'ibc',
+        'pallets?', 'paletten?',
+        'pieces?', 'units?', 'items?',
+        'sacks?', 'bags?', 'säcke?',
+        'packs?', 'pakete?',
+        'skids?',
+        'tonnes?'
+      ];
+      const unitRegex = new RegExp(
+        `(\\d[\\d,. ]*\\d|\\d+)\\s*(?:x\\s*)?(${UNIT_TYPES.join('|')})(?:[\\s,./]|$)`,
+        'i'
+      );
+      // Search the raw HTML description (split on visual breaks) and metadata values
+      const rawSearchLines = (description + '\n' + Object.values(metadata).join('\n'))
+        .replace(/<br[^>]*>/gi, '\n')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<\/li>/gi, '\n')
+        .replace(/<\/div>/gi, '\n')
+        .replace(/<[^>]*>/g, '')
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean);
+      // Prefer lines that also contain a capacity/capacity-related keyword
+      const capacityKeywordRe = /(capacity|kapazität|capacité|load|payload|volume|bale|tier|animal|aufnahme|fassungsverm)/i;
+      let bestMatch = null;
+      let bestCount = 0;
+      for (const line of rawSearchLines) {
+        const m = line.match(unitRegex);
+        if (m) {
+          const count = parseFloat(m[1].replace(/[, ]/g, ''));
+          if (count > 0 && count < 100000) {
+            // Prefer matches from lines that have context keywords, and prefer higher counts (more specific)
+            const hasContext = capacityKeywordRe.test(line);
+            if (!bestMatch || (hasContext && !bestMatch.hasContext) || count > bestCount) {
+              bestMatch = { count, type: m[2].toLowerCase().replace(/\s+/g, ' ').trim(), hasContext };
+              bestCount = count;
+            }
+          }
+        }
+      }
+      if (bestMatch) {
+        techData.unitCapacity = bestMatch.count;
+        techData.unitCapacityType = bestMatch.type;
       }
     }
   }
