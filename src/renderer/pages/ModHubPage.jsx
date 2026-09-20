@@ -193,27 +193,32 @@ export default function ModHubPage() {
       const sameType = isSmartMatching && (!!mod.techData.hpIsRequirement === !!powerReference.techData?.hpIsRequirement);
 
       // Technical data filters
-      const price = mod.techData?.price || 0;
+      const hasTechData = !!mod.techData;
+      
       // Price Range Check
       if (activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < globalMax.price) {
-        if (price < activeFilters.priceRange[0] || price > activeFilters.priceRange[1]) {
-          return false;
+        const price = mod.techData?.price || 0;
+        if (price > 0) {
+          if (price < activeFilters.priceRange[0] || price > activeFilters.priceRange[1]) return false;
+        } else if (hasTechData && activeFilters.priceRange[0] > 0) {
+          // If detailed specs were scraped and price is truly 0 or not set, but min filter is > 0
+          if (price < activeFilters.priceRange[0]) return false;
         }
       }
       
-      const hp = mod.techData?.hp || 0;
       // HP Range Check
       if (!sameType && (activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < globalMax.hp)) {
-        if (hp < activeFilters.hpRange[0] || hp > activeFilters.hpRange[1]) {
-          return false;
+        const hp = mod.techData?.hp || 0;
+        if (hp > 0) {
+          if (hp < activeFilters.hpRange[0] || hp > activeFilters.hpRange[1]) return false;
         }
       }
       
-      const cap = mod.techData?.capacity || 0;
       // Capacity Range Check
       if (activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap) {
-        if (cap < activeFilters.capRange[0] || cap > activeFilters.capRange[1]) {
-          return false;
+        const cap = mod.techData?.capacity || 0;
+        if (cap > 0) {
+          if (cap < activeFilters.capRange[0] || cap > activeFilters.capRange[1]) return false;
         }
       }
 
