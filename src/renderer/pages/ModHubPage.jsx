@@ -192,25 +192,19 @@ export default function ModHubPage() {
       const isSmartMatching = isSmartMatchEnabled && powerReference && mod.techData;
       const sameType = isSmartMatching && (!!mod.techData.hpIsRequirement === !!powerReference.techData?.hpIsRequirement);
 
-      // Technical data filters
+      // Technical data filters: Only filter items if they possess the spec (spec > 0)
       if (mod.techData) {
-        if (mod.techData.price > 0) {
-          if (activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < globalMax.price) {
-            if (mod.techData.price < activeFilters.priceRange[0] || mod.techData.price > activeFilters.priceRange[1]) return false;
-          }
+        if (mod.techData.price > 0 && (activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < globalMax.price)) {
+          if (mod.techData.price < activeFilters.priceRange[0] || mod.techData.price > activeFilters.priceRange[1]) return false;
         }
         
         // Manual HP filter only if NOT same-type smart matching
-        if (!sameType && mod.techData.hp > 0) {
-          if (activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < globalMax.hp) {
-            if (mod.techData.hp < activeFilters.hpRange[0] || mod.techData.hp > activeFilters.hpRange[1]) return false;
-          }
+        if (!sameType && mod.techData.hp > 0 && (activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < globalMax.hp)) {
+          if (mod.techData.hp < activeFilters.hpRange[0] || mod.techData.hp > activeFilters.hpRange[1]) return false;
         }
         
-        if (mod.techData.capacity > 0) {
-          if (activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap) {
-            if (mod.techData.capacity < activeFilters.capRange[0] || mod.techData.capacity > activeFilters.capRange[1]) return false;
-          }
+        if (mod.techData.capacity > 0 && (activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap)) {
+          if (mod.techData.capacity < activeFilters.capRange[0] || mod.techData.capacity > activeFilters.capRange[1]) return false;
         }
       }
 
