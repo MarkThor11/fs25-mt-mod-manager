@@ -194,11 +194,13 @@ export const useModHubStore = create((set, get) => ({
     const { mods, isDeepScanning } = get();
     if (isDeepScanning || mods.length === 0) return;
     
-    // Check if we already have tech data AND dependencies for all
-    // Also re-scan mods that were scraped but have no capacity (scraper may have improved)
-    const needsRescrape = (m) => m.techData?.scraped &&
-      (m.techData?.capacity ?? 0) === 0 &&
-      (m.techData?.unitCapacity ?? 0) === 0;
+    // Re-scan mods scraped but with missing or suspiciously small capacity (scraper improvements)
+    const needsRescrape = (m) => {
+      if (!m.techData?.scraped) return false;
+      const cap = m.techData?.capacity ?? 0;
+      const unitCap = m.techData?.unitCapacity ?? 0;
+      return (cap === 0 && unitCap === 0) || (cap > 0 && cap < 1000 && unitCap === 0);
+    };
     const needsScan = mods.some(m => !m.techData || !m.techData.scraped || !m.dependencies || needsRescrape(m));
     if (!needsScan) return;
 
@@ -226,7 +228,7 @@ export const useModHubStore = create((set, get) => ({
         const detail = batchResults[mod.modId];
         if (detail && detail.techData?.scraped) {
           updatedMods[idx] = get().enrichModWithDetail(mod, detail);
-        } else if (!mod.techData || !mod.techData.scraped || !mod.dependencies) {
+        } else if (!mod.techData || !mod.techData.scraped || !mod.dependencies || needsRescrape(mod)) {
           stillMissingIds.push(mod.modId);
         }
       });
@@ -234,10 +236,13 @@ export const useModHubStore = create((set, get) => ({
       // Update UI with what we found in cache immediately
       set({ mods: [...updatedMods] });
 
+      // Deduplicate — a mod may appear in both "missing" and "needsRescrape" paths
+      const uniqueMissingIds = [...new Set(stillMissingIds)];
+
       // 2. For anything still missing, fetch individually (will be throttled by scraper)
-      if (stillMissingIds.length > 0) {
-        for (let i = 0; i < stillMissingIds.length; i += 5) {
-          const chunk = stillMissingIds.slice(i, i + 5);
+      if (uniqueMissingIds.length > 0) {
+        for (let i = 0; i < uniqueMissingIds.length; i += 5) {
+          const chunk = uniqueMissingIds.slice(i, i + 5);
           await Promise.all(chunk.map(async (modId) => {
              try {
                const detail = await window.api.modhub.fetchModDetail({ modId, bustCache: false });
@@ -920,11 +925,14 @@ export const useModHubStore = create((set, get) => ({
 
       const enrichedMods = uniqueAllMods.map(mod => {
           const cachedMod = modCache[String(mod.modId)];
-          // Don't apply stale capacity-0 techData — let deep scan re-fetch it
-          const cachedHasNoCapacity = cachedMod?.techData?.scraped &&
-            (cachedMod.techData?.capacity ?? 0) === 0 &&
-            (cachedMod.techData?.unitCapacity ?? 0) === 0;
-          const effectiveCached = (cachedMod && !cachedHasNoCapacity) ? cachedMod : cachedMod ? { ...cachedMod, techData: undefined } : null;
+          // Don't apply stale or mis-parsed techData — let deep scan re-fetch
+          const cachedCap = cachedMod?.techData?.capacity ?? 0;
+          const cachedUnit = cachedMod?.techData?.unitCapacity ?? 0;
+          const cachedIsStale = cachedMod?.techData?.scraped && (
+            (cachedCap === 0 && cachedUnit === 0) ||
+            (cachedCap > 0 && cachedCap < 1000 && cachedUnit === 0)
+          );
+          const effectiveCached = (cachedMod && !cachedIsStale) ? cachedMod : cachedMod ? { ...cachedMod, techData: undefined } : null;
           let enriched = effectiveCached ? { ...mod, ...effectiveCached } : { ...mod };
 
           // Badge First-Seen Tracking

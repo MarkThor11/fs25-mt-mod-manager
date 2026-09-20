@@ -654,11 +654,14 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
     if (!bustCache) {
       const cached = cache.get(cacheKey);
       if (cached && cached.downloadUrl) {
-        // Re-scrape if capacity is missing — the scraper may have been improved since last cache
-        const needsCapacityRescrape = cached.techData &&
-          cached.techData.scraped &&
-          cached.techData.capacity === 0 &&
-          (!cached.techData.unitCapacity || cached.techData.unitCapacity === 0);
+        // Re-scrape if capacity is missing OR suspiciously small (likely a mis-parse from before scraper was fixed)
+        // Trailers/wagons won't have < 1000 L as a legitimate capacity — values like 26, 9, 600 are model-code bleeds
+        const cap = cached.techData?.capacity ?? 0;
+        const unitCap = cached.techData?.unitCapacity ?? 0;
+        const needsCapacityRescrape = cached.techData?.scraped && (
+          (cap === 0 && unitCap === 0) ||
+          (cap > 0 && cap < 1000 && unitCap === 0)  // tiny litre value with no unit cap = mis-parse
+        );
 
         if (!needsCapacityRescrape) {
           if (!cached.fileName) {
@@ -743,11 +746,14 @@ ipcMain.handle('modhub:getBatchDetails', async (_, modIds) => {
   modIds.forEach(id => {
     const cached = cache.get(`modDetail_${id}`);
     if (cached) {
-      // Don't serve stale entries with no capacity — they need a re-scrape
-      const hasNoCapacity = cached.techData?.scraped &&
-        (cached.techData?.capacity ?? 0) === 0 &&
-        (cached.techData?.unitCapacity ?? 0) === 0;
-      if (!hasNoCapacity) {
+      // Don't serve stale or mis-parsed entries — they need a re-scrape
+      const cap = cached.techData?.capacity ?? 0;
+      const unitCap = cached.techData?.unitCapacity ?? 0;
+      const needsRescrape = cached.techData?.scraped && (
+        (cap === 0 && unitCap === 0) ||
+        (cap > 0 && cap < 1000 && unitCap === 0)
+      );
+      if (!needsRescrape) {
         results[id] = cached;
       }
     }
