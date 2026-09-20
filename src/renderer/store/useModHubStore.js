@@ -70,6 +70,7 @@ export const useModHubStore = create((set, get) => ({
     priceRange: [0, Infinity],
     hpRange: [0, Infinity],
     capRange: [0, Infinity],
+    unitRange: [0, Infinity],
     platforms: [],
     hideRequired: false,
     hideInstalled: false,

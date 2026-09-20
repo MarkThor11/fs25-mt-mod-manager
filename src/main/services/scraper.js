@@ -847,20 +847,33 @@ async function fetchModDetail(modId) {
       const lines = descText.replace(/<br[^>]*>/gi, '\n').split('\n');
       for (const line of lines) {
         if (/(capacity|kapazität|capacité|volume|inhalte)/i.test(line) && /(liters?|litres?|l\b|m³|m3|cubic)/i.test(line)) {
-            let isCubic = /(m³|m3|cubic)/i.test(line);
-            const nums = (line.match(/\d[\d,.]*\d|\d+/g) || []).map(n => parseInt(n.replace(/[,.]/g, ''), 10));
-            const valid = nums.filter(n => isCubic ? n > 0 : n >= 100);
-            if (valid.length > 0) {
-                let min = Math.min(...valid);
-                let max = Math.max(...valid);
-                if (isCubic && max < 1000) { min *= 1000; max *= 1000; }
-                if (max < 50000000) {
-                    techData.capacityMin = min;
-                    techData.capacityMax = max;
-                    techData.capacity = max;
-                }
-                break;
+          let isCubic = /(m³|m3|cubic)/i.test(line);
+          const nums = (line.match(/\d[\d,.]*\d|\d+/g) || []).map(n => parseInt(n.replace(/[,.]/g, ''), 10));
+          const valid = nums.filter(n => isCubic ? n > 0 : n >= 100);
+          if (valid.length > 0) {
+            let min = Math.min(...valid);
+            let max = Math.max(...valid);
+            if (isCubic && max < 1000) { min *= 1000; max *= 1000; }
+            if (max < 50000000) {
+              techData.capacityMin = min;
+              techData.capacityMax = max;
+              techData.capacity = max;
             }
+            break;
+          }
+        }
+      }
+      // If still no capacity found, try unit-based capacity (e.g., cows, bales, logs)
+      if (!techData.unitCapacity) {
+        for (const line of lines) {
+          const unitMatch = line.match(/(\d[\d,.]*?)\s*(cows?|pigs?|bales?|logs?|pieces?|tonnes?)\b/i);
+          if (unitMatch) {
+            const count = parseFloat(unitMatch[1].replace(/,/g, ''));
+            const type = unitMatch[2].toLowerCase();
+            techData.unitCapacity = count;
+            techData.unitCapacityType = type;
+            break;
+          }
         }
       }
     }
