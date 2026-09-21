@@ -1568,6 +1568,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
                     if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
                     if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
+                    if (farmlandsFile) await extractExactZipFile(farmlandsFile, 'farmland.xml');
 
                     // If starting farm is disabled, strip farm 1 vehicles
                     if (!includeStartFarm) {
@@ -1645,6 +1646,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                         if (!fs.existsSync(path.join(slotPath, 'placeables.xml')) && lowerBase === 'placeables.xml') {
                             await fs.writeFile(path.join(slotPath, 'placeables.xml'), entry.getData());
+                        }
+                        if (!fs.existsSync(path.join(slotPath, 'farmland.xml')) && (lowerBase === 'farmland.xml' || lowerBase === 'farmlands.xml')) {
+                            await fs.writeFile(path.join(slotPath, 'farmland.xml'), entry.getData());
                         }
                         if (!fs.existsSync(path.join(slotPath, 'items.xml')) && lowerBase === 'items.xml') {
                             await fs.writeFile(path.join(slotPath, 'items.xml'), entry.getData());
