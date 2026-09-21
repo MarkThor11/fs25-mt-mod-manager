@@ -2922,7 +2922,7 @@ export default function SavegamesPage() {
   const [createMode, setCreateMode] = useState('NEW_FARMER');
   const [includeStartFarm, setIncludeStartFarm] = useState(true);
   const [includeStartVehicles, setIncludeStartVehicles] = useState(true);
-  const [mapHasTemplate, setMapHasTemplate] = useState(true);
+  const [mapHasTemplate, setMapHasTemplate] = useState(false);
   const [selectedSaves, setSelectedSaves] = useState(new Set());
   const [includeMustHaves, setIncludeMustHaves] = useState(true);
   const [localMissingDeps, setLocalMissingDeps] = useState([]);
@@ -2997,6 +2997,7 @@ export default function SavegamesPage() {
     setMissingDeps(null); // Reset missing deps
     setModalSelectedMods(new Set()); // Reset selected mods to prevent accumulation from previous map selections
     setLocalMissingDeps([]); // Clear previous missing deps
+    setMapHasTemplate(false); // Clear automation badge immediately while checking template
     if (mapId && window.api?.maps) {
       window.api.maps.checkTemplate(mapId, title, modName).then(exists => {
           setMapHasTemplate(exists);

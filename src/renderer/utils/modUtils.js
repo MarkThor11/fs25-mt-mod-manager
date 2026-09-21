@@ -108,13 +108,23 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
   if (depId && m.modId) {
     const safeModId = String(m.modId).replace(/^0+/, '');
     if (safeModId === depId) return true;
+    // Contradicting ModHub ID means it is definitely not the same mod!
+    return false;
   }
 
   // 2. Identity 2: ZIP Filename / Technical Mod Name Match (exact)
   if (depFileName) {
     const normDepFile = normalizeForMatching(depFileName);
-    if (m.fileName && normalizeForMatching(m.fileName) === normDepFile) return true;
-    if (m.modName && normalizeForMatching(m.modName) === normDepFile) return true;
+    const mFileNorm = m.fileName ? normalizeForMatching(m.fileName) : null;
+    const mNameNorm = m.modName ? normalizeForMatching(m.modName) : null;
+
+    if (mFileNorm === normDepFile || mNameNorm === normDepFile) return true;
+
+    // If depFileName is explicit (e.g. starts with fs25_ or contains _) and candidate mod has a contradicting modName/fileName, reject!
+    if ((normDepFile.startsWith('fs25_') || normDepFile.includes('_')) && (mFileNorm || mNameNorm)) {
+      if (mFileNorm && mFileNorm !== normDepFile && mFileNorm.startsWith('fs25_')) return false;
+      if (mNameNorm && mNameNorm !== normDepFile && mNameNorm.startsWith('fs25_')) return false;
+    }
   }
 
   if (strict) return false;
@@ -122,9 +132,19 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
   // 3. Identity 3: Internal modDesc.xml Mod Title Match (exact full string)
   if (depTitle) {
     const cleanDepTitle = cleanModName(depTitle).toLowerCase();
-    if (m.title && cleanModName(m.title).toLowerCase() === cleanDepTitle) return true;
-    if (m.modName && m.modName.toLowerCase() === cleanDepTitle) return true;
-    if (m.fileName && normalizeForMatching(m.fileName) === normalizeForMatching(cleanDepTitle)) return true;
+    const cleanMTitle = m.title ? cleanModName(m.title).toLowerCase() : null;
+    const cleanMModName = m.modName ? m.modName.toLowerCase() : null;
+    const cleanMFileName = m.fileName ? normalizeForMatching(m.fileName) : null;
+
+    if (cleanMTitle === cleanDepTitle || cleanMModName === cleanDepTitle || cleanMFileName === cleanDepTitle) {
+      // Safety check: if candidate mod has a technical modName/fileName that contradicts depFileName, do not false-match!
+      if (depFileName && (cleanMModName || cleanMFileName)) {
+        const normDepFile = normalizeForMatching(depFileName);
+        if (cleanMModName && cleanMModName !== normDepFile && normDepFile.startsWith('fs25_')) return false;
+        if (cleanMFileName && cleanMFileName !== normDepFile && normDepFile.startsWith('fs25_')) return false;
+      }
+      return true;
+    }
   }
 
   return false;
