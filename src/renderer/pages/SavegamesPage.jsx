@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Save, Play, RefreshCw, Edit3, MapPin,
   Clock, DollarSign, Package, Check, X,
-  Plus, ChevronDown, ChevronRight, Gamepad2, Trash2, TrendingUp, Shield,
+  Plus, ChevronDown, ChevronRight, Gamepad2, Trash2, TrendingUp, Shield, Download, AlertTriangle,
   Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft, Anchor, Truck, Tractor, Car, Wheat, Share2, Lock, Unlock, Crown, Server, User
 } from 'lucide-react';
 import { useSavegameStore } from '../store/useSavegameStore';
@@ -3400,6 +3400,11 @@ export default function SavegamesPage() {
 
   const handleCreate = async () => {
     if (!createName.trim()) return;
+    if (localMissingDeps && localMissingDeps.length > 0) {
+      setMissingDeps(localMissingDeps);
+      useToastStore.getState().warning("Please download the required dependencies for this map first.");
+      return;
+    }
     setCreating(true);
     try {
       let targetSlotValue = createSlot;
@@ -4119,8 +4124,17 @@ export default function SavegamesPage() {
                                     
                                     {localMissingDeps.length > 0 && (
                                         <div style={{ marginTop: 12, padding: '12px 16px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: 8, color: '#f87171', fontSize: 13 }} className="animate-fade-in">
-                                            <div style={{ fontWeight: 800, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                <AlertTriangle size={14} style={{ color: '#ef4444' }} /> MISSING DEPENDENCIES ({localMissingDeps.length})
+                                            <div style={{ fontWeight: 800, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <AlertTriangle size={14} style={{ color: '#ef4444' }} /> MISSING DEPENDENCIES ({localMissingDeps.length})
+                                                </div>
+                                                <button 
+                                                    className="btn btn--xs btn--primary"
+                                                    style={{ background: '#ef4444', color: '#fff', border: 'none', fontWeight: 700, padding: '4px 10px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                                                    onClick={() => setMissingDeps(localMissingDeps)}
+                                                >
+                                                    <Download size={12} /> Download Required Mods
+                                                </button>
                                             </div>
                                             <div style={{ opacity: 0.9, fontSize: 12, lineHeight: 1.5 }}>
                                                 This map requires the following mods which are not installed:
@@ -4644,15 +4658,16 @@ export default function SavegamesPage() {
       )}
 
       {missingDeps && (
-          <DependencyDownloadModal 
-            missingMods={missingDeps}
-            onCancel={() => setMissingDeps(null)}
-            onComplete={async () => {
-              await useLocalModsStore.getState().scanMods(); // Refresh the list
-              setMissingDeps(null);
-            }}
-          />
-      )}
+           <DependencyDownloadModal 
+             missingMods={missingDeps}
+             subFolder="Map Dependencies"
+             onCancel={() => setMissingDeps(null)}
+             onComplete={async () => {
+               await useLocalModsStore.getState().scanMods(null, true);
+               setMissingDeps(null);
+             }}
+           />
+       )}
     </div>
   );
 }
