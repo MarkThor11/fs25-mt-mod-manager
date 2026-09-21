@@ -1061,40 +1061,29 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         if (matchedMapMod?.version) mapModObj.version = matchedMapMod.version;
     }
 
-    // Auto-include sibling mods from dedicated map subfolder (e.g. required placeables/buildings)
-    if (matchedMapMod && matchedMapMod.filePath) {
-        try {
-            const mapDir = path.dirname(matchedMapMod.filePath);
-            const configuredRoots = modManager.getModsPaths().map(p => path.resolve(p).toLowerCase());
-            const mapDirResolved = path.resolve(mapDir).toLowerCase();
-            const parentOfMapDir = path.resolve(path.dirname(mapDir)).toLowerCase();
+    // Auto-include all mods from "Map Dependencies" folder and dedicated map subfolders
+    try {
+        const mapDepMods = allMods.filter(m => {
+            if (!m || m.isMap) return false;
+            const fLow = (m.folder || '').toLowerCase();
+            const mapFLow = matchedMapMod && matchedMapMod.folder ? matchedMapMod.folder.toLowerCase() : '';
+            return fLow === 'map dependencies' || (mapFLow && fLow === mapFLow && fLow !== 'mods');
+        });
 
-            if (configuredRoots.includes(parentOfMapDir) && !configuredRoots.includes(mapDirResolved)) {
-                const subfolderSiblings = allMods.filter(m => {
-                    if (!m.filePath) return false;
-                    const mDir = path.resolve(path.dirname(m.filePath)).toLowerCase();
-                    if (mDir !== mapDirResolved) return false;
-                    if (m.modName && m.modName.toLowerCase() === matchedMapMod.modName.toLowerCase()) return false;
-                    if (m.isMap) return false;
-                    return true;
+        for (const depMod of mapDepMods) {
+            if (depMod.modName && !finalMods.some(m => (m.modName || '').toLowerCase() === depMod.modName.toLowerCase())) {
+                console.log(`[CREATE] Auto-including map dependency mod: ${depMod.title || depMod.modName}`);
+                finalMods.push({
+                    modName: depMod.modName,
+                    title: depMod.title || depMod.modName,
+                    version: depMod.version || '1.0.0.0',
+                    required: true,
+                    fileHash: depMod.fileHash || ''
                 });
-
-                for (const sib of subfolderSiblings) {
-                    if (!finalMods.some(m => (m.modName || '').toLowerCase() === (sib.modName || '').toLowerCase())) {
-                        console.log(`[CREATE] Auto-including map subfolder sibling mod: ${sib.title || sib.modName}`);
-                        finalMods.push({
-                            modName: sib.modName,
-                            title: sib.title || sib.modName,
-                            version: sib.version || '1.0.0.0',
-                            required: false,
-                            fileHash: sib.fileHash || ''
-                        });
-                    }
-                }
             }
-        } catch (subErr) {
-            console.warn('[CREATE] Failed to resolve subfolder siblings:', subErr.message);
         }
+    } catch (subErr) {
+        console.warn('[CREATE] Failed to resolve map dependencies:', subErr.message);
     }
 
     // --- AUTO-INJECT DEPENDENCIES FOR ALL SELECTED MODS ---
@@ -5049,15 +5038,14 @@ async function syncSubfolderMapDependencies(savePath) {
             }
         }
 
-        // Also check by folder property if map has a dedicated folder
-        if (mapModObj.folder && mapModObj.folder.toLowerCase() !== 'mods' && mapModObj.folder.toLowerCase() !== '') {
-            const fLow = mapModObj.folder.toLowerCase();
-            const folderSibs = localMods.filter(m => m.folder && m.folder.toLowerCase() === fLow && !m.isMap && m.modName.toLowerCase() !== mapModObj.modName.toLowerCase());
-            for (const fsib of folderSibs) {
-                const sLow = (fsib.modName || '').toLowerCase();
-                if (sLow && !seenModNames.has(sLow)) {
+        // Auto-include all non-map mods from "Map Dependencies" folder and map subfolders
+        const mapDepFolderMods = localMods.filter(m => !m.isMap && m.folder && (m.folder.toLowerCase() === 'map dependencies' || (mapModObj.folder && m.folder.toLowerCase() === mapModObj.folder.toLowerCase() && m.folder.toLowerCase() !== 'mods')));
+        for (const depMod of mapDepFolderMods) {
+            if (depMod.modName) {
+                const sLow = depMod.modName.toLowerCase();
+                if (!seenModNames.has(sLow)) {
                     seenModNames.add(sLow);
-                    modsToEnsure.push(fsib);
+                    modsToEnsure.push(depMod);
                 }
             }
         }
