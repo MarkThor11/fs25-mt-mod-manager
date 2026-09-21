@@ -330,7 +330,8 @@ async function getMapTemplates() {
     });
 
     const results = await Promise.all(templatePromises);
-    return results.filter(t => t !== null && !isOfficialMap(t.mapId));
+    const OFFICIAL_TEMPLATE_FOLDERS = ['mapus', 'mapeu', 'mapas', 'pdlc_highlandsfishingpack_highlandsfishingmap'];
+    return results.filter(t => t !== null && !OFFICIAL_TEMPLATE_FOLDERS.includes(t.id.toLowerCase()));
 }
 
 /**
