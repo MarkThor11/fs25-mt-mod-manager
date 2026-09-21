@@ -407,11 +407,12 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
     };
 
     // 0. Official base map master templates — explicit direct folder match.
-    //    Official maps have no mapModName, and their IDs are listed as "generic" to prevent
-    //    custom maps from accidentally picking them up. But we still need to find them for
-    //    official map careers (Riverbend, Zielonka, Hutan Pantai, Kinlaig).
-    //    Match by canonical folder name or well-known aliases.
-    if (!targetModNorm) {
+    //    Official maps (including DLC like Kinlaig) are listed as "generic" to prevent custom
+    //    maps from accidentally picking them up. But we still need to find their master templates.
+    //    Kinlaig comes in with mapModName='pdlc_highlandsFishingPack' from the dropdown, so we
+    //    also need to handle that case (not just the no-modName path).
+    const OFFICIAL_DLC_MOD_NORMS = new Set(['highlandsfishingpack']); // ultraNorm of pdlc_highlandsFishingPack
+    if (!targetModNorm || OFFICIAL_DLC_MOD_NORMS.has(targetModNorm)) {
         const OFFICIAL_FOLDER_MAP = {
             'mapus': 'MapUS',
             'mapeu': 'MapEU',
