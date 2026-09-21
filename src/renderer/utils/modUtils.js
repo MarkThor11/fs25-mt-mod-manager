@@ -97,8 +97,9 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
   }
 
   // Check resolvedMetadata pool if available
-  if (depTitle && resolvedMetadata[depTitle]) {
-    const meta = resolvedMetadata[depTitle];
+  const metaKey = depId || depTitle;
+  if (metaKey && resolvedMetadata && resolvedMetadata[metaKey]) {
+    const meta = resolvedMetadata[metaKey];
     if (meta.modId && !depId) depId = String(meta.modId).replace(/^0+/, '');
     if (meta.fileName && !depFileName) depFileName = meta.fileName.replace(/\.zip$/i, '').toLowerCase();
     if (meta.title && !depTitle) depTitle = cleanModName(meta.title);
@@ -108,42 +109,45 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
   if (depId && m.modId) {
     const safeModId = String(m.modId).replace(/^0+/, '');
     if (safeModId === depId) return true;
-    // Contradicting ModHub ID means it is definitely not the same mod!
     return false;
   }
 
-  // 2. Identity 2: ZIP Filename / Technical Mod Name Match (exact)
+  const mFileNorm = m.fileName ? normalizeForMatching(m.fileName) : '';
+  const mNameNorm = m.modName ? normalizeForMatching(m.modName) : '';
+
+  // 2. Identity 2: ZIP Filename / Technical Mod Name Match (exact or prefix-stripped)
   if (depFileName) {
     const normDepFile = normalizeForMatching(depFileName);
-    const mFileNorm = m.fileName ? normalizeForMatching(m.fileName) : null;
-    const mNameNorm = m.modName ? normalizeForMatching(m.modName) : null;
-
     if (mFileNorm === normDepFile || mNameNorm === normDepFile) return true;
 
-    // If depFileName is explicit (e.g. starts with fs25_ or contains _) and candidate mod has a contradicting modName/fileName, reject!
-    if ((normDepFile.startsWith('fs25_') || normDepFile.includes('_')) && (mFileNorm || mNameNorm)) {
-      if (mFileNorm && mFileNorm !== normDepFile && mFileNorm.startsWith('fs25_')) return false;
-      if (mNameNorm && mNameNorm !== normDepFile && mNameNorm.startsWith('fs25_')) return false;
-    }
+    const cleanDepFile = normDepFile.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+    const cleanMName = mNameNorm.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+    const cleanMFile = mFileNorm.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+
+    if (cleanDepFile && (cleanMName === cleanDepFile || cleanMFile === cleanDepFile)) return true;
   }
 
   if (strict) return false;
 
-  // 3. Identity 3: Internal modDesc.xml Mod Title Match (exact full string)
+  // 3. Identity 3: Internal modDesc.xml Mod Title / Normalized Name Match
   if (depTitle) {
-    const cleanDepTitle = cleanModName(depTitle).toLowerCase();
-    const cleanMTitle = m.title ? cleanModName(m.title).toLowerCase() : null;
-    const cleanMModName = m.modName ? m.modName.toLowerCase() : null;
-    const cleanMFileName = m.fileName ? normalizeForMatching(m.fileName) : null;
+    const cleanDepTitle = cleanModName(depTitle).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const cleanMTitle = m.title ? cleanModName(m.title).toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+    const cleanMName = mNameNorm.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+    const cleanMFile = mFileNorm.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
 
-    if (cleanMTitle === cleanDepTitle || cleanMModName === cleanDepTitle || cleanMFileName === cleanDepTitle) {
-      // Safety check: if candidate mod has a technical modName/fileName that contradicts depFileName, do not false-match!
-      if (depFileName && (cleanMModName || cleanMFileName)) {
-        const normDepFile = normalizeForMatching(depFileName);
-        if (cleanMModName && cleanMModName !== normDepFile && normDepFile.startsWith('fs25_')) return false;
-        if (cleanMFileName && cleanMFileName !== normDepFile && normDepFile.startsWith('fs25_')) return false;
-      }
-      return true;
+    if (!cleanDepTitle) return false;
+
+    // Exact clean title or modName match
+    if (cleanMTitle && cleanMTitle === cleanDepTitle) return true;
+    if (cleanMName && cleanMName === cleanDepTitle) return true;
+    if (cleanMFile && cleanMFile === cleanDepTitle) return true;
+
+    // Substring token match (e.g. "Workshop" in "garageworkshop" or "Garage Workshop")
+    if (cleanDepTitle.length >= 4) {
+      if (cleanMTitle && (cleanMTitle.includes(cleanDepTitle) || cleanDepTitle.includes(cleanMTitle))) return true;
+      if (cleanMName && (cleanMName.includes(cleanDepTitle) || cleanDepTitle.includes(cleanMName))) return true;
+      if (cleanMFile && (cleanMFile.includes(cleanDepTitle) || cleanDepTitle.includes(cleanMFile))) return true;
     }
   }
 
