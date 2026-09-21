@@ -620,7 +620,8 @@ export default function ModDetailPage() {
   const handleInstall = async () => {
     if (isCurrentlyInstalling || !mod || !isOnline) return;
     
-    // Register in global store
+    // Register in global store and fire starting toast
+    useToastStore.getState().info(`Downloading ${mod.title}...`, { id: `dl-toast-${mod.modId}` });
     addDownload(mod.modId, mod.title, mod.images?.[0]);
 
     try {
@@ -637,9 +638,7 @@ export default function ModDetailPage() {
         category: mod.category || '',
         subFolder
       });
-      if (result.success) {
-        useToastStore.getState().success(`${mod.title} install started!`);
-      } else {
+      if (!result.success) {
         useToastStore.getState().error(`Failed: ${result.error}`, { id: `dl-toast-${mod.modId}` });
         removeDownload(mod.modId);
       }

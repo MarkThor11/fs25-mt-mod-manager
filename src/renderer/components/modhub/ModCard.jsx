@@ -292,7 +292,8 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
         throw new Error('Could not find a valid download link for this mod.');
       }
 
-      // Only register the download now that we have everything we need
+      // Show starting download toast with consistent custom ID so completion updates it cleanly
+      useToastStore.getState().info(`Downloading ${modTitle}...`, { id: `dl-toast-${modId}` });
       useDownloadStore.getState().addDownload(modId, modTitle, imgSrc);
 
       if (!window.api?.mods) throw new Error('System bridge not available');
@@ -306,7 +307,6 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
 
       if (result.success) {
         installQueued = true;
-        useToastStore.getState().success(`${modTitle} install started!`);
         useLocalModsStore.getState().scanMods();
       } else {
         useToastStore.getState().error(`Failed: ${result.error}`, { id: `dl-toast-${modId}` });

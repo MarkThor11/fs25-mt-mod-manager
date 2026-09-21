@@ -1565,7 +1565,7 @@
   bottom: var(--sp-6);
   left: var(--sp-6);
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   gap: var(--sp-2);
   z-index: 2147483647;
   pointer-events: none;
