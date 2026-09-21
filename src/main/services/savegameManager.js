@@ -149,6 +149,34 @@ function getTemplatesPath() {
         console.error('[TEMPLATES] Failed to sync master templates:', e);
     }
 
+    // Protection: Sync templates with safety backup directory
+    try {
+        const backupDir = path.join(getFs25Path(), 'modManagerTemplates_backup');
+        fs.ensureDirSync(backupDir);
+
+        const currentItems = fs.readdirSync(p);
+        for (const item of currentItems) {
+            const src = path.join(p, item);
+            const dst = path.join(backupDir, item);
+            if (!fs.existsSync(dst)) {
+                fs.copySync(src, dst);
+            }
+        }
+
+        // Auto-restore any template from backup if missing in main folder
+        const backupItems = fs.readdirSync(backupDir);
+        for (const bItem of backupItems) {
+            const bSrc = path.join(backupDir, bItem);
+            const pDst = path.join(p, bItem);
+            if (!fs.existsSync(pDst)) {
+                fs.copySync(bSrc, pDst);
+                console.log(`[TEMPLATES PROTECTION] Automatically restored missing template ${bItem} from safety backup!`);
+            }
+        }
+    } catch (e) {
+        console.error('[TEMPLATES PROTECTION] Safety backup sync error:', e);
+    }
+
     return p;
 }
 
@@ -339,16 +367,24 @@ async function getMapTemplates() {
  */
 async function deleteMapTemplate(folderName) {
     const templatesDir = getTemplatesPath();
+    const archiveDir = path.join(getFs25Path(), 'modManagerTemplates_archive');
+    await fs.ensureDir(archiveDir);
     const cleanName = folderName.replace(/\.zip$/i, '');
     const targetDir = path.join(templatesDir, cleanName);
     const targetZip = path.join(templatesDir, `${cleanName}.zip`);
+    const backupDir = path.join(getFs25Path(), 'modManagerTemplates_backup');
     let deleted = false;
+
     if (fs.existsSync(targetZip)) {
-        await fs.remove(targetZip);
+        await fs.move(targetZip, path.join(archiveDir, path.basename(targetZip)), { overwrite: true });
+        const bZip = path.join(backupDir, path.basename(targetZip));
+        if (fs.existsSync(bZip)) await fs.remove(bZip);
         deleted = true;
     }
     if (fs.existsSync(targetDir)) {
-        await fs.remove(targetDir);
+        await fs.move(targetDir, path.join(archiveDir, path.basename(targetDir)), { overwrite: true });
+        const bDir = path.join(backupDir, path.basename(targetDir));
+        if (fs.existsSync(bDir)) await fs.remove(bDir);
         deleted = true;
     }
     return { success: deleted };
