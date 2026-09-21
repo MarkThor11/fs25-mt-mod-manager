@@ -459,14 +459,12 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         // A custom mod map can NEVER use an official base game template (MapUS, MapEU, MapAS, Kinlaig)
         if (targetModNorm && (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolder.toLowerCase()))) continue;
 
-        // Exact normalized modName match (e.g. "birgland" === "birgland")
-        if (targetModNorm && (fNorm === targetModNorm || ufNorm === targetModNorm)) return folder;
-        // Template named with modName prefix (e.g. FS25_Blue_Island_Forest_...)
-        if (targetModNorm && (fNorm.startsWith(targetModNorm) || ufNorm.startsWith(targetModNorm))) return folder;
+        // Exact or prefix or substring normalized modName match (e.g. "birgland", "FS25_BackRoadsCounty4x_FS25_BackRoadsCounty4x_mapUS")
+        if (targetModNorm && (fNorm === targetModNorm || ufNorm === targetModNorm || fNorm.startsWith(targetModNorm) || ufNorm.startsWith(targetModNorm) || fNorm.includes(targetModNorm) || ufNorm.includes(targetModNorm))) return folder;
         // Template named with pattern: {modName}_{mapId} or {modName}_{modName}_{mapId}
         if (targetModNorm && targetMapIdNorm && (fNorm === `${targetModNorm}${targetMapIdNorm}` || fNorm === `${targetModNorm}${targetModNorm}${targetMapIdNorm}`)) return folder;
         // Exact normalized title match
-        if (targetTitleNorm && (fNorm === targetTitleNorm || ufNorm === targetTitleNorm)) return folder;
+        if (targetTitleNorm && (fNorm === targetTitleNorm || ufNorm === targetTitleNorm || fNorm.includes(targetTitleNorm) || ufNorm.includes(targetTitleNorm))) return folder;
         // Non-generic mapId match
         if (!isGenericMapId && targetMapIdNorm && (fNorm === targetMapIdNorm || ufNorm === targetMapIdNorm)) return folder;
     }
@@ -507,17 +505,12 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
                     
                     if (internalId && targetModNorm) {
                         const internalModPart = ultraNorm(internalId.split('.')[0]);
-                        if (internalModPart === targetModNorm || targetModNorm.startsWith(internalModPart)) {
+                        if (internalModPart === targetModNorm || targetModNorm.startsWith(internalModPart) || internalModPart.startsWith(targetModNorm)) {
                             return folder;
                         }
                     }
                     if (internalTitle && targetTitleNorm && ultraNorm(internalTitle) === targetTitleNorm) {
-                        if (targetModNorm) {
-                            const internalModPart = ultraNorm((internalId || '').split('.')[0]);
-                            if (internalModPart && (internalModPart === targetModNorm || targetModNorm.startsWith(internalModPart))) return folder;
-                        } else {
-                            return folder;
-                        }
+                        return folder;
                     }
                     if (!isGenericMapId && internalId && ultraNorm(internalId) === targetMapIdNorm) {
                         return folder;

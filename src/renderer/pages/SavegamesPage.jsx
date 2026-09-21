@@ -3008,7 +3008,14 @@ export default function SavegamesPage() {
       if (modName && !modName.toLowerCase().startsWith('pdlc_') && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(modName.toLowerCase())) {
         try {
           console.log(`[CAREER MODAL] Resolving dependencies for map: ${modName}. Total mods available: ${mods ? mods.length : 0}`);
-          const birglandMod = mods ? mods.find(m => m.modName === modName || m.modName.toLowerCase() === modName.toLowerCase()) : null;
+          const birglandMod = mods ? mods.find(m => 
+            m.isMap && (
+              (m.modName && (m.modName.toLowerCase() === modName.toLowerCase() || m.modName.toLowerCase().split('.')[0] === modName.toLowerCase().split('.')[0])) ||
+              (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === modName.toLowerCase().split('.')[0]) ||
+              (m.title && (title && m.title.toLowerCase() === title.toLowerCase()))
+            )
+          ) || mods.find(m => m.modName === modName || m.modName.toLowerCase() === modName.toLowerCase()) : null;
+
           if (birglandMod) {
             console.log(`[CAREER MODAL] Found map mod in mods array:`, JSON.stringify({
                 modName: birglandMod.modName,
@@ -3020,7 +3027,8 @@ export default function SavegamesPage() {
             console.log(`[CAREER MODAL] Map mod '${modName}' NOT found in mods array! Available map mods:`, mods ? mods.filter(m => m.isMap).map(m => m.modName).join(', ') : 'none');
           }
 
-          const { installed, missing } = resolveRecursiveDependencies(modName, mods);
+          const targetForDeps = birglandMod || modName;
+          const { installed, missing } = resolveRecursiveDependencies(targetForDeps, mods);
           const installedList = Array.isArray(installed) ? installed : Array.from(installed || []);
           const missingList = Array.isArray(missing) ? missing : Array.from(missing || []);
           
@@ -3405,17 +3413,25 @@ export default function SavegamesPage() {
       }
 
       // Safety net: always resolve map dependencies for custom maps even if UI missed them
-      const [, , mapModForDeps] = createMap.split('|');
+      const [mapIdForDeps, mapTitleForDeps, mapModForDeps] = createMap.split('|');
       if (mapModForDeps && !mapModForDeps.toLowerCase().startsWith('pdlc_') && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(mapModForDeps.toLowerCase())) {
         try {
           console.log(`[CREATE-SAFETY] Resolving dependencies for ${mapModForDeps}. Total mods: ${mods ? mods.length : 0}`);
-          const { installed } = resolveRecursiveDependencies(mapModForDeps, mods);
+          const mapObj = mods ? mods.find(m => 
+            m.isMap && (
+              (m.modName && (m.modName.toLowerCase() === mapModForDeps.toLowerCase() || m.modName.toLowerCase().split('.')[0] === mapModForDeps.toLowerCase().split('.')[0])) ||
+              (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === mapModForDeps.toLowerCase().split('.')[0]) ||
+              (m.title && (mapTitleForDeps && m.title.toLowerCase() === mapTitleForDeps.toLowerCase()))
+            )
+          ) || mods.find(m => m.modName === mapModForDeps || m.modName.toLowerCase() === mapModForDeps.toLowerCase()) : null;
+
+          const targetForDeps = mapObj || mapModForDeps;
+          const { installed } = resolveRecursiveDependencies(targetForDeps, mods);
           const installedList = Array.isArray(installed) ? installed : Array.from(installed || []);
           installedList.forEach(d => finalModNames.add(d));
           console.log(`[CREATE] Safety net resolved ${installedList.length} map dependencies:`, installedList);
 
           // Also auto-select non-map sibling mods from the map's dedicated subfolder
-          const mapObj = mods ? mods.find(m => m.modName === mapModForDeps || m.modName.toLowerCase() === mapModForDeps.toLowerCase()) : null;
           if (mapObj && mapObj.folder && mapObj.folder !== '' && mapObj.folder !== 'mods') {
             const fLow = mapObj.folder.toLowerCase();
             const sibs = (mods || []).filter(m => m.folder && m.folder.toLowerCase() === fLow && !m.isMap && m.modName.toLowerCase() !== mapModForDeps.toLowerCase());
