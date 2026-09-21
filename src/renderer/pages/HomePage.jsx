@@ -140,18 +140,21 @@ export default function HomePage() {
   useEffect(() => {
     fetchSavegames();
     fetchStats();
-    // Only fetch live network items if local cache is empty
-    if (homeShowLatest && homeFeatured.length === 0) loadFeaturedMods();
-    if (homeShowDownloaded && homeTopDownloaded.length === 0) loadTopDownloadedMods();
+    if (homeShowLatest) loadFeaturedMods();
+    if (homeShowDownloaded) loadTopDownloadedMods();
   }, []);
 
   const loadFeaturedMods = async () => {
     if (!window.api?.modhub) return;
     try {
-      const result = await window.api.modhub.fetchMods({ filter: 'latest', page: 0 });
-      // Only show mods that are truly NEW (filtering out updates)
-      const newMods = (result.mods || []).filter(m => m.isNew).slice(0, 18);
-      setHomeFeatured(newMods);
+      const result = await window.api.modhub.fetchMods({ filter: 'latest', page: 0, bustCache: true });
+      const modsList = result.mods || [];
+      // Prefer mods marked as isNew, but fill up to 18 with the latest mods from page 0
+      const newModsOnly = modsList.filter(m => m.isNew);
+      const featured = (newModsOnly.length >= 6 ? newModsOnly : modsList).slice(0, 18);
+      if (featured.length > 0) {
+        setHomeFeatured(featured);
+      }
     } catch (err) {
       console.error('Failed to load featured mods:', err);
     } finally {
@@ -162,11 +165,12 @@ export default function HomePage() {
   const loadTopDownloadedMods = async () => {
     if (!window.api?.modhub) return;
     try {
-      const result = await window.api.modhub.fetchMods({ filter: 'downloads', page: 0 });
-      // Explicitly sort by download count as a safety measure for the UI
+      const result = await window.api.modhub.fetchMods({ filter: 'downloads', page: 0, bustCache: true });
       const sorted = (result.mods || []).sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
       const topMods = sorted.slice(0, 18);
-      setHomeTopDownloaded(topMods);
+      if (topMods.length > 0) {
+        setHomeTopDownloaded(topMods);
+      }
     } catch (err) {
       console.error('Failed to load top downloaded mods:', err);
     } finally {
