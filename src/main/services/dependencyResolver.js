@@ -27,12 +27,13 @@ function matchModWithDependency(m, dep, resolvedMetadata = {}) {
   let depFileName = null;
 
   if (typeof dep === 'string') {
-    if (dep.includes('http')) {
+    if (dep.includes('http') || dep.toLowerCase().includes('.zip')) {
       const idMatch = dep.match(/mod_id=(\d+)/i) || dep.match(/storage\/(\d+)\//i);
       if (idMatch) depId = parseInt(idMatch[1], 10).toString();
-      const fileMatch = dep.match(/\/([^\/]+\.zip)$/i);
+      const fileMatch = dep.match(/\/([^\/?#]+\.zip)/i) || dep.match(/([a-z0-9_]+\.zip)/i);
       if (fileMatch) depFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
-    } else {
+    }
+    if (!depFileName) {
       depFileName = dep.replace(/\.zip$/i, '').trim().toLowerCase();
     }
   } else if (typeof dep === 'object') {
@@ -40,11 +41,13 @@ function matchModWithDependency(m, dep, resolvedMetadata = {}) {
     if (dep.url) {
       const idMatch = dep.url.match(/mod_id=(\d+)/i) || dep.url.match(/storage\/(\d+)\//i);
       if (idMatch && !depId) depId = parseInt(idMatch[1], 10).toString();
-      const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
+      const fileMatch = dep.url.match(/\/([^\/?#]+\.zip)/i) || dep.url.match(/([a-z0-9_]+\.zip)/i);
       if (fileMatch) depFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
     }
-    const fn = dep.fileName || dep.modName || dep.technicalName;
-    if (fn) depFileName = fn.replace(/\.zip$/i, '').toLowerCase();
+    if (!depFileName) {
+      const fn = dep.fileName || dep.modName || dep.technicalName;
+      if (fn) depFileName = fn.replace(/\.zip$/i, '').toLowerCase();
+    }
   }
 
   // Look up resolved metadata pool for exact ZIP filename if available

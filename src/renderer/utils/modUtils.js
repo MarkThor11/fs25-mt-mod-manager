@@ -71,12 +71,13 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}) => {
   let depFileName = null;
 
   if (typeof dep === 'string') {
-    if (dep.includes('http')) {
+    if (dep.includes('http') || dep.toLowerCase().includes('.zip')) {
       const idMatch = dep.match(/mod_id=(\d+)/i) || dep.match(/storage\/(\d+)\//i);
       if (idMatch) depId = parseInt(idMatch[1], 10).toString();
-      const fileMatch = dep.match(/\/([^\/]+\.zip)$/i);
+      const fileMatch = dep.match(/\/([^\/?#]+\.zip)/i) || dep.match(/([a-z0-9_]+\.zip)/i);
       if (fileMatch) depFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
-    } else {
+    }
+    if (!depFileName) {
       depFileName = dep.replace(/\.zip$/i, '').trim().toLowerCase();
     }
   } else if (typeof dep === 'object') {
@@ -84,11 +85,13 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}) => {
     if (dep.url) {
       const idMatch = dep.url.match(/mod_id=(\d+)/i) || dep.url.match(/storage\/(\d+)\//i);
       if (idMatch && !depId) depId = parseInt(idMatch[1], 10).toString();
-      const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
+      const fileMatch = dep.url.match(/\/([^\/?#]+\.zip)/i) || dep.url.match(/([a-z0-9_]+\.zip)/i);
       if (fileMatch) depFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
     }
-    const fn = dep.fileName || dep.modName || dep.technicalName;
-    if (fn) depFileName = fn.replace(/\.zip$/i, '').toLowerCase();
+    if (!depFileName) {
+      const fn = dep.fileName || dep.modName || dep.technicalName;
+      if (fn) depFileName = fn.replace(/\.zip$/i, '').toLowerCase();
+    }
   }
 
   // Look up resolved metadata pool for exact ZIP filename if available
@@ -189,16 +192,22 @@ export const resolveRecursiveDependencies = (targetModOrName, allMods, sessionIn
     let fallbackFileName = null;
     
     if (typeof depObjOrString === 'string') {
-        depString = depObjOrString;
+        const fileMatch = depObjOrString.match(/\/([^\/?#]+\.zip)/i) || depObjOrString.match(/([a-z0-9_]+\.zip)/i);
+        if (fileMatch) {
+          depString = fileMatch[1].replace(/\.zip$/i, '');
+          fallbackFileName = depString;
+        } else {
+          depString = depObjOrString;
+        }
     } else if (typeof depObjOrString === 'object') {
         const url = depObjOrString.url || '';
         if (url) {
-            const fileMatch = url.match(/\/([^\/]+\.zip)$/i);
+            const fileMatch = url.match(/\/([^\/?#]+\.zip)/i) || url.match(/([a-z0-9_]+\.zip)/i);
             if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
         }
-        depString = fallbackFileName || depObjOrString.modName || depObjOrString.technicalName || depObjOrString.title || depObjOrString.fileName || '';
+        depString = fallbackFileName || depObjOrString.fileName || depObjOrString.modName || depObjOrString.technicalName || depObjOrString.title || '';
         
-        const idMatch = url.match(/mod_id=(\d+)/) || url.match(/storage\/(\d+)\//);
+        const idMatch = url.match(/mod_id=(\d+)/i) || url.match(/storage\/(\d+)\//i);
         if (idMatch) depId = parseInt(idMatch[1], 10).toString();
     }
 
