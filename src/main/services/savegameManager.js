@@ -5066,6 +5066,18 @@ async function syncSubfolderMapDependencies(savePath) {
         const queue = [mapModObj, ...modsToEnsure];
         while (queue.length > 0) {
             const current = queue.shift();
+            if (current && (!current.dependencies || current.dependencies.length === 0) && current.modId) {
+                try {
+                    const scraper = require('./scraper');
+                    const detail = await scraper.fetchModDetail(current.modId);
+                    if (detail && detail.dependencies && Array.isArray(detail.dependencies)) {
+                        current.dependencies = detail.dependencies;
+                    }
+                } catch (sErr) {
+                    console.warn(`[SYNC-DEPS] Could not fetch ModHub dependencies for ID ${current.modId}:`, sErr.message);
+                }
+            }
+
             if (current && current.dependencies && Array.isArray(current.dependencies) && current.dependencies.length > 0) {
                 for (const dep of current.dependencies) {
                     const matchedDep = localMods.find(m => dependencyResolver.matchModWithDependency(m, dep));

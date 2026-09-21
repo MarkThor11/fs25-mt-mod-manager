@@ -2992,92 +2992,105 @@ export default function SavegamesPage() {
   }, []);
 
   useEffect(() => {
-    // Check if the selected map has a master template whenever it changes
-    const [mapId, title, modName] = createMap.split('|');
-    setMissingDeps(null); // Reset missing deps
-    setModalSelectedMods(new Set()); // Reset selected mods to prevent accumulation from previous map selections
-    setLocalMissingDeps([]); // Clear previous missing deps
-    setMapHasTemplate(false); // Clear automation badge immediately while checking template
-    if (mapId && window.api?.maps) {
-      window.api.maps.checkTemplate(mapId, title, modName).then(exists => {
-          setMapHasTemplate(exists);
-          // Only force auto-launch if NOT automated; otherwise preserve user preference or reset to false
-          if (!exists) {
-            setAutoLaunchOnCreate(true);
-          } else {
-            setAutoLaunchOnCreate(false); 
-          }
-      });
+    (async () => {
+      // Check if the selected map has a master template whenever it changes
+      const [mapId, title, modName] = createMap.split('|');
+      setMissingDeps(null); // Reset missing deps
+      setModalSelectedMods(new Set()); // Reset selected mods to prevent accumulation from previous map selections
+      setLocalMissingDeps([]); // Clear previous missing deps
+      setMapHasTemplate(false); // Clear automation badge immediately while checking template
+      if (mapId && window.api?.maps) {
+        window.api.maps.checkTemplate(mapId, title, modName).then(exists => {
+            setMapHasTemplate(exists);
+            // Only force auto-launch if NOT automated; otherwise preserve user preference or reset to false
+            if (!exists) {
+              setAutoLaunchOnCreate(true);
+            } else {
+              setAutoLaunchOnCreate(false); 
+            }
+        });
 
-      // Auto-select required mods for custom modded maps (skip official DLCs like pdlc_highlandsFishingPack)
-      const cleanMapModName = (modName || '').split('.')[0];
-      if (cleanMapModName && !cleanMapModName.toLowerCase().startsWith('pdlc_') && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(cleanMapModName.toLowerCase())) {
-        try {
-          console.log(`[CAREER MODAL] Resolving dependencies for map: ${cleanMapModName}. Total mods available: ${mods ? mods.length : 0}`);
-          const cLow = cleanMapModName.toLowerCase();
-          const birglandMod = mods ? mods.find(m => 
-            m.isMap && (
-              (m.modName && (m.modName.toLowerCase() === cLow || m.modName.toLowerCase().split('.')[0] === cLow)) ||
-              (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === cLow) ||
-              (m.title && (title && m.title.toLowerCase() === title.toLowerCase()))
-            )
-          ) || mods.find(m => m.modName && (m.modName.toLowerCase() === cLow || m.modName.toLowerCase().split('.')[0] === cLow)) : null;
+        // Auto-select required mods for custom modded maps (skip official DLCs like pdlc_highlandsFishingPack)
+        const cleanMapModName = (modName || '').split('.')[0];
+        if (cleanMapModName && !cleanMapModName.toLowerCase().startsWith('pdlc_') && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(cleanMapModName.toLowerCase())) {
+          try {
+            console.log(`[CAREER MODAL] Resolving dependencies for map: ${cleanMapModName}. Total mods available: ${mods ? mods.length : 0}`);
+            const cLow = cleanMapModName.toLowerCase();
+            const birglandMod = mods ? mods.find(m => 
+              m.isMap && (
+                (m.modName && (m.modName.toLowerCase() === cLow || m.modName.toLowerCase().split('.')[0] === cLow)) ||
+                (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === cLow) ||
+                (m.title && (title && m.title.toLowerCase() === title.toLowerCase()))
+              )
+            ) || mods.find(m => m.modName && (m.modName.toLowerCase() === cLow || m.modName.toLowerCase().split('.')[0] === cLow)) : null;
 
-          if (birglandMod) {
-            console.log(`[CAREER MODAL] Found map mod object:`, JSON.stringify({
-                modName: birglandMod.modName,
-                isMap: birglandMod.isMap,
-                dependenciesCount: birglandMod.dependencies ? birglandMod.dependencies.length : 0,
-                dependencies: birglandMod.dependencies
-            }));
-          } else {
-            console.log(`[CAREER MODAL] Map mod '${cleanMapModName}' not found in mods array, resolving by name fallback.`);
-          }
-
-          const targetForDeps = birglandMod || cleanMapModName;
-          const { installed, missing } = resolveRecursiveDependencies(targetForDeps, mods);
-          const installedList = Array.isArray(installed) ? installed : Array.from(installed || []);
-          const missingList = Array.isArray(missing) ? missing : Array.from(missing || []);
-          
-          const hasSubfolderSiblings = birglandMod && birglandMod.folder && birglandMod.folder !== '' && birglandMod.folder !== 'mods';
-          
-          setModalSelectedMods(prev => {
-            const next = new Set(prev);
-            // Always ensure the map mod itself is in modalSelectedMods
-            if (birglandMod && birglandMod.modName) {
-              next.add(birglandMod.modName);
-            } else if (cleanMapModName) {
-              next.add(cleanMapModName);
+            if (birglandMod) {
+              console.log(`[CAREER MODAL] Found map mod object:`, JSON.stringify({
+                  modName: birglandMod.modName,
+                  isMap: birglandMod.isMap,
+                  dependenciesCount: birglandMod.dependencies ? birglandMod.dependencies.length : 0,
+                  dependencies: birglandMod.dependencies
+              }));
+            } else {
+              console.log(`[CAREER MODAL] Map mod '${cleanMapModName}' not found in mods array, resolving by name fallback.`);
             }
 
-            installedList.forEach(d => {
-              if (d) {
-                const matchedModObj = mods ? mods.find(m => (m.modName || '').toLowerCase() === d.toLowerCase() || (m.fileName || '').replace(/\.zip$/i, '').toLowerCase() === d.toLowerCase()) : null;
-                next.add(matchedModObj ? matchedModObj.modName : d);
+            let targetForDeps = birglandMod || cleanMapModName;
+            if (birglandMod && (!birglandMod.dependencies || birglandMod.dependencies.length === 0) && birglandMod.modId && window.api?.modhub?.fetchModDetail) {
+              try {
+                const detail = await window.api.modhub.fetchModDetail({ modId: birglandMod.modId });
+                if (detail && detail.dependencies && Array.isArray(detail.dependencies) && detail.dependencies.length > 0) {
+                  targetForDeps = { ...birglandMod, dependencies: detail.dependencies };
+                }
+              } catch (dErr) {
+                console.warn('[CAREER MODAL] Could not fetch ModHub dependencies for map:', dErr.message);
               }
+            }
+
+            const { installed, missing } = resolveRecursiveDependencies(targetForDeps, mods);
+            const installedList = Array.isArray(installed) ? installed : Array.from(installed || []);
+            const missingList = Array.isArray(missing) ? missing : Array.from(missing || []);
+            
+            const hasSubfolderSiblings = birglandMod && birglandMod.folder && birglandMod.folder !== '' && birglandMod.folder !== 'mods';
+            
+            setModalSelectedMods(prev => {
+              const next = new Set(prev);
+              // Always ensure the map mod itself is in modalSelectedMods
+              if (birglandMod && birglandMod.modName) {
+                next.add(birglandMod.modName);
+              } else if (cleanMapModName) {
+                next.add(cleanMapModName);
+              }
+
+              installedList.forEach(d => {
+                if (d) {
+                  const matchedModObj = mods ? mods.find(m => (m.modName || '').toLowerCase() === d.toLowerCase() || (m.fileName || '').replace(/\.zip$/i, '').toLowerCase() === d.toLowerCase()) : null;
+                  next.add(matchedModObj ? matchedModObj.modName : d);
+                }
+              });
+
+              // Also auto-select non-map sibling mods from the map's dedicated subfolder
+              if (hasSubfolderSiblings) {
+                const fLow = birglandMod.folder.toLowerCase();
+                const sibs = (mods || []).filter(m => m.folder && m.folder.toLowerCase() === fLow && !m.isMap && m.modName);
+                sibs.forEach(s => {
+                  if (s.modName) next.add(s.modName);
+                });
+              }
+
+              return next;
             });
 
-            // Also auto-select non-map sibling mods from the map's dedicated subfolder
-            if (hasSubfolderSiblings) {
-              const fLow = birglandMod.folder.toLowerCase();
-              const sibs = (mods || []).filter(m => m.folder && m.folder.toLowerCase() === fLow && !m.isMap && m.modName);
-              sibs.forEach(s => {
-                if (s.modName) next.add(s.modName);
-              });
+            if (missingList.length > 0) {
+              console.log(`[CAREER MODAL] Missing dependencies detected:`, missingList);
+              setLocalMissingDeps(missingList);
             }
-
-            return next;
-          });
-
-          if (missingList.length > 0) {
-            console.log(`[CAREER MODAL] Missing dependencies detected:`, missingList);
-            setLocalMissingDeps(missingList);
+          } catch (e) {
+            console.error('[CAREER MODAL] Dependency auto-select failed:', e);
           }
-        } catch (e) {
-          console.error('[CAREER MODAL] Dependency auto-select failed:', e);
         }
       }
-    }
+    })();
   }, [createMap, mods]);
 
   const handleRename = async (save) => {
@@ -3450,7 +3463,16 @@ export default function SavegamesPage() {
             finalModNames.add(cleanMapForDeps);
           }
 
-          const targetForDeps = mapObj || cleanMapForDeps;
+          let targetForDeps = mapObj || cleanMapForDeps;
+          if (mapObj && (!mapObj.dependencies || mapObj.dependencies.length === 0) && mapObj.modId && window.api?.modhub?.fetchModDetail) {
+            try {
+              const detail = await window.api.modhub.fetchModDetail({ modId: mapObj.modId });
+              if (detail && detail.dependencies && Array.isArray(detail.dependencies) && detail.dependencies.length > 0) {
+                targetForDeps = { ...mapObj, dependencies: detail.dependencies };
+              }
+            } catch (_) {}
+          }
+
           const { installed } = resolveRecursiveDependencies(targetForDeps, mods);
           const installedList = Array.isArray(installed) ? installed : Array.from(installed || []);
           installedList.forEach(d => {
