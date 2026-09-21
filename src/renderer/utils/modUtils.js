@@ -64,12 +64,11 @@ export const isMapCategory = (category) => {
  * @param {string|Object} dep - The dependency requirement.
  * @param {Object} [resolvedMetadata] - Optional ModHub resolved metadata pool/lookup.
  */
-export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = false) => {
+export const matchModWithDependency = (m, dep, resolvedMetadata = {}) => {
   if (!dep || !m) return false;
 
   let depId = null;
   let depFileName = null;
-  let depTitle = null;
 
   if (typeof dep === 'string') {
     if (dep.includes('http')) {
@@ -78,7 +77,6 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
       const fileMatch = dep.match(/\/([^\/]+\.zip)$/i);
       if (fileMatch) depFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
     } else {
-      depTitle = cleanModName(dep);
       depFileName = dep.replace(/\.zip$/i, '').trim().toLowerCase();
     }
   } else if (typeof dep === 'object') {
@@ -89,64 +87,32 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
       const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i);
       if (fileMatch) depFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
     }
-    if (!depFileName) {
-      const fn = dep.fileName || dep.modName || dep.technicalName;
-      if (fn) depFileName = fn.replace(/\.zip$/i, '').toLowerCase();
-    }
-    if (dep.title) depTitle = cleanModName(dep.title);
+    const fn = dep.fileName || dep.modName || dep.technicalName;
+    if (fn) depFileName = fn.replace(/\.zip$/i, '').toLowerCase();
   }
 
-  // Check resolvedMetadata pool if available
-  const metaKey = depId || depTitle;
+  // Look up resolved metadata pool for exact ZIP filename if available
+  const metaKey = depId || depFileName;
   if (metaKey && resolvedMetadata && resolvedMetadata[metaKey]) {
     const meta = resolvedMetadata[metaKey];
     if (meta.modId && !depId) depId = String(meta.modId).replace(/^0+/, '');
     if (meta.fileName && !depFileName) depFileName = meta.fileName.replace(/\.zip$/i, '').toLowerCase();
-    if (meta.title && !depTitle) depTitle = cleanModName(meta.title);
   }
 
-  // 1. Identity 1: ModHub ID Match (exact)
+  // 1. ModHub ID Match (exact)
   if (depId && m.modId) {
     const safeModId = String(m.modId).replace(/^0+/, '');
     if (safeModId === depId) return true;
     return false;
   }
 
-  const mFileNorm = m.fileName ? normalizeForMatching(m.fileName) : '';
-  const mNameNorm = m.modName ? normalizeForMatching(m.modName) : '';
-
-  // 2. Identity 2: ZIP Filename / Technical Mod Name Match (exact, preserving fs25_)
+  // 2. ZIP Filename / Technical Mod Name Match (exact, unique)
   if (depFileName) {
     const normDepFile = normalizeForMatching(depFileName);
+    const mFileNorm = m.fileName ? normalizeForMatching(m.fileName) : '';
+    const mNameNorm = m.modName ? normalizeForMatching(m.modName) : '';
+
     if (mFileNorm === normDepFile || mNameNorm === normDepFile) return true;
-  }
-
-  if (strict) return false;
-
-  // 3. Identity 3: Internal Mod Title / Mod Name Match
-  if (depTitle) {
-    const cleanDepTitle = cleanModName(depTitle).toLowerCase().trim();
-    const cleanMTitle = m.title ? cleanModName(m.title).toLowerCase().trim() : '';
-
-    if (cleanDepTitle) {
-      if (cleanMTitle && cleanMTitle === cleanDepTitle) return true;
-      if (mNameNorm && mNameNorm === cleanDepTitle) return true;
-      if (mFileNorm && mFileNorm === cleanDepTitle) return true;
-
-      // Substring & token match (e.g. ModHub title "Workshop" matching "Garage Workshop" or "FS25_garageWorkshop")
-      if (cleanDepTitle.length >= 4) {
-        const depAlpha = cleanDepTitle.replace(/[^a-z0-9]/g, '');
-        const titleAlpha = cleanMTitle.replace(/[^a-z0-9]/g, '');
-        const nameAlpha = mNameNorm.replace(/[^a-z0-9]/g, '');
-        const fileAlpha = mFileNorm.replace(/[^a-z0-9]/g, '');
-
-        if (depAlpha.length >= 4) {
-          if (titleAlpha && (titleAlpha.includes(depAlpha) || depAlpha.includes(titleAlpha))) return true;
-          if (nameAlpha && (nameAlpha.includes(depAlpha) || depAlpha.includes(nameAlpha))) return true;
-          if (fileAlpha && (fileAlpha.includes(depAlpha) || depAlpha.includes(fileAlpha))) return true;
-        }
-      }
-    }
   }
 
   return false;
