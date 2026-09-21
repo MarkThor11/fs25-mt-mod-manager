@@ -78,6 +78,13 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
       'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap'
     ]);
 
+    const GENERIC_MAP_IDS = new Set([
+      'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
+      'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
+      'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
+      'mapus', 'mapeu', 'mapas', 'highlandsfishingmap'
+    ]);
+
     return (mod) => {
       if (!templates || templates.length === 0) return false;
       const mName = norm(mod.modName);
@@ -93,8 +100,9 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
         // A community mod map can NEVER match an official base game template
         if (OFFICIAL_TEMPLATES.has(tId) || OFFICIAL_TEMPLATES.has(utId)) return false;
 
-        // 1. Direct mapId match
-        if (t.mapId && mod.mapId && norm(t.mapId) === norm(mod.mapId)) return true;
+        // 1. Direct non-generic mapId match
+        const modMapIdNorm = norm(mod.mapId);
+        if (t.mapId && mod.mapId && norm(t.mapId) === modMapIdNorm && !GENERIC_MAP_IDS.has(modMapIdNorm)) return true;
 
         // 2. Direct modName match (t.modName comes from careerSavegame.xml before the dot, or from matched mod)
         const tMod = norm(t.modName);
@@ -103,15 +111,18 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
         if (utMod && utMod.length >= 4 && (utMod === uName || utMod === ultraNorm(mFolder) || utMod === ultraNorm(mFileName))) return true;
 
         // 3. Map ID prefix matching (e.g. FS25_MyMap.mapUS -> FS25_MyMap)
-        const tMapIdPrefix = norm(t.mapId?.split('.')[0]);
-        const utMapIdPrefix = ultraNorm(t.mapId?.split('.')[0]);
-        if (tMapIdPrefix && (tMapIdPrefix === mName || tMapIdPrefix === mFolder || tMapIdPrefix === mFileName)) return true;
-        if (utMapIdPrefix && utMapIdPrefix.length >= 4 && (utMapIdPrefix === uName || utMapIdPrefix === ultraNorm(mFolder))) return true;
+        const rawMapIdPrefix = norm(t.mapId?.split('.')[0]);
+        if (rawMapIdPrefix && !GENERIC_MAP_IDS.has(rawMapIdPrefix)) {
+          const tMapIdPrefix = norm(rawMapIdPrefix);
+          const utMapIdPrefix = ultraNorm(rawMapIdPrefix);
+          if (tMapIdPrefix && (tMapIdPrefix === mName || tMapIdPrefix === mFolder || tMapIdPrefix === mFileName)) return true;
+          if (utMapIdPrefix && utMapIdPrefix.length >= 4 && (utMapIdPrefix === uName || utMapIdPrefix === ultraNorm(mFolder))) return true;
+        }
 
         // 4. Template ID / folder prefix matching (e.g. FS25_BackRoadsCounty4x_... or FS25_horschAgrovation_...)
         const cleanTId = (t.id || '').replace(/\.zip$/i, '').toLowerCase();
         const modNameLower = (mod.modName || '').toLowerCase();
-        if (cleanTId === modNameLower || cleanTId.startsWith(modNameLower + '_')) return true;
+        if (modNameLower && (cleanTId === modNameLower || cleanTId.startsWith(modNameLower + '_'))) return true;
 
         if (mName && (tId === mName || tId.startsWith(mName + '_'))) return true;
         if (uName && uName.length >= 4 && (utId === uName || utId.startsWith(uName + '_'))) return true;

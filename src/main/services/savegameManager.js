@@ -5297,6 +5297,7 @@ async function adoptSaveAsTemplate(saveIndex) {
             console.warn(`[HARVEST] Could not compress template to .zip, keeping uncompressed folder:`, zErr.message);
         }
         
+        cachedMapMods = null;
         return { success: true };
     } catch (err) {
         console.error('[HARVEST] Failed to adopt template:', err);

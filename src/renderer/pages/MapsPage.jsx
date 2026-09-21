@@ -326,7 +326,36 @@ export default function MapsPage() {
                 ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: 'var(--sp-4)' }}>
                         {sortedInstalled.map(mod => {
-                            const hasAutomated = templates.some(t => t.mapId === mod.mapId || t.title === mod.title);
+                            const hasAutomated = templates.some(t => {
+                                if (!t) return false;
+                                const cleanStr = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                const GENERIC_MAP_IDS = new Set([
+                                  'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
+                                  'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
+                                  'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
+                                  'mapus', 'mapeu', 'mapas', 'highlandsfishingmap'
+                                ]);
+                                const OFFICIAL_TEMPLATES = new Set(['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap']);
+
+                                const tIdNorm = cleanStr(t.id);
+                                if (OFFICIAL_TEMPLATES.has(tIdNorm)) return false;
+
+                                // Direct title match
+                                if (t.title && mod.title && cleanStr(t.title) === cleanStr(mod.title)) return true;
+
+                                // Direct modName match
+                                if (t.modName && mod.modName && cleanStr(t.modName) === cleanStr(mod.modName)) return true;
+
+                                // Template folder matching modName
+                                const cleanTId = (t.id || '').replace(/\.zip$/i, '').toLowerCase();
+                                const modNameLower = (mod.modName || '').toLowerCase();
+                                if (modNameLower && (cleanTId === modNameLower || cleanTId.startsWith(modNameLower + '_'))) return true;
+
+                                // Non-generic mapId match
+                                if (t.mapId && mod.mapId && cleanStr(t.mapId) === cleanStr(mod.mapId) && !GENERIC_MAP_IDS.has(cleanStr(mod.mapId))) return true;
+
+                                return false;
+                            });
                             const modIsCP = isCrossplay(mod.title, mod);
                             return (
                                 <div key={mod.filePath || `${mod.folder || ''}_${mod.fileName}`} className="save-card" style={{ padding: 'var(--sp-4)', position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 180, overflow: 'hidden' }}>
