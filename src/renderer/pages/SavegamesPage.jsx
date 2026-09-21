@@ -16,7 +16,7 @@ import { useLocalModsStore } from '../store/useLocalModsStore';
 import { useModHubStore } from '../store/useModHubStore';
 import { useDownloadStore } from '../store/useDownloadStore';
 import MapImage, { MAP_PREVIEWS } from '../components/common/MapImage';
-import { resolveRecursiveDependencies, getActiveConflictsForSave } from '../utils/modUtils';
+import { resolveRecursiveDependencies, matchModWithDependency, getActiveConflictsForSave } from '../utils/modUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 import MapSelectDropdown from '../components/common/MapSelectDropdown';
 import { COMBINE_HARVESTER_ICON } from '../assets/combineIconData';
