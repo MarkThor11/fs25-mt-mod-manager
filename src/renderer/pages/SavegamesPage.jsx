@@ -3473,10 +3473,34 @@ export default function SavegamesPage() {
             } catch (_) {}
           }
 
-          const { installed } = resolveRecursiveDependencies(targetForDeps, mods);
+          const resolvedMetadata = {};
+          if (targetForDeps && typeof targetForDeps === 'object' && targetForDeps.dependencies && window.api?.modhub?.fetchModDetail) {
+            for (const dep of targetForDeps.dependencies) {
+              if (typeof dep === 'object' && dep.url) {
+                const idMatch = dep.url.match(/mod_id=(\d+)/i) || dep.url.match(/storage\/(\d+)\//i);
+                if (idMatch && idMatch[1]) {
+                  const depId = idMatch[1].replace(/^0+/, '');
+                  try {
+                    const detail = await window.api.modhub.fetchModDetail({ modId: depId });
+                    if (detail) {
+                      const zipName = detail.fileName || (detail.downloadUrl ? detail.downloadUrl.split('/').pop() : null);
+                      if (zipName) {
+                        const metaObj = { modId: depId, fileName: zipName.replace(/\.zip$/i, '').toLowerCase(), title: detail.title };
+                        resolvedMetadata[depId] = metaObj;
+                        if (dep.title) resolvedMetadata[dep.title] = metaObj;
+                        if (dep.url) resolvedMetadata[dep.url] = metaObj;
+                      }
+                    }
+                  } catch (_) {}
+                }
+              }
+            }
+          }
+
+          const { installed } = resolveRecursiveDependencies(targetForDeps, mods, {}, resolvedMetadata);
           const installedList = Array.isArray(installed) ? installed : Array.from(installed || []);
           installedList.forEach(d => {
-            const matchedModObj = mods ? mods.find(m => matchModWithDependency(m, d)) : null;
+            const matchedModObj = mods ? mods.find(m => matchModWithDependency(m, d, resolvedMetadata)) : null;
             if (matchedModObj && matchedModObj.modName) {
               finalModNames.add(matchedModObj.modName);
             } else {

@@ -5090,7 +5090,24 @@ async function syncSubfolderMapDependencies(savePath) {
 
             if (current && current.dependencies && Array.isArray(current.dependencies) && current.dependencies.length > 0) {
                 for (const dep of current.dependencies) {
-                    const matchedDep = localMods.find(m => dependencyResolver.matchModWithDependency(m, dep));
+                    let matchedDep = localMods.find(m => dependencyResolver.matchModWithDependency(m, dep));
+
+                    if (!matchedDep && typeof dep === 'object' && dep.url) {
+                        const idMatch = dep.url.match(/mod_id=(\d+)/i) || dep.url.match(/storage\/(\d+)\//i);
+                        if (idMatch && idMatch[1]) {
+                            try {
+                                const scraper = require('./scraper');
+                                const depDetail = await scraper.fetchModDetail(idMatch[1]);
+                                if (depDetail && depDetail.downloadUrl) {
+                                    const depZipName = depDetail.downloadUrl.split('/').pop().replace(/\.zip$/i, '').toLowerCase();
+                                    matchedDep = localMods.find(m => 
+                                        (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === depZipName) ||
+                                        (m.modName && m.modName.toLowerCase() === depZipName)
+                                    );
+                                }
+                            } catch (_) {}
+                        }
+                    }
 
                     if (matchedDep && matchedDep.modName) {
                         const dLow = matchedDep.modName.toLowerCase();
