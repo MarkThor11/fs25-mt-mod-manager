@@ -417,7 +417,12 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
             'mapus': 'MapUS',
             'mapeu': 'MapEU',
             'mapas': 'MapAS',
+            // mapId as stored by dropdown (no dot): 'HighlandsFishingMap'
             'highlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+            // mapId as stored in saved careerSavegame.xml (engineMapId with dot): 'pdlc_highlandsFishingPack.HighlandsFishingMap'
+            // ultraNorm strips non-alphanum then strips 'pdlc' prefix → 'highlandsfishingpackhighlandsfishingmap'
+            'highlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+            // cleanStr (no pdlc strip) variant, just in case
             'pdlchighlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
         };
         const expectedFolder = OFFICIAL_FOLDER_MAP[targetMapIdNorm];
