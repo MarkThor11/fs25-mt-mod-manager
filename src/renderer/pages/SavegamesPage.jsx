@@ -3042,16 +3042,24 @@ export default function SavegamesPage() {
           
           setModalSelectedMods(prev => {
             const next = new Set(prev);
+            // Always ensure the map mod itself is in modalSelectedMods
+            if (birglandMod && birglandMod.modName) {
+              next.add(birglandMod.modName);
+            } else if (cleanMapModName) {
+              next.add(cleanMapModName);
+            }
+
             installedList.forEach(d => {
-              if (d && d.toLowerCase() !== cLow) {
-                next.add(d);
+              if (d) {
+                const matchedModObj = mods ? mods.find(m => (m.modName || '').toLowerCase() === d.toLowerCase() || (m.fileName || '').replace(/\.zip$/i, '').toLowerCase() === d.toLowerCase()) : null;
+                next.add(matchedModObj ? matchedModObj.modName : d);
               }
             });
 
             // Also auto-select non-map sibling mods from the map's dedicated subfolder
             if (hasSubfolderSiblings) {
               const fLow = birglandMod.folder.toLowerCase();
-              const sibs = (mods || []).filter(m => m.folder && m.folder.toLowerCase() === fLow && !m.isMap && m.modName && m.modName.toLowerCase() !== cLow);
+              const sibs = (mods || []).filter(m => m.folder && m.folder.toLowerCase() === fLow && !m.isMap && m.modName);
               sibs.forEach(s => {
                 if (s.modName) next.add(s.modName);
               });
@@ -3417,27 +3425,38 @@ export default function SavegamesPage() {
 
       // Safety net: always resolve map dependencies for custom maps even if UI missed them
       const [mapIdForDeps, mapTitleForDeps, mapModForDeps] = createMap.split('|');
-      if (mapModForDeps && !mapModForDeps.toLowerCase().startsWith('pdlc_') && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(mapModForDeps.toLowerCase())) {
+      const cleanMapForDeps = (mapModForDeps || '').split('.')[0];
+      if (cleanMapForDeps && !cleanMapForDeps.toLowerCase().startsWith('pdlc_') && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(cleanMapForDeps.toLowerCase())) {
         try {
-          console.log(`[CREATE-SAFETY] Resolving dependencies for ${mapModForDeps}. Total mods: ${mods ? mods.length : 0}`);
+          const cLow = cleanMapForDeps.toLowerCase();
+          console.log(`[CREATE-SAFETY] Resolving dependencies for ${cleanMapForDeps}. Total mods: ${mods ? mods.length : 0}`);
           const mapObj = mods ? mods.find(m => 
             m.isMap && (
-              (m.modName && (m.modName.toLowerCase() === mapModForDeps.toLowerCase() || m.modName.toLowerCase().split('.')[0] === mapModForDeps.toLowerCase().split('.')[0])) ||
-              (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === mapModForDeps.toLowerCase().split('.')[0]) ||
+              (m.modName && (m.modName.toLowerCase() === cLow || m.modName.toLowerCase().split('.')[0] === cLow)) ||
+              (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === cLow) ||
               (m.title && (mapTitleForDeps && m.title.toLowerCase() === mapTitleForDeps.toLowerCase()))
             )
-          ) || mods.find(m => m.modName === mapModForDeps || m.modName.toLowerCase() === mapModForDeps.toLowerCase()) : null;
+          ) || mods.find(m => m.modName && m.modName.toLowerCase() === cLow) : null;
 
-          const targetForDeps = mapObj || mapModForDeps;
+          if (mapObj && mapObj.modName) {
+            finalModNames.add(mapObj.modName);
+          } else {
+            finalModNames.add(cleanMapForDeps);
+          }
+
+          const targetForDeps = mapObj || cleanMapForDeps;
           const { installed } = resolveRecursiveDependencies(targetForDeps, mods);
           const installedList = Array.isArray(installed) ? installed : Array.from(installed || []);
-          installedList.forEach(d => finalModNames.add(d));
+          installedList.forEach(d => {
+            const matchedModObj = mods ? mods.find(m => (m.modName || '').toLowerCase() === d.toLowerCase() || (m.fileName || '').replace(/\.zip$/i, '').toLowerCase() === d.toLowerCase()) : null;
+            finalModNames.add(matchedModObj ? matchedModObj.modName : d);
+          });
           console.log(`[CREATE] Safety net resolved ${installedList.length} map dependencies:`, installedList);
 
           // Also auto-select non-map sibling mods from the map's dedicated subfolder
           if (mapObj && mapObj.folder && mapObj.folder !== '' && mapObj.folder !== 'mods') {
             const fLow = mapObj.folder.toLowerCase();
-            const sibs = (mods || []).filter(m => m.folder && m.folder.toLowerCase() === fLow && !m.isMap && m.modName.toLowerCase() !== mapModForDeps.toLowerCase());
+            const sibs = (mods || []).filter(m => m.folder && m.folder.toLowerCase() === fLow && !m.isMap);
             sibs.forEach(s => {
               if (s.modName) finalModNames.add(s.modName);
             });
@@ -3448,7 +3467,14 @@ export default function SavegamesPage() {
         }
       }
 
-      const modsToAdd = mods.filter(m => finalModNames.has(m.modName));
+      // Case-insensitive lookup set for modsToAdd filtering
+      const selectedLower = new Set(Array.from(finalModNames).map(s => String(s).toLowerCase()));
+      const modsToAdd = (mods || []).filter(m => {
+        if (!m || !m.modName) return false;
+        const mNameLow = m.modName.toLowerCase();
+        const fNameLow = (m.fileName || '').replace(/\.zip$/i, '').toLowerCase();
+        return selectedLower.has(mNameLow) || selectedLower.has(fNameLow);
+      });
       const [mapId, mapTitle, mapModName, , filePath] = createMap.split('|');
       
       // Confirm overwrite if manually selected an occupied slot
