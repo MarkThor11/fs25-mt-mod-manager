@@ -1084,23 +1084,10 @@ async function performScan(manualPaths = null) {
                 }
             }
 
-				// Combine dependencies from ModHub website and local modDesc.xml so neither is lost
-				const webDeps = Array.isArray(remoteMod.dependencies) ? remoteMod.dependencies : [];
-				const localDeps = Array.isArray(dependencies) ? dependencies : [];
-				const mergedDeps = [...webDeps];
-				for (const lDep of localDeps) {
-					const lStr = (typeof lDep === 'string' ? lDep : (lDep.modName || lDep.title || lDep.fileName || '')).toLowerCase();
-					const cleanL = lStr.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
-					const exists = mergedDeps.some(d => {
-						const dStr = (typeof d === 'string' ? d : (d.modName || d.title || d.fileName || '')).toLowerCase();
-						const cleanD = dStr.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
-						return cleanD && cleanL && (cleanD === cleanL || cleanD.includes(cleanL) || cleanL.includes(cleanD));
-					});
-					if (!exists) {
-						mergedDeps.push(lDep);
-					}
+				// Use ModHub dependencies as primary authority
+				if (remoteMod.dependencies && Array.isArray(remoteMod.dependencies)) {
+					dependencies = remoteMod.dependencies;
 				}
-				dependencies = mergedDeps;
 
                 // Enrich missing metadata
 				if (author === 'Unknown' && remoteMod.author) author = remoteMod.author;
