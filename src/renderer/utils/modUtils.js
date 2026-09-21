@@ -237,6 +237,9 @@ export const resolveRecursiveDependencies = (targetModOrName, allMods, sessionIn
     const cleanedName = cleanModName(depString);
     if (!cleanedName) return;
     const nameLower = cleanedName.toLowerCase();
+
+    // Ignore official GIANTS DLCs (e.g. pdlc_highlandsFishingPack) as missing zip mods
+    if (nameLower.startsWith('pdlc_')) return;
     
     if (processed.has(nameLower)) return;
     processed.add(nameLower);

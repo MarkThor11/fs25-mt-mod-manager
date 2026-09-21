@@ -3004,8 +3004,8 @@ export default function SavegamesPage() {
           }
       });
 
-      // Auto-select required mods for modded maps
-      if (modName) {
+      // Auto-select required mods for custom modded maps (skip official DLCs like pdlc_highlandsFishingPack)
+      if (modName && !modName.toLowerCase().startsWith('pdlc_') && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(modName.toLowerCase())) {
         try {
           console.log(`[CAREER MODAL] Resolving dependencies for map: ${modName}. Total mods available: ${mods ? mods.length : 0}`);
           const birglandMod = mods ? mods.find(m => m.modName === modName || m.modName.toLowerCase() === modName.toLowerCase()) : null;
@@ -3404,9 +3404,9 @@ export default function SavegamesPage() {
           .forEach(m => finalModNames.add(m.modName));
       }
 
-      // Safety net: always resolve map dependencies even if UI missed them
+      // Safety net: always resolve map dependencies for custom maps even if UI missed them
       const [, , mapModForDeps] = createMap.split('|');
-      if (mapModForDeps) {
+      if (mapModForDeps && !mapModForDeps.toLowerCase().startsWith('pdlc_') && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(mapModForDeps.toLowerCase())) {
         try {
           console.log(`[CREATE-SAFETY] Resolving dependencies for ${mapModForDeps}. Total mods: ${mods ? mods.length : 0}`);
           const { installed } = resolveRecursiveDependencies(mapModForDeps, mods);
