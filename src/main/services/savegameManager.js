@@ -5066,15 +5066,25 @@ async function syncSubfolderMapDependencies(savePath) {
         const queue = [mapModObj, ...modsToEnsure];
         while (queue.length > 0) {
             const current = queue.shift();
-            if (current && (!current.dependencies || current.dependencies.length === 0) && current.modId) {
+            if (current && (!current.dependencies || current.dependencies.length === 0)) {
                 try {
                     const scraper = require('./scraper');
-                    const detail = await scraper.fetchModDetail(current.modId);
-                    if (detail && detail.dependencies && Array.isArray(detail.dependencies)) {
-                        current.dependencies = detail.dependencies;
+                    let modIdToFetch = current.modId;
+                    if (!modIdToFetch && (current.title || current.modName)) {
+                        const searchRes = await scraper.searchMods(current.title || current.modName);
+                        if (searchRes && searchRes.mods && searchRes.mods.length > 0) {
+                            const mapMatch = searchRes.mods.find(sm => sm.isMap || sm.modId);
+                            if (mapMatch) modIdToFetch = mapMatch.modId;
+                        }
+                    }
+                    if (modIdToFetch) {
+                        const detail = await scraper.fetchModDetail(modIdToFetch);
+                        if (detail && detail.dependencies && Array.isArray(detail.dependencies)) {
+                            current.dependencies = detail.dependencies;
+                        }
                     }
                 } catch (sErr) {
-                    console.warn(`[SYNC-DEPS] Could not fetch ModHub dependencies for ID ${current.modId}:`, sErr.message);
+                    console.warn(`[SYNC-DEPS] Could not fetch ModHub dependencies:`, sErr.message);
                 }
             }
 

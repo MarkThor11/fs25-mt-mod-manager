@@ -123,15 +123,29 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}, strict = f
 
   if (strict) return false;
 
-  // 3. Identity 3: Internal Mod Title / Mod Name Match (exact, preserving fs25_)
+  // 3. Identity 3: Internal Mod Title / Mod Name Match
   if (depTitle) {
-    const cleanDepTitle = cleanModName(depTitle).toLowerCase();
-    const cleanMTitle = m.title ? cleanModName(m.title).toLowerCase() : '';
+    const cleanDepTitle = cleanModName(depTitle).toLowerCase().trim();
+    const cleanMTitle = m.title ? cleanModName(m.title).toLowerCase().trim() : '';
 
     if (cleanDepTitle) {
       if (cleanMTitle && cleanMTitle === cleanDepTitle) return true;
       if (mNameNorm && mNameNorm === cleanDepTitle) return true;
       if (mFileNorm && mFileNorm === cleanDepTitle) return true;
+
+      // Substring & token match (e.g. ModHub title "Workshop" matching "Garage Workshop" or "FS25_garageWorkshop")
+      if (cleanDepTitle.length >= 4) {
+        const depAlpha = cleanDepTitle.replace(/[^a-z0-9]/g, '');
+        const titleAlpha = cleanMTitle.replace(/[^a-z0-9]/g, '');
+        const nameAlpha = mNameNorm.replace(/[^a-z0-9]/g, '');
+        const fileAlpha = mFileNorm.replace(/[^a-z0-9]/g, '');
+
+        if (depAlpha.length >= 4) {
+          if (titleAlpha && (titleAlpha.includes(depAlpha) || depAlpha.includes(titleAlpha))) return true;
+          if (nameAlpha && (nameAlpha.includes(depAlpha) || depAlpha.includes(nameAlpha))) return true;
+          if (fileAlpha && (fileAlpha.includes(depAlpha) || depAlpha.includes(fileAlpha))) return true;
+        }
+      }
     }
   }
 

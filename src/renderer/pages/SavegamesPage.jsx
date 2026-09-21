@@ -3476,8 +3476,12 @@ export default function SavegamesPage() {
           const { installed } = resolveRecursiveDependencies(targetForDeps, mods);
           const installedList = Array.isArray(installed) ? installed : Array.from(installed || []);
           installedList.forEach(d => {
-            const matchedModObj = mods ? mods.find(m => (m.modName || '').toLowerCase() === d.toLowerCase() || (m.fileName || '').replace(/\.zip$/i, '').toLowerCase() === d.toLowerCase()) : null;
-            finalModNames.add(matchedModObj ? matchedModObj.modName : d);
+            const matchedModObj = mods ? mods.find(m => matchModWithDependency(m, d)) : null;
+            if (matchedModObj && matchedModObj.modName) {
+              finalModNames.add(matchedModObj.modName);
+            } else {
+              finalModNames.add(typeof d === 'string' ? d : (d.modName || d.fileName || d.title || ''));
+            }
           });
           console.log(`[CREATE] Safety net resolved ${installedList.length} map dependencies:`, installedList);
 
@@ -3501,7 +3505,11 @@ export default function SavegamesPage() {
         if (!m || !m.modName) return false;
         const mNameLow = m.modName.toLowerCase();
         const fNameLow = (m.fileName || '').replace(/\.zip$/i, '').toLowerCase();
-        return selectedLower.has(mNameLow) || selectedLower.has(fNameLow);
+        if (selectedLower.has(mNameLow) || selectedLower.has(fNameLow)) return true;
+        for (const fn of finalModNames) {
+          if (matchModWithDependency(m, fn)) return true;
+        }
+        return false;
       });
       const [mapId, mapTitle, mapModName, , filePath] = createMap.split('|');
       
