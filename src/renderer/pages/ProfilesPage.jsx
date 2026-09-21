@@ -686,7 +686,7 @@ export default function ProfilesPage() {
                           <div className="input-with-icon">
                             <Map size={14} />
                             <select 
-                              value={options.mapModName ? `${options.mapModName}|${options.mapId}|${options.mapTitle}` : options.mapId}
+                              value={options.mapModName ? `${options.mapId}|${options.mapTitle}|${options.mapModName}` : options.mapId}
                               style={{ paddingLeft: 32 }}
                               onChange={e => {
                                 const val = e.target.value;
