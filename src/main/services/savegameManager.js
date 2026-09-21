@@ -1033,21 +1033,29 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     const mapBaseName = (mapModName || '').split('.')[0];
     const matchedMapMod = allMods.find(m => {
         if (!m || !m.modName) return false;
+        if (modZipPath && m.filePath && path.resolve(m.filePath).toLowerCase() === path.resolve(modZipPath).toLowerCase()) {
+            return true;
+        }
         const mLow = m.modName.toLowerCase();
         const rawLow = (mapModName || '').toLowerCase();
         const baseLow = mapBaseName.toLowerCase();
         const fLow = (m.fileName || '').replace(/\.zip$/i, '').toLowerCase();
-        return mLow === rawLow || mLow === baseLow || fLow === baseLow || fLow === rawLow;
+        const tLow = (mapTitle || '').toLowerCase();
+        const idLow = (mapId || '').toLowerCase();
+        return (m.isMap && (mLow === rawLow || mLow === baseLow || fLow === baseLow || fLow === rawLow ||
+               (m.title && m.title.toLowerCase() === tLow) ||
+               (m.mapId && m.mapId.toLowerCase() === idLow))) ||
+               mLow === rawLow || mLow === baseLow || fLow === baseLow || fLow === rawLow;
     });
-    const trueMapModName = matchedMapMod ? matchedMapMod.modName : mapBaseName;
+    const trueMapModName = matchedMapMod ? matchedMapMod.modName : (mapModName || mapBaseName);
 
     let mapModObj = finalMods.find(m => {
         if (!m || !m.modName) return false;
         const mLow = m.modName.toLowerCase();
-        return mLow === (mapModName || '').toLowerCase() || mLow === mapBaseName.toLowerCase() || mLow === trueMapModName.toLowerCase();
+        return mLow === (mapModName || '').toLowerCase() || mLow === mapBaseName.toLowerCase() || mLow === (trueMapModName || '').toLowerCase();
     });
 
-    if (mapModName && !mapModObj) {
+    if ((mapModName || trueMapModName) && !mapModObj) {
         mapModObj = { 
             modName: trueMapModName, 
             title: mapTitle || matchedMapMod?.title || trueMapModName, 
@@ -1149,7 +1157,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     // Determine engineMapId:
     // For official base maps, use canonical base ID (MapUS, MapEU, MapAS, pdlc_highlandsFishingPack...).
     // For custom mod maps, FS25 engine REQUIRES {mapModName}.{internalMapId} (e.g. FS25_BackRoadsCounty4x.mapUS)
-    const isOfficialBaseMap = !mapModName || ['mapus', 'mapeu', 'mapas'].includes((mapModName || '').toLowerCase()) || (mapModName || '').toLowerCase().includes('highlandsfishing');
+    const effectiveMapModName = trueMapModName || mapModName;
+    const isOfficialBaseMap = !effectiveMapModName || ['mapus', 'mapeu', 'mapas'].includes((effectiveMapModName || '').toLowerCase()) || (effectiveMapModName || '').toLowerCase().includes('highlandsfishing');
     let engineMapId = internalMapId || mapId;
 
     if (isOfficialBaseMap) {
@@ -1157,15 +1166,15 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         if (lowEngineId === 'mapus') engineMapId = 'MapUS';
         else if (lowEngineId === 'mapeu') engineMapId = 'MapEU';
         else if (lowEngineId === 'mapas') engineMapId = 'MapAS';
-        else if (lowEngineId.includes('highlandsfishing') || (mapModName || '').toLowerCase().includes('highlandsfishing')) {
+        else if (lowEngineId.includes('highlandsfishing') || (effectiveMapModName || '').toLowerCase().includes('highlandsfishing')) {
             engineMapId = 'pdlc_highlandsFishingPack.HighlandsFishingMap';
         }
-    } else if (mapModName) {
+    } else if (effectiveMapModName) {
         // Strip any previous mod prefix if mismatched
-        if (!engineMapId.startsWith(mapModName + '.')) {
+        if (!engineMapId.startsWith(effectiveMapModName + '.')) {
             const dotIdx = engineMapId.indexOf('.');
             const cleanId = dotIdx !== -1 ? engineMapId.substring(dotIdx + 1) : engineMapId;
-            engineMapId = `${mapModName}.${cleanId || 'mapUS'}`;
+            engineMapId = `${effectiveMapModName}.${cleanId || 'mapUS'}`;
         }
     }
 
