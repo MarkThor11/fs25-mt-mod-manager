@@ -406,6 +406,36 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         return count >= 25;
     };
 
+    // 0. Official base map master templates — explicit direct folder match.
+    //    Official maps have no mapModName, and their IDs are listed as "generic" to prevent
+    //    custom maps from accidentally picking them up. But we still need to find them for
+    //    official map careers (Riverbend, Zielonka, Hutan Pantai, Kinlaig).
+    //    Match by canonical folder name or well-known aliases.
+    if (!targetModNorm) {
+        const OFFICIAL_FOLDER_MAP = {
+            'mapus': 'MapUS',
+            'mapeu': 'MapEU',
+            'mapas': 'MapAS',
+            'highlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+            'pdlchighlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+        };
+        const expectedFolder = OFFICIAL_FOLDER_MAP[targetMapIdNorm];
+        if (expectedFolder) {
+            // Look for exact folder or zip by canonical name
+            for (const folder of folders) {
+                const cleanFolder = folder.replace(/\.zip$/i, '');
+                if (cleanFolder === expectedFolder || cleanFolder.toLowerCase() === expectedFolder.toLowerCase()) {
+                    const folderPath = path.join(templatesDir, folder);
+                    const stat = await fs.stat(folderPath).catch(() => null);
+                    if (!stat) continue;
+                    const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
+                    if (!stat.isDirectory() && !isZip) continue;
+                    if (await isCompleteTemplate(folderPath, isZip)) return folder;
+                }
+            }
+        }
+    }
+
     // 1. Direct folder/zip check
     for (const folder of folders) {
         const folderPath = path.join(templatesDir, folder);
@@ -1164,6 +1194,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.loadDefaultFarm = startFarmFlag;
             savegameData.careerSavegame.settings.loadDefaultVehicles = startFarmFlag;
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
+
+            // Critically ensure valid="true" is present — without it FS25 engine treats slot as empty
+            savegameData.careerSavegame['@_valid'] = 'true';
             
             if (!savegameData.careerSavegame.statistics) savegameData.careerSavegame.statistics = {};
             savegameData.careerSavegame.statistics.money = String(money);
@@ -1216,34 +1249,39 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             // Update careerSavegame mods list
             savegameData.careerSavegame.mod = modData;
 
-            // Configure player spawn: official maps receive canonical farmhouse coordinates,
-            // while mod maps have coordinates cleared so the engine uses the author's designated spawn
+            // Configure player spawn: try the template's stored spawn position first (preserves
+            // the map's actual start location). Fall back to hardcoded official-map defaults if
+            // the template has no spawn data, then clear for custom maps.
             if (!savegameData.careerSavegame.player) {
                 savegameData.careerSavegame.player = {};
             }
-            if (engineMapId === 'MapUS') {
-                savegameData.careerSavegame.player['@_spawnPositionX'] = '-128.000';
-                savegameData.careerSavegame.player['@_spawnPositionY'] = '49.200';
-                savegameData.careerSavegame.player['@_spawnPositionZ'] = '-162.000';
-            } else if (engineMapId === 'MapEU') {
-                savegameData.careerSavegame.player['@_spawnPositionX'] = '-263.000';
-                savegameData.careerSavegame.player['@_spawnPositionY'] = '60.000';
-                savegameData.careerSavegame.player['@_spawnPositionZ'] = '44.000';
-            } else if (engineMapId === 'MapAS') {
-                savegameData.careerSavegame.player['@_spawnPositionX'] = '-528.800';
-                savegameData.careerSavegame.player['@_spawnPositionY'] = '19.800';
-                savegameData.careerSavegame.player['@_spawnPositionZ'] = '-61.100';
+
+            // Hardcoded defaults for official base maps (used only when template has no spawn)
+            const OFFICIAL_DEFAULT_SPAWNS = {
+                'MapUS': { x: '-128.000', y: '49.200', z: '-162.000' },
+                'MapEU': { x: '-263.000', y: '60.000', z: '44.000' },
+                'MapAS': { x: '-528.800', y: '19.800', z: '-61.100' },
+                'pdlc_highlandsFishingPack.HighlandsFishingMap': { x: '-48.000', y: '25.000', z: '-82.000' },
+            };
+
+            const officialDefault = OFFICIAL_DEFAULT_SPAWNS[engineMapId];
+            const templateSpawn = await getMapDefaultStartCoordinates(slotPath);
+
+            if (templateSpawn && templateSpawn.x !== undefined && templateSpawn.x !== 0) {
+                // Use the template's stored coordinates (correct for this specific template)
+                savegameData.careerSavegame.player['@_spawnPositionX'] = templateSpawn.x.toFixed(3);
+                savegameData.careerSavegame.player['@_spawnPositionY'] = templateSpawn.y.toFixed(3);
+                savegameData.careerSavegame.player['@_spawnPositionZ'] = templateSpawn.z.toFixed(3);
+            } else if (officialDefault) {
+                // Fall back to hardcoded default for official maps
+                savegameData.careerSavegame.player['@_spawnPositionX'] = officialDefault.x;
+                savegameData.careerSavegame.player['@_spawnPositionY'] = officialDefault.y;
+                savegameData.careerSavegame.player['@_spawnPositionZ'] = officialDefault.z;
             } else {
-                const defaultSpawn = await getMapDefaultStartCoordinates(slotPath);
-                if (defaultSpawn && defaultSpawn.x !== undefined) {
-                    savegameData.careerSavegame.player['@_spawnPositionX'] = defaultSpawn.x.toFixed(3);
-                    savegameData.careerSavegame.player['@_spawnPositionY'] = defaultSpawn.y.toFixed(3);
-                    savegameData.careerSavegame.player['@_spawnPositionZ'] = defaultSpawn.z.toFixed(3);
-                } else {
-                    delete savegameData.careerSavegame.player['@_spawnPositionX'];
-                    delete savegameData.careerSavegame.player['@_spawnPositionY'];
-                    delete savegameData.careerSavegame.player['@_spawnPositionZ'];
-                }
+                // Custom mod map — clear spawn so the engine uses the map author's designated start
+                delete savegameData.careerSavegame.player['@_spawnPositionX'];
+                delete savegameData.careerSavegame.player['@_spawnPositionY'];
+                delete savegameData.careerSavegame.player['@_spawnPositionZ'];
             }
             // Always ensure the player does NOT spawn inside a vehicle or car
             delete savegameData.careerSavegame.player['@_spawnYaw'];
