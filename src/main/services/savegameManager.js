@@ -838,10 +838,14 @@ async function setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModN
                     if (idM) {
                         const id = idM[1];
                         allFarmlandIds.push(id);
-                        if (/defaultFarmProperty=["']true["']/i.test(attrs)) {
+                        if (/defaultFarmProperty=["'](true|1)["']/i.test(attrs) || /farmId=["']1["']/i.test(attrs)) {
                             defaultFarmIds.add(id);
                         }
                     }
+                }
+                if (defaultFarmIds.size === 0 && allFarmlandIds.length > 0) {
+                    defaultFarmIds.add(allFarmlandIds[0]);
+                    if (allFarmlandIds.length > 1) defaultFarmIds.add(allFarmlandIds[1]);
                 }
             }
         } catch (e) {
@@ -1735,6 +1739,18 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             }
         };
         await fs.writeFile(envPath, builder.build(initialEnv));
+    }
+
+    // Ensure all subfolder map dependencies are synced and mirror links are created in primary mods directory
+    try {
+        await syncSubfolderMapDependencies(slotPath);
+        const modManager = require('./modManager');
+        const defaultMods = modManager.getDefaultModsPath();
+        if (defaultMods) {
+            await modManager.syncMirrorLinks(defaultMods);
+        }
+    } catch (syncErr) {
+        console.warn('[CREATE] Warning syncing map dependencies and mirror links:', syncErr.message);
     }
 
     return { success: true, path: slotPath, requiresEngineInit, mapId };
