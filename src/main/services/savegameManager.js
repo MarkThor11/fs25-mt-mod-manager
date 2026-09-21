@@ -1061,18 +1061,34 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     const finalMods = selectedMods.filter(m => m.modName !== 'FS25_rememberPositions');
     // Add map mod if not already there
-    const matchedMapMod = allMods.find(m => (m.modName || '').toLowerCase() === (mapModName || '').toLowerCase());
-    let mapModObj = finalMods.find(m => (m.modName || '').toLowerCase() === (mapModName || '').toLowerCase());
+    const mapBaseName = (mapModName || '').split('.')[0];
+    const matchedMapMod = allMods.find(m => {
+        if (!m || !m.modName) return false;
+        const mLow = m.modName.toLowerCase();
+        const rawLow = (mapModName || '').toLowerCase();
+        const baseLow = mapBaseName.toLowerCase();
+        const fLow = (m.fileName || '').replace(/\.zip$/i, '').toLowerCase();
+        return mLow === rawLow || mLow === baseLow || fLow === baseLow || fLow === rawLow;
+    });
+    const trueMapModName = matchedMapMod ? matchedMapMod.modName : mapBaseName;
+
+    let mapModObj = finalMods.find(m => {
+        if (!m || !m.modName) return false;
+        const mLow = m.modName.toLowerCase();
+        return mLow === (mapModName || '').toLowerCase() || mLow === mapBaseName.toLowerCase() || mLow === trueMapModName.toLowerCase();
+    });
+
     if (mapModName && !mapModObj) {
         mapModObj = { 
-            modName: mapModName, 
-            title: mapTitle || matchedMapMod?.title || mapModName, 
+            modName: trueMapModName, 
+            title: mapTitle || matchedMapMod?.title || trueMapModName, 
             version: matchedMapMod?.version || '1.0.0.0', 
             required: true 
         };
         finalMods.unshift(mapModObj);
     } else if (mapModObj) {
         mapModObj.required = true;
+        mapModObj.modName = trueMapModName;
         if (matchedMapMod?.version) mapModObj.version = matchedMapMod.version;
     }
 

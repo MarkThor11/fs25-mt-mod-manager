@@ -3009,57 +3009,56 @@ export default function SavegamesPage() {
       });
 
       // Auto-select required mods for custom modded maps (skip official DLCs like pdlc_highlandsFishingPack)
-      if (modName && !modName.toLowerCase().startsWith('pdlc_') && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(modName.toLowerCase())) {
+      const cleanMapModName = (modName || '').split('.')[0];
+      if (cleanMapModName && !cleanMapModName.toLowerCase().startsWith('pdlc_') && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(cleanMapModName.toLowerCase())) {
         try {
-          console.log(`[CAREER MODAL] Resolving dependencies for map: ${modName}. Total mods available: ${mods ? mods.length : 0}`);
+          console.log(`[CAREER MODAL] Resolving dependencies for map: ${cleanMapModName}. Total mods available: ${mods ? mods.length : 0}`);
+          const cLow = cleanMapModName.toLowerCase();
           const birglandMod = mods ? mods.find(m => 
             m.isMap && (
-              (m.modName && (m.modName.toLowerCase() === modName.toLowerCase() || m.modName.toLowerCase().split('.')[0] === modName.toLowerCase().split('.')[0])) ||
-              (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === modName.toLowerCase().split('.')[0]) ||
+              (m.modName && (m.modName.toLowerCase() === cLow || m.modName.toLowerCase().split('.')[0] === cLow)) ||
+              (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === cLow) ||
               (m.title && (title && m.title.toLowerCase() === title.toLowerCase()))
             )
-          ) || mods.find(m => m.modName === modName || m.modName.toLowerCase() === modName.toLowerCase()) : null;
+          ) || mods.find(m => m.modName && (m.modName.toLowerCase() === cLow || m.modName.toLowerCase().split('.')[0] === cLow)) : null;
 
           if (birglandMod) {
-            console.log(`[CAREER MODAL] Found map mod in mods array:`, JSON.stringify({
+            console.log(`[CAREER MODAL] Found map mod object:`, JSON.stringify({
                 modName: birglandMod.modName,
                 isMap: birglandMod.isMap,
                 dependenciesCount: birglandMod.dependencies ? birglandMod.dependencies.length : 0,
                 dependencies: birglandMod.dependencies
             }));
           } else {
-            console.log(`[CAREER MODAL] Map mod '${modName}' NOT found in mods array! Available map mods:`, mods ? mods.filter(m => m.isMap).map(m => m.modName).join(', ') : 'none');
+            console.log(`[CAREER MODAL] Map mod '${cleanMapModName}' not found in mods array, resolving by name fallback.`);
           }
 
-          const targetForDeps = birglandMod || modName;
+          const targetForDeps = birglandMod || cleanMapModName;
           const { installed, missing } = resolveRecursiveDependencies(targetForDeps, mods);
           const installedList = Array.isArray(installed) ? installed : Array.from(installed || []);
           const missingList = Array.isArray(missing) ? missing : Array.from(missing || []);
           
           const hasSubfolderSiblings = birglandMod && birglandMod.folder && birglandMod.folder !== '' && birglandMod.folder !== 'mods';
-          if (installedList.length > 0 || hasSubfolderSiblings) {
-            console.log(`[CAREER MODAL] Auto-selecting ${installedList.length} dependency mods:`, installedList);
-            setModalSelectedMods(prev => {
-              const next = new Set(prev);
-              installedList.forEach(d => {
-                const isMapMod = mods.some(m => m.modName === d && m.isMap);
-                if (!isMapMod) {
-                  next.add(d);
-                }
-              });
-
-              // Also auto-select non-map sibling mods from the map's dedicated subfolder
-              if (hasSubfolderSiblings) {
-                const fLow = birglandMod.folder.toLowerCase();
-                const sibs = (mods || []).filter(m => m.folder && m.folder.toLowerCase() === fLow && !m.isMap && m.modName.toLowerCase() !== modName.toLowerCase());
-                sibs.forEach(s => {
-                  if (s.modName) next.add(s.modName);
-                });
+          
+          setModalSelectedMods(prev => {
+            const next = new Set(prev);
+            installedList.forEach(d => {
+              if (d && d.toLowerCase() !== cLow) {
+                next.add(d);
               }
-
-              return next;
             });
-          }
+
+            // Also auto-select non-map sibling mods from the map's dedicated subfolder
+            if (hasSubfolderSiblings) {
+              const fLow = birglandMod.folder.toLowerCase();
+              const sibs = (mods || []).filter(m => m.folder && m.folder.toLowerCase() === fLow && !m.isMap && m.modName && m.modName.toLowerCase() !== cLow);
+              sibs.forEach(s => {
+                if (s.modName) next.add(s.modName);
+              });
+            }
+
+            return next;
+          });
 
           if (missingList.length > 0) {
             console.log(`[CAREER MODAL] Missing dependencies detected:`, missingList);
