@@ -71,39 +71,23 @@ function matchModWithDependency(m, dep, resolvedMetadata = {}, strict = false) {
   const mFileNorm = m.fileName ? normalizeForMatching(m.fileName) : '';
   const mNameNorm = m.modName ? normalizeForMatching(m.modName) : '';
 
-  // 2. Identity 2: ZIP Filename / Technical Mod Name Match (exact or prefix-stripped)
+  // 2. Identity 2: ZIP Filename / Technical Mod Name Match (exact, preserving fs25_)
   if (depFileName) {
     const normDepFile = normalizeForMatching(depFileName);
     if (mFileNorm === normDepFile || mNameNorm === normDepFile) return true;
-
-    const cleanDepFile = normDepFile.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
-    const cleanMName = mNameNorm.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
-    const cleanMFile = mFileNorm.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
-
-    if (cleanDepFile && (cleanMName === cleanDepFile || cleanMFile === cleanDepFile)) return true;
   }
 
   if (strict) return false;
 
-  // 3. Identity 3: Internal modDesc.xml Mod Title / Normalized Name Match
+  // 3. Identity 3: Internal Mod Title / Mod Name Match (exact, preserving fs25_)
   if (depTitle) {
-    const cleanDepTitle = cleanModName(depTitle).toLowerCase().replace(/[^a-z0-9]/g, '');
-    const cleanMTitle = m.title ? cleanModName(m.title).toLowerCase().replace(/[^a-z0-9]/g, '') : '';
-    const cleanMName = mNameNorm.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
-    const cleanMFile = mFileNorm.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/g, '');
+    const cleanDepTitle = cleanModName(depTitle).toLowerCase();
+    const cleanMTitle = m.title ? cleanModName(m.title).toLowerCase() : '';
 
-    if (!cleanDepTitle) return false;
-
-    // Exact clean title or modName match
-    if (cleanMTitle && cleanMTitle === cleanDepTitle) return true;
-    if (cleanMName && cleanMName === cleanDepTitle) return true;
-    if (cleanMFile && cleanMFile === cleanDepTitle) return true;
-
-    // Substring token match (e.g. "Workshop" in "garageworkshop" or "Garage Workshop")
-    if (cleanDepTitle.length >= 4) {
-      if (cleanMTitle && (cleanMTitle.includes(cleanDepTitle) || cleanDepTitle.includes(cleanMTitle))) return true;
-      if (cleanMName && (cleanMName.includes(cleanDepTitle) || cleanDepTitle.includes(cleanMName))) return true;
-      if (cleanMFile && (cleanMFile.includes(cleanDepTitle) || cleanDepTitle.includes(cleanMFile))) return true;
+    if (cleanDepTitle) {
+      if (cleanMTitle && cleanMTitle === cleanDepTitle) return true;
+      if (mNameNorm && mNameNorm === cleanDepTitle) return true;
+      if (mFileNorm && mFileNorm === cleanDepTitle) return true;
     }
   }
 
