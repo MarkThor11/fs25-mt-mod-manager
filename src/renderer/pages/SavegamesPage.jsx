@@ -2921,6 +2921,7 @@ export default function SavegamesPage() {
   const [autoLaunchOnCreate, setAutoLaunchOnCreate] = useState(false);
   const [createMode, setCreateMode] = useState('NEW_FARMER');
   const [includeStartFarm, setIncludeStartFarm] = useState(true);
+  const [includeStartVehicles, setIncludeStartVehicles] = useState(true);
   const [mapHasTemplate, setMapHasTemplate] = useState(true);
   const [selectedSaves, setSelectedSaves] = useState(new Set());
   const [includeMustHaves, setIncludeMustHaves] = useState(true);
@@ -2964,18 +2965,21 @@ export default function SavegamesPage() {
       setCreateEconomy('EASY');
       setCreateDifficulty(1);
       setIncludeStartFarm(true);
+      setIncludeStartVehicles(true);
     } else if (mode === 'FARM_MANAGER') {
       setCreateMoney(1500000);
       setCreateLoan(0);
       setCreateEconomy('NORMAL');
       setCreateDifficulty(2);
       setIncludeStartFarm(false);
+      setIncludeStartVehicles(false);
     } else if (mode === 'START_FROM_SCRATCH') {
       setCreateMoney(500000);
       setCreateLoan(0);
       setCreateEconomy('HARD');
       setCreateDifficulty(3);
       setIncludeStartFarm(false);
+      setIncludeStartVehicles(false);
     }
   };
 
@@ -3481,7 +3485,8 @@ export default function SavegamesPage() {
         startMonth: createStartMonth,
         startTime: createStartTime,
         startWeather: createStartWeather,
-        includeStartFarm: includeStartFarm
+        includeStartFarm: includeStartFarm,
+        includeStartVehicles: includeStartVehicles
       });
 
       if (result.success) {
@@ -4154,66 +4159,70 @@ export default function SavegamesPage() {
 
                     {createActiveTab === 'rules' && (
                         <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-                            {!mapHasTemplate ? (
-                                <div className="animate-pulse-subtle" style={{ padding: '24px', background: 'rgba(var(--warning-rgb), 0.05)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--warning-dim)' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--warning)', fontWeight: 800, fontSize: 14, marginBottom: 10 }}>
-                                        <ShieldAlert size={20} /> HANDSHAKE REQUIRED
+                            {!mapHasTemplate && (
+                                <div className="animate-pulse-subtle" style={{ padding: '16px 20px', background: 'rgba(var(--accent-rgb), 0.08)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--accent-dim)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--accent)', fontWeight: 800, fontSize: 13, marginBottom: 4 }}>
+                                        <Zap size={18} /> INITIAL MAP HARVEST MODE
                                     </div>
-                                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                                        This map doesn't have an automation template yet. <strong>Rules & Economy settings are locked </strong> 
-                                        until you initialize the map. Simply launch, save, and exit—the Manager will learn the map settings automatically!
+                                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                                        Money, Difficulty, Farmlands, and Equipment can be customized below! <strong>Start Month & Weather are set to Map Default</strong> for this first launch so the game engine generates all native crops on fields.
                                     </p>
                                 </div>
-                            ) : (
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48 }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                                        <div>
-                                            <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>STARTING MODE</label>
-                                            <select value={createMode} onChange={e => handleModeChange(e.target.value)} style={{ width: '100%', padding: '14px', border: '2px solid var(--accent)', color: 'var(--accent)', fontWeight: 800, fontSize: 16, borderRadius: 8, background: 'var(--bg-tertiary)' }}>
-                                                <option value="NEW_FARMER">New Farmer</option>
-                                                <option value="FARM_MANAGER">Farm Manager</option>
-                                                <option value="START_FROM_SCRATCH">Start From Scratch</option>
-                                            </select>
-                                        </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                            <div>
-                                                <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>INITIAL MONEY</label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>$</span>
-                                                    <input type="number" value={createMoney} onChange={e => setCreateMoney(parseInt(e.target.value))} style={{ width: '100%', padding: '12px 12px 12px 28px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>INITIAL LOAN</label>
-                                                <div style={{ position: 'relative' }}>
-                                                    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>$</span>
-                                                    <input type="number" value={createLoan} onChange={e => setCreateLoan(parseInt(e.target.value))} style={{ width: '100%', padding: '12px 12px 12px 28px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} />
-                                                </div>
-                                            </div>
-                                        </div>
+                            )}
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                                    <div>
+                                        <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>STARTING MODE</label>
+                                        <select value={createMode} onChange={e => handleModeChange(e.target.value)} style={{ width: '100%', padding: '14px', border: '2px solid var(--accent)', color: 'var(--accent)', fontWeight: 800, fontSize: 16, borderRadius: 8, background: 'var(--bg-tertiary)' }}>
+                                            <option value="NEW_FARMER">New Farmer</option>
+                                            <option value="FARM_MANAGER">Farm Manager</option>
+                                            <option value="START_FROM_SCRATCH">Start From Scratch</option>
+                                        </select>
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                                         <div>
-                                            <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>ECONOMY DIFFICULTY</label>
-                                            <select value={createEconomy} onChange={e => setCreateEconomy(e.target.value)} style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
-                                                <option value="EASY">Easy</option>
-                                                <option value="NORMAL">Normal</option>
-                                                <option value="HARD">Hard</option>
-                                            </select>
+                                            <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>INITIAL MONEY</label>
+                                            <div style={{ position: 'relative' }}>
+                                                <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>$</span>
+                                                <input type="number" value={createMoney} onChange={e => setCreateMoney(parseInt(e.target.value))} style={{ width: '100%', padding: '12px 12px 12px 28px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} />
+                                            </div>
                                         </div>
                                         <div>
-                                            <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>SEASON LENGTH (DAYS)</label>
-                                            <input type="number" min="1" max="28" value={createSeasonLength} onChange={e => setCreateSeasonLength(parseInt(e.target.value))} style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} />
+                                            <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>INITIAL LOAN</label>
+                                            <div style={{ position: 'relative' }}>
+                                                <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>$</span>
+                                                <input type="number" value={createLoan} onChange={e => setCreateLoan(parseInt(e.target.value))} style={{ width: '100%', padding: '12px 12px 12px 28px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                                    <div>
+                                        <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>ECONOMY DIFFICULTY</label>
+                                        <select value={createEconomy} onChange={e => setCreateEconomy(e.target.value)} style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                                            <option value="EASY">Easy</option>
+                                            <option value="NORMAL">Normal</option>
+                                            <option value="HARD">Hard</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>SEASON LENGTH (DAYS)</label>
+                                        <input type="number" min="1" max="28" value={createSeasonLength} onChange={e => setCreateSeasonLength(parseInt(e.target.value))} style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} />
+                                    </div>
+                                </div>
+                            </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
                                 <div>
                                     <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>STARTING MONTH</label>
-                                    <select value={createStartMonth} onChange={e => setCreateStartMonth(e.target.value)} style={{ width: '100%', padding: '14px', fontSize: 14, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
-                                        <option value="DEFAULT">Map Default (August)</option>
+                                    <select 
+                                        value={mapHasTemplate ? createStartMonth : 'DEFAULT'} 
+                                        onChange={e => setCreateStartMonth(e.target.value)} 
+                                        disabled={!mapHasTemplate}
+                                        style={{ width: '100%', padding: '14px', fontSize: 14, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, opacity: !mapHasTemplate ? 0.6 : 1 }}
+                                    >
+                                        <option value="DEFAULT">Map Default (Native Season)</option>
                                         <option value="1">March (Spring)</option>
                                         <option value="2">April (Spring)</option>
                                         <option value="3">May (Spring)</option>
@@ -4244,7 +4253,12 @@ export default function SavegamesPage() {
                                 </div>
                                 <div>
                                     <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>STARTING WEATHER</label>
-                                    <select value={createStartWeather} onChange={e => setCreateStartWeather(e.target.value)} style={{ width: '100%', padding: '14px', fontSize: 14, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                                    <select 
+                                        value={mapHasTemplate ? createStartWeather : 'DEFAULT'} 
+                                        onChange={e => setCreateStartWeather(e.target.value)} 
+                                        disabled={!mapHasTemplate}
+                                        style={{ width: '100%', padding: '14px', fontSize: 14, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, opacity: !mapHasTemplate ? 0.6 : 1 }}
+                                    >
                                         <option value="DEFAULT">Map Default</option>
                                         <option value="SUN">Clear / Sunny</option>
                                         <option value="CLOUDY">Cloudy / Overcast</option>
@@ -4253,35 +4267,54 @@ export default function SavegamesPage() {
                                 </div>
                             </div>
 
-                            <div style={{ padding: '24px', background: 'var(--bg-tertiary)', borderRadius: 16, border: includeStartFarm ? '1px solid var(--accent)' : '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 20 }}>
-                                <div style={{ width: 44, height: 44, borderRadius: 12, background: includeStartFarm ? 'var(--accent-dim)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: includeStartFarm ? 'var(--accent)' : 'var(--text-tertiary)' }}>
-                                    <Tractor size={24} />
+                            {/* Dual Starting Farm Toggles */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                                <div style={{ padding: '20px', background: 'var(--bg-tertiary)', borderRadius: 16, border: includeStartFarm ? '1px solid var(--accent)' : '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 16 }}>
+                                    <div style={{ width: 40, height: 40, borderRadius: 10, background: includeStartFarm ? 'var(--accent-dim)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: includeStartFarm ? 'var(--accent)' : 'var(--text-tertiary)' }}>
+                                        <MapPin size={22} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: 800, fontSize: 15 }}>Starting Farmlands & Fields</div>
+                                        <div style={{ fontSize: 12, opacity: 0.6, marginTop: 2 }}>Owns default map fields automatically.</div>
+                                    </div>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={includeStartFarm} 
+                                        onChange={e => setIncludeStartFarm(e.target.checked)}
+                                        style={{ width: 24, height: 24, cursor: 'pointer', accentColor: 'var(--accent)' }}
+                                    />
                                 </div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 800, fontSize: 16 }}>Include Starting Farm & Vehicles</div>
-                                    <div style={{ fontSize: 13, opacity: 0.6, marginTop: 2 }}>Spawns default starting tractors, harvesters, equipment, and farm land automatically.</div>
+
+                                <div style={{ padding: '20px', background: 'var(--bg-tertiary)', borderRadius: 16, border: includeStartVehicles ? '1px solid var(--accent)' : '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 16 }}>
+                                    <div style={{ width: 40, height: 40, borderRadius: 10, background: includeStartVehicles ? 'var(--accent-dim)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: includeStartVehicles ? 'var(--accent)' : 'var(--text-tertiary)' }}>
+                                        <Tractor size={22} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: 800, fontSize: 15 }}>Starting Vehicles & Equipment</div>
+                                        <div style={{ fontSize: 12, opacity: 0.6, marginTop: 2 }}>Spawns default starting tractors & machinery.</div>
+                                    </div>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={includeStartVehicles} 
+                                        onChange={e => setIncludeStartVehicles(e.target.checked)}
+                                        style={{ width: 24, height: 24, cursor: 'pointer', accentColor: 'var(--accent)' }}
+                                    />
                                 </div>
-                                <input 
-                                    type="checkbox" 
-                                    checked={includeStartFarm} 
-                                    onChange={e => setIncludeStartFarm(e.target.checked)}
-                                    style={{ width: 28, height: 28, cursor: 'pointer', accentColor: 'var(--accent)' }}
-                                />
                             </div>
 
-                            <div style={{ padding: '24px', background: 'var(--bg-tertiary)', borderRadius: 16, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 20 }}>
-                                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
-                                    <Zap size={24} />
+                            <div style={{ padding: '20px', background: 'var(--bg-tertiary)', borderRadius: 16, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 16 }}>
+                                <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                                    <Zap size={22} />
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 800, fontSize: 16 }}>Auto-launch to initialize map</div>
-                                    <div style={{ fontSize: 13, opacity: 0.6, marginTop: 2 }}>Modded maps require one launch to build the world files. We'll handle this automatically.</div>
+                                    <div style={{ fontWeight: 800, fontSize: 15 }}>Auto-launch to initialize map</div>
+                                    <div style={{ fontSize: 12, opacity: 0.6, marginTop: 2 }}>Modded maps require one launch to build the world files. We'll handle this automatically.</div>
                                 </div>
                                 <input 
                                     type="checkbox" 
                                     checked={autoLaunchOnCreate} 
                                     onChange={e => setAutoLaunchOnCreate(e.target.checked)}
-                                    style={{ width: 28, height: 28, cursor: 'pointer', accentColor: 'var(--accent)' }}
+                                    style={{ width: 24, height: 24, cursor: 'pointer', accentColor: 'var(--accent)' }}
                                 />
                             </div>
                         </div>

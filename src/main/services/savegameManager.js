@@ -954,6 +954,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         mode = 'NEW_FARMER' 
     } = opts;
     const includeStartFarm = opts.includeStartFarm !== false && opts.includeStartFarm !== 'false';
+    const includeStartVehicles = opts.includeStartVehicles !== false && opts.includeStartVehicles !== 'false';
     const startFarmFlag = includeStartFarm ? 'true' : 'false';
 
     // 1. Prepare Slot
@@ -1399,8 +1400,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 } catch (e) {}
             }
 
-            // If start farm is disabled by user, strip starting farm vehicles from vehicles.xml
-            if (!includeStartFarm) {
+            // If starting vehicles are disabled by user, strip starting farm vehicles from vehicles.xml
+            if (!includeStartVehicles) {
                 const vehiclesPath = path.join(slotPath, 'vehicles.xml');
                 if (fs.existsSync(vehiclesPath)) {
                     try {
@@ -1409,7 +1410,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         vXml = vXml.replace(/<vehicle\s+[^>]*farmId="1"[^>]*>[\s\S]*?<\/vehicle>/gi, '');
                         vXml = vXml.replace(/<vehicle\s+[^>]*farmId="1"[^>]*\/>/gi, '');
                         await fs.writeFile(vehiclesPath, vXml);
-                        console.log('[CREATE] Stripped starting farm vehicles because includeStartFarm is false.');
+                        console.log('[CREATE] Stripped starting farm vehicles because includeStartVehicles is false.');
                     } catch (e) {}
                 }
             }
