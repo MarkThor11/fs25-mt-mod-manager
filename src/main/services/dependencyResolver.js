@@ -20,7 +20,7 @@ function normalizeForMatching(str) {
   return str.split(/[/\\]/).pop().replace(/\.zip$/i, "").toLowerCase().trim();
 }
 
-export const matchModWithDependency = (m, dep, resolvedMetadata = {}) => {
+function matchModWithDependency(m, dep, resolvedMetadata = {}) {
   if (!dep || !m) return false;
 
   let depId = null;
