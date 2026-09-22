@@ -671,7 +671,8 @@ async function setSavegameMods(savegamePath, mods) {
     
     await fs.writeFile(careerPath, newXml);
     
-    // Auto-inject any missing dependencies required by the user's selected mods
+    // Auto-inject any missing map dependencies and declared mod dependencies
+    await syncSubfolderMapDependencies(savegamePath);
     await autoInjectDependencies(savegamePath);
     
     return { success: true };
@@ -4984,14 +4985,15 @@ async function syncSubfolderMapDependencies(savePath) {
 
         // Identify the map mod using robust detection
         const mapModObj = findMapModInSavegame(xmlData, localMods);
-        if (!mapModObj) return;
 
         const modsToEnsure = [];
         const seenModNames = new Set();
-        seenModNames.add(mapModObj.modName.toLowerCase());
+        if (mapModObj && mapModObj.modName) {
+            seenModNames.add(mapModObj.modName.toLowerCase());
+        }
 
         // 1. Check if the map resides in a dedicated subfolder
-        if (mapModObj.filePath) {
+        if (mapModObj && mapModObj.filePath) {
             try {
                 const mapDir = path.dirname(mapModObj.filePath);
                 const configuredRoots = modManager.getModsPaths().map(p => path.resolve(p).toLowerCase());
@@ -5048,7 +5050,7 @@ async function syncSubfolderMapDependencies(savePath) {
         }
 
         // Auto-include all non-map mods from "Map Dependencies" folder and map subfolders
-        const mapDepFolderMods = localMods.filter(m => !m.isMap && m.folder && (m.folder.toLowerCase() === 'map dependencies' || (mapModObj.folder && m.folder.toLowerCase() === mapModObj.folder.toLowerCase() && m.folder.toLowerCase() !== 'mods')));
+        const mapDepFolderMods = localMods.filter(m => !m.isMap && m.folder && (m.folder.toLowerCase() === 'map dependencies' || (mapModObj && mapModObj.folder && m.folder.toLowerCase() === mapModObj.folder.toLowerCase() && m.folder.toLowerCase() !== 'mods')));
         for (const depMod of mapDepFolderMods) {
             if (depMod.modName) {
                 const sLow = depMod.modName.toLowerCase();
@@ -5060,7 +5062,7 @@ async function syncSubfolderMapDependencies(savePath) {
         }
 
         // 2. Recursively resolve all declared dependencies for the map and its siblings
-        const queue = [mapModObj, ...modsToEnsure];
+        const queue = (mapModObj ? [mapModObj, ...modsToEnsure] : [...modsToEnsure]);
         while (queue.length > 0) {
             const current = queue.shift();
             if (current && (!current.dependencies || current.dependencies.length === 0)) {
