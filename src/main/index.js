@@ -1667,6 +1667,24 @@ ipcMain.handle('game:launch', async (_, options) => {
           console.error('[LAUNCH] Auto-harvesting failed on game exit:', harvestErr);
         }
 
+        // Re-inject Map Dependencies and declared mod dependencies after the game exits.
+        // The FS25 engine overwrites careerSavegame.xml on first-time map initialization,
+        // stripping any mods we pre-populated that it didn't actively load.
+        try {
+          const fs25DataRoot = pathProvider.getFS25DataRoot();
+          if (fs25DataRoot) {
+            const savePath = path.join(fs25DataRoot, `savegame${options.savegameIndex}`);
+            if (fs.existsSync(savePath)) {
+              console.log(`[LAUNCH] Re-injecting map dependencies into savegame${options.savegameIndex} after game exit...`);
+              await savegameManager.syncSubfolderMapDependencies(savePath);
+              await savegameManager.autoInjectDependencies(savePath);
+              console.log(`[LAUNCH] Dependency re-injection complete for savegame${options.savegameIndex}.`);
+            }
+          }
+        } catch (depErr) {
+          console.error('[LAUNCH] Dependency re-injection failed on game exit:', depErr);
+        }
+
         // Automatic Cloud Backup if cloudBackupPath is configured
         try {
           const cloudBackupPath = cache.getSetting('cloudBackupPath');
