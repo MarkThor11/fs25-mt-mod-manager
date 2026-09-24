@@ -145,6 +145,34 @@ function getTemplatesPath() {
                 }
             }
         }
+        // Sanitize existing custom templates in modManagerTemplates (remove dummy/corrupt folders that lack genuine terrain/density files)
+        const items = fs.readdirSync(p);
+        const OFFICIAL_FOLDERS = ['mapus', 'mapeu', 'mapas', 'pdlc_highlandsfishingpack_highlandsfishingmap'];
+        for (const item of items) {
+            const itemLow = item.replace(/\.zip$/i, '').toLowerCase();
+            if (OFFICIAL_FOLDERS.includes(itemLow)) continue;
+            const itemPath = path.join(p, item);
+            const isZip = item.toLowerCase().endsWith('.zip');
+            let isCorrupt = false;
+            if (isZip) {
+                try {
+                    const zip = new AdmZip(itemPath);
+                    const hasHeight = !!zip.getEntry('terrain.heightmap.png');
+                    const hasGdm = !!zip.getEntry('densityMap_fruits.gdm') || !!zip.getEntry('densityMap_ground.gdm');
+                    if (!hasHeight || (!hasGdm && zip.getEntries().length < 25)) isCorrupt = true;
+                } catch (e) {
+                    isCorrupt = true;
+                }
+            } else if (fs.statSync(itemPath).isDirectory()) {
+                const hasHeight = fs.existsSync(path.join(itemPath, 'terrain.heightmap.png'));
+                const hasGdm = fs.existsSync(path.join(itemPath, 'densityMap_fruits.gdm')) || fs.existsSync(path.join(itemPath, 'densityMap_ground.gdm'));
+                if (!hasHeight || !hasGdm) isCorrupt = true;
+            }
+            if (isCorrupt) {
+                console.log(`[TEMPLATES] Purging corrupt/dummy custom template: ${item}`);
+                try { fs.removeSync(itemPath); } catch (e) {}
+            }
+        }
     } catch (e) {
         console.error('[TEMPLATES] Failed to sync master templates:', e);
     }
@@ -388,22 +416,24 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
 
     const folders = await fs.readdir(templatesDir);
 
-    // Helper: Verify template is complete (not a corrupt/dummy 9-file unlaunched folder)
+    // Helper: Verify template is complete (not a corrupt/dummy folder with only copied XMLs)
     const isCompleteTemplate = async (fPath, isZip = false) => {
         if (isZip) {
             try {
                 const AdmZip = require('adm-zip');
                 const zip = new AdmZip(fPath);
-                return !!zip.getEntry('terrain.heightmap.png') && (!!zip.getEntry('densityMap_fruits.gdm') || !!zip.getEntry('economy.xml') || zip.getEntries().length >= 25);
+                const hasHeightmap = !!zip.getEntry('terrain.heightmap.png');
+                const hasGdm = !!zip.getEntry('densityMap_fruits.gdm') || !!zip.getEntry('densityMap_ground.gdm');
+                const hasTour = !!zip.getEntry('guidedTour.xml');
+                return hasHeightmap && (hasGdm || hasTour || zip.getEntries().length >= 25);
             } catch (e) {
                 return false;
             }
         }
         if (!fs.existsSync(path.join(fPath, 'terrain.heightmap.png'))) return false;
-        // Must have real engine-generated files or substantial file count
-        const hasGdm = fs.existsSync(path.join(fPath, 'densityMap_fruits.gdm'));
-        const hasEconomy = fs.existsSync(path.join(fPath, 'economy.xml'));
-        if (hasGdm || hasEconomy) return true;
+        const hasGdm = fs.existsSync(path.join(fPath, 'densityMap_fruits.gdm')) || fs.existsSync(path.join(fPath, 'densityMap_ground.gdm'));
+        const hasTour = fs.existsSync(path.join(fPath, 'guidedTour.xml'));
+        if (hasGdm || hasTour) return true;
         const count = await fs.readdir(fPath).then(files => files.length).catch(() => 0);
         return count >= 25;
     };
@@ -964,29 +994,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     if (!copiedTemplate) {
-        console.log(`[CREATE] No specific custom template found for ${mapId}. Copying base structural XML configuration from MapUS master...`);
-        const masterBaseDir = path.join(templatesDir, 'MapUS');
-        if (fs.existsSync(masterBaseDir)) {
-            try {
-                const files = await fs.readdir(masterBaseDir);
-                for (const file of files) {
-                    const ext = path.extname(file).toLowerCase();
-                    // Copy configuration XMLs so FS25 engine treats save slot as fully valid and auto-starts cleanly.
-                    // Do NOT copy binary heightmaps/density maps so the engine generates the custom map's own terrain.
-                    if (ext === '.xml' || file === 'modManager.json') {
-                        const srcFile = path.join(masterBaseDir, file);
-                        const dstFile = path.join(slotPath, file);
-                        await fs.copy(srcFile, dstFile);
-                    }
-                }
-                copiedTemplate = true;
-            } catch (copyErr) {
-                console.warn('[CREATE] Failed to copy base structural XMLs from MapUS:', copyErr.message);
-            }
-        }
-        if (!copiedTemplate) {
-            requiresEngineInit = true;
-        }
+        console.log(`[CREATE] No specific master template found for map ${mapId}. Save slot ${savegameIndex} will require first-time engine initialization (Ghost Save).`);
+        requiresEngineInit = true;
     }
 
     // 3. Update careerSavegame.xml
@@ -2019,16 +2028,19 @@ async function getAllSavegames() {
             const playTime = parseFloat(stats?.['@_playTime'] || stats?.playTime || 0);
 
             // A savegame is ONLY truly initialized if the game engine has actually generated and saved it:
-            // Must have core files AND genuine engine data (economy.xml, guidedTour.xml, or densityMap_fruits.gdm with playTime > 0)
-            const hasEngineData = fs.existsSync(path.join(savePath, 'economy.xml')) ||
-                                  fs.existsSync(path.join(savePath, 'guidedTour.xml')) ||
-                                  (fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm')) && playTime > 0);
+            // Must have core files AND genuine engine data (densityMap_fruits.gdm, densityMap_ground.gdm, or guidedTour.xml)
+            const hasEngineData = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm')) ||
+                                  fs.existsSync(path.join(savePath, 'densityMap_ground.gdm')) ||
+                                  fs.existsSync(path.join(savePath, 'guidedTour.xml'));
             const isInitialized = fs.existsSync(farmsFile) && fs.existsSync(initFile) && fs.existsSync(placeablesFile) && hasEngineData;
+
+            // Auto-harvest requires genuine gameplay engine generation (fruit/ground density map)
+            const canAutoHarvest = isInitialized && (fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm')) || fs.existsSync(path.join(savePath, 'densityMap_ground.gdm')));
 
             let hasTemplate = false;
             try {
                 hasTemplate = await hasMapTemplate(mapId, mapTitle, mapModName);
-                if (isInitialized && !hasTemplate && mapId && !isOfficialMap(mapId) && hasEngineData) {
+                if (isInitialized && !hasTemplate && mapId && !isOfficialMap(mapId) && canAutoHarvest) {
                     console.log(`[AUTO-HARVEST] Automatically learning master template for map ${mapId} from savegame slot ${i}...`);
                     const harvestResult = await adoptSaveAsTemplate(i);
                     if (harvestResult && harvestResult.success) {
