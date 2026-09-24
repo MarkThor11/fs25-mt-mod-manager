@@ -525,11 +525,17 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
     return null;
 }
 
-/**
- * Check if a map has a template.
- */
 async function hasMapTemplate(mapId, mapTitle = null, modName = null) {
-    const folder = await resolveTemplateFolder(mapId, modName, mapTitle);
+    // Support object argument if passed: { mapId, mapTitle, modName } or positional arguments
+    let id = mapId;
+    let title = mapTitle;
+    let mod = modName;
+    if (typeof mapId === 'object' && mapId !== null) {
+        id = mapId.mapId;
+        title = mapId.mapTitle;
+        mod = mapId.modName;
+    }
+    const folder = await resolveTemplateFolder(id, mod, title);
     return !!folder;
 }
 

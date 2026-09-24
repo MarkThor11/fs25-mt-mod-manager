@@ -3580,7 +3580,7 @@ export default function SavegamesPage() {
           setShowCreateModal(false);
           
           // Wait a moment for the user to read the toast
-          if (autoLaunchOnCreate) {
+          if (true) {
               setTimeout(() => {
                 handleLaunch(slotIndex, { 
                     requiresEngineInit: true, 
