@@ -408,43 +408,35 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         return count >= 25;
     };
 
-    // 0. Official base map master templates — explicit direct folder match.
-    //    Official maps (including DLC like Kinlaig) are listed as "generic" to prevent custom
-    //    maps from accidentally picking them up. But we still need to find their master templates.
-    //    Kinlaig comes in with mapModName='pdlc_highlandsFishingPack' from the dropdown, so we
-    //    also need to handle that case (not just the no-modName path).
-    const OFFICIAL_DLC_MOD_NORMS = new Set(['highlandsfishingpack']); // ultraNorm of pdlc_highlandsFishingPack
-    if (!targetModNorm || OFFICIAL_DLC_MOD_NORMS.has(targetModNorm)) {
-        const OFFICIAL_FOLDER_MAP = {
-            'mapus': 'MapUS',
-            'mapeu': 'MapEU',
-            'mapas': 'MapAS',
-            // mapId as stored by dropdown (no dot): 'HighlandsFishingMap'
-            'highlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
-            // mapId as stored in saved careerSavegame.xml (engineMapId with dot): 'pdlc_highlandsFishingPack.HighlandsFishingMap'
-            // ultraNorm strips non-alphanum then strips 'pdlc' prefix → 'highlandsfishingpackhighlandsfishingmap'
-            'highlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
-            // cleanStr (no pdlc strip) variant, just in case
-            'pdlchighlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
-        };
+    // 1. Official base map master templates — exact direct folder match.
+    const OFFICIAL_FOLDER_MAP = {
+        'mapus': 'MapUS',
+        'mapeu': 'MapEU',
+        'mapas': 'MapAS',
+        'highlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+        'highlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+        'pdlchighlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+    };
+    if (OFFICIAL_FOLDER_MAP[targetMapIdNorm]) {
         const expectedFolder = OFFICIAL_FOLDER_MAP[targetMapIdNorm];
-        if (expectedFolder) {
-            // Look for exact folder or zip by canonical name
-            for (const folder of folders) {
-                const cleanFolder = folder.replace(/\.zip$/i, '');
-                if (cleanFolder === expectedFolder || cleanFolder.toLowerCase() === expectedFolder.toLowerCase()) {
-                    const folderPath = path.join(templatesDir, folder);
-                    const stat = await fs.stat(folderPath).catch(() => null);
-                    if (!stat) continue;
-                    const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
-                    if (!stat.isDirectory() && !isZip) continue;
-                    if (await isCompleteTemplate(folderPath, isZip)) return folder;
-                }
+        for (const folder of folders) {
+            const cleanFolder = folder.replace(/\.zip$/i, '');
+            if (cleanFolder.toLowerCase() === expectedFolder.toLowerCase()) {
+                const folderPath = path.join(templatesDir, folder);
+                const stat = await fs.stat(folderPath).catch(() => null);
+                if (!stat) continue;
+                const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
+                if (!stat.isDirectory() && !isZip) continue;
+                if (await isCompleteTemplate(folderPath, isZip)) return folder;
             }
         }
+        return null;
     }
 
-    // 1. Direct folder/zip check
+    // 2. Custom Mod Map Templates — Strict Exact Mod Name Match
+    // Each custom mod map has its own specific template named after its exact modName (or {modName}_{...}).
+    if (!mapModName) return null;
+
     for (const folder of folders) {
         const folderPath = path.join(templatesDir, folder);
         const stat = await fs.stat(folderPath).catch(() => null);
@@ -458,67 +450,12 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         const fNorm = cleanStr(cleanFolder);
         const ufNorm = ultraNorm(cleanFolder);
 
-        // A custom mod map can NEVER use an official base game template (MapUS, MapEU, MapAS, Kinlaig)
-        if (targetModNorm && (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolder.toLowerCase()))) continue;
+        // Never match base game templates for custom mod maps
+        if (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolder.toLowerCase())) continue;
 
-        // Exact or prefix normalized modName match (e.g. "birgland", "FS25_BackRoadsCounty4x_FS25_BackRoadsCounty4x_mapUS")
-        if (targetModNorm && (fNorm === targetModNorm || ufNorm === targetModNorm || cleanFolder.toLowerCase().startsWith(targetModNorm.toLowerCase() + '_') || cleanFolder.toLowerCase().startsWith('fs25_' + targetModNorm.toLowerCase() + '_') || fNorm.startsWith(targetModNorm + '_'))) return folder;
-        // Template named with pattern: {modName}_{mapId} or {modName}_{modName}_{mapId}
-        if (targetModNorm && targetMapIdNorm && (fNorm === `${targetModNorm}${targetMapIdNorm}` || fNorm === `${targetModNorm}${targetModNorm}${targetMapIdNorm}`)) return folder;
-        // Exact normalized title match (only if targetModNorm is not set or matches)
-        if (targetModNorm && targetTitleNorm && (fNorm === targetTitleNorm || ufNorm === targetTitleNorm)) return folder;
-        // Non-generic mapId match (only if mapId matches cleanFolder and targetModNorm matches)
-        if (targetModNorm && !isGenericMapId && targetMapIdNorm && (fNorm === targetMapIdNorm || ufNorm === targetMapIdNorm)) return folder;
-    }
-
-    // 2. XML Deep Scan check inside templates
-    for (const folder of folders) {
-        const folderPath = path.join(templatesDir, folder);
-        const stat = await fs.stat(folderPath).catch(() => null);
-        if (!stat) continue;
-        const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
-        if (!stat.isDirectory() && !isZip) continue;
-
-        if (await isCompleteTemplate(folderPath, isZip)) {
-            const cleanFolder = folder.replace(/\.zip$/i, '');
-            const fNorm = cleanStr(cleanFolder);
-            const ufNorm = ultraNorm(cleanFolder);
-            if (targetModNorm && (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolder.toLowerCase()))) continue;
-
-            try {
-                let xml = null;
-                if (isZip) {
-                    const AdmZip = require('adm-zip');
-                    const zip = new AdmZip(folderPath);
-                    const careerEntry = zip.getEntry('careerSavegame.xml');
-                    if (careerEntry) xml = careerEntry.getData().toString('utf8');
-                } else {
-                    const careerPath = path.join(folderPath, 'careerSavegame.xml');
-                    if (fs.existsSync(careerPath)) {
-                        xml = await fs.readFile(careerPath, 'utf8');
-                    }
-                }
-
-                if (xml) {
-                    const idMatch = xml.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xml.match(/mapId=["']([^"']+)["']/i);
-                    const titleMatch = xml.match(/<mapTitle[^>]*>([^<]+)<\/mapTitle>/i) || xml.match(/mapTitle=["']([^"']+)["']/i);
-                    const internalId = idMatch ? idMatch[1] : null;
-                    const internalTitle = titleMatch ? titleMatch[1] : null;
-                    
-                    const internalModPart = internalId ? ultraNorm(internalId.split('.')[0]) : null;
-                    if (internalId && targetModNorm && internalModPart && internalModPart !== 'samplemodmap' && internalModPart !== 'templatemap') {
-                        if (internalModPart === targetModNorm) {
-                            return folder;
-                        }
-                    }
-                    if (internalTitle && targetTitleNorm && ultraNorm(internalTitle) === targetTitleNorm) {
-                        return folder;
-                    }
-                    if (!isGenericMapId && internalId && ultraNorm(internalId) === targetMapIdNorm) {
-                        return folder;
-                    }
-                }
-            } catch (e) {}
+        // Exact match by normalized modName (e.g. FS25_BackRoadsCounty4x or FS25_BackRoadsCounty4x_FS25_BackRoadsCounty4x_BackRoadsCounty4x)
+        if (fNorm === targetModNorm || ufNorm === targetModNorm || cleanFolder.toLowerCase().startsWith(targetModNorm.toLowerCase() + '_') || cleanFolder.toLowerCase().startsWith('fs25_' + targetModNorm.toLowerCase() + '_')) {
+            return folder;
         }
     }
 
