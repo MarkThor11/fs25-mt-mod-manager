@@ -461,12 +461,12 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         // A custom mod map can NEVER use an official base game template (MapUS, MapEU, MapAS, Kinlaig)
         if (targetModNorm && (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolder.toLowerCase()))) continue;
 
-        // Exact or prefix or substring normalized modName match (e.g. "birgland", "FS25_BackRoadsCounty4x_FS25_BackRoadsCounty4x_mapUS")
-        if (targetModNorm && (fNorm === targetModNorm || ufNorm === targetModNorm || fNorm.startsWith(targetModNorm) || ufNorm.startsWith(targetModNorm) || fNorm.includes(targetModNorm) || ufNorm.includes(targetModNorm))) return folder;
+        // Exact or prefix normalized modName match (e.g. "birgland", "FS25_BackRoadsCounty4x_FS25_BackRoadsCounty4x_mapUS")
+        if (targetModNorm && (fNorm === targetModNorm || ufNorm === targetModNorm || cleanFolder.toLowerCase().startsWith(targetModNorm.toLowerCase() + '_') || cleanFolder.toLowerCase().startsWith('fs25_' + targetModNorm.toLowerCase() + '_') || fNorm.startsWith(targetModNorm + '_'))) return folder;
         // Template named with pattern: {modName}_{mapId} or {modName}_{modName}_{mapId}
         if (targetModNorm && targetMapIdNorm && (fNorm === `${targetModNorm}${targetMapIdNorm}` || fNorm === `${targetModNorm}${targetModNorm}${targetMapIdNorm}`)) return folder;
         // Exact normalized title match
-        if (targetTitleNorm && (fNorm === targetTitleNorm || ufNorm === targetTitleNorm || fNorm.includes(targetTitleNorm) || ufNorm.includes(targetTitleNorm))) return folder;
+        if (targetTitleNorm && (fNorm === targetTitleNorm || ufNorm === targetTitleNorm)) return folder;
         // Non-generic mapId match
         if (!isGenericMapId && targetMapIdNorm && (fNorm === targetMapIdNorm || ufNorm === targetMapIdNorm)) return folder;
     }
