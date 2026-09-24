@@ -465,10 +465,10 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         if (targetModNorm && (fNorm === targetModNorm || ufNorm === targetModNorm || cleanFolder.toLowerCase().startsWith(targetModNorm.toLowerCase() + '_') || cleanFolder.toLowerCase().startsWith('fs25_' + targetModNorm.toLowerCase() + '_') || fNorm.startsWith(targetModNorm + '_'))) return folder;
         // Template named with pattern: {modName}_{mapId} or {modName}_{modName}_{mapId}
         if (targetModNorm && targetMapIdNorm && (fNorm === `${targetModNorm}${targetMapIdNorm}` || fNorm === `${targetModNorm}${targetModNorm}${targetMapIdNorm}`)) return folder;
-        // Exact normalized title match
-        if (targetTitleNorm && (fNorm === targetTitleNorm || ufNorm === targetTitleNorm)) return folder;
-        // Non-generic mapId match
-        if (!isGenericMapId && targetMapIdNorm && (fNorm === targetMapIdNorm || ufNorm === targetMapIdNorm)) return folder;
+        // Exact normalized title match (only if targetModNorm is not set or matches)
+        if (targetModNorm && targetTitleNorm && (fNorm === targetTitleNorm || ufNorm === targetTitleNorm)) return folder;
+        // Non-generic mapId match (only if mapId matches cleanFolder and targetModNorm matches)
+        if (targetModNorm && !isGenericMapId && targetMapIdNorm && (fNorm === targetMapIdNorm || ufNorm === targetMapIdNorm)) return folder;
     }
 
     // 2. XML Deep Scan check inside templates
@@ -505,9 +505,9 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
                     const internalId = idMatch ? idMatch[1] : null;
                     const internalTitle = titleMatch ? titleMatch[1] : null;
                     
-                    if (internalId && targetModNorm) {
-                        const internalModPart = ultraNorm(internalId.split('.')[0]);
-                        if (internalModPart === targetModNorm || targetModNorm.startsWith(internalModPart) || internalModPart.startsWith(targetModNorm)) {
+                    const internalModPart = internalId ? ultraNorm(internalId.split('.')[0]) : null;
+                    if (internalId && targetModNorm && internalModPart && internalModPart !== 'samplemodmap' && internalModPart !== 'templatemap') {
+                        if (internalModPart === targetModNorm) {
                             return folder;
                         }
                     }

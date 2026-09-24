@@ -2588,7 +2588,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 </div>
               )}
 
-              {save.hasTemplate && !save.isGhost && (
+              {save.isInitialized && save.hasTemplate && !save.isGhost && (
                 <div style={{ 
                   background: 'var(--accent-dim)', 
                   color: 'var(--accent)', 
