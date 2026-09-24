@@ -782,7 +782,11 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                     try {
                         await fs.symlink(m.filePath, destPath, 'junction');
                     } catch (jErr) {
-                        await atomicCopyFile(m.filePath, destPath);
+                        try {
+                            await fs.symlink(m.filePath, destPath, 'dir');
+                        } catch (dErr) {
+                            await fs.copy(m.filePath, destPath);
+                        }
                     }
                 }
                 linkedCount++;
