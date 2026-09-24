@@ -2445,8 +2445,8 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 				depTitle = pool[depId].title;
 			}
 			if (depId && !activeInstalls.has(depId) && !downloadQueue.some(t => String(t.modId) === depId)) {
-				console.log(`[QUEUE] Auto-queueing linked ModHub dependency "${depTitle || `Mod ${depId}`}" (ID: ${depId}) for map "${resolvedTitle}"`);
-				enqueueInstall(depId, depTitle, depUrl, onProgress, null, targetSubFolder).catch(() => {});
+				console.log(`[QUEUE] Auto-queueing shared dependency "${depTitle || `Mod ${depId}`}" (ID: ${depId}) into "${MAP_DEPENDENCIES_FOLDER}" for map "${resolvedTitle}"`);
+				enqueueInstall(depId, depTitle, depUrl, onProgress, null, MAP_DEPENDENCIES_FOLDER).catch(() => {});
 			}
 		}
 	}
@@ -2581,7 +2581,7 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 			subFolder = cleanMapFolder;
 			console.log(`[INSTALL] Custom Mod Map detected ("${cleanMapFolder}"). Auto-assigned to dedicated subfolder: ${subFolder}`);
 		}
-	} else if (subFolder && !path.isAbsolute(subFolder)) {
+	} else if (subFolder && !path.isAbsolute(subFolder) && subFolder.toLowerCase() !== MAP_DEPENDENCIES_FOLDER.toLowerCase()) {
 		subFolder = null;
 	}
 
@@ -6144,10 +6144,10 @@ async function autoResolveMissingDependencies(mods, targetMapName = null) {
 					broadcastStatus('dependency:progress', {
 						...progress,
 						isBackground: true,
-						targetFolder
+						targetFolder: MAP_DEPENDENCIES_FOLDER
 					});
 				}
-			}, targetFolder);
+			}, MAP_DEPENDENCIES_FOLDER);
 		} catch (err) {
 			console.log(`[AUTO-RESOLVE] Dependency install failed for ${dep.title}. Skipping future automatic retries.`);
 			if (depKey) failedAutoResolves.add(depKey);
