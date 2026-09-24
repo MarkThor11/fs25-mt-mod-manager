@@ -964,8 +964,29 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     if (!copiedTemplate) {
-        console.warn(`[CREATE] No specific or base template found for ${mapId}. Creating minimal save to force terrain generation.`);
-        requiresEngineInit = true;
+        console.log(`[CREATE] No specific custom template found for ${mapId}. Copying base structural XML configuration from MapUS master...`);
+        const masterBaseDir = path.join(templatesDir, 'MapUS');
+        if (fs.existsSync(masterBaseDir)) {
+            try {
+                const files = await fs.readdir(masterBaseDir);
+                for (const file of files) {
+                    const ext = path.extname(file).toLowerCase();
+                    // Copy configuration XMLs so FS25 engine treats save slot as fully valid and auto-starts cleanly.
+                    // Do NOT copy binary heightmaps/density maps so the engine generates the custom map's own terrain.
+                    if (ext === '.xml' || file === 'modManager.json') {
+                        const srcFile = path.join(masterBaseDir, file);
+                        const dstFile = path.join(slotPath, file);
+                        await fs.copy(srcFile, dstFile);
+                    }
+                }
+                copiedTemplate = true;
+            } catch (copyErr) {
+                console.warn('[CREATE] Failed to copy base structural XMLs from MapUS:', copyErr.message);
+            }
+        }
+        if (!copiedTemplate) {
+            requiresEngineInit = true;
+        }
     }
 
     // 3. Update careerSavegame.xml
