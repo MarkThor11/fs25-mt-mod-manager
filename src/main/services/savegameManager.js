@@ -880,9 +880,11 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         await fs.ensureDir(slotPath);
     }
 
-    // Use passed selectedMods as the primary mod list for fast creation
+    // Use cached mods for instant resolution of map zip, dependencies, and placeables
     const modManager = require('./modManager');
-    let allMods = selectedMods || [];
+    let allMods = (modManager.getLastScanResult() && modManager.getLastScanResult().mods)
+        ? modManager.getLastScanResult().mods
+        : (await modManager.scanLocalMods()).mods || [];
 
     const GENERIC_MAP_IDS = new Set([
         'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
@@ -960,7 +962,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     const careerPath = path.join(slotPath, 'careerSavegame.xml');
     const today = new Date().toISOString().split('T')[0];
 
-    const finalMods = selectedMods.filter(m => m.modName !== 'FS25_rememberPositions');
+    const finalMods = (Array.isArray(selectedMods) ? selectedMods : []).filter(m => m && m.modName !== 'FS25_rememberPositions');
     // Add map mod if not already there
     const mapBaseName = (mapModName || '').split('.')[0];
     const matchedMapMod = allMods.find(m => {

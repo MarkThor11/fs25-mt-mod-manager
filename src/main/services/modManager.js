@@ -642,6 +642,22 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 					if (modsList) {
 						modsList.forEach(m => activeModNames.add(m.modName.toLowerCase()));
 					}
+
+					// Scan placeables.xml, vehicles.xml, and items.xml for $moddir$ references
+					const xmlFiles = ['placeables.xml', 'vehicles.xml', 'items.xml'];
+					for (const xf of xmlFiles) {
+						const xp = path.join(savePath, xf);
+						if (fs.existsSync(xp)) {
+							const content = await fs.readFile(xp, 'utf8').catch(() => '');
+							const re = /\$moddir\$([^\/\\<">]+)/gi;
+							let match;
+							while ((match = re.exec(content)) !== null) {
+								if (match[1]) {
+									activeModNames.add(match[1].toLowerCase());
+								}
+							}
+						}
+					}
 					
 					// Identify the map mod using robust detection
 					const careerPath = path.join(savePath, 'careerSavegame.xml');
@@ -758,8 +774,54 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                 continue;
             }
 
+            if (seenFiles.has(modNameLower)) {
+                continue;
+            }
+
+            // Resolve true physical source path
+            let realSource = m.filePath;
+            try {
+                if (fs.existsSync(realSource)) {
+                    realSource = await fs.realpath(realSource);
+                }
+            } catch (_) {}
+
+            let validSource = false;
+            try {
+                const s = await fs.stat(realSource);
+                if (s && s.size > 100) validSource = true;
+            } catch (_) {}
+
+            if (!validSource) {
+                // Fallback search across configured roots
+                const targetBase = path.basename(m.filePath);
+                const roots = getModsPaths();
+                for (const r of roots) {
+                    const cand = path.join(r, targetBase);
+                    const candDep = path.join(r, 'Map Dependencies', targetBase);
+                    for (const c of [cand, candDep]) {
+                        try {
+                            if (fs.existsSync(c)) {
+                                const cs = await fs.stat(c);
+                                if (cs.size > 100) {
+                                    realSource = c;
+                                    validSource = true;
+                                    break;
+                                }
+                            }
+                        } catch (_) {}
+                    }
+                    if (validSource) break;
+                }
+            }
+
+            if (!validSource) {
+                console.warn(`[VIRTUAL] Skipping unresolvable or empty mod: ${m.modName}`);
+                continue;
+            }
+
             // Name the symlink EXACTLY what the engine expects (m.modName + .zip if it was a zip)
-            const isZip = m.filePath.toLowerCase().endsWith('.zip');
+            const isZip = realSource.toLowerCase().endsWith('.zip');
             const destPath = path.join(virtualPath, m.modName + (isZip ? '.zip' : ''));
 
             try {
@@ -769,28 +831,28 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                 if (isZip) {
                     // Try Hardlink first (requires no admin privileges on Windows when on same drive)
                     try {
-                        await fs.link(m.filePath, destPath);
+                        await fs.link(realSource, destPath);
                     } catch (hErr) {
                         try {
-                            await fs.symlink(m.filePath, destPath, 'file');
+                            await fs.symlink(realSource, destPath, 'file');
                         } catch (sErr) {
                             // Fallback to direct copy if symlink fails across drives (e.g. without dev mode / admin permissions)
-                            await atomicCopyFile(m.filePath, destPath);
+                            await atomicCopyFile(realSource, destPath);
                         }
                     }
                 } else {
                     try {
-                        await fs.symlink(m.filePath, destPath, 'junction');
+                        await fs.symlink(realSource, destPath, 'junction');
                     } catch (jErr) {
                         try {
-                            await fs.symlink(m.filePath, destPath, 'dir');
+                            await fs.symlink(realSource, destPath, 'dir');
                         } catch (dErr) {
-                            await fs.copy(m.filePath, destPath);
+                            await fs.copy(realSource, destPath);
                         }
                     }
                 }
                 linkedCount++;
-                seenFiles.add(m.modName.toLowerCase());
+                seenFiles.add(modNameLower);
             } catch (e) {
                 console.error(`[VIRTUAL] Failed to stage mod ${m.modName} in virtual folder:`, e.message);
                 debugLog(`[VIRTUAL] Link failed for ${m.modName}: ${e.message}`);
