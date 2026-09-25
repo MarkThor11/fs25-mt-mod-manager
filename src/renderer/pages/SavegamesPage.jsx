@@ -2940,22 +2940,20 @@ export default function SavegamesPage() {
   const { mods } = useLocalModsStore();
   const {
     savegames, isLoading: isSavesLoading, fetchSavegames,
-    isGameRunning, playingSlot
+    isGameRunning, playingSlot, recentlyExitedSlots, markSlotExited
   } = useSavegameStore();
 
   const { skipIntro, cloudBackupPath } = useSettingsStore();
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
-
-  const [recentlyExitedSlots, setRecentlyExitedSlots] = useState({});
 
   useEffect(() => {
     const unsubCloud = window.api?.on?.cloudSyncComplete?.((data) => {
       useToastStore.getState().success(`Cloud Backup: Auto-synced Slot ${data.savegameIndex} to cloud!`);
     });
     const unsubExit = window.api?.on?.gameExited?.((data) => {
-      const slot = data?.slotIndex || useSavegameStore.getState().playingSlot;
+      const slot = data?.savegameIndex || data?.slotIndex || useSavegameStore.getState().playingSlot;
       if (slot) {
-        setRecentlyExitedSlots(prev => ({ ...prev, [slot]: Date.now() }));
+        markSlotExited(slot);
       }
       useSavegameStore.setState({ isGameRunning: false, playingSlot: null });
       fetchSavegames();
@@ -2964,7 +2962,7 @@ export default function SavegamesPage() {
       if (typeof unsubCloud === 'function') unsubCloud();
       if (typeof unsubExit === 'function') unsubExit();
     };
-  }, []);
+  }, [markSlotExited, fetchSavegames]);
 
   const {
     archives, isLoading: isArchivesLoading, fetchArchives, deleteArchive, archiveSavegame, restoreSavegame

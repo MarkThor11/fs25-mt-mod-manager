@@ -11,6 +11,17 @@ export const useSavegameStore = create((set) => ({
   playingSlot: null,
   isGameRunning: false,
   launchGraceUntil: 0,
+  recentlyExitedSlots: {},
+
+  markSlotExited: (slotIndex) => {
+    if (!slotIndex) return;
+    set((s) => ({
+      recentlyExitedSlots: {
+        ...s.recentlyExitedSlots,
+        [slotIndex]: Date.now(),
+      }
+    }));
+  },
 
   fetchSavegames: async () => {
     if (!window.api?.savegames) return;

@@ -330,12 +330,14 @@ export default function App() {
         }
 
         if (isRunning !== isGameRunning || currentSlot !== playingSlot) {
-          useSavegameStore.setState({ isGameRunning: isRunning, playingSlot: currentSlot, launchGraceUntil: isRunning ? 0 : launchGraceUntil });
-          // If the game just stopped, clear the playing slot and refresh saves to trigger auto-harvesting
-          if (!isRunning && playingSlot !== null) {
-            useSavegameStore.setState({ launchGraceUntil: 0 });
+          if (!isRunning && (playingSlot !== null || status.playingSlot)) {
+            const exitedSlot = playingSlot || status.playingSlot;
+            useSavegameStore.getState().markSlotExited(exitedSlot);
+            useSavegameStore.setState({ isGameRunning: false, playingSlot: null, launchGraceUntil: 0 });
             useSavegameStore.getState().fetchSavegames();
             useMapStore.getState().fetchTemplates();
+          } else {
+            useSavegameStore.setState({ isGameRunning: isRunning, playingSlot: currentSlot, launchGraceUntil: isRunning ? 0 : launchGraceUntil });
           }
         }
       } catch (err) {
@@ -348,8 +350,12 @@ export default function App() {
     // Listen to event-driven gameExited channel for instant updates
     let unsubscribeGameExited = () => {};
     if (window.api?.on?.gameExited) {
-      unsubscribeGameExited = window.api.on.gameExited(() => {
+      unsubscribeGameExited = window.api.on.gameExited((data) => {
         console.log('[APP] Game exited event received. Refreshing savegames and templates...');
+        const exitedSlot = data?.savegameIndex || data?.slotIndex || useSavegameStore.getState().playingSlot;
+        if (exitedSlot) {
+          useSavegameStore.getState().markSlotExited(exitedSlot);
+        }
         useSavegameStore.setState({ isGameRunning: false, playingSlot: null, launchGraceUntil: 0 });
         useSavegameStore.getState().fetchSavegames();
         useMapStore.getState().fetchTemplates();
