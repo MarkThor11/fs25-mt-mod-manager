@@ -794,11 +794,19 @@ async function setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModN
                 if (defaultFarmIds.size === 0 && allFarmlandIds.length > 0) {
                     defaultFarmIds.add(allFarmlandIds[0]);
                     if (allFarmlandIds.length > 1) defaultFarmIds.add(allFarmlandIds[1]);
+                    if (allFarmlandIds.length > 2) defaultFarmIds.add(allFarmlandIds[2]);
                 }
             }
         } catch (e) {
             console.warn('[CREATE] Could not parse default farmlands from mod zip:', e.message);
         }
+    }
+
+    if (defaultFarmIds.size === 0) {
+        // Ultimate fallback for any mod map where zip parsing didn't find specific default properties
+        defaultFarmIds.add('1');
+        defaultFarmIds.add('2');
+        defaultFarmIds.add('3');
     }
 
     console.log(`[CREATE] Configured ${defaultFarmIds.size} starting farmlands for ${engineMapId}: [${Array.from(defaultFarmIds).join(', ')}]`);
