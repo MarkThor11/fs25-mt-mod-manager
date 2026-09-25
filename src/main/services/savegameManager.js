@@ -1442,6 +1442,13 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     if (modZipPath) {
         try {
             if (fs.existsSync(modZipPath)) {
+                try {
+                    const modManager = require('./modManager');
+                    if (modManager.patchMapDensityHeightTypesIfNeeded) {
+                        modManager.patchMapDensityHeightTypesIfNeeded(modZipPath);
+                    }
+                } catch (_) {}
+
                 const stats = fs.statSync(modZipPath);
                 if (stats.isFile()) {
                     const AdmZip = require('adm-zip');

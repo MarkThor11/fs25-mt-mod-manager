@@ -581,6 +581,97 @@ async function getFolderSize(folderPath) {
 	return sizes.reduce((a, b) => a + b, 0);
 }
 
+/**
+ * Automatically inspects a map mod zip archive or directory and patches missing <densityMapHeightTypes> XML tag.
+ * FS25 requires <densityMapHeightTypes filename="$data/maps/maps_densityMapHeightTypes.xml"/> in map XML files.
+ * Missing this tag causes DensityMapHeightManager.lua:635 to fail with Divide by Zero, freezing map loading at 55%.
+ */
+function patchMapDensityHeightTypesIfNeeded(mapPath) {
+	if (!mapPath || !fs.existsSync(mapPath)) return false;
+	const isZip = mapPath.toLowerCase().endsWith('.zip');
+	let patched = false;
+
+	try {
+		if (isZip) {
+			const zip = new AdmZip(mapPath);
+			const entries = zip.getEntries();
+			for (const entry of entries) {
+				const entryNameLower = entry.entryName.toLowerCase();
+				const isMapXml = entryNameLower.endsWith('mapus.xml') || 
+								 entryNameLower.endsWith('mapeu.xml') || 
+								 entryNameLower.endsWith('mapas.xml') || 
+								 (entryNameLower.endsWith('map.xml') && 
+								  !entryNameLower.includes('placeable') && 
+								  !entryNameLower.includes('store') && 
+								  !entryNameLower.includes('item') && 
+								  !entryNameLower.includes('shop') && 
+								  !entryNameLower.includes('field'));
+
+				if (isMapXml) {
+					let xmlText = entry.getData().toString('utf8');
+					if (!xmlText.includes('densityMapHeightTypes')) {
+						debugLog(`[MAP-PATCH] Injecting missing densityMapHeightTypes in map XML entry: ${entry.entryName} of ${path.basename(mapPath)}`);
+						const patchTag = '    <densityMapHeightTypes filename="$data/maps/maps_densityMapHeightTypes.xml"/>';
+						if (/<fruitTypes[^>]*\/>/i.test(xmlText)) {
+							xmlText = xmlText.replace(/(<fruitTypes[^>]*\/>)/i, `$1\n${patchTag}`);
+						} else if (/<fillTypes[^>]*\/>/i.test(xmlText)) {
+							xmlText = xmlText.replace(/(<fillTypes[^>]*\/>)/i, `$1\n${patchTag}`);
+						} else if (/<\/map>/i.test(xmlText)) {
+							xmlText = xmlText.replace(/<\/map>/i, `${patchTag}\n</map>`);
+						} else {
+							xmlText += `\n${patchTag}\n`;
+						}
+						zip.updateFile(entry.entryName, Buffer.from(xmlText, 'utf8'));
+						patched = true;
+					}
+				}
+			}
+			if (patched) {
+				zip.writeZip(mapPath);
+				console.log(`[MAP-PATCH] Successfully patched missing densityMapHeightTypes in map zip: ${path.basename(mapPath)}`);
+				debugLog(`[MAP-PATCH] Successfully patched missing densityMapHeightTypes in map zip: ${path.basename(mapPath)}`);
+			}
+		} else if (fs.statSync(mapPath).isDirectory()) {
+			function scanAndPatchDir(dirPath) {
+				const files = fs.readdirSync(dirPath);
+				for (const f of files) {
+					const fullPath = path.join(dirPath, f);
+					const stat = fs.statSync(fullPath);
+					if (stat.isDirectory()) {
+						scanAndPatchDir(fullPath);
+					} else if (f.toLowerCase().endsWith('.xml')) {
+						const lowerName = f.toLowerCase();
+						const isMapXml = lowerName === 'mapus.xml' || lowerName === 'mapeu.xml' || lowerName === 'mapas.xml' ||
+										 (lowerName.endsWith('map.xml') && !lowerName.includes('placeable') && !lowerName.includes('store') && !lowerName.includes('item'));
+						if (isMapXml) {
+							let xmlText = fs.readFileSync(fullPath, 'utf8');
+							if (!xmlText.includes('densityMapHeightTypes')) {
+								const patchTag = '    <densityMapHeightTypes filename="$data/maps/maps_densityMapHeightTypes.xml"/>';
+								if (/<fruitTypes[^>]*\/>/i.test(xmlText)) {
+									xmlText = xmlText.replace(/(<fruitTypes[^>]*\/>)/i, `$1\n${patchTag}`);
+								} else if (/<fillTypes[^>]*\/>/i.test(xmlText)) {
+									xmlText = xmlText.replace(/(<fillTypes[^>]*\/>)/i, `$1\n${patchTag}`);
+								} else if (/<\/map>/i.test(xmlText)) {
+									xmlText = xmlText.replace(/<\/map>/i, `${patchTag}\n</map>`);
+								} else {
+									xmlText += `\n${patchTag}\n`;
+								}
+								fs.writeFileSync(fullPath, xmlText, 'utf8');
+								patched = true;
+								debugLog(`[MAP-PATCH] Successfully patched map XML in directory: ${fullPath}`);
+							}
+						}
+					}
+				}
+			}
+			scanAndPatchDir(mapPath);
+		}
+	} catch (e) {
+		console.warn(`[MAP-PATCH] Could not patch map XML for ${path.basename(mapPath)}:`, e.message);
+	}
+	return patched;
+}
+
 async function prepareVirtualModsFolder(savegameIndex = null) {
 	let virtualBaseDir = (app && app.getPath) ? app.getPath('userData') : path.join(process.env.APPDATA, 'fs25-mt-mod-manager');
 	
@@ -825,6 +916,11 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
             if (!validSource) {
                 console.warn(`[VIRTUAL] Skipping unresolvable or empty mod: ${m.modName}`);
                 continue;
+            }
+
+            // Auto-patch map mods missing <densityMapHeightTypes> to prevent Divide by Zero crash at 55% map load
+            if (m.isMap || (mapModName && modNameLower === mapModName)) {
+                patchMapDensityHeightTypesIfNeeded(realSource);
             }
 
             // Name the symlink EXACTLY what the engine expects (m.modName + .zip if it was a zip)
@@ -6707,5 +6803,6 @@ module.exports = {
 	getCorruptMods,
 	repairCorruptMod,
 	consolidateDependencies,
+	patchMapDensityHeightTypesIfNeeded,
 	MAP_DEPENDENCIES_FOLDER,
 };
