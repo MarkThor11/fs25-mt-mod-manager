@@ -1567,6 +1567,69 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         }
     }
 
+    // Auto-discover and inject all starting placeable/vehicle mod dependencies into careerSavegame.xml
+    try {
+        const placeableFiles = ['placeables.xml', 'vehicles.xml', 'items.xml'];
+        const discoveredMods = new Set();
+        for (const pf of placeableFiles) {
+            const pFullPath = path.join(slotPath, pf);
+            if (fs.existsSync(pFullPath)) {
+                const content = await fs.readFile(pFullPath, 'utf8');
+                const matches = content.match(/\$moddir\$([^\/\\<">]+)/gi);
+                if (matches) {
+                    for (const m of matches) {
+                        const cleanName = m.replace(/^\$moddir\$/i, '').trim();
+                        if (cleanName && cleanName.toLowerCase() !== (mapModName || '').toLowerCase()) {
+                            discoveredMods.add(cleanName);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (discoveredMods.size > 0 && fs.existsSync(careerPath)) {
+            const cXml = await fs.readFile(careerPath, 'utf8');
+            const cData = parser.parse(cXml);
+            if (cData && cData.careerSavegame) {
+                const currentMods = Array.isArray(cData.careerSavegame.mod) 
+                    ? cData.careerSavegame.mod 
+                    : (cData.careerSavegame.mod ? [cData.careerSavegame.mod] : []);
+                const existingNames = new Set(currentMods.map(m => (m['@_modName'] || '').toLowerCase()));
+                let modified = false;
+
+                for (const dModName of discoveredMods) {
+                    if (!existingNames.has(dModName.toLowerCase())) {
+                        const matchedMod = allMods.find(m => 
+                            (m.modName && m.modName.toLowerCase() === dModName.toLowerCase()) || 
+                            (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === dModName.toLowerCase())
+                        );
+                        currentMods.push({
+                            '@_modName': matchedMod ? matchedMod.modName : dModName,
+                            '@_title': String(matchedMod?.title || dModName).replace(/"/g, '&quot;'),
+                            '@_version': matchedMod?.version || '1.0.0.0',
+                            '@_required': 'true',
+                            '@_fileHash': matchedMod?.fileHash || ''
+                        });
+                        existingNames.add(dModName.toLowerCase());
+                        modified = true;
+                        console.log(`[CREATE] Injected required placeable mod into careerSavegame.xml: ${dModName}`);
+                    }
+                }
+
+                if (modified) {
+                    cData.careerSavegame.mod = currentMods;
+                    let updatedOutput = builder.build(cData);
+                    if (!updatedOutput.startsWith('<?xml')) {
+                        updatedOutput = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n' + updatedOutput;
+                    }
+                    await fs.writeFile(careerPath, updatedOutput);
+                }
+            }
+        }
+    } catch (placeErr) {
+        console.warn('[CREATE] Failed to scan placeables for required mods:', placeErr.message);
+    }
+
     // Configure starting farmlands accurately based on game mode and map definitions
     await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
 
@@ -1640,18 +1703,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             }
         };
         await fs.writeFile(envPath, builder.build(initialEnv));
-    }
-
-    // Ensure all subfolder map dependencies are synced and mirror links are created in primary mods directory
-    try {
-        await syncSubfolderMapDependencies(slotPath);
-        const modManager = require('./modManager');
-        const defaultMods = modManager.getDefaultModsPath();
-        if (defaultMods) {
-            await modManager.syncMirrorLinks(defaultMods);
-        }
-    } catch (syncErr) {
-        console.warn('[CREATE] Warning syncing map dependencies and mirror links:', syncErr.message);
     }
 
     return { success: true, path: slotPath, requiresEngineInit, mapId };

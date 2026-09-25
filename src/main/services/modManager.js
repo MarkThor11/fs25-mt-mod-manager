@@ -1373,7 +1373,7 @@ function extractVehicleSpecs(modPath, xmlPath) {
 
 let lastScanResult = null;
 let lastScanTime = 0;
-const SCAN_CACHE_TTL = 15000; // 15s in-memory cache TTL for unforced scans
+const SCAN_CACHE_TTL = 120000; // 120s (2 min) in-memory cache TTL for unforced scans
 let pendingScanQueue = [];
 let nextScanForced = false;
 
@@ -1538,25 +1538,34 @@ async function performScan(manualPaths = null) {
 						let real = null;
 						try {
 							real = await fs.realpath(fullPath);
+							const rStats = await fs.stat(real).catch(() => null);
+							if (!rStats || rStats.size < 100) real = null;
 						} catch (e) {
+							real = null;
+						}
+
+						if (!real) {
 							// Check if the symlink target path was in an old subfolder that was reorganized
 							const rawTarget = await fs.readlink(fullPath).catch(() => null);
-							if (rawTarget) {
-								const baseTarget = path.basename(rawTarget);
-								const candidatePaths = [
-									path.join(path.dirname(path.dirname(rawTarget)), baseTarget),
-									path.join('D:\\mods', baseTarget),
-									path.join('F:\\mods4', baseTarget)
-								];
-								for (const cp of candidatePaths) {
+							const baseTarget = rawTarget ? path.basename(rawTarget) : entryName;
+							const candidatePaths = [
+								...(rawTarget ? [path.join(path.dirname(path.dirname(rawTarget)), baseTarget)] : []),
+								...modsPaths.map(mp => path.join(mp, baseTarget)),
+								...modsPaths.map(mp => path.join(mp, 'Map Dependencies', baseTarget))
+							];
+							for (const cp of candidatePaths) {
+								try {
 									if (await fs.pathExists(cp)) {
-										real = cp;
-										break;
+										const cpStats = await fs.lstat(cp);
+										if (!cpStats.isSymbolicLink() && cpStats.size > 100) {
+											real = cp;
+											break;
+										}
 									}
-								}
+								} catch (_) {}
 							}
 						}
-						if (!real) return;
+						if (!real) return; // Broken symlink with no valid physical target anywhere, skip!
 
 						const isInternalMirror = real.toLowerCase().startsWith(modRootPath.toLowerCase());
 						if (isInternalMirror) {
@@ -1565,9 +1574,8 @@ async function performScan(manualPaths = null) {
 						}
 						targetPath = real;
 						const realStats = await fs.stat(real).catch(() => null);
-						if (realStats) {
-							stats = realStats;
-						}
+						if (!realStats || realStats.size < 100) return;
+						stats = realStats;
 					} catch (e) {
 						return;
 					}
@@ -1575,7 +1583,7 @@ async function performScan(manualPaths = null) {
 					try {
 						targetPath = await fs.realpath(fullPath);
 						const realStats = await fs.stat(targetPath).catch(() => null);
-						if (realStats && realStats.size > 1000) {
+						if (realStats && realStats.size > 100) {
 							stats = realStats;
 						} else {
 							// Link target might be broken or 0 bytes, check if root zip exists
@@ -1583,6 +1591,8 @@ async function performScan(manualPaths = null) {
 							if (fs.existsSync(rootZipPath) && !fs.lstatSync(rootZipPath).isSymbolicLink()) {
 								targetPath = rootZipPath;
 								stats = await fs.stat(targetPath).catch(() => stats);
+							} else {
+								return; // Broken symlink in subfolder, skip!
 							}
 						}
 					} catch (e) {
@@ -1590,6 +1600,8 @@ async function performScan(manualPaths = null) {
 						if (fs.existsSync(rootZipPath) && !fs.lstatSync(rootZipPath).isSymbolicLink()) {
 							targetPath = rootZipPath;
 							stats = await fs.stat(targetPath).catch(() => stats);
+						} else {
+							return; // Broken symlink, skip!
 						}
 					}
 				}
@@ -1776,7 +1788,7 @@ async function performScan(manualPaths = null) {
 				category: modDesc?.category || null,
 				size: size,
 				fileName: subFolder ? `${subFolder}/${entryName}` : entryName,
-				filePath: fullPath,
+				filePath: targetPath,
 				folder: subFolder, 
 				isDLC: isDlc || subFolder === 'DLC' || entryName.toLowerCase().startsWith('pdlc_'),
 				isMap: modDesc?.isMap || false,
@@ -1935,11 +1947,18 @@ async function performScan(manualPaths = null) {
 	// organized into separate folders) must NEVER deduplicate against each other.
 	const uniqueModsMap = new Map();
 	const sortedForDedupe = [...mods].sort((a, b) => {
+		// Non-corrupt mods always beat corrupt mods
+		if (!a.isCorrupt && b.isCorrupt) return -1;
+		if (a.isCorrupt && !b.isCorrupt) return 1;
+
+		// Prioritize mods in subfolders over root
 		const aIsRoot = !a.folder || a.folder === '';
 		const bIsRoot = !b.folder || b.folder === '';
 		if (!aIsRoot && bIsRoot) return -1;
 		if (aIsRoot && !bIsRoot) return 1;
-		return 0;
+
+		// Prioritize mods with genuine file size over 0-byte or broken links
+		return (b.size || 0) - (a.size || 0);
 	});
 
 	for (const m of sortedForDedupe) {

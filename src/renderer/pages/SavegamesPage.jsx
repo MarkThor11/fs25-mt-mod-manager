@@ -3104,7 +3104,7 @@ export default function SavegamesPage() {
   const handleLaunch = async (slotIndex, extraOptions = {}) => {
     // Optimistically mark the slot as active and notify immediately so the user knows it's launching
     const numericSlot = parseInt(slotIndex, 10);
-    useSavegameStore.setState({ isGameRunning: true, playingSlot: numericSlot, launchGraceUntil: Date.now() + 25000 });
+    useSavegameStore.setState({ isGameRunning: true, playingSlot: numericSlot, launchGraceUntil: Date.now() + 60000 });
     useSettingsStore.getState().setSavegameSlot(numericSlot);
     useToastStore.getState().info(`Preparing & Launching Slot ${slotIndex}...`);
 
