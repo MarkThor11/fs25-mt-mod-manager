@@ -1522,16 +1522,30 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
+                    // Create a fast lookup map of entry basenames for instant O(1) file extraction
+                    const zipEntries = zip.getEntries();
+                    const entryByFullPath = new Map();
+                    const entryByBaseName = new Map();
+                    for (const entry of zipEntries) {
+                        const normPath = entry.entryName.replace(/\\/g, '/').toLowerCase();
+                        entryByFullPath.set(normPath, entry);
+                        const baseName = path.basename(normPath);
+                        if (!entryByBaseName.has(baseName)) {
+                            entryByBaseName.set(baseName, entry);
+                        }
+                    }
+
                     // Helper to extract a specific entry from zip to destination file in slotPath
                     const extractExactZipFile = async (relPath, destFilename) => {
                         if (!relPath || relPath.startsWith('$data')) return false;
                         const normPath = relPath.replace(/\\/g, '/').toLowerCase();
-                        const entry = zip.getEntries().find(e => e.entryName.replace(/\\/g, '/').toLowerCase() === normPath);
+                        const baseName = path.basename(normPath);
+                        const entry = entryByFullPath.get(normPath) || entryByBaseName.get(baseName);
                         if (entry) {
                             const targetPath = path.join(slotPath, destFilename);
                             if (!fs.existsSync(targetPath)) {
                                 await fs.writeFile(targetPath, entry.getData());
-                                console.log(`[CREATE] Extracted author-configured ${entry.entryName} -> ${destFilename}`);
+                                console.log(`[CREATE] Fast-extracted ${entry.entryName} -> ${destFilename}`);
                                 return true;
                             }
                         }
@@ -1546,6 +1560,26 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
                     if (farmlandsFile) await extractExactZipFile(farmlandsFile, 'farmland.xml');
 
+                    // Fallback extraction for starting XML files
+                    for (const targetXml of ['vehicles.xml', 'placeables.xml', 'farmland.xml', 'items.xml']) {
+                        if (!fs.existsSync(path.join(slotPath, targetXml))) {
+                            const entry = entryByBaseName.get(targetXml) || (targetXml === 'farmland.xml' ? entryByBaseName.get('farmlands.xml') : null);
+                            if (entry) {
+                                await fs.writeFile(path.join(slotPath, targetXml), entry.getData());
+                                console.log(`[CREATE] Fast fallback extracted ${targetXml}`);
+                            }
+                        }
+                    }
+
+                    // Extract heightmap if present
+                    if (!fs.existsSync(path.join(slotPath, 'terrain.heightmap.png'))) {
+                        const hEntry = entryByBaseName.get('terrain.heightmap.png') || entryByBaseName.get('dem.png');
+                        if (hEntry) {
+                            await fs.writeFile(path.join(slotPath, 'terrain.heightmap.png'), hEntry.getData());
+                            console.log(`[CREATE] Fast extracted heightmap -> terrain.heightmap.png`);
+                        }
+                    }
+
                     // If starting farm is disabled, strip farm 1 vehicles
                     if (!includeStartFarm) {
                         const vehiclesPath = path.join(slotPath, 'vehicles.xml');
@@ -1559,78 +1593,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             } catch (e) {}
                         }
                     }
-
-                    let extractedTerrain = false;
-
-                    // Extract terrain assets: info layers, heightmaps, density maps, and terrain caches
-                    // NOTE: Notice environment.xml is deliberately EXCLUDED! A map mod's environment.xml is a map lighting/weather
-                    // configuration, NOT a savegame state. Copying it to the savegame breaks native ambient sounds and weather.
-                    for (const entry of zip.getEntries()) {
-                        const entryName = entry.entryName.replace(/\\/g, '/');
-                        const baseName = path.basename(entryName);
-                        const lowerBase = baseName.toLowerCase();
-
-                        if (lowerBase.startsWith('infolayer_') && lowerBase.endsWith('.grle')) {
-                            const targetPath = path.join(slotPath, baseName);
-                            if (!fs.existsSync(targetPath)) {
-                                await fs.writeFile(targetPath, entry.getData());
-                                extractedGrles++;
-                            }
-                        }
-                        if (lowerBase.startsWith('densitymap_') && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.xml'))) {
-                            const targetPath = path.join(slotPath, baseName);
-                            if (!fs.existsSync(targetPath)) {
-                                await fs.writeFile(targetPath, entry.getData());
-                            }
-                        }
-                        if (lowerBase === 'dem.png' || lowerBase === 'terrain.heightmap.png' || lowerBase.endsWith('_dem.png')) {
-                            const targetPath = path.join(slotPath, 'terrain.heightmap.png');
-                            if (!fs.existsSync(targetPath)) {
-                                await fs.writeFile(targetPath, entry.getData());
-                                extractedTerrain = true;
-                                console.log(`[CREATE] Extracted heightmap ${baseName} -> terrain.heightmap.png`);
-                            }
-                        }
-                        if (lowerBase.endsWith('.terrain.occluders.cache') || lowerBase === 'terrain.occluders.cache') {
-                            const targetPath = path.join(slotPath, 'terrain.occluders.cache');
-                            if (!fs.existsSync(targetPath)) {
-                                await fs.writeFile(targetPath, entry.getData());
-                            }
-                        }
-                        if (lowerBase.endsWith('.terrain.nmap.cache') || lowerBase === 'terrain.nmap.cache') {
-                            const targetPath = path.join(slotPath, 'terrain.nmap.cache');
-                            if (!fs.existsSync(targetPath)) {
-                                await fs.writeFile(targetPath, entry.getData());
-                            }
-                        }
-                        if (lowerBase.endsWith('.terrain.lod.type.cache') || lowerBase === 'terrain.lod.type.cache') {
-                            const targetPath = path.join(slotPath, 'terrain.lod.type.cache');
-                            if (!fs.existsSync(targetPath)) {
-                                await fs.writeFile(targetPath, entry.getData());
-                            }
-                        }
-                        if (lowerBase === 'splitshapes.gmss') {
-                            const targetPath = path.join(slotPath, 'splitShapes.gmss');
-                            if (!fs.existsSync(targetPath)) {
-                                await fs.writeFile(targetPath, entry.getData());
-                            }
-                        }
-
-                        // Fallback extraction for maps that didn't have standard modDesc default attributes
-                        if (!fs.existsSync(path.join(slotPath, 'vehicles.xml')) && lowerBase === 'vehicles.xml') {
-                            await fs.writeFile(path.join(slotPath, 'vehicles.xml'), entry.getData());
-                        }
-                        if (!fs.existsSync(path.join(slotPath, 'placeables.xml')) && lowerBase === 'placeables.xml') {
-                            await fs.writeFile(path.join(slotPath, 'placeables.xml'), entry.getData());
-                        }
-                        if (!fs.existsSync(path.join(slotPath, 'farmland.xml')) && (lowerBase === 'farmland.xml' || lowerBase === 'farmlands.xml')) {
-                            await fs.writeFile(path.join(slotPath, 'farmland.xml'), entry.getData());
-                        }
-                        if (!fs.existsSync(path.join(slotPath, 'items.xml')) && lowerBase === 'items.xml') {
-                            await fs.writeFile(path.join(slotPath, 'items.xml'), entry.getData());
-                        }
-                    }
-                    console.log(`[CREATE] Extracted ${extractedGrles} infoLayer GRLE files and terrain assets from map zip: ${path.basename(modZipPath)}.`);
                 }
             }
         } catch (err) {

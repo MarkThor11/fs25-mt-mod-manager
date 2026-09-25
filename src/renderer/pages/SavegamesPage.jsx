@@ -3475,7 +3475,7 @@ export default function SavegamesPage() {
 
           const resolvedMetadata = {};
           if (targetForDeps && typeof targetForDeps === 'object' && targetForDeps.dependencies && window.api?.modhub?.fetchModDetail) {
-            for (const dep of targetForDeps.dependencies) {
+            const depPromises = targetForDeps.dependencies.map(async (dep) => {
               if (typeof dep === 'object' && dep.url) {
                 const idMatch = dep.url.match(/mod_id=(\d+)/i) || dep.url.match(/storage\/(\d+)\//i);
                 if (idMatch && idMatch[1]) {
@@ -3494,7 +3494,8 @@ export default function SavegamesPage() {
                   } catch (_) {}
                 }
               }
-            }
+            });
+            await Promise.all(depPromises);
           }
 
           const { installed } = resolveRecursiveDependencies(targetForDeps, mods, {}, resolvedMetadata);
