@@ -2596,6 +2596,23 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
 
             {/* Top Badges Container */}
             <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', alignItems: 'center', gap: 6, zIndex: 5 }}>
+              {save.isServerSave && (
+                <span style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 4, 
+                  background: versionMismatches > 0 ? 'rgba(239, 68, 68, 0.25)' : 'rgba(34, 197, 94, 0.2)',
+                  border: `1px solid ${versionMismatches > 0 ? '#ef4444' : '#22c55e'}`,
+                  color: versionMismatches > 0 ? '#fca5a5' : '#86efac',
+                  padding: '2px 8px',
+                  borderRadius: 4,
+                  fontSize: 8,
+                  fontWeight: 900
+                }}>
+                  {versionMismatches > 0 ? <ShieldAlert size={10} /> : <Check size={10} />}
+                  {versionMismatches > 0 ? `${versionMismatches} OUT OF DATE` : 'MODS SYNCED'}
+                </span>
+              )}
               {isPlaying && (
                 <div style={{ 
                   background: 'rgba(34, 197, 94, 0.25)', 
@@ -2687,36 +2704,32 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 </div>
               )}
             </div>
-            <div style={{ flex: 1, zIndex: 1, paddingLeft: 34 }}>
+            <div style={{ flex: 1, zIndex: 1, paddingLeft: 34, display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {editingName === save.folderName ? (
-                    <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+                    <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
                         <input type="text" value={newName} onChange={e => setNewName(e.target.value)} autoFocus style={{ flex: 1, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--accent)' }} />
                         <button className="btn btn--primary btn--sm" onClick={handleRename}><Check size={16} /></button>
                         <button className="btn btn--ghost btn--sm" onClick={() => setEditingName(null)}><X size={16} /></button>
                     </div>
                 ) : (
-                    <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.8)', marginBottom: 2 }}>{save.farmName}</div>
+                    <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>{save.farmName}</div>
                 )}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', opacity: 0.9, fontSize: 11, color: 'white' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-                      <MapPin size={12} className="text-accent" /> 
-                      {getLocalizedString(save.mapTitle, 'Unknown Map')} 
-                      {save.mapAuthor && getLocalizedString(save.mapAuthor) !== 'Unknown' && (
-                        <span style={{ opacity: 0.5, fontSize: 9, marginLeft: 4 }}>BY {getLocalizedString(save.mapAuthor).toUpperCase()}</span>
-                      )}
-                    </span>
+                {/* Line 2: Map & Creator */}
+                <div style={{ opacity: 0.95, fontSize: 11, color: 'white', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <MapPin size={12} className="text-accent" /> 
+                    <span style={{ fontWeight: 700, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>{getLocalizedString(save.mapTitle, 'Unknown Map')}</span>
+                    {save.mapAuthor && getLocalizedString(save.mapAuthor) !== 'Unknown' && (
+                      <span style={{ opacity: 0.5, fontSize: 9, marginLeft: 2 }}>BY {getLocalizedString(save.mapAuthor).toUpperCase()}</span>
+                    )}
+                </div>
+                {/* Line 3: Money, Play Time, Economy, Created */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', opacity: 0.9, fontSize: 11, color: 'white' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}><DollarSign size={12} className="text-accent" /> {formatMoney(save.money)}</span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}><Clock size={12} className="text-accent" /> {formatPlayTime(save.playTime)}</span>
                     
-                    {save.creationDate && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, textShadow: '0 1px 2px rgba(0,0,0,0.5)', opacity: 0.8 }}>
-                        <span style={{ fontSize: 9, opacity: 0.5 }}>CREATED:</span> {save.creationDate}
-                      </span>
-                    )}
-                    
                     {save.economicDifficulty && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, textShadow: '0 1px 2px rgba(0,0,0,0.5)', opacity: 0.8 }}>
-                        <span style={{ fontSize: 9, opacity: 0.5 }}>ECONOMY:</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, textShadow: '0 1px 2px rgba(0,0,0,0.5)', opacity: 0.85 }}>
+                        <span style={{ fontSize: 9, opacity: 0.6 }}>ECONOMY:</span>
                         <span style={{ 
                           color: save.economicDifficulty === 'HARD' ? 'var(--color-error)' : (save.economicDifficulty === 'EASY' ? 'var(--color-success)' : 'white'),
                           fontWeight: 700 
@@ -2725,33 +2738,21 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                         </span>
                       </span>
                     )}
+
+                    {save.creationDate && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, textShadow: '0 1px 2px rgba(0,0,0,0.5)', opacity: 0.75 }}>
+                        <span style={{ fontSize: 9, opacity: 0.6 }}>CREATED:</span> {save.creationDate}
+                      </span>
+                    )}
                 </div>
             </div>
-            <div style={{ display: 'flex', gap: 2, alignItems: 'center', marginTop: 'auto', width: '100%', zIndex: 1, padding: 'var(--sp-2) 0 0 0', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                {save.isServerSave && (
-                  <span style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 4, 
-                    background: versionMismatches > 0 ? 'rgba(239, 68, 68, 0.25)' : 'rgba(34, 197, 94, 0.2)',
-                    border: `1px solid ${versionMismatches > 0 ? '#ef4444' : '#22c55e'}`,
-                    color: versionMismatches > 0 ? '#fca5a5' : '#86efac',
-                    padding: '2px 8px',
-                    borderRadius: 4,
-                    fontSize: 9,
-                    fontWeight: 800,
-                    marginRight: 4
-                  }}>
-                    {versionMismatches > 0 ? <ShieldAlert size={10} /> : <Check size={10} />}
-                    {versionMismatches > 0 ? `${versionMismatches} OUT OF DATE` : 'MODS SYNCED'}
-                  </span>
-                )}
+            {/* Bottom Action Bar aligned to left side */}
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 'auto', width: '100%', zIndex: 1, padding: 'var(--sp-2) 0 0 0', borderTop: '1px solid rgba(255,255,255,0.1)', justifyContent: 'flex-start' }}>
                 {save.isInitialized && !save.hasTemplate && (
                     <button className="btn btn--ghost btn--sm" onClick={onAdopt} title="Save as Master Template" style={{ color: 'rgba(255,255,255,0.7)' }}>
                         <Zap size={16} />
                     </button>
                 )}
-                <div style={{ flex: 1 }} />
 
 
                 <button 
