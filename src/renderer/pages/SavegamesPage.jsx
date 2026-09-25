@@ -3522,16 +3522,12 @@ export default function SavegamesPage() {
       }
 
       // Case-insensitive lookup set for modsToAdd filtering
-      const selectedLower = new Set(Array.from(finalModNames).map(s => String(s).toLowerCase()));
+            const selectedLower = new Set(Array.from(finalModNames).map(s => String(s).toLowerCase()));
       const modsToAdd = (mods || []).filter(m => {
         if (!m || !m.modName) return false;
         const mNameLow = m.modName.toLowerCase();
         const fNameLow = (m.fileName || '').replace(/\.zip$/i, '').toLowerCase();
-        if (selectedLower.has(mNameLow) || selectedLower.has(fNameLow)) return true;
-        for (const fn of finalModNames) {
-          if (matchModWithDependency(m, fn)) return true;
-        }
-        return false;
+        return selectedLower.has(mNameLow) || selectedLower.has(fNameLow);
       });
       const [mapId, mapTitle, mapModName, , filePath] = createMap.split('|');
       

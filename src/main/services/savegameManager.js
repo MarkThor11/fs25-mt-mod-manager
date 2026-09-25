@@ -1072,32 +1072,41 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     // If we don't do this, the FS25 engine pauses the launch and prompts: "Do you want to select all required mods?"
     try {
         let addedNewDep = true;
-        while(addedNewDep) {
+        let passes = 0;
+        while(addedNewDep && passes < 10) {
+            passes++;
             addedNewDep = false;
             const currentMods = [...finalMods];
+            const existingSet = new Set(currentMods.map(m => (m && m.modName ? m.modName.toLowerCase() : '')).filter(Boolean));
+
             for (const selMod of currentMods) {
+                if (!selMod || !selMod.modName) continue;
                 const fullMod = allMods.find(m => 
-                    (m.modName && m.modName.toLowerCase() === (selMod.modName || '').toLowerCase()) ||
-                    (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === (selMod.modName || '').toLowerCase())
+                    (m.modName && m.modName.toLowerCase() === selMod.modName.toLowerCase()) ||
+                    (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === selMod.modName.toLowerCase())
                 );
-                if (fullMod && fullMod.dependencies && fullMod.dependencies.length > 0) {
+                if (fullMod && fullMod.dependencies && Array.isArray(fullMod.dependencies) && fullMod.dependencies.length > 0) {
                     for (const dep of fullMod.dependencies) {
                         const installedDep = allMods.find(m => dependencyResolver.matchModWithDependency(m, dep));
 
-                        if (installedDep && installedDep.modName !== mapModName && !finalMods.some(m => m.modName.toLowerCase() === installedDep.modName.toLowerCase())) {
-                            console.log(`[CREATE] Auto-injecting dependency: ${installedDep.title} (required by ${selMod.title || selMod.modName})`);
-                            finalMods.push({
-                                modName: installedDep.modName,
-                                title: installedDep.title,
-                                version: installedDep.version || '1.0.0.0',
-                                required: true,
-                                fileHash: installedDep.fileHash || ''
-                            });
-                            addedNewDep = true;
-                        } else if (installedDep) {
-                            const alreadySelected = finalMods.find(m => m.modName.toLowerCase() === installedDep.modName.toLowerCase());
-                            if (alreadySelected) {
-                                alreadySelected.required = true;
+                        if (installedDep && installedDep.modName) {
+                            const depModNameLow = installedDep.modName.toLowerCase();
+                            if (installedDep.modName !== mapModName && !existingSet.has(depModNameLow)) {
+                                console.log(`[CREATE] Auto-injecting dependency: ${installedDep.title || installedDep.modName} (required by ${selMod.title || selMod.modName})`);
+                                finalMods.push({
+                                    modName: installedDep.modName,
+                                    title: installedDep.title || installedDep.modName,
+                                    version: installedDep.version || '1.0.0.0',
+                                    required: true,
+                                    fileHash: installedDep.fileHash || ''
+                                });
+                                existingSet.add(depModNameLow);
+                                addedNewDep = true;
+                            } else {
+                                const alreadySelected = finalMods.find(m => m && m.modName && m.modName.toLowerCase() === depModNameLow);
+                                if (alreadySelected) {
+                                    alreadySelected.required = true;
+                                }
                             }
                         }
                     }
