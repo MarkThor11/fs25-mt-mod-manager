@@ -3418,6 +3418,7 @@ export default function SavegamesPage() {
         const firstEmpty = allSlots.find(s => s.isEmpty);
         if (!firstEmpty) {
           useToastStore.getState().error("All 20 save slots are full! Please archive or delete a save to free up a slot.");
+          setCreating(false);
           return;
         }
         targetSlotValue = firstEmpty.index.toString();
@@ -3467,8 +3468,8 @@ export default function SavegamesPage() {
           });
           console.log(`[CREATE] Safety net resolved ${installedList.length} map dependencies:`, installedList);
 
-          // Auto-include all mods from "Map Dependencies" folder and dedicated subfolders
-          const mapDepMods = (mods || []).filter(m => !m.isMap && m.folder && (m.folder.toLowerCase() === 'map dependencies' || (mapObj && mapObj.folder && m.folder.toLowerCase() === mapObj.folder.toLowerCase() && m.folder.toLowerCase() !== 'mods')));
+          // Auto-include non-map mods from dedicated map subfolders
+          const mapDepMods = (mods || []).filter(m => !m.isMap && m.folder && (mapObj && mapObj.folder && m.folder.toLowerCase() === mapObj.folder.toLowerCase() && m.folder.toLowerCase() !== 'mods'));
           mapDepMods.forEach(s => {
             if (s.modName) finalModNames.add(s.modName);
           });

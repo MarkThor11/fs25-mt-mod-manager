@@ -224,8 +224,8 @@ export const resolveRecursiveDependencies = (targetModOrName, allMods, sessionIn
     if (!cleanedName) return;
     const nameLower = cleanedName.toLowerCase();
 
-    // Ignore official GIANTS DLCs (e.g. pdlc_highlandsFishingPack) as missing zip mods
-    if (nameLower.startsWith('pdlc_')) return;
+    // Ignore official GIANTS DLCs and blacklisted incompatible mods as missing zip mods
+    if (nameLower.startsWith('pdlc_') || nameLower === 'fs25_maxdensityheighttypesbymap') return;
     
     if (processed.has(nameLower)) return;
     processed.add(nameLower);
