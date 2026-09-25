@@ -1538,15 +1538,94 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
                     if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
                     if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
-                    if (farmlandsFile) await extractExactZipFile(farmlandsFile, 'farmland.xml');
 
-                    // Fallback extraction for starting XML files
-                    for (const targetXml of ['vehicles.xml', 'placeables.xml', 'farmland.xml', 'items.xml']) {
+                    // Parse and build proper savegame farmland.xml from map farmlands config
+                    try {
+                        let farmlandsXmlEntry = null;
+                        if (farmlandsFile) {
+                            const normFL = farmlandsFile.replace(/\\/g, '/').toLowerCase();
+                            farmlandsXmlEntry = entryByFullPath.get(normFL) || entryByBaseName.get(path.basename(normFL));
+                        }
+                        if (!farmlandsXmlEntry) {
+                            farmlandsXmlEntry = entryByBaseName.get('farmlands.xml') || entryByBaseName.get('farmland.xml');
+                        }
+
+                        if (farmlandsXmlEntry) {
+                            const flContent = farmlandsXmlEntry.getData().toString('utf8');
+                            const reFarmland = /<farmland\s+([^>]+)\/?>/gi;
+                            let fMatch;
+                            const farmlandNodes = [];
+                            let hasAnyDefaultOwner = false;
+
+                            while ((fMatch = reFarmland.exec(flContent)) !== null) {
+                                const attrs = fMatch[1];
+                                const idMatch = attrs.match(/id=["'](\d+)["']/i);
+                                if (idMatch) {
+                                    const fid = idMatch[1];
+                                    const isDefault = /defaultFarmProperty=["']true["']/i.test(attrs) || 
+                                                      /defaultOwner=["'](?:true|1)["']/i.test(attrs) || 
+                                                      /farmId=["']1["']/i.test(attrs) ||
+                                                      /owner=["']1["']/i.test(attrs);
+                                    if (isDefault) hasAnyDefaultOwner = true;
+                                    farmlandNodes.push({ id: fid, defaultOwned: isDefault });
+                                }
+                            }
+
+                            if (farmlandNodes.length > 0) {
+                                let flXmlOutput = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<farmlands>\n';
+                                for (const fn of farmlandNodes) {
+                                    let assignedFarmId = '0';
+                                    if (includeStartFarm) {
+                                        if (fn.defaultOwned) {
+                                            assignedFarmId = '1';
+                                        } else if (!hasAnyDefaultOwner && fn.id === '1') {
+                                            assignedFarmId = '1';
+                                        }
+                                    }
+                                    flXmlOutput += `    <farmland id="${fn.id}" farmId="${assignedFarmId}"/>\n`;
+                                }
+                                flXmlOutput += '</farmlands>\n';
+
+                                const targetFarmlandPath = path.join(slotPath, 'farmland.xml');
+                                await fs.writeFile(targetFarmlandPath, flXmlOutput, 'utf8');
+                                console.log(`[CREATE] Built proper savegame farmland.xml with ${farmlandNodes.filter(n => n.defaultOwned).length} starting owned farmlands.`);
+                            }
+                        }
+                    } catch (flErr) {
+                        console.warn('[CREATE] Failed to parse/build farmland.xml:', flErr.message);
+                    }
+
+                    // Fallback extraction for starting XML files if missing
+                    for (const targetXml of ['vehicles.xml', 'placeables.xml', 'items.xml', 'fields.xml']) {
                         if (!fs.existsSync(path.join(slotPath, targetXml))) {
-                            const entry = entryByBaseName.get(targetXml) || (targetXml === 'farmland.xml' ? entryByBaseName.get('farmlands.xml') : null);
+                            const entry = entryByBaseName.get(targetXml);
                             if (entry) {
                                 await fs.writeFile(path.join(slotPath, targetXml), entry.getData());
                                 console.log(`[CREATE] Fast fallback extracted ${targetXml}`);
+                            }
+                        }
+                    }
+
+                    // Extract all starting density maps, infoLayers, and field state files from map zip
+                    for (const entry of zipEntries) {
+                        const baseName = path.basename(entry.entryName);
+                        const baseLower = baseName.toLowerCase();
+                        
+                        const isFieldStateFile = 
+                            baseLower.startsWith('densitymap_') || 
+                            baseLower.startsWith('infolayer_') ||
+                            baseLower === 'fieldground.xml' ||
+                            baseLower === 'weed_growthstate.xml' ||
+                            baseLower === 'stone_growthstate.xml' ||
+                            baseLower === 'densitymapheight.xml';
+
+                        if (isFieldStateFile && !entry.isDirectory()) {
+                            const destFile = path.join(slotPath, baseName);
+                            if (!fs.existsSync(destFile)) {
+                                try {
+                                    await fs.writeFile(destFile, entry.getData());
+                                    console.log(`[CREATE] Fast-extracted field state layer: ${baseName}`);
+                                } catch (e) {}
                             }
                         }
                     }
