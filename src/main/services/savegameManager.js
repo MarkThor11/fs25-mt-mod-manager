@@ -145,34 +145,7 @@ function getTemplatesPath() {
                 }
             }
         }
-        // Sanitize existing custom templates in modManagerTemplates (remove dummy/corrupt folders that lack genuine terrain/density files)
-        const items = fs.readdirSync(p);
-        const OFFICIAL_FOLDERS = ['mapus', 'mapeu', 'mapas', 'pdlc_highlandsfishingpack_highlandsfishingmap'];
-        for (const item of items) {
-            const itemLow = item.replace(/\.zip$/i, '').toLowerCase();
-            if (OFFICIAL_FOLDERS.includes(itemLow)) continue;
-            const itemPath = path.join(p, item);
-            const isZip = item.toLowerCase().endsWith('.zip');
-            let isCorrupt = false;
-            if (isZip) {
-                try {
-                    const zip = new AdmZip(itemPath);
-                    const hasHeight = !!zip.getEntry('terrain.heightmap.png');
-                    const hasGdm = !!zip.getEntry('densityMap_fruits.gdm') || !!zip.getEntry('densityMap_ground.gdm');
-                    if (!hasHeight || (!hasGdm && zip.getEntries().length < 25)) isCorrupt = true;
-                } catch (e) {
-                    isCorrupt = true;
-                }
-            } else if (fs.statSync(itemPath).isDirectory()) {
-                const hasHeight = fs.existsSync(path.join(itemPath, 'terrain.heightmap.png'));
-                const hasGdm = fs.existsSync(path.join(itemPath, 'densityMap_fruits.gdm')) || fs.existsSync(path.join(itemPath, 'densityMap_ground.gdm'));
-                if (!hasHeight || !hasGdm) isCorrupt = true;
-            }
-            if (isCorrupt) {
-                console.log(`[TEMPLATES] Purging corrupt/dummy custom template: ${item}`);
-                try { fs.removeSync(itemPath); } catch (e) {}
-            }
-        }
+        // Custom templates in modManagerTemplates
     } catch (e) {
         console.error('[TEMPLATES] Failed to sync master templates:', e);
     }
@@ -907,24 +880,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         await fs.ensureDir(slotPath);
     }
 
-    // Scan mods first so we can resolve the correct path of the map mod (even if in a subfolder)
+    // Use passed selectedMods as the primary mod list for fast creation
     const modManager = require('./modManager');
-    try {
-        const defaultMods = modManager.getDefaultModsPath();
-        if (defaultMods) {
-            await modManager.syncMirrorLinks(defaultMods);
-        }
-    } catch (mErr) {
-        console.warn('[CREATE] Warning: failed to sync mirror links:', mErr.message);
-    }
-
-    let allMods = [];
-    try {
-        const scanRes = await modManager.scanLocalMods();
-        allMods = scanRes.mods || [];
-    } catch (err) {
-        console.error('[CREATE] Failed to scan local mods:', err);
-    }
+    let allMods = selectedMods || [];
 
     const GENERIC_MAP_IDS = new Set([
         'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 

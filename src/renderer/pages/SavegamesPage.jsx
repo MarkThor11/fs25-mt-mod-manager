@@ -3464,44 +3464,11 @@ export default function SavegamesPage() {
           }
 
           let targetForDeps = mapObj || cleanMapForDeps;
-          if (mapObj && (!mapObj.dependencies || mapObj.dependencies.length === 0) && mapObj.modId && window.api?.modhub?.fetchModDetail) {
-            try {
-              const detail = await window.api.modhub.fetchModDetail({ modId: mapObj.modId });
-              if (detail && detail.dependencies && Array.isArray(detail.dependencies) && detail.dependencies.length > 0) {
-                targetForDeps = { ...mapObj, dependencies: detail.dependencies };
-              }
-            } catch (_) {}
-          }
 
-          const resolvedMetadata = {};
-          if (targetForDeps && typeof targetForDeps === 'object' && targetForDeps.dependencies && window.api?.modhub?.fetchModDetail) {
-            const depPromises = targetForDeps.dependencies.map(async (dep) => {
-              if (typeof dep === 'object' && dep.url) {
-                const idMatch = dep.url.match(/mod_id=(\d+)/i) || dep.url.match(/storage\/(\d+)\//i);
-                if (idMatch && idMatch[1]) {
-                  const depId = idMatch[1].replace(/^0+/, '');
-                  try {
-                    const detail = await window.api.modhub.fetchModDetail({ modId: depId });
-                    if (detail) {
-                      const zipName = detail.fileName || (detail.downloadUrl ? detail.downloadUrl.split('/').pop() : null);
-                      if (zipName) {
-                        const metaObj = { modId: depId, fileName: zipName.replace(/\.zip$/i, '').toLowerCase(), title: detail.title };
-                        resolvedMetadata[depId] = metaObj;
-                        if (dep.title) resolvedMetadata[dep.title] = metaObj;
-                        if (dep.url) resolvedMetadata[dep.url] = metaObj;
-                      }
-                    }
-                  } catch (_) {}
-                }
-              }
-            });
-            await Promise.all(depPromises);
-          }
-
-          const { installed } = resolveRecursiveDependencies(targetForDeps, mods, {}, resolvedMetadata);
+          const { installed } = resolveRecursiveDependencies(targetForDeps, mods, {}, {});
           const installedList = Array.isArray(installed) ? installed : Array.from(installed || []);
           installedList.forEach(d => {
-            const matchedModObj = mods ? mods.find(m => matchModWithDependency(m, d, resolvedMetadata)) : null;
+            const matchedModObj = mods ? mods.find(m => matchModWithDependency(m, d, {})) : null;
             if (matchedModObj && matchedModObj.modName) {
               finalModNames.add(matchedModObj.modName);
             } else {
