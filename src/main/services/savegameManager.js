@@ -1532,12 +1532,11 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         return false;
                     };
 
-                    // Extract exact starting files designated by the map author
-                    if (defaultVehiclesFile) await extractExactZipFile(defaultVehiclesFile, 'vehicles.xml');
+                    // Extract exact starting files designated by the map author (vehicles, placeables, items, handtools)
+                    if (includeStartVehicles && defaultVehiclesFile) await extractExactZipFile(defaultVehiclesFile, 'vehicles.xml');
                     if (defaultPlaceablesFile) await extractExactZipFile(defaultPlaceablesFile, 'placeables.xml');
                     if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
                     if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
-                    if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
 
                     // Parse and build proper savegame farmland.xml from map farmlands config
                     try {
@@ -1596,7 +1595,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     }
 
                     // Fallback extraction for starting XML files if missing
-                    for (const targetXml of ['vehicles.xml', 'placeables.xml', 'items.xml', 'fields.xml']) {
+                    for (const targetXml of ['placeables.xml', 'items.xml', 'handTools.xml']) {
                         if (!fs.existsSync(path.join(slotPath, targetXml))) {
                             const entry = entryByBaseName.get(targetXml);
                             if (entry) {
@@ -1606,41 +1605,16 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    // Extract all starting density maps, infoLayers, and field state files from map zip
-                    for (const entry of zipEntries) {
-                        const baseName = path.basename(entry.entryName);
-                        const baseLower = baseName.toLowerCase();
-                        
-                        const isFieldStateFile = 
-                            baseLower.startsWith('densitymap_') || 
-                            baseLower.startsWith('infolayer_') ||
-                            baseLower === 'fieldground.xml' ||
-                            baseLower === 'weed_growthstate.xml' ||
-                            baseLower === 'stone_growthstate.xml' ||
-                            baseLower === 'densitymapheight.xml';
-
-                        if (isFieldStateFile && !entry.isDirectory()) {
-                            const destFile = path.join(slotPath, baseName);
-                            if (!fs.existsSync(destFile)) {
-                                try {
-                                    await fs.writeFile(destFile, entry.getData());
-                                    console.log(`[CREATE] Fast-extracted field state layer: ${baseName}`);
-                                } catch (e) {}
-                            }
+                    if (includeStartVehicles && !fs.existsSync(path.join(slotPath, 'vehicles.xml'))) {
+                        const entry = entryByBaseName.get('vehicles.xml');
+                        if (entry) {
+                            await fs.writeFile(path.join(slotPath, 'vehicles.xml'), entry.getData());
+                            console.log(`[CREATE] Fast fallback extracted vehicles.xml`);
                         }
                     }
 
-                    // Extract heightmap if present
-                    if (!fs.existsSync(path.join(slotPath, 'terrain.heightmap.png'))) {
-                        const hEntry = entryByBaseName.get('terrain.heightmap.png') || entryByBaseName.get('dem.png');
-                        if (hEntry) {
-                            await fs.writeFile(path.join(slotPath, 'terrain.heightmap.png'), hEntry.getData());
-                            console.log(`[CREATE] Fast extracted heightmap -> terrain.heightmap.png`);
-                        }
-                    }
-
-                    // If starting farm is disabled, strip farm 1 vehicles
-                    if (!includeStartFarm) {
+                    // If starting farm or vehicles is disabled, strip farm 1 vehicles
+                    if (!includeStartFarm || !includeStartVehicles) {
                         const vehiclesPath = path.join(slotPath, 'vehicles.xml');
                         if (fs.existsSync(vehiclesPath)) {
                             try {
@@ -1648,7 +1622,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                                 vXml = vXml.replace(/<vehicle\s+[^>]*farmId="1"[^>]*>[\s\S]*?<\/vehicle>/gi, '');
                                 vXml = vXml.replace(/<vehicle\s+[^>]*farmId="1"[^>]*\/>/gi, '');
                                 await fs.writeFile(vehiclesPath, vXml);
-                                console.log('[CREATE] Stripped starting farm vehicles because includeStartFarm is false.');
+                                console.log('[CREATE] Stripped starting farm vehicles because start farm or vehicles is false.');
                             } catch (e) {}
                         }
                     }
@@ -5967,36 +5941,36 @@ async function restoreStashedSinglePlayerSaves() {
  * Resets/refreshes starting field states (crops, foliage, ground state) for an existing savegame slot
  * by extracting original density maps & infoLayers from the map zip archive into the savegame directory.
  */
-async function resetSavegameFieldStates(savePath, mapZipPath) {
-    if (!savePath || !fs.existsSync(savePath) || !mapZipPath || !fs.existsSync(mapZipPath)) {
-        return { success: false, error: 'Invalid savegame path or map zip path.' };
+async function resetSavegameFieldStates(savePath) {
+    if (!savePath || !fs.existsSync(savePath)) {
+        return { success: false, error: 'Invalid savegame path.' };
     }
     try {
-        const zip = new AdmZip(mapZipPath);
-        const entries = zip.getEntries();
-        let extractedCount = 0;
+        const files = await fs.readdir(savePath);
+        let removedCount = 0;
 
-        for (const entry of entries) {
-            const baseName = path.basename(entry.entryName);
-            const baseLower = baseName.toLowerCase();
+        for (const file of files) {
+            const baseLower = file.toLowerCase();
             const isFieldStateFile = 
                 baseLower.startsWith('densitymap_') || 
                 baseLower.startsWith('infolayer_') ||
+                baseLower === 'fields.xml' ||
                 baseLower === 'fieldground.xml' ||
                 baseLower === 'weed_growthstate.xml' ||
                 baseLower === 'stone_growthstate.xml' ||
-                baseLower === 'densitymapheight.xml';
+                baseLower === 'densitymapheight.xml' ||
+                baseLower === 'terrain.heightmap.png';
 
-            if (isFieldStateFile && !entry.isDirectory()) {
-                const destFile = path.join(savePath, baseName);
-                await fs.writeFile(destFile, entry.getData());
-                extractedCount++;
+            if (isFieldStateFile) {
+                const target = path.join(savePath, file);
+                await fs.remove(target);
+                removedCount++;
             }
         }
-        console.log(`[REPAIR-FIELDS] Refreshed ${extractedCount} field state density layers for savegame at ${savePath}`);
-        return { success: true, extractedCount };
+        console.log(`[REPAIR-FIELDS] Reset field states by removing ${removedCount} cached density layers from savegame at ${savePath}`);
+        return { success: true, removedCount };
     } catch (err) {
-        console.error('[REPAIR-FIELDS] Failed to refresh field state layers:', err.message);
+        console.error('[REPAIR-FIELDS] Failed to reset field state layers:', err.message);
         return { success: false, error: err.message };
     }
 }
