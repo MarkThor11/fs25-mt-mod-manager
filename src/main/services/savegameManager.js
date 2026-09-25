@@ -18,6 +18,7 @@ function ultraNormalize(str) {
     return s;
 }
 const INTERNAL_HELPER_MODS = ['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge'];
+const INCOMPATIBLE_ENGINE_MODS = new Set(['fs25_maxdensityheighttypesbymap']);
 
 // 🛠️ DIAGNOSTIC UTILITY 🛠️
 const logFile = (app && typeof app.getPath === 'function') 
@@ -1076,6 +1077,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     } catch (err) {
         console.error('[CREATE] Failed to auto-inject dependencies:', err);
     }
+
+    // Filter out any known engine-crashing/incompatible mods
+    finalMods = finalMods.filter(m => m && m.modName && !INCOMPATIBLE_ENGINE_MODS.has(m.modName.toLowerCase()));
 
     // Extract true map id from the mod's modDesc.xml if available
     let internalMapId = matchedMapMod?.mapId || mapId;
@@ -3474,7 +3478,8 @@ async function cleanInternalHelperModsFromSavegame(savePath) {
         let modified = false;
 
         xmlData = xmlData.replace(modRegex, (match, modName) => {
-            if (INTERNAL_HELPER_MODS.includes((modName || '').toLowerCase())) {
+            const mLow = (modName || '').toLowerCase();
+            if (INTERNAL_HELPER_MODS.includes(mLow) || INCOMPATIBLE_ENGINE_MODS.has(mLow)) {
                 modified = true;
                 return '';
             }
@@ -5037,6 +5042,9 @@ async function syncSubfolderMapDependencies(savePath) {
                 }
             }
         }
+
+        // Filter out any known engine-crashing/incompatible mods
+        modsToEnsure = modsToEnsure.filter(m => m && m.modName && !INCOMPATIBLE_ENGINE_MODS.has(m.modName.toLowerCase()));
 
         if (modsToEnsure.length === 0) return;
 

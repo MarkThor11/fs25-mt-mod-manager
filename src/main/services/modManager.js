@@ -22,6 +22,10 @@ const gameLauncher = require('./gameLauncher');
 const pathProvider = require('./pathProvider');
 const dependencyResolver = require('./dependencyResolver');
 
+const INCOMPATIBLE_ENGINE_MODS = new Set([
+	'fs25_maxdensityheighttypesbymap'
+]);
+
 const activeInstalls = new Map();
 const downloadQueue = [];
 let activeCount = 0;
@@ -766,9 +770,20 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
             }
         }
         
+        // Ensure known engine-crashing/incompatible mods are stripped from activeModNames
+        if (activeModNames) {
+            INCOMPATIBLE_ENGINE_MODS.forEach(badMod => activeModNames.delete(badMod));
+        }
+
         for (const m of mods) {
             const modNameLower = m.modName.toLowerCase();
             
+            // EXCLUDE: Never link engine-crashing/incompatible mods
+            if (INCOMPATIBLE_ENGINE_MODS.has(modNameLower)) {
+                console.log(`[VIRTUAL] Excluding incompatible engine-crashing mod: ${m.modName}`);
+                continue;
+            }
+
             // FILTER: If we are in selective mode, only link if it's in the active set
             if (activeModNames && !activeModNames.has(modNameLower)) {
                 continue;

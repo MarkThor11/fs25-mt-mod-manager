@@ -20,6 +20,10 @@ const crypto = require('crypto');
 const gameLauncher = require('./gameLauncher');
 const pathProvider = require('./pathProvider');
 
+const INCOMPATIBLE_ENGINE_MODS = new Set([
+	'fs25_maxdensityheighttypesbymap'
+]);
+
 const activeInstalls = new Map();
 const downloadQueue = [];
 let activeCount = 0;
@@ -314,6 +318,11 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 				const name = entry.name;
 				const modNameNoExt = name.toLowerCase().replace(/\.zip$/, '');
 				
+				// EXCLUDE: Never link engine-crashing/incompatible mods
+				if (INCOMPATIBLE_ENGINE_MODS.has(modNameNoExt)) {
+					continue;
+				}
+
 				// FILTER: If we are in selective mode, only link if it's in the active set
 				if (activeModNames && !activeModNames.has(modNameNoExt)) {
 					continue;
