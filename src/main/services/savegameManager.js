@@ -1837,6 +1837,8 @@ async function updateSavegameAttribute(savePath, fileType, attribute, value) {
         else if (attribute === 'timeScale') settings.timeScale = stringValue;
         else if (attribute === 'autoSaveInterval') settings.autoSaveInterval = stringValue;
         else if (attribute === 'plannedDaysPerPeriod') settings.plannedDaysPerPeriod = stringValue;
+        else if (attribute === 'growthMode') settings.growthMode = stringValue;
+        else if (attribute === 'fixedSeasonalVisuals') settings.fixedSeasonalVisuals = stringValue;
         else if (attribute === 'trafficEnabled') settings.trafficEnabled = stringValue;
         else if (attribute === 'fruitDestruction') settings.fruitDestruction = stringValue;
         else if (attribute === 'plowingRequiredEnabled') settings.plowingRequiredEnabled = stringValue;
@@ -2124,6 +2126,8 @@ async function getAllSavegames() {
                 formattedTime: formattedTime || '08:00',
                 weather: currentWeather,
                 plannedDaysPerPeriod: settings['@_plannedDaysPerPeriod'] || settings.plannedDaysPerPeriod,
+                growthMode: settings['@_growthMode'] || settings.growthMode || 'SEASONAL',
+                fixedSeasonalVisuals: settings['@_fixedSeasonalVisuals'] || settings.fixedSeasonalVisuals || 'OFF',
                 trafficEnabled: (settings['@_trafficEnabled'] || settings.trafficEnabled) !== 'false',
                 fruitDestruction: (settings['@_fruitDestruction'] || settings.fruitDestruction) !== 'false',
                 plowingRequiredEnabled: (settings['@_plowingRequiredEnabled'] || settings.plowingRequiredEnabled) === 'true',

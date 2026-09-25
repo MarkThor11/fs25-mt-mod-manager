@@ -1614,10 +1614,11 @@
 .save-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding: var(--sp-4);
   display: flex;
   gap: var(--sp-4);
+  overflow: hidden;
   transition: all var(--duration-fast) ease;
 }
 .save-card:hover {

@@ -1202,17 +1202,45 @@ const [activeTab, setActiveTab] = useState('general');
                       </div>
                     </div>
                     <div className="setting">
-                      <label title="How many in-game days are in a month.">DAYS PER MONTH</label>
+                      <label title="Seasonal crop growth behavior.">CROP GROWTH MODE</label>
+                      <div className="input-with-icon">
+                        <Wheat size={14} />
+                        <select defaultValue={save.growthMode || 'SEASONAL'} onChange={(e) => handleUpdate('career', 'growthMode', e.target.value)}>
+                          <option value="SEASONAL">Yes (Seasonal Growth Enabled)</option>
+                          <option value="DISABLED">No (Growth Disabled)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="setting">
+                      <label title="Lock visual season regardless of month.">FIXED SEASONAL VISUALS</label>
+                      <div className="input-with-icon">
+                        <Thermometer size={14} />
+                        <select defaultValue={save.fixedSeasonalVisuals || 'OFF'} onChange={(e) => handleUpdate('career', 'fixedSeasonalVisuals', e.target.value)}>
+                          <option value="OFF">Off (Follow In-Game Months)</option>
+                          <option value="SPRING">Spring Visuals Only</option>
+                          <option value="SUMMER">Summer Visuals Only</option>
+                          <option value="AUTUMN">Autumn Visuals Only</option>
+                          <option value="WINTER">Winter Visuals Only</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="setting">
+                      <label title="How many in-game days are in a month (1 to 28 days).">DAYS PER MONTH</label>
                       <div className="input-with-icon">
                         <CalendarDays size={14} />
                         <input 
                           type="number" min="1" max="28" 
                           style={{ minWidth: 100 }}
-                          defaultValue={save.plannedDaysPerPeriod || 1} 
-                          onBlur={(e) => {
-                             handleUpdate('career', 'plannedDaysPerPeriod', e.target.value);
-                             handleUpdate('environment', 'daysPerPeriod', e.target.value);
-                         }} />
+                          value={save.plannedDaysPerPeriod || 1} 
+                          onChange={(e) => {
+                             let num = parseInt(e.target.value);
+                             if (isNaN(num)) num = 1;
+                             if (num > 28) num = 28;
+                             if (num < 1) num = 1;
+                             handleUpdate('career', 'plannedDaysPerPeriod', num);
+                             handleUpdate('environment', 'daysPerPeriod', num);
+                          }}
+                        />
                        </div>
                      </div>
                     <div className="setting">
@@ -2522,6 +2550,8 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                     minHeight: 180, 
                     padding: 'var(--sp-4)', 
                     position: 'relative', 
+                    borderRadius: 14,
+                    overflow: 'hidden',
                     border: isPlaying ? '1px solid #22c55e' : (isDragOver ? '2px solid var(--accent)' : (isSelected ? '1px solid var(--accent)' : (save.hasTemplate ? '1px solid var(--accent-dim)' : '1px solid transparent'))), 
                     boxShadow: isPlaying ? '0 0 20px rgba(34, 197, 94, 0.25)' : (isSelected ? '0 0 15px rgba(var(--accent-rgb), 0.2)' : 'none'), 
                     background: isDragOver ? 'rgba(var(--accent-rgb), 0.1)' : (isSelected ? 'var(--bg-tertiary)' : ''),
@@ -2542,8 +2572,9 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
 
             
             {/* Map Preview Background */}
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.25, zIndex: 0, maskImage: 'linear-gradient(to bottom, black, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, black, transparent)' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.55, zIndex: 0, overflow: 'hidden' }}>
                 <MapImage mapTitle={getLocalizedString(save.mapTitle, 'Unknown Map')} mapId={save.mapId} mods={mods} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(15, 23, 42, 0.92) 0%, rgba(15, 23, 42, 0.75) 50%, rgba(15, 23, 42, 0.45) 100%)' }} />
             </div>
 
             {/* Top Badges Container */}
@@ -3365,7 +3396,15 @@ export default function SavegamesPage() {
 
   const openCreateModal = (slot = 'auto') => {
     setCreateSlot(slot.toString());
-    setCreateName('New Farming Career');
+    
+    // Priority 1: Hero Banner nickname setting
+    const heroNickname = useSettingsStore.getState().nickname;
+    // Priority 2: Existing savegame player name
+    const existingPlayerName = savegames.find(s => s.playerName && s.playerName !== 'Farmer' && s.playerName !== 'Player')?.playerName
+      || savegames.find(s => s.playerName)?.playerName;
+    
+    const chosenName = heroNickname?.trim() || existingPlayerName?.trim();
+    setCreateName(chosenName ? `${chosenName}'s Farm` : 'New Farming Career');
     setCreateStartMonth('DEFAULT');
     setCreateStartTime('DEFAULT');
     setCreateStartWeather('DEFAULT');
@@ -4154,31 +4193,6 @@ export default function SavegamesPage() {
                                          }
                                          return <MapImage mapTitle={title} mapId={mapId} mods={mods} />;
                                      })()}
-                                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, background: 'linear-gradient(transparent, rgba(0,0,0,0.8))', color: 'white' }}>
-                                         <div style={{ fontWeight: 800, fontSize: 18 }}>
-                                             {(() => {
-                                                 const [, title, modName] = createMap.split('|');
-                                                 const mapMod = mods.find(m => m.modName === modName || m.title === title);
-                                                 const isCP = mapMod && (
-                                                     mapMod.isCrossplay || 
-                                                     /crossplay|\(cp\)|\[cp\]/i.test(mapMod.title || '') ||
-                                                     /crossplay|\(cp\)|\[cp\]/i.test(mapMod.modName || '') ||
-                                                     /crossplay|\(cp\)|\[cp\]/i.test(mapMod.fileName || '') ||
-                                                     /crossplay|\(cp\)|\[cp\]/i.test(mapMod.filePath || '') ||
-                                                     /crossplay|\(cp\)|\[cp\]/i.test(mapMod.folder || '')
-                                                 );
-                                                  if (isCP && title) {
-                                                      let baseTitle = title.replace(/\s*[\(\[]\s*(?:crossplay|cp)\s*[\)\]]\s*$/i, '')
-                                                                           .replace(/\s+crossplay\s*$/i, '')
-                                                                           .replace(/\s+cp\s*$/i, '')
-                                                                           .trim();
-                                                      return `${baseTitle} (CP)`;
-                                                  }
-                                                  return title;
-                                             })()}
-                                         </div>
-                                         <div style={{ fontSize: 12, opacity: 0.8 }}>{createMap.split('|')[0]}</div>
-                                     </div>
                                  </div>
                             </div>
                         </div>
