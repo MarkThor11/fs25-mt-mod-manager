@@ -286,39 +286,40 @@ async function launch(options = {}) {
   }
 
   // ── DYNAMIC INITIALIZATION HANDSHAKE ──
-  // Check if this savegame is "Officialized" (initialized by the engine)
+  // Check if this savegame is valid to launch
   let needsManualInit = false;
-    if (options.savegameIndex !== undefined) {
-      activePlayingSlot = parseInt(options.savegameIndex, 10) || null;
-      const fs25Path = pathProvider.getFS25DataRoot();
-      const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
-      const farmsFile = path.join(savePath, 'farms.xml');
-      const careerFile = path.join(savePath, 'careerSavegame.xml');
-      const serverMetaPath = path.join(savePath, 'server_meta.json');
-      const isServerSave = fs.existsSync(serverMetaPath);
-      const isGhostSave = options.requiresEngineInit === true || (!fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm')) && !fs.existsSync(path.join(savePath, 'densityMap_ground.gdm')) && !fs.existsSync(path.join(savePath, 'guidedTour.xml')));
-      let isValidSavegame = fs.existsSync(farmsFile) && fs.existsSync(careerFile) && !isServerSave && !isGhostSave;
-      
-      if (isServerSave) {
-        console.log(`[LAUNCH] Savegame ${options.savegameIndex} is a Multiplayer Server save. Bypassing singleplayer autoStart so game launches to Multiplayer menu.`);
-      } else if (!isValidSavegame) {
-        console.log(`[LAUNCH] Savegame ${options.savegameIndex} requires initial engine map creation (Ghost Save). Bypassing autoStart into save.`);
-        needsManualInit = true;
-      } else {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is fully initialized. Enabling Auto-Start into map.`);
-        args.push('-autoStartSavegameId', String(options.savegameIndex));
+  if (options.savegameIndex !== undefined) {
+    activePlayingSlot = parseInt(options.savegameIndex, 10) || null;
+    const fs25Path = pathProvider.getFS25DataRoot();
+    const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
+    const farmsFile = path.join(savePath, 'farms.xml');
+    const careerFile = path.join(savePath, 'careerSavegame.xml');
+    const serverMetaPath = path.join(savePath, 'server_meta.json');
+    const isServerSave = fs.existsSync(serverMetaPath);
+    let isValidSavegame = fs.existsSync(farmsFile) && fs.existsSync(careerFile) && !isServerSave;
+    
+    if (isServerSave) {
+      console.log(`[LAUNCH] Savegame ${options.savegameIndex} is a Multiplayer Server save. Bypassing singleplayer autoStart so game launches to Multiplayer menu.`);
+    } else if (!isValidSavegame) {
+      console.log(`[LAUNCH] Savegame ${options.savegameIndex} does not have valid savegame XML files. Bypassing autoStart.`);
+      needsManualInit = true;
+    } else {
+      console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is valid. Enabling Auto-Start into map.`);
+      args.push('-autoStartSavegameId', String(options.savegameIndex));
+      if (!args.includes('-autoStart')) {
         args.push('-autoStart');
+      }
 
-        // Ensure careerSavegame.xml is completely clean of internal helper mod entries
-        try {
-          await savegameManager.cleanInternalHelperModsFromSavegame(savePath);
-        } catch (e) {
-          console.warn('[LAUNCH] Helper mods cleanup warning:', e.message);
-        }
+      // Ensure careerSavegame.xml is completely clean of internal helper mod entries
+      try {
+        await savegameManager.cleanInternalHelperModsFromSavegame(savePath);
+      } catch (e) {
+        console.warn('[LAUNCH] Helper mods cleanup warning:', e.message);
       }
     }
+  }
 
-  if (options.autoStart) {
+  if (options.autoStart && !args.includes('-autoStart')) {
     args.push('-autoStart');
   }
 

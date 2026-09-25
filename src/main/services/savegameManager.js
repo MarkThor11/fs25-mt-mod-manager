@@ -978,7 +978,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         const idLow = (mapId || '').toLowerCase();
         return (m.isMap && (mLow === rawLow || mLow === baseLow || fLow === baseLow || fLow === rawLow ||
                (m.title && m.title.toLowerCase() === tLow) ||
-               (m.mapId && m.mapId.toLowerCase() === idLow))) ||
+               (idLow && !GENERIC_MAP_IDS.has(idLow) && m.mapId && m.mapId.toLowerCase() === idLow))) ||
                mLow === rawLow || mLow === baseLow || fLow === baseLow || fLow === rawLow;
     });
     const trueMapModName = matchedMapMod ? matchedMapMod.modName : (mapModName || mapBaseName);
@@ -1651,8 +1651,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     const envPath = path.join(slotPath, 'environment.xml');
-    const hasCustomEnv = (startMonth && startMonth !== 'DEFAULT') || (startTime && startTime !== 'DEFAULT') || (startWeather && startWeather !== 'DEFAULT');
-    if (!fs.existsSync(envPath) && hasCustomEnv) {
+    if (!fs.existsSync(envPath)) {
         let pNum = 6;
         if (startMonth && startMonth !== 'DEFAULT') pNum = parseInt(startMonth);
         const dpp = fixedSeasonLength || 1;

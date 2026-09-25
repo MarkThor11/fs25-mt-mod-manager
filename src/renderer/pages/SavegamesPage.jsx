@@ -3529,27 +3529,13 @@ export default function SavegamesPage() {
         if (result.path) {
           try { localStorage.removeItem(`selected_spawn_${result.path}`); } catch (e) {}
         }
-        if (result.requiresEngineInit) {
-          useToastStore.getState().info(`Ghost save created in Slot ${slotIndex}. Ready for first launch!`);
-          setShowCreateModal(false);
-          fetchSavegames();
-          if (autoLaunchOnCreate) {
-              setTimeout(() => {
-                handleLaunch(slotIndex, { 
-                    requiresEngineInit: true, 
-                    mapId: result.mapId 
-                });
-              }, 1500);
-          }
-        } else {
-          useToastStore.getState().success(`Career created in Slot ${slotIndex}`);
-          setShowCreateModal(false);
-          fetchSavegames();
-          if (autoLaunchOnCreate) {
-              setTimeout(() => {
-                handleLaunch(slotIndex);
-              }, 1500);
-          }
+        useToastStore.getState().success(`Career created in Slot ${slotIndex}`);
+        setShowCreateModal(false);
+        fetchSavegames();
+        if (autoLaunchOnCreate) {
+            setTimeout(() => {
+              handleLaunch(slotIndex);
+            }, 1500);
         }
       } else {
         useToastStore.getState().error(result.error);
