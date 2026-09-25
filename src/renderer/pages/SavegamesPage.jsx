@@ -3453,8 +3453,8 @@ export default function SavegamesPage() {
       || savegames.find(s => s.playerName)?.playerName;
     
     const chosenName = heroNickname?.trim() || existingPlayerName?.trim();
-    setCreateName(chosenName ? `${chosenName}'s Farm` : 'New Farming Career');
-    setCreatePlayerName(heroNickname?.trim() || existingPlayerName?.trim() || 'Farmer');
+    setCreateName('My Farm');
+    setCreatePlayerName(chosenName || 'Farmer');
     setCreateStartMonth('DEFAULT');
     setCreateStartTime('DEFAULT');
     setCreateStartWeather('DEFAULT');
@@ -4168,7 +4168,7 @@ export default function SavegamesPage() {
                                         type="text" 
                                         value={createName} 
                                         onChange={e => setCreateName(e.target.value)} 
-                                        placeholder="New Farming Career"
+                                        placeholder="My Farm"
                                         style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} 
                                     />
                                 </div>
