@@ -963,7 +963,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     const careerPath = path.join(slotPath, 'careerSavegame.xml');
     const today = new Date().toISOString().split('T')[0];
 
-    const finalMods = (Array.isArray(selectedMods) ? selectedMods : []).filter(m => m && m.modName !== 'FS25_rememberPositions');
+    let finalMods = (Array.isArray(selectedMods) ? selectedMods : []).filter(m => m && m.modName !== 'FS25_rememberPositions');
     // Add map mod if not already there
     const mapBaseName = (mapModName || '').split('.')[0];
     const matchedMapMod = allMods.find(m => {
@@ -4949,7 +4949,7 @@ async function syncSubfolderMapDependencies(savePath) {
         // Identify the map mod using robust detection
         const mapModObj = findMapModInSavegame(xmlData, localMods);
 
-        const modsToEnsure = [];
+        let modsToEnsure = [];
         const seenModNames = new Set();
         if (mapModObj && mapModObj.modName) {
             seenModNames.add(mapModObj.modName.toLowerCase());
