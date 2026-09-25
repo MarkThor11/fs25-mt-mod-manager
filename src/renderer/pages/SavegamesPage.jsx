@@ -326,7 +326,13 @@ function ServerExportModal({ save, onClose, onExportComplete }) {
         useToastStore.getState().info(`Preparing standard backup for ${defaultName}...`);
         const result = await window.api.savegames.export({ savePath: save.path, defaultName });
         if (result.success) {
-          useToastStore.getState().success(`Savegame exported successfully to ${result.filePath}`);
+          useToastStore.getState().success(`Exported: ${result.filePath}`, {
+            duration: 12000,
+            action: {
+              label: 'Open Folder',
+              onClick: () => window.api.shell.showItemInFolder(result.filePath)
+            }
+          });
           if (onExportComplete) onExportComplete();
           onClose();
         } else if (!result.canceled) {
@@ -342,7 +348,13 @@ function ServerExportModal({ save, onClose, onExportComplete }) {
           serverModUrl: serverModUrl.trim()
         });
         if (result.success) {
-          useToastStore.getState().success(`Multiplayer server save (${exportType.toUpperCase()}) exported to ${result.filePath}`);
+          useToastStore.getState().success(`Exported (${exportType.toUpperCase()}): ${result.filePath}`, {
+            duration: 12000,
+            action: {
+              label: 'Open Folder',
+              onClick: () => window.api.shell.showItemInFolder(result.filePath)
+            }
+          });
           if (onExportComplete) onExportComplete();
           onClose();
         } else if (!result.canceled) {
