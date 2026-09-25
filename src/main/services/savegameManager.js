@@ -1524,61 +1524,11 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
                     if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
 
-                    // Parse and build proper savegame farmland.xml from map farmlands config
-                    try {
-                        let farmlandsXmlEntry = null;
-                        if (farmlandsFile) {
-                            const normFL = farmlandsFile.replace(/\\/g, '/').toLowerCase();
-                            farmlandsXmlEntry = entryByFullPath.get(normFL) || entryByBaseName.get(path.basename(normFL));
-                        }
-                        if (!farmlandsXmlEntry) {
-                            farmlandsXmlEntry = entryByBaseName.get('farmlands.xml') || entryByBaseName.get('farmland.xml');
-                        }
-
-                        if (farmlandsXmlEntry) {
-                            const flContent = farmlandsXmlEntry.getData().toString('utf8');
-                            const reFarmland = /<farmland\s+([^>]+)\/?>/gi;
-                            let fMatch;
-                            const farmlandNodes = [];
-                            let hasAnyDefaultOwner = false;
-
-                            while ((fMatch = reFarmland.exec(flContent)) !== null) {
-                                const attrs = fMatch[1];
-                                const idMatch = attrs.match(/id=["'](\d+)["']/i);
-                                if (idMatch) {
-                                    const fid = idMatch[1];
-                                    const isDefault = /defaultFarmProperty=["']true["']/i.test(attrs) || 
-                                                      /defaultOwner=["'](?:true|1)["']/i.test(attrs) || 
-                                                      /farmId=["']1["']/i.test(attrs) ||
-                                                      /owner=["']1["']/i.test(attrs);
-                                    if (isDefault) hasAnyDefaultOwner = true;
-                                    farmlandNodes.push({ id: fid, defaultOwned: isDefault });
-                                }
-                            }
-
-                            if (farmlandNodes.length > 0) {
-                                let flXmlOutput = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<farmlands>\n';
-                                for (const fn of farmlandNodes) {
-                                    let assignedFarmId = '0';
-                                    if (includeStartFarm) {
-                                        if (fn.defaultOwned) {
-                                            assignedFarmId = '1';
-                                        } else if (!hasAnyDefaultOwner && fn.id === '1') {
-                                            assignedFarmId = '1';
-                                        }
-                                    }
-                                    flXmlOutput += `    <farmland id="${fn.id}" farmId="${assignedFarmId}"/>\n`;
-                                }
-                                flXmlOutput += '</farmlands>\n';
-
-                                const targetFarmlandPath = path.join(slotPath, 'farmland.xml');
-                                await fs.writeFile(targetFarmlandPath, flXmlOutput, 'utf8');
-                                console.log(`[CREATE] Built proper savegame farmland.xml with ${farmlandNodes.filter(n => n.defaultOwned).length} starting owned farmlands.`);
-                            }
-                        }
-                    } catch (flErr) {
-                        console.warn('[CREATE] Failed to parse/build farmland.xml:', flErr.message);
-                    }
+                    // Do NOT pre-write farmland.xml for uninitialized custom mod maps!
+                    // If farmland.xml exists in the save folder on first launch, FS25 treats farmlands as already initialized,
+                    // which causes field crop generation (FieldManager) to be skipped, leaving fields bare.
+                    // Omitting farmland.xml allows FS25 FarmlandManager and FieldManager to parse maps/config/farmlands.xml
+                    // and maps/config/fields.xml to populate starting owned farmlands and default crop states.
 
                     // Fallback extraction for starting XML files if missing
                     for (const targetXml of ['placeables.xml', 'items.xml', 'handTools.xml']) {
