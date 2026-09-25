@@ -534,7 +534,8 @@ function ServerExportModal({ save, onClose, onExportComplete }) {
 function SavegameEditorModal({ save, onClose, onRefresh, onLaunch, onToggleMode }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-    const [pendingLaunchSlot, setPendingLaunchSlot] = useState(null)
+  const [plannedDays, setPlannedDays] = useState(() => save.plannedDaysPerPeriod || save.daysPerPeriod || 1);
+  const [pendingLaunchSlot, setPendingLaunchSlot] = useState(null);
   const [launchExtraOptions, setLaunchExtraOptions] = useState({});
   const [conflictResolutionData, setConflictResolutionData] = useState(null);
 
@@ -1016,7 +1017,7 @@ const [activeTab, setActiveTab] = useState('general');
                     <div className="input-with-icon">
                       <input 
                         type="text" 
-                        defaultValue={save.playerName || 'Farmer'} 
+                        defaultValue={save.playerName && save.playerName !== 'Farmer' ? save.playerName : (useSettingsStore.getState().nickname || 'Farmer')} 
                         style={{ paddingLeft: 'calc(var(--sp-2) + 0.5ch)' }}
                         onBlur={(e) => handleUpdate('career', 'playerName', e.target.value)} 
                       />
@@ -1231,12 +1232,18 @@ const [activeTab, setActiveTab] = useState('general');
                         <input 
                           type="number" min="1" max="28" 
                           style={{ minWidth: 100 }}
-                          value={save.plannedDaysPerPeriod || 1} 
+                          value={plannedDays} 
                           onChange={(e) => {
-                             let num = parseInt(e.target.value);
+                             const rawVal = e.target.value;
+                             if (rawVal === '') {
+                               setPlannedDays('');
+                               return;
+                             }
+                             let num = parseInt(rawVal, 10);
                              if (isNaN(num)) num = 1;
                              if (num > 28) num = 28;
                              if (num < 1) num = 1;
+                             setPlannedDays(num);
                              handleUpdate('career', 'plannedDaysPerPeriod', num);
                              handleUpdate('environment', 'daysPerPeriod', num);
                           }}
@@ -2974,6 +2981,7 @@ export default function SavegamesPage() {
   const [selectedArchives, setSelectedArchives] = useState(new Set());
   const [isArchivePanelOpen, setIsArchivePanelOpen] = useState(false);
   const [createName, setCreateName] = useState('');
+  const [createPlayerName, setCreatePlayerName] = useState('Farmer');
   const [createSlot, setCreateSlot] = useState('1');
   const [modalSelectedMods, setModalSelectedMods] = useState(new Set());
   const [creating, setCreating] = useState(false);
@@ -3446,6 +3454,7 @@ export default function SavegamesPage() {
     
     const chosenName = heroNickname?.trim() || existingPlayerName?.trim();
     setCreateName(chosenName ? `${chosenName}'s Farm` : 'New Farming Career');
+    setCreatePlayerName(heroNickname?.trim() || existingPlayerName?.trim() || 'Farmer');
     setCreateStartMonth('DEFAULT');
     setCreateStartTime('DEFAULT');
     setCreateStartWeather('DEFAULT');
@@ -3588,6 +3597,7 @@ export default function SavegamesPage() {
       const result = await window.api.savegames.create({
         savegameIndex: slotIndex,
         savegameName: createName.trim(),
+        playerName: createPlayerName.trim() || 'Farmer',
         selectedMods: modsToAdd,
         mapId: mapId,
         mapTitle: mapTitle,
@@ -4153,12 +4163,23 @@ export default function SavegamesPage() {
                         <div className="animate-fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                                 <div>
-                                    <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>SAVEGAME NAME</label>
+                                    <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>SAVEGAME NAME (FARM NAME)</label>
                                     <input 
                                         type="text" 
                                         value={createName} 
                                         onChange={e => setCreateName(e.target.value)} 
                                         placeholder="New Farming Career"
+                                        style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} 
+                                    />
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>PLAYER NAME</label>
+                                    <input 
+                                        type="text" 
+                                        value={createPlayerName} 
+                                        onChange={e => setCreatePlayerName(e.target.value)} 
+                                        placeholder="Farmer"
                                         style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} 
                                     />
                                 </div>

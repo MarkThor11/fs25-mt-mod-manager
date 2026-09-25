@@ -868,7 +868,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         startMonth = 'DEFAULT',
         startTime = 'DEFAULT',
         startWeather = 'DEFAULT',
-        mode = 'NEW_FARMER' 
+        mode = 'NEW_FARMER',
+        playerName = 'Farmer'
     } = opts;
     const includeStartFarm = opts.includeStartFarm !== false && opts.includeStartFarm !== 'false';
     const includeStartVehicles = opts.includeStartVehicles !== false && opts.includeStartVehicles !== 'false';
@@ -1147,6 +1148,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             // Only update necessary fields
             if (!savegameData.careerSavegame.settings) savegameData.careerSavegame.settings = {};
             savegameData.careerSavegame.settings.savegameName = savegameName;
+            savegameData.careerSavegame.settings.playerName = playerName;
             savegameData.careerSavegame.settings.mapId = engineMapId;
             savegameData.careerSavegame.settings.mapTitle = mapTitle;
             savegameData.careerSavegame.settings.saveDateFormatted = today;
@@ -1361,6 +1363,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                                 const playerObj = Array.isArray(targetFarm.players.player) ? targetFarm.players.player[0] : targetFarm.players.player;
                                 if (playerObj) {
                                     playerObj['@_uniqueUserId'] = userId;
+                                    playerObj['@_lastNickname'] = playerName;
                                 }
                             }
                         }
@@ -1384,6 +1387,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 '@_valid': 'true',
                 settings: {
                     savegameName: savegameName,
+                    playerName: playerName,
                     creationDate: today,
                     mapId: engineMapId,
                     mapTitle: mapTitle,
