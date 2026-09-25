@@ -1644,8 +1644,12 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         console.warn('[CREATE] Failed to scan placeables for required mods:', placeErr.message);
     }
 
-    // Configure starting farmlands accurately based on game mode and map definitions
-    await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
+    // Configure starting farmlands accurately for template-based saves.
+    // For fresh/ghost saves requiring engine init, omitting farmland.xml allows the FS25 engine
+    // to automatically parse the map's farmlands & fields config and generate full starting field crops!
+    if (!requiresEngineInit) {
+        await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
+    }
 
     if (requiresEngineInit || !fs.existsSync(path.join(slotPath, 'farms.xml'))) {
         const realUserId = await getPersistentUniqueUserId(fs25Path);
