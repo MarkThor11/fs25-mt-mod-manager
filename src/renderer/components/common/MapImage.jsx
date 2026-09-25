@@ -88,7 +88,7 @@ const MapImage = ({ mapTitle, mapId, mods, opacity = 0.25 }) => {
                   position: 'absolute',
                   right: 14,
                   top: '52%',
-                  transform: 'translateY(-50%)',
+                  transform: 'translateY(calc(-50% + 10px))',
                   height: '75%',
                   maxHeight: 125,
                   aspectRatio: '1/1',
