@@ -2748,7 +2748,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
             </div>
             {/* Bottom Action Bar aligned to left side */}
             <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 'auto', zIndex: 1, padding: 'var(--sp-2) 0 0 0', position: 'relative', justifyContent: 'flex-start' }}>
-                <div style={{ position: 'absolute', top: 0, left: -2, right: 170, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+                <div style={{ position: 'absolute', top: 0, left: -2, right: 128, height: 1, background: 'rgba(255,255,255,0.1)' }} />
                 {save.isInitialized && !save.hasTemplate && (
                     <button className="btn btn--ghost btn--sm" onClick={onAdopt} title="Save as Master Template" style={{ color: 'rgba(255,255,255,0.7)' }}>
                         <Zap size={16} />
