@@ -1226,7 +1226,7 @@ const [activeTab, setActiveTab] = useState('general');
                       </div>
                     </div>
                     <div className="setting">
-                      <label title="How many in-game days are in a month (1 to 28 days).">DAYS PER MONTH</label>
+                      <label title="How many in-game days are in a month (1 to 28 days).">DAYS PER MONTH (Up to 28 days)</label>
                       <div className="input-with-icon">
                         <CalendarDays size={14} />
                         <input 
