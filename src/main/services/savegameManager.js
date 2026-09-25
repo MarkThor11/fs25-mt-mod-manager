@@ -1010,7 +1010,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             if (!m || m.isMap) return false;
             const fLow = (m.folder || '').toLowerCase();
             const mapFLow = matchedMapMod && matchedMapMod.folder ? matchedMapMod.folder.toLowerCase() : '';
-            return fLow === 'map dependencies' || (mapFLow && fLow === mapFLow && fLow !== 'mods');
+            return Boolean(mapFLow && fLow === mapFLow && fLow !== 'mods');
         });
 
         for (const depMod of mapDepMods) {
@@ -5012,8 +5012,8 @@ async function syncSubfolderMapDependencies(savePath) {
             }
         }
 
-        // Auto-include all non-map mods from "Map Dependencies" folder and map subfolders
-        const mapDepFolderMods = localMods.filter(m => !m.isMap && m.folder && (m.folder.toLowerCase() === 'map dependencies' || (mapModObj && mapModObj.folder && m.folder.toLowerCase() === mapModObj.folder.toLowerCase() && m.folder.toLowerCase() !== 'mods')));
+        // Auto-include non-map mods from the map's own subfolder
+        const mapDepFolderMods = localMods.filter(m => !m.isMap && m.folder && (mapModObj && mapModObj.folder && m.folder.toLowerCase() === mapModObj.folder.toLowerCase() && m.folder.toLowerCase() !== 'mods'));
         for (const depMod of mapDepFolderMods) {
             if (depMod.modName) {
                 const sLow = depMod.modName.toLowerCase();

@@ -726,14 +726,6 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 			}
 		}
 
-		// Auto-activate all non-map mods residing in 'mods/Map Dependencies' so they are symlinked into virtual mods folder
-		if (activeModNames) {
-			mods.forEach(m => {
-				if (m.folder && m.folder.toLowerCase() === 'map dependencies' && m.modName && !m.isMap) {
-					activeModNames.add(m.modName.toLowerCase());
-				}
-			});
-		}
 
         // Recursively resolve all dependencies of active mods (including shared mods outside the subfolder)
         if (activeModNames) {
