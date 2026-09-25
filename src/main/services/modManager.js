@@ -637,6 +637,20 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 					entryModified = true;
 				}
 
+				// 3. Clean broken precisionFarming soilMap tags pointing to missing files
+				if (isMapXml && xmlText.includes('<precisionFarming>')) {
+					const pfMatch = xmlText.match(/<precisionFarming>[\s\S]*?<soilMap\s+filename=["']([^"']+)["'][\s\S]*?<\/precisionFarming>/i);
+					if (pfMatch) {
+						const smPath = pfMatch[1];
+						const exists = entries.some(e => e.entryName.replace(/\\/g, '/').toLowerCase() === smPath.replace(/\\/g, '/').toLowerCase() || e.entryName.toLowerCase().endsWith('soilmap.grle'));
+						if (!exists) {
+							debugLog(`[MAP-PATCH] Stripping broken Precision Farming soilMap block from ${entry.entryName} of ${path.basename(mapPath)}`);
+							xmlText = xmlText.replace(/<precisionFarming>[\s\S]*?<\/precisionFarming>/gi, '');
+							entryModified = true;
+						}
+					}
+				}
+
 				if (entryModified) {
 					zip.updateFile(entry.entryName, Buffer.from(xmlText, 'utf8'));
 					patched = true;
