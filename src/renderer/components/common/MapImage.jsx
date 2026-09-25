@@ -15,7 +15,7 @@ export const MAP_PREVIEWS = {
 };
 
 const MapImage = ({ mapTitle, mapId, mods, opacity = 0.25 }) => {
-  // 1. Base map match
+  // 1. Base map match (16:9 full-bleed landscape photos)
   if (MAP_PREVIEWS[mapTitle]) {
     const isKinlaig = mapTitle.includes('Kinlaig') || mapTitle.includes('Highlands');
     return (
@@ -61,11 +61,56 @@ const MapImage = ({ mapTitle, mapId, mods, opacity = 0.25 }) => {
     }
 
     if (mapMod) {
+        let imgSrc = null;
         if (mapMod.iconData && !mapMod.iconData.startsWith('CATEGORY:')) {
-            return <img src={mapMod.iconData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%', filter: 'contrast(1.05)' }} />;
+            imgSrc = mapMod.iconData;
+        } else if (mapMod.filePath) {
+            imgSrc = `mod-icon://icon?path=${encodeURIComponent(mapMod.filePath)}`;
         }
-        if (mapMod.filePath) {
-            return <img src={`mod-icon://icon?path=${encodeURIComponent(mapMod.filePath)}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 25%', filter: 'contrast(1.05)' }} />;
+
+        if (imgSrc) {
+            return (
+              <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+                {/* Atmospheric Ambient Background */}
+                <img 
+                  src={imgSrc} 
+                  alt="" 
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'cover', 
+                    filter: 'blur(14px) brightness(0.4) saturate(1.2)', 
+                    transform: 'scale(1.25)' 
+                  }} 
+                />
+                {/* Crisp Uncropped Map Icon Preview Badge on the Right */}
+                <div style={{
+                  position: 'absolute',
+                  right: 14,
+                  top: '52%',
+                  transform: 'translateY(-50%)',
+                  height: '75%',
+                  maxHeight: 125,
+                  aspectRatio: '1/1',
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                  boxShadow: '0 6px 18px rgba(0,0,0,0.65)',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  background: 'rgba(0,0,0,0.4)',
+                  zIndex: 2
+                }}>
+                  <img 
+                    src={imgSrc} 
+                    alt="" 
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'contain'
+                    }} 
+                  />
+                </div>
+              </div>
+            );
         }
     }
   }

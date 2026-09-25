@@ -111,6 +111,8 @@ export default function App() {
 
   // ── Drag & Drop Implementation ──
   useEffect(() => {
+    let dragTimeout = null;
+
     const handleDragOver = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -119,6 +121,12 @@ export default function App() {
         
         if (e.dataTransfer.types.includes('Files') && !isInternalDrag) {
             setIsDragging(true);
+
+            // Heartbeat: if mouse leaves window or drag is dropped outside without dragleave firing
+            if (dragTimeout) clearTimeout(dragTimeout);
+            dragTimeout = setTimeout(() => {
+                setIsDragging(false);
+            }, 600);
         }
     };
 
@@ -127,6 +135,14 @@ export default function App() {
         e.stopPropagation();
         // Only leave if we exit the window
         if (e.relatedTarget === null || !document.body.contains(e.relatedTarget)) {
+            if (dragTimeout) clearTimeout(dragTimeout);
+            setIsDragging(false);
+        }
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+            if (dragTimeout) clearTimeout(dragTimeout);
             setIsDragging(false);
         }
     };
@@ -134,6 +150,7 @@ export default function App() {
     const handleDrop = async (e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (dragTimeout) clearTimeout(dragTimeout);
         setIsDragging(false);
 
         const files = Array.from(e.dataTransfer.files);
@@ -224,6 +241,7 @@ export default function App() {
     window.addEventListener('dragover', handleDragOver);
     window.addEventListener('dragleave', handleDragLeave);
     window.addEventListener('drop', handleDrop);
+    window.addEventListener('keydown', handleKeyDown);
 
     const handleOnline = () => useSettingsStore.getState().setIsOnline(true);
     const handleOffline = () => useSettingsStore.getState().setIsOnline(false);
@@ -232,9 +250,11 @@ export default function App() {
     window.addEventListener('offline', handleOffline);
 
     return () => {
+        if (dragTimeout) clearTimeout(dragTimeout);
         window.removeEventListener('dragover', handleDragOver);
         window.removeEventListener('dragleave', handleDragLeave);
         window.removeEventListener('drop', handleDrop);
+        window.removeEventListener('keydown', handleKeyDown);
         window.removeEventListener('online', handleOnline);
         window.removeEventListener('offline', handleOffline);
     };
@@ -376,7 +396,7 @@ export default function App() {
           </main>
         </div>
         <ToastContainer />
-        <DropOverlay isDragging={isDragging} />
+        <DropOverlay isDragging={isDragging} onClose={() => setIsDragging(false)} />
         <WelcomeTour />
         <AppUpdateModal />
         <ConsolidationPromptModal />

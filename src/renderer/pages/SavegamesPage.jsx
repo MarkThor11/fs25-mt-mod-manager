@@ -2572,9 +2572,9 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
 
             
             {/* Map Preview Background */}
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.55, zIndex: 0, overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.85, zIndex: 0, overflow: 'hidden' }}>
                 <MapImage mapTitle={getLocalizedString(save.mapTitle, 'Unknown Map')} mapId={save.mapId} mods={mods} />
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(15, 23, 42, 0.92) 0%, rgba(15, 23, 42, 0.75) 50%, rgba(15, 23, 42, 0.45) 100%)' }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(15, 23, 42, 0.94) 0%, rgba(15, 23, 42, 0.75) 45%, rgba(15, 23, 42, 0.25) 100%)', pointerEvents: 'none' }} />
             </div>
 
             {/* Top Badges Container */}
