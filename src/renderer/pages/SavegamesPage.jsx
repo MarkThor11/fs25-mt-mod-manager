@@ -2704,7 +2704,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 </div>
               )}
             </div>
-            <div style={{ flex: 1, zIndex: 1, paddingLeft: 34, paddingTop: 24, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ flex: 1, zIndex: 1, paddingLeft: 34, paddingTop: 40, paddingRight: 240, display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {editingName === save.folderName ? (
                     <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
                         <input type="text" value={newName} onChange={e => setNewName(e.target.value)} autoFocus style={{ flex: 1, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--accent)' }} />
@@ -2747,7 +2747,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 </div>
             </div>
             {/* Bottom Action Bar aligned to left side */}
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 'auto', maxWidth: 'calc(100% - 240px)', zIndex: 1, padding: 'var(--sp-2) 0 0 0', borderTop: '1px solid rgba(255,255,255,0.15)', justifyContent: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 'auto', zIndex: 1, padding: 'var(--sp-2) 0 0 34px', borderTop: '1px solid rgba(255,255,255,0.15)', width: 'fit-content', justifyContent: 'flex-start' }}>
                 {save.isInitialized && !save.hasTemplate && (
                     <button className="btn btn--ghost btn--sm" onClick={onAdopt} title="Save as Master Template" style={{ color: 'rgba(255,255,255,0.7)' }}>
                         <Zap size={16} />
