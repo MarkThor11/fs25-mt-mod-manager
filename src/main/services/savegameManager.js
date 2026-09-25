@@ -2050,6 +2050,7 @@ async function getAllSavegames() {
                 mapTitle,
                 isInitialized,
                 hasTemplate,
+                isGhost: !hasTemplate && !isInitialized,
                 isServerSave: !!serverMeta,
                 serverAccessLevel: serverMeta?.accessLevel || (serverMeta ? 'admin' : null),
                 isEditorLocked: serverMeta ? (serverMeta.accessLevel === 'player' || serverMeta.isLocked === true) : false,
@@ -4966,53 +4967,13 @@ async function syncSubfolderMapDependencies(savePath) {
             }
         }
 
-        // 2. Recursively resolve all declared dependencies for the map and its siblings
+        // 2. In-memory recursive resolution for declared local dependencies
         const queue = (mapModObj ? [mapModObj, ...modsToEnsure] : [...modsToEnsure]);
         while (queue.length > 0) {
             const current = queue.shift();
-            if (current && (!current.dependencies || current.dependencies.length === 0)) {
-                try {
-                    const scraper = require('./scraper');
-                    let modIdToFetch = current.modId;
-                    if (!modIdToFetch && (current.title || current.modName)) {
-                        const searchRes = await scraper.searchMods(current.title || current.modName);
-                        if (searchRes && searchRes.mods && searchRes.mods.length > 0) {
-                            const mapMatch = searchRes.mods.find(sm => sm.isMap || sm.modId);
-                            if (mapMatch) modIdToFetch = mapMatch.modId;
-                        }
-                    }
-                    if (modIdToFetch) {
-                        const detail = await scraper.fetchModDetail(modIdToFetch);
-                        if (detail && detail.dependencies && Array.isArray(detail.dependencies)) {
-                            current.dependencies = detail.dependencies;
-                        }
-                    }
-                } catch (sErr) {
-                    console.warn(`[SYNC-DEPS] Could not fetch ModHub dependencies:`, sErr.message);
-                }
-            }
-
             if (current && current.dependencies && Array.isArray(current.dependencies) && current.dependencies.length > 0) {
                 for (const dep of current.dependencies) {
-                    let matchedDep = localMods.find(m => dependencyResolver.matchModWithDependency(m, dep));
-
-                    if (!matchedDep && typeof dep === 'object' && dep.url) {
-                        const idMatch = dep.url.match(/mod_id=(\d+)/i) || dep.url.match(/storage\/(\d+)\//i);
-                        if (idMatch && idMatch[1]) {
-                            try {
-                                const scraper = require('./scraper');
-                                const depDetail = await scraper.fetchModDetail(idMatch[1]);
-                                if (depDetail && depDetail.downloadUrl) {
-                                    const depZipName = depDetail.downloadUrl.split('/').pop().replace(/\.zip$/i, '').toLowerCase();
-                                    matchedDep = localMods.find(m => 
-                                        (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === depZipName) ||
-                                        (m.modName && m.modName.toLowerCase() === depZipName)
-                                    );
-                                }
-                            } catch (_) {}
-                        }
-                    }
-
+                    const matchedDep = localMods.find(m => dependencyResolver.matchModWithDependency(m, dep));
                     if (matchedDep && matchedDep.modName) {
                         const dLow = matchedDep.modName.toLowerCase();
                         if (!seenModNames.has(dLow)) {

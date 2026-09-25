@@ -108,7 +108,7 @@ function resolveRecursiveDependencies(targetModName, allMods, sessionInstalled =
       const cleanFile = m.fileName.split(/[\/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
       indexByName.set(cleanFile, m);
     }
-    if (m.title) indexByName.set(m.title.toLowerCase(), m);
+    // Do not index arbitrary mod titles into indexByName to avoid generic title collisions
 
     if (m.folder && m.folder.toLowerCase() !== 'mods' && m.folder.toLowerCase() !== '') {
       const fLow = m.folder.toLowerCase();

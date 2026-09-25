@@ -3036,16 +3036,6 @@ export default function SavegamesPage() {
             }
 
             let targetForDeps = birglandMod || cleanMapModName;
-            if (birglandMod && (!birglandMod.dependencies || birglandMod.dependencies.length === 0) && birglandMod.modId && window.api?.modhub?.fetchModDetail) {
-              try {
-                const detail = await window.api.modhub.fetchModDetail({ modId: birglandMod.modId });
-                if (detail && detail.dependencies && Array.isArray(detail.dependencies) && detail.dependencies.length > 0) {
-                  targetForDeps = { ...birglandMod, dependencies: detail.dependencies };
-                }
-              } catch (dErr) {
-                console.warn('[CAREER MODAL] Could not fetch ModHub dependencies for map:', dErr.message);
-              }
-            }
 
             const { installed, missing } = resolveRecursiveDependencies(targetForDeps, mods);
             const installedList = Array.isArray(installed) ? installed : Array.from(installed || []);
@@ -3540,21 +3530,16 @@ export default function SavegamesPage() {
           try { localStorage.removeItem(`selected_spawn_${result.path}`); } catch (e) {}
         }
         if (result.requiresEngineInit) {
-          useToastStore.getState().success(`Map needs engine initialization. Launching Slot ${slotIndex} to build world...`);
+          useToastStore.getState().info(`Ghost save created in Slot ${slotIndex}. Ready for first launch!`);
           setShowCreateModal(false);
-          
-          // Wait a moment for the user to read the toast
-          if (true) {
+          fetchSavegames();
+          if (autoLaunchOnCreate) {
               setTimeout(() => {
                 handleLaunch(slotIndex, { 
                     requiresEngineInit: true, 
                     mapId: result.mapId 
                 });
-                fetchSavegames();
               }, 1500);
-          } else {
-              useToastStore.getState().info("Save created. You will need to launch it once to initialize the map files.");
-              fetchSavegames();
           }
         } else {
           useToastStore.getState().success(`Career created in Slot ${slotIndex}`);

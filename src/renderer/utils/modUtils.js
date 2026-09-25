@@ -158,7 +158,7 @@ export const resolveRecursiveDependencies = (targetModOrName, allMods, sessionIn
       const cleanFile = m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
       addToIndex(indexByName, cleanFile, m);
     }
-    if (m.title) addToIndex(indexByName, m.title.toLowerCase(), m);
+    // Do not index arbitrary mod titles into indexByName to prevent generic titles (e.g. "Workshop", "Shed", "Barn") from overriding actual technical mod names/files
 
     if (m.folder && m.folder.toLowerCase() !== 'mods' && m.folder.toLowerCase() !== '') {
       const fLow = m.folder.toLowerCase();
