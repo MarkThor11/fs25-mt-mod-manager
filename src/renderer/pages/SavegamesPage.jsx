@@ -2496,7 +2496,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
     const isRecentlyExited = Boolean(
         recentlyExitedSlots && 
         recentlyExitedSlots[save.index] && 
-        (Date.now() - recentlyExitedSlots[save.index] < 20000)
+        (Date.now() - recentlyExitedSlots[save.index] < 5000)
     );
 
     const wasPlayed = save.isInitialized || save.playTime > 0 || isRecentlyExited;
