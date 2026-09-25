@@ -4249,7 +4249,21 @@ export default function SavegamesPage() {
                                     </div>
                                     <div>
                                         <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>SEASON LENGTH (DAYS)</label>
-                                        <input type="number" min="1" max="28" value={createSeasonLength} onChange={e => setCreateSeasonLength(parseInt(e.target.value))} style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} />
+                                        <input 
+                                            type="number" 
+                                            min="1" 
+                                            max="28" 
+                                            value={createSeasonLength} 
+                                            onChange={e => {
+                                                const val = parseInt(e.target.value);
+                                                if (isNaN(val)) {
+                                                    setCreateSeasonLength('');
+                                                } else {
+                                                    setCreateSeasonLength(Math.max(1, Math.min(28, val)));
+                                                }
+                                            }} 
+                                            style={{ width: '100%', padding: '14px', fontSize: 16, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }} 
+                                        />
                                     </div>
                                 </div>
                             </div>
