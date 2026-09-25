@@ -275,23 +275,11 @@ function MTRadioManager:initHooks()
 
     self:loadConfiguration()
 
-    if _G ~= nil then
-        for k, v in pairs(_G) do
-            local kStr = tostring(k)
-            local kLower = string.lower(kStr)
-            if string.find(kLower, "radio") or string.find(kLower, "sound") then
-                if type(v) == "table" and kStr ~= "MTRadioManager" then
-                    self:hookClass(kStr, v)
-                end
-            end
-        end
-    end
-
-    if SoundPlayer ~= nil then self:hookClass("SoundPlayer", SoundPlayer) end
     if RadioManager ~= nil then self:hookClass("RadioManager", RadioManager) end
+    if SoundPlayer ~= nil then self:hookClass("SoundPlayer", SoundPlayer) end
     if Radio ~= nil then self:hookClass("Radio", Radio) end
 
-    print("[MTRadioManager] Radio & Sound subsystem hooks initialization completed.")
+    print("[MTRadioManager] Radio subsystem hooks initialization completed.")
 end
 
 function MTRadioManager:loadMap(mapName)
