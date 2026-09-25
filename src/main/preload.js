@@ -280,6 +280,11 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.on('app:update-error', handler);
       return () => ipcRenderer.removeListener('app:update-error', handler);
     },
+    gameExited: (callback) => {
+      const handler = (_, data) => callback(data);
+      ipcRenderer.on('game:exited', handler);
+      return () => ipcRenderer.removeListener('game:exited', handler);
+    },
   },
 
   // App Update Methods

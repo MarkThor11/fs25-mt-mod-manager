@@ -2470,10 +2470,20 @@ const [activeTab, setActiveTab] = useState('general');
   );
 }
 
-function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, onExport, onToggleMode, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop, isPlaying, isGameRunning }) {
+function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, onExport, onToggleMode, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop, isPlaying, isGameRunning, recentlyExitedSlots }) {
     const isEmpty = save.modCount === 0 && (save.farmName || '').startsWith('Empty');
     const [isDragOver, setIsDragOver] = useState(false);
     
+    const isRecentlyExited = Boolean(
+        recentlyExitedSlots && 
+        recentlyExitedSlots[save.index] && 
+        (Date.now() - recentlyExitedSlots[save.index] < 8000)
+    );
+
+    const wasPlayed = save.isInitialized || save.playTime > 0 || isRecentlyExited;
+    const isAutomated = save.hasTemplate && (wasPlayed || !save.isGhost);
+    const isReadyForFirstLaunch = save.hasTemplate && save.isGhost && !wasPlayed;
+
     const versionMismatches = React.useMemo(() => {
         if (!save.mods || !mods) return 0;
         let mismatches = 0;
@@ -2540,7 +2550,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
 
     return (
             <div 
-                className={`save-card ${save.isGhost ? 'save-card--ghost' : ''} ${isSelected ? 'save-card--selected' : ''} ${isDragOver ? 'save-card--drag-over' : ''}`} 
+                className={`save-card ${isReadyForFirstLaunch ? 'save-card--ghost' : ''} ${isSelected ? 'save-card--selected' : ''} ${isDragOver ? 'save-card--drag-over' : ''}`} 
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDropInternal}
@@ -2552,8 +2562,8 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                     position: 'relative', 
                     borderRadius: 14,
                     overflow: 'hidden',
-                    border: isPlaying ? '1px solid #22c55e' : (isDragOver ? '2px solid var(--accent)' : (isSelected ? '1px solid var(--accent)' : (save.hasTemplate ? '1px solid var(--accent-dim)' : '1px solid transparent'))), 
-                    boxShadow: isPlaying ? '0 0 20px rgba(34, 197, 94, 0.25)' : (isSelected ? '0 0 15px rgba(var(--accent-rgb), 0.2)' : 'none'), 
+                    border: isPlaying ? '1px solid #22c55e' : (isRecentlyExited ? '1px solid #06b6d4' : (isDragOver ? '2px solid var(--accent)' : (isSelected ? '1px solid var(--accent)' : (save.hasTemplate ? '1px solid var(--accent-dim)' : '1px solid transparent')))), 
+                    boxShadow: isPlaying ? '0 0 20px rgba(34, 197, 94, 0.25)' : (isRecentlyExited ? '0 0 15px rgba(6, 182, 212, 0.3)' : (isSelected ? '0 0 15px rgba(var(--accent-rgb), 0.2)' : 'none')), 
                     background: isDragOver ? 'rgba(var(--accent-rgb), 0.1)' : (isSelected ? 'var(--bg-tertiary)' : ''),
                     transition: 'all 0.2s ease'
                 }} 
@@ -2599,6 +2609,26 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 </div>
               )}
 
+              {!isPlaying && isRecentlyExited && (
+                <div style={{ 
+                  background: 'rgba(6, 182, 212, 0.25)', 
+                  border: '1px solid #06b6d4', 
+                  color: '#22d3ee', 
+                  fontSize: 8, 
+                  fontWeight: 900, 
+                  padding: '2px 8px', 
+                  borderRadius: 4, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 5, 
+                  boxShadow: '0 0 12px rgba(6, 182, 212, 0.5)', 
+                  letterSpacing: 0.5 
+                }}>
+                  <RefreshCw size={10} className="animate-spin" />
+                  SAVING & SYNCING...
+                </div>
+              )}
+
               {save.isServerSave && (
                 <div style={{ 
                   background: isPlaying ? (save.serverAccessLevel === 'admin' ? 'rgba(234, 179, 8, 0.2)' : 'rgba(6, 182, 212, 0.2)') : 'var(--bg-tertiary)', 
@@ -2619,7 +2649,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 </div>
               )}
 
-              {save.isInitialized && save.hasTemplate && !save.isGhost && (
+              {!isPlaying && !isRecentlyExited && isAutomated && (
                 <div style={{ 
                   background: 'var(--accent-dim)', 
                   color: 'var(--accent)', 
@@ -2635,7 +2665,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 </div>
               )}
 
-              {save.isGhost && (
+              {!isPlaying && !isRecentlyExited && isReadyForFirstLaunch && (
                 <div style={{ 
                   background: 'var(--accent)', 
                   color: 'white', 
@@ -2907,12 +2937,23 @@ export default function SavegamesPage() {
   const { skipIntro, cloudBackupPath } = useSettingsStore();
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
+  const [recentlyExitedSlots, setRecentlyExitedSlots] = useState({});
+
   useEffect(() => {
-    const unsub = window.api?.on?.cloudSyncComplete?.((data) => {
+    const unsubCloud = window.api?.on?.cloudSyncComplete?.((data) => {
       useToastStore.getState().success(`Cloud Backup: Auto-synced Slot ${data.savegameIndex} to cloud!`);
     });
+    const unsubExit = window.api?.on?.gameExited?.((data) => {
+      const slot = data?.slotIndex || useSavegameStore.getState().playingSlot;
+      if (slot) {
+        setRecentlyExitedSlots(prev => ({ ...prev, [slot]: Date.now() }));
+      }
+      useSavegameStore.setState({ isGameRunning: false, playingSlot: null });
+      fetchSavegames();
+    });
     return () => {
-      if (typeof unsub === 'function') unsub();
+      if (typeof unsubCloud === 'function') unsubCloud();
+      if (typeof unsubExit === 'function') unsubExit();
     };
   }, []);
 
@@ -3924,6 +3965,7 @@ export default function SavegamesPage() {
                 editingName={editingName}
                 isPlaying={isGameRunning && Number(playingSlot) === Number(save.index)}
                 isGameRunning={isGameRunning}
+                recentlyExitedSlots={recentlyExitedSlots}
                 newName={newName}
                 setNewName={setNewName}
                 handleRename={() => handleRename(save)}
