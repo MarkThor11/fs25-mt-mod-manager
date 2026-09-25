@@ -5963,6 +5963,44 @@ async function restoreStashedSinglePlayerSaves() {
     }
 }
 
+/**
+ * Resets/refreshes starting field states (crops, foliage, ground state) for an existing savegame slot
+ * by extracting original density maps & infoLayers from the map zip archive into the savegame directory.
+ */
+async function resetSavegameFieldStates(savePath, mapZipPath) {
+    if (!savePath || !fs.existsSync(savePath) || !mapZipPath || !fs.existsSync(mapZipPath)) {
+        return { success: false, error: 'Invalid savegame path or map zip path.' };
+    }
+    try {
+        const zip = new AdmZip(mapZipPath);
+        const entries = zip.getEntries();
+        let extractedCount = 0;
+
+        for (const entry of entries) {
+            const baseName = path.basename(entry.entryName);
+            const baseLower = baseName.toLowerCase();
+            const isFieldStateFile = 
+                baseLower.startsWith('densitymap_') || 
+                baseLower.startsWith('infolayer_') ||
+                baseLower === 'fieldground.xml' ||
+                baseLower === 'weed_growthstate.xml' ||
+                baseLower === 'stone_growthstate.xml' ||
+                baseLower === 'densitymapheight.xml';
+
+            if (isFieldStateFile && !entry.isDirectory()) {
+                const destFile = path.join(savePath, baseName);
+                await fs.writeFile(destFile, entry.getData());
+                extractedCount++;
+            }
+        }
+        console.log(`[REPAIR-FIELDS] Refreshed ${extractedCount} field state density layers for savegame at ${savePath}`);
+        return { success: true, extractedCount };
+    } catch (err) {
+        console.error('[REPAIR-FIELDS] Failed to refresh field state layers:', err.message);
+        return { success: false, error: err.message };
+    }
+}
+
 module.exports = {
     adoptSaveAsTemplate,
     cleanupBridgeModFromSavegame,
@@ -6016,5 +6054,6 @@ module.exports = {
     syncSubfolderMapDependencies,
     stashSinglePlayerSaves,
     restoreStashedSinglePlayerSaves,
-    repairSavegameMapId
+    repairSavegameMapId,
+    resetSavegameFieldStates
 };
