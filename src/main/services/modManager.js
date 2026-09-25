@@ -597,6 +597,21 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 			const entries = zip.getEntries();
 			for (const entry of entries) {
 				const entryNameLower = entry.entryName.toLowerCase();
+				if (!entryNameLower.endsWith('.xml')) continue;
+
+				let xmlText = entry.getData().toString('utf8');
+				let entryModified = false;
+
+				// 1. Repair invalid legacy FS22 $data paths (e.g. $data/maps/mapUS/data/infoLayer_sprayLevel.png -> mapUS/data/infoLayer_sprayLevel.png)
+				if (xmlText.includes('$data/maps/mapUS/data/') || xmlText.includes('$data/maps/mapEU/data/') || xmlText.includes('$data/maps/mapAS/data/')) {
+					debugLog(`[MAP-PATCH] Repairing legacy FS22 $data paths in XML entry: ${entry.entryName} of ${path.basename(mapPath)}`);
+					xmlText = xmlText.replace(/\$data\/maps\/mapUS\/data\//gi, 'mapUS/data/')
+									 .replace(/\$data\/maps\/mapEU\/data\//gi, 'mapEU/data/')
+									 .replace(/\$data\/maps\/mapAS\/data\//gi, 'mapAS/data/');
+					entryModified = true;
+				}
+
+				// 2. Inject missing <densityMapHeightTypes> tag if map XML
 				const isMapXml = entryNameLower.endsWith('mapus.xml') || 
 								 entryNameLower.endsWith('mapeu.xml') || 
 								 entryNameLower.endsWith('mapas.xml') || 
@@ -607,29 +622,31 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 								  !entryNameLower.includes('shop') && 
 								  !entryNameLower.includes('field'));
 
-				if (isMapXml) {
-					let xmlText = entry.getData().toString('utf8');
-					if (!xmlText.includes('densityMapHeightTypes')) {
-						debugLog(`[MAP-PATCH] Injecting missing densityMapHeightTypes in map XML entry: ${entry.entryName} of ${path.basename(mapPath)}`);
-						const patchTag = '    <densityMapHeightTypes filename="$data/maps/maps_densityMapHeightTypes.xml"/>';
-						if (/<fruitTypes[^>]*\/>/i.test(xmlText)) {
-							xmlText = xmlText.replace(/(<fruitTypes[^>]*\/>)/i, `$1\n${patchTag}`);
-						} else if (/<fillTypes[^>]*\/>/i.test(xmlText)) {
-							xmlText = xmlText.replace(/(<fillTypes[^>]*\/>)/i, `$1\n${patchTag}`);
-						} else if (/<\/map>/i.test(xmlText)) {
-							xmlText = xmlText.replace(/<\/map>/i, `${patchTag}\n</map>`);
-						} else {
-							xmlText += `\n${patchTag}\n`;
-						}
-						zip.updateFile(entry.entryName, Buffer.from(xmlText, 'utf8'));
-						patched = true;
+				if (isMapXml && !xmlText.includes('densityMapHeightTypes')) {
+					debugLog(`[MAP-PATCH] Injecting missing densityMapHeightTypes in map XML entry: ${entry.entryName} of ${path.basename(mapPath)}`);
+					const patchTag = '    <densityMapHeightTypes filename="$data/maps/maps_densityMapHeightTypes.xml"/>';
+					if (/<fruitTypes[^>]*\/>/i.test(xmlText)) {
+						xmlText = xmlText.replace(/(<fruitTypes[^>]*\/>)/i, `$1\n${patchTag}`);
+					} else if (/<fillTypes[^>]*\/>/i.test(xmlText)) {
+						xmlText = xmlText.replace(/(<fillTypes[^>]*\/>)/i, `$1\n${patchTag}`);
+					} else if (/<\/map>/i.test(xmlText)) {
+						xmlText = xmlText.replace(/<\/map>/i, `${patchTag}\n</map>`);
+					} else {
+						xmlText += `\n${patchTag}\n`;
 					}
+					entryModified = true;
+				}
+
+				if (entryModified) {
+					zip.updateFile(entry.entryName, Buffer.from(xmlText, 'utf8'));
+					patched = true;
 				}
 			}
+
 			if (patched) {
 				zip.writeZip(mapPath);
-				console.log(`[MAP-PATCH] Successfully patched missing densityMapHeightTypes in map zip: ${path.basename(mapPath)}`);
-				debugLog(`[MAP-PATCH] Successfully patched missing densityMapHeightTypes in map zip: ${path.basename(mapPath)}`);
+				console.log(`[MAP-PATCH] Successfully patched map XMLs in archive: ${path.basename(mapPath)}`);
+				debugLog(`[MAP-PATCH] Successfully patched map XMLs in archive: ${path.basename(mapPath)}`);
 			}
 		} else if (fs.statSync(mapPath).isDirectory()) {
 			function scanAndPatchDir(dirPath) {
@@ -640,26 +657,37 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 					if (stat.isDirectory()) {
 						scanAndPatchDir(fullPath);
 					} else if (f.toLowerCase().endsWith('.xml')) {
+						let xmlText = fs.readFileSync(fullPath, 'utf8');
+						let fileModified = false;
+
+						if (xmlText.includes('$data/maps/mapUS/data/') || xmlText.includes('$data/maps/mapEU/data/') || xmlText.includes('$data/maps/mapAS/data/')) {
+							xmlText = xmlText.replace(/\$data\/maps\/mapUS\/data\//gi, 'mapUS/data/')
+											 .replace(/\$data\/maps\/mapEU\/data\//gi, 'mapEU/data/')
+											 .replace(/\$data\/maps\/mapAS\/data\//gi, 'mapAS/data/');
+							fileModified = true;
+						}
+
 						const lowerName = f.toLowerCase();
 						const isMapXml = lowerName === 'mapus.xml' || lowerName === 'mapeu.xml' || lowerName === 'mapas.xml' ||
 										 (lowerName.endsWith('map.xml') && !lowerName.includes('placeable') && !lowerName.includes('store') && !lowerName.includes('item'));
-						if (isMapXml) {
-							let xmlText = fs.readFileSync(fullPath, 'utf8');
-							if (!xmlText.includes('densityMapHeightTypes')) {
-								const patchTag = '    <densityMapHeightTypes filename="$data/maps/maps_densityMapHeightTypes.xml"/>';
-								if (/<fruitTypes[^>]*\/>/i.test(xmlText)) {
-									xmlText = xmlText.replace(/(<fruitTypes[^>]*\/>)/i, `$1\n${patchTag}`);
-								} else if (/<fillTypes[^>]*\/>/i.test(xmlText)) {
-									xmlText = xmlText.replace(/(<fillTypes[^>]*\/>)/i, `$1\n${patchTag}`);
-								} else if (/<\/map>/i.test(xmlText)) {
-									xmlText = xmlText.replace(/<\/map>/i, `${patchTag}\n</map>`);
-								} else {
-									xmlText += `\n${patchTag}\n`;
-								}
-								fs.writeFileSync(fullPath, xmlText, 'utf8');
-								patched = true;
-								debugLog(`[MAP-PATCH] Successfully patched map XML in directory: ${fullPath}`);
+						if (isMapXml && !xmlText.includes('densityMapHeightTypes')) {
+							const patchTag = '    <densityMapHeightTypes filename="$data/maps/maps_densityMapHeightTypes.xml"/>';
+							if (/<fruitTypes[^>]*\/>/i.test(xmlText)) {
+								xmlText = xmlText.replace(/(<fruitTypes[^>]*\/>)/i, `$1\n${patchTag}`);
+							} else if (/<fillTypes[^>]*\/>/i.test(xmlText)) {
+								xmlText = xmlText.replace(/(<fillTypes[^>]*\/>)/i, `$1\n${patchTag}`);
+							} else if (/<\/map>/i.test(xmlText)) {
+								xmlText = xmlText.replace(/<\/map>/i, `${patchTag}\n</map>`);
+							} else {
+								xmlText += `\n${patchTag}\n`;
 							}
+							fileModified = true;
+						}
+
+						if (fileModified) {
+							fs.writeFileSync(fullPath, xmlText, 'utf8');
+							patched = true;
+							debugLog(`[MAP-PATCH] Successfully patched map XML in directory: ${fullPath}`);
 						}
 					}
 				}
