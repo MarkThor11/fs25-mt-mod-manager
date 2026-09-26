@@ -1664,31 +1664,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         console.warn('[CREATE] Failed to scan placeables for required mods:', placeErr.message);
     }
 
-    // Extract pristine starting field crops and density maps from map mod ZIP if template contains fallow/bare fields
-    if (modZipPath && fs.existsSync(modZipPath)) {
-        try {
-            const slotFieldsPath = path.join(slotPath, 'fields.xml');
-            let needsFieldsRestore = true;
-            if (fs.existsSync(slotFieldsPath)) {
-                const fContent = await fs.readFile(slotFieldsPath, 'utf8');
-                if (fContent.includes('<fruit') && !/plannedFruit=["']FALLOW["']/gi.test(fContent)) {
-                    needsFieldsRestore = false;
-                }
-            }
-            const slotFruitsGdm = path.join(slotPath, 'densityMap_fruits.gdm');
-            let needsGdmRestore = !fs.existsSync(slotFruitsGdm) || fs.statSync(slotFruitsGdm).size < 2000000;
-
-            if (needsFieldsRestore || needsGdmRestore) {
-                console.log(`[CREATE] Restoring pristine author field crops and density maps from map mod ZIP: ${path.basename(modZipPath)}`);
-                await extractMapDensityFiles(modZipPath, slotPath, true);
-            }
-        } catch (e) {
-            console.warn('[CREATE] Failed to restore pristine map density maps:', e.message);
-        }
-    }
-
     // Configure starting farmlands accurately for template-based saves.
-    if (!requiresEngineInit || modZipPath) {
+    // For fresh saves requiring engine init, omitting farmland.xml allows the FS25 engine
+    // to automatically parse the map's farmlands & fields config and generate full starting field crops!
+    if (!requiresEngineInit) {
         await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
     }
 
@@ -6072,7 +6051,7 @@ async function ensureSavegameDensityMaps(savePath) {
             } catch (e) {}
         }
 
-        // 2. Ensure densityMap_fruits.gdm and densityMap_ground.gdm exist for mod maps
+        // 2. Ensure densityMapRevision in careerSavegame.xml matches mod map requirements (Revision 1 for mod maps vs 4 for base game)
         const careerPath = path.join(savePath, 'careerSavegame.xml');
         if (fs.existsSync(careerPath)) {
             try {
@@ -6081,15 +6060,6 @@ async function ensureSavegameDensityMaps(savePath) {
                 const settings = parsed?.careerSavegame?.settings || {};
                 const mapId = settings['@_mapId'] || settings.mapId;
                 if (mapId && !isOfficialMap(mapId)) {
-                    const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
-                    const hasGroundGdm = fs.existsSync(path.join(savePath, 'densityMap_ground.gdm'));
-                    if (!hasFruitsGdm || !hasGroundGdm) {
-                        const modPath = await resolveMapModPath(savePath);
-                        if (modPath && fs.existsSync(modPath)) {
-                            console.log(`[DENSITY-CHECK] Save slot at ${savePath} missing density maps! Extracting pristine field files from ${path.basename(modPath)}...`);
-                            await extractMapDensityFiles(modPath, savePath, false);
-                        }
-                    }
 
                     let expectedRev = '1';
                     const modPath = await resolveMapModPath(savePath);
