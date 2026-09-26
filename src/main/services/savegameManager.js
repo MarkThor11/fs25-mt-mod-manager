@@ -439,7 +439,7 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         return null;
     }
 
-    // 2. Custom Mod Map Templates — Matching by Mod Name, Title, or unique Map ID
+    // 2. Custom Mod Map Templates — Matching by exact Mod Name or declared template mod folder
     for (const folder of folders) {
         const folderPath = path.join(templatesDir, folder);
         const stat = await fs.stat(folderPath).catch(() => null);
@@ -456,12 +456,20 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         // Never match base game templates for custom mod maps
         if (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolder.toLowerCase())) continue;
 
-        // Match by modName, mapTitle, or unique non-generic mapId
-        if (targetModNorm && targetModNorm.length >= 3 && ufNorm.includes(targetModNorm)) {
-            return folder;
-        }
-        if (targetTitleNorm && targetTitleNorm.length >= 3 && ufNorm.includes(targetTitleNorm)) {
-            return folder;
+        // Match by modName or unique non-generic mapId
+        if (targetModNorm && targetModNorm.length >= 3) {
+            if (ufNorm === targetModNorm) return folder;
+
+            const fParts = cleanFolder.split('_');
+            const lastPartNorm = ultraNorm(fParts[fParts.length - 1]);
+            let modParts = fParts;
+            if (GENERIC_MAP_IDS.has(lastPartNorm) || (targetMapIdNorm && lastPartNorm === targetMapIdNorm)) {
+                modParts = fParts.slice(0, Math.max(1, fParts.length - 1));
+            }
+            const templateModNorm = ultraNorm(modParts.join('_'));
+            if (templateModNorm === targetModNorm) {
+                return folder;
+            }
         }
         if (targetMapIdNorm && targetMapIdNorm.length >= 4 && !GENERIC_MAP_IDS.has(targetMapIdNorm) && ufNorm.includes(targetMapIdNorm)) {
             return folder;
