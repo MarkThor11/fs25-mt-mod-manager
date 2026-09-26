@@ -2934,7 +2934,33 @@ async function deleteSavegame(savePath) {
         const slotMatch = folderName.match(/savegame(\d+)/i);
         const slotIndex = slotMatch ? slotMatch[1] : null;
 
-        await fs.remove(savePath);
+        let retries = 5;
+        let deleted = false;
+        while (retries > 0) {
+            try {
+                await fs.remove(savePath);
+                deleted = true;
+                break;
+            } catch (err) {
+                retries--;
+                if (retries === 0) {
+                    console.error(`[SAVEGAMES] Error deleting savegame at ${savePath}: ${err.message}. Attempting inner file cleanup fallback...`);
+                    // Fallback: If folder is locked by OS/Cloud sync, delete inner files first
+                    try {
+                        const files = await fs.readdir(savePath);
+                        for (const file of files) {
+                            await fs.remove(path.join(savePath, file)).catch(() => {});
+                        }
+                        await fs.remove(savePath).catch(() => {});
+                        deleted = true;
+                    } catch (fallbackErr) {
+                        return { success: false, error: `File locked by OS or cloud sync: ${err.message}` };
+                    }
+                } else {
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
+            }
+        }
 
         // Fast cleanup: Remove virtual active mods staging directory for this slot
         if (slotIndex) {
@@ -2949,7 +2975,7 @@ async function deleteSavegame(savePath) {
             }
         }
 
-        return { success: true };
+        return { success: deleted };
     }
     return { success: false, error: 'Savegame not found' };
 }

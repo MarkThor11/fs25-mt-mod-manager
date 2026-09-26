@@ -145,18 +145,24 @@ export const useSavegameStore = create((set) => ({
     }
   },
 
-  deleteSavegame: async (path) => {
+  deleteSavegame: async (savePath) => {
     if (!window.api?.savegames) return { success: false, error: 'API Offline' };
+    // Optimistically update UI state immediately
+    set((s) => ({
+      savegames: s.savegames.filter(sg => sg.path !== savePath),
+      selectedSavegame: s.selectedSavegame?.path === savePath ? null : s.selectedSavegame
+    }));
     try {
-      const result = await window.api.savegames.delete({ path });
-      if (result.success) {
-        set((s) => ({
-          savegames: s.savegames.filter(sg => sg.path !== path),
-          selectedSavegame: s.selectedSavegame?.path === path ? null : s.selectedSavegame
-        }));
+      const result = await window.api.savegames.delete({ path: savePath });
+      if (!result?.success) {
+        useToastStore.getState().error(result?.error || 'Failed to delete savegame from disk');
+        // Re-fetch to restore UI state if deletion failed
+        get().fetchSavegames();
       }
       return result;
     } catch (err) {
+      useToastStore.getState().error(`Deletion error: ${err.message}`);
+      get().fetchSavegames();
       return { success: false, error: err.message };
     }
   },
