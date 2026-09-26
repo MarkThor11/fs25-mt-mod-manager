@@ -439,10 +439,7 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         return null;
     }
 
-    // 2. Custom Mod Map Templates — Strict Exact Mod Name Match
-    // Each custom mod map has its own specific template named after its exact modName (or {modName}_{...}).
-    if (!mapModName) return null;
-
+    // 2. Custom Mod Map Templates — Matching by Mod Name, Title, or unique Map ID
     for (const folder of folders) {
         const folderPath = path.join(templatesDir, folder);
         const stat = await fs.stat(folderPath).catch(() => null);
@@ -459,8 +456,14 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         // Never match base game templates for custom mod maps
         if (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolder.toLowerCase())) continue;
 
-        // Exact match by normalized modName (e.g. FS25_BackRoadsCounty4x or FS25_BackRoadsCounty4x_FS25_BackRoadsCounty4x_BackRoadsCounty4x)
-        if (fNorm === targetModNorm || ufNorm === targetModNorm || cleanFolder.toLowerCase().startsWith(targetModNorm.toLowerCase() + '_') || cleanFolder.toLowerCase().startsWith('fs25_' + targetModNorm.toLowerCase() + '_')) {
+        // Match by modName, mapTitle, or unique non-generic mapId
+        if (targetModNorm && targetModNorm.length >= 3 && ufNorm.includes(targetModNorm)) {
+            return folder;
+        }
+        if (targetTitleNorm && targetTitleNorm.length >= 3 && ufNorm.includes(targetTitleNorm)) {
+            return folder;
+        }
+        if (targetMapIdNorm && targetMapIdNorm.length >= 4 && !GENERIC_MAP_IDS.has(targetMapIdNorm) && ufNorm.includes(targetMapIdNorm)) {
             return folder;
         }
     }
