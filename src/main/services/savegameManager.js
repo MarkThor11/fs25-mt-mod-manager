@@ -394,7 +394,7 @@ async function deleteMapTemplate(folderName) {
 }
 
 async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) {
-    if (!mapId) return null;
+    if (!mapId && !mapModName) return null;
     const templatesDir = getTemplatesPath();
     if (!fs.existsSync(templatesDir)) return null;
 
@@ -404,22 +404,21 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
     };
     const ultraNorm = (s) => cleanStr(s).replace(/^(?:fs\d{2}|pdlc)/, '');
 
-    const targetMapIdNorm = ultraNorm(mapId);
-    const targetModNorm = ultraNorm(mapModName);
-    const targetTitleNorm = ultraNorm(mapTitle);
+    let effectiveModName = mapModName;
+    if (!effectiveModName && mapId && mapId.includes('.')) {
+        effectiveModName = mapId.split('.')[0];
+    }
+    if (!effectiveModName && mapId && mapId.toLowerCase().startsWith('fs25_')) {
+        effectiveModName = mapId;
+    }
 
-    const GENERIC_MAP_IDS = new Set([
-        'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
-        'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
-        'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
-        'mapus', 'mapeu', 'mapas', 'highlandsfishingmap'
-    ]);
+    const targetMapIdNorm = ultraNorm(mapId);
+    const targetModNorm = ultraNorm(effectiveModName);
+    const targetTitleNorm = ultraNorm(mapTitle);
 
     const OFFICIAL_MASTER_TEMPLATES = new Set([
         'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap'
     ]);
-
-    const isGenericMapId = GENERIC_MAP_IDS.has(targetMapIdNorm);
 
     const folders = await fs.readdir(templatesDir);
 
@@ -462,7 +461,9 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         'hutanpantai': 'MapAS',
         'kinlaig': 'pdlc_highlandsFishingPack_HighlandsFishingMap'
     };
-    const isBaseGameLaunch = !mapModName || isOfficialMap(mapModName);
+    const isBaseGameLaunch = (!effectiveModName || isOfficialMap(effectiveModName)) &&
+        (isOfficialMap(mapId) || ['riverbendsprings', 'zielonka', 'hutanpantai', 'kinlaig'].includes(targetTitleNorm));
+
     const officialTarget = isBaseGameLaunch ? (OFFICIAL_FOLDER_MAP[targetMapIdNorm] || officialByTitle[targetTitleNorm]) : null;
     if (officialTarget) {
         for (const folder of folders) {
@@ -479,7 +480,7 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         return null;
     }
 
-    // 2. Custom Mod Map Templates — Matching by exact Mod Name or declared template mod folder
+    // 2. Custom Mod Map Templates — Matching by exact Mod Name, template prefix, or title
     for (const folder of folders) {
         const folderPath = path.join(templatesDir, folder);
         const stat = await fs.stat(folderPath).catch(() => null);
@@ -496,18 +497,43 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         // Never match base game templates for custom mod maps
         if (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolder.toLowerCase())) continue;
 
-        // Match strictly by exact modName match or declared template mod folder
-        if (targetModNorm && targetModNorm.length >= 3) {
-            if (ufNorm === targetModNorm) return folder;
+        if (effectiveModName) {
+            const cleanFolderLower = cleanFolder.toLowerCase();
+            const effModLower = effectiveModName.toLowerCase();
+            const effModClean = cleanStr(effectiveModName);
 
-            const fParts = cleanFolder.split('_');
-            const lastPartNorm = ultraNorm(fParts[fParts.length - 1]);
-            let modParts = fParts;
-            if (GENERIC_MAP_IDS.has(lastPartNorm) || (targetMapIdNorm && lastPartNorm === targetMapIdNorm)) {
-                modParts = fParts.slice(0, Math.max(1, fParts.length - 1));
+            // Exact match
+            if (cleanFolderLower === effModLower || fNorm === effModClean || ufNorm === targetModNorm) {
+                return folder;
             }
-            const templateModNorm = ultraNorm(modParts.join('_'));
-            if (templateModNorm === targetModNorm) {
+
+            // Starts with modName (e.g. FS25_Birgland_FS25_Birgland_Birgland or FS25_Alliklepa_SampleModMap)
+            if (cleanFolderLower.startsWith(effModLower + '_') || cleanFolderLower.startsWith(effModLower + '.')) {
+                return folder;
+            }
+
+            // UltraNorm prefix matching
+            if (targetModNorm && targetModNorm.length >= 3) {
+                if (ufNorm.startsWith(targetModNorm)) {
+                    const remainder = ufNorm.slice(targetModNorm.length);
+                    if (remainder.length === 0 || 
+                        remainder.startsWith('fs25') || 
+                        remainder.startsWith('sample') || 
+                        remainder.startsWith('map') || 
+                        remainder.startsWith('crossplay') || 
+                        remainder.startsWith('template') || 
+                        remainder.startsWith('multi') || 
+                        remainder.startsWith('base') || 
+                        remainder.startsWith(targetModNorm)) {
+                        return folder;
+                    }
+                }
+            }
+        }
+
+        // Title matching fallback if modName was missing or didn't match
+        if (targetTitleNorm && targetTitleNorm.length >= 4) {
+            if (ufNorm === targetTitleNorm || ufNorm.startsWith(targetTitleNorm)) {
                 return folder;
             }
         }

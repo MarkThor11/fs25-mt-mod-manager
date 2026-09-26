@@ -317,14 +317,19 @@ async function launch(options = {}) {
     
     if (isServerSave) {
       console.log(`[LAUNCH] Savegame ${options.savegameIndex} is a Multiplayer Server save. Bypassing singleplayer autoStart so game launches to Multiplayer menu.`);
-    } else if (!isCompleteAndAutomated) {
-      console.log(`[LAUNCH] Savegame ${options.savegameIndex} is not fully automated / initialized (missing terrain or density files). Bypassing -autoStart to prevent 55% loading screen hang.`);
-      needsManualInit = true;
     } else {
-      console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is fully automated. Enabling Auto-Start into map.`);
-      args.push('-autoStartSavegameId', String(options.savegameIndex));
-      if (!args.includes('-autoStart')) {
-        args.push('-autoStart');
+      if (!isCompleteAndAutomated) {
+        console.log(`[LAUNCH] Savegame ${options.savegameIndex} is a first-time / un-automated slot. Auto-starting into slot for engine initialization.`);
+        needsManualInit = true;
+      } else {
+        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is fully automated. Auto-starting into map.`);
+      }
+
+      if (options.autoStart !== false) {
+        args.push('-autoStartSavegameId', String(options.savegameIndex));
+        if (!args.includes('-autoStart')) {
+          args.push('-autoStart');
+        }
       }
 
       // Ensure careerSavegame.xml is completely clean of internal helper mod entries
@@ -336,7 +341,7 @@ async function launch(options = {}) {
     }
   }
 
-  if (!needsManualInit && options.autoStart && !args.includes('-autoStart')) {
+  if (options.autoStart && !args.includes('-autoStart')) {
     args.push('-autoStart');
   }
 

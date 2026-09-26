@@ -3474,6 +3474,12 @@ export default function SavegamesPage() {
     // Reset map to default so the useEffect always re-fires when user picks a map
     setCreateMap('MapUS|Riverbend Springs|||');
     setModalSelectedMods(new Set());
+    if (window.api?.maps) {
+      window.api.maps.checkTemplate('MapUS', 'Riverbend Springs', '').then(exists => {
+        setMapHasTemplate(exists);
+        setAutoLaunchOnCreate(!exists);
+      });
+    }
     setShowCreateModal(true);
   };
 

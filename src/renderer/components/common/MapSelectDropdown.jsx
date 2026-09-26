@@ -75,16 +75,11 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
       'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap'
     ]);
 
-    const GENERIC_MAP_IDS = new Set([
-      'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
-      'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
-      'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
-      'mapus', 'mapeu', 'mapas', 'highlandsfishingmap'
-    ]);
-
     return (mod) => {
       if (!templates || templates.length === 0) return false;
       const mNameLow = (mod.modName || '').toLowerCase();
+      const utMod = ultraNorm(mod.modName);
+      const utTitle = ultraNorm(mod.title);
 
       return templates.some((t) => {
         const tId = norm(t.id);
@@ -94,11 +89,38 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
         const tModName = (t.modName || '').toLowerCase();
         const cleanTId = (t.id || '').replace(/\.zip$/i, '').toLowerCase();
 
-        // 1. Direct exact modName match (e.g. FS25_Cows_Farm vs FS25_Cows_Farm_4X)
+        // 1. Direct exact modName match
         if (tModName && mNameLow && tModName === mNameLow) return true;
 
-        // 2. Exact template zip filename match
-        if (cleanTId && mNameLow && cleanTId === mNameLow) return true;
+        // 2. Exact template zip filename match or prefix match
+        if (cleanTId && mNameLow) {
+          if (cleanTId === mNameLow) return true;
+          if (cleanTId.startsWith(mNameLow + '_') || cleanTId.startsWith(mNameLow + '.')) return true;
+        }
+
+        // 3. UltraNorm prefix matching
+        if (utMod && utMod.length >= 3) {
+          if (utId === utMod) return true;
+          if (utId.startsWith(utMod)) {
+            const remainder = utId.slice(utMod.length);
+            if (remainder.length === 0 || 
+                remainder.startsWith('fs25') || 
+                remainder.startsWith('sample') || 
+                remainder.startsWith('map') || 
+                remainder.startsWith('crossplay') || 
+                remainder.startsWith('template') || 
+                remainder.startsWith('multi') || 
+                remainder.startsWith('base') || 
+                remainder.startsWith(utMod)) {
+              return true;
+            }
+          }
+        }
+
+        // 4. Title matching fallback
+        if (utTitle && utTitle.length >= 4) {
+          if (utId === utTitle || utId.startsWith(utTitle)) return true;
+        }
 
         return false;
       });
