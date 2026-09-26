@@ -1173,6 +1173,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.loadDefaultFarm = startFarmFlag;
             savegameData.careerSavegame.settings.loadDefaultVehicles = startFarmFlag;
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
+            if (!isOfficialBaseMap) {
+                savegameData.careerSavegame.settings.densityMapRevision = '1';
+            }
 
             // Critically ensure valid="true" is present — without it FS25 engine treats slot as empty
             savegameData.careerSavegame['@_valid'] = 'true';
@@ -1412,7 +1415,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     hasInitiallyOwnedFarmlands: startFarmFlag,
                     loadDefaultFarm: startFarmFlag,
                     loadDefaultVehicles: startFarmFlag,
-                    isCrossPlatformSavegame: 'false'
+                    isCrossPlatformSavegame: 'false',
+                    densityMapRevision: isOfficialBaseMap ? '4' : '1'
                 },
                 statistics: {
                     money: String(money),
@@ -1721,6 +1725,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         };
         await fs.writeFile(envPath, builder.build(initialEnv));
     }
+
+    // Auto-heal missing density maps and sanitize growthState XML for newly created save slot
+    await ensureSavegameDensityMaps(slotPath);
 
     return { success: true, path: slotPath, requiresEngineInit, mapId };
 }
@@ -5296,7 +5303,7 @@ async function adoptSaveAsTemplate(saveIndex) {
             }
         }
         
-        // Clean up temporary/user files in template
+        // Clean up temporary/user files in template and sanitize growth XML
         const filesToRemove = ['steam_autocloud.vdf', 'modManager.json'];
         for (const f of filesToRemove) {
             const p = path.join(destPath, f);
@@ -5304,6 +5311,7 @@ async function adoptSaveAsTemplate(saveIndex) {
                 await fs.remove(p);
             }
         }
+        await ensureSavegameDensityMaps(destPath);
         // Auto-compress harvested template into a lightweight .zip archive
         const zipPath = path.join(templatesDir, `${templateFolder}.zip`);
         try {
@@ -6039,7 +6047,40 @@ async function ensureSavegameDensityMaps(savePath) {
             } catch (e) {}
         }
 
-        // 2. Ensure density maps exist
+        // 2. Ensure densityMapRevision in careerSavegame.xml matches mod map requirements (Revision 1 for mod maps vs 4 for base game)
+        const careerPath = path.join(savePath, 'careerSavegame.xml');
+        if (fs.existsSync(careerPath)) {
+            try {
+                let careerXml = await fs.readFile(careerPath, 'utf8');
+                const parsed = parser.parse(careerXml);
+                const settings = parsed?.careerSavegame?.settings || {};
+                const mapId = settings['@_mapId'] || settings.mapId;
+                if (mapId && !isOfficialMap(mapId)) {
+                    let expectedRev = '1';
+                    const modPath = await resolveMapModPath(savePath);
+                    if (modPath && modPath.toLowerCase().endsWith('.zip') && fs.existsSync(modPath)) {
+                        try {
+                            const AdmZip = require('adm-zip');
+                            const zip = new AdmZip(modPath);
+                            const mapEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('map.xml') && !e.entryName.toLowerCase().includes('sound'));
+                            if (mapEntry) {
+                                const xml = mapEntry.getData().toString('utf8');
+                                const m = xml.match(/<densityMap\s+[^>]*revision=["'](\d+)["']/i);
+                                if (m) expectedRev = m[1];
+                            }
+                        } catch (_) {}
+                    }
+                    const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '4';
+                    if (curRev !== expectedRev) {
+                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>${expectedRev}</densityMapRevision>`);
+                        await fs.writeFile(careerPath, careerXml);
+                        console.log(`[DENSITY-CHECK] Corrected densityMapRevision ${curRev} -> ${expectedRev} in ${savePath}`);
+                    }
+                }
+            } catch (e) {}
+        }
+
+        // 3. Ensure density maps exist
         const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm')) || 
                              fs.existsSync(path.join(savePath, 'densityMap_ground.gdm'));
         if (!hasFruitsGdm) {
