@@ -453,29 +453,28 @@ function monitorGameExitAndRestore(onExitCallback = null) {
         consecutiveNotRunning = 0;
       } else if (hasSeenGameRunning) {
         consecutiveNotRunning++;
-        // Require at least 2 consecutive checks (8 seconds) of not running to prevent false triggers during process handoff
-        if (consecutiveNotRunning >= 2) {
+        if (consecutiveNotRunning >= 1) {
           clearInterval(interval);
           isMonitoringExit = false;
-          console.log('[LAUNCH] Game process exit detected. Restoring global gameSettings.xml in 2 seconds...');
+          console.log('[LAUNCH] Game process exit detected. Restoring global gameSettings.xml...');
           if (typeof onExitCallback === 'function') {
             try { onExitCallback(); } catch (e) {}
           }
           setTimeout(() => {
             restoreGlobalGameSettings();
-          }, 2000);
+          }, 500);
         }
-      } else if (checksCount > 90) {
-        // Fallback: 6 minutes elapsed without detecting the game running (e.g. cancelled launch)
+      } else if (checksCount > 120) {
+        // Fallback: 3 minutes elapsed without detecting the game running
         clearInterval(interval);
         isMonitoringExit = false;
-        console.log('[LAUNCH] Game did not launch within 6 minutes. Restoring global gameSettings.xml...');
+        console.log('[LAUNCH] Game did not launch within timeout. Restoring global gameSettings.xml...');
         restoreGlobalGameSettings();
       }
     } catch (e) {
       console.error('[LAUNCH] Error monitoring game exit:', e.message);
     }
-  }, 4000);
+  }, 1500);
 }
 
 /**
