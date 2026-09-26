@@ -2951,7 +2951,7 @@ export default function SavegamesPage() {
   const navigate = useNavigate();
   const { mods } = useLocalModsStore();
   const {
-    savegames, isLoading: isSavesLoading, fetchSavegames,
+    savegames, isLoading: isSavesLoading, fetchSavegames, deleteSavegame,
     isGameRunning, playingSlot, recentlyExitedSlots, markSlotExited
   } = useSavegameStore();
 
@@ -3675,7 +3675,7 @@ export default function SavegamesPage() {
             for (const index of list) {
                 const save = allSlots.find(s => s.index === index);
                 if (save && !save.isEmpty) {
-                    await window.api.savegames.delete({ path: save.path });
+                    await deleteSavegame(save.path);
                 }
             }
             useToastStore.getState().success(`Successfully cleared ${list.length} slots.`);
@@ -3980,8 +3980,7 @@ export default function SavegamesPage() {
                 onDelete={async () => {
                     const skipConfirm = useSettingsStore.getState().skipDeleteConfirm;
                     if (skipConfirm || window.confirm(`Delete Slot ${save.index}?`)) {
-                        await window.api.savegames.delete({ path: save.path });
-                        fetchSavegames();
+                        deleteSavegame(save.path);
                     }
                 }}
                 editingName={editingName}
