@@ -108,18 +108,9 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
         const utMod = ultraNorm(t.modName);
         if (utMod && uName && utMod === uName) return true;
 
-        // 3. Template ID / folder mod part match
+        // 3. Exact template folder modName match
         const cleanTId = (t.id || '').replace(/\.zip$/i, '');
         if (ultraNorm(cleanTId) === uName) return true;
-
-        const fParts = cleanTId.split('_');
-        const lastPartNorm = ultraNorm(fParts[fParts.length - 1]);
-        let modParts = fParts;
-        if (GENERIC_MAP_IDS.has(lastPartNorm) || (modMapIdNorm && lastPartNorm === modMapIdNorm)) {
-          modParts = fParts.slice(0, Math.max(1, fParts.length - 1));
-        }
-        const templateModNorm = ultraNorm(modParts.join('_'));
-        if (uName && templateModNorm === uName) return true;
 
         return false;
       });
