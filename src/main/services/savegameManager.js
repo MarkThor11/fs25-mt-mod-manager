@@ -357,10 +357,7 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
 
     const cleanStr = (s) => {
         if (!s) return '';
-        return s.toLowerCase()
-            .replace(/\s*[\(\[]\s*(?:crossplay|cp)\s*[\)\]]/gi, '')
-            .replace(/[_ -](?:crossplay|cp)(?=[_ -]|$)/gi, '')
-            .replace(/[^a-z0-9]/g, '');
+        return s.toLowerCase().replace(/[^a-z0-9]/g, '');
     };
     const ultraNorm = (s) => cleanStr(s).replace(/^(?:fs\d{2}|pdlc)/, '');
 
