@@ -1659,17 +1659,21 @@ ipcMain.handle('game:launch', async (_, options) => {
       exitHandled = true;
       console.log(`[LAUNCH] Game exit verified (code ${code}). Running post-game checks...`);
 
+      // Notify the frontend instantly so UI updates without delay
+      mainWindow?.webContents.send('game:exited', { 
+        savegameIndex: options.savegameIndex,
+        exitCode: code 
+      });
+
       if (options.savegameIndex) {
         try {
-          // Trigger auto-harvesting immediately inside the main process
+          // Trigger auto-harvesting background task
           await savegameManager.getAllSavegames();
         } catch (harvestErr) {
           console.error('[LAUNCH] Auto-harvesting failed on game exit:', harvestErr);
         }
 
         // Re-inject Map Dependencies and declared mod dependencies after the game exits.
-        // The FS25 engine overwrites careerSavegame.xml on first-time map initialization,
-        // stripping any mods we pre-populated that it didn't actively load.
         try {
           const fs25DataRoot = pathProvider.getFS25DataRoot();
           if (fs25DataRoot) {
@@ -1710,12 +1714,6 @@ ipcMain.handle('game:launch', async (_, options) => {
           console.error('[CLOUD] Auto-sync failed on game exit:', cloudErr);
         }
       }
-
-      // Notify the frontend instantly
-      mainWindow?.webContents.send('game:exited', { 
-        savegameIndex: options.savegameIndex,
-        exitCode: code 
-      });
     };
 
     const launchOptions = {
