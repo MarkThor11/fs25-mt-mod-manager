@@ -5339,20 +5339,26 @@ async function adoptSaveAsTemplate(saveIndex) {
             }
         }
         await ensureSavegameDensityMaps(destPath);
-        // Auto-compress harvested template into a lightweight .zip archive
+        // Defer template ZIP compression so post-game processing finishes immediately without UI lag
         const zipPath = path.join(templatesDir, `${templateFolder}.zip`);
-        try {
-            const AdmZip = require('adm-zip');
-            const zip = new AdmZip();
-            zip.addLocalFolder(destPath);
-            zip.writeZip(zipPath);
-            const zipStats = fs.statSync(zipPath);
-            console.log(`[HARVEST] Auto-compressed template "${templateFolder}" to ${path.basename(zipPath)} (${(zipStats.size / (1024 * 1024)).toFixed(2)} MB)`);
-            // Clean up uncompressed folder to save disk space
-            await fs.remove(destPath);
-        } catch (zErr) {
-            console.warn(`[HARVEST] Could not compress template to .zip, keeping uncompressed folder:`, zErr.message);
-        }
+        setImmediate(async () => {
+            try {
+                const AdmZip = require('adm-zip');
+                const zip = new AdmZip();
+                zip.addLocalFolder(destPath);
+                await new Promise((resolve, reject) => {
+                    zip.writeZip(zipPath, (err) => {
+                        if (err) reject(err);
+                        else resolve();
+                    });
+                });
+                const zipStats = fs.statSync(zipPath);
+                console.log(`[HARVEST] Auto-compressed template "${templateFolder}" to ${path.basename(zipPath)} (${(zipStats.size / (1024 * 1024)).toFixed(2)} MB)`);
+                await fs.remove(destPath);
+            } catch (zErr) {
+                console.warn(`[HARVEST] Could not compress template to .zip, keeping uncompressed folder:`, zErr.message);
+            }
+        });
         
         cachedMapMods = null;
         return { success: true };
@@ -6136,7 +6142,48 @@ async function resetSavegameFieldStates(savePath) {
     }
 }
 
+async function processPostGameExit(saveIndex) {
+    if (!saveIndex) return;
+    try {
+        const fs25Path = getFs25Path();
+        const savePath = path.join(fs25Path, `savegame${saveIndex}`);
+        const careerPath = path.join(savePath, 'careerSavegame.xml');
+        if (!fs.existsSync(careerPath)) return;
+
+        const xml = await fs.readFile(careerPath, 'utf8');
+        const data = parser.parse(xml);
+        if (!data || !data.careerSavegame) return;
+        const settings = data.careerSavegame.settings || {};
+        const mapId = settings['@_mapId'] || settings.mapId;
+        const mapTitle = settings['@_mapTitle'] || settings.mapTitle;
+        let mapModName = null;
+        if (mapId && mapId.includes('.')) {
+            mapModName = mapId.split('.')[0];
+        }
+
+        const farmsFile = path.join(savePath, 'farms.xml');
+        const initFile = path.join(savePath, 'terrain.heightmap.png');
+        const placeablesFile = path.join(savePath, 'placeables.xml');
+        const hasEngineData = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm')) ||
+                              fs.existsSync(path.join(savePath, 'densityMap_ground.gdm')) ||
+                              fs.existsSync(path.join(savePath, 'guidedTour.xml'));
+        const isInitialized = fs.existsSync(farmsFile) && fs.existsSync(initFile) && fs.existsSync(placeablesFile) && hasEngineData;
+        const canAutoHarvest = isInitialized && (fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm')) || fs.existsSync(path.join(savePath, 'densityMap_ground.gdm')));
+
+        if (isInitialized && mapId && !isOfficialMap(mapId) && canAutoHarvest) {
+            const hasTemplate = await hasMapTemplate(mapId, mapTitle, mapModName);
+            if (!hasTemplate) {
+                console.log(`[AUTO-HARVEST] Automatically learning master template for map ${mapId} from slot ${saveIndex}...`);
+                await adoptSaveAsTemplate(saveIndex);
+            }
+        }
+    } catch (err) {
+        console.error(`[POST-GAME] Failed targeted exit processing for slot ${saveIndex}:`, err);
+    }
+}
+
 module.exports = {
+    processPostGameExit,
     adoptSaveAsTemplate,
     cleanupBridgeModFromSavegame,
     syncSubfolderMapDependencies,

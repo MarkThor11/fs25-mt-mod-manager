@@ -1667,8 +1667,8 @@ ipcMain.handle('game:launch', async (_, options) => {
 
       if (options.savegameIndex) {
         try {
-          // Trigger auto-harvesting background task
-          await savegameManager.getAllSavegames();
+          // Targeted template learning for ONLY the savegame slot that just closed
+          await savegameManager.processPostGameExit(options.savegameIndex);
         } catch (harvestErr) {
           console.error('[LAUNCH] Auto-harvesting failed on game exit:', harvestErr);
         }
