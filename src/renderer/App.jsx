@@ -50,9 +50,10 @@ export default function App() {
         
         useModHubStore.getState().loadCache();
         
-        // Load cached installed mods immediately so UI shows them right away
+        // Load cached installed mods and savegames immediately so UI shows them right away
         await useLocalModsStore.getState().loadCache();
         await useMapStore.getState().loadCache();
+        await useSavegameStore.getState().loadCache();
         
         // Startup ModHub Warming: 
         // Fetch the category menu structure immediately so it's ready before the user clicks "ModHub".

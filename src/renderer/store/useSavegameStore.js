@@ -24,16 +24,40 @@ export const useSavegameStore = create((set) => ({
     }));
   },
 
+  loadCache: async () => {
+    if (!window.api?.settings) return;
+    try {
+      const cached = await window.api.settings.get('savegamesCache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          set({ savegames: parsed });
+        }
+      }
+    } catch (e) {
+      console.error("[SAVEGAMES-STORE] Failed to load cache:", e);
+    }
+  },
+
   fetchSavegames: async () => {
     if (!window.api?.savegames) return;
-    set({ isLoading: true, error: null });
+    const currentSaves = useSavegameStore.getState().savegames;
+    // Only set global isLoading if we don't already have cached savegames displaying
+    if (!currentSaves || currentSaves.length === 0) {
+      set({ isLoading: true, error: null });
+    }
     try {
       const result = await window.api.savegames.getAll();
+      const freshSavegames = result.savegames || [];
       set({
-        savegames: result.savegames || [],
+        savegames: freshSavegames,
         isLoading: false,
         error: result.error || null,
       });
+      // Save to cache asynchronously
+      if (window.api?.settings && freshSavegames.length > 0) {
+        window.api.settings.set('savegamesCache', JSON.stringify(freshSavegames)).catch(() => {});
+      }
     } catch (err) {
       set({ error: err.message, isLoading: false });
     }
