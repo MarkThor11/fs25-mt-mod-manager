@@ -411,11 +411,16 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         'highlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
         'pdlchighlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
     };
-    if (OFFICIAL_FOLDER_MAP[targetMapIdNorm]) {
-        const expectedFolder = OFFICIAL_FOLDER_MAP[targetMapIdNorm];
+    const officialByTitle = {
+        'riverbendsprings': 'MapUS',
+        'zielonka': 'MapEU',
+        'hutanpantai': 'MapAS'
+    };
+    const officialTarget = OFFICIAL_FOLDER_MAP[targetMapIdNorm] || officialByTitle[targetTitleNorm];
+    if (officialTarget) {
         for (const folder of folders) {
             const cleanFolder = folder.replace(/\.zip$/i, '');
-            if (cleanFolder.toLowerCase() === expectedFolder.toLowerCase()) {
+            if (cleanFolder.toLowerCase() === officialTarget.toLowerCase()) {
                 const folderPath = path.join(templatesDir, folder);
                 const stat = await fs.stat(folderPath).catch(() => null);
                 if (!stat) continue;
@@ -881,6 +886,11 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     const includeStartVehicles = opts.includeStartVehicles !== false && opts.includeStartVehicles !== 'false';
     const startFarmFlag = includeStartFarm ? 'true' : 'false';
 
+    const isOfficialBaseMap = isOfficialMap(mapId) || isOfficialMap(mapModName) || 
+        ['riverbend springs', 'zielonka', 'hutan pantai'].includes((mapTitle || '').toLowerCase()) ||
+        ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes((mapId || '').toLowerCase()) ||
+        ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes((mapModName || '').toLowerCase());
+
     // 1. Prepare Slot
     if (fs.existsSync(slotPath)) {
         await fs.emptyDir(slotPath);
@@ -897,7 +907,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     const GENERIC_MAP_IDS = new Set([
         'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
         'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
-        'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek'
+        'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
+        'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpack', 'mapforest'
     ]);
 
     let modZipPath = null;
@@ -962,7 +973,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
         return null;
     };
-    modZipPath = findMapZip(mapModName, mapTitle, mapId, opts.mapFilePath);
+    if (!isOfficialBaseMap) {
+        modZipPath = findMapZip(mapModName, mapTitle, mapId, opts.mapFilePath);
+    }
 
     // 2. Identify and Copy Template
     const resolvedFolder = await resolveTemplateFolder(mapId, mapModName, mapTitle);
@@ -997,7 +1010,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     let finalMods = (Array.isArray(selectedMods) ? selectedMods : []).filter(m => m && m.modName !== 'FS25_rememberPositions');
     // Add map mod if not already there
     const mapBaseName = (mapModName || '').split('.')[0];
-    const matchedMapMod = allMods.find(m => {
+    const matchedMapMod = isOfficialBaseMap ? null : allMods.find(m => {
         if (!m || !m.modName) return false;
         if (modZipPath && m.filePath && path.resolve(m.filePath).toLowerCase() === path.resolve(modZipPath).toLowerCase()) {
             return true;
@@ -1013,7 +1026,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                (idLow && !GENERIC_MAP_IDS.has(idLow) && m.mapId && m.mapId.toLowerCase() === idLow))) ||
                mLow === rawLow || mLow === baseLow || fLow === baseLow || fLow === rawLow;
     });
-    const trueMapModName = matchedMapMod ? matchedMapMod.modName : (mapModName || mapBaseName);
+    const canonicalBaseMapName = isOfficialMap(mapId) ? mapId : ((mapTitle || '').toLowerCase() === 'riverbend springs' ? 'MapUS' : (mapTitle || '').toLowerCase() === 'zielonka' ? 'MapEU' : 'MapAS');
+    const trueMapModName = isOfficialBaseMap ? canonicalBaseMapName : (matchedMapMod ? matchedMapMod.modName : (mapModName || mapBaseName));
 
     let mapModObj = finalMods.find(m => {
         if (!m || !m.modName) return false;
@@ -1021,7 +1035,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         return mLow === (mapModName || '').toLowerCase() || mLow === mapBaseName.toLowerCase() || mLow === (trueMapModName || '').toLowerCase();
     });
 
-    if ((mapModName || trueMapModName) && !mapModObj) {
+    if (!isOfficialBaseMap && (mapModName || trueMapModName) && !mapModObj) {
         mapModObj = { 
             modName: trueMapModName, 
             title: mapTitle || matchedMapMod?.title || trueMapModName, 
@@ -1029,7 +1043,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             required: true 
         };
         finalMods.unshift(mapModObj);
-    } else if (mapModObj) {
+    } else if (!isOfficialBaseMap && mapModObj) {
         mapModObj.required = true;
         mapModObj.modName = trueMapModName;
         if (matchedMapMod?.version) mapModObj.version = matchedMapMod.version;
@@ -1135,15 +1149,14 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     // Determine engineMapId:
     // For official base maps, use canonical base ID (MapUS, MapEU, MapAS, pdlc_highlandsFishingPack...).
     // For custom mod maps, FS25 engine REQUIRES {mapModName}.{internalMapId} (e.g. FS25_BackRoadsCounty4x.mapUS)
-    const effectiveMapModName = trueMapModName || mapModName;
-    const isOfficialBaseMap = !effectiveMapModName || ['mapus', 'mapeu', 'mapas'].includes((effectiveMapModName || '').toLowerCase()) || (effectiveMapModName || '').toLowerCase().includes('highlandsfishing');
+    const effectiveMapModName = isOfficialBaseMap ? '' : (trueMapModName || mapModName);
     let engineMapId = internalMapId || mapId;
 
     if (isOfficialBaseMap) {
         const lowEngineId = (engineMapId || '').toLowerCase();
-        if (lowEngineId === 'mapus') engineMapId = 'MapUS';
-        else if (lowEngineId === 'mapeu') engineMapId = 'MapEU';
-        else if (lowEngineId === 'mapas') engineMapId = 'MapAS';
+        if (lowEngineId === 'mapus' || (mapTitle || '').toLowerCase() === 'riverbend springs') engineMapId = 'MapUS';
+        else if (lowEngineId === 'mapeu' || (mapTitle || '').toLowerCase() === 'zielonka') engineMapId = 'MapEU';
+        else if (lowEngineId === 'mapas' || (mapTitle || '').toLowerCase() === 'hutan pantai') engineMapId = 'MapAS';
         else if (lowEngineId.includes('highlandsfishing') || (effectiveMapModName || '').toLowerCase().includes('highlandsfishing')) {
             engineMapId = 'pdlc_highlandsFishingPack.HighlandsFishingMap';
         }
@@ -4949,7 +4962,7 @@ function findMapModInSavegame(xmlData, localMods = []) {
     const rawMapId = mapIdMatch ? mapIdMatch[1].trim() : null;
 
     // Skip default base-game maps
-    if (rawMapId && ['MapUS', 'MapEU', 'MapAS', 'HighlandsFishingMap'].includes(rawMapId)) {
+    if (rawMapId && (isOfficialMap(rawMapId) || ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(rawMapId.toLowerCase()))) {
         return null;
     }
 
@@ -4966,7 +4979,8 @@ function findMapModInSavegame(xmlData, localMods = []) {
         const GENERIC_MAP_IDS = new Set([
             'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
             'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
-            'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek'
+            'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
+            'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpack', 'mapforest'
         ]);
         if (!GENERIC_MAP_IDS.has(rawMapId.toLowerCase())) {
             const matchByMapId = localMods.find(m => m.isMap && m.mapId && m.mapId.toLowerCase() === rawMapId.toLowerCase());
@@ -6074,11 +6088,19 @@ async function ensureSavegameDensityMaps(savePath) {
                     let expectedRev = '1';
                     const modPath = await resolveMapModPath(savePath);
                     if (modPath && fs.existsSync(modPath)) {
-                        const hasFruits = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
-                        const hasGround = fs.existsSync(path.join(savePath, 'densityMap_ground.gdm'));
-                        if (!hasFruits || !hasGround) {
-                            console.log(`[DENSITY-CHECK] Save slot at ${savePath} missing density maps! Extracting from ${path.basename(modPath)}...`);
-                            await extractMapDensityFiles(modPath, savePath, false);
+                        const fruitsPath = path.join(savePath, 'densityMap_fruits.gdm');
+                        const groundPath = path.join(savePath, 'densityMap_ground.gdm');
+                        const fruitsValid = fs.existsSync(fruitsPath) && fs.statSync(fruitsPath).size > 1024;
+                        const groundValid = fs.existsSync(groundPath) && fs.statSync(groundPath).size > 1024;
+                        if (!fruitsValid || !groundValid) {
+                            console.log(`[DENSITY-CHECK] Save slot at ${savePath} missing or empty density maps! Extracting from ${path.basename(modPath)}...`);
+                            await extractMapDensityFiles(modPath, savePath, true);
+                        }
+
+                        const farmlandPath = path.join(savePath, 'farmland.xml');
+                        if (!fs.existsSync(farmlandPath)) {
+                            console.log(`[DENSITY-CHECK] Save slot at ${savePath} missing farmland.xml! Setting up farmlands...`);
+                            await setupSavegameFarmlands(savePath, modPath, mapId, null, true);
                         }
 
                         try {
