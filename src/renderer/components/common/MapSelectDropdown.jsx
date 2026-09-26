@@ -87,30 +87,21 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
 
     return (mod) => {
       if (!templates || templates.length === 0) return false;
-      const mName = norm(mod.modName);
-      const mFolder = norm(mod.folder || '');
-      const mFileName = norm(mod.fileName?.replace(/\.zip$/i, '') || '');
-      const uName = ultraNorm(mod.modName);
-      const mTitle = norm(mod.title);
+      const mNameLow = (mod.modName || '').toLowerCase();
 
       return templates.some((t) => {
         const tId = norm(t.id);
         const utId = ultraNorm(t.id);
-
-        // A community mod map can NEVER match an official base game template
         if (OFFICIAL_TEMPLATES.has(tId) || OFFICIAL_TEMPLATES.has(utId)) return false;
 
-        // 1. Direct non-generic mapId match
-        const modMapIdNorm = norm(mod.mapId);
-        if (t.mapId && mod.mapId && norm(t.mapId) === modMapIdNorm && !GENERIC_MAP_IDS.has(modMapIdNorm)) return true;
+        const tModName = (t.modName || '').toLowerCase();
+        const cleanTId = (t.id || '').replace(/\.zip$/i, '').toLowerCase();
 
-        // 2. Direct modName match
-        const utMod = ultraNorm(t.modName);
-        if (utMod && uName && utMod === uName) return true;
+        // 1. Direct exact modName match (e.g. FS25_Cows_Farm vs FS25_Cows_Farm_4X)
+        if (tModName && mNameLow && tModName === mNameLow) return true;
 
-        // 3. Exact template folder modName match
-        const cleanTId = (t.id || '').replace(/\.zip$/i, '');
-        if (ultraNorm(cleanTId) === uName) return true;
+        // 2. Exact template zip filename match
+        if (cleanTId && mNameLow && cleanTId === mNameLow) return true;
 
         return false;
       });
