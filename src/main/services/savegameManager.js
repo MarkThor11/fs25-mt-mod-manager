@@ -5774,41 +5774,7 @@ async function stashSinglePlayerSaves() {
     }
 }
 
-/**
- * Restores all stashed Single Player save slots from quarantine (stashed_sp_saves)
- * back to their active savegame1..20 slot folders in FS25 root.
- */
-async function restoreStashedSinglePlayerSaves() {
-    try {
-        const fs25Path = getFs25Path();
-        const stashPath = path.join(fs25Path, 'stashed_sp_saves');
-        if (!fs.existsSync(stashPath)) return { success: true, restoredCount: 0 };
 
-        const items = await fs.readdir(stashPath);
-        let restoredCount = 0;
-
-        for (const item of items) {
-            if (/^savegame\d+$/i.test(item)) {
-                const sourceStash = path.join(stashPath, item);
-                const targetSave = path.join(fs25Path, item);
-                if (fs.existsSync(sourceStash)) {
-                    if (fs.existsSync(targetSave)) {
-                        await fs.remove(targetSave);
-                    }
-                    await fs.move(sourceStash, targetSave);
-                    restoredCount++;
-                    console.log(`[RESTORE-SAVES] Restored Single Player Save ${item} to active slots.`);
-                }
-            }
-        }
-
-        try { await fs.remove(stashPath); } catch (e) {}
-        return { success: true, restoredCount };
-    } catch (err) {
-        console.error('[RESTORE-SAVES] Error restoring single player saves:', err);
-        return { success: false, error: err.message };
-    }
-}
 
 /**
  * Exports a savegame as a dedicated multiplayer server pack.
