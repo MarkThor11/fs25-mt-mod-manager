@@ -1664,12 +1664,22 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         console.warn('[CREATE] Failed to scan placeables for required mods:', placeErr.message);
     }
 
-    // Configure starting farmlands accurately for template-based saves.
-    // For fresh saves requiring engine init, omitting farmland.xml allows the FS25 engine
-    // to automatically parse the map's farmlands & fields config and generate full starting field crops!
-    if (!requiresEngineInit) {
-        await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
+    // Extract starting field crops, ground density maps, and infoLayers from map mod ZIP if missing or fresh save
+    if (modZipPath && fs.existsSync(modZipPath)) {
+        try {
+            const hasFruitsGdm = fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'));
+            if (!hasFruitsGdm || requiresEngineInit) {
+                console.log(`[CREATE] Extracting author field crops and density maps from map mod ZIP: ${path.basename(modZipPath)}`);
+                await extractMapDensityFiles(modZipPath, slotPath, false);
+            }
+        } catch (e) {
+            console.warn('[CREATE] Failed to extract map density maps:', e.message);
+        }
     }
+
+    // Configure starting farmlands accurately for both template and fresh mod saves
+    await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
+
 
     if (requiresEngineInit || !fs.existsSync(path.join(slotPath, 'farms.xml'))) {
         const realUserId = await getPersistentUniqueUserId(fs25Path);
@@ -6063,7 +6073,14 @@ async function ensureSavegameDensityMaps(savePath) {
 
                     let expectedRev = '1';
                     const modPath = await resolveMapModPath(savePath);
-                    if (modPath && modPath.toLowerCase().endsWith('.zip') && fs.existsSync(modPath)) {
+                    if (modPath && fs.existsSync(modPath)) {
+                        const hasFruits = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
+                        const hasGround = fs.existsSync(path.join(savePath, 'densityMap_ground.gdm'));
+                        if (!hasFruits || !hasGround) {
+                            console.log(`[DENSITY-CHECK] Save slot at ${savePath} missing density maps! Extracting from ${path.basename(modPath)}...`);
+                            await extractMapDensityFiles(modPath, savePath, false);
+                        }
+
                         try {
                             const AdmZip = require('adm-zip');
                             const zip = new AdmZip(modPath);
