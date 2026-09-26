@@ -203,14 +203,14 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
           padding: '13px 16px',
           fontSize: 15,
           background: 'var(--bg-tertiary)',
-          border: selectedInfo.hasTemplate || mapHasTemplate ? '1px solid var(--accent)' : '1px solid var(--border)',
+          border: selectedInfo.hasTemplate ? '1px solid var(--accent)' : '1px solid var(--border)',
           borderRadius: 8,
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 12,
-          boxShadow: (selectedInfo.hasTemplate || mapHasTemplate) ? '0 0 12px rgba(74, 222, 128, 0.12)' : 'none',
+          boxShadow: selectedInfo.hasTemplate ? '0 0 12px rgba(74, 222, 128, 0.12)' : 'none',
           transition: 'all 0.2s ease',
           userSelect: 'none'
         }}
@@ -223,7 +223,7 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-          {(selectedInfo.hasTemplate || mapHasTemplate) && (
+          {selectedInfo.hasTemplate && (
             <div style={{ display: 'flex', alignItems: 'center', color: 'var(--accent)', flexShrink: 0 }}>
               <Zap size={16} fill="var(--accent)" />
             </div>
@@ -240,7 +240,7 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
           >
             {selectedInfo.title}
           </span>
-          {(selectedInfo.hasTemplate || mapHasTemplate) && (
+          {selectedInfo.hasTemplate && (
             <span
               style={{
                 fontSize: 9,
