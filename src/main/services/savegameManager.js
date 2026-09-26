@@ -709,6 +709,72 @@ async function getPersistentUniqueUserId(fs25Path) {
 }
 
 /**
+ * Ensure all fields across the map have varied starting crops populated in fields.xml.
+ */
+async function ensureAllFieldsHaveCrops(slotPath) {
+    if (!slotPath || !fs.existsSync(slotPath)) return;
+    const fieldsPath = path.join(slotPath, 'fields.xml');
+    const farmlandPath = path.join(slotPath, 'farmland.xml');
+
+    let fieldIds = [];
+    if (fs.existsSync(farmlandPath)) {
+        try {
+            const flXml = await fs.readFile(farmlandPath, 'utf8');
+            const matches = flXml.matchAll(/farmland\s+id=["'](\d+)["']/g);
+            for (const m of matches) {
+                fieldIds.push(parseInt(m[1]));
+            }
+        } catch (_) {}
+    }
+    if (fieldIds.length === 0) {
+        fieldIds = Array.from({ length: 50 }, (_, i) => i + 1);
+    }
+
+    let existingCount = 0;
+    if (fs.existsSync(fieldsPath)) {
+        try {
+            const xml = await fs.readFile(fieldsPath, 'utf8');
+            const matches = xml.matchAll(/<field\s+[^>]*>/gi);
+            for (const m of matches) {
+                if (!/plannedFruit=["']FALLOW["']/i.test(m[0])) existingCount++;
+            }
+        } catch (_) {}
+    }
+
+    if (existingCount < 10 && fieldIds.length > 0) {
+        const CROPS = [
+            { fruit: 'WHEAT', ground: 'HARVEST_READY', growth: 'HARVESTREADY' },
+            { fruit: 'BARLEY', ground: 'HARVEST_READY', growth: 'HARVESTREADY' },
+            { fruit: 'CANOLA', ground: 'HARVEST_READY', growth: 'HARVESTREADY' },
+            { fruit: 'MAIZE', ground: 'PLANTED', growth: 'GREENBIG' },
+            { fruit: 'SOYBEAN', ground: 'HARVEST_READY', growth: 'HARVESTREADY' },
+            { fruit: 'OAT', ground: 'HARVEST_READY', growth: 'HARVESTREADY' },
+            { fruit: 'SUNFLOWER', ground: 'PLANTED', growth: 'GREENBIG' },
+            { fruit: 'COTTON', ground: 'HARVEST_READY', growth: 'HARVESTREADY' },
+            { fruit: 'SORGHUM', ground: 'PLANTED', growth: 'GREENMIDDLE' },
+            { fruit: 'FIELDGRASS', ground: 'GRASS', growth: 'HARVESTREADY' },
+            { fruit: 'ALFALFA', ground: 'GRASS', growth: 'HARVESTREADY' }
+        ];
+
+        let outXml = `<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n<map xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../shared/xml/schema/fields.xsd">\n    <fields>\n`;
+
+        for (let i = 0; i < fieldIds.length; i++) {
+            const fId = fieldIds[i];
+            const crop = CROPS[i % CROPS.length];
+            outXml += `        <field fieldId="${fId}" weedState="0" plowLevel="1" limeLevel="3">\n`;
+            outXml += `            <fruit type="${crop.fruit}" growthState="${crop.growth}"/>\n`;
+            outXml += `            <ground type="${crop.ground}" angle="0" />\n`;
+            outXml += `            <spray type="FERTILIZER" level="2" />\n`;
+            outXml += `        </field>\n`;
+        }
+
+        outXml += `    </fields>\n</map>\n`;
+        await fs.writeFile(fieldsPath, outXml, 'utf8');
+        console.log(`[FIELDS] Automatically populated all ${fieldIds.length} fields with varied starting crops in ${fieldsPath}`);
+    }
+}
+
+/**
  * Configure farmland ownership in savegame farmland.xml based on game mode and map definitions.
  */
 async function setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm) {
@@ -1694,6 +1760,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     // Configure starting farmlands accurately for template-based saves.
     if (!requiresEngineInit || modZipPath) {
         await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
+        await ensureAllFieldsHaveCrops(slotPath);
     }
 
     if (requiresEngineInit || !fs.existsSync(path.join(slotPath, 'farms.xml'))) {
