@@ -142,7 +142,7 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
 
   // Format modded maps list
   const moddedMaps = useMemo(() => {
-    return mods
+    const rawList = mods
       .filter((m) => m.isMap && !m.isDLC)
       .map((m) => {
         const isCP =
@@ -169,6 +169,24 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
           mod: m
         };
       });
+
+    // Count occurrences of each title to disambiguate duplicate titles
+    const titleCounts = new Map();
+    rawList.forEach((item) => {
+      const key = item.title.toLowerCase();
+      titleCounts.set(key, (titleCounts.get(key) || 0) + 1);
+    });
+
+    return rawList.map((item) => {
+      if ((titleCounts.get(item.title.toLowerCase()) || 0) > 1) {
+        const modTag = item.mod.modName || (item.mod.fileName ? item.mod.fileName.replace(/\.zip$/i, '') : '');
+        return {
+          ...item,
+          title: `${item.title} (${modTag})`
+        };
+      }
+      return item;
+    });
   }, [mods, checkModHasTemplate]);
 
   // Find currently selected item title and template status
