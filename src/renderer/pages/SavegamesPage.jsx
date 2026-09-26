@@ -4215,15 +4215,8 @@ export default function SavegamesPage() {
 
                                 <div>
                                     <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>
-                                        SELECT MAP {createMap && mapHasTemplate && (
-                                            (() => {
-                                                const modName = createMap.split('|')[2] || '';
-                                                // Ensure standard map vs 4x variant distinction in header badge
-                                                if (modName && modName.includes('crossplay') && !availableTemplates.some(t => t.modName === modName)) {
-                                                    return null;
-                                                }
-                                                return <span style={{ color: 'var(--accent)', marginLeft: 8 }}><Zap size={10} fill="var(--accent)" /> AUTOMATED</span>;
-                                            })()
+                                        SELECT MAP {mapHasTemplate && (
+                                            <span style={{ color: 'var(--accent)', marginLeft: 8 }}><Zap size={10} fill="var(--accent)" /> AUTOMATED</span>
                                         )}
                                     </label>
                                     <MapSelectDropdown 
