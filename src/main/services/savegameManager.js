@@ -839,11 +839,11 @@ async function setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModN
                 for (const id of defaultFarmIds) {
                     const reg = new RegExp(`(<farmland\\s+[^>]*id=["']${id}["'][^>]*farmId=["'])[0-9]+(["'])`, 'i');
                     if (reg.test(existingXml)) {
-                        existingXml = existingXml.replace(reg, '$11$2');
+                        existingXml = existingXml.replace(reg, (match, p1, p2) => p1 + '1' + p2);
                     } else {
                         const regNoFarmId = new RegExp(`(<farmland\\s+[^>]*id=["']${id}["'])([^>]*\/?>)`, 'i');
                         if (regNoFarmId.test(existingXml)) {
-                            existingXml = existingXml.replace(regNoFarmId, '$1 farmId="1"$2');
+                            existingXml = existingXml.replace(regNoFarmId, (match, p1, p2) => p1 + ' farmId="1"' + p2);
                         }
                     }
                 }
@@ -937,6 +937,30 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 if (!m.filePath || !m.filePath.toLowerCase().endsWith('.zip')) continue;
                 const mMapIdLow = (m.mapId || '').toLowerCase();
                 if (mMapIdLow === idLow) return m.filePath;
+            }
+        }
+
+        // Pass 4: Fuzzy normalized match for custom map mods with suffixes (e.g. _SampleModMap, _crossplay)
+        const clean = (str) => (str || '').toLowerCase()
+            .replace(/_samplemodmap$/i, '')
+            .replace(/_basemap$/i, '')
+            .replace(/_crossplay$/i, '')
+            .replace(/[^a-z0-9]/g, '');
+
+        const nClean = clean(name);
+        const tClean = clean(title);
+        const idClean = clean(id);
+
+        for (const m of allMods) {
+            if (!m.filePath || !m.filePath.toLowerCase().endsWith('.zip')) continue;
+            const mNameClean = clean(m.modName);
+            const mFileClean = clean(path.basename(m.filePath, '.zip'));
+            const mTitleClean = clean(m.title);
+
+            if ((nClean && (mNameClean === nClean || mFileClean === nClean)) ||
+                (tClean && mTitleClean === tClean && tClean.length >= 4) ||
+                (idClean && !GENERIC_MAP_IDS.has(idClean) && (mNameClean === idClean || mFileClean === idClean))) {
+                return m.filePath;
             }
         }
 
@@ -1644,10 +1668,31 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         console.warn('[CREATE] Failed to scan placeables for required mods:', placeErr.message);
     }
 
+    // Extract pristine starting field crops and density maps from map mod ZIP if template contains fallow/bare fields
+    if (modZipPath && fs.existsSync(modZipPath)) {
+        try {
+            const slotFieldsPath = path.join(slotPath, 'fields.xml');
+            let needsFieldsRestore = true;
+            if (fs.existsSync(slotFieldsPath)) {
+                const fContent = await fs.readFile(slotFieldsPath, 'utf8');
+                if (fContent.includes('<fruit') && !/plannedFruit=["']FALLOW["']/gi.test(fContent)) {
+                    needsFieldsRestore = false;
+                }
+            }
+            const slotFruitsGdm = path.join(slotPath, 'densityMap_fruits.gdm');
+            let needsGdmRestore = !fs.existsSync(slotFruitsGdm) || fs.statSync(slotFruitsGdm).size < 2000000;
+
+            if (needsFieldsRestore || needsGdmRestore) {
+                console.log(`[CREATE] Restoring pristine author field crops and density maps from map mod ZIP: ${path.basename(modZipPath)}`);
+                await extractMapDensityFiles(modZipPath, slotPath, true);
+            }
+        } catch (e) {
+            console.warn('[CREATE] Failed to restore pristine map density maps:', e.message);
+        }
+    }
+
     // Configure starting farmlands accurately for template-based saves.
-    // For fresh/ghost saves requiring engine init, omitting farmland.xml allows the FS25 engine
-    // to automatically parse the map's farmlands & fields config and generate full starting field crops!
-    if (!requiresEngineInit) {
+    if (!requiresEngineInit || modZipPath) {
         await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
     }
 
