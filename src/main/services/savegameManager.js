@@ -283,20 +283,17 @@ async function getMapTemplates() {
             const tModClean = (templateModName || '').toLowerCase();
             const fLower = baseName.toLowerCase();
 
-            const matchedMod = mapMods.find(m => {
-                const mName = (m.modName || '').toLowerCase();
-
-                // 1. Exact modName match via templateModName
-                if (tModClean && mName === tModClean) return true;
-
-                // 2. Exact match on baseName
-                if (mName && fLower === mName) return true;
-
-                // 3. Exact modName matches baseName prefix (e.g. FS25_Cows_Farm_4X_SampleModMap.zip matches FS25_Cows_Farm_4X)
-                if (mName && fLower.startsWith(mName + '_')) return true;
-
-                return false;
-            });
+            // Find the most specific matching mod (longest matching modName first)
+            const matchedMod = mapMods
+                .filter(m => {
+                    const mName = (m.modName || '').toLowerCase();
+                    if (!mName) return false;
+                    if (tModClean && mName === tModClean) return true;
+                    if (fLower === mName) return true;
+                    if (fLower.startsWith(mName + '_')) return true;
+                    return false;
+                })
+                .sort((a, b) => (b.modName || '').length - (a.modName || '').length)[0] || null;
 
             let dlcInfo = null;
             if (!matchedMod) {
