@@ -4170,7 +4170,7 @@ export default function SavegamesPage() {
                     </button>
                 </div>
 
-                <div style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
+                <div style={{ flex: 1, overflow: 'visible', padding: 32 }}>
                     {createActiveTab === 'basic' && (
                         <div className="animate-fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
