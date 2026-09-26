@@ -2942,26 +2942,16 @@ async function deleteSavegame(savePath) {
 
         await fs.remove(savePath);
 
-        // Thorough cleanup: Also remove any virtual active mods staging directory for this slot
+        // Fast cleanup: Remove virtual active mods staging directory for this slot
         if (slotIndex) {
             try {
-                const modManager = require('./modManager');
-                const allPaths = modManager.getModsPaths ? modManager.getModsPaths() : [];
-                const rootsToCheck = [
-                    (app && app.getPath) ? app.getPath('userData') : path.join(process.env.APPDATA, 'fs25-mt-mod-manager'),
-                    ...allPaths.map(p => {
-                        const parsed = path.parse(p);
-                        return path.join(parsed.root || path.dirname(p), '.fs25_virtual_mods');
-                    })
-                ];
-                for (const base of rootsToCheck) {
-                    const stagingDir = path.join(base, `VirtualActiveMods_Savegame${slotIndex}`);
-                    if (fs.existsSync(stagingDir)) {
-                        await fs.remove(stagingDir).catch(() => {});
-                    }
+                const fs25DataRoot = pathProvider.getFS25DataRoot();
+                const primaryVirtualDir = path.join(fs25DataRoot, '.fs25_virtual_mods', `VirtualActiveMods_Savegame${slotIndex}`);
+                if (fs.existsSync(primaryVirtualDir)) {
+                    await fs.remove(primaryVirtualDir).catch(() => {});
                 }
             } catch (e) {
-                console.warn(`[SAVEGAMES] Note: Non-critical virtual folder cleanup for slot ${slotIndex}:`, e.message);
+                console.warn(`[SAVEGAMES] Note: Virtual folder cleanup for slot ${slotIndex}:`, e.message);
             }
         }
 
