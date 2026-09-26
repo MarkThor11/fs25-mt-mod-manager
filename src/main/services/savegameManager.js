@@ -6072,7 +6072,7 @@ async function ensureSavegameDensityMaps(savePath) {
             } catch (e) {}
         }
 
-        // 2. Ensure densityMapRevision in careerSavegame.xml matches mod map requirements (Revision 1 for mod maps vs 4 for base game)
+        // 2. Ensure densityMap_fruits.gdm and densityMap_ground.gdm exist for mod maps
         const careerPath = path.join(savePath, 'careerSavegame.xml');
         if (fs.existsSync(careerPath)) {
             try {
@@ -6081,6 +6081,16 @@ async function ensureSavegameDensityMaps(savePath) {
                 const settings = parsed?.careerSavegame?.settings || {};
                 const mapId = settings['@_mapId'] || settings.mapId;
                 if (mapId && !isOfficialMap(mapId)) {
+                    const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
+                    const hasGroundGdm = fs.existsSync(path.join(savePath, 'densityMap_ground.gdm'));
+                    if (!hasFruitsGdm || !hasGroundGdm) {
+                        const modPath = await resolveMapModPath(savePath);
+                        if (modPath && fs.existsSync(modPath)) {
+                            console.log(`[DENSITY-CHECK] Save slot at ${savePath} missing density maps! Extracting pristine field files from ${path.basename(modPath)}...`);
+                            await extractMapDensityFiles(modPath, savePath, false);
+                        }
+                    }
+
                     let expectedRev = '1';
                     const modPath = await resolveMapModPath(savePath);
                     if (modPath && modPath.toLowerCase().endsWith('.zip') && fs.existsSync(modPath)) {
