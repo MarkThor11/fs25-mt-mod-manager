@@ -133,13 +133,15 @@ function getTemplatesPath() {
                     if (!fs.existsSync(dstMf)) {
                         fs.copySync(srcMf, dstMf);
                     } else {
-                        // Ensure vehicles.xml, careerSavegame.xml, and heightmap exist in target master folder
-                        for (const file of ['vehicles.xml', 'careerSavegame.xml', 'terrain.heightmap.png']) {
+                        // Ensure vehicles.xml, careerSavegame.xml, densityMap_fruits_growthState.xml, and heightmap exist in target master folder
+                        for (const file of ['vehicles.xml', 'careerSavegame.xml', 'densityMap_fruits_growthState.xml', 'terrain.heightmap.png']) {
                             const sf = path.join(srcMf, file);
                             const df = path.join(dstMf, file);
-                            if (fs.existsSync(sf) && (!fs.existsSync(df) || fs.statSync(df).size < 100)) {
-                                fs.copySync(sf, df);
-                                console.log(`[TEMPLATES] Synced missing master template file ${mf}/${file}`);
+                            if (fs.existsSync(sf)) {
+                                if (!fs.existsSync(df) || fs.statSync(df).size < 50 || file === 'densityMap_fruits_growthState.xml') {
+                                    fs.copySync(sf, df);
+                                    console.log(`[TEMPLATES] Synced master template file ${mf}/${file}`);
+                                }
                             }
                         }
                     }
@@ -6024,6 +6026,20 @@ async function resolveMapModPath(savePath) {
 async function ensureSavegameDensityMaps(savePath) {
     if (!savePath || !fs.existsSync(savePath)) return 0;
     try {
+        // 1. Sanitize densityMap_fruits_growthState.xml if it contains a crop-wipe mask or bad index
+        const growthXmlPath = path.join(savePath, 'densityMap_fruits_growthState.xml');
+        if (fs.existsSync(growthXmlPath)) {
+            try {
+                const growthContent = await fs.readFile(growthXmlPath, 'utf8');
+                if (growthContent.includes('growthMasks64') || growthContent.includes('4294967295')) {
+                    const cleanGrowthXml = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<foliageCropsUpdater currentGrowthIndex="0" applyGrowthCurrentIndex="-1" applyGrowthMaxTimePerFrame="1.000000">\n</foliageCropsUpdater>\n';
+                    await fs.writeFile(growthXmlPath, cleanGrowthXml);
+                    console.log(`[DENSITY-CHECK] Sanitized crop-wiping growthState XML in ${savePath}`);
+                }
+            } catch (e) {}
+        }
+
+        // 2. Ensure density maps exist
         const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm')) || 
                              fs.existsSync(path.join(savePath, 'densityMap_ground.gdm'));
         if (!hasFruitsGdm) {
