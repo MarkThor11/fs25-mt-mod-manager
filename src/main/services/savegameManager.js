@@ -126,6 +126,12 @@ function getTemplatesPath() {
 
         if (bundledTemplates) {
             const masterFolders = ['MapAS', 'MapEU', 'MapUS', 'pdlc_highlandsFishingPack_HighlandsFishingMap'];
+            const filesToPurge = [
+                'fields.xml', 'fieldGround.xml', 'densityMap_fruits_growthState.xml',
+                'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml',
+                'terrain.lod.type.cache', 'terrain.nmap.cache', 'terrain.occluders.cache',
+                'vehicleNavigationCostmap.dat'
+            ];
             for (const mf of masterFolders) {
                 const srcMf = path.join(bundledTemplates, mf);
                 const dstMf = path.join(p, mf);
@@ -133,17 +139,36 @@ function getTemplatesPath() {
                     if (!fs.existsSync(dstMf)) {
                         fs.copySync(srcMf, dstMf);
                     } else {
-                        // Ensure vehicles.xml, careerSavegame.xml, densityMap_fruits_growthState.xml, and heightmap exist in target master folder
-                        for (const file of ['vehicles.xml', 'careerSavegame.xml', 'densityMap_fruits_growthState.xml', 'terrain.heightmap.png']) {
+                        // Ensure all essential template files match pristine master versions
+                        const filesToCheck = fs.readdirSync(srcMf);
+                        for (const file of filesToCheck) {
                             const sf = path.join(srcMf, file);
                             const df = path.join(dstMf, file);
-                            if (fs.existsSync(sf)) {
-                                if (!fs.existsSync(df) || fs.statSync(df).size < 50 || file === 'densityMap_fruits_growthState.xml') {
+                            if (fs.existsSync(sf) && fs.statSync(sf).isFile()) {
+                                if (!fs.existsSync(df) || fs.statSync(df).size !== fs.statSync(sf).size) {
                                     fs.copySync(sf, df);
                                     console.log(`[TEMPLATES] Synced master template file ${mf}/${file}`);
                                 }
                             }
                         }
+                    }
+                    // Purge bad/bloated/crop-freezing files from user master template folder
+                    for (const badFile of filesToPurge) {
+                        const badPath = path.join(dstMf, badFile);
+                        if (fs.existsSync(badPath)) {
+                            try { fs.unlinkSync(badPath); } catch (_) {}
+                        }
+                    }
+                    // Ensure careerSavegame.xml has densityMapRevision 1 matching official maps
+                    const cPath = path.join(dstMf, 'careerSavegame.xml');
+                    if (fs.existsSync(cPath)) {
+                        try {
+                            let cXml = fs.readFileSync(cPath, 'utf8');
+                            if (cXml.includes('<densityMapRevision>4</densityMapRevision>')) {
+                                cXml = cXml.replace(/<densityMapRevision>4<\/densityMapRevision>/g, '<densityMapRevision>1</densityMapRevision>');
+                                fs.writeFileSync(cPath, cXml);
+                            }
+                        } catch (_) {}
                     }
                 }
             }
@@ -1194,9 +1219,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.loadDefaultFarm = startFarmFlag;
             savegameData.careerSavegame.settings.loadDefaultVehicles = startFarmFlag;
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
-            if (!isOfficialBaseMap) {
-                savegameData.careerSavegame.settings.densityMapRevision = '1';
-            }
+            savegameData.careerSavegame.settings.densityMapRevision = '1';
 
             // Critically ensure valid="true" is present — without it FS25 engine treats slot as empty
             savegameData.careerSavegame['@_valid'] = 'true';
@@ -1437,7 +1460,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     loadDefaultFarm: startFarmFlag,
                     loadDefaultVehicles: startFarmFlag,
                     isCrossPlatformSavegame: 'false',
-                    densityMapRevision: isOfficialBaseMap ? '4' : '1'
+                    densityMapRevision: '1'
                 },
                 statistics: {
                     money: String(money),
@@ -5931,16 +5954,11 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
                 if (entry.isDirectory) continue;
                 const baseName = path.basename(entry.entryName);
                 const lowerBase = baseName.toLowerCase();
-                const isFieldOrDensity = 
-                    lowerBase.startsWith('densitymap_') || 
-                    lowerBase.startsWith('infolayer_') ||
-                    lowerBase === 'fields.xml' ||
-                    lowerBase === 'fieldground.xml' ||
-                    lowerBase === 'weed_growthstate.xml' ||
-                    lowerBase === 'stone_growthstate.xml' ||
-                    lowerBase === 'densitymapheight.xml';
+                const isDensityFile = 
+                    (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm') || 
+                    lowerBase.startsWith('infolayer_');
 
-                if (isFieldOrDensity && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.grle') || lowerBase.endsWith('.png') || lowerBase.endsWith('.xml'))) {
+                if (isDensityFile && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.grle') || lowerBase.endsWith('.png'))) {
                     const normPath = entry.entryName.replace(/\\/g, '/').toLowerCase();
                     const existing = candidateMap.get(lowerBase);
                     if (!existing) {
@@ -5972,16 +5990,11 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
                         await processDirectory(fullP);
                     } else {
                         const lowerBase = item.name.toLowerCase();
-                        const isFieldOrDensity = 
-                            lowerBase.startsWith('densitymap_') || 
-                            lowerBase.startsWith('infolayer_') ||
-                            lowerBase === 'fields.xml' ||
-                            lowerBase === 'fieldground.xml' ||
-                            lowerBase === 'weed_growthstate.xml' ||
-                            lowerBase === 'stone_growthstate.xml' ||
-                            lowerBase === 'densitymapheight.xml';
+                        const isDensityFile = 
+                            (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm') || 
+                            lowerBase.startsWith('infolayer_');
 
-                        if (isFieldOrDensity && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.grle') || lowerBase.endsWith('.png') || lowerBase.endsWith('.xml'))) {
+                        if (isDensityFile && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.grle') || lowerBase.endsWith('.png'))) {
                             const destPath = path.join(targetSavePath, item.name);
                             if (overwrite || !fs.existsSync(destPath)) {
                                 await fs.copy(fullP, destPath);
@@ -6040,20 +6053,51 @@ async function resolveMapModPath(savePath) {
 async function ensureSavegameDensityMaps(savePath) {
     if (!savePath || !fs.existsSync(savePath)) return 0;
     try {
-        // 1. Sanitize densityMap_fruits_growthState.xml if it contains a crop-wipe mask or bad index
+        // 1. Purge densityMap_fruits_growthState.xml if present (causes frozen crop growth when applyGrowthCurrentIndex="-1")
         const growthXmlPath = path.join(savePath, 'densityMap_fruits_growthState.xml');
         if (fs.existsSync(growthXmlPath)) {
             try {
-                const growthContent = await fs.readFile(growthXmlPath, 'utf8');
-                if (growthContent.includes('growthMasks64') || growthContent.includes('4294967295')) {
-                    const cleanGrowthXml = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<foliageCropsUpdater currentGrowthIndex="0" applyGrowthCurrentIndex="-1" applyGrowthMaxTimePerFrame="1.000000">\n</foliageCropsUpdater>\n';
-                    await fs.writeFile(growthXmlPath, cleanGrowthXml);
-                    console.log(`[DENSITY-CHECK] Sanitized crop-wiping growthState XML in ${savePath}`);
+                await fs.remove(growthXmlPath);
+                console.log(`[DENSITY-CHECK] Purged crop-freezing growthState XML in ${savePath}`);
+            } catch (e) {}
+        }
+
+        // 2. Remove invalid/fallow fields.xml or map config XML that prevents engine crop generation
+        const fieldsXmlPath = path.join(savePath, 'fields.xml');
+        if (fs.existsSync(fieldsXmlPath)) {
+            try {
+                const fContent = await fs.readFile(fieldsXmlPath, 'utf8');
+                if (fContent.includes('<map') || /plannedFruit=["']FALLOW["']/gi.test(fContent)) {
+                    await fs.remove(fieldsXmlPath);
+                    console.log(`[DENSITY-CHECK] Removed invalid/fallow fields.xml from ${savePath}`);
                 }
             } catch (e) {}
         }
 
-        // 2. Ensure densityMapRevision in careerSavegame.xml matches mod map requirements (Revision 1 for mod maps vs 4 for base game)
+        // 3. Remove flat placeholder densityMap_height.gdm and cache files that cause floating objects / terrain elevation bugs
+        const heightGdmPath = path.join(savePath, 'densityMap_height.gdm');
+        if (fs.existsSync(heightGdmPath)) {
+            try {
+                if (fs.statSync(heightGdmPath).size <= 131349) {
+                    await fs.remove(heightGdmPath);
+                    console.log(`[DENSITY-CHECK] Removed flat template densityMap_height.gdm to avoid floating objects in ${savePath}`);
+                }
+            } catch (e) {}
+        }
+
+        const cachesToRemove = [
+            'fieldGround.xml', 'densityMapHeight.xml', 'stone_growthState.xml',
+            'weed_growthState.xml', 'terrain.lod.type.cache', 'terrain.nmap.cache',
+            'terrain.occluders.cache', 'vehicleNavigationCostmap.dat'
+        ];
+        for (const cf of cachesToRemove) {
+            const cp = path.join(savePath, cf);
+            if (fs.existsSync(cp)) {
+                try { await fs.remove(cp); } catch (_) {}
+            }
+        }
+
+        // 4. Ensure densityMapRevision in careerSavegame.xml is 1 (matches both base game and mod maps)
         const careerPath = path.join(savePath, 'careerSavegame.xml');
         if (fs.existsSync(careerPath)) {
             try {
@@ -6061,9 +6105,9 @@ async function ensureSavegameDensityMaps(savePath) {
                 const parsed = parser.parse(careerXml);
                 const settings = parsed?.careerSavegame?.settings || {};
                 const mapId = settings['@_mapId'] || settings.mapId;
-                if (mapId && !isOfficialMap(mapId)) {
 
-                    let expectedRev = '1';
+                let expectedRev = '1';
+                if (mapId && !isOfficialMap(mapId)) {
                     const modPath = await resolveMapModPath(savePath);
                     if (modPath && fs.existsSync(modPath)) {
                         const fruitsPath = path.join(savePath, 'densityMap_fruits.gdm');
@@ -6092,15 +6136,40 @@ async function ensureSavegameDensityMaps(savePath) {
                             }
                         } catch (_) {}
                     }
-                    const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '4';
-                    if (curRev !== expectedRev) {
-                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>${expectedRev}</densityMapRevision>`);
-                        await fs.writeFile(careerPath, careerXml);
-                        console.log(`[DENSITY-CHECK] Corrected densityMapRevision ${curRev} -> ${expectedRev} in ${savePath}`);
+                } else if (mapId && isOfficialMap(mapId)) {
+                    // For official maps, verify densityMap_fruits.gdm is pristine (header !MDF)
+                    const fruitsPath = path.join(savePath, 'densityMap_fruits.gdm');
+                    let needsFruitsSync = !fs.existsSync(fruitsPath) || fs.statSync(fruitsPath).size < 1024;
+                    if (!needsFruitsSync) {
+                        try {
+                            const fd = fs.openSync(fruitsPath, 'r');
+                            const hBuf = Buffer.alloc(4);
+                            fs.readSync(fd, hBuf, 0, 4, 0);
+                            fs.closeSync(fd);
+                            if (hBuf[0] === 0x22) { // Old header version with 79% expansion bug
+                                needsFruitsSync = true;
+                            }
+                        } catch (_) {}
+                    }
+                    if (needsFruitsSync) {
+                        const resolvedFolder = await resolveTemplateFolder(mapId, null, settings['@_mapTitle'] || settings.mapTitle);
+                        const templatesDir = getTemplatesPath();
+                        const tFruit = resolvedFolder ? path.join(templatesDir, resolvedFolder, 'densityMap_fruits.gdm') : null;
+                        if (tFruit && fs.existsSync(tFruit)) {
+                            await fs.copy(tFruit, fruitsPath);
+                            console.log(`[DENSITY-CHECK] Replaced corrupted base game densityMap_fruits.gdm with pristine template file in ${savePath}`);
+                        }
                     }
                 }
 
-                // 3. Remove leftover Precision Farming files if Precision Farming mod is not active
+                const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '1';
+                if (curRev !== expectedRev) {
+                    careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>${expectedRev}</densityMapRevision>`);
+                    await fs.writeFile(careerPath, careerXml);
+                    console.log(`[DENSITY-CHECK] Corrected densityMapRevision ${curRev} -> ${expectedRev} in ${savePath}`);
+                }
+
+                // 5. Remove leftover Precision Farming files if Precision Farming mod is not active
                 const hasPf = careerXml.includes('FS25_precisionFarming') || careerXml.includes('precisionFarming');
                 if (!hasPf) {
                     const files = await fs.readdir(savePath);
