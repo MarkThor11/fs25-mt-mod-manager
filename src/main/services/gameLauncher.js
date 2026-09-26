@@ -6,6 +6,7 @@ const pathProvider = require('./pathProvider');
 const systemOptimizer = require('./systemOptimizer');
 
 let activePlayingSlot = null;
+let lastLaunchedSlot = null;
 
 /**
  * Common Farming Simulator 25 install paths.
@@ -294,6 +295,9 @@ async function launch(options = {}) {
   let needsManualInit = false;
   if (options.savegameIndex !== undefined) {
     activePlayingSlot = parseInt(options.savegameIndex, 10) || null;
+    if (activePlayingSlot) {
+      lastLaunchedSlot = activePlayingSlot;
+    }
     const fs25Path = pathProvider.getFS25DataRoot();
     const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
     const farmsFile = path.join(savePath, 'farms.xml');
@@ -521,10 +525,11 @@ function detectActiveSlotFromGame() {
       const content = fs.readFileSync(logPath, 'utf8');
       
       // Check start parameter or autoStart message: e.g. "Auto start local savegame (Id: 5)" or "autoStartSavegameId 5"
-      const autoStartMatch = content.match(/Auto start local savegame\s*\(Id:\s*(\d+)\)/i) ||
-                             content.match(/autoStartSavegameId\s+(\d+)/i);
-      if (autoStartMatch && autoStartMatch[1]) {
-        return parseInt(autoStartMatch[1], 10);
+      const autoStartMatches = [...content.matchAll(/Auto start local savegame\s*\(Id:\s*(\d+)\)|autoStartSavegameId\s+(\d+)/gi)];
+      if (autoStartMatches.length > 0) {
+        const lastMatch = autoStartMatches[autoStartMatches.length - 1];
+        const slotId = lastMatch[1] || lastMatch[2];
+        if (slotId) return parseInt(slotId, 10);
       }
 
       // Check for loaded density maps or savegame files: e.g. ".../savegame5/densityMap..."
@@ -546,11 +551,13 @@ async function getGameStatus() {
   let slot = null;
   if (isRunning) {
     // If we launched a specific slot, stick firmly to that slot while the game is running
-    slot = activePlayingSlot || detectActiveSlotFromGame();
-    if (slot && !activePlayingSlot) {
+    slot = activePlayingSlot || lastLaunchedSlot || detectActiveSlotFromGame();
+    if (slot) {
       activePlayingSlot = slot;
+      lastLaunchedSlot = slot;
     }
   } else {
+    slot = activePlayingSlot || lastLaunchedSlot || detectActiveSlotFromGame();
     activePlayingSlot = null;
   }
   return { isRunning, playingSlot: slot };

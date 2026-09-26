@@ -14,11 +14,12 @@ export const useSavegameStore = create((set) => ({
   recentlyExitedSlots: {},
 
   markSlotExited: (slotIndex) => {
-    if (!slotIndex) return;
+    const num = Number(slotIndex);
+    if (!num) return;
     set((s) => ({
       recentlyExitedSlots: {
         ...s.recentlyExitedSlots,
-        [slotIndex]: Date.now(),
+        [num]: Date.now(),
       }
     }));
   },
