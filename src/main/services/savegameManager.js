@@ -917,9 +917,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
         const nLow = (name || '').toLowerCase();
         const tLow = (title || '').toLowerCase();
-        const idLow = (id || '').toLowerCase();
         
-        // Pass 1: Match by exact mod name or file basename
+        // Pass 1: Match by exact mod name or file basename (unique per mod)
         if (nLow) {
             for (const m of allMods) {
                 if (!m.filePath || !m.filePath.toLowerCase().endsWith('.zip')) continue;
@@ -938,16 +937,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             }
         }
 
-        // Pass 3: Match by unique mapId (NEVER match generic placeholder map IDs like SampleModMap!)
-        if (idLow && !GENERIC_MAP_IDS.has(idLow)) {
-            for (const m of allMods) {
-                if (!m.filePath || !m.filePath.toLowerCase().endsWith('.zip')) continue;
-                const mMapIdLow = (m.mapId || '').toLowerCase();
-                if (mMapIdLow === idLow) return m.filePath;
-            }
-        }
-
-        // Pass 4: Fuzzy normalized match for custom map mods with suffixes (e.g. _SampleModMap, _crossplay)
+        // Pass 3: Fuzzy normalized match strictly for custom mod names and titles with suffixes (e.g. _crossplay, _CP)
         const clean = (str) => (str || '').toLowerCase()
             .replace(/_samplemodmap$/i, '')
             .replace(/_basemap$/i, '')
@@ -956,7 +946,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
         const nClean = clean(name);
         const tClean = clean(title);
-        const idClean = clean(id);
 
         for (const m of allMods) {
             if (!m.filePath || !m.filePath.toLowerCase().endsWith('.zip')) continue;
@@ -965,8 +954,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             const mTitleClean = clean(m.title);
 
             if ((nClean && (mNameClean === nClean || mFileClean === nClean)) ||
-                (tClean && mTitleClean === tClean && tClean.length >= 4) ||
-                (idClean && !GENERIC_MAP_IDS.has(idClean) && (mNameClean === idClean || mFileClean === idClean))) {
+                (tClean && mTitleClean === tClean && tClean.length >= 4)) {
                 return m.filePath;
             }
         }
@@ -4975,17 +4963,7 @@ function findMapModInSavegame(xmlData, localMods = []) {
         const matchByPrefix = localMods.find(m => m.isMap && m.modName && m.modName.toLowerCase() === prefix.toLowerCase());
         if (matchByPrefix) return matchByPrefix;
 
-        // Try exact mapId match (ignoring generic placeholder IDs used by many modders)
-        const GENERIC_MAP_IDS = new Set([
-            'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
-            'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
-            'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
-            'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpack', 'mapforest'
-        ]);
-        if (!GENERIC_MAP_IDS.has(rawMapId.toLowerCase())) {
-            const matchByMapId = localMods.find(m => m.isMap && m.mapId && m.mapId.toLowerCase() === rawMapId.toLowerCase());
-            if (matchByMapId) return matchByMapId;
-        }
+
     }
 
     if (rawMapTitle) {

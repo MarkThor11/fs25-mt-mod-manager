@@ -47,14 +47,11 @@ const MapImage = ({ mapTitle, mapId, mods, opacity = 0.25 }) => {
         mapMod = mods.find(m => {
             if (!m.isMap) return false;
             
-            // b. Exact match by ID
-            if (mapId && m.mapId === mapId) return true;
-            
-            // c. Match by Title (case insensitive)
+            // Match by Title (case insensitive)
             if (mapTitle && m.title && m.title.toLowerCase() === mapTitle.toLowerCase()) return true;
-            
-            // d. Match by "Cleaned" ID (folder name consistency)
-            if (mapId && m.mapId && m.mapId.replace(/[^a-z0-9]/gi, '_') === mapId.replace(/[^a-z0-9]/gi, '_')) return true;
+
+            // Match by modName
+            if (mapId && m.modName && m.modName.toLowerCase() === mapId.toLowerCase()) return true;
 
             return false;
         });
