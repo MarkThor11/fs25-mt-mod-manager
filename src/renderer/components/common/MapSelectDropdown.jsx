@@ -337,7 +337,7 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
           {/* List Area */}
           <div
             style={{
-              maxHeight: 320,
+              maxHeight: 240,
               overflowY: 'auto',
               padding: '6px 0'
             }}
