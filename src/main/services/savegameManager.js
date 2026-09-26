@@ -456,7 +456,7 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         // Never match base game templates for custom mod maps
         if (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolder.toLowerCase())) continue;
 
-        // Match by modName or unique non-generic mapId
+        // Match strictly by exact modName match or declared template mod folder
         if (targetModNorm && targetModNorm.length >= 3) {
             if (ufNorm === targetModNorm) return folder;
 
@@ -470,9 +470,6 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
             if (templateModNorm === targetModNorm) {
                 return folder;
             }
-        }
-        if (targetMapIdNorm && targetMapIdNorm.length >= 4 && !GENERIC_MAP_IDS.has(targetMapIdNorm) && ufNorm.includes(targetMapIdNorm)) {
-            return folder;
         }
     }
 
