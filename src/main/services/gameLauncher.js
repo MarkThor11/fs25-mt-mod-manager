@@ -221,8 +221,9 @@ async function launch(options = {}) {
         const fs25Path = pathProvider.getFS25DataRoot();
         const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
         const serverMetaPath = path.join(savePath, 'server_meta.json');
+        const savegameManager = require('./savegameManager');
+
         if (fs.existsSync(serverMetaPath)) {
-          const savegameManager = require('./savegameManager');
           const serverPrep = await savegameManager.prepareServerModsFolder(options.savegameIndex, savePath);
           if (serverPrep && serverPrep.success && serverPrep.targetFolder) {
             targetModsPath = serverPrep.targetFolder;
@@ -231,6 +232,9 @@ async function launch(options = {}) {
           // Automatically stash single player saves into quarantine so in-game Host Game menu ONLY displays multiplayer saves
           console.log(`[LAUNCH] Quarantining Single Player saves so in-game multiplayer menu only lists MP saves...`);
           await savegameManager.stashSinglePlayerSaves();
+        } else {
+          // Single player save: restore any stashed single player saves
+          await savegameManager.restoreStashedSinglePlayerSaves().catch(e => console.warn('[LAUNCH] Auto-restore stashed saves warning:', e.message));
         }
       } catch (srvErr) {
         console.warn('[LAUNCH] Server save mods preparation warning:', srvErr.message);
