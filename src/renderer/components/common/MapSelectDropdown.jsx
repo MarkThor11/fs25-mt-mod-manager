@@ -67,10 +67,7 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
 
   // Check if a mod map has an automation template
   const checkModHasTemplate = useMemo(() => {
-    const clean = (s) => (s || '').toLowerCase()
-      .replace(/\s*[\(\[]\s*(?:crossplay|cp)\s*[\)\]]/gi, '')
-      .replace(/[_ -](?:crossplay|cp)(?=[_ -]|$)/gi, '')
-      .trim();
+    const clean = (s) => (s || '').toLowerCase().trim();
     const norm = (s) => clean(s).replace(/[^a-z0-9]/g, '');
     const ultraNorm = (s) => norm(s).replace(/^(?:fs\d{2}|pdlc)/, '');
 
