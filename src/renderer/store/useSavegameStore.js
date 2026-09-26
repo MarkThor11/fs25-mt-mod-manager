@@ -22,6 +22,14 @@ export const useSavegameStore = create((set) => ({
         [num]: Date.now(),
       }
     }));
+    // Explicitly clear recentlyExitedSlots and trigger re-render after 4 seconds so badge never hangs
+    setTimeout(() => {
+      set((s) => {
+        const next = { ...s.recentlyExitedSlots };
+        delete next[num];
+        return { recentlyExitedSlots: next };
+      });
+    }, 4000);
   },
 
   loadCache: async () => {

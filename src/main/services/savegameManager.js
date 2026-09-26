@@ -173,7 +173,25 @@ function getTemplatesPath() {
                 }
             }
         }
-        // Custom templates in modManagerTemplates
+        // Purge bad/bloated/crop-freezing files from ALL user templates in modManagerTemplates
+        const allTemplateDirs = fs.readdirSync(p);
+        const allFilesToPurge = [
+            'fields.xml', 'fieldGround.xml', 'densityMap_fruits_growthState.xml',
+            'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml',
+            'terrain.lod.type.cache', 'terrain.nmap.cache', 'terrain.occluders.cache',
+            'vehicleNavigationCostmap.dat'
+        ];
+        for (const tDir of allTemplateDirs) {
+            const tDirPath = path.join(p, tDir);
+            if (fs.existsSync(tDirPath) && fs.statSync(tDirPath).isDirectory()) {
+                for (const badFile of allFilesToPurge) {
+                    const badPath = path.join(tDirPath, badFile);
+                    if (fs.existsSync(badPath)) {
+                        try { fs.unlinkSync(badPath); } catch (_) {}
+                    }
+                }
+            }
+        }
     } catch (e) {
         console.error('[TEMPLATES] Failed to sync master templates:', e);
     }
@@ -428,6 +446,8 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
     };
 
     // 1. Official base map master templates — exact direct folder match.
+    // CRITICAL: ONLY match official base templates if this is genuinely a base game map or official DLC.
+    // Mod maps frequently reuse "MapUS" or "MapEU" as an internal map ID in modDesc.xml. They must NEVER match MapUS/MapEU!
     const OFFICIAL_FOLDER_MAP = {
         'mapus': 'MapUS',
         'mapeu': 'MapEU',
@@ -439,9 +459,11 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
     const officialByTitle = {
         'riverbendsprings': 'MapUS',
         'zielonka': 'MapEU',
-        'hutanpantai': 'MapAS'
+        'hutanpantai': 'MapAS',
+        'kinlaig': 'pdlc_highlandsFishingPack_HighlandsFishingMap'
     };
-    const officialTarget = OFFICIAL_FOLDER_MAP[targetMapIdNorm] || officialByTitle[targetTitleNorm];
+    const isBaseGameLaunch = !mapModName || isOfficialMap(mapModName);
+    const officialTarget = isBaseGameLaunch ? (OFFICIAL_FOLDER_MAP[targetMapIdNorm] || officialByTitle[targetTitleNorm]) : null;
     if (officialTarget) {
         for (const folder of folders) {
             const cleanFolder = folder.replace(/\.zip$/i, '');
@@ -1008,6 +1030,20 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 await fs.copy(templatePath, slotPath);
                 copiedTemplate = true;
             }
+            if (copiedTemplate) {
+                const templateBadFiles = [
+                    'fields.xml', 'fieldGround.xml', 'densityMap_fruits_growthState.xml',
+                    'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml',
+                    'terrain.lod.type.cache', 'terrain.nmap.cache', 'terrain.occluders.cache',
+                    'vehicleNavigationCostmap.dat'
+                ];
+                for (const bad of templateBadFiles) {
+                    const bp = path.join(slotPath, bad);
+                    if (fs.existsSync(bp)) {
+                        try { await fs.remove(bp); } catch (_) {}
+                    }
+                }
+            }
         }
     }
 
@@ -1294,10 +1330,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 savegameData.careerSavegame.player['@_spawnPositionX'] = '-528.800';
                 savegameData.careerSavegame.player['@_spawnPositionY'] = '19.800';
                 savegameData.careerSavegame.player['@_spawnPositionZ'] = '-61.100';
-            } else if (engineMapId === 'pdlc_highlandsFishingPack.HighlandsFishingMap') {
-                savegameData.careerSavegame.player['@_spawnPositionX'] = '-48.000';
-                savegameData.careerSavegame.player['@_spawnPositionY'] = '25.000';
-                savegameData.careerSavegame.player['@_spawnPositionZ'] = '-82.000';
+            } else if (engineMapId === 'pdlc_highlandsFishingPack.HighlandsFishingMap' || (engineMapId || '').toLowerCase().includes('highlandsfishing') || (mapTitle || '').toLowerCase() === 'kinlaig') {
+                savegameData.careerSavegame.player['@_spawnPositionX'] = '-896.000';
+                savegameData.careerSavegame.player['@_spawnPositionY'] = '135.700';
+                savegameData.careerSavegame.player['@_spawnPositionZ'] = '190.000';
             } else {
                 // Custom mod map — use the map's actual default start from its i3d/config files
                 const defaultSpawn = await getMapDefaultStartCoordinates(slotPath);
@@ -1330,7 +1366,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         if (engineMapId === 'MapUS')       spawnForPlayers = { x: -128.0,  y: 49.2,  z: -162.0 };
                         else if (engineMapId === 'MapEU')  spawnForPlayers = { x: -263.0,  y: 60.0,  z: 44.0   };
                         else if (engineMapId === 'MapAS')  spawnForPlayers = { x: -528.8,  y: 19.8,  z: -61.1  };
-                        else if (engineMapId === 'pdlc_highlandsFishingPack.HighlandsFishingMap') spawnForPlayers = { x: -48.0, y: 25.0, z: -82.0 };
+                        else if (engineMapId === 'pdlc_highlandsFishingPack.HighlandsFishingMap' || (engineMapId || '').toLowerCase().includes('highlandsfishing') || (mapTitle || '').toLowerCase() === 'kinlaig') spawnForPlayers = { x: -896.0, y: 135.7, z: 190.0 };
                         else spawnForPlayers = await getMapDefaultStartCoordinates(slotPath);
 
                         for (const p of plist) {
@@ -3783,22 +3819,41 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true) {
         // those reflect wherever the player last saved (e.g. inside a vehicle), not the map's
         // true default start. Use hardcoded official-map defaults below, or read from the map files.
 
-        if (!mapModName) {
-            if (mapId === 'MapUS') {
+        if (!mapModName || isOfficialMap(mapModName) || isOfficialMap(mapId)) {
+            if (mapId === 'MapUS' || mapTitle === 'Riverbend Springs') {
                 return { x: -128.0, y: 49.2, z: -162.0 };
-            } else if (mapId === 'MapEU') {
+            } else if (mapId === 'MapEU' || mapTitle === 'Zielonka') {
                 return { x: -263.0, y: 60.0, z: 44.0 };
-            } else if (mapId === 'MapAS') {
+            } else if (mapId === 'MapAS' || mapTitle === 'Hutan Pantai') {
                 return { x: -528.8, y: 19.8, z: -61.1 };
+            } else if (mapId === 'pdlc_highlandsFishingPack.HighlandsFishingMap' || (mapId || '').toLowerCase().includes('highlandsfishing') || (mapTitle || '').toLowerCase() === 'kinlaig') {
+                return { x: -896.0, y: 135.7, z: 190.0 };
             }
         }
 
         // Fallback: parse map mod zip itself for careerStartPoint
         if (mapModName) {
             const modManager = require('./modManager');
-            const modsDir = modManager.getModsPath();
-            const modZip = path.join(modsDir, `${mapModName}.zip`);
-            if (fs.existsSync(modZip)) {
+            const modsPaths = modManager.getModsPaths();
+            let modZip = null;
+            for (const root of modsPaths) {
+                if (!fs.existsSync(root)) continue;
+                const directP = path.join(root, `${mapModName}.zip`);
+                if (fs.existsSync(directP)) { modZip = directP; break; }
+                try {
+                    const subDirs = fs.readdirSync(root);
+                    for (const sub of subDirs) {
+                        const subP = path.join(root, sub);
+                        if (fs.existsSync(subP) && fs.statSync(subP).isDirectory()) {
+                            const nestedP = path.join(subP, `${mapModName}.zip`);
+                            if (fs.existsSync(nestedP)) { modZip = nestedP; break; }
+                        }
+                    }
+                } catch (_) {}
+                if (modZip) break;
+            }
+
+            if (modZip && fs.existsSync(modZip)) {
                 // 1. Check modDesc.xml maps config
                 const modDescBuf = modManager.readEntryFromZip(modZip, 'modDesc.xml');
                 let mapConfigFile = null;
@@ -3860,6 +3915,40 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true) {
                     }
                 }
             }
+        }
+
+        // Fallback: parse vehicles.xml in savePath to spawn at player's starter vehicle / farm
+        const vehiclesPath = path.join(savePath, 'vehicles.xml');
+        if (fs.existsSync(vehiclesPath)) {
+            try {
+                const vXml = fs.readFileSync(vehiclesPath, 'utf8');
+                const vMatch = vXml.match(/<vehicle\s+[^>]*farmId=["']1["'][^>]*position=["']([^"']+)["']/i) ||
+                               vXml.match(/<vehicle\s+[^>]*position=["']([^"']+)["'][^>]*farmId=["']1["']/i) ||
+                               vXml.match(/position=["']([^"']+)["'][^>]*propertyState=["']1["']/i) ||
+                               vXml.match(/<vehicle\s+[^>]*position=["']([^"']+)["']/i);
+                if (vMatch && vMatch[1]) {
+                    const vCoords = vMatch[1].trim().split(/\s+/).map(parseFloat);
+                    if (vCoords.length >= 3 && !isNaN(vCoords[0])) {
+                        return { x: parseFloat((vCoords[0] + 2.0).toFixed(3)), y: parseFloat(vCoords[1].toFixed(3)), z: parseFloat((vCoords[2] + 2.0).toFixed(3)) };
+                    }
+                }
+            } catch (_) {}
+        }
+
+        // Fallback: parse placeables.xml in savePath for farm building spawn
+        const placeablesPath = path.join(savePath, 'placeables.xml');
+        if (fs.existsSync(placeablesPath)) {
+            try {
+                const pXml = fs.readFileSync(placeablesPath, 'utf8');
+                const pMatch = pXml.match(/<placeable\s+[^>]*farmId=["']1["'][^>]*position=["']([^"']+)["']/i) ||
+                               pXml.match(/<placeable\s+[^>]*position=["']([^"']+)["'][^>]*farmId=["']1["']/i);
+                if (pMatch && pMatch[1]) {
+                    const pCoords = pMatch[1].trim().split(/\s+/).map(parseFloat);
+                    if (pCoords.length >= 3 && !isNaN(pCoords[0])) {
+                        return { x: parseFloat((pCoords[0] + 3.0).toFixed(3)), y: parseFloat(pCoords[1].toFixed(3)), z: parseFloat((pCoords[2] + 3.0).toFixed(3)) };
+                    }
+                }
+            } catch (_) {}
         }
     } catch (e) {
         console.error('Error getting map default start coordinates:', e);
@@ -5361,7 +5450,12 @@ async function adoptSaveAsTemplate(saveIndex) {
         }
         
         // Clean up temporary/user files in template and sanitize growth XML
-        const filesToRemove = ['steam_autocloud.vdf', 'modManager.json'];
+        const filesToRemove = [
+            'steam_autocloud.vdf', 'modManager.json', 'fields.xml', 'fieldGround.xml',
+            'densityMap_fruits_growthState.xml', 'stone_growthState.xml', 'weed_growthState.xml',
+            'densityMapHeight.xml', 'terrain.lod.type.cache', 'terrain.nmap.cache',
+            'terrain.occluders.cache', 'vehicleNavigationCostmap.dat'
+        ];
         for (const f of filesToRemove) {
             const p = path.join(destPath, f);
             if (fs.existsSync(p)) {
@@ -6146,7 +6240,8 @@ async function ensureSavegameDensityMaps(savePath) {
                             const hBuf = Buffer.alloc(4);
                             fs.readSync(fd, hBuf, 0, 4, 0);
                             fs.closeSync(fd);
-                            if (hBuf[0] === 0x22) { // Old header version with 79% expansion bug
+                            const lowMapId = (mapId || '').toLowerCase();
+                            if ((lowMapId === 'mapus' || lowMapId === 'mapeu') && hBuf[0] === 0x22) {
                                 needsFruitsSync = true;
                             }
                         } catch (_) {}
