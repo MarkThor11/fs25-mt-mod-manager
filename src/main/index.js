@@ -1676,12 +1676,6 @@ ipcMain.handle('game:launch', async (_, options) => {
       exitHandled = true;
       console.log(`[LAUNCH] Game exit verified (code ${code}). Running post-game checks...`);
 
-      // Notify the frontend instantly so UI updates without delay
-      mainWindow?.webContents.send('game:exited', { 
-        savegameIndex: options.savegameIndex,
-        exitCode: code 
-      });
-
       if (options.savegameIndex) {
         try {
           // Targeted template learning for ONLY the savegame slot that just closed
@@ -1731,6 +1725,12 @@ ipcMain.handle('game:launch', async (_, options) => {
           console.error('[CLOUD] Auto-sync failed on game exit:', cloudErr);
         }
       }
+
+      // Notify the frontend after post-game exit processing & template harvesting completes
+      mainWindow?.webContents.send('game:exited', { 
+        savegameIndex: options.savegameIndex,
+        exitCode: code 
+      });
     };
 
     const launchOptions = {
