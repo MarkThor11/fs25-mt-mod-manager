@@ -2500,8 +2500,8 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
     );
 
     const wasPlayed = save.isInitialized || save.playTime > 0 || isRecentlyExited;
-    const isAutomated = save.hasTemplate && (wasPlayed || !save.isGhost);
-    const isReadyForFirstLaunch = save.hasTemplate && save.isGhost && !wasPlayed;
+    const isAutomated = save.hasTemplate;
+    const isReadyForFirstLaunch = !save.hasTemplate && !save.isInitialized;
 
     const versionMismatches = React.useMemo(() => {
         if (!save.mods || !mods) return 0;
@@ -2685,7 +2685,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 </div>
               )}
 
-              {!isPlaying && !isRecentlyExited && save.hasTemplate && save.isInitialized && (
+              {!isPlaying && !isRecentlyExited && save.hasTemplate && (
                 <div style={{ 
                   background: 'var(--accent-dim)', 
                   color: 'var(--accent)', 
@@ -2701,7 +2701,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 </div>
               )}
 
-              {!isPlaying && !isRecentlyExited && (!save.isInitialized && save.playTime === 0) && (
+              {!isPlaying && !isRecentlyExited && !save.hasTemplate && !save.isInitialized && (
                 <div style={{ 
                   background: 'var(--accent)', 
                   color: 'white', 
