@@ -74,52 +74,32 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
     const OFFICIAL_TEMPLATES = new Set([
       'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap'
     ]);
+    const GENERIC_MAP_NAMES = new Set([
+      'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
+      'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
+      'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
+      'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpack', 'mapforest'
+    ]);
 
     return (mod) => {
-      if (!templates || templates.length === 0) return false;
+      if (!templates || templates.length === 0 || !mod || !mod.modName) return false;
       const mNameLow = (mod.modName || '').toLowerCase();
-      const utMod = ultraNorm(mod.modName);
+      const mNameNorm = norm(mod.modName);
       const utTitle = ultraNorm(mod.title);
 
+      if (GENERIC_MAP_NAMES.has(mNameNorm)) return false;
+
       return templates.some((t) => {
-        const tId = norm(t.id);
-        const utId = ultraNorm(t.id);
-        if (OFFICIAL_TEMPLATES.has(tId) || OFFICIAL_TEMPLATES.has(utId)) return false;
+        const cleanTId = (t.id || '').replace(/\.zip$/i, '').toLowerCase();
+        if (OFFICIAL_TEMPLATES.has(cleanTId)) return false;
 
         const tModName = (t.modName || '').toLowerCase();
-        const cleanTId = (t.id || '').replace(/\.zip$/i, '').toLowerCase();
+        if (tModName && tModName === mNameLow) return true;
+        if (cleanTId === mNameLow || cleanTId.startsWith(mNameLow + '_') || cleanTId.startsWith(mNameLow + '.')) return true;
 
-        // 1. Direct exact modName match
-        if (tModName && mNameLow && tModName === mNameLow) return true;
-
-        // 2. Exact template zip filename match or prefix match
-        if (cleanTId && mNameLow) {
-          if (cleanTId === mNameLow) return true;
-          if (cleanTId.startsWith(mNameLow + '_') || cleanTId.startsWith(mNameLow + '.')) return true;
-        }
-
-        // 3. UltraNorm prefix matching
-        if (utMod && utMod.length >= 3) {
-          if (utId === utMod) return true;
-          if (utId.startsWith(utMod)) {
-            const remainder = utId.slice(utMod.length);
-            if (remainder.length === 0 || 
-                remainder.startsWith('fs25') || 
-                remainder.startsWith('sample') || 
-                remainder.startsWith('map') || 
-                remainder.startsWith('crossplay') || 
-                remainder.startsWith('template') || 
-                remainder.startsWith('multi') || 
-                remainder.startsWith('base') || 
-                remainder.startsWith(utMod)) {
-              return true;
-            }
-          }
-        }
-
-        // 4. Title matching fallback
-        if (utTitle && utTitle.length >= 4) {
-          if (utId === utTitle || utId.startsWith(utTitle)) return true;
+        if (utTitle && !GENERIC_MAP_NAMES.has(utTitle) && utTitle.length >= 4) {
+          const utId = ultraNorm(t.id);
+          if (utId === utTitle || utId.startsWith(utTitle + '_')) return true;
         }
 
         return false;

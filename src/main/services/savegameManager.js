@@ -412,6 +412,13 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
     };
     const ultraNorm = (s) => cleanStr(s).replace(/^(?:fs\d{2}|pdlc)/, '');
 
+    const GENERIC_MAP_IDS = new Set([
+        'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
+        'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
+        'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
+        'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpack', 'mapforest'
+    ]);
+
     let effectiveModName = mapModName;
     if (!effectiveModName && mapId && mapId.includes('.')) {
         effectiveModName = mapId.split('.')[0];
@@ -420,15 +427,40 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         effectiveModName = mapId;
     }
 
-    const targetMapIdNorm = ultraNorm(mapId);
-    const targetModNorm = ultraNorm(effectiveModName);
-    const targetTitleNorm = ultraNorm(mapTitle);
-
     const OFFICIAL_MASTER_TEMPLATES = new Set([
         'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap'
     ]);
 
-    const folders = await fs.readdir(templatesDir);
+    const targetMapIdNorm = ultraNorm(mapId);
+    const targetTitleNorm = ultraNorm(mapTitle);
+
+    const isBaseGameLaunch = (!effectiveModName || isOfficialMap(effectiveModName)) &&
+        (isOfficialMap(mapId) || ['riverbendsprings', 'zielonka', 'hutanpantai', 'kinlaig'].includes(targetTitleNorm));
+
+    if (isBaseGameLaunch) {
+        const OFFICIAL_FOLDER_MAP = {
+            'mapus': 'MapUS',
+            'mapeu': 'MapEU',
+            'mapas': 'MapAS',
+            'highlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+            'highlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+            'pdlchighlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+        };
+        const officialByTitle = {
+            'riverbendsprings': 'MapUS',
+            'zielonka': 'MapEU',
+            'hutanpantai': 'MapAS',
+            'kinlaig': 'pdlc_highlandsFishingPack_HighlandsFishingMap'
+        };
+        const officialTarget = OFFICIAL_FOLDER_MAP[targetMapIdNorm] || officialByTitle[targetTitleNorm];
+        if (officialTarget) {
+            const folderPath = path.join(templatesDir, officialTarget);
+            if (fs.existsSync(folderPath) || fs.existsSync(`${folderPath}.zip`)) {
+                return officialTarget;
+            }
+        }
+        return null;
+    }
 
     // Helper: Verify template is complete with required career configuration
     const isCompleteTemplate = async (fPath, isZip = false) => {
@@ -448,97 +480,36 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         return hasCareer && hasFarms;
     };
 
-    // 1. Official base map master templates — exact direct folder match.
-    // CRITICAL: ONLY match official base templates if this is genuinely a base game map or official DLC.
-    // Mod maps frequently reuse "MapUS" or "MapEU" as an internal map ID in modDesc.xml. They must NEVER match MapUS/MapEU!
-    const OFFICIAL_FOLDER_MAP = {
-        'mapus': 'MapUS',
-        'mapeu': 'MapEU',
-        'mapas': 'MapAS',
-        'highlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
-        'highlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
-        'pdlchighlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
-    };
-    const officialByTitle = {
-        'riverbendsprings': 'MapUS',
-        'zielonka': 'MapEU',
-        'hutanpantai': 'MapAS',
-        'kinlaig': 'pdlc_highlandsFishingPack_HighlandsFishingMap'
-    };
-    const isBaseGameLaunch = (!effectiveModName || isOfficialMap(effectiveModName)) &&
-        (isOfficialMap(mapId) || ['riverbendsprings', 'zielonka', 'hutanpantai', 'kinlaig'].includes(targetTitleNorm));
+    const folders = await fs.readdir(templatesDir);
+    const effModLower = (effectiveModName || '').toLowerCase();
+    const effModClean = cleanStr(effectiveModName);
 
-    const officialTarget = isBaseGameLaunch ? (OFFICIAL_FOLDER_MAP[targetMapIdNorm] || officialByTitle[targetTitleNorm]) : null;
-    if (officialTarget) {
-        for (const folder of folders) {
-            const cleanFolder = folder.replace(/\.zip$/i, '');
-            if (cleanFolder.toLowerCase() === officialTarget.toLowerCase()) {
-                const folderPath = path.join(templatesDir, folder);
-                const stat = await fs.stat(folderPath).catch(() => null);
-                if (!stat) continue;
-                const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
-                if (!stat.isDirectory() && !isZip) continue;
-                if (await isCompleteTemplate(folderPath, isZip)) return folder;
-            }
-        }
-        return null;
-    }
-
-    // 2. Custom Mod Map Templates — Matching by exact Mod Name, template prefix, or title
     for (const folder of folders) {
+        const cleanFolder = folder.replace(/\.zip$/i, '');
+        const cleanFolderLower = cleanFolder.toLowerCase();
+        const fNorm = cleanStr(cleanFolder);
+
+        // Never match official base templates for custom mod maps
+        if (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolderLower)) continue;
+
         const folderPath = path.join(templatesDir, folder);
         const stat = await fs.stat(folderPath).catch(() => null);
         if (!stat) continue;
         const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
         if (!stat.isDirectory() && !isZip) continue;
 
-        if (!(await isCompleteTemplate(folderPath, isZip))) continue;
-
-        const cleanFolder = folder.replace(/\.zip$/i, '');
-        const fNorm = cleanStr(cleanFolder);
-        const ufNorm = ultraNorm(cleanFolder);
-
-        // Never match base game templates for custom mod maps
-        if (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolder.toLowerCase())) continue;
-
-        if (effectiveModName) {
-            const cleanFolderLower = cleanFolder.toLowerCase();
-            const effModLower = effectiveModName.toLowerCase();
-            const effModClean = cleanStr(effectiveModName);
-
-            // Exact match
-            if (cleanFolderLower === effModLower || fNorm === effModClean || ufNorm === targetModNorm) {
-                return folder;
-            }
-
-            // Starts with modName (e.g. FS25_Birgland_FS25_Birgland_Birgland or FS25_Alliklepa_SampleModMap)
-            if (cleanFolderLower.startsWith(effModLower + '_') || cleanFolderLower.startsWith(effModLower + '.')) {
-                return folder;
-            }
-
-            // UltraNorm prefix matching
-            if (targetModNorm && targetModNorm.length >= 3) {
-                if (ufNorm.startsWith(targetModNorm)) {
-                    const remainder = ufNorm.slice(targetModNorm.length);
-                    if (remainder.length === 0 || 
-                        remainder.startsWith('fs25') || 
-                        remainder.startsWith('sample') || 
-                        remainder.startsWith('map') || 
-                        remainder.startsWith('crossplay') || 
-                        remainder.startsWith('template') || 
-                        remainder.startsWith('multi') || 
-                        remainder.startsWith('base') || 
-                        remainder.startsWith(targetModNorm)) {
-                        return folder;
-                    }
-                }
+        // 1. Direct exact modName match or prefix match (e.g. FS25_Cows_Farm_4X or FS25_Cows_Farm_4X_SampleModMap)
+        if (effModLower && !GENERIC_MAP_IDS.has(effModClean)) {
+            if (cleanFolderLower === effModLower || cleanFolderLower.startsWith(effModLower + '_') || cleanFolderLower.startsWith(effModLower + '.')) {
+                if (await isCompleteTemplate(folderPath, isZip)) return folder;
             }
         }
 
-        // Title matching fallback if modName was missing or didn't match
-        if (targetTitleNorm && targetTitleNorm.length >= 4) {
-            if (ufNorm === targetTitleNorm || ufNorm.startsWith(targetTitleNorm)) {
-                return folder;
+        // 2. Exact Title match if modName didn't match (e.g. "Cows Farm 4X")
+        if (targetTitleNorm && !GENERIC_MAP_IDS.has(targetTitleNorm) && targetTitleNorm.length >= 4) {
+            const ufNorm = ultraNorm(cleanFolder);
+            if (ufNorm === targetTitleNorm || ufNorm.startsWith(targetTitleNorm + '_')) {
+                if (await isCompleteTemplate(folderPath, isZip)) return folder;
             }
         }
     }
@@ -977,9 +948,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     // Use cached mods for instant resolution of map zip, dependencies, and placeables
     const modManager = require('./modManager');
+    const cache = require('./cache');
     let allMods = (modManager.getLastScanResult() && modManager.getLastScanResult().mods)
         ? modManager.getLastScanResult().mods
-        : (await modManager.scanLocalMods()).mods || [];
+        : (cache.getAllLocalModCache() || []);
 
     const GENERIC_MAP_IDS = new Set([
         'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
