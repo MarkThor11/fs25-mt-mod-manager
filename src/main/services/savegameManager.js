@@ -6224,7 +6224,7 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
                 const baseName = path.basename(entry.entryName);
                 const lowerBase = baseName.toLowerCase();
                 const isDensityFile = 
-                    (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm' && lowerBase !== 'densitymap_fruits.gdm') || 
+                    (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm') || 
                     lowerBase.startsWith('infolayer_') ||
                     lowerBase === 'fields.xml';
 
@@ -6246,7 +6246,13 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
             for (const { entry, baseName } of candidateMap.values()) {
                 const destPath = path.join(targetSavePath, baseName);
                 if (overwrite || !fs.existsSync(destPath)) {
-                    await fs.writeFile(destPath, entry.getData());
+                    const dataBuf = entry.getData();
+                    // Skip map editor source asset GDMs (!MDF header: 0x21 0x4D 0x44 0x46)
+                    if (dataBuf.length >= 4 && dataBuf[0] === 0x21 && dataBuf[1] === 0x4D && dataBuf[2] === 0x44 && dataBuf[3] === 0x46) {
+                        console.log(`[DENSITY-EXTRACT] Skipped map editor asset (!MDF) ${entry.entryName}`);
+                        continue;
+                    }
+                    await fs.writeFile(destPath, dataBuf);
                     extractedCount++;
                     console.log(`[DENSITY-EXTRACT] Extracted ${entry.entryName} -> ${destPath}`);
                 }
@@ -6261,11 +6267,23 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
                     } else {
                         const lowerBase = item.name.toLowerCase();
                         const isDensityFile = 
-                            (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm' && lowerBase !== 'densitymap_fruits.gdm') || 
+                            (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm') || 
                             lowerBase.startsWith('infolayer_') ||
                             lowerBase === 'fields.xml';
 
                         if (isDensityFile && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.grle') || lowerBase.endsWith('.png') || lowerBase === 'fields.xml')) {
+                            if (lowerBase.endsWith('.gdm')) {
+                                if (isSavegameGdm(fullP) === false && fs.existsSync(fullP)) {
+                                    const fd = nodeFs.openSync(fullP, 'r');
+                                    const buf = Buffer.alloc(4);
+                                    nodeFs.readSync(fd, buf, 0, 4, 0);
+                                    nodeFs.closeSync(fd);
+                                    if (buf[0] === 0x21 && buf[1] === 0x4D && buf[2] === 0x44 && buf[3] === 0x46) {
+                                        console.log(`[DENSITY-EXTRACT] Skipped map editor asset (!MDF) ${item.name}`);
+                                        continue;
+                                    }
+                                }
+                            }
                             const destPath = path.join(targetSavePath, item.name);
                             if (overwrite || !fs.existsSync(destPath)) {
                                 await fs.copy(fullP, destPath);
