@@ -31,7 +31,7 @@
         <helperBuyFertilizer>true</helperBuyFertilizer>
         <helperSlurrySource>2</helperSlurrySource>
         <helperManureSource>2</helperManureSource>
-        <densityMapRevision>1</densityMapRevision>
+        <densityMapRevision>4</densityMapRevision>
         <terrainTextureRevision>1</terrainTextureRevision>
         <terrainLodTextureRevision>2</terrainLodTextureRevision>
         <splitShapesRevision>2</splitShapesRevision>
