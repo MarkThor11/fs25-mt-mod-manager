@@ -1232,9 +1232,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             const entry = zip.getEntry('modDesc.xml');
             if (entry) {
                 const xmlContent = entry.getData().toString('utf8');
-                const mMatch = xmlContent.match(/<map\s+[^>]*id=(["'])(.*?)\1/i) || xmlContent.match(/<mapId>(.*?)<\/mapId>/i);
-                if (mMatch && (mMatch[2] || mMatch[1])) {
-                    internalMapId = mMatch[2] || mMatch[1];
+                const mMatch = xmlContent.match(/<map\s+[^>]*id=["']([^"']+)["']/i) || xmlContent.match(/<mapId>([^<]+)<\/mapId>/i);
+                if (mMatch && mMatch[1]) {
+                    internalMapId = mMatch[1];
                     console.log(`[CREATE] Extracted real internal mapId "${internalMapId}" from ${path.basename(modZipPath)}`);
                 }
             }

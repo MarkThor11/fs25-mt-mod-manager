@@ -602,14 +602,7 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 				let xmlText = entry.getData().toString('utf8');
 				let entryModified = false;
 
-				// 1. Repair invalid legacy FS22 $data paths (e.g. $data/maps/mapUS/data/infoLayer_sprayLevel.png -> mapUS/data/infoLayer_sprayLevel.png)
-				if (xmlText.includes('$data/maps/mapUS/data/') || xmlText.includes('$data/maps/mapEU/data/') || xmlText.includes('$data/maps/mapAS/data/')) {
-					debugLog(`[MAP-PATCH] Repairing legacy FS22 $data paths in XML entry: ${entry.entryName} of ${path.basename(mapPath)}`);
-					xmlText = xmlText.replace(/\$data\/maps\/mapUS\/data\//gi, 'mapUS/data/')
-									 .replace(/\$data\/maps\/mapEU\/data\//gi, 'mapEU/data/')
-									 .replace(/\$data\/maps\/mapAS\/data\//gi, 'mapAS/data/');
-					entryModified = true;
-				}
+
 
 				// 2. Inject missing <densityMapHeightTypes> tag if map XML
 				const isMapXml = entryNameLower.endsWith('mapus.xml') || 
@@ -674,12 +667,7 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 						let xmlText = fs.readFileSync(fullPath, 'utf8');
 						let fileModified = false;
 
-						if (xmlText.includes('$data/maps/mapUS/data/') || xmlText.includes('$data/maps/mapEU/data/') || xmlText.includes('$data/maps/mapAS/data/')) {
-							xmlText = xmlText.replace(/\$data\/maps\/mapUS\/data\//gi, 'mapUS/data/')
-											 .replace(/\$data\/maps\/mapEU\/data\//gi, 'mapEU/data/')
-											 .replace(/\$data\/maps\/mapAS\/data\//gi, 'mapAS/data/');
-							fileModified = true;
-						}
+
 
 						const lowerName = f.toLowerCase();
 						const isMapXml = lowerName === 'mapus.xml' || lowerName === 'mapeu.xml' || lowerName === 'mapas.xml' ||
