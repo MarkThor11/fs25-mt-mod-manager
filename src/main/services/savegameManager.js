@@ -1642,20 +1642,30 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         return false;
                     };
 
-                    // Extract exact starting files designated by the map author (vehicles, placeables, items, handtools)
+                    // Extract exact starting files designated by the map author (vehicles, placeables, items, handtools, fields)
                     if (includeStartVehicles && defaultVehiclesFile) await extractExactZipFile(defaultVehiclesFile, 'vehicles.xml');
                     if (defaultPlaceablesFile) await extractExactZipFile(defaultPlaceablesFile, 'placeables.xml');
                     if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
                     if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
+                    if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
 
                     // Fallback extraction for starting XML files if missing
-                    for (const targetXml of ['placeables.xml', 'items.xml', 'handTools.xml']) {
+                    for (const targetXml of ['placeables.xml', 'items.xml', 'handTools.xml', 'fields.xml']) {
                         if (!fs.existsSync(path.join(slotPath, targetXml))) {
                             const entry = entryByBaseName.get(targetXml);
                             if (entry) {
                                 await fs.writeFile(path.join(slotPath, targetXml), entry.getData());
                                 console.log(`[CREATE] Fast fallback extracted ${targetXml}`);
                             }
+                        }
+                    }
+
+                    // Extract fruit density map from custom map archive if available
+                    if (!fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'))) {
+                        const fruitEntry = entryByBaseName.get('densitymap_fruits.gdm');
+                        if (fruitEntry) {
+                            await fs.writeFile(path.join(slotPath, 'densityMap_fruits.gdm'), fruitEntry.getData());
+                            console.log(`[CREATE] Fast fallback extracted densityMap_fruits.gdm`);
                         }
                     }
 
@@ -1824,29 +1834,36 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         await fs.writeFile(envPath, builder.build(initialEnv));
     }
 
-    // Final clean pass: Ensure no harvested fruit density maps or invalid field growth state exist in the new slot
-    // This allows Giants Engine to load and generate all author crops natively by default.
-    // NOTE: Strictly preserve terrain.occluders.cache, vehicleNavigationCostmap.dat, info layers, split shapes, and placeables.
+    // Final clean pass: Sanitize stale growth XML and unused Precision Farming files
+    // NOTE: Strictly preserve genuine densityMap_fruits.gdm, fields.xml, terrain.occluders.cache,
+    // vehicleNavigationCostmap.dat, info layers, split shapes, and placeables.
     try {
         const remainingFiles = await fs.readdir(slotPath);
         for (const file of remainingFiles) {
             const lower = file.toLowerCase();
-            const isDensityFruit = lower.startsWith('densitymap_fruits');
-            const isFieldOrGrowth = lower === 'fields.xml' || lower === 'fieldground.xml' || lower.endsWith('growthstate.xml') || lower === 'densitymapheight.xml';
+            const isStaleGrowth = lower.endsWith('growthstate.xml') || lower === 'densitymapheight.xml' || lower === 'densitymap_height.gdm' || lower.includes('broken14');
             const isPf = lower.startsWith('precisionfarming') && !finalMods.some(m => (m?.modName || '').toLowerCase().includes('precisionfarming'));
-            if (isDensityFruit || isFieldOrGrowth || isPf) {
+            if (isStaleGrowth || isPf) {
                 await fs.remove(path.join(slotPath, file)).catch(() => {});
             }
         }
 
-        // Double check careerSavegame.xml has no density map revision markers so engine populates author crops
+        // Ensure careerSavegame.xml density map revisions are consistent with densityMap_fruits.gdm
         const finalCareerPath = path.join(slotPath, 'careerSavegame.xml');
         if (fs.existsSync(finalCareerPath)) {
             let fcXml = await fs.readFile(finalCareerPath, 'utf8');
-            const densityRevRegex = /<(?:densityMapRevision|mapDensityMapRevision)>.*?<\/(?:densityMapRevision|mapDensityMapRevision)>\r?\n?/gi;
-            if (densityRevRegex.test(fcXml)) {
-                fcXml = fcXml.replace(densityRevRegex, '');
-                await fs.writeFile(finalCareerPath, fcXml, 'utf8');
+            const hasFruitsGdm = fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'));
+            if (hasFruitsGdm) {
+                if (!fcXml.includes('<densityMapRevision>')) {
+                    fcXml = fcXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>1</densityMapRevision>\n        <mapDensityMapRevision>1</mapDensityMapRevision>');
+                    await fs.writeFile(finalCareerPath, fcXml, 'utf8');
+                }
+            } else {
+                const densityRevRegex = /<(?:densityMapRevision|mapDensityMapRevision)>.*?<\/(?:densityMapRevision|mapDensityMapRevision)>\r?\n?/gi;
+                if (densityRevRegex.test(fcXml)) {
+                    fcXml = fcXml.replace(densityRevRegex, '');
+                    await fs.writeFile(finalCareerPath, fcXml, 'utf8');
+                }
             }
         }
     } catch (_) {}
@@ -5605,7 +5622,7 @@ async function adoptSaveAsTemplate(saveIndex) {
         
         // Clean up temporary/user files in template and sanitize growth XML
         const filesToRemove = [
-            'steam_autocloud.vdf', 'modManager.json', 'fields.xml', 'fieldGround.xml',
+            'steam_autocloud.vdf', 'modManager.json', 'fieldGround.xml',
             'densityMap_fruits_growthState.xml', 'stone_growthState.xml', 'weed_growthState.xml',
             'densityMapHeight.xml'
         ];
@@ -6203,9 +6220,10 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
                 const lowerBase = baseName.toLowerCase();
                 const isDensityFile = 
                     (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm') || 
-                    lowerBase.startsWith('infolayer_');
+                    lowerBase.startsWith('infolayer_') ||
+                    lowerBase === 'fields.xml';
 
-                if (isDensityFile && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.grle') || lowerBase.endsWith('.png'))) {
+                if (isDensityFile && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.grle') || lowerBase.endsWith('.png') || lowerBase === 'fields.xml')) {
                     const normPath = entry.entryName.replace(/\\/g, '/').toLowerCase();
                     const existing = candidateMap.get(lowerBase);
                     if (!existing) {
@@ -6239,9 +6257,10 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
                         const lowerBase = item.name.toLowerCase();
                         const isDensityFile = 
                             (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm') || 
-                            lowerBase.startsWith('infolayer_');
+                            lowerBase.startsWith('infolayer_') ||
+                            lowerBase === 'fields.xml';
 
-                        if (isDensityFile && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.grle') || lowerBase.endsWith('.png'))) {
+                        if (isDensityFile && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.grle') || lowerBase.endsWith('.png') || lowerBase === 'fields.xml')) {
                             const destPath = path.join(targetSavePath, item.name);
                             if (overwrite || !fs.existsSync(destPath)) {
                                 await fs.copy(fullP, destPath);
@@ -6309,14 +6328,14 @@ async function ensureSavegameDensityMaps(savePath) {
             } catch (e) {}
         }
 
-        // 2. Remove invalid/fallow fields.xml or map config XML that prevents engine crop generation
+        // 2. Remove invalid fields.xml if mistakenly copied from map config
         const fieldsXmlPath = path.join(savePath, 'fields.xml');
         if (fs.existsSync(fieldsXmlPath)) {
             try {
                 const fContent = await fs.readFile(fieldsXmlPath, 'utf8');
-                if (fContent.includes('<map') || /plannedFruit=["']FALLOW["']/gi.test(fContent)) {
+                if (fContent.includes('<map') || (!fContent.includes('<fields') && !fContent.includes('<field '))) {
                     await fs.remove(fieldsXmlPath);
-                    console.log(`[DENSITY-CHECK] Removed invalid/fallow fields.xml from ${savePath}`);
+                    console.log(`[DENSITY-CHECK] Removed invalid fields.xml from ${savePath}`);
                 }
             } catch (e) {}
         }
@@ -6384,8 +6403,12 @@ async function ensureSavegameDensityMaps(savePath) {
                     console.log(`[DENSITY-CHECK] Purged densityMapRevision because densityMap_fruits.gdm is absent for ${savePath}`);
                 } else {
                     const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '1';
-                    if (curRev !== expectedRev) {
-                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>${expectedRev}</densityMapRevision>`);
+                    if (curRev !== expectedRev || !careerXml.includes('<densityMapRevision>')) {
+                        if (careerXml.includes('<densityMapRevision>')) {
+                            careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>${expectedRev}</densityMapRevision>`);
+                        } else {
+                            careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <densityMapRevision>${expectedRev}</densityMapRevision>\n        <mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
+                        }
                         await fs.writeFile(careerPath, careerXml);
                         console.log(`[DENSITY-CHECK] Corrected densityMapRevision ${curRev} -> ${expectedRev} in ${savePath}`);
                     }
@@ -6446,6 +6469,28 @@ async function resetSavegameFieldStates(savePath) {
         let restoredCount = 0;
         if (modPath) {
             restoredCount = await extractMapDensityFiles(modPath, savePath, true);
+        } else {
+            // Official map fallback: restore from master templates
+            const careerPath = path.join(savePath, 'careerSavegame.xml');
+            if (fs.existsSync(careerPath)) {
+                try {
+                    const cXml = await fs.readFile(careerPath, 'utf8');
+                    const cData = parser.parse(cXml);
+                    const mapId = cData?.careerSavegame?.settings?.['@_mapId'] || cData?.careerSavegame?.settings?.mapId;
+                    if (mapId) {
+                        const tPath = path.join(getTemplatesPath(), mapId);
+                        if (fs.existsSync(tPath)) {
+                            for (const fn of ['densityMap_fruits.gdm', 'fields.xml', 'densityMap_ground.gdm', 'densityMap_weed.gdm', 'densityMap_stones.gdm']) {
+                                const srcF = path.join(tPath, fn);
+                                if (fs.existsSync(srcF)) {
+                                    await fs.copy(srcF, path.join(savePath, fn));
+                                    restoredCount++;
+                                }
+                            }
+                        }
+                    }
+                } catch (_) {}
+            }
         }
 
         console.log(`[REPAIR-FIELDS] Reset field states: removed ${removedCount} cached density layers and restored ${restoredCount} fresh density map files at ${savePath}`);
