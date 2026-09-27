@@ -706,10 +706,13 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 	let virtualBaseDir = (app && app.getPath) ? app.getPath('userData') : path.join(process.env.APPDATA, 'fs25-mt-mod-manager');
 	
 	try {
+		const fs25DataRoot = getFS25DataRoot();
 		const primaryModsPath = getModsPath();
 		if (primaryModsPath && fs.existsSync(primaryModsPath)) {
-			const driveRoot = path.parse(primaryModsPath).root || path.dirname(primaryModsPath);
-			virtualBaseDir = path.join(driveRoot, '.fs25_virtual_mods');
+			// Place virtual mods on the exact same drive & directory tree as primary mods to guarantee fast samedrive hardlinking
+			virtualBaseDir = path.join(path.dirname(primaryModsPath), '.fs25_virtual_mods');
+		} else if (fs25DataRoot && fs.existsSync(fs25DataRoot)) {
+			virtualBaseDir = path.join(fs25DataRoot, '.fs25_virtual_mods');
 		}
 	} catch (err) {
 		console.warn('[VIRTUAL] Failed to resolve primary drive for virtual mods, falling back to userData:', err.message);
@@ -748,7 +751,12 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 			if (fs.existsSync(savePath)) {
 				try {
 					const { mods: modsList } = await savegameManager.getSavegameMods(savePath);
-					if (modsList) {
+					// If slot is an uninitialized save (no fruits GDM), disable selective filtering so all mods are available to native engine init
+					const hasSavegameFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm')) && savegameManager.isSavegameGdm(path.join(savePath, 'densityMap_fruits.gdm'));
+					if (!hasSavegameFruitsGdm || !modsList || modsList.length <= 2) {
+						activeModNames = null;
+						console.log(`[VIRTUAL] Uninitialized / new save slot ${savegameIndex} detected: including all local mods for native map initialization.`);
+					} else if (modsList) {
 						modsList.forEach(m => activeModNames.add(m.modName.toLowerCase()));
 					}
 
