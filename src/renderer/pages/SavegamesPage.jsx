@@ -3198,8 +3198,8 @@ export default function SavegamesPage() {
 
     // Re-apply spawn position right before launch so game always reads the latest choice
     try {
-      const fs25Root = await window.api.savegames.getAll().then(saves => saves).catch(() => null);
       const savePath = (() => {
+        if (extraOptions?.targetPath) return extraOptions.targetPath;
         const allSaves = useSavegameStore.getState().savegames;
         const s = allSaves.find(sg => sg.index === slotIndex);
         return s?.path;
@@ -3638,7 +3638,7 @@ export default function SavegamesPage() {
         setShowCreateModal(false);
         await fetchSavegames();
         if (autoLaunchOnCreate) {
-          handleLaunch(slotIndex);
+          handleLaunch(slotIndex, { targetPath: result.path });
         }
       } else {
         useToastStore.getState().error(result.error);
