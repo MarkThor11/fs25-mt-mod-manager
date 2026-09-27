@@ -24,9 +24,19 @@ const INCOMPATIBLE_ENGINE_MODS = new Set(['fs25_maxdensityheighttypesbymap']);
 const logFile = (app && typeof app.getPath === 'function') 
     ? path.join(app.getPath('userData'), 'download_debug.log')
     : path.join(process.cwd(), 'download_debug.log');
-function debugLog(msg) {
-    const entry = `${new Date().toISOString()} - ${msg}\n`;
-    try { nodeFs.appendFile(logFile, entry, 'utf8', () => {}); } catch (e) {}
+function isSavegameGdm(filePath) {
+    if (!filePath || !fs.existsSync(filePath)) return false;
+    try {
+        const fd = nodeFs.openSync(filePath, 'r');
+        const buf = Buffer.alloc(4);
+        nodeFs.readSync(fd, buf, 0, 4, 0);
+        nodeFs.closeSync(fd);
+        // Savegame GDM binary files start with "MDF (0x22 0x4D 0x44 0x46)
+        // Map source asset GDM files start with !MDF (0x21 0x4D 0x44 0x46)
+        return buf[0] === 0x22 && buf[1] === 0x4D && buf[2] === 0x44 && buf[3] === 0x46;
+    } catch (_) {
+        return false;
+    }
 }
 
 const parser = new XMLParser({ 
@@ -1278,9 +1288,13 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.loadDefaultVehicles = startFarmFlag;
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
 
-            // Ensure densityMapRevision is 4 and mapDensityMapRevision is 1 when fruits density map is present
-            // In FS25, engine densityMapRevision is 4. Setting it to 1 causes "Warning: density map is not valid, ignoring density map from savegame"
-            if (fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'))) {
+            // Ensure densityMapRevision is 4 and mapDensityMapRevision is 1 ONLY when genuine savegame fruits density map ("MDF) is present
+            // In FS25, engine densityMapRevision is 4. For custom mod maps or DLC maps without savegame fruits GDM, densityMapRevision must be omitted.
+            const slotFruitsPath = path.join(slotPath, 'densityMap_fruits.gdm');
+            if (fs.existsSync(slotFruitsPath) && !isSavegameGdm(slotFruitsPath)) {
+                try { fs.unlinkSync(slotFruitsPath); } catch (_) {}
+            }
+            if (fs.existsSync(slotFruitsPath) && isSavegameGdm(slotFruitsPath)) {
                 savegameData.careerSavegame.settings.densityMapRevision = '4';
                 savegameData.careerSavegame.settings.mapDensityMapRevision = '1';
             } else {
@@ -1660,14 +1674,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    // Extract fruit density map from custom map archive if available
-                    if (!fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'))) {
-                        const fruitEntry = entryByBaseName.get('densitymap_fruits.gdm');
-                        if (fruitEntry) {
-                            await fs.writeFile(path.join(slotPath, 'densityMap_fruits.gdm'), fruitEntry.getData());
-                            console.log(`[CREATE] Fast fallback extracted densityMap_fruits.gdm`);
-                        }
-                    }
+                    // Do NOT extract raw densityMap_fruits.gdm from custom map archive because map ZIP assets use !MDF editor headers which GIANTS Engine rejects in savegames
 
                     if (includeStartVehicles && !fs.existsSync(path.join(slotPath, 'vehicles.xml'))) {
                         const entry = entryByBaseName.get('vehicles.xml');
@@ -6222,7 +6229,7 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
                 const baseName = path.basename(entry.entryName);
                 const lowerBase = baseName.toLowerCase();
                 const isDensityFile = 
-                    (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm') || 
+                    (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm' && lowerBase !== 'densitymap_fruits.gdm') || 
                     lowerBase.startsWith('infolayer_') ||
                     lowerBase === 'fields.xml';
 
@@ -6259,7 +6266,7 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
                     } else {
                         const lowerBase = item.name.toLowerCase();
                         const isDensityFile = 
-                            (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm') || 
+                            (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm' && lowerBase !== 'densitymap_fruits.gdm') || 
                             lowerBase.startsWith('infolayer_') ||
                             lowerBase === 'fields.xml';
 
@@ -6397,13 +6404,30 @@ async function ensureSavegameDensityMaps(savePath) {
                     }
                 }
 
-                const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
+                const fruitsPath = path.join(savePath, 'densityMap_fruits.gdm');
+                if (fs.existsSync(fruitsPath) && !isSavegameGdm(fruitsPath)) {
+                    try {
+                        await fs.remove(fruitsPath);
+                        console.log(`[DENSITY-CHECK] Purged raw map asset (!MDF) densityMap_fruits.gdm from ${savePath}`);
+                    } catch (_) {}
+                }
+
+                const hasFruitsGdm = fs.existsSync(fruitsPath) && isSavegameGdm(fruitsPath);
                 if (!hasFruitsGdm) {
-                    // If fruits GDM is not in the slot, strip densityMapRevision completely so Giants Engine natively generates crops
-                    careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>\r?\n?/gi, '');
-                    careerXml = careerXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>\r?\n?/gi, '');
-                    await fs.writeFile(careerPath, careerXml);
-                    console.log(`[DENSITY-CHECK] Purged densityMapRevision because densityMap_fruits.gdm is absent for ${savePath}`);
+                    // If valid savegame fruits GDM is not in the slot, strip densityMapRevision completely so Giants Engine natively generates crops
+                    let xmlModified = false;
+                    if (careerXml.includes('<densityMapRevision>')) {
+                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>\r?\n?/gi, '');
+                        xmlModified = true;
+                    }
+                    if (careerXml.includes('<mapDensityMapRevision>')) {
+                        careerXml = careerXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>\r?\n?/gi, '');
+                        xmlModified = true;
+                    }
+                    if (xmlModified) {
+                        await fs.writeFile(careerPath, careerXml);
+                        console.log(`[DENSITY-CHECK] Purged densityMapRevision because valid savegame densityMap_fruits.gdm is absent for ${savePath}`);
+                    }
                 } else {
                     const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '';
                     const curMapRev = settings['@_mapDensityMapRevision'] || settings.mapDensityMapRevision || '';
