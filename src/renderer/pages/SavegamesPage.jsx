@@ -3094,10 +3094,8 @@ export default function SavegamesPage() {
       if (mapId && window.api?.maps) {
         window.api.maps.checkTemplate(mapId, title, modName).then(exists => {
             setMapHasTemplate(exists);
-            // Always enable auto-launch for custom mod maps so newly created saves launch directly into the game
-            const isBaseMap = ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes((mapId || '').toLowerCase()) ||
-                              ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes((modName || '').toLowerCase());
-            setAutoLaunchOnCreate(!isBaseMap || !exists);
+            // Only uninitialized maps (!exists) automatically launch; initialized maps (with automation template) do NOT auto-launch
+            setAutoLaunchOnCreate(!exists);
         });
 
         // Auto-select required mods for custom modded maps (skip official DLCs like pdlc_highlandsFishingPack)
@@ -4216,9 +4214,7 @@ export default function SavegamesPage() {
 
                                 <div>
                                     <label style={{ fontSize: 12, fontWeight: 800, display: 'block', marginBottom: 8, color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>
-                                        SELECT MAP {mapHasTemplate && (
-                                            <span style={{ color: 'var(--accent)', marginLeft: 8 }}><Zap size={10} fill="var(--accent)" /> AUTOMATED</span>
-                                        )}
+                                        SELECT MAP
                                     </label>
                                     <MapSelectDropdown 
                                         value={createMap} 
