@@ -314,31 +314,10 @@ async function launch(options = {}) {
     const hasEngineTerrain = fs.existsSync(heightmapFile);
     const hasEngineDensity = fs.existsSync(densityFruitsFile) || fs.existsSync(densityGroundFile) || fs.existsSync(guidedTourFile);
     
-    let isCompleteAndAutomated = false;
-    if (hasCoreXml && !isServerSave) {
-      try {
-        const cXml = fs.readFileSync(careerFile, 'utf8');
-        const mapMatch = cXml.match(/<mapId>(.*?)<\/mapId>/i);
-        const currentMapId = mapMatch ? mapMatch[1] : '';
-        const isOfficial = savegameManager.isOfficialMap(currentMapId);
-        const hasEngineFiles = hasEngineTerrain || hasEngineDensity;
-        const hasTemplate = isOfficial || (await savegameManager.hasMapTemplate(currentMapId));
-
-        if (isOfficial || hasEngineFiles || hasTemplate) {
-          isCompleteAndAutomated = true;
-        }
-      } catch (e) {
-        isCompleteAndAutomated = hasEngineTerrain && hasEngineDensity;
-      }
-    }
-    
     if (isServerSave) {
       console.log(`[LAUNCH] Savegame ${options.savegameIndex} is a Multiplayer Server save. Bypassing singleplayer autoStart so game launches to Multiplayer menu.`);
-    } else if (!isCompleteAndAutomated) {
-      console.log(`[LAUNCH] Savegame ${options.savegameIndex} is an un-automated slot without a master template. Bypassing autoStart so GIANTS Engine initializes map natively in-game.`);
-      needsManualInit = true;
     } else {
-      console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is fully automated. Auto-starting into map.`);
+      console.log(`[LAUNCH] Target savegame ${options.savegameIndex} auto-starting into map.`);
       if (options.autoStart !== false) {
         args.push('-autoStartSavegameId', String(options.savegameIndex));
         if (!args.includes('-autoStart')) {
