@@ -312,7 +312,24 @@ async function launch(options = {}) {
     const hasCoreXml = fs.existsSync(farmsFile) && fs.existsSync(careerFile);
     const hasEngineTerrain = fs.existsSync(heightmapFile);
     const hasEngineDensity = fs.existsSync(densityFruitsFile) || fs.existsSync(densityGroundFile) || fs.existsSync(guidedTourFile);
-    const isCompleteAndAutomated = hasCoreXml && hasEngineTerrain && hasEngineDensity && !isServerSave;
+    
+    let isCompleteAndAutomated = false;
+    if (hasCoreXml && !isServerSave) {
+      try {
+        const cXml = fs.readFileSync(careerFile, 'utf8');
+        const mapMatch = cXml.match(/<mapId>(.*?)<\/mapId>/i);
+        const currentMapId = mapMatch ? mapMatch[1] : '';
+        const isOfficial = savegameManager.isOfficialMap(currentMapId);
+        const hasEngineFiles = hasEngineTerrain || hasEngineDensity;
+        const hasTemplate = isOfficial || (await savegameManager.hasMapTemplate(currentMapId));
+
+        if (isOfficial || hasEngineFiles || hasTemplate) {
+          isCompleteAndAutomated = true;
+        }
+      } catch (e) {
+        isCompleteAndAutomated = hasEngineTerrain && hasEngineDensity;
+      }
+    }
     
     if (isServerSave) {
       console.log(`[LAUNCH] Savegame ${options.savegameIndex} is a Multiplayer Server save. Bypassing singleplayer autoStart so game launches to Multiplayer menu.`);

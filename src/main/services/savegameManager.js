@@ -424,26 +424,22 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
 
     const folders = await fs.readdir(templatesDir);
 
-    // Helper: Verify template is complete (not a corrupt/dummy folder with only copied XMLs)
+    // Helper: Verify template is complete with required career configuration
     const isCompleteTemplate = async (fPath, isZip = false) => {
         if (isZip) {
             try {
                 const AdmZip = require('adm-zip');
                 const zip = new AdmZip(fPath);
-                const hasHeightmap = !!zip.getEntry('terrain.heightmap.png');
-                const hasGdm = !!zip.getEntry('densityMap_fruits.gdm') || !!zip.getEntry('densityMap_ground.gdm');
-                const hasTour = !!zip.getEntry('guidedTour.xml');
-                return hasHeightmap && (hasGdm || hasTour || zip.getEntries().length >= 25);
+                const hasCareer = !!zip.getEntry('careerSavegame.xml');
+                const hasFarms = !!zip.getEntry('farms.xml') || !!zip.getEntry('farmland.xml');
+                return hasCareer && hasFarms;
             } catch (e) {
                 return false;
             }
         }
-        if (!fs.existsSync(path.join(fPath, 'terrain.heightmap.png'))) return false;
-        const hasGdm = fs.existsSync(path.join(fPath, 'densityMap_fruits.gdm')) || fs.existsSync(path.join(fPath, 'densityMap_ground.gdm'));
-        const hasTour = fs.existsSync(path.join(fPath, 'guidedTour.xml'));
-        if (hasGdm || hasTour) return true;
-        const count = await fs.readdir(fPath).then(files => files.length).catch(() => 0);
-        return count >= 25;
+        const hasCareer = fs.existsSync(path.join(fPath, 'careerSavegame.xml'));
+        const hasFarms = fs.existsSync(path.join(fPath, 'farms.xml')) || fs.existsSync(path.join(fPath, 'farmland.xml'));
+        return hasCareer && hasFarms;
     };
 
     // 1. Official base map master templates — exact direct folder match.
