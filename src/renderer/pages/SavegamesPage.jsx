@@ -3094,12 +3094,10 @@ export default function SavegamesPage() {
       if (mapId && window.api?.maps) {
         window.api.maps.checkTemplate(mapId, title, modName).then(exists => {
             setMapHasTemplate(exists);
-            // Only force auto-launch if NOT automated; otherwise preserve user preference or reset to false
-            if (!exists) {
-              setAutoLaunchOnCreate(true);
-            } else {
-              setAutoLaunchOnCreate(false); 
-            }
+            // Always enable auto-launch for custom mod maps so newly created saves launch directly into the game
+            const isBaseMap = ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes((mapId || '').toLowerCase()) ||
+                              ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes((modName || '').toLowerCase());
+            setAutoLaunchOnCreate(!isBaseMap || !exists);
         });
 
         // Auto-select required mods for custom modded maps (skip official DLCs like pdlc_highlandsFishingPack)
@@ -3640,11 +3638,9 @@ export default function SavegamesPage() {
         }
         useToastStore.getState().success(`Career created in Slot ${slotIndex}`);
         setShowCreateModal(false);
-        fetchSavegames();
+        await fetchSavegames();
         if (autoLaunchOnCreate) {
-            setTimeout(() => {
-              handleLaunch(slotIndex);
-            }, 1500);
+          handleLaunch(slotIndex);
         }
       } else {
         useToastStore.getState().error(result.error);
