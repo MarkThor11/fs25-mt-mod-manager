@@ -158,13 +158,13 @@ function getTemplatesPath() {
                             try { fs.unlinkSync(badPath); } catch (_) {}
                         }
                     }
-                    // Ensure careerSavegame.xml has densityMapRevision 1 matching official maps
+                    // Ensure careerSavegame.xml has densityMapRevision 4 for FS25 savegame format
                     const cPath = path.join(dstMf, 'careerSavegame.xml');
                     if (fs.existsSync(cPath)) {
                         try {
                             let cXml = fs.readFileSync(cPath, 'utf8');
-                            if (cXml.includes('<densityMapRevision>4</densityMapRevision>')) {
-                                cXml = cXml.replace(/<densityMapRevision>4<\/densityMapRevision>/g, '<densityMapRevision>1</densityMapRevision>');
+                            if (cXml.includes('<densityMapRevision>1</densityMapRevision>')) {
+                                cXml = cXml.replace(/<densityMapRevision>1<\/densityMapRevision>/g, '<densityMapRevision>4</densityMapRevision>');
                                 fs.writeFileSync(cPath, cXml);
                             }
                         } catch (_) {}
@@ -1278,10 +1278,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.loadDefaultVehicles = startFarmFlag;
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
 
-            // Ensure densityMapRevision and mapDensityMapRevision are set to '1' when fruits density map is present
-            // Mismatched or deleted revisions cause Giants Engine to ignore density map from savegame
+            // Ensure densityMapRevision is 4 and mapDensityMapRevision is 1 when fruits density map is present
+            // In FS25, engine densityMapRevision is 4. Setting it to 1 causes "Warning: density map is not valid, ignoring density map from savegame"
             if (fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'))) {
-                savegameData.careerSavegame.settings.densityMapRevision = '1';
+                savegameData.careerSavegame.settings.densityMapRevision = '4';
                 savegameData.careerSavegame.settings.mapDensityMapRevision = '1';
             } else {
                 delete savegameData.careerSavegame.settings.densityMapRevision;
@@ -1855,7 +1855,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             const hasFruitsGdm = fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'));
             if (hasFruitsGdm) {
                 if (!fcXml.includes('<densityMapRevision>')) {
-                    fcXml = fcXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>1</densityMapRevision>\n        <mapDensityMapRevision>1</mapDensityMapRevision>');
+                    fcXml = fcXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>4</densityMapRevision>\n        <mapDensityMapRevision>1</mapDensityMapRevision>');
+                    await fs.writeFile(finalCareerPath, fcXml, 'utf8');
+                } else if (fcXml.includes('<densityMapRevision>1</densityMapRevision>')) {
+                    fcXml = fcXml.replace(/<densityMapRevision>1<\/densityMapRevision>/g, '<densityMapRevision>4</densityMapRevision>');
                     await fs.writeFile(finalCareerPath, fcXml, 'utf8');
                 }
             } else {
@@ -6402,15 +6405,29 @@ async function ensureSavegameDensityMaps(savePath) {
                     await fs.writeFile(careerPath, careerXml);
                     console.log(`[DENSITY-CHECK] Purged densityMapRevision because densityMap_fruits.gdm is absent for ${savePath}`);
                 } else {
-                    const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '1';
-                    if (curRev !== expectedRev || !careerXml.includes('<densityMapRevision>')) {
+                    const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '';
+                    const curMapRev = settings['@_mapDensityMapRevision'] || settings.mapDensityMapRevision || '';
+                    let modified = false;
+
+                    if (curRev !== '4' || !careerXml.includes('<densityMapRevision>')) {
                         if (careerXml.includes('<densityMapRevision>')) {
-                            careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>${expectedRev}</densityMapRevision>`);
+                            careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, '<densityMapRevision>4</densityMapRevision>');
                         } else {
-                            careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <densityMapRevision>${expectedRev}</densityMapRevision>\n        <mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
+                            careerXml = careerXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>4</densityMapRevision>');
                         }
+                        modified = true;
+                    }
+                    if (curMapRev !== expectedRev || !careerXml.includes('<mapDensityMapRevision>')) {
+                        if (careerXml.includes('<mapDensityMapRevision>')) {
+                            careerXml = careerXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>/i, `<mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
+                        } else {
+                            careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
+                        }
+                        modified = true;
+                    }
+                    if (modified) {
                         await fs.writeFile(careerPath, careerXml);
-                        console.log(`[DENSITY-CHECK] Corrected densityMapRevision ${curRev} -> ${expectedRev} in ${savePath}`);
+                        console.log(`[DENSITY-CHECK] Corrected density revisions (densityMapRevision=4, mapDensityMapRevision=${expectedRev}) in ${savePath}`);
                     }
                 }
 
@@ -6596,5 +6613,6 @@ module.exports = {
     stashSinglePlayerSaves,
     restoreStashedSinglePlayerSaves,
     repairSavegameMapId,
-    resetSavegameFieldStates
+    resetSavegameFieldStates,
+    ensureSavegameDensityMaps
 };
