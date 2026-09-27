@@ -156,10 +156,15 @@ export const useSavegameStore = create((set) => ({
   deleteSavegame: async (savePath) => {
     if (!window.api?.savegames) return { success: false, error: 'API Offline' };
     // Optimistically update UI state immediately
+    const remaining = get().savegames.filter(sg => sg.path !== savePath);
     set((s) => ({
-      savegames: s.savegames.filter(sg => sg.path !== savePath),
+      savegames: remaining,
       selectedSavegame: s.selectedSavegame?.path === savePath ? null : s.selectedSavegame
     }));
+    // Instantly persist cache so deleted save does not flash on reload
+    if (window.api?.settings) {
+      window.api.settings.set('savegamesCache', JSON.stringify(remaining)).catch(() => {});
+    }
     try {
       const result = await window.api.savegames.delete({ path: savePath });
       if (!result?.success) {

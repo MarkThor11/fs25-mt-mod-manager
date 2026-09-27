@@ -127,6 +127,7 @@ function getTemplatesPath() {
         if (bundledTemplates) {
             const masterFolders = ['MapAS', 'MapEU', 'MapUS', 'pdlc_highlandsFishingPack_HighlandsFishingMap'];
             const filesToPurge = [
+                'densityMap_fruits.gdm', 'densityMap_fruits_broken14.gdm', 'densityMap_fruits_fixed14.gdm',
                 'fields.xml', 'fieldGround.xml', 'densityMap_fruits_growthState.xml',
                 'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml',
                 'terrain.lod.type.cache', 'terrain.nmap.cache', 'terrain.occluders.cache',
@@ -176,6 +177,7 @@ function getTemplatesPath() {
         // Purge bad/bloated/crop-freezing files from ALL user templates in modManagerTemplates
         const allTemplateDirs = fs.readdirSync(p);
         const allFilesToPurge = [
+            'densityMap_fruits.gdm', 'densityMap_fruits_broken14.gdm', 'densityMap_fruits_fixed14.gdm',
             'fields.xml', 'fieldGround.xml', 'densityMap_fruits_growthState.xml',
             'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml',
             'terrain.lod.type.cache', 'terrain.nmap.cache', 'terrain.occluders.cache',
@@ -1057,17 +1059,22 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 copiedTemplate = true;
             }
             if (copiedTemplate) {
-                const templateBadFiles = [
-                    'fields.xml', 'fieldGround.xml', 'densityMap_fruits_growthState.xml',
-                    'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml',
-                    'terrain.lod.type.cache', 'terrain.nmap.cache', 'terrain.occluders.cache',
-                    'vehicleNavigationCostmap.dat'
-                ];
-                for (const bad of templateBadFiles) {
-                    const bp = path.join(slotPath, bad);
-                    if (fs.existsSync(bp)) {
-                        try { await fs.remove(bp); } catch (_) {}
+                // ALWAYS purge density maps, info layers, growth states, fields, and caches from the new savegame slot:
+                // This ensures Giants Engine natively initializes all fields with their default author crops and vegetation.
+                try {
+                    const filesInSlot = await fs.readdir(slotPath);
+                    for (const file of filesInSlot) {
+                        const lower = file.toLowerCase();
+                        const isDensity = lower.startsWith('densitymap_');
+                        const isInfoLayer = lower.startsWith('infolayer_');
+                        const isFieldOrGrowth = lower === 'fields.xml' || lower === 'fieldground.xml' || lower.endsWith('growthstate.xml') || lower === 'densitymapheight.xml';
+                        const isCache = lower.endsWith('.cache') || lower === 'vehiclenavigationcostmap.dat';
+                        if (isDensity || isInfoLayer || isFieldOrGrowth || isCache) {
+                            await fs.remove(path.join(slotPath, file)).catch(() => {});
+                        }
                     }
+                } catch (purgeErr) {
+                    console.warn('[CREATE] Failed to purge density maps from slot:', purgeErr.message);
                 }
             }
         }
@@ -1356,12 +1363,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 savegameData.careerSavegame.player['@_spawnPositionX'] = '-528.800';
                 savegameData.careerSavegame.player['@_spawnPositionY'] = '19.800';
                 savegameData.careerSavegame.player['@_spawnPositionZ'] = '-61.100';
-            } else if (engineMapId === 'pdlc_highlandsFishingPack.HighlandsFishingMap' || (engineMapId || '').toLowerCase().includes('highlandsfishing') || (mapTitle || '').toLowerCase() === 'kinlaig') {
-                savegameData.careerSavegame.player['@_spawnPositionX'] = '-896.000';
-                savegameData.careerSavegame.player['@_spawnPositionY'] = '135.700';
-                savegameData.careerSavegame.player['@_spawnPositionZ'] = '190.000';
             } else {
-                // Custom mod map — use the map's actual default start from its i3d/config files
+                // Kinlaig and custom mod maps: use the map's actual default start from its i3d/config files,
+                // or omit coordinates completely so Giants Engine spawns the player at the author's designated playerStart
                 const defaultSpawn = await getMapDefaultStartCoordinates(slotPath);
                 if (defaultSpawn && defaultSpawn.x !== undefined) {
                     savegameData.careerSavegame.player['@_spawnPositionX'] = defaultSpawn.x.toFixed(3);
@@ -1386,13 +1390,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     const pData = parser.parse(pXml);
                     if (pData?.players?.player) {
                         const plist = Array.isArray(pData.players.player) ? pData.players.player : [pData.players.player];
-                        // Use the same spawn source as careerSavegame.xml: hardcoded for official maps,
-                        // map-file lookup for custom maps. Never use saved player position.
                         let spawnForPlayers = null;
                         if (engineMapId === 'MapUS')       spawnForPlayers = { x: -128.0,  y: 49.2,  z: -162.0 };
                         else if (engineMapId === 'MapEU')  spawnForPlayers = { x: -263.0,  y: 60.0,  z: 44.0   };
                         else if (engineMapId === 'MapAS')  spawnForPlayers = { x: -528.8,  y: 19.8,  z: -61.1  };
-                        else if (engineMapId === 'pdlc_highlandsFishingPack.HighlandsFishingMap' || (engineMapId || '').toLowerCase().includes('highlandsfishing') || (mapTitle || '').toLowerCase() === 'kinlaig') spawnForPlayers = { x: -896.0, y: 135.7, z: 190.0 };
                         else spawnForPlayers = await getMapDefaultStartCoordinates(slotPath);
 
                         for (const p of plist) {
@@ -1750,22 +1751,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         console.warn('[CREATE] Failed to scan placeables for required mods:', placeErr.message);
     }
 
-    // Extract starting field crops, ground density maps, and infoLayers from map mod ZIP if missing or fresh save
-    if (modZipPath && fs.existsSync(modZipPath)) {
-        try {
-            const hasFruitsGdm = fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'));
-            if (!hasFruitsGdm || requiresEngineInit) {
-                console.log(`[CREATE] Extracting author field crops and density maps from map mod ZIP: ${path.basename(modZipPath)}`);
-                await extractMapDensityFiles(modZipPath, slotPath, false);
-            }
-        } catch (e) {
-            console.warn('[CREATE] Failed to extract map density maps:', e.message);
-        }
-    }
-
     // Configure starting farmlands accurately for both template and fresh mod saves
     await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
-
 
     if (requiresEngineInit || !fs.existsSync(path.join(slotPath, 'farms.xml'))) {
         const realUserId = await getPersistentUniqueUserId(fs25Path);
@@ -1838,8 +1825,17 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         await fs.writeFile(envPath, builder.build(initialEnv));
     }
 
-    // Auto-heal missing density maps and sanitize growthState XML for newly created save slot
-    await ensureSavegameDensityMaps(slotPath);
+    // Final clean pass: Ensure no density maps, info layers, or invalid fields exist in the new slot
+    // This allows Giants Engine to load and generate all author crops natively by default
+    try {
+        const remainingFiles = await fs.readdir(slotPath);
+        for (const file of remainingFiles) {
+            const lower = file.toLowerCase();
+            if (lower.startsWith('densitymap_') || lower.startsWith('infolayer_') || lower === 'fields.xml' || lower === 'fieldground.xml' || lower.endsWith('growthstate.xml') || lower.endsWith('.cache') || lower === 'vehiclenavigationcostmap.dat') {
+                await fs.remove(path.join(slotPath, file)).catch(() => {});
+            }
+        }
+    } catch (_) {}
 
     return { success: true, path: slotPath, requiresEngineInit, mapId };
 }
@@ -2089,6 +2085,10 @@ async function getAllSavegames() {
             const xml = await fs.readFile(path.join(savePath, 'careerSavegame.xml'), 'utf8');
             const data = parser.parse(xml);
             if (!data || !data.careerSavegame) continue;
+            if (data.careerSavegame['@_valid'] === 'false' || data.careerSavegame['@_valid'] === false) {
+                debugLog(`[SAVEGAMES] Slot ${i} has valid="false", skipping empty/deleted slot.`);
+                continue;
+            }
             debugLog(`[SAVEGAMES] Found slot ${i}: size=${xml.length} bytes`);
             const settings = data.careerSavegame.settings || {};
             const stats = data.careerSavegame.statistics || {};
@@ -2139,9 +2139,6 @@ async function getAllSavegames() {
             if (mapId && mapId.includes('.')) {
                 mapModName = mapId.split('.')[0];
             }
-
-            // Auto-heal missing crop density maps for mod maps if not present
-            await ensureSavegameDensityMaps(savePath);
 
             const farmsFile = path.join(savePath, 'farms.xml');
             const initFile = path.join(savePath, 'terrain.heightmap.png');
@@ -3002,6 +2999,82 @@ async function renameSavegame(savePath, newName) {
     return updateSavegameAttribute(savePath, 'career', 'savegameName', newName);
 }
 
+function removeSlotFromVdf(vdfContent, slotIndex) {
+    if (!vdfContent || !slotIndex) return vdfContent;
+    const lines = vdfContent.split(/\r?\n/);
+    const result = [];
+    let skipping = false;
+    let skipDepth = 0;
+    const targetPrefix = `"FarmingSimulator2025/savegame${slotIndex}/`;
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (!skipping) {
+            if (trimmed.startsWith(targetPrefix)) {
+                skipping = true;
+                skipDepth = 0;
+                continue;
+            }
+            result.push(line);
+        } else {
+            if (trimmed === '{') {
+                skipDepth++;
+            } else if (trimmed === '}') {
+                skipDepth--;
+                if (skipDepth <= 0) {
+                    skipping = false;
+                }
+            }
+        }
+    }
+    return result.join('\n');
+}
+
+async function cleanSteamRemoteCacheForSlot(slotIndex) {
+    if (!slotIndex) return;
+    try {
+        const steamPaths = [
+            'C:\\Program Files (x86)\\Steam\\userdata',
+            'C:\\Program Files\\Steam\\userdata'
+        ];
+        try {
+            const { execSync } = require('child_process');
+            const regOut = execSync('reg query "HKEY_CURRENT_USER\\Software\\Valve\\Steam" /v "SteamPath" 2>nul').toString();
+            const match = regOut.match(/SteamPath\s+REG_SZ\s+(.*)/i);
+            if (match && match[1]) {
+                const regSteamUserdata = path.join(match[1].trim(), 'userdata');
+                if (!steamPaths.includes(regSteamUserdata)) {
+                    steamPaths.unshift(regSteamUserdata);
+                }
+            }
+        } catch (_) {}
+
+        for (const basePath of steamPaths) {
+            if (!fs.existsSync(basePath)) continue;
+            const accounts = await fs.readdir(basePath);
+            for (const acc of accounts) {
+                const vdfPath = path.join(basePath, acc, '2300320', 'remotecache.vdf');
+                if (fs.existsSync(vdfPath)) {
+                    try {
+                        const content = await fs.readFile(vdfPath, 'utf8');
+                        if (content.includes(`FarmingSimulator2025/savegame${slotIndex}/`)) {
+                            const cleaned = removeSlotFromVdf(content, slotIndex);
+                            await fs.writeFile(vdfPath, cleaned, 'utf8');
+                            console.log(`[STEAM-CLOUD] Removed savegame${slotIndex} entries from Steam remotecache.vdf: ${vdfPath}`);
+                        }
+                    } catch (e) {
+                        console.warn(`[STEAM-CLOUD] Could not clean remotecache for account ${acc}:`, e.message);
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        console.warn('[STEAM-CLOUD] Error scanning userdata for remotecache cleanup:', err.message);
+    }
+}
+
 async function deleteSavegame(savePath) {
     if (fs.existsSync(savePath)) {
         // Extract slot number, e.g. savegame4 -> 4
@@ -3009,6 +3082,34 @@ async function deleteSavegame(savePath) {
         const slotMatch = folderName.match(/savegame(\d+)/i);
         const slotIndex = slotMatch ? slotMatch[1] : null;
 
+        // 1. Steam Cloud sync prevention: Clean up entries from Steam's remotecache.vdf
+        if (slotIndex) {
+            await cleanSteamRemoteCacheForSlot(slotIndex);
+        }
+
+        // 2. Clean up stashed Single Player save if present
+        if (slotIndex) {
+            try {
+                const fs25Path = getFs25Path();
+                const stashedSlot = path.join(fs25Path, 'stashed_sp_saves', folderName);
+                if (fs.existsSync(stashedSlot)) {
+                    await fs.remove(stashedSlot);
+                    console.log(`[SAVEGAMES] Cleaned up stashed save for slot ${slotIndex}`);
+                }
+            } catch (e) {
+                console.warn(`[SAVEGAMES] Note: Stashed save cleanup for slot ${slotIndex}:`, e.message);
+            }
+        }
+
+        // 3. Mark careerSavegame.xml as invalid tombstone first so any pending sync treats it as empty
+        try {
+            const careerFile = path.join(savePath, 'careerSavegame.xml');
+            if (fs.existsSync(careerFile)) {
+                await fs.writeFile(careerFile, '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<careerSavegame revision="2" valid="false"/>\n', 'utf8');
+            }
+        } catch (_) {}
+
+        // 4. Remove the savegame directory from disk
         let retries = 5;
         let deleted = false;
         while (retries > 0) {
@@ -3037,7 +3138,7 @@ async function deleteSavegame(savePath) {
             }
         }
 
-        // Fast cleanup: Remove virtual active mods staging directory for this slot
+        // 5. Fast cleanup: Remove virtual active mods staging directory for this slot
         if (slotIndex) {
             try {
                 const fs25DataRoot = pathProvider.getFS25DataRoot();
@@ -6230,15 +6331,6 @@ async function ensureSavegameDensityMaps(savePath) {
                 if (mapId && !isOfficialMap(mapId)) {
                     const modPath = await resolveMapModPath(savePath);
                     if (modPath && fs.existsSync(modPath)) {
-                        const fruitsPath = path.join(savePath, 'densityMap_fruits.gdm');
-                        const groundPath = path.join(savePath, 'densityMap_ground.gdm');
-                        const fruitsValid = fs.existsSync(fruitsPath) && fs.statSync(fruitsPath).size > 1024;
-                        const groundValid = fs.existsSync(groundPath) && fs.statSync(groundPath).size > 1024;
-                        if (!fruitsValid || !groundValid) {
-                            console.log(`[DENSITY-CHECK] Save slot at ${savePath} missing or empty density maps! Extracting from ${path.basename(modPath)}...`);
-                            await extractMapDensityFiles(modPath, savePath, true);
-                        }
-
                         const farmlandPath = path.join(savePath, 'farmland.xml');
                         if (!fs.existsSync(farmlandPath)) {
                             console.log(`[DENSITY-CHECK] Save slot at ${savePath} missing farmland.xml! Setting up farmlands...`);
@@ -6255,31 +6347,6 @@ async function ensureSavegameDensityMaps(savePath) {
                                 if (m) expectedRev = m[1];
                             }
                         } catch (_) {}
-                    }
-                } else if (mapId && isOfficialMap(mapId)) {
-                    // For official maps, verify densityMap_fruits.gdm is pristine (header !MDF)
-                    const fruitsPath = path.join(savePath, 'densityMap_fruits.gdm');
-                    let needsFruitsSync = !fs.existsSync(fruitsPath) || fs.statSync(fruitsPath).size < 1024;
-                    if (!needsFruitsSync) {
-                        try {
-                            const fd = fs.openSync(fruitsPath, 'r');
-                            const hBuf = Buffer.alloc(4);
-                            fs.readSync(fd, hBuf, 0, 4, 0);
-                            fs.closeSync(fd);
-                            const lowMapId = (mapId || '').toLowerCase();
-                            if ((lowMapId === 'mapus' || lowMapId === 'mapeu') && hBuf[0] === 0x22) {
-                                needsFruitsSync = true;
-                            }
-                        } catch (_) {}
-                    }
-                    if (needsFruitsSync) {
-                        const resolvedFolder = await resolveTemplateFolder(mapId, null, settings['@_mapTitle'] || settings.mapTitle);
-                        const templatesDir = getTemplatesPath();
-                        const tFruit = resolvedFolder ? path.join(templatesDir, resolvedFolder, 'densityMap_fruits.gdm') : null;
-                        if (tFruit && fs.existsSync(tFruit)) {
-                            await fs.copy(tFruit, fruitsPath);
-                            console.log(`[DENSITY-CHECK] Replaced corrupted base game densityMap_fruits.gdm with pristine template file in ${savePath}`);
-                        }
                     }
                 }
 
