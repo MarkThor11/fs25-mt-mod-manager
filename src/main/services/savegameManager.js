@@ -1673,31 +1673,32 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         return false;
                     };
 
-                    // Extract exact starting files designated by the map author (vehicles, placeables, items, handtools, fields)
-                    if (includeStartVehicles && defaultVehiclesFile) await extractExactZipFile(defaultVehiclesFile, 'vehicles.xml');
-                    if (defaultPlaceablesFile) await extractExactZipFile(defaultPlaceablesFile, 'placeables.xml');
-                    if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
-                    if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
-                    if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
+                    // Only extract template starting XML files if restoring from a master template.
+                    // For fresh uninitialized saves, leave slot clean so GIANTS Engine natively loads complete map defaults.
+                    if (!requiresEngineInit) {
+                        if (includeStartVehicles && defaultVehiclesFile) await extractExactZipFile(defaultVehiclesFile, 'vehicles.xml');
+                        if (defaultPlaceablesFile) await extractExactZipFile(defaultPlaceablesFile, 'placeables.xml');
+                        if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
+                        if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
+                        if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
 
-                    // Fallback extraction for starting XML files if missing
-                    for (const targetXml of ['placeables.xml', 'items.xml', 'handTools.xml', 'fields.xml']) {
-                        if (!fs.existsSync(path.join(slotPath, targetXml))) {
-                            const entry = entryByBaseName.get(targetXml);
-                            if (entry) {
-                                await fs.writeFile(path.join(slotPath, targetXml), entry.getData());
-                                console.log(`[CREATE] Fast fallback extracted ${targetXml}`);
+                        // Fallback extraction for starting XML files if missing
+                        for (const targetXml of ['placeables.xml', 'items.xml', 'handTools.xml', 'fields.xml']) {
+                            if (!fs.existsSync(path.join(slotPath, targetXml))) {
+                                const entry = entryByBaseName.get(targetXml);
+                                if (entry) {
+                                    await fs.writeFile(path.join(slotPath, targetXml), entry.getData());
+                                    console.log(`[CREATE] Fast fallback extracted ${targetXml}`);
+                                }
                             }
                         }
-                    }
 
-                    // Do NOT extract raw densityMap_fruits.gdm from custom map archive because map ZIP assets use !MDF editor headers which GIANTS Engine rejects in savegames
-
-                    if (includeStartVehicles && !fs.existsSync(path.join(slotPath, 'vehicles.xml'))) {
-                        const entry = entryByBaseName.get('vehicles.xml');
-                        if (entry) {
-                            await fs.writeFile(path.join(slotPath, 'vehicles.xml'), entry.getData());
-                            console.log(`[CREATE] Fast fallback extracted vehicles.xml`);
+                        if (includeStartVehicles && !fs.existsSync(path.join(slotPath, 'vehicles.xml'))) {
+                            const entry = entryByBaseName.get('vehicles.xml');
+                            if (entry) {
+                                await fs.writeFile(path.join(slotPath, 'vehicles.xml'), entry.getData());
+                                console.log(`[CREATE] Fast fallback extracted vehicles.xml`);
+                            }
                         }
                     }
 
@@ -6424,8 +6425,27 @@ async function ensureSavegameDensityMaps(savePath) {
                 const settings = parsed?.careerSavegame?.settings || {};
                 const mapId = settings['@_mapId'] || settings.mapId;
 
+                const fruitsPath = path.join(savePath, 'densityMap_fruits.gdm');
+                if (fs.existsSync(fruitsPath) && !isSavegameGdm(fruitsPath)) {
+                    try {
+                        await fs.remove(fruitsPath);
+                        console.log(`[DENSITY-CHECK] Purged raw map asset (!MDF) densityMap_fruits.gdm from ${savePath}`);
+                    } catch (_) {}
+                }
+
+                const hasFruitsGdm = fs.existsSync(fruitsPath) && isSavegameGdm(fruitsPath);
+
+                // For uninitialized saves (no valid savegame densityMap_fruits.gdm), purge any partial fields.xml
+                // so GIANTS Engine natively loads the map's complete default fields & crops from the map mod ZIP.
+                if (!hasFruitsGdm && fs.existsSync(fieldsXmlPath)) {
+                    try {
+                        await fs.remove(fieldsXmlPath);
+                        console.log(`[DENSITY-CHECK] Purged uninitialized save fields.xml from ${savePath} for native engine loading.`);
+                    } catch (_) {}
+                }
+
                 let expectedRev = '1';
-                if (mapId && !isOfficialMap(mapId)) {
+                if (mapId && !isOfficialMap(mapId) && hasFruitsGdm) {
                     const modPath = await resolveMapModPath(savePath);
                     if (modPath && fs.existsSync(modPath)) {
                         await extractMapDensityFiles(modPath, savePath, false);
@@ -6448,16 +6468,6 @@ async function ensureSavegameDensityMaps(savePath) {
                         } catch (_) {}
                     }
                 }
-
-                const fruitsPath = path.join(savePath, 'densityMap_fruits.gdm');
-                if (fs.existsSync(fruitsPath) && !isSavegameGdm(fruitsPath)) {
-                    try {
-                        await fs.remove(fruitsPath);
-                        console.log(`[DENSITY-CHECK] Purged raw map asset (!MDF) densityMap_fruits.gdm from ${savePath}`);
-                    } catch (_) {}
-                }
-
-                const hasFruitsGdm = fs.existsSync(fruitsPath) && isSavegameGdm(fruitsPath);
                 if (!hasFruitsGdm) {
                     // If valid savegame fruits GDM is not in the slot, strip densityMapRevision completely so Giants Engine natively generates crops
                     let xmlModified = false;
