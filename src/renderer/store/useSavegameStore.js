@@ -64,7 +64,7 @@ export const useSavegameStore = create((set, get) => ({
         error: result.error || null,
       });
       // Save to cache asynchronously
-      if (window.api?.settings && freshSavegames.length > 0) {
+      if (window.api?.settings) {
         window.api.settings.set('savegamesCache', JSON.stringify(freshSavegames)).catch(() => {});
       }
     } catch (err) {

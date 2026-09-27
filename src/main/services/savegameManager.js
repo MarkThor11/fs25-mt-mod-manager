@@ -24,6 +24,10 @@ const INCOMPATIBLE_ENGINE_MODS = new Set(['fs25_maxdensityheighttypesbymap']);
 const logFile = (app && typeof app.getPath === 'function') 
     ? path.join(app.getPath('userData'), 'download_debug.log')
     : path.join(process.cwd(), 'download_debug.log');
+function debugLog(...args) {
+    console.log(...args);
+}
+
 function isSavegameGdm(filePath) {
     if (!filePath || !fs.existsSync(filePath)) return false;
     try {

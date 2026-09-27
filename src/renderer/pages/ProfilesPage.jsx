@@ -460,6 +460,7 @@ export default function ProfilesPage() {
       if (result.success) {
         useToastStore.getState().success(`Savegame successfully created in Slot ${slotIndex}!`);
         setShowSlotModal(false);
+        useSavegameStore.getState().fetchSavegames();
       } else {
         useToastStore.getState().error(result.error);
       }
