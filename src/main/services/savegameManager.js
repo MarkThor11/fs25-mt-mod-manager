@@ -6380,6 +6380,8 @@ async function ensureSavegameDensityMaps(savePath) {
                 if (mapId && !isOfficialMap(mapId)) {
                     const modPath = await resolveMapModPath(savePath);
                     if (modPath && fs.existsSync(modPath)) {
+                        await extractMapDensityFiles(modPath, savePath, false);
+
                         const farmlandPath = path.join(savePath, 'farmland.xml');
                         if (!fs.existsSync(farmlandPath)) {
                             console.log(`[DENSITY-CHECK] Save slot at ${savePath} missing farmland.xml! Setting up farmlands...`);
