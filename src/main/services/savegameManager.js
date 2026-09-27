@@ -127,8 +127,8 @@ function getTemplatesPath() {
         if (bundledTemplates) {
             const masterFolders = ['MapAS', 'MapEU', 'MapUS', 'pdlc_highlandsFishingPack_HighlandsFishingMap'];
             const filesToPurge = [
-                'densityMap_fruits.gdm', 'densityMap_fruits_broken14.gdm', 'densityMap_fruits_fixed14.gdm',
-                'fields.xml', 'fieldGround.xml', 'densityMap_fruits_growthState.xml',
+                'densityMap_fruits_broken14.gdm', 'densityMap_fruits_fixed14.gdm',
+                'fieldGround.xml', 'densityMap_fruits_growthState.xml',
                 'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml', 'densityMap_height.gdm'
             ];
             for (const mf of masterFolders) {
@@ -175,8 +175,8 @@ function getTemplatesPath() {
         // Purge bad/bloated/crop-freezing files from ALL user templates in modManagerTemplates
         const allTemplateDirs = fs.readdirSync(p);
         const allFilesToPurge = [
-            'densityMap_fruits.gdm', 'densityMap_fruits_broken14.gdm', 'densityMap_fruits_fixed14.gdm',
-            'fields.xml', 'fieldGround.xml', 'densityMap_fruits_growthState.xml',
+            'densityMap_fruits_broken14.gdm', 'densityMap_fruits_fixed14.gdm',
+            'fieldGround.xml', 'densityMap_fruits_growthState.xml',
             'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml', 'densityMap_height.gdm'
         ];
         for (const tDir of allTemplateDirs) {
@@ -1051,23 +1051,19 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 copiedTemplate = true;
             }
             if (copiedTemplate) {
-                // Purge empty/harvested fruit density maps and stale growth states from the new savegame slot:
-                // This allows Giants Engine to natively populate all fields with their default author crops.
-                // NOTE: We strictly preserve terrain.occluders.cache, vehicleNavigationCostmap.dat, info layers,
-                // heightmaps, split shapes, and placeables so the map loads smoothly without 55% occluder quadtree regeneration freeze.
+                // Sanitize stale growth states and flat heightmap placeholders while keeping genuine crop density and field files intact
                 try {
                     const filesInSlot = await fs.readdir(slotPath);
                     for (const file of filesInSlot) {
                         const lower = file.toLowerCase();
-                        const isDensityFruit = lower.startsWith('densitymap_fruits');
-                        const isFieldOrGrowth = lower === 'fields.xml' || lower === 'fieldground.xml' || lower.endsWith('growthstate.xml') || lower === 'densitymapheight.xml';
+                        const isStaleGrowth = lower.endsWith('growthstate.xml') || lower === 'densitymapheight.xml' || lower === 'densitymap_height.gdm' || lower.includes('broken14');
                         const isPf = lower.startsWith('precisionfarming') && !finalMods.some(m => (m?.modName || '').toLowerCase().includes('precisionfarming'));
-                        if (isDensityFruit || isFieldOrGrowth || isPf) {
+                        if (isStaleGrowth || isPf) {
                             await fs.remove(path.join(slotPath, file)).catch(() => {});
                         }
                     }
                 } catch (purgeErr) {
-                    console.warn('[CREATE] Failed to purge density fruit maps from slot:', purgeErr.message);
+                    console.warn('[CREATE] Failed to sanitize slot files:', purgeErr.message);
                 }
             }
         }
@@ -1282,14 +1278,16 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.loadDefaultVehicles = startFarmFlag;
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
 
-            // Strip ONLY density revision numbers so Giants Engine loads author crops fresh from game files,
-            // while preserving terrain, collision, and split shapes revisions so the engine doesn't recompute them
-            const revisionKeys = [
-                'densityMapRevision', 'mapDensityMapRevision'
-            ];
-            for (const rk of revisionKeys) {
-                delete savegameData.careerSavegame.settings[rk];
-                delete savegameData.careerSavegame.settings['@_' + rk];
+            // Ensure densityMapRevision and mapDensityMapRevision are set to '1' when fruits density map is present
+            // Mismatched or deleted revisions cause Giants Engine to ignore density map from savegame
+            if (fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'))) {
+                savegameData.careerSavegame.settings.densityMapRevision = '1';
+                savegameData.careerSavegame.settings.mapDensityMapRevision = '1';
+            } else {
+                delete savegameData.careerSavegame.settings.densityMapRevision;
+                delete savegameData.careerSavegame.settings['@_densityMapRevision'];
+                delete savegameData.careerSavegame.settings.mapDensityMapRevision;
+                delete savegameData.careerSavegame.settings['@_mapDensityMapRevision'];
             }
 
             // Critically ensure valid="true" is present — without it FS25 engine treats slot as empty
