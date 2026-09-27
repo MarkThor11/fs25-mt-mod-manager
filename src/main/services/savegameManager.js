@@ -1534,7 +1534,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         savegameData = {
             careerSavegame: {
                 '@_revision': '2',
-                '@_valid': 'true',
+                '@_valid': requiresEngineInit ? 'false' : 'true',
                 settings: {
                     savegameName: savegameName,
                     playerName: playerName,
