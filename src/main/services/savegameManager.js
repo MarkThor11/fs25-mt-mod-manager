@@ -6224,7 +6224,7 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
                 const baseName = path.basename(entry.entryName);
                 const lowerBase = baseName.toLowerCase();
                 const isDensityFile = 
-                    (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm') || 
+                    (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm' && lowerBase !== 'densitymap_fruits.gdm') || 
                     lowerBase.startsWith('infolayer_') ||
                     lowerBase === 'fields.xml';
 
@@ -6267,7 +6267,7 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
                     } else {
                         const lowerBase = item.name.toLowerCase();
                         const isDensityFile = 
-                            (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm') || 
+                            (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm' && lowerBase !== 'densitymap_fruits.gdm') || 
                             lowerBase.startsWith('infolayer_') ||
                             lowerBase === 'fields.xml';
 
