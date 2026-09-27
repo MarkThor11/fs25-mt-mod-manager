@@ -203,11 +203,37 @@ function getTemplatesPath() {
             'fieldGround.xml', 'densityMap_fruits_growthState.xml',
             'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml', 'densityMap_height.gdm'
         ];
-        for (const tDir of allTemplateDirs) {
-            const tDirPath = path.join(p, tDir);
-            if (fs.existsSync(tDirPath) && fs.statSync(tDirPath).isDirectory()) {
+        const masterFoldersSet = new Set(['mapas', 'mapeu', 'mapus', 'pdlc_highlandsfishingpack_highlandsfishingmap']);
+        for (const tItem of allTemplateDirs) {
+            const tItemLower = tItem.replace(/\.zip$/i, '').toLowerCase();
+            const tPath = path.join(p, tItem);
+            if (!fs.existsSync(tPath)) continue;
+            
+            // If custom map template lacks complete engine terrain or economy files, purge it so it's treated as fresh uninitialized map
+            if (!masterFoldersSet.has(tItemLower)) {
+                try {
+                    const stat = fs.statSync(tPath);
+                    if (stat.isFile() && tItem.toLowerCase().endsWith('.zip')) {
+                        const AdmZip = require('adm-zip');
+                        const zip = new AdmZip(tPath);
+                        if (!zip.getEntry('terrain.heightmap.png') || !zip.getEntry('economy.xml')) {
+                            fs.unlinkSync(tPath);
+                            console.log(`[TEMPLATES] Purged incomplete template ZIP: ${tItem}`);
+                            continue;
+                        }
+                    } else if (stat.isDirectory()) {
+                        if (!fs.existsSync(path.join(tPath, 'terrain.heightmap.png')) || !fs.existsSync(path.join(tPath, 'economy.xml'))) {
+                            fs.removeSync(tPath);
+                            console.log(`[TEMPLATES] Purged incomplete template folder: ${tItem}`);
+                            continue;
+                        }
+                    }
+                } catch (pErr) {}
+            }
+
+            if (fs.existsSync(tPath) && fs.statSync(tPath).isDirectory()) {
                 for (const badFile of allFilesToPurge) {
-                    const badPath = path.join(tDirPath, badFile);
+                    const badPath = path.join(tPath, badFile);
                     if (fs.existsSync(badPath)) {
                         try { fs.unlinkSync(badPath); } catch (_) {}
                     }
@@ -476,7 +502,7 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         return null;
     }
 
-    // Helper: Verify template is complete with required career configuration
+    // Helper: Verify template is complete with required career configuration and engine world files
     const isCompleteTemplate = async (fPath, isZip = false) => {
         if (isZip) {
             try {
@@ -484,14 +510,18 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
                 const zip = new AdmZip(fPath);
                 const hasCareer = !!zip.getEntry('careerSavegame.xml');
                 const hasFarms = !!zip.getEntry('farms.xml') || !!zip.getEntry('farmland.xml');
-                return hasCareer && hasFarms;
+                const hasHeightmap = !!zip.getEntry('terrain.heightmap.png');
+                const hasEconomy = !!zip.getEntry('economy.xml');
+                return hasCareer && hasFarms && hasHeightmap && hasEconomy;
             } catch (e) {
                 return false;
             }
         }
         const hasCareer = fs.existsSync(path.join(fPath, 'careerSavegame.xml'));
         const hasFarms = fs.existsSync(path.join(fPath, 'farms.xml')) || fs.existsSync(path.join(fPath, 'farmland.xml'));
-        return hasCareer && hasFarms;
+        const hasHeightmap = fs.existsSync(path.join(fPath, 'terrain.heightmap.png'));
+        const hasEconomy = fs.existsSync(path.join(fPath, 'economy.xml'));
+        return hasCareer && hasFarms && hasHeightmap && hasEconomy;
     };
 
     const folders = await fs.readdir(templatesDir);
