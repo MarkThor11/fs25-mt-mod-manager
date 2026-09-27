@@ -751,12 +751,7 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 			if (fs.existsSync(savePath)) {
 				try {
 					const { mods: modsList } = await savegameManager.getSavegameMods(savePath);
-					// If slot is an uninitialized save (no fruits GDM), disable selective filtering so all mods are available to native engine init
-					const hasSavegameFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm')) && savegameManager.isSavegameGdm(path.join(savePath, 'densityMap_fruits.gdm'));
-					if (!hasSavegameFruitsGdm || !modsList || modsList.length <= 2) {
-						activeModNames = null;
-						console.log(`[VIRTUAL] Uninitialized / new save slot ${savegameIndex} detected: including all local mods for native map initialization.`);
-					} else if (modsList) {
+					if (modsList) {
 						modsList.forEach(m => activeModNames.add(m.modName.toLowerCase()));
 					}
 
