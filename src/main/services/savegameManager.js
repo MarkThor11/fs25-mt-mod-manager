@@ -129,9 +129,7 @@ function getTemplatesPath() {
             const filesToPurge = [
                 'densityMap_fruits.gdm', 'densityMap_fruits_broken14.gdm', 'densityMap_fruits_fixed14.gdm',
                 'fields.xml', 'fieldGround.xml', 'densityMap_fruits_growthState.xml',
-                'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml',
-                'terrain.lod.type.cache', 'terrain.nmap.cache', 'terrain.occluders.cache',
-                'vehicleNavigationCostmap.dat'
+                'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml'
             ];
             for (const mf of masterFolders) {
                 const srcMf = path.join(bundledTemplates, mf);
@@ -179,9 +177,7 @@ function getTemplatesPath() {
         const allFilesToPurge = [
             'densityMap_fruits.gdm', 'densityMap_fruits_broken14.gdm', 'densityMap_fruits_fixed14.gdm',
             'fields.xml', 'fieldGround.xml', 'densityMap_fruits_growthState.xml',
-            'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml',
-            'terrain.lod.type.cache', 'terrain.nmap.cache', 'terrain.occluders.cache',
-            'vehicleNavigationCostmap.dat'
+            'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml'
         ];
         for (const tDir of allTemplateDirs) {
             const tDirPath = path.join(p, tDir);
@@ -1055,24 +1051,23 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 copiedTemplate = true;
             }
             if (copiedTemplate) {
-                // ALWAYS purge density maps, info layers, terrain heightmaps, split shapes, growth states, fields, and caches from the new savegame slot:
-                // This ensures Giants Engine natively initializes all fields with their default author crops, occluders, and vegetation.
+                // Purge empty/harvested fruit density maps and stale growth states from the new savegame slot:
+                // This allows Giants Engine to natively populate all fields with their default author crops.
+                // NOTE: We strictly preserve terrain.occluders.cache, vehicleNavigationCostmap.dat, info layers,
+                // heightmaps, split shapes, and placeables so the map loads smoothly without 55% occluder quadtree regeneration freeze.
                 try {
                     const filesInSlot = await fs.readdir(slotPath);
                     for (const file of filesInSlot) {
                         const lower = file.toLowerCase();
-                        const isDensity = lower.startsWith('densitymap_');
-                        const isInfoLayer = lower.startsWith('infolayer_');
-                        const isTerrain = lower.startsWith('terrain.heightmap') || lower === 'splitshapes.gmss';
+                        const isDensityFruit = lower.startsWith('densitymap_fruits');
                         const isFieldOrGrowth = lower === 'fields.xml' || lower === 'fieldground.xml' || lower.endsWith('growthstate.xml') || lower === 'densitymapheight.xml';
-                        const isCache = lower.endsWith('.cache') || lower === 'vehiclenavigationcostmap.dat';
-                        const isPf = lower.startsWith('precisionfarming');
-                        if (isDensity || isInfoLayer || isTerrain || isFieldOrGrowth || isCache || isPf) {
+                        const isPf = lower.startsWith('precisionfarming') && !finalMods.some(m => (m?.modName || '').toLowerCase().includes('precisionfarming'));
+                        if (isDensityFruit || isFieldOrGrowth || isPf) {
                             await fs.remove(path.join(slotPath, file)).catch(() => {});
                         }
                     }
                 } catch (purgeErr) {
-                    console.warn('[CREATE] Failed to purge density maps from slot:', purgeErr.message);
+                    console.warn('[CREATE] Failed to purge density fruit maps from slot:', purgeErr.message);
                 }
             }
         }
@@ -1287,15 +1282,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.loadDefaultVehicles = startFarmFlag;
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
 
-            // Strip pre-baked density, terrain, and collision revision numbers so Giants Engine natively loads map crops
+            // Strip ONLY density revision numbers so Giants Engine loads author crops fresh from game files,
+            // while preserving terrain, collision, and split shapes revisions so the engine doesn't recompute them
             const revisionKeys = [
-                'densityMapRevision', 'mapDensityMapRevision',
-                'terrainTextureRevision', 'mapTerrainTextureRevision',
-                'terrainLodTextureRevision', 'mapTerrainLodTextureRevision',
-                'splitShapesRevision', 'mapSplitShapesRevision',
-                'tipCollisionRevision', 'mapTipCollisionRevision',
-                'placementCollisionRevision', 'mapPlacementCollisionRevision',
-                'navigationCollisionRevision', 'mapNavigationCollisionRevision'
+                'densityMapRevision', 'mapDensityMapRevision'
             ];
             for (const rk of revisionKeys) {
                 delete savegameData.careerSavegame.settings[rk];
@@ -1836,40 +1826,28 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         await fs.writeFile(envPath, builder.build(initialEnv));
     }
 
-    // Final clean pass: Ensure no density maps, info layers, heightmaps, split shapes, or invalid fields exist in the new slot
-    // This allows Giants Engine to load and generate all author crops natively by default and avoids 55% occluder rebuild freeze
+    // Final clean pass: Ensure no harvested fruit density maps or invalid field growth state exist in the new slot
+    // This allows Giants Engine to load and generate all author crops natively by default.
+    // NOTE: Strictly preserve terrain.occluders.cache, vehicleNavigationCostmap.dat, info layers, split shapes, and placeables.
     try {
         const remainingFiles = await fs.readdir(slotPath);
         for (const file of remainingFiles) {
             const lower = file.toLowerCase();
-            const isDensity = lower.startsWith('densitymap_');
-            const isInfoLayer = lower.startsWith('infolayer_');
-            const isTerrain = lower.startsWith('terrain.heightmap') || lower === 'splitshapes.gmss';
+            const isDensityFruit = lower.startsWith('densitymap_fruits');
             const isFieldOrGrowth = lower === 'fields.xml' || lower === 'fieldground.xml' || lower.endsWith('growthstate.xml') || lower === 'densitymapheight.xml';
-            const isCache = lower.endsWith('.cache') || lower === 'vehiclenavigationcostmap.dat';
-            const isPf = lower.startsWith('precisionfarming');
-            if (isDensity || isInfoLayer || isTerrain || isFieldOrGrowth || isCache || isPf) {
+            const isPf = lower.startsWith('precisionfarming') && !finalMods.some(m => (m?.modName || '').toLowerCase().includes('precisionfarming'));
+            if (isDensityFruit || isFieldOrGrowth || isPf) {
                 await fs.remove(path.join(slotPath, file)).catch(() => {});
             }
         }
 
-        // For official base maps, ensure placeables.xml and vehicles.xml are clean minimal XML
-        if (isOfficialBaseMap) {
-            const placeablesPath = path.join(slotPath, 'placeables.xml');
-            await fs.writeFile(placeablesPath, '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<placeables version="1"/>\n', 'utf8');
-            if (includeStartVehicles) {
-                const vehiclesPath = path.join(slotPath, 'vehicles.xml');
-                await fs.writeFile(vehiclesPath, '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<vehicles version="1"/>\n', 'utf8');
-            }
-        }
-
-        // Double check careerSavegame.xml has no revision markers that would trigger density map missing warning
+        // Double check careerSavegame.xml has no density map revision markers so engine populates author crops
         const finalCareerPath = path.join(slotPath, 'careerSavegame.xml');
         if (fs.existsSync(finalCareerPath)) {
             let fcXml = await fs.readFile(finalCareerPath, 'utf8');
-            const revRegex = /<(?:densityMapRevision|terrainTextureRevision|terrainLodTextureRevision|splitShapesRevision|tipCollisionRevision|placementCollisionRevision|navigationCollisionRevision|mapDensityMapRevision|mapTerrainTextureRevision|mapTerrainLodTextureRevision|mapSplitShapesRevision|mapTipCollisionRevision|mapPlacementCollisionRevision|mapNavigationCollisionRevision)>.*?<\/(?:densityMapRevision|terrainTextureRevision|terrainLodTextureRevision|splitShapesRevision|tipCollisionRevision|placementCollisionRevision|navigationCollisionRevision|mapDensityMapRevision|mapTerrainTextureRevision|mapTerrainLodTextureRevision|mapSplitShapesRevision|mapTipCollisionRevision|mapPlacementCollisionRevision|mapNavigationCollisionRevision)>\r?\n?/gi;
-            if (revRegex.test(fcXml)) {
-                fcXml = fcXml.replace(revRegex, '');
+            const densityRevRegex = /<(?:densityMapRevision|mapDensityMapRevision)>.*?<\/(?:densityMapRevision|mapDensityMapRevision)>\r?\n?/gi;
+            if (densityRevRegex.test(fcXml)) {
+                fcXml = fcXml.replace(densityRevRegex, '');
                 await fs.writeFile(finalCareerPath, fcXml, 'utf8');
             }
         }
@@ -5631,8 +5609,7 @@ async function adoptSaveAsTemplate(saveIndex) {
         const filesToRemove = [
             'steam_autocloud.vdf', 'modManager.json', 'fields.xml', 'fieldGround.xml',
             'densityMap_fruits_growthState.xml', 'stone_growthState.xml', 'weed_growthState.xml',
-            'densityMapHeight.xml', 'terrain.lod.type.cache', 'terrain.nmap.cache',
-            'terrain.occluders.cache', 'vehicleNavigationCostmap.dat'
+            'densityMapHeight.xml'
         ];
         for (const f of filesToRemove) {
             const p = path.join(destPath, f);
@@ -6359,8 +6336,7 @@ async function ensureSavegameDensityMaps(savePath) {
 
         const cachesToRemove = [
             'fieldGround.xml', 'densityMapHeight.xml', 'stone_growthState.xml',
-            'weed_growthState.xml', 'terrain.lod.type.cache', 'terrain.nmap.cache',
-            'terrain.occluders.cache', 'vehicleNavigationCostmap.dat'
+            'weed_growthState.xml'
         ];
         for (const cf of cachesToRemove) {
             const cp = path.join(savePath, cf);
