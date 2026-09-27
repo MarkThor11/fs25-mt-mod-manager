@@ -48,6 +48,16 @@ const parser = new XMLParser({
 
 function sanitizeCareerSavegameXml(xmlContent) {
     if (!xmlContent) return xmlContent;
+    
+    // Ensure <careerSavegame ...> has valid="true" (preventing fast-xml-parser boolean attribute suppression from breaking direct map load)
+    xmlContent = xmlContent.replace(/<careerSavegame\b([^>]*?)>/gi, (match, attrs) => {
+        if (!/valid=/i.test(attrs)) {
+            return `<careerSavegame${attrs} valid="true">`;
+        } else {
+            return match.replace(/valid=(["']?)(?:true|false|\w*)\1/i, 'valid="true"');
+        }
+    });
+
     // Fix malformed <mod .../> tags with extra attribute garbage caused by quotes in mod titles
     return xmlContent.replace(/<mod\s+([^>]+)\/?>/gi, (match, attrString) => {
         const modNameMatch = attrString.match(/modName=["']([^"']+)["']/i);
@@ -1526,6 +1536,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     let xmlOutput = builder.build(savegameData);
+    xmlOutput = sanitizeCareerSavegameXml(xmlOutput);
     
     // Ensure XML declaration
     if (!xmlOutput.startsWith('<?xml')) {
@@ -3018,14 +3029,18 @@ function removeSlotFromVdf(vdfContent, slotIndex) {
     const result = [];
     let skipping = false;
     let skipDepth = 0;
-    const targetPrefix = `"FarmingSimulator2025/savegame${slotIndex}/`;
+    const targetPrefixes = [
+        `"FarmingSimulator2025/savegame${slotIndex}/`,
+        `"savegame${slotIndex}/`,
+        `"FarmingSimulator2022/savegame${slotIndex}/`
+    ];
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const trimmed = line.trim();
 
         if (!skipping) {
-            if (trimmed.startsWith(targetPrefix)) {
+            if (targetPrefixes.some(prefix => trimmed.startsWith(prefix))) {
                 skipping = true;
                 skipDepth = 0;
                 continue;
@@ -3064,21 +3079,25 @@ async function cleanSteamRemoteCacheForSlot(slotIndex) {
             }
         } catch (_) {}
 
+        const appIds = ['2621490', '2300320'];
+
         for (const basePath of steamPaths) {
             if (!fs.existsSync(basePath)) continue;
             const accounts = await fs.readdir(basePath);
             for (const acc of accounts) {
-                const vdfPath = path.join(basePath, acc, '2300320', 'remotecache.vdf');
-                if (fs.existsSync(vdfPath)) {
-                    try {
-                        const content = await fs.readFile(vdfPath, 'utf8');
-                        if (content.includes(`FarmingSimulator2025/savegame${slotIndex}/`)) {
-                            const cleaned = removeSlotFromVdf(content, slotIndex);
-                            await fs.writeFile(vdfPath, cleaned, 'utf8');
-                            console.log(`[STEAM-CLOUD] Removed savegame${slotIndex} entries from Steam remotecache.vdf: ${vdfPath}`);
+                for (const appId of appIds) {
+                    const vdfPath = path.join(basePath, acc, appId, 'remotecache.vdf');
+                    if (fs.existsSync(vdfPath)) {
+                        try {
+                            const content = await fs.readFile(vdfPath, 'utf8');
+                            if (content.includes(`savegame${slotIndex}/`)) {
+                                const cleaned = removeSlotFromVdf(content, slotIndex);
+                                await fs.writeFile(vdfPath, cleaned, 'utf8');
+                                console.log(`[STEAM-CLOUD] Removed savegame${slotIndex} entries from Steam remotecache.vdf (app ${appId}): ${vdfPath}`);
+                            }
+                        } catch (e) {
+                            console.warn(`[STEAM-CLOUD] Could not clean remotecache for account ${acc} app ${appId}:`, e.message);
                         }
-                    } catch (e) {
-                        console.warn(`[STEAM-CLOUD] Could not clean remotecache for account ${acc}:`, e.message);
                     }
                 }
             }
