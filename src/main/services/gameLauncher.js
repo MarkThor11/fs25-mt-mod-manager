@@ -334,14 +334,11 @@ async function launch(options = {}) {
     
     if (isServerSave) {
       console.log(`[LAUNCH] Savegame ${options.savegameIndex} is a Multiplayer Server save. Bypassing singleplayer autoStart so game launches to Multiplayer menu.`);
+    } else if (!isCompleteAndAutomated) {
+      console.log(`[LAUNCH] Savegame ${options.savegameIndex} is an un-automated slot without a master template. Bypassing autoStart so GIANTS Engine initializes map natively in-game.`);
+      needsManualInit = true;
     } else {
-      if (!isCompleteAndAutomated) {
-        console.log(`[LAUNCH] Savegame ${options.savegameIndex} is a first-time / un-automated slot. Auto-starting into slot for engine initialization.`);
-        needsManualInit = true;
-      } else {
-        console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is fully automated. Auto-starting into map.`);
-      }
-
+      console.log(`[LAUNCH] Target savegame ${options.savegameIndex} is fully automated. Auto-starting into map.`);
       if (options.autoStart !== false) {
         args.push('-autoStartSavegameId', String(options.savegameIndex));
         if (!args.includes('-autoStart')) {
