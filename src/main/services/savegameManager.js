@@ -129,7 +129,7 @@ function getTemplatesPath() {
             const filesToPurge = [
                 'densityMap_fruits.gdm', 'densityMap_fruits_broken14.gdm', 'densityMap_fruits_fixed14.gdm',
                 'fields.xml', 'fieldGround.xml', 'densityMap_fruits_growthState.xml',
-                'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml'
+                'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml', 'densityMap_height.gdm'
             ];
             for (const mf of masterFolders) {
                 const srcMf = path.join(bundledTemplates, mf);
@@ -177,7 +177,7 @@ function getTemplatesPath() {
         const allFilesToPurge = [
             'densityMap_fruits.gdm', 'densityMap_fruits_broken14.gdm', 'densityMap_fruits_fixed14.gdm',
             'fields.xml', 'fieldGround.xml', 'densityMap_fruits_growthState.xml',
-            'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml'
+            'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml', 'densityMap_height.gdm'
         ];
         for (const tDir of allTemplateDirs) {
             const tDirPath = path.join(p, tDir);
