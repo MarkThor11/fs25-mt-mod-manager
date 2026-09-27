@@ -3094,8 +3094,9 @@ export default function SavegamesPage() {
       if (mapId && window.api?.maps) {
         window.api.maps.checkTemplate(mapId, title, modName).then(exists => {
             setMapHasTemplate(exists);
-            // Only uninitialized maps (!exists) automatically launch; initialized maps (with automation template) do NOT auto-launch
-            setAutoLaunchOnCreate(!exists);
+            // Official base maps (MapUS, MapEU, MapAS, HighlandsFishingMap) NEVER need auto-launch; only uninitialized custom modded maps auto-launch!
+            const isOfficial = ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(String(mapId).toLowerCase());
+            setAutoLaunchOnCreate(!isOfficial && !exists);
         });
 
         // Auto-select required mods for custom modded maps (skip official DLCs like pdlc_highlandsFishingPack)
@@ -3473,7 +3474,7 @@ export default function SavegamesPage() {
     if (window.api?.maps) {
       window.api.maps.checkTemplate('MapUS', 'Riverbend Springs', '').then(exists => {
         setMapHasTemplate(exists);
-        setAutoLaunchOnCreate(!exists);
+        setAutoLaunchOnCreate(false); // MapUS is an official map and never auto-launches
       });
     }
     setShowCreateModal(true);
