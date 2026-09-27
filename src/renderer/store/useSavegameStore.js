@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { useLocalModsStore } from './useLocalModsStore';
+import { useToastStore } from './useToastStore';
 
-export const useSavegameStore = create((set) => ({
+export const useSavegameStore = create((set, get) => ({
   savegames: [],
   isLoading: false,
   error: null,
@@ -153,23 +154,41 @@ export const useSavegameStore = create((set) => ({
     }
   },
 
-  deleteSavegame: async (savePath) => {
+  deleteSavegame: async (saveTarget) => {
     if (!window.api?.savegames) return { success: false, error: 'API Offline' };
+    
+    // Resolve target whether it's a path, an index, or an object
+    const targetPath = typeof saveTarget === 'string' ? saveTarget : (saveTarget?.path || (typeof saveTarget === 'number' ? `savegame${saveTarget}` : ''));
+    const targetIndex = typeof saveTarget === 'number' 
+      ? saveTarget 
+      : (saveTarget?.index || (typeof targetPath === 'string' ? parseInt((targetPath.match(/savegame(\d+)/i) || [])[1], 10) : null));
+
     // Optimistically update UI state immediately
-    const remaining = get().savegames.filter(sg => sg.path !== savePath);
+    const remaining = get().savegames.filter(sg => {
+      if (targetPath && sg.path === targetPath) return false;
+      if (targetIndex && sg.index === targetIndex) return false;
+      return true;
+    });
+
     set((s) => ({
       savegames: remaining,
-      selectedSavegame: s.selectedSavegame?.path === savePath ? null : s.selectedSavegame
+      selectedSavegame: (s.selectedSavegame?.path === targetPath || s.selectedSavegame?.index === targetIndex) ? null : s.selectedSavegame
     }));
+
     // Instantly persist cache so deleted save does not flash on reload
     if (window.api?.settings) {
       window.api.settings.set('savegamesCache', JSON.stringify(remaining)).catch(() => {});
     }
+
     try {
-      const result = await window.api.savegames.delete({ path: savePath });
+      const payload = typeof saveTarget === 'object' ? saveTarget : { path: targetPath, slotIndex: targetIndex };
+      const result = await window.api.savegames.delete(payload);
       if (!result?.success) {
         useToastStore.getState().error(result?.error || 'Failed to delete savegame from disk');
-        // Re-fetch to restore UI state if deletion failed
+        get().fetchSavegames();
+      } else {
+        useToastStore.getState().success(targetIndex ? `Slot ${targetIndex} cleared.` : 'Savegame deleted.');
+        // Re-fetch to guarantee complete disk sync
         get().fetchSavegames();
       }
       return result;

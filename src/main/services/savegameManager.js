@@ -1059,17 +1059,19 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 copiedTemplate = true;
             }
             if (copiedTemplate) {
-                // ALWAYS purge density maps, info layers, growth states, fields, and caches from the new savegame slot:
-                // This ensures Giants Engine natively initializes all fields with their default author crops and vegetation.
+                // ALWAYS purge density maps, info layers, terrain heightmaps, split shapes, growth states, fields, and caches from the new savegame slot:
+                // This ensures Giants Engine natively initializes all fields with their default author crops, occluders, and vegetation.
                 try {
                     const filesInSlot = await fs.readdir(slotPath);
                     for (const file of filesInSlot) {
                         const lower = file.toLowerCase();
                         const isDensity = lower.startsWith('densitymap_');
                         const isInfoLayer = lower.startsWith('infolayer_');
+                        const isTerrain = lower.startsWith('terrain.heightmap') || lower === 'splitshapes.gmss';
                         const isFieldOrGrowth = lower === 'fields.xml' || lower === 'fieldground.xml' || lower.endsWith('growthstate.xml') || lower === 'densitymapheight.xml';
                         const isCache = lower.endsWith('.cache') || lower === 'vehiclenavigationcostmap.dat';
-                        if (isDensity || isInfoLayer || isFieldOrGrowth || isCache) {
+                        const isPf = lower.startsWith('precisionfarming');
+                        if (isDensity || isInfoLayer || isTerrain || isFieldOrGrowth || isCache || isPf) {
                             await fs.remove(path.join(slotPath, file)).catch(() => {});
                         }
                     }
@@ -1288,7 +1290,21 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.loadDefaultFarm = startFarmFlag;
             savegameData.careerSavegame.settings.loadDefaultVehicles = startFarmFlag;
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
-            savegameData.careerSavegame.settings.densityMapRevision = '1';
+
+            // Strip pre-baked density, terrain, and collision revision numbers so Giants Engine natively loads map crops
+            const revisionKeys = [
+                'densityMapRevision', 'mapDensityMapRevision',
+                'terrainTextureRevision', 'mapTerrainTextureRevision',
+                'terrainLodTextureRevision', 'mapTerrainLodTextureRevision',
+                'splitShapesRevision', 'mapSplitShapesRevision',
+                'tipCollisionRevision', 'mapTipCollisionRevision',
+                'placementCollisionRevision', 'mapPlacementCollisionRevision',
+                'navigationCollisionRevision', 'mapNavigationCollisionRevision'
+            ];
+            for (const rk of revisionKeys) {
+                delete savegameData.careerSavegame.settings[rk];
+                delete savegameData.careerSavegame.settings['@_' + rk];
+            }
 
             // Critically ensure valid="true" is present — without it FS25 engine treats slot as empty
             savegameData.careerSavegame['@_valid'] = 'true';
@@ -1522,8 +1538,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     hasInitiallyOwnedFarmlands: startFarmFlag,
                     loadDefaultFarm: startFarmFlag,
                     loadDefaultVehicles: startFarmFlag,
-                    isCrossPlatformSavegame: 'false',
-                    densityMapRevision: '1'
+                    isCrossPlatformSavegame: 'false'
                 },
                 statistics: {
                     money: String(money),
@@ -1825,14 +1840,41 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         await fs.writeFile(envPath, builder.build(initialEnv));
     }
 
-    // Final clean pass: Ensure no density maps, info layers, or invalid fields exist in the new slot
-    // This allows Giants Engine to load and generate all author crops natively by default
+    // Final clean pass: Ensure no density maps, info layers, heightmaps, split shapes, or invalid fields exist in the new slot
+    // This allows Giants Engine to load and generate all author crops natively by default and avoids 55% occluder rebuild freeze
     try {
         const remainingFiles = await fs.readdir(slotPath);
         for (const file of remainingFiles) {
             const lower = file.toLowerCase();
-            if (lower.startsWith('densitymap_') || lower.startsWith('infolayer_') || lower === 'fields.xml' || lower === 'fieldground.xml' || lower.endsWith('growthstate.xml') || lower.endsWith('.cache') || lower === 'vehiclenavigationcostmap.dat') {
+            const isDensity = lower.startsWith('densitymap_');
+            const isInfoLayer = lower.startsWith('infolayer_');
+            const isTerrain = lower.startsWith('terrain.heightmap') || lower === 'splitshapes.gmss';
+            const isFieldOrGrowth = lower === 'fields.xml' || lower === 'fieldground.xml' || lower.endsWith('growthstate.xml') || lower === 'densitymapheight.xml';
+            const isCache = lower.endsWith('.cache') || lower === 'vehiclenavigationcostmap.dat';
+            const isPf = lower.startsWith('precisionfarming');
+            if (isDensity || isInfoLayer || isTerrain || isFieldOrGrowth || isCache || isPf) {
                 await fs.remove(path.join(slotPath, file)).catch(() => {});
+            }
+        }
+
+        // For official base maps, ensure placeables.xml and vehicles.xml are clean minimal XML
+        if (isOfficialBaseMap) {
+            const placeablesPath = path.join(slotPath, 'placeables.xml');
+            await fs.writeFile(placeablesPath, '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<placeables version="1"/>\n', 'utf8');
+            if (includeStartVehicles) {
+                const vehiclesPath = path.join(slotPath, 'vehicles.xml');
+                await fs.writeFile(vehiclesPath, '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<vehicles version="1"/>\n', 'utf8');
+            }
+        }
+
+        // Double check careerSavegame.xml has no revision markers that would trigger density map missing warning
+        const finalCareerPath = path.join(slotPath, 'careerSavegame.xml');
+        if (fs.existsSync(finalCareerPath)) {
+            let fcXml = await fs.readFile(finalCareerPath, 'utf8');
+            const revRegex = /<(?:densityMapRevision|terrainTextureRevision|terrainLodTextureRevision|splitShapesRevision|tipCollisionRevision|placementCollisionRevision|navigationCollisionRevision|mapDensityMapRevision|mapTerrainTextureRevision|mapTerrainLodTextureRevision|mapSplitShapesRevision|mapTipCollisionRevision|mapPlacementCollisionRevision|mapNavigationCollisionRevision)>.*?<\/(?:densityMapRevision|terrainTextureRevision|terrainLodTextureRevision|splitShapesRevision|tipCollisionRevision|placementCollisionRevision|navigationCollisionRevision|mapDensityMapRevision|mapTerrainTextureRevision|mapTerrainLodTextureRevision|mapSplitShapesRevision|mapTipCollisionRevision|mapPlacementCollisionRevision|mapNavigationCollisionRevision)>\r?\n?/gi;
+            if (revRegex.test(fcXml)) {
+                fcXml = fcXml.replace(revRegex, '');
+                await fs.writeFile(finalCareerPath, fcXml, 'utf8');
             }
         }
     } catch (_) {}
@@ -3075,85 +3117,98 @@ async function cleanSteamRemoteCacheForSlot(slotIndex) {
     }
 }
 
-async function deleteSavegame(savePath) {
-    if (fs.existsSync(savePath)) {
-        // Extract slot number, e.g. savegame4 -> 4
-        const folderName = path.basename(savePath);
-        const slotMatch = folderName.match(/savegame(\d+)/i);
-        const slotIndex = slotMatch ? slotMatch[1] : null;
+async function deleteSavegame(target) {
+    let savePath = typeof target === 'object' ? (target?.path || '') : String(target || '');
+    let slotIndex = typeof target === 'object' ? target?.slotIndex : null;
 
-        // 1. Steam Cloud sync prevention: Clean up entries from Steam's remotecache.vdf
-        if (slotIndex) {
-            await cleanSteamRemoteCacheForSlot(slotIndex);
-        }
-
-        // 2. Clean up stashed Single Player save if present
-        if (slotIndex) {
-            try {
-                const fs25Path = getFs25Path();
-                const stashedSlot = path.join(fs25Path, 'stashed_sp_saves', folderName);
-                if (fs.existsSync(stashedSlot)) {
-                    await fs.remove(stashedSlot);
-                    console.log(`[SAVEGAMES] Cleaned up stashed save for slot ${slotIndex}`);
-                }
-            } catch (e) {
-                console.warn(`[SAVEGAMES] Note: Stashed save cleanup for slot ${slotIndex}:`, e.message);
-            }
-        }
-
-        // 3. Mark careerSavegame.xml as invalid tombstone first so any pending sync treats it as empty
-        try {
-            const careerFile = path.join(savePath, 'careerSavegame.xml');
-            if (fs.existsSync(careerFile)) {
-                await fs.writeFile(careerFile, '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<careerSavegame revision="2" valid="false"/>\n', 'utf8');
-            }
-        } catch (_) {}
-
-        // 4. Remove the savegame directory from disk
-        let retries = 5;
-        let deleted = false;
-        while (retries > 0) {
-            try {
-                await fs.remove(savePath);
-                deleted = true;
-                break;
-            } catch (err) {
-                retries--;
-                if (retries === 0) {
-                    console.error(`[SAVEGAMES] Error deleting savegame at ${savePath}: ${err.message}. Attempting inner file cleanup fallback...`);
-                    // Fallback: If folder is locked by OS/Cloud sync, delete inner files first
-                    try {
-                        const files = await fs.readdir(savePath);
-                        for (const file of files) {
-                            await fs.remove(path.join(savePath, file)).catch(() => {});
-                        }
-                        await fs.remove(savePath).catch(() => {});
-                        deleted = true;
-                    } catch (fallbackErr) {
-                        return { success: false, error: `File locked by OS or cloud sync: ${err.message}` };
-                    }
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                }
-            }
-        }
-
-        // 5. Fast cleanup: Remove virtual active mods staging directory for this slot
-        if (slotIndex) {
-            try {
-                const fs25DataRoot = pathProvider.getFS25DataRoot();
-                const primaryVirtualDir = path.join(fs25DataRoot, '.fs25_virtual_mods', `VirtualActiveMods_Savegame${slotIndex}`);
-                if (fs.existsSync(primaryVirtualDir)) {
-                    await fs.remove(primaryVirtualDir).catch(() => {});
-                }
-            } catch (e) {
-                console.warn(`[SAVEGAMES] Note: Virtual folder cleanup for slot ${slotIndex}:`, e.message);
-            }
-        }
-
-        return { success: deleted };
+    if (!slotIndex) {
+        const match = savePath.match(/savegame(\d+)/i);
+        if (match) slotIndex = match[1];
+        else if (/^\d+$/.test(savePath.trim())) slotIndex = savePath.trim();
     }
-    return { success: false, error: 'Savegame not found' };
+
+    const fs25Path = getFs25Path();
+    if (slotIndex && (!savePath || !path.isAbsolute(savePath))) {
+        savePath = path.join(fs25Path, `savegame${slotIndex}`);
+    }
+    if (savePath) {
+        savePath = path.resolve(savePath);
+    }
+
+    // 1. Steam Cloud sync prevention: Clean up entries from Steam's remotecache.vdf
+    if (slotIndex) {
+        await cleanSteamRemoteCacheForSlot(slotIndex);
+    }
+
+    // 2. Clean up stashed Single Player save if present
+    if (slotIndex) {
+        try {
+            const stashedSlot = path.join(fs25Path, 'stashed_sp_saves', `savegame${slotIndex}`);
+            if (fs.existsSync(stashedSlot)) {
+                await fs.remove(stashedSlot);
+                console.log(`[SAVEGAMES] Cleaned up stashed save for slot ${slotIndex}`);
+            }
+        } catch (e) {
+            console.warn(`[SAVEGAMES] Note: Stashed save cleanup for slot ${slotIndex}:`, e.message);
+        }
+    }
+
+    // 3. Fast cleanup: Remove virtual active mods staging directory for this slot
+    if (slotIndex) {
+        try {
+            const fs25DataRoot = pathProvider.getFS25DataRoot();
+            const primaryVirtualDir = path.join(fs25DataRoot, '.fs25_virtual_mods', `VirtualActiveMods_Savegame${slotIndex}`);
+            if (fs.existsSync(primaryVirtualDir)) {
+                await fs.remove(primaryVirtualDir).catch(() => {});
+            }
+        } catch (e) {
+            console.warn(`[SAVEGAMES] Note: Virtual folder cleanup for slot ${slotIndex}:`, e.message);
+        }
+    }
+
+    // If folder does not exist on disk, we have already cleaned up Steam cache and stashed saves, so return success
+    if (!savePath || !fs.existsSync(savePath)) {
+        return { success: true };
+    }
+
+    // 4. Mark careerSavegame.xml as invalid tombstone first so any pending sync treats it as empty
+    try {
+        const careerFile = path.join(savePath, 'careerSavegame.xml');
+        if (fs.existsSync(careerFile)) {
+            await fs.writeFile(careerFile, '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<careerSavegame revision="2" valid="false"/>\n', 'utf8');
+        }
+    } catch (_) {}
+
+    // 5. Remove the savegame directory from disk
+    let retries = 5;
+    let deleted = false;
+    while (retries > 0) {
+        try {
+            await fs.remove(savePath);
+            deleted = true;
+            break;
+        } catch (err) {
+            retries--;
+            if (retries === 0) {
+                console.error(`[SAVEGAMES] Error deleting savegame at ${savePath}: ${err.message}. Attempting inner file cleanup fallback...`);
+                // Fallback: If folder is locked by OS/Cloud sync, delete inner files first
+                try {
+                    const files = await fs.readdir(savePath);
+                    for (const file of files) {
+                        await fs.remove(path.join(savePath, file)).catch(() => {});
+                    }
+                    await fs.remove(savePath).catch(() => {});
+                    deleted = true;
+                } catch (fallbackErr) {
+                    return { success: false, error: `File locked by OS or cloud sync: ${err.message}` };
+                }
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+        }
+    }
+
+    return { success: deleted };
 }
 
 function getArchivesPath() {
@@ -6350,11 +6405,20 @@ async function ensureSavegameDensityMaps(savePath) {
                     }
                 }
 
-                const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '1';
-                if (curRev !== expectedRev) {
-                    careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>${expectedRev}</densityMapRevision>`);
+                const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
+                if (!hasFruitsGdm) {
+                    // If fruits GDM is not in the slot, strip densityMapRevision completely so Giants Engine natively generates crops
+                    careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>\r?\n?/gi, '');
+                    careerXml = careerXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>\r?\n?/gi, '');
                     await fs.writeFile(careerPath, careerXml);
-                    console.log(`[DENSITY-CHECK] Corrected densityMapRevision ${curRev} -> ${expectedRev} in ${savePath}`);
+                    console.log(`[DENSITY-CHECK] Purged densityMapRevision because densityMap_fruits.gdm is absent for ${savePath}`);
+                } else {
+                    const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '1';
+                    if (curRev !== expectedRev) {
+                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>${expectedRev}</densityMapRevision>`);
+                        await fs.writeFile(careerPath, careerXml);
+                        console.log(`[DENSITY-CHECK] Corrected densityMapRevision ${curRev} -> ${expectedRev} in ${savePath}`);
+                    }
                 }
 
                 // 5. Remove leftover Precision Farming files if Precision Farming mod is not active

@@ -1285,8 +1285,7 @@ ipcMain.handle('savegames:rename', async (_, { savegamePath, newName }) => {
 
 ipcMain.handle('savegames:delete', async (_, params) => {
   try {
-    const targetPath = typeof params === 'string' ? params : params?.path;
-    return await savegameManager.deleteSavegame(targetPath);
+    return await savegameManager.deleteSavegame(params);
   } catch (err) {
     return { success: false, error: err.message };
   }

@@ -3986,7 +3986,7 @@ export default function SavegamesPage() {
                 onDelete={async () => {
                     const skipConfirm = useSettingsStore.getState().skipDeleteConfirm;
                     if (skipConfirm || window.confirm(`Delete Slot ${save.index}?`)) {
-                        deleteSavegame(save.path);
+                        await deleteSavegame({ path: save.path, slotIndex: save.index });
                     }
                 }}
                 editingName={editingName}

@@ -31,21 +31,7 @@
         <helperBuyFertilizer>true</helperBuyFertilizer>
         <helperSlurrySource>2</helperSlurrySource>
         <helperManureSource>2</helperManureSource>
-        <densityMapRevision>1</densityMapRevision>
-        <terrainTextureRevision>1</terrainTextureRevision>
-        <terrainLodTextureRevision>2</terrainLodTextureRevision>
-        <splitShapesRevision>2</splitShapesRevision>
-        <tipCollisionRevision>2</tipCollisionRevision>
-        <placementCollisionRevision>2</placementCollisionRevision>
-        <navigationCollisionRevision>2</navigationCollisionRevision>
-        <mapDensityMapRevision>1</mapDensityMapRevision>
-        <mapTerrainTextureRevision>1</mapTerrainTextureRevision>
-        <mapTerrainLodTextureRevision>1</mapTerrainLodTextureRevision>
-        <mapSplitShapesRevision>1</mapSplitShapesRevision>
-        <mapTipCollisionRevision>1</mapTipCollisionRevision>
-        <mapPlacementCollisionRevision>1</mapPlacementCollisionRevision>
-        <mapNavigationCollisionRevision>1</mapNavigationCollisionRevision>
-        <disasterDestructionState>ENABLED</disasterDestructionState>
+                                                                                                                        <disasterDestructionState>ENABLED</disasterDestructionState>
         <dirtInterval>3</dirtInterval>
         <timeScale>5.000000</timeScale>
         <autoSaveInterval>15.000000</autoSaveInterval>
