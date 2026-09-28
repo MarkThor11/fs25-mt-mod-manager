@@ -571,35 +571,6 @@ function getMapDepsPath() {
 	return path.join(getModsPath(), MAP_DEPENDENCIES_FOLDER);
 }
 
-/**
- * Automatically creates symlinks to map dependencies inside the map's subfolder (or Map Dependencies folder)
- * so subfolder mod structure stays clean, linked, and organized.
- */
-async function linkMapDependencyToMapSubfolder(mapFilePath, dependencyFilePath) {
-	if (!mapFilePath || !dependencyFilePath || !fs.existsSync(mapFilePath) || !fs.existsSync(dependencyFilePath)) return false;
-	try {
-		const mapDir = path.dirname(mapFilePath);
-		const depFileName = path.basename(dependencyFilePath);
-		const targetLinkPath = path.join(mapDir, depFileName);
-
-		// Avoid symlinking a file to itself
-		if (path.resolve(targetLinkPath).toLowerCase() === path.resolve(dependencyFilePath).toLowerCase()) {
-			return false;
-		}
-
-		if (!fs.existsSync(targetLinkPath)) {
-			await fs.symlink(dependencyFilePath, targetLinkPath, 'file').catch(async () => {
-				await atomicCopyFile(dependencyFilePath, targetLinkPath);
-			});
-			console.log(`[MAP-DEPS] Created subfolder link: ${targetLinkPath} -> ${dependencyFilePath}`);
-			return true;
-		}
-	} catch (err) {
-		console.warn('[MAP-DEPS] Failed to create subfolder link for map dependency:', err.message);
-	}
-	return false;
-}
-
 async function getFolderSize(folderPath) {
 	const stats = await fs.stat(folderPath);
 	if (!stats.isDirectory()) return stats.size;
@@ -6844,5 +6815,4 @@ module.exports = {
 	consolidateDependencies,
 	patchMapDensityHeightTypesIfNeeded,
 	MAP_DEPENDENCIES_FOLDER,
-	linkMapDependencyToMapSubfolder,
 };
