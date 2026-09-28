@@ -1615,7 +1615,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             limeRequired: 'true',
             isSnowEnabled: 'true',
             fuelUsage: '2',
-            densityMapRevision: '4',
+            densityMapRevision: '1',
             terrainTextureRevision: '1',
             terrainLodTextureRevision: '2',
             splitShapesRevision: '2',
@@ -6620,7 +6620,13 @@ async function ensureSavegameDensityMaps(savePath) {
                         try {
                             const AdmZip = require('adm-zip');
                             const zip = new AdmZip(modPath);
-                            const mapEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('map.xml') && !e.entryName.toLowerCase().includes('sound'));
+                            const mapEntry = zip.getEntries().find(e => {
+                                const norm = e.entryName.toLowerCase();
+                                return norm.endsWith('.xml') && !norm.includes('sound') && !norm.includes('moddesc') && (
+                                    norm.endsWith('map.xml') || norm.endsWith('mapeu.xml') || norm.endsWith('mapus.xml') || 
+                                    norm.endsWith('mapas.xml') || norm.includes('map')
+                                );
+                            });
                             if (mapEntry) {
                                 const xml = mapEntry.getData().toString('utf8');
                                 const m = xml.match(/<densityMap\s+[^>]*revision=["'](\d+)["']/i);
@@ -6634,11 +6640,11 @@ async function ensureSavegameDensityMaps(savePath) {
                 const curMapRev = settings['@_mapDensityMapRevision'] || settings.mapDensityMapRevision || '';
                 let modified = false;
 
-                if (curRev !== '4' || !careerXml.includes('<densityMapRevision>')) {
+                if (curRev !== expectedRev || !careerXml.includes('<densityMapRevision>')) {
                     if (careerXml.includes('<densityMapRevision>')) {
-                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, '<densityMapRevision>4</densityMapRevision>');
+                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>${expectedRev}</densityMapRevision>`);
                     } else {
-                        careerXml = careerXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>4</densityMapRevision>');
+                        careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <densityMapRevision>${expectedRev}</densityMapRevision>`);
                     }
                     modified = true;
                 }
