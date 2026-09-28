@@ -997,6 +997,15 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         ? modManager.getLastScanResult().mods
         : (cache.getAllLocalModCache() || []);
 
+    if ((!allMods || allMods.length === 0) && typeof modManager.scanLocalMods === 'function') {
+        try {
+            const scanRes = await modManager.scanLocalMods();
+            allMods = (scanRes && scanRes.mods) ? scanRes.mods : [];
+        } catch (e) {
+            console.warn('[SavegameManager] Error scanning local mods for createSavegameWithMods:', e.message);
+        }
+    }
+
     const GENERIC_MAP_IDS = new Set([
         'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
         'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
