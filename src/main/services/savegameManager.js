@@ -6382,28 +6382,40 @@ async function resolveMapModPath(savePath) {
 async function ensureSavegameDensityMaps(savePath) {
     if (!savePath || !fs.existsSync(savePath)) return 0;
     try {
-        // 1. Purge densityMap_fruits_growthState.xml if present (causes frozen crop growth when applyGrowthCurrentIndex="-1")
+        // 1. Ensure densityMap_fruits_growthState.xml, weed_growthState.xml, and stone_growthState.xml exist
         const growthXmlPath = path.join(savePath, 'densityMap_fruits_growthState.xml');
-        if (fs.existsSync(growthXmlPath)) {
+        if (!fs.existsSync(growthXmlPath)) {
             try {
-                await fs.remove(growthXmlPath);
-                console.log(`[DENSITY-CHECK] Purged crop-freezing growthState XML in ${savePath}`);
+                const defaultGrowthXml = `<?xml version="1.0" encoding="iso-8859-1"?>\n<foliageCropsUpdater currentGrowthIndex="0" applyGrowthCurrentIndex="4294967295" applyGrowthMaxTimePerFrame="0.000000">\n  <growthMasks64 numCells="16384"><![CDATA[XQAAEAAAf+/7v/6jsV7l+D+yqiZV+GhwQXAVD439HkwbikK3GfRpGHGuZiOKik0vow3Zf6bjjCMRU+BZGMV1iuJ3+LaUfwxqwN50SWTi6VxTsgTY90QMq1nkPx4AAA==]]></growthMasks64>\n</foliageCropsUpdater>`;
+                await fs.writeFile(growthXmlPath, defaultGrowthXml, 'utf8');
+                console.log(`[DENSITY-CHECK] Created default densityMap_fruits_growthState.xml in ${savePath}`);
             } catch (e) {}
         }
 
-        // 2. Remove invalid fields.xml if mistakenly copied from map config
+        const defaultUpdaterXml = `<?xml version="1.0" encoding="iso-8859-1"?>\n<densityMapUpdater updateCycleTime="0.000000" currentUpdateTime="0.000000" currentUpdateIndex="-1" numCellsToUpdate="0.000000" applyUpdateCurrentIndex="-1" applyUpdateMaxTimePerFrame="0.000000">\n</densityMapUpdater>`;
+        for (const stateXml of ['weed_growthState.xml', 'stone_growthState.xml']) {
+            const sPath = path.join(savePath, stateXml);
+            if (!fs.existsSync(sPath)) {
+                try {
+                    await fs.writeFile(sPath, defaultUpdaterXml, 'utf8');
+                    console.log(`[DENSITY-CHECK] Created default ${stateXml} in ${savePath}`);
+                } catch (e) {}
+            }
+        }
+
+        // 2. Validate fields.xml (only remove if completely devoid of field definitions)
         const fieldsXmlPath = path.join(savePath, 'fields.xml');
         if (fs.existsSync(fieldsXmlPath)) {
             try {
                 const fContent = await fs.readFile(fieldsXmlPath, 'utf8');
-                if (fContent.includes('<map') || (!fContent.includes('<fields') && !fContent.includes('<field '))) {
+                if (!fContent.includes('<fields') && !fContent.includes('<field ')) {
                     await fs.remove(fieldsXmlPath);
                     console.log(`[DENSITY-CHECK] Removed invalid fields.xml from ${savePath}`);
                 }
             } catch (e) {}
         }
 
-        // 3. Remove flat placeholder densityMap_height.gdm and cache files that cause floating objects / terrain elevation bugs
+        // 3. Remove flat placeholder densityMap_height.gdm and lock caches that cause elevation bugs
         const heightGdmPath = path.join(savePath, 'densityMap_height.gdm');
         if (fs.existsSync(heightGdmPath)) {
             try {
@@ -6414,10 +6426,7 @@ async function ensureSavegameDensityMaps(savePath) {
             } catch (e) {}
         }
 
-        const cachesToRemove = [
-            'fieldGround.xml', 'densityMapHeight.xml', 'stone_growthState.xml',
-            'weed_growthState.xml'
-        ];
+        const cachesToRemove = ['fieldGround.xml', 'densityMapHeight.xml'];
         for (const cf of cachesToRemove) {
             const cp = path.join(savePath, cf);
             if (fs.existsSync(cp)) {

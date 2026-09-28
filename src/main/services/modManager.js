@@ -806,15 +806,11 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 				const parentOfMapDir = path.resolve(path.dirname(mapDir)).toLowerCase();
 
 				if (configuredRoots.includes(parentOfMapDir) && !configuredRoots.includes(mapDirResolved)) {
-					debugLog(`[VIRTUAL] Map '${mapModObj.modName}' resides in dedicated subfolder '${path.basename(mapDir)}'. Auto-activating non-map sibling mods.`);
+					debugLog(`[VIRTUAL] Map '${mapModObj.modName}' resides in dedicated subfolder '${path.basename(mapDir)}'. Auto-activating sibling mods.`);
 					mods.forEach(m => {
 						if (!m.filePath || !m.modName) return;
 						const mDir = path.resolve(path.dirname(m.filePath)).toLowerCase();
 						if (mDir === mapDirResolved) {
-							// DO NOT auto-add conflicting alternate map versions (e.g. crossplay vs non-crossplay in same folder)
-							if (m.isMap && m.modName.toLowerCase() !== mapModObj.modName.toLowerCase()) {
-								return;
-							}
 							activeModNames.add(m.modName.toLowerCase());
 						}
 					});
@@ -822,9 +818,6 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 					const folderLower = mapModObj.folder.toLowerCase();
 					mods.forEach(m => {
 						if (m.folder && m.folder.toLowerCase() === folderLower && m.modName) {
-							if (m.isMap && m.modName.toLowerCase() !== mapModObj.modName.toLowerCase()) {
-								return;
-							}
 							activeModNames.add(m.modName.toLowerCase());
 						}
 					});
