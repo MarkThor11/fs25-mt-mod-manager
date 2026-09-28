@@ -1681,16 +1681,25 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    // Create a fast lookup map of entry basenames for instant O(1) file extraction
+                    // Create a lookup map of entry basenames, prioritizing entries in maps/config/, config/, maps/, or map/ and larger size
                     const zipEntries = zip.getEntries();
                     const entryByFullPath = new Map();
                     const entryByBaseName = new Map();
                     for (const entry of zipEntries) {
+                        if (entry.isDirectory) continue;
                         const normPath = entry.entryName.replace(/\\/g, '/').toLowerCase();
                         entryByFullPath.set(normPath, entry);
                         const baseName = path.basename(normPath);
-                        if (!entryByBaseName.has(baseName)) {
+                        const existing = entryByBaseName.get(baseName);
+                        if (!existing) {
                             entryByBaseName.set(baseName, entry);
+                        } else {
+                            const ePath = existing.entryName.replace(/\\/g, '/').toLowerCase();
+                            const eConfig = ePath.includes('config/') || ePath.includes('maps/') || ePath.includes('map/');
+                            const cConfig = normPath.includes('config/') || normPath.includes('maps/') || normPath.includes('map/');
+                            if ((cConfig && !eConfig) || (cConfig === eConfig && entry.header.size > existing.header.size)) {
+                                entryByBaseName.set(baseName, entry);
+                            }
                         }
                     }
 
@@ -1717,14 +1726,22 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
                     if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
                     if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
+                    if (farmlandsFile) await extractExactZipFile(farmlandsFile, 'farmland.xml');
 
                     // Fallback extraction for starting XML files if missing
-                    for (const targetXml of ['placeables.xml', 'items.xml', 'handTools.xml', 'fields.xml']) {
-                        if (!fs.existsSync(path.join(slotPath, targetXml))) {
+                    for (const [targetXml, destName] of [
+                        ['placeables.xml', 'placeables.xml'],
+                        ['items.xml', 'items.xml'],
+                        ['handTools.xml', 'handTools.xml'],
+                        ['fields.xml', 'fields.xml'],
+                        ['farmlands.xml', 'farmland.xml'],
+                        ['farmland.xml', 'farmland.xml']
+                    ]) {
+                        if (!fs.existsSync(path.join(slotPath, destName))) {
                             const entry = entryByBaseName.get(targetXml);
                             if (entry) {
-                                await fs.writeFile(path.join(slotPath, targetXml), entry.getData());
-                                console.log(`[CREATE] Fast fallback extracted ${targetXml}`);
+                                await fs.writeFile(path.join(slotPath, destName), entry.getData());
+                                console.log(`[CREATE] Fast fallback extracted ${entry.entryName} -> ${destName}`);
                             }
                         }
                     }
