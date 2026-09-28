@@ -1551,32 +1551,40 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     if (!savegameData) {
-        // Fallback for fresh uninitialized maps (or if parsing failed)
+        // Fallback for fresh uninitialized maps (or if parsing failed).
+        // NOTE: densityMapRevision is intentionally omitted when requiresEngineInit=true.
+        // Setting it to 4 tells the engine "GDMs are current — skip crop init from ZIP",
+        // which produces blank fields. Without it the engine does a proper first-run init.
+        const settingsBlock = {
+            savegameName: savegameName,
+            playerName: playerName,
+            creationDate: today,
+            mapId: engineMapId,
+            mapTitle: mapTitle,
+            saveDateFormatted: today,
+            saveDate: today,
+            initialMoney: String(money),
+            initialLoan: String(initialLoan),
+            difficulty: String(difficulty),
+            economicDifficulty: String(economicDifficulty || 'NORMAL').toUpperCase(),
+            plannedDaysPerPeriod: String(fixedSeasonLength || 1),
+            timeScale: String(timeScale || 5.0),
+            hasInitiallyOwnedFarmlands: startFarmFlag,
+            loadDefaultFarm: startFarmFlag,
+            loadDefaultVehicles: startFarmFlag,
+            isCrossPlatformSavegame: 'false',
+        };
+        // Only include density revision markers for template-based saves.
+        // Without these, the engine treats the slot as needing a fresh crop init from the map ZIP.
+        if (!requiresEngineInit) {
+            settingsBlock.densityMapRevision = '4';
+            settingsBlock.mapDensityMapRevision = '1';
+        }
         savegameData = {
             careerSavegame: {
                 '@_revision': '2',
                 '@_valid': 'true',
-                settings: {
-                    savegameName: savegameName,
-                    playerName: playerName,
-                    creationDate: today,
-                    mapId: engineMapId,
-                    mapTitle: mapTitle,
-                    saveDateFormatted: today,
-                    saveDate: today,
-                    initialMoney: String(money),
-                    initialLoan: String(initialLoan),
-                    difficulty: String(difficulty),
-                    economicDifficulty: String(economicDifficulty || 'NORMAL').toUpperCase(),
-                    plannedDaysPerPeriod: String(fixedSeasonLength || 1),
-                    timeScale: String(timeScale || 5.0),
-                    hasInitiallyOwnedFarmlands: startFarmFlag,
-                    loadDefaultFarm: startFarmFlag,
-                    loadDefaultVehicles: startFarmFlag,
-                    isCrossPlatformSavegame: 'false',
-                    densityMapRevision: '4',
-                    mapDensityMapRevision: '1'
-                },
+                settings: settingsBlock,
                 statistics: {
                     money: String(money),
                     playTime: '0.000000'
@@ -1592,46 +1600,13 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         };
     }
 
-    // ── NO-TEMPLATE FIRST-RUN PATH ───────────────────────────────────────────
-    // When there is no template, we leave the slot folder EMPTY and do NOT write
-    // careerSavegame.xml. This exactly replicates what happened for Ebony Island
-    // and AgroForests: the engine sees an empty slot, does a proper new-career
-    // init from the map ZIP, and crops appear correctly on first load.
-    //
-    // We persist the user's app-configured settings to .mm_pending_settings.json
-    // so that processPostGameExit can patch them back into the engine's
-    // careerSavegame.xml after the player saves for the first time in-game.
-    if (requiresEngineInit) {
-        const pendingSettingsPath = path.join(slotPath, '.mm_pending_settings.json');
-        const pendingSettings = {
-            savegameName: savegameName,
-            playerName: playerName,
-            money: money,
-            difficulty: difficulty,
-            economicDifficulty: economicDifficulty || 'NORMAL',
-            initialLoan: initialLoan,
-            fixedSeasonLength: fixedSeasonLength,
-            timeScale: timeScale,
-            startMonth: startMonth,
-            startTime: startTime,
-            startWeather: startWeather,
-            includeStartFarm: includeStartFarm,
-            includeStartVehicles: includeStartVehicles,
-            mapId: engineMapId,
-            mapTitle: mapTitle,
-            mapModName: mapModName,
-        };
-        await fs.writeFile(pendingSettingsPath, JSON.stringify(pendingSettings, null, 2), 'utf8');
-        console.log(`[CREATE] No template for map ${mapId} — leaving slot ${savegameIndex} empty for native engine first-run init. Settings saved to .mm_pending_settings.json`);
-        return { success: true, path: slotPath, requiresEngineInit: true, mapId };
-    }
-
-    // ── TEMPLATE PATH ─────────────────────────────────────────────────────────
-    // A template was copied into the slot. Write careerSavegame.xml with the
-    // user's settings on top of the template data.
+    // Write careerSavegame.xml for all paths — the game needs this to know which
+    // map and mods to load. For no-template slots (requiresEngineInit=true) we
+    // write it WITHOUT densityMapRevision so the engine does a proper first-run
+    // crop init from the map ZIP, exactly as it did for Ebony Island / AgroForests.
     let xmlOutput = builder.build(savegameData);
     xmlOutput = sanitizeCareerSavegameXml(xmlOutput);
-    
+
     // Ensure XML declaration
     if (!xmlOutput.startsWith('<?xml')) {
         xmlOutput = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n' + xmlOutput;
@@ -1639,8 +1614,11 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     await fs.writeFile(careerPath, xmlOutput);
 
+    // For no-template first-run slots, skip extracting anything from the map ZIP.
+    // The engine handles everything from scratch via its native new-career init path.
+    // Extracting files (even non-GDM ones) can interfere with that init.
     let extractedGrles = 0;
-    if (modZipPath) {
+    if (!requiresEngineInit && modZipPath) {
         try {
             if (fs.existsSync(modZipPath)) {
                 try {
@@ -1973,24 +1951,28 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             }
         }
 
-        // Ensure careerSavegame.xml density map revisions are consistent with densityMap_fruits.gdm
-        const finalCareerPath = path.join(slotPath, 'careerSavegame.xml');
-        if (fs.existsSync(finalCareerPath)) {
-            let fcXml = await fs.readFile(finalCareerPath, 'utf8');
-            const hasFruitsGdm = fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'));
-            if (hasFruitsGdm) {
-                if (!fcXml.includes('<densityMapRevision>')) {
-                    fcXml = fcXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>4</densityMapRevision>\n        <mapDensityMapRevision>1</mapDensityMapRevision>');
-                    await fs.writeFile(finalCareerPath, fcXml, 'utf8');
-                } else if (fcXml.includes('<densityMapRevision>1</densityMapRevision>')) {
-                    fcXml = fcXml.replace(/<densityMapRevision>1<\/densityMapRevision>/g, '<densityMapRevision>4</densityMapRevision>');
-                    await fs.writeFile(finalCareerPath, fcXml, 'utf8');
-                }
-            } else {
-                const densityRevRegex = /<(?:densityMapRevision|mapDensityMapRevision)>.*?<\/(?:densityMapRevision|mapDensityMapRevision)>\r?\n?/gi;
-                if (densityRevRegex.test(fcXml)) {
-                    fcXml = fcXml.replace(densityRevRegex, '');
-                    await fs.writeFile(finalCareerPath, fcXml, 'utf8');
+        // Ensure careerSavegame.xml density map revisions are consistent with densityMap_fruits.gdm.
+        // Skip this entirely for first-run (no-template) slots — we deliberately left
+        // densityMapRevision absent so the engine does a proper crop init from the map ZIP.
+        if (!requiresEngineInit) {
+            const finalCareerPath = path.join(slotPath, 'careerSavegame.xml');
+            if (fs.existsSync(finalCareerPath)) {
+                let fcXml = await fs.readFile(finalCareerPath, 'utf8');
+                const hasFruitsGdm = fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'));
+                if (hasFruitsGdm) {
+                    if (!fcXml.includes('<densityMapRevision>')) {
+                        fcXml = fcXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>4</densityMapRevision>\n        <mapDensityMapRevision>1</mapDensityMapRevision>');
+                        await fs.writeFile(finalCareerPath, fcXml, 'utf8');
+                    } else if (fcXml.includes('<densityMapRevision>1</densityMapRevision>')) {
+                        fcXml = fcXml.replace(/<densityMapRevision>1<\/densityMapRevision>/g, '<densityMapRevision>4</densityMapRevision>');
+                        await fs.writeFile(finalCareerPath, fcXml, 'utf8');
+                    }
+                } else {
+                    const densityRevRegex = /<(?:densityMapRevision|mapDensityMapRevision)>.*?<\/(?:densityMapRevision|mapDensityMapRevision)>\r?\n?/gi;
+                    if (densityRevRegex.test(fcXml)) {
+                        fcXml = fcXml.replace(densityRevRegex, '');
+                        await fs.writeFile(finalCareerPath, fcXml, 'utf8');
+                    }
                 }
             }
         }
