@@ -1201,6 +1201,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             return mLow === dLow || fLow === dLow;
                         });
                         const targetName = foundMod ? foundMod.modName : depName;
+                        if (foundMod && foundMod.filePath) {
+                            await modManager.linkMapDependencyToMapSubfolder(modZipPath, foundMod.filePath);
+                        }
                         if (!finalMods.some(m => (m.modName || '').toLowerCase() === targetName.toLowerCase())) {
                             console.log(`[CREATE] Auto-including map dependency declared in modDesc.xml: ${targetName}`);
                             finalMods.push({
