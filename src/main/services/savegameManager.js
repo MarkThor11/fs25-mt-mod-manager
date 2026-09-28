@@ -1180,8 +1180,44 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         if (matchedMapMod?.version) mapModObj.version = matchedMapMod.version;
     }
 
-    // Auto-include all mods from "Map Dependencies" folder and dedicated map subfolders
+    // Auto-include map dependencies declared in map's modDesc.xml (<dependency>ModName</dependency>) and subfolders
     try {
+        if (modZipPath && fs.existsSync(modZipPath) && fs.statSync(modZipPath).isFile()) {
+            try {
+                const AdmZip = require('adm-zip');
+                const zip = new AdmZip(modZipPath);
+                const mdEntry = zip.getEntry('modDesc.xml');
+                if (mdEntry) {
+                    const mdXml = mdEntry.getData().toString('utf8');
+                    const depMatches = mdXml.match(/<dependency>([\s\S]*?)<\/dependency>/gi) || [];
+                    for (const depTag of depMatches) {
+                        const depName = depTag.replace(/<\/?dependency>/gi, '').trim();
+                        if (!depName) continue;
+                        const foundMod = allMods.find(m => {
+                            if (!m || !m.modName) return false;
+                            const mLow = m.modName.toLowerCase();
+                            const dLow = depName.toLowerCase();
+                            const fLow = (m.fileName || '').replace(/\.zip$/i, '').toLowerCase();
+                            return mLow === dLow || fLow === dLow;
+                        });
+                        const targetName = foundMod ? foundMod.modName : depName;
+                        if (!finalMods.some(m => (m.modName || '').toLowerCase() === targetName.toLowerCase())) {
+                            console.log(`[CREATE] Auto-including map dependency declared in modDesc.xml: ${targetName}`);
+                            finalMods.push({
+                                modName: targetName,
+                                title: foundMod?.title || targetName,
+                                version: foundMod?.version || '1.0.0.0',
+                                required: true,
+                                fileHash: foundMod?.fileHash || ''
+                            });
+                        }
+                    }
+                }
+            } catch (dErr) {
+                console.warn('[CREATE] Error parsing map modDesc.xml dependencies:', dErr.message);
+            }
+        }
+
         const mapDepMods = allMods.filter(m => {
             if (!m || m.isMap) return false;
             const fLow = (m.folder || '').toLowerCase();
@@ -1191,7 +1227,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
         for (const depMod of mapDepMods) {
             if (depMod.modName && !finalMods.some(m => (m.modName || '').toLowerCase() === depMod.modName.toLowerCase())) {
-                console.log(`[CREATE] Auto-including map dependency mod: ${depMod.title || depMod.modName}`);
+                console.log(`[CREATE] Auto-including map dependency mod from subfolder: ${depMod.title || depMod.modName}`);
                 finalMods.push({
                     modName: depMod.modName,
                     title: depMod.title || depMod.modName,
