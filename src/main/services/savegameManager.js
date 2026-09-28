@@ -1722,9 +1722,35 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    // Extract all starting density maps & infoLayers from the map ZIP into the slot folder
-                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false);
-                    console.log(`[CREATE] Extracted ${extractedCount} starting map density files into slot ${savegameIndex}`);
+                    // Extract all starting density maps & infoLayers from the map ZIP into the slot folder.
+                    // skipGdm=true: skip .gdm files because GDMs from raw map ZIPs are in map-editor format.
+                    // They contain coordinate data that mismatches the engine's runtime cell layout, causing
+                    // the "elements very far out from cell edge" warning and preventing crops from rendering.
+                    // The engine generates correct savegame-format GDMs itself on first load.
+                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, true);
+                    console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer/fields files into slot ${savegameIndex} (GDMs skipped — engine generates these)`);
+
+
+                    // Sanitize extracted fields.xml — if it only contains UNKNOWN fruit types,
+                    // the engine will not render any crops on fields even though the GDM has crop data.
+                    // Fix: replace UNKNOWN with an empty fruit element so the engine reads fruit from the GDM.
+                    const fieldsXmlPath = path.join(slotPath, 'fields.xml');
+                    if (fs.existsSync(fieldsXmlPath)) {
+                        try {
+                            let fXml = await fs.readFile(fieldsXmlPath, 'utf8');
+                            const unknownCount = (fXml.match(/fruit\s+type=["']UNKNOWN["']/gi) || []).length;
+                            const fieldCount = (fXml.match(/<field\s/gi) || []).length;
+                            if (unknownCount > 0) {
+                                // Remove fruit entries with UNKNOWN type — engine will use GDM data
+                                fXml = fXml.replace(/<fruit\s+type=["']UNKNOWN["'][^>]*\/>/gi, '');
+                                fXml = fXml.replace(/<fruit\s+type=["']UNKNOWN["'][^>]*><\/fruit>/gi, '');
+                                await fs.writeFile(fieldsXmlPath, fXml);
+                                console.log(`[CREATE] Sanitized ${unknownCount} UNKNOWN fruit entries from fields.xml (${fieldCount} fields)`);
+                            }
+                        } catch (fErr) {
+                            console.warn('[CREATE] Could not sanitize fields.xml:', fErr.message);
+                        }
+                    }
 
                     // Ensure careerSavegame.xml is updated with densityMapRevision=4 and mapDensityMapRevision=1
                     const slotFruits = path.join(slotPath, 'densityMap_fruits.gdm');
@@ -6273,8 +6299,11 @@ async function restoreStashedSinglePlayerSaves() {
 /**
  * Safely extracts all density maps, info layers, and field data from a map mod (zip or folder)
  * into a target savegame directory.
+ * @param {boolean} skipGdm - If true, skip extracting .gdm files. Use this when extracting from
+ *   a raw map ZIP (not a template), since map-editor GDMs have coordinate mismatches that prevent
+ *   the engine from rendering crops. The engine generates correct GDMs itself on first load.
  */
-async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite = false) {
+async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite = false, skipGdm = false) {
     if (!modZipOrDirPath || !fs.existsSync(modZipOrDirPath) || !targetSavePath || !fs.existsSync(targetSavePath)) {
         return 0;
     }
@@ -6291,6 +6320,10 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
                 if (entry.isDirectory) continue;
                 const baseName = path.basename(entry.entryName);
                 const lowerBase = baseName.toLowerCase();
+
+                // Skip GDM files when requested — map-editor GDMs cause coordinate mismatches
+                if (skipGdm && lowerBase.endsWith('.gdm')) continue;
+
                 const isDensityFile = 
                     (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm') || 
                     lowerBase.startsWith('infolayer_') ||
@@ -6491,7 +6524,7 @@ async function ensureSavegameDensityMaps(savePath) {
                 if (mapId && !isOfficialMap(mapId)) {
                     const modPath = await resolveMapModPath(savePath);
                     if (modPath && fs.existsSync(modPath)) {
-                        await extractMapDensityFiles(modPath, savePath, false);
+                        await extractMapDensityFiles(modPath, savePath, false, true);
 
                         const farmlandPath = path.join(savePath, 'farmland.xml');
                         if (!fs.existsSync(farmlandPath)) {
