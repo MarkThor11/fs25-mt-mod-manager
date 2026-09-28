@@ -1673,33 +1673,47 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         return false;
                     };
 
-                    // Only extract template starting XML files if restoring from a master template.
-                    // For fresh uninitialized saves, leave slot clean so GIANTS Engine natively loads complete map defaults.
-                    if (!requiresEngineInit) {
-                        if (includeStartVehicles && defaultVehiclesFile) await extractExactZipFile(defaultVehiclesFile, 'vehicles.xml');
-                        if (defaultPlaceablesFile) await extractExactZipFile(defaultPlaceablesFile, 'placeables.xml');
-                        if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
-                        if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
-                        if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
+                    // Extract template starting XML files for all custom map saves
+                    if (includeStartVehicles && defaultVehiclesFile) await extractExactZipFile(defaultVehiclesFile, 'vehicles.xml');
+                    if (defaultPlaceablesFile) await extractExactZipFile(defaultPlaceablesFile, 'placeables.xml');
+                    if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
+                    if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
+                    if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
 
-                        // Fallback extraction for starting XML files if missing
-                        for (const targetXml of ['placeables.xml', 'items.xml', 'handTools.xml', 'fields.xml']) {
-                            if (!fs.existsSync(path.join(slotPath, targetXml))) {
-                                const entry = entryByBaseName.get(targetXml);
-                                if (entry) {
-                                    await fs.writeFile(path.join(slotPath, targetXml), entry.getData());
-                                    console.log(`[CREATE] Fast fallback extracted ${targetXml}`);
-                                }
-                            }
-                        }
-
-                        if (includeStartVehicles && !fs.existsSync(path.join(slotPath, 'vehicles.xml'))) {
-                            const entry = entryByBaseName.get('vehicles.xml');
+                    // Fallback extraction for starting XML files if missing
+                    for (const targetXml of ['placeables.xml', 'items.xml', 'handTools.xml', 'fields.xml']) {
+                        if (!fs.existsSync(path.join(slotPath, targetXml))) {
+                            const entry = entryByBaseName.get(targetXml);
                             if (entry) {
-                                await fs.writeFile(path.join(slotPath, 'vehicles.xml'), entry.getData());
-                                console.log(`[CREATE] Fast fallback extracted vehicles.xml`);
+                                await fs.writeFile(path.join(slotPath, targetXml), entry.getData());
+                                console.log(`[CREATE] Fast fallback extracted ${targetXml}`);
                             }
                         }
+                    }
+
+                    if (includeStartVehicles && !fs.existsSync(path.join(slotPath, 'vehicles.xml'))) {
+                        const entry = entryByBaseName.get('vehicles.xml');
+                        if (entry) {
+                            await fs.writeFile(path.join(slotPath, 'vehicles.xml'), entry.getData());
+                            console.log(`[CREATE] Fast fallback extracted vehicles.xml`);
+                        }
+                    }
+
+                    // Extract all starting density maps & infoLayers from the map ZIP into the slot folder
+                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false);
+                    console.log(`[CREATE] Extracted ${extractedCount} starting map density files into slot ${savegameIndex}`);
+
+                    // Ensure careerSavegame.xml is updated with densityMapRevision=4 and mapDensityMapRevision=1
+                    const slotFruits = path.join(slotPath, 'densityMap_fruits.gdm');
+                    if (fs.existsSync(slotFruits) && fs.existsSync(careerPath)) {
+                        try {
+                            let cXml = await fs.readFile(careerPath, 'utf8');
+                            if (!cXml.includes('<densityMapRevision>')) {
+                                cXml = cXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>4</densityMapRevision>\n        <mapDensityMapRevision>1</mapDensityMapRevision>');
+                                await fs.writeFile(careerPath, cXml);
+                                console.log(`[CREATE] Applied densityMapRevision=4 and mapDensityMapRevision=1 to careerSavegame.xml for ${savegameIndex}`);
+                            }
+                        } catch (_) {}
                     }
 
                     // If starting farm or vehicles is disabled, strip farm 1 vehicles
