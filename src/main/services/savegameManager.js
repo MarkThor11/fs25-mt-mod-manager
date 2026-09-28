@@ -1020,6 +1020,29 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         const nLow = (name || '').toLowerCase();
         const tLow = (title || '').toLowerCase();
         
+        // Pass 0: Direct filesystem lookup by mapModName — fastest and most reliable even with cold cache
+        const modsRootForDirect = pathProvider.getModsPath();
+        if (name) {
+            const directZip = path.join(modsRootForDirect, `${name}.zip`);
+            if (fs.existsSync(directZip) && fs.statSync(directZip).size > 0) {
+                console.log(`[CREATE] Direct mod ZIP resolved: ${directZip}`);
+                return directZip;
+            }
+            // Also search one level deep in subfolders (map packs often live in their own folder)
+            try {
+                const subFolders = fs.readdirSync(modsRootForDirect, { withFileTypes: true })
+                    .filter(d => d.isDirectory())
+                    .map(d => d.name);
+                for (const sub of subFolders) {
+                    const subZip = path.join(modsRootForDirect, sub, `${name}.zip`);
+                    if (fs.existsSync(subZip) && fs.statSync(subZip).size > 0) {
+                        console.log(`[CREATE] Direct mod ZIP resolved in subfolder: ${subZip}`);
+                        return subZip;
+                    }
+                }
+            } catch (_) {}
+        }
+
         // Pass 1: Match by exact mod name or file basename (unique per mod)
         if (nLow) {
             for (const m of allMods) {
@@ -1065,7 +1088,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     };
     if (!isOfficialBaseMap) {
         modZipPath = findMapZip(mapModName, mapTitle, mapId, opts.mapFilePath);
+        console.log(`[CREATE] modZipPath resolved: ${modZipPath || '(null - no map ZIP found)'}`);
     }
+
 
     // 2. Identify and Copy Template
     const resolvedFolder = await resolveTemplateFolder(mapId, mapModName, mapTitle);
@@ -6353,12 +6378,32 @@ async function resolveMapModPath(savePath) {
         const mapId = settings['@_mapId'] || settings.mapId;
         if (!mapId || isOfficialMap(mapId)) return null;
 
-        const modManager = require('./modManager');
-        const { mods: allMods } = await modManager.scanLocalMods();
         let mapModName = mapId;
         if (mapId.includes('.')) {
             mapModName = mapId.split('.')[0];
         }
+
+        // Pass 0: Direct filesystem lookup — most reliable, no scan dependency
+        const modsRoot = pathProvider.getModsPath();
+        const directZip = path.join(modsRoot, `${mapModName}.zip`);
+        if (fs.existsSync(directZip) && fs.statSync(directZip).size > 0) {
+            return directZip;
+        }
+        // Search one level deep in subfolders
+        try {
+            const subFolders = fs.readdirSync(modsRoot, { withFileTypes: true })
+                .filter(d => d.isDirectory())
+                .map(d => d.name);
+            for (const sub of subFolders) {
+                const subZip = path.join(modsRoot, sub, `${mapModName}.zip`);
+                if (fs.existsSync(subZip) && fs.statSync(subZip).size > 0) {
+                    return subZip;
+                }
+            }
+        } catch (_) {}
+
+        const modManager = require('./modManager');
+        const { mods: allMods } = await modManager.scanLocalMods();
         const mapMod = allMods.find(m => m.isMap && (
             (m.modName && m.modName.toLowerCase() === mapModName.toLowerCase()) ||
             (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === mapModName.toLowerCase())
@@ -6372,6 +6417,7 @@ async function resolveMapModPath(savePath) {
     }
     return null;
 }
+
 
 /**
  * Ensures that a savegame directory has required crop/ground density maps.
