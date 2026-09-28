@@ -1304,21 +1304,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.loadDefaultVehicles = startFarmFlag;
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
 
-            // Ensure densityMapRevision is 4 and mapDensityMapRevision is 1 ONLY when genuine savegame fruits density map ("MDF) is present
-            // In FS25, engine densityMapRevision is 4. For custom mod maps or DLC maps without savegame fruits GDM, densityMapRevision must be omitted.
-            const slotFruitsPath = path.join(slotPath, 'densityMap_fruits.gdm');
-            if (fs.existsSync(slotFruitsPath) && !isSavegameGdm(slotFruitsPath)) {
-                try { fs.unlinkSync(slotFruitsPath); } catch (_) {}
-            }
-            if (fs.existsSync(slotFruitsPath) && isSavegameGdm(slotFruitsPath)) {
-                savegameData.careerSavegame.settings.densityMapRevision = '4';
-                savegameData.careerSavegame.settings.mapDensityMapRevision = '1';
-            } else {
-                delete savegameData.careerSavegame.settings.densityMapRevision;
-                delete savegameData.careerSavegame.settings['@_densityMapRevision'];
-                delete savegameData.careerSavegame.settings.mapDensityMapRevision;
-                delete savegameData.careerSavegame.settings['@_mapDensityMapRevision'];
-            }
+            savegameData.careerSavegame.settings.densityMapRevision = '4';
+            savegameData.careerSavegame.settings.mapDensityMapRevision = '1';
 
             // Critically ensure valid="true" is present — without it FS25 engine treats slot as empty
             savegameData.careerSavegame['@_valid'] = 'true';
@@ -1552,7 +1539,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     hasInitiallyOwnedFarmlands: startFarmFlag,
                     loadDefaultFarm: startFarmFlag,
                     loadDefaultVehicles: startFarmFlag,
-                    isCrossPlatformSavegame: 'false'
+                    isCrossPlatformSavegame: 'false',
+                    densityMapRevision: '4',
+                    mapDensityMapRevision: '1'
                 },
                 statistics: {
                     money: String(money),
