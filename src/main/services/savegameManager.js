@@ -6278,11 +6278,6 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
                 const destPath = path.join(targetSavePath, baseName);
                 if (overwrite || !fs.existsSync(destPath)) {
                     const dataBuf = entry.getData();
-                    // Skip map editor source asset GDMs (!MDF header: 0x21 0x4D 0x44 0x46)
-                    if (dataBuf.length >= 4 && dataBuf[0] === 0x21 && dataBuf[1] === 0x4D && dataBuf[2] === 0x44 && dataBuf[3] === 0x46) {
-                        console.log(`[DENSITY-EXTRACT] Skipped map editor asset (!MDF) ${entry.entryName}`);
-                        continue;
-                    }
                     await fs.writeFile(destPath, dataBuf);
                     extractedCount++;
                     console.log(`[DENSITY-EXTRACT] Extracted ${entry.entryName} -> ${destPath}`);
@@ -6426,14 +6421,7 @@ async function ensureSavegameDensityMaps(savePath) {
                 const mapId = settings['@_mapId'] || settings.mapId;
 
                 const fruitsPath = path.join(savePath, 'densityMap_fruits.gdm');
-                if (fs.existsSync(fruitsPath) && !isSavegameGdm(fruitsPath)) {
-                    try {
-                        await fs.remove(fruitsPath);
-                        console.log(`[DENSITY-CHECK] Purged raw map asset (!MDF) densityMap_fruits.gdm from ${savePath}`);
-                    } catch (_) {}
-                }
-
-                const hasFruitsGdm = fs.existsSync(fruitsPath) && isSavegameGdm(fruitsPath);
+                const hasFruitsGdm = fs.existsSync(fruitsPath);
 
                 // For uninitialized saves (no valid savegame densityMap_fruits.gdm), purge any partial fields.xml
                 // so GIANTS Engine natively loads the map's complete default fields & crops from the map mod ZIP.
