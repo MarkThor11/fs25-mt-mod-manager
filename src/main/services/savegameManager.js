@@ -1737,8 +1737,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, false);
-                    console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer/density map files into slot ${savegameIndex}`);
+                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, true);
+                    console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer/density map files into slot ${savegameIndex} (GDMs skipped)`);
 
 
                     // Sanitize extracted fields.xml — if it only contains UNKNOWN fruit types,
@@ -6539,7 +6539,7 @@ async function ensureSavegameDensityMaps(savePath) {
                 if (mapId && !isOfficialMap(mapId)) {
                     const modPath = await resolveMapModPath(savePath);
                     if (modPath && fs.existsSync(modPath)) {
-                        await extractMapDensityFiles(modPath, savePath, false, false);
+                        await extractMapDensityFiles(modPath, savePath, false, true);
 
                         const farmlandPath = path.join(savePath, 'farmland.xml');
                         if (!fs.existsSync(farmlandPath)) {
@@ -6564,29 +6564,19 @@ async function ensureSavegameDensityMaps(savePath) {
                 const hasFruitsGdm = fs.existsSync(fruitsPath);
 
                 if (!hasFruitsGdm) {
-                    // Ensure densityMapRevision=4 and mapDensityMapRevision exist so the engine initializes crops for new slots correctly
-                    const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '';
-                    const curMapRev = settings['@_mapDensityMapRevision'] || settings.mapDensityMapRevision || '';
+                    // If valid savegame densityMap_fruits.gdm is absent from the save slot, purge densityMapRevision so FS25 engine reads map ZIP GDM natively
                     let xmlModified = false;
-                    if (curRev !== '4' || !careerXml.includes('<densityMapRevision>')) {
-                        if (careerXml.includes('<densityMapRevision>')) {
-                            careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, '<densityMapRevision>4</densityMapRevision>');
-                        } else {
-                            careerXml = careerXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>4</densityMapRevision>');
-                        }
+                    if (careerXml.includes('<densityMapRevision>')) {
+                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>\r?\n?/gi, '');
                         xmlModified = true;
                     }
-                    if (curMapRev !== expectedRev || !careerXml.includes('<mapDensityMapRevision>')) {
-                        if (careerXml.includes('<mapDensityMapRevision>')) {
-                            careerXml = careerXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>/i, `<mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
-                        } else {
-                            careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
-                        }
+                    if (careerXml.includes('<mapDensityMapRevision>')) {
+                        careerXml = careerXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>\r?\n?/gi, '');
                         xmlModified = true;
                     }
                     if (xmlModified) {
                         await fs.writeFile(careerPath, careerXml);
-                        console.log(`[DENSITY-CHECK] Ensured densityMapRevision=4 and mapDensityMapRevision=${expectedRev} in ${savePath}`);
+                        console.log(`[DENSITY-CHECK] Purged densityMapRevision because valid savegame densityMap_fruits.gdm is absent for ${savePath}`);
                     }
                 } else {
                     const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '';
