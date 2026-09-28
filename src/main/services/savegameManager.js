@@ -6459,6 +6459,44 @@ async function resolveMapModPath(savePath) {
 async function ensureSavegameDensityMaps(savePath) {
     if (!savePath || !fs.existsSync(savePath)) return 0;
     try {
+        // ── FIRST-RUN CROP FIX ────────────────────────────────────────────────────
+        // The FS25 engine ONLY reads GDMs from the map ZIP (applying starting-season
+        // crop growth) during a brand-new career creation — i.e. when no
+        // careerSavegame.xml exists in the slot. The moment our app writes one, the
+        // engine treats the slot as an existing save and generates blank GDMs instead.
+        //
+        // Solution: if this slot has no GDMs yet (untemplatized map, first run),
+        // back up careerSavegame.xml and remove it just before launch.
+        // The engine then does a proper fresh new-career init with crops from the
+        // map ZIP. processPostGameExit restores/merges our settings afterwards.
+        const careerPathForCheck = path.join(savePath, 'careerSavegame.xml');
+        const careerBakPath = path.join(savePath, '.mm_career_bak.xml');
+        const fruitsCheckPath = path.join(savePath, 'densityMap_fruits.gdm');
+        const groundCheckPath = path.join(savePath, 'densityMap_ground.gdm');
+        const hasAnyGdm = fs.existsSync(fruitsCheckPath) || fs.existsSync(groundCheckPath);
+        const isFirstRun = !hasAnyGdm && fs.existsSync(careerPathForCheck) && !fs.existsSync(careerBakPath);
+
+        if (isFirstRun) {
+            try {
+                // Check if this is a non-official mod map slot (not a base-game map)
+                const careerForCheck = await fs.readFile(careerPathForCheck, 'utf8');
+                const parsedCheck = parser.parse(careerForCheck);
+                const mapIdCheck = parsedCheck?.careerSavegame?.settings?.['@_mapId'] ||
+                                   parsedCheck?.careerSavegame?.settings?.mapId;
+                if (mapIdCheck && !isOfficialMap(mapIdCheck)) {
+                    // Back up our careerSavegame.xml so processPostGameExit can restore settings
+                    await fs.copy(careerPathForCheck, careerBakPath);
+                    await fs.remove(careerPathForCheck);
+                    console.log(`[DENSITY-CHECK] First-run crop fix: backed up and removed careerSavegame.xml from ${savePath}`);
+                    console.log(`[DENSITY-CHECK] Engine will do fresh new-career init from map ZIP — crops will appear correctly.`);
+                    // Return early — no further processing needed before launch
+                    return 0;
+                }
+            } catch (firstRunErr) {
+                console.warn('[DENSITY-CHECK] First-run crop fix check failed, continuing normally:', firstRunErr.message);
+            }
+        }
+
         // 1. Ensure densityMap_fruits_growthState.xml, weed_growthState.xml, and stone_growthState.xml exist
         const growthXmlPath = path.join(savePath, 'densityMap_fruits_growthState.xml');
         if (!fs.existsSync(growthXmlPath)) {
@@ -6683,6 +6721,55 @@ async function processPostGameExit(saveIndex) {
         const fs25Path = getFs25Path();
         const savePath = path.join(fs25Path, `savegame${saveIndex}`);
         const careerPath = path.join(savePath, 'careerSavegame.xml');
+        const careerBakPath = path.join(savePath, '.mm_career_bak.xml');
+
+        // ── FIRST-RUN CROP FIX: restore app settings from backup ─────────────────
+        // If ensureSavegameDensityMaps backed up and removed careerSavegame.xml before
+        // launch (to let the engine do a fresh crop-init from the map ZIP), and the
+        // player saved in-game (so the engine wrote a new careerSavegame.xml), we
+        // now merge our app-configured settings back into the engine's file.
+        if (fs.existsSync(careerBakPath) && fs.existsSync(careerPath)) {
+            try {
+                const bakXml = await fs.readFile(careerBakPath, 'utf8');
+                const bakData = parser.parse(bakXml);
+                const bakSettings = bakData?.careerSavegame?.settings || {};
+
+                let engineXml = await fs.readFile(careerPath, 'utf8');
+
+                // Restore app-configured savegame name
+                const appName = bakSettings.savegameName || bakSettings['@_savegameName'];
+                if (appName) {
+                    engineXml = engineXml.replace(/<savegameName>[^<]*<\/savegameName>/i, `<savegameName>${appName}</savegameName>`);
+                }
+
+                await fs.writeFile(careerPath, engineXml, 'utf8');
+
+                // Also update farms.xml money from the backup settings if we can find it
+                const bakMoney = bakSettings.initialMoney || bakSettings['@_initialMoney'];
+                const farmsPath = path.join(savePath, 'farms.xml');
+                if (bakMoney && fs.existsSync(farmsPath)) {
+                    try {
+                        let farmsXml = await fs.readFile(farmsPath, 'utf8');
+                        farmsXml = farmsXml.replace(/(<farm\s[^>]*money=")[^"]*"/i, `$1${bakMoney}"`);
+                        await fs.writeFile(farmsPath, farmsXml, 'utf8');
+                    } catch (_) {}
+                }
+
+                // Clean up the backup
+                await fs.remove(careerBakPath);
+                console.log(`[POST-GAME] First-run crop fix: merged app settings back into engine careerSavegame.xml for slot ${saveIndex}`);
+
+                // Immediately capture this slot as a template so future slot creations
+                // get the engine-generated GDMs (which have correct crop growth stages)
+                await adoptSaveAsTemplate(saveIndex);
+                console.log(`[POST-GAME] First-run crop fix: auto-captured template for map after first engine init`);
+            } catch (bakErr) {
+                console.warn('[POST-GAME] First-run crop fix: failed to restore backup settings:', bakErr.message);
+                // Clean up backup even on error to avoid blocking future runs
+                await fs.remove(careerBakPath).catch(() => {});
+            }
+        }
+
         if (!fs.existsSync(careerPath)) return;
 
         const xml = await fs.readFile(careerPath, 'utf8');
