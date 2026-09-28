@@ -53,12 +53,13 @@ const parser = new XMLParser({
 function sanitizeCareerSavegameXml(xmlContent) {
     if (!xmlContent) return xmlContent;
     
-    // Ensure <careerSavegame ...> retains valid attribute if set, defaulting to valid="true" only if omitted
+    // Ensure <careerSavegame ...> has valid="true" (preventing fast-xml-parser boolean attribute suppression from breaking direct map load)
     xmlContent = xmlContent.replace(/<careerSavegame\b([^>]*?)>/gi, (match, attrs) => {
         if (!/valid=/i.test(attrs)) {
             return `<careerSavegame${attrs} valid="true">`;
+        } else {
+            return match.replace(/valid=(["']?)(?:true|false|\w*)\1/i, 'valid="true"');
         }
-        return match;
     });
 
     // Fix malformed <mod .../> tags with extra attribute garbage caused by quotes in mod titles
@@ -1533,7 +1534,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         savegameData = {
             careerSavegame: {
                 '@_revision': '2',
-                '@_valid': requiresEngineInit ? 'false' : 'true',
+                '@_valid': 'true',
                 settings: {
                     savegameName: savegameName,
                     playerName: playerName,
