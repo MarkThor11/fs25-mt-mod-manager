@@ -53,13 +53,12 @@ const parser = new XMLParser({
 function sanitizeCareerSavegameXml(xmlContent) {
     if (!xmlContent) return xmlContent;
     
-    // Ensure <careerSavegame ...> has valid="true" (preventing fast-xml-parser boolean attribute suppression from breaking direct map load)
+    // Ensure <careerSavegame ...> retains valid attribute if set, defaulting to valid="true" only if omitted
     xmlContent = xmlContent.replace(/<careerSavegame\b([^>]*?)>/gi, (match, attrs) => {
         if (!/valid=/i.test(attrs)) {
             return `<careerSavegame${attrs} valid="true">`;
-        } else {
-            return match.replace(/valid=(["']?)(?:true|false|\w*)\1/i, 'valid="true"');
         }
+        return match;
     });
 
     // Fix malformed <mod .../> tags with extra attribute garbage caused by quotes in mod titles
@@ -6420,18 +6419,6 @@ async function ensureSavegameDensityMaps(savePath) {
                 const settings = parsed?.careerSavegame?.settings || {};
                 const mapId = settings['@_mapId'] || settings.mapId;
 
-                const fruitsPath = path.join(savePath, 'densityMap_fruits.gdm');
-                const hasFruitsGdm = fs.existsSync(fruitsPath);
-
-                // For uninitialized saves (no valid savegame densityMap_fruits.gdm), purge any partial fields.xml
-                // so GIANTS Engine natively loads the map's complete default fields & crops from the map mod ZIP.
-                if (!hasFruitsGdm && fs.existsSync(fieldsXmlPath)) {
-                    try {
-                        await fs.remove(fieldsXmlPath);
-                        console.log(`[DENSITY-CHECK] Purged uninitialized save fields.xml from ${savePath} for native engine loading.`);
-                    } catch (_) {}
-                }
-
                 let expectedRev = '1';
                 if (mapId && !isOfficialMap(mapId)) {
                     const modPath = await resolveMapModPath(savePath);
@@ -6456,8 +6443,11 @@ async function ensureSavegameDensityMaps(savePath) {
                         } catch (_) {}
                     }
                 }
-                const updatedHasFruitsGdm = fs.existsSync(fruitsPath);
-                if (!updatedHasFruitsGdm) {
+
+                const fruitsPath = path.join(savePath, 'densityMap_fruits.gdm');
+                const hasFruitsGdm = fs.existsSync(fruitsPath);
+
+                if (!hasFruitsGdm) {
                     // If valid savegame fruits GDM is not in the slot, strip densityMapRevision completely so Giants Engine natively generates crops
                     let xmlModified = false;
                     if (careerXml.includes('<densityMapRevision>')) {
