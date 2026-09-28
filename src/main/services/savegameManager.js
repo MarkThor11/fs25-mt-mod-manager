@@ -1737,13 +1737,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    // Extract all starting density maps & infoLayers from the map ZIP into the slot folder.
-                    // skipGdm=true: skip .gdm files because GDMs from raw map ZIPs are in map-editor format.
-                    // They contain coordinate data that mismatches the engine's runtime cell layout, causing
-                    // the "elements very far out from cell edge" warning and preventing crops from rendering.
-                    // The engine generates correct savegame-format GDMs itself on first load.
-                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, true);
-                    console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer/fields files into slot ${savegameIndex} (GDMs skipped — engine generates these)`);
+                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, false);
+                    console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer/density map files into slot ${savegameIndex}`);
 
 
                     // Sanitize extracted fields.xml — if it only contains UNKNOWN fruit types,
@@ -6544,7 +6539,7 @@ async function ensureSavegameDensityMaps(savePath) {
                 if (mapId && !isOfficialMap(mapId)) {
                     const modPath = await resolveMapModPath(savePath);
                     if (modPath && fs.existsSync(modPath)) {
-                        await extractMapDensityFiles(modPath, savePath, false, true);
+                        await extractMapDensityFiles(modPath, savePath, false, false);
 
                         const farmlandPath = path.join(savePath, 'farmland.xml');
                         if (!fs.existsSync(farmlandPath)) {
