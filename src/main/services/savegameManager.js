@@ -6380,12 +6380,16 @@ async function restoreStashedSinglePlayerSaves() {
     }
 }
 
+function isGdmRuntimeFormat(gdmBuffer) {
+    if (!gdmBuffer || gdmBuffer.length < 24) return false;
+    const sig = gdmBuffer.slice(16, 20).toString('hex');
+    return sig.startsWith('0500') || sig.startsWith('0502');
+}
+
 /**
  * Safely extracts all density maps, info layers, and field data from a map mod (zip or folder)
  * into a target savegame directory.
- * @param {boolean} skipGdm - If true, skip extracting .gdm files. Use this when extracting from
- *   a raw map ZIP (not a template), since map-editor GDMs have coordinate mismatches that prevent
- *   the engine from rendering crops. The engine generates correct GDMs itself on first load.
+ * @param {boolean} skipGdm - If true, skip extracting .gdm files.
  */
 async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite = false, skipGdm = false) {
     if (!modZipOrDirPath || !fs.existsSync(modZipOrDirPath) || !targetSavePath || !fs.existsSync(targetSavePath)) {
@@ -6398,14 +6402,14 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
             const zip = new AdmZip(modZipOrDirPath);
             const entries = zip.getEntries();
 
-            // Group entries by lower-case basename to select best candidate (prefer entries in maps/ or map/ directory and larger file size)
+            // Group entries by lower-case basename to select best candidate
             const candidateMap = new Map();
             for (const entry of entries) {
                 if (entry.isDirectory) continue;
                 const baseName = path.basename(entry.entryName);
                 const lowerBase = baseName.toLowerCase();
 
-                // Skip GDM files when requested — map-editor GDMs cause coordinate mismatches
+                // Skip GDM files when requested
                 if (skipGdm && lowerBase.endsWith('.gdm')) continue;
 
                 const isDensityFile = 
@@ -6430,11 +6434,17 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
 
             for (const { entry, baseName } of candidateMap.values()) {
                 const destPath = path.join(targetSavePath, baseName);
+                const dataBuf = entry.getData();
+                if (baseName.toLowerCase().endsWith('.gdm')) {
+                    if (!isGdmRuntimeFormat(dataBuf)) {
+                        console.log(`[DENSITY-EXTRACT] Skipping editor-format GDM: ${entry.entryName} (not runtime format)`);
+                        continue;
+                    }
+                }
                 if (overwrite || !fs.existsSync(destPath)) {
-                    const dataBuf = entry.getData();
                     await fs.writeFile(destPath, dataBuf);
                     extractedCount++;
-                    console.log(`[DENSITY-EXTRACT] Extracted ${entry.entryName} -> ${destPath}`);
+                    console.log(`[DENSITY-EXTRACT] Extracted runtime GDM/infoLayer: ${entry.entryName} -> ${destPath}`);
                 }
             }
         } else if (stats.isDirectory()) {
