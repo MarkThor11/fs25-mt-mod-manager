@@ -1807,7 +1807,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, false);
+                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, true, false);
                     console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer/density map files into slot ${savegameIndex}`);
 
 
@@ -6609,7 +6609,7 @@ async function ensureSavegameDensityMaps(savePath) {
                 if (mapId && !isOfficialMap(mapId)) {
                     const modPath = await resolveMapModPath(savePath);
                     if (modPath && fs.existsSync(modPath)) {
-                        await extractMapDensityFiles(modPath, savePath, false, false);
+                        await extractMapDensityFiles(modPath, savePath, true, false);
 
                         const farmlandPath = path.join(savePath, 'farmland.xml');
                         if (!fs.existsSync(farmlandPath)) {
