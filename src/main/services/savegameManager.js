@@ -1551,10 +1551,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     if (!savegameData) {
-        // Fallback for fresh uninitialized maps (or if parsing failed).
-        // NOTE: densityMapRevision is intentionally omitted when requiresEngineInit=true.
-        // Setting it to 4 tells the engine "GDMs are current — skip crop init from ZIP",
-        // which produces blank fields. Without it the engine does a proper first-run init.
+        // Fallback for fresh uninitialized maps — uses full FS25 revision block (matches Ebony Island & AgroForests)
         const settingsBlock = {
             savegameName: savegameName,
             playerName: playerName,
@@ -1567,19 +1564,39 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             initialLoan: String(initialLoan),
             difficulty: String(difficulty),
             economicDifficulty: String(economicDifficulty || 'NORMAL').toUpperCase(),
-            plannedDaysPerPeriod: String(fixedSeasonLength || 1),
-            timeScale: String(timeScale || 5.0),
             hasInitiallyOwnedFarmlands: startFarmFlag,
             loadDefaultFarm: startFarmFlag,
             loadDefaultVehicles: startFarmFlag,
+            startWithGuidedTour: 'true',
+            trafficEnabled: 'true',
+            stopAndGoBraking: 'true',
+            growthMode: '1',
+            plannedDaysPerPeriod: String(fixedSeasonLength || 1),
+            fruitDestruction: 'true',
+            plowingRequiredEnabled: 'false',
+            stonesEnabled: 'true',
+            weedsEnabled: 'true',
+            limeRequired: 'true',
+            isSnowEnabled: 'true',
+            fuelUsage: '2',
+            densityMapRevision: '4',
+            terrainTextureRevision: '1',
+            terrainLodTextureRevision: '2',
+            splitShapesRevision: '2',
+            tipCollisionRevision: '2',
+            placementCollisionRevision: '2',
+            navigationCollisionRevision: '2',
+            mapDensityMapRevision: '1',
+            mapTerrainTextureRevision: '1',
+            mapTerrainLodTextureRevision: '1',
+            mapSplitShapesRevision: '1',
+            mapTipCollisionRevision: '1',
+            mapPlacementCollisionRevision: '1',
+            mapNavigationCollisionRevision: '1',
+            timeScale: String(timeScale || 1.0),
             isCrossPlatformSavegame: 'false',
+            initialPlatformName: 'WIN'
         };
-        // Only include density revision markers for template-based saves.
-        // Without these, the engine treats the slot as needing a fresh crop init from the map ZIP.
-        if (!requiresEngineInit) {
-            settingsBlock.densityMapRevision = '4';
-            settingsBlock.mapDensityMapRevision = '1';
-        }
         savegameData = {
             careerSavegame: {
                 '@_revision': '2',
@@ -1754,8 +1771,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, true);
-                    console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer/density map files into slot ${savegameIndex} (GDMs skipped)`);
+                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, false);
+                    console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer/density map files into slot ${savegameIndex}`);
 
 
                     // Sanitize extracted fields.xml — if it only contains UNKNOWN fruit types,
@@ -6556,7 +6573,7 @@ async function ensureSavegameDensityMaps(savePath) {
                 if (mapId && !isOfficialMap(mapId)) {
                     const modPath = await resolveMapModPath(savePath);
                     if (modPath && fs.existsSync(modPath)) {
-                        await extractMapDensityFiles(modPath, savePath, false, true);
+                        await extractMapDensityFiles(modPath, savePath, false, false);
 
                         const farmlandPath = path.join(savePath, 'farmland.xml');
                         if (!fs.existsSync(farmlandPath)) {
@@ -6577,49 +6594,29 @@ async function ensureSavegameDensityMaps(savePath) {
                     }
                 }
 
-                const fruitsPath = path.join(savePath, 'densityMap_fruits.gdm');
-                const hasFruitsGdm = fs.existsSync(fruitsPath);
+                const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '';
+                const curMapRev = settings['@_mapDensityMapRevision'] || settings.mapDensityMapRevision || '';
+                let modified = false;
 
-                if (!hasFruitsGdm) {
-                    // If valid savegame densityMap_fruits.gdm is absent from the save slot, purge densityMapRevision so FS25 engine reads map ZIP GDM natively
-                    let xmlModified = false;
+                if (curRev !== '4' || !careerXml.includes('<densityMapRevision>')) {
                     if (careerXml.includes('<densityMapRevision>')) {
-                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>\r?\n?/gi, '');
-                        xmlModified = true;
+                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, '<densityMapRevision>4</densityMapRevision>');
+                    } else {
+                        careerXml = careerXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>4</densityMapRevision>');
                     }
+                    modified = true;
+                }
+                if (curMapRev !== expectedRev || !careerXml.includes('<mapDensityMapRevision>')) {
                     if (careerXml.includes('<mapDensityMapRevision>')) {
-                        careerXml = careerXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>\r?\n?/gi, '');
-                        xmlModified = true;
+                        careerXml = careerXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>/i, `<mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
+                    } else {
+                        careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
                     }
-                    if (xmlModified) {
-                        await fs.writeFile(careerPath, careerXml);
-                        console.log(`[DENSITY-CHECK] Purged densityMapRevision because valid savegame densityMap_fruits.gdm is absent for ${savePath}`);
-                    }
-                } else {
-                    const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '';
-                    const curMapRev = settings['@_mapDensityMapRevision'] || settings.mapDensityMapRevision || '';
-                    let modified = false;
-
-                    if (curRev !== '4' || !careerXml.includes('<densityMapRevision>')) {
-                        if (careerXml.includes('<densityMapRevision>')) {
-                            careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, '<densityMapRevision>4</densityMapRevision>');
-                        } else {
-                            careerXml = careerXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>4</densityMapRevision>');
-                        }
-                        modified = true;
-                    }
-                    if (curMapRev !== expectedRev || !careerXml.includes('<mapDensityMapRevision>')) {
-                        if (careerXml.includes('<mapDensityMapRevision>')) {
-                            careerXml = careerXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>/i, `<mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
-                        } else {
-                            careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
-                        }
-                        modified = true;
-                    }
-                    if (modified) {
-                        await fs.writeFile(careerPath, careerXml);
-                        console.log(`[DENSITY-CHECK] Corrected density revisions (densityMapRevision=4, mapDensityMapRevision=${expectedRev}) in ${savePath}`);
-                    }
+                    modified = true;
+                }
+                if (modified) {
+                    await fs.writeFile(careerPath, careerXml);
+                    console.log(`[DENSITY-CHECK] Ensured density revisions (densityMapRevision=4, mapDensityMapRevision=${expectedRev}) in ${savePath}`);
                 }
 
                 // 5. Remove leftover Precision Farming files if Precision Farming mod is not active
