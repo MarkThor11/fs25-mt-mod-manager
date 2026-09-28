@@ -6445,7 +6445,7 @@ async function ensureSavegameDensityMaps(savePath) {
                 }
 
                 let expectedRev = '1';
-                if (mapId && !isOfficialMap(mapId) && hasFruitsGdm) {
+                if (mapId && !isOfficialMap(mapId)) {
                     const modPath = await resolveMapModPath(savePath);
                     if (modPath && fs.existsSync(modPath)) {
                         await extractMapDensityFiles(modPath, savePath, false);
@@ -6468,7 +6468,8 @@ async function ensureSavegameDensityMaps(savePath) {
                         } catch (_) {}
                     }
                 }
-                if (!hasFruitsGdm) {
+                const updatedHasFruitsGdm = fs.existsSync(fruitsPath);
+                if (!updatedHasFruitsGdm) {
                     // If valid savegame fruits GDM is not in the slot, strip densityMapRevision completely so Giants Engine natively generates crops
                     let xmlModified = false;
                     if (careerXml.includes('<densityMapRevision>')) {
