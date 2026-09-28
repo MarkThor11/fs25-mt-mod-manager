@@ -6569,19 +6569,29 @@ async function ensureSavegameDensityMaps(savePath) {
                 const hasFruitsGdm = fs.existsSync(fruitsPath);
 
                 if (!hasFruitsGdm) {
-                    // If valid savegame fruits GDM is not in the slot, strip densityMapRevision completely so Giants Engine natively generates crops
+                    // Ensure densityMapRevision=4 and mapDensityMapRevision exist so the engine initializes crops for new slots correctly
+                    const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '';
+                    const curMapRev = settings['@_mapDensityMapRevision'] || settings.mapDensityMapRevision || '';
                     let xmlModified = false;
-                    if (careerXml.includes('<densityMapRevision>')) {
-                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>\r?\n?/gi, '');
+                    if (curRev !== '4' || !careerXml.includes('<densityMapRevision>')) {
+                        if (careerXml.includes('<densityMapRevision>')) {
+                            careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, '<densityMapRevision>4</densityMapRevision>');
+                        } else {
+                            careerXml = careerXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>4</densityMapRevision>');
+                        }
                         xmlModified = true;
                     }
-                    if (careerXml.includes('<mapDensityMapRevision>')) {
-                        careerXml = careerXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>\r?\n?/gi, '');
+                    if (curMapRev !== expectedRev || !careerXml.includes('<mapDensityMapRevision>')) {
+                        if (careerXml.includes('<mapDensityMapRevision>')) {
+                            careerXml = careerXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>/i, `<mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
+                        } else {
+                            careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
+                        }
                         xmlModified = true;
                     }
                     if (xmlModified) {
                         await fs.writeFile(careerPath, careerXml);
-                        console.log(`[DENSITY-CHECK] Purged densityMapRevision because valid savegame densityMap_fruits.gdm is absent for ${savePath}`);
+                        console.log(`[DENSITY-CHECK] Ensured densityMapRevision=4 and mapDensityMapRevision=${expectedRev} in ${savePath}`);
                     }
                 } else {
                     const curRev = settings['@_densityMapRevision'] || settings.densityMapRevision || '';
