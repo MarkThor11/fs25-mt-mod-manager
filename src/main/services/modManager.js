@@ -655,6 +655,18 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 				console.log(`[MAP-PATCH] Successfully patched map XMLs in archive: ${path.basename(mapPath)}`);
 				debugLog(`[MAP-PATCH] Successfully patched map XMLs in archive: ${path.basename(mapPath)}`);
 			}
+
+			// Automatically evaluate and patch maps_fruitTypes.xml if missing base crops
+			try {
+				const fruitPatcher = require('./fruitTypePatcher');
+				const pRes = fruitPatcher.patchMapFruitTypes(mapPath);
+				if (pRes && pRes.patched) {
+					console.log(`[MAP-PATCH] ${path.basename(mapPath)}: ${pRes.reason}`);
+					patched = true;
+				}
+			} catch (fErr) {
+				console.warn(`[MAP-PATCH] Fruit type patcher warning for ${path.basename(mapPath)}:`, fErr.message);
+			}
 		} else if (fs.statSync(mapPath).isDirectory()) {
 			function scanAndPatchDir(dirPath) {
 				const files = fs.readdirSync(dirPath);

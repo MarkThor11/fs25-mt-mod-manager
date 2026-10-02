@@ -74,7 +74,7 @@ function detectExternalFruitTypesPath(zip) {
 function isMissingBaseEntries(parsedXml) {
   const entries = parsedXml?.map?.fruitTypes?.fruitType ?? [];
   const filenames = entries.map((e) => e?.['@_filename'] ?? '');
-  return !filenames.some((f) => f && f.startsWith('$data/foliage/'));
+  return !filenames.some((f) => f && f.includes('wheat.xml'));
 }
 
 function buildMergedXml(parsedXml) {
