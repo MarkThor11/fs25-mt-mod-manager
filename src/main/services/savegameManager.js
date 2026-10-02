@@ -531,17 +531,17 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
         if (!stat.isDirectory() && !isZip) continue;
 
-        // 1. Direct exact modName match or prefix match (e.g. FS25_Cows_Farm_4X or FS25_Cows_Farm_4X_SampleModMap)
+        // 1. Direct exact modName match or prefix match with delimiter (e.g. FS25_Cows_Farm_4X_SampleModMap)
         if (effModLower && !GENERIC_MAP_IDS.has(effModClean)) {
-            if (cleanFolderLower === effModLower || cleanFolderLower.startsWith(effModLower + '_') || cleanFolderLower.startsWith(effModLower + '.')) {
+            if (cleanFolderLower === effModLower || cleanFolderLower === `${effModLower}_samplemodmap` || cleanFolderLower === `${effModLower}_templatemap`) {
                 if (await isCompleteTemplate(folderPath, isZip)) return folder;
             }
         }
 
-        // 2. Exact Title match if modName didn't match (e.g. "Cows Farm 4X")
+        // 2. Exact Title match if modName didn't match
         if (targetTitleNorm && !GENERIC_MAP_IDS.has(targetTitleNorm) && targetTitleNorm.length >= 4) {
             const ufNorm = ultraNorm(cleanFolder);
-            if (ufNorm === targetTitleNorm || ufNorm.startsWith(targetTitleNorm + '_')) {
+            if (ufNorm === targetTitleNorm) {
                 if (await isCompleteTemplate(folderPath, isZip)) return folder;
             }
         }
