@@ -182,17 +182,6 @@ function getTemplatesPath() {
                             try { fs.unlinkSync(badPath); } catch (_) {}
                         }
                     }
-                    // Ensure careerSavegame.xml has densityMapRevision 4 for FS25 savegame format
-                    const cPath = path.join(dstMf, 'careerSavegame.xml');
-                    if (fs.existsSync(cPath)) {
-                        try {
-                            let cXml = fs.readFileSync(cPath, 'utf8');
-                            if (cXml.includes('<densityMapRevision>1</densityMapRevision>')) {
-                                cXml = cXml.replace(/<densityMapRevision>1<\/densityMapRevision>/g, '<densityMapRevision>4</densityMapRevision>');
-                                fs.writeFileSync(cPath, cXml);
-                            }
-                        } catch (_) {}
-                    }
                 }
             }
         }
@@ -1374,8 +1363,24 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.loadDefaultVehicles = startFarmFlag;
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
 
-            savegameData.careerSavegame.settings.densityMapRevision = '4';
-            savegameData.careerSavegame.settings.mapDensityMapRevision = '1';
+            // Dynamically set map densityMap revision matching map file or default to 1 (reverts hardcoded 4 that broke revision-1 custom maps like Alliklepa)
+            let mapDeclaredRev = '1';
+            if (modZipPath && fs.existsSync(modZipPath)) {
+                try {
+                    const AdmZip = require('adm-zip');
+                    const zip = new AdmZip(modZipPath);
+                    const mapXmlEntry = zip.getEntries().find(e => /map.*\.xml$/i.test(e.entryName));
+                    if (mapXmlEntry) {
+                        const mText = mapXmlEntry.getData().toString('utf8');
+                        const revMatch = mText.match(/<densityMap\s+[^>]*revision=["'](\d+)["']/i);
+                        if (revMatch && revMatch[1]) {
+                            mapDeclaredRev = revMatch[1];
+                        }
+                    }
+                } catch (_) {}
+            }
+            savegameData.careerSavegame.settings.densityMapRevision = mapDeclaredRev;
+            savegameData.careerSavegame.settings.mapDensityMapRevision = mapDeclaredRev;
 
             // Critically ensure valid="true" is present — without it FS25 engine treats slot as empty
             savegameData.careerSavegame['@_valid'] = 'true';
