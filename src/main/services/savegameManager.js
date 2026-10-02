@@ -1670,6 +1670,63 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         xmlOutput = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n' + xmlOutput;
     }
 
+    // Auto-patch fruitTypes definition into savegame if map omits base game crop definitions
+    if (requiresEngineInit && modZipPath && fs.existsSync(modZipPath)) {
+        try {
+            const AdmZip = require('adm-zip');
+            const zip = new AdmZip(modZipPath);
+            const fruitEntry = zip.getEntries().find(e => /maps_fruitTypes\.xml$/i.test(e.entryName));
+            if (fruitEntry) {
+                const fText = fruitEntry.getData().toString('utf8');
+                if (!fText.includes('wheat.xml')) {
+                    console.log(`[CREATE] Detected custom map fruit list without base game crops in ${path.basename(modZipPath)}. Synthesizing complete fruitTypes in slot...`);
+                    const baseFruitXmlPath = path.join(pathProvider.getFS25DataRoot(), '..', 'Farming Simulator 25', 'data', 'maps', 'maps_fruitTypes.xml');
+                    let baseList = [];
+                    if (fs.existsSync(baseFruitXmlPath)) {
+                        const bText = fs.readFileSync(baseFruitXmlPath, 'utf8');
+                        const matches = bText.match(/<fruitType\s+filename="[^"]+"\s*\/>/gi);
+                        if (matches) baseList = matches;
+                    }
+                    if (baseList.length === 0) {
+                        baseList = [
+                            '<fruitType filename="$data/foliage/wheat/wheat.xml"/>',
+                            '<fruitType filename="$data/foliage/barley/barley.xml"/>',
+                            '<fruitType filename="$data/foliage/canola/canola.xml"/>',
+                            '<fruitType filename="$data/foliage/oat/oat.xml"/>',
+                            '<fruitType filename="$data/foliage/maize/maize.xml"/>',
+                            '<fruitType filename="$data/foliage/sunflower/sunflower.xml"/>',
+                            '<fruitType filename="$data/foliage/soybean/soybean.xml"/>',
+                            '<fruitType filename="$data/foliage/potato/potato.xml"/>',
+                            '<fruitType filename="$data/foliage/rice/rice.xml"/>',
+                            '<fruitType filename="$data/foliage/riceLongGrain/riceLongGrain.xml"/>',
+                            '<fruitType filename="$data/foliage/sugarbeet/sugarbeet.xml"/>',
+                            '<fruitType filename="$data/foliage/sugarcane/sugarcane.xml"/>',
+                            '<fruitType filename="$data/foliage/cotton/cotton.xml"/>',
+                            '<fruitType filename="$data/foliage/sorghum/sorghum.xml"/>',
+                            '<fruitType filename="$data/foliage/grape/grape.xml"/>',
+                            '<fruitType filename="$data/foliage/olive/olive.xml"/>',
+                            '<fruitType filename="$data/foliage/poplar/poplar.xml"/>',
+                            '<fruitType filename="$data/foliage/beetRoot/beetRoot.xml"/>',
+                            '<fruitType filename="$data/foliage/carrot/carrot.xml"/>',
+                            '<fruitType filename="$data/foliage/parsnip/parsnip.xml"/>',
+                            '<fruitType filename="$data/foliage/greenBean/greenBean.xml"/>',
+                            '<fruitType filename="$data/foliage/pea/pea.xml"/>',
+                            '<fruitType filename="$data/foliage/spinach/spinach.xml"/>',
+                            '<fruitType filename="$data/foliage/grass/grass.xml"/>',
+                            '<fruitType filename="$data/foliage/oilseedRadish/oilseedRadish.xml"/>'
+                        ];
+                    }
+                    const customMatches = fText.match(/<fruitType\s+filename="[^"]+"\s*\/>/gi) || [];
+                    const combinedList = [...new Set([...baseList, ...customMatches])];
+                    const mergedXml = `<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<map xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../shared/xml/schema/fruitTypes.xsd">\n    <fruitTypes>\n        ${combinedList.join('\n        ')}\n    </fruitTypes>\n</map>`;
+                    await fs.writeFile(path.join(slotPath, 'maps_fruitTypes.xml'), mergedXml);
+                }
+            }
+        } catch (fErr) {
+            console.warn('[CREATE] Failed to evaluate custom map fruit list:', fErr.message);
+        }
+    }
+
     await fs.writeFile(careerPath, xmlOutput);
 
     // For no-template first-run slots, skip extracting anything from the map ZIP.
