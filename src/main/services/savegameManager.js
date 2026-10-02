@@ -1773,12 +1773,11 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         return false;
                     };
 
-                    // Extract template starting XML files for all custom map saves
+                    // Extract template starting XML files for all custom map saves (excluding fields.xml so engine seeds crops natively)
                     if (includeStartVehicles && defaultVehiclesFile) await extractExactZipFile(defaultVehiclesFile, 'vehicles.xml');
                     if (defaultPlaceablesFile) await extractExactZipFile(defaultPlaceablesFile, 'placeables.xml');
                     if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
                     if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
-                    if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
                     if (farmlandsFile) await extractExactZipFile(farmlandsFile, 'farmland.xml');
 
                     // Fallback extraction for starting XML files if missing
@@ -1786,7 +1785,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         ['placeables.xml', 'placeables.xml'],
                         ['items.xml', 'items.xml'],
                         ['handTools.xml', 'handTools.xml'],
-                        ['fields.xml', 'fields.xml'],
                         ['farmlands.xml', 'farmland.xml'],
                         ['farmland.xml', 'farmland.xml']
                     ]) {
@@ -1810,6 +1808,12 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, true, false);
                     console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer/density map files into slot ${savegameIndex}`);
 
+                    // Strategy A: Ensure fields.xml is NOT present in the slot directory so GIANTS Engine reads fields natively from map ZIP
+                    const slotFieldsXml = path.join(slotPath, 'fields.xml');
+                    if (fs.existsSync(slotFieldsXml)) {
+                        try { await fs.remove(slotFieldsXml); } catch (_) {}
+                    }
+
                     // Extract pre-rendered terrain.occluders.cache from map mod ZIP to prevent 55% load hang
                     if (modZipPath && fs.existsSync(modZipPath)) {
                         try {
@@ -1825,28 +1829,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             }
                         } catch (occErr) {
                             console.warn('[CREATE] Occluder extraction warning:', occErr.message);
-                        }
-                    }
-
-
-                    // Sanitize extracted fields.xml — if it only contains UNKNOWN fruit types,
-                    // the engine will not render any crops on fields even though the GDM has crop data.
-                    // Fix: replace UNKNOWN with an empty fruit element so the engine reads fruit from the GDM.
-                    const fieldsXmlPath = path.join(slotPath, 'fields.xml');
-                    if (fs.existsSync(fieldsXmlPath)) {
-                        try {
-                            let fXml = await fs.readFile(fieldsXmlPath, 'utf8');
-                            const unknownCount = (fXml.match(/fruit\s+type=["']UNKNOWN["']/gi) || []).length;
-                            const fieldCount = (fXml.match(/<field\s/gi) || []).length;
-                            if (unknownCount > 0) {
-                                // Remove fruit entries with UNKNOWN type — engine will use GDM data
-                                fXml = fXml.replace(/<fruit\s+type=["']UNKNOWN["'][^>]*\/>/gi, '');
-                                fXml = fXml.replace(/<fruit\s+type=["']UNKNOWN["'][^>]*><\/fruit>/gi, '');
-                                await fs.writeFile(fieldsXmlPath, fXml);
-                                console.log(`[CREATE] Sanitized ${unknownCount} UNKNOWN fruit entries from fields.xml (${fieldCount} fields)`);
-                            }
-                        } catch (fErr) {
-                            console.warn('[CREATE] Could not sanitize fields.xml:', fErr.message);
                         }
                     }
 
@@ -6432,10 +6414,9 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
 
                 const isDensityFile = 
                     (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm') || 
-                    lowerBase.startsWith('infolayer_') ||
-                    lowerBase === 'fields.xml';
+                    lowerBase.startsWith('infolayer_');
 
-                if (isDensityFile && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.grle') || lowerBase.endsWith('.png') || lowerBase === 'fields.xml')) {
+                if (isDensityFile && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.grle') || lowerBase.endsWith('.png'))) {
                     const normPath = entry.entryName.replace(/\\/g, '/').toLowerCase();
                     const existing = candidateMap.get(lowerBase);
                     if (!existing) {
