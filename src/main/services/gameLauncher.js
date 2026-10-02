@@ -312,8 +312,8 @@ async function launch(options = {}) {
 
     const hasCoreXml = fs.existsSync(farmsFile) && fs.existsSync(careerFile);
     const hasEngineTerrain = fs.existsSync(heightmapFile);
-    const hasEngineDensity = fs.existsSync(densityFruitsFile) || fs.existsSync(densityGroundFile) || fs.existsSync(guidedTourFile);
-    
+    needsManualInit = !hasEngineTerrain;
+
     if (isServerSave) {
       console.log(`[LAUNCH] Savegame ${options.savegameIndex} is a Multiplayer Server save. Bypassing singleplayer autoStart so game launches to Multiplayer menu.`);
     } else {

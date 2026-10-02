@@ -1810,6 +1810,24 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, true, false);
                     console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer/density map files into slot ${savegameIndex}`);
 
+                    // Extract pre-rendered terrain.occluders.cache from map mod ZIP to prevent 55% load hang
+                    if (modZipPath && fs.existsSync(modZipPath)) {
+                        try {
+                            const occTarget = path.join(slotPath, 'terrain.occluders.cache');
+                            if (!fs.existsSync(occTarget)) {
+                                const AdmZip = require('adm-zip');
+                                const zip = new AdmZip(modZipPath);
+                                const occEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('.terrain.occluders.cache'));
+                                if (occEntry) {
+                                    await fs.writeFile(occTarget, occEntry.getData());
+                                    console.log(`[CREATE] Extracted pre-rendered terrain occluder cache to ${occTarget}`);
+                                }
+                            }
+                        } catch (occErr) {
+                            console.warn('[CREATE] Occluder extraction warning:', occErr.message);
+                        }
+                    }
+
 
                     // Sanitize extracted fields.xml — if it only contains UNKNOWN fruit types,
                     // the engine will not render any crops on fields even though the GDM has crop data.
@@ -6554,24 +6572,24 @@ async function ensureSavegameDensityMaps(savePath) {
     if (!savePath || !fs.existsSync(savePath)) return 0;
     try {
 
-        // 1. Ensure densityMap_fruits_growthState.xml, weed_growthState.xml, and stone_growthState.xml exist
-        const growthXmlPath = path.join(savePath, 'densityMap_fruits_growthState.xml');
-        if (!fs.existsSync(growthXmlPath)) {
-            try {
-                const defaultGrowthXml = `<?xml version="1.0" encoding="iso-8859-1"?>\n<foliageCropsUpdater currentGrowthIndex="0" applyGrowthCurrentIndex="4294967295" applyGrowthMaxTimePerFrame="0.000000">\n  <growthMasks64 numCells="16384"><![CDATA[XQAAEAAAf+/7v/6jsV7l+D+yqiZV+GhwQXAVD439HkwbikK3GfRpGHGuZiOKik0vow3Zf6bjjCMRU+BZGMV1iuJ3+LaUfwxqwN50SWTi6VxTsgTY90QMq1nkPx4AAA==]]></growthMasks64>\n</foliageCropsUpdater>`;
-                await fs.writeFile(growthXmlPath, defaultGrowthXml, 'utf8');
-                console.log(`[DENSITY-CHECK] Created default densityMap_fruits_growthState.xml in ${savePath}`);
-            } catch (e) {}
-        }
-
-        const defaultUpdaterXml = `<?xml version="1.0" encoding="iso-8859-1"?>\n<densityMapUpdater updateCycleTime="0.000000" currentUpdateTime="0.000000" currentUpdateIndex="-1" numCellsToUpdate="0.000000" applyUpdateCurrentIndex="-1" applyUpdateMaxTimePerFrame="0.000000">\n</densityMapUpdater>`;
-        for (const stateXml of ['weed_growthState.xml', 'stone_growthState.xml']) {
-            const sPath = path.join(savePath, stateXml);
-            if (!fs.existsSync(sPath)) {
+        // 1. Ensure foliage growth state updater XML files exist ONLY when densityMap_fruits.gdm is present
+        const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
+        if (hasFruitsGdm) {
+            const growthXmlPath = path.join(savePath, 'densityMap_fruits_growthState.xml');
+            if (!fs.existsSync(growthXmlPath)) {
                 try {
-                    await fs.writeFile(sPath, defaultUpdaterXml, 'utf8');
-                    console.log(`[DENSITY-CHECK] Created default ${stateXml} in ${savePath}`);
+                    const defaultGrowthXml = `<?xml version="1.0" encoding="iso-8859-1"?>\n<foliageCropsUpdater currentGrowthIndex="0" applyGrowthCurrentIndex="4294967295" applyGrowthMaxTimePerFrame="0.000000">\n  <growthMasks64 numCells="16384"><![CDATA[XQAAEAAAf+/7v/6jsV7l+D+yqiZV+GhwQXAVD439HkwbikK3GfRpGHGuZiOKik0vow3Zf6bjjCMRU+BZGMV1iuJ3+LaUfwxqwN50SWTi6VxTsgTY90QMq1nkPx4AAA==]]></growthMasks64>\n</foliageCropsUpdater>`;
+                    await fs.writeFile(growthXmlPath, defaultGrowthXml, 'utf8');
+                    console.log(`[DENSITY-CHECK] Created default densityMap_fruits_growthState.xml in ${savePath}`);
                 } catch (e) {}
+            }
+        } else {
+            // On fresh un-initialized slots, remove stale growth XMLs so GIANTS Engine loads natively without 55% hang
+            for (const stateXml of ['densityMap_fruits_growthState.xml', 'weed_growthState.xml', 'stone_growthState.xml', 'densityMapHeight.xml']) {
+                const sPath = path.join(savePath, stateXml);
+                if (fs.existsSync(sPath)) {
+                    try { await fs.remove(sPath); } catch (e) {}
+                }
             }
         }
 
