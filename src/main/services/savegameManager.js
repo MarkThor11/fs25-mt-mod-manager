@@ -1051,28 +1051,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             }
         }
 
-        // Pass 3: Fuzzy normalized match strictly for custom mod names and titles with suffixes (e.g. _crossplay, _CP)
-        const clean = (str) => (str || '').toLowerCase()
-            .replace(/_samplemodmap$/i, '')
-            .replace(/_basemap$/i, '')
-            .replace(/_crossplay$/i, '')
-            .replace(/[^a-z0-9]/g, '');
-
-        const nClean = clean(name);
-        const tClean = clean(title);
-
-        for (const m of allMods) {
-            if (!m.filePath || !m.filePath.toLowerCase().endsWith('.zip')) continue;
-            const mNameClean = clean(m.modName);
-            const mFileClean = clean(path.basename(m.filePath, '.zip'));
-            const mTitleClean = clean(m.title);
-
-            if ((nClean && (mNameClean === nClean || mFileClean === nClean)) ||
-                (tClean && mTitleClean === tClean && tClean.length >= 4)) {
-                return m.filePath;
-            }
-        }
-
         return null;
     };
     if (!isOfficialBaseMap) {
@@ -1337,6 +1315,23 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         };
     });
 
+    // Dynamically set map densityMap revision matching map file or default to 1
+    let mapDeclaredRev = '1';
+    if (modZipPath && fs.existsSync(modZipPath)) {
+        try {
+            const AdmZip = require('adm-zip');
+            const zip = new AdmZip(modZipPath);
+            const mapXmlEntry = zip.getEntries().find(e => /map.*\.xml$/i.test(e.entryName));
+            if (mapXmlEntry) {
+                const mText = mapXmlEntry.getData().toString('utf8');
+                const revMatch = mText.match(/<densityMap\s+[^>]*revision=["'](\d+)["']/i);
+                if (revMatch && revMatch[1]) {
+                    mapDeclaredRev = revMatch[1];
+                }
+            }
+        } catch (_) {}
+    }
+
     let savegameData;
     if (!requiresEngineInit && fs.existsSync(careerPath)) {
         // We copied a template, so preserve its initialized state!
@@ -1363,22 +1358,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.loadDefaultVehicles = startFarmFlag;
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
 
-            // Dynamically set map densityMap revision matching map file or default to 1 (reverts hardcoded 4 that broke revision-1 custom maps like Alliklepa)
-            let mapDeclaredRev = '1';
-            if (modZipPath && fs.existsSync(modZipPath)) {
-                try {
-                    const AdmZip = require('adm-zip');
-                    const zip = new AdmZip(modZipPath);
-                    const mapXmlEntry = zip.getEntries().find(e => /map.*\.xml$/i.test(e.entryName));
-                    if (mapXmlEntry) {
-                        const mText = mapXmlEntry.getData().toString('utf8');
-                        const revMatch = mText.match(/<densityMap\s+[^>]*revision=["'](\d+)["']/i);
-                        if (revMatch && revMatch[1]) {
-                            mapDeclaredRev = revMatch[1];
-                        }
-                    }
-                } catch (_) {}
-            }
             savegameData.careerSavegame.settings.densityMapRevision = mapDeclaredRev;
             savegameData.careerSavegame.settings.mapDensityMapRevision = mapDeclaredRev;
 
@@ -1620,14 +1599,14 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             limeRequired: 'true',
             isSnowEnabled: 'true',
             fuelUsage: '2',
-            densityMapRevision: '1',
+            densityMapRevision: mapDeclaredRev,
             terrainTextureRevision: '1',
             terrainLodTextureRevision: '2',
             splitShapesRevision: '2',
             tipCollisionRevision: '2',
             placementCollisionRevision: '2',
             navigationCollisionRevision: '2',
-            mapDensityMapRevision: '1',
+            mapDensityMapRevision: mapDeclaredRev,
             mapTerrainTextureRevision: '1',
             mapTerrainLodTextureRevision: '1',
             mapSplitShapesRevision: '1',
