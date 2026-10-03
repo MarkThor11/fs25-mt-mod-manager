@@ -1856,7 +1856,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, true, false);
+                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, true, true);
                     console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer and density map files into slot ${savegameIndex}`);
 
                     // Ensure fields.xml is generated with complete field entries so GIANTS Engine renders full field crops on initial launch
