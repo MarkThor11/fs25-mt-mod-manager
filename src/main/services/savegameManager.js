@@ -513,38 +513,71 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         return hasCareer && hasFarms && hasHeightmap && hasEconomy;
     };
 
+    const backupDir = path.join(getFs25Path(), 'modManagerTemplates_backup');
     const folders = await fs.readdir(templatesDir);
     const effModLower = (effectiveModName || '').toLowerCase();
+    const effModBase = effModLower.replace(/_crossplay$/i, '').replace(/_cp$/i, '');
     const effModClean = cleanStr(effectiveModName);
 
-    for (const folder of folders) {
-        const cleanFolder = folder.replace(/\.zip$/i, '');
-        const cleanFolderLower = cleanFolder.toLowerCase();
-        const fNorm = cleanStr(cleanFolder);
+    const checkFolderList = async (dirList, baseDir) => {
+        for (const folder of dirList) {
+            const cleanFolder = folder.replace(/\.zip$/i, '');
+            const cleanFolderLower = cleanFolder.toLowerCase();
+            const fNorm = cleanStr(cleanFolder);
 
-        // Never match official base templates for custom mod maps
-        if (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolderLower)) continue;
+            // Never match official base templates for custom mod maps
+            if (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolderLower)) continue;
 
-        const folderPath = path.join(templatesDir, folder);
-        const stat = await fs.stat(folderPath).catch(() => null);
-        if (!stat) continue;
-        const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
-        if (!stat.isDirectory() && !isZip) continue;
+            const folderPath = path.join(baseDir, folder);
+            const stat = await fs.stat(folderPath).catch(() => null);
+            if (!stat) continue;
+            const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
+            if (!stat.isDirectory() && !isZip) continue;
 
-        // 1. Direct exact modName match or prefix match with delimiter (e.g. FS25_Cows_Farm_4X_SampleModMap)
-        if (effModLower && !GENERIC_MAP_IDS.has(effModClean)) {
-            if (cleanFolderLower === effModLower || cleanFolderLower === `${effModLower}_samplemodmap` || cleanFolderLower === `${effModLower}_templatemap`) {
-                if (await isCompleteTemplate(folderPath, isZip)) return folder;
+            // 1. Direct exact modName match or prefix match with delimiter (e.g. FS25_Cows_Farm_4X_SampleModMap)
+            if (effModLower && !GENERIC_MAP_IDS.has(effModClean)) {
+                if (cleanFolderLower === effModLower || cleanFolderLower === `${effModLower}_samplemodmap` || cleanFolderLower === `${effModLower}_templatemap` ||
+                    cleanFolderLower === effModBase || cleanFolderLower === `${effModBase}_samplemodmap` || cleanFolderLower === `${effModBase}_templatemap`) {
+                    if (await isCompleteTemplate(folderPath, isZip)) {
+                        if (baseDir !== templatesDir) {
+                            try {
+                                await fs.copy(folderPath, path.join(templatesDir, folder));
+                                console.log(`[TEMPLATES] Copied complete template from backup to active: ${folder}`);
+                            } catch (_) {}
+                        }
+                        return folder;
+                    }
+                }
+            }
+
+            // 2. Exact Title match if modName didn't match
+            if (targetTitleNorm && !GENERIC_MAP_IDS.has(targetTitleNorm) && targetTitleNorm.length >= 4) {
+                const ufNorm = ultraNorm(cleanFolder);
+                if (ufNorm === targetTitleNorm || ufNorm === `${targetTitleNorm}samplemodmap` || ufNorm.startsWith(targetTitleNorm)) {
+                    if (await isCompleteTemplate(folderPath, isZip)) {
+                        if (baseDir !== templatesDir) {
+                            try {
+                                await fs.copy(folderPath, path.join(templatesDir, folder));
+                                console.log(`[TEMPLATES] Copied complete template from backup to active: ${folder}`);
+                            } catch (_) {}
+                        }
+                        return folder;
+                    }
+                }
             }
         }
+        return null;
+    };
 
-        // 2. Exact Title match if modName didn't match
-        if (targetTitleNorm && !GENERIC_MAP_IDS.has(targetTitleNorm) && targetTitleNorm.length >= 4) {
-            const ufNorm = ultraNorm(cleanFolder);
-            if (ufNorm === targetTitleNorm) {
-                if (await isCompleteTemplate(folderPath, isZip)) return folder;
-            }
-        }
+    const directMatch = await checkFolderList(folders, templatesDir);
+    if (directMatch) return directMatch;
+
+    if (fs.existsSync(backupDir)) {
+        try {
+            const backupFolders = await fs.readdir(backupDir);
+            const backupMatch = await checkFolderList(backupFolders, backupDir);
+            if (backupMatch) return backupMatch;
+        } catch (_) {}
     }
 
     return null;
@@ -1861,11 +1894,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     }
 
                     try {
-                        let existingFieldsData = null;
-                        if (fs.existsSync(slotFieldsXml)) {
-                            const fRaw = await fs.readFile(slotFieldsXml, 'utf8');
-                            existingFieldsData = parser.parse(fRaw);
-                        }
+                        const isAlliklepa = (mapTitle || '').toLowerCase().includes('alliklepa') || (mapId || '').toLowerCase().includes('alliklepa') || (mapModName || '').toLowerCase().includes('alliklepa');
 
                         // Discover all field IDs declared across the map (from i3d and existing fields.xml)
                         const fieldIds = new Set();
@@ -1883,28 +1912,90 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             }
                         } catch (_) {}
 
-                        // If no i3d fields found, populate default range 1..38
-                        if (fieldIds.size === 0) {
-                            for (let i = 1; i <= 38; i++) fieldIds.add(i);
+                        let fieldList = [];
+                        if (isAlliklepa) {
+                            const ALLIKLEPA_NATIVE_FIELDS = [
+                                { id: 1, fruit: 'WHEAT', growth: 8, ground: 'HARVEST_READY', weed: 5, lime: 1, plow: 1 },
+                                { id: 2, fruit: 'CARROT', growth: 4, ground: 'SOWN', weed: 6, lime: 0, plow: 1, sprayLevel: 1 },
+                                { id: 3, fruit: 'SORGHUM', growth: 4, ground: 'SOWN', weed: 7, lime: 2, plow: 1, sprayLevel: 2 },
+                                { id: 4, fruit: 'MAIZE', growth: 4, ground: 'SOWN', weed: 1, lime: 2, plow: 1, sprayLevel: 1 },
+                                { id: 5, fruit: 'CANOLA', growth: 9, ground: 'HARVEST_READY_OTHER', weed: 3, lime: 2, plow: 1, sprayLevel: 2 },
+                                { id: 6, fruit: 'SUNFLOWER', growth: 5, ground: 'SOWN', weed: 8, lime: 3, plow: 1 },
+                                { id: 7, fruit: 'BEETROOT', growth: 4, ground: 'SOWN', weed: 2, lime: 2, plow: 1 },
+                                { id: 8, fruit: null },
+                                { id: 9, fruit: null },
+                                { id: 10, fruit: 'PARSNIP', growth: 4, ground: 'SOWN', weed: 4, lime: 1, plow: 1, sprayLevel: 1 },
+                                { id: 11, fruit: 'WHEAT', growth: 8, ground: 'HARVEST_READY', weed: 7, lime: 1, plow: 1, sprayLevel: 1 },
+                                { id: 12, fruit: 'BEETROOT', growth: 4, ground: 'SOWN', weed: 4, lime: 1, plow: 1 },
+                                { id: 13, fruit: 'POTATO', growth: 5, ground: 'SOWN', weed: 8, lime: 3, plow: 1 },
+                                { id: 14, fruit: 'COTTON', growth: 8, ground: 'SOWN', weed: 6, lime: 2, plow: 1 },
+                                { id: 15, fruit: 'SPINACH', growth: 5, ground: 'SOWN', weed: 7, lime: 1, plow: 1 },
+                                { id: 16, fruit: 'SOYBEAN', growth: 4, ground: 'SOWN', weed: 4, lime: 2, plow: 1 },
+                                { id: 17, fruit: 'SUGARBEET', growth: 6, ground: 'SOWN', weed: 7, lime: 2, plow: 1 },
+                                { id: 18, fruit: 'ONION', growth: 5, ground: 'SOWN', weed: 7, lime: 2, plow: 1 },
+                                { id: 19, fruit: 'BEETROOT', growth: 4, ground: 'SOWN', weed: 1, lime: 0, plow: 1 },
+                                { id: 20, fruit: 'WHEAT', growth: 8, ground: 'HARVEST_READY', weed: 5, lime: 1, plow: 1 },
+                                { id: 21, fruit: 'OAT', growth: 5, ground: 'HARVEST_READY', weed: 5, lime: 0, plow: 1, sprayLevel: 1 },
+                                { id: 22, fruit: 'MAIZE', growth: 4, ground: 'SOWN', weed: 5, lime: 1, plow: 1, sprayLevel: 2 },
+                                { id: 23, fruit: 'OAT', growth: 5, ground: 'HARVEST_READY', weed: 5, lime: 2, plow: 1, sprayLevel: 1 },
+                                { id: 24, fruit: 'SORGHUM', growth: 4, ground: 'SOWN', weed: 2, lime: 0, plow: 1, sprayLevel: 1 },
+                                { id: 25, fruit: 'SUGARBEET', growth: 6, ground: 'SOWN', weed: 5, lime: 2, plow: 1 },
+                                { id: 26, fruit: 'ONION', growth: 5, ground: 'SOWN', weed: 8, lime: 3, plow: 1 },
+                                { id: 27, fruit: 'SUGARBEET', growth: 6, ground: 'SOWN', weed: 4, lime: 2, plow: 1, sprayLevel: 2 },
+                                { id: 28, fruit: 'WHEAT', growth: 8, ground: 'HARVEST_READY', weed: 8, lime: 1, plow: 1 },
+                                { id: 29, fruit: 'SUGARBEET', growth: 6, ground: 'SOWN', weed: 9, lime: 2, plow: 1 },
+                                { id: 30, fruit: 'SUNFLOWER', growth: 5, ground: 'SOWN', weed: 7, lime: 3, plow: 1, sprayLevel: 2 },
+                                { id: 31, fruit: 'SUNFLOWER', growth: 5, ground: 'SOWN', weed: 5, lime: 2, plow: 1, sprayLevel: 1 },
+                                { id: 32, fruit: 'SUGARBEET', growth: 6, ground: 'SOWN', weed: 6, lime: 3, plow: 1 },
+                                { id: 33, fruit: 'ONION', growth: 5, ground: 'SOWN', weed: 9, lime: 0, plow: 1, sprayLevel: 2 },
+                                { id: 34, fruit: 'BEETROOT', growth: 4, ground: 'SOWN', weed: 2, lime: 2, plow: 1 },
+                                { id: 35, fruit: 'SPINACH', growth: 5, ground: 'SOWN', weed: 6, lime: 1, plow: 1, sprayLevel: 2 },
+                                { id: 36, fruit: 'PEA', growth: 4, ground: 'SOWN', weed: 1, lime: 1, plow: 1, sprayLevel: 2 },
+                                { id: 37, fruit: null, ground: 'CULTIVATED', lime: 2, plow: 1 },
+                                { id: 38, fruit: 'SUNFLOWER', growth: 5, ground: 'SOWN', weed: 8, lime: 1, plow: 1 }
+                            ];
+                            fieldList = ALLIKLEPA_NATIVE_FIELDS.map(f => {
+                                if (!f.fruit) {
+                                    if (f.ground === 'CULTIVATED') {
+                                        return `    <field id="${f.id}" plannedFruit="FALLOW" fruitType="UNKNOWN" growthState="0" lastGrowthState="0" weedState="0" stoneLevel="0" groundType="CULTIVATED" sprayType="NONE" sprayLevel="0" limeLevel="${f.lime ?? 1}" rollerLevel="0" plowLevel="${f.plow ?? 1}" stubbleShredLevel="0" waterLevel="0"/>`;
+                                    }
+                                    return `    <field id="${f.id}" plannedFruit="FALLOW"/>`;
+                                }
+                                return `    <field id="${f.id}" plannedFruit="FALLOW" fruitType="${f.fruit}" growthState="${f.growth}" lastGrowthState="0" weedState="${f.weed ?? 0}" stoneLevel="0" groundType="${f.ground}" sprayType="NONE" sprayLevel="${f.sprayLevel ?? 0}" limeLevel="${f.lime ?? 1}" rollerLevel="0" plowLevel="${f.plow ?? 1}" stubbleShredLevel="0" waterLevel="0"/>`;
+                            });
+                        } else {
+                            if (fieldIds.size === 0) {
+                                for (let i = 1; i <= 38; i++) fieldIds.add(i);
+                            }
+                            const cropCycle = ['WHEAT', 'BARLEY', 'CANOLA', 'OAT', 'MAIZE', 'SOYBEAN', 'SUNFLOWER', 'CARROT', 'BEETROOT', 'SORGHUM'];
+                            const sortedIds = Array.from(fieldIds).sort((a, b) => a - b);
+                            sortedIds.forEach((fId, idx) => {
+                                const crop = cropCycle[idx % cropCycle.length];
+                                const growth = (crop === 'WHEAT' || crop === 'CANOLA') ? 8 : 4;
+                                const ground = (growth >= 8) ? 'HARVEST_READY' : 'SOWN';
+                                fieldList.push(`    <field id="${fId}" plannedFruit="FALLOW" fruitType="${crop}" growthState="${growth}" lastGrowthState="0" weedState="0" stoneLevel="0" groundType="${ground}" sprayType="NONE" sprayLevel="0" limeLevel="1" rollerLevel="0" plowLevel="1" stubbleShredLevel="0" waterLevel="0"/>`);
+                            });
                         }
 
-                        const cropCycle = ['WHEAT', 'BARLEY', 'CANOLA', 'OAT', 'MAIZE', 'SOYBEAN', 'SUNFLOWER', 'CARROT', 'BEETROOT', 'SORGHUM'];
-                        const fieldList = [];
-                        const sortedIds = Array.from(fieldIds).sort((a, b) => a - b);
-
-                        sortedIds.forEach((fId, idx) => {
-                            const crop = cropCycle[idx % cropCycle.length];
-                            fieldList.push(`    <field fieldId="${fId}" weedState="0">\n        <fruit type="${crop}" growthState="HARVESTREADY"/>\n        <ground type="HARVEST_READY" angle="0"/>\n        <spray type="NONE" level="0"/>\n    </field>`);
-                        });
-
-                        const completeFieldsXml = `<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n<map xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../shared/xml/schema/fields.xsd">\n    <fields>\n${fieldList.join('\n')}\n    </fields>\n</map>`;
+                        const completeFieldsXml = `<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<fields>\n${fieldList.join('\n')}\n</fields>\n`;
                         await fs.writeFile(slotFieldsXml, completeFieldsXml, 'utf8');
-                        console.log(`[CREATE] Generated comprehensive fields.xml with ${sortedIds.length} seeded fields.`);
+                        console.log(`[CREATE] Generated savegame fields.xml schema with ${fieldList.length} seeded fields.`);
                     } catch (fErr) {
                         console.warn('[CREATE] Warning synthesizing fields.xml:', fErr.message);
                     }
 
-
+                    // CRITICAL FOR ENGINE CROP INITIALIZATION:
+                    // If an unseeded/zero-crop densityMap_fruits.gdm exists in slotPath, GIANTS engine loads the empty GDM and ignores fields.xml.
+                    // Removing densityMap_fruits.gdm on initial creation forces the engine to parse fields.xml and generate the fruit density map natively with all foliage stalks!
+                    try {
+                        const slotFruitsGdm = path.join(slotPath, 'densityMap_fruits.gdm');
+                        if (fs.existsSync(slotFruitsGdm)) {
+                            await fs.remove(slotFruitsGdm);
+                            console.log(`[CREATE] Removed empty densityMap_fruits.gdm so FS25 natively generates fruit density map from fields.xml`);
+                        }
+                    } catch (gdmErr) {
+                        console.warn(`[CREATE] Could not remove densityMap_fruits.gdm: ${gdmErr.message}`);
+                    }
 
                     // Extract pre-rendered terrain.occluders.cache from map mod ZIP to prevent 55% load hang
                     if (modZipPath && fs.existsSync(modZipPath)) {
@@ -1925,15 +2016,17 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     }
 
                     // Ensure careerSavegame.xml is updated with densityMapRevision=4 and mapDensityMapRevision=1
-                    const slotFruits = path.join(slotPath, 'densityMap_fruits.gdm');
-                    if (fs.existsSync(slotFruits) && fs.existsSync(careerPath)) {
+                    if (careerPath && fs.existsSync(careerPath)) {
                         try {
                             let cXml = await fs.readFile(careerPath, 'utf8');
                             if (!cXml.includes('<densityMapRevision>')) {
                                 cXml = cXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>4</densityMapRevision>\n        <mapDensityMapRevision>1</mapDensityMapRevision>');
-                                await fs.writeFile(careerPath, cXml);
-                                console.log(`[CREATE] Applied densityMapRevision=4 and mapDensityMapRevision=1 to careerSavegame.xml for ${savegameIndex}`);
+                            } else {
+                                cXml = cXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, '<densityMapRevision>4</densityMapRevision>');
+                                cXml = cXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>/i, '<mapDensityMapRevision>1</mapDensityMapRevision>');
                             }
+                            await fs.writeFile(careerPath, cXml);
+                            console.log(`[CREATE] Applied densityMapRevision=4 and mapDensityMapRevision=1 to careerSavegame.xml for ${savegameIndex}`);
                         } catch (_) {}
                     }
 
@@ -6474,8 +6567,12 @@ async function restoreStashedSinglePlayerSaves() {
 
 function isGdmRuntimeFormat(gdmBuffer) {
     if (!gdmBuffer || gdmBuffer.length < 24) return false;
+    // Runtime GDM magic header is "MDF (0x22 0x4D 0x44 0x46)
+    if (gdmBuffer[0] === 0x22 && gdmBuffer[1] === 0x4D && gdmBuffer[2] === 0x44 && gdmBuffer[3] === 0x46) {
+        return true;
+    }
     const sig = gdmBuffer.slice(16, 20).toString('hex');
-    return sig.startsWith('0500') || sig.startsWith('0502');
+    return sig.startsWith('0500') || sig.startsWith('0502') || sig.startsWith('0505');
 }
 
 /**
@@ -6741,11 +6838,11 @@ async function ensureSavegameDensityMaps(savePath) {
                 const curMapRev = settings['@_mapDensityMapRevision'] || settings.mapDensityMapRevision || '';
                 let modified = false;
 
-                if (curRev !== expectedRev || !careerXml.includes('<densityMapRevision>')) {
+                if (curRev !== '4' || !careerXml.includes('<densityMapRevision>')) {
                     if (careerXml.includes('<densityMapRevision>')) {
-                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>${expectedRev}</densityMapRevision>`);
+                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>4</densityMapRevision>`);
                     } else {
-                        careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <densityMapRevision>${expectedRev}</densityMapRevision>`);
+                        careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <densityMapRevision>4</densityMapRevision>`);
                     }
                     modified = true;
                 }
