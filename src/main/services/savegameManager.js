@@ -536,45 +536,28 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
     const effModBase = effModLower.replace(/_crossplay$/i, '').replace(/_cp$/i, '');
     const effModClean = cleanStr(effectiveModName);
 
-    const checkFolderList = async (dirList, baseDir) => {
-        for (const folder of dirList) {
-            const cleanFolder = folder.replace(/\.zip$/i, '');
-            const cleanFolderLower = cleanFolder.toLowerCase();
-            const fNorm = cleanStr(cleanFolder);
+    for (const folder of folders) {
+        const cleanFolder = folder.replace(/\.zip$/i, '');
+        const cleanFolderLower = cleanFolder.toLowerCase();
+        const fNorm = cleanStr(cleanFolder);
 
-            // Never match official base templates for custom mod maps
-            if (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolderLower)) continue;
+        // Never match official base templates for custom mod maps
+        if (OFFICIAL_MASTER_TEMPLATES.has(fNorm) || OFFICIAL_MASTER_TEMPLATES.has(cleanFolderLower)) continue;
 
-            const folderPath = path.join(baseDir, folder);
-            const stat = await fs.stat(folderPath).catch(() => null);
-            if (!stat) continue;
-            const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
-            if (!stat.isDirectory() && !isZip) continue;
+        const folderPath = path.join(templatesDir, folder);
+        const stat = await fs.stat(folderPath).catch(() => null);
+        if (!stat) continue;
+        const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
+        if (!stat.isDirectory() && !isZip) continue;
 
-            // 1. Direct exact modName match or prefix match with delimiter (e.g. FS25_Cows_Farm_4X_SampleModMap)
-            if (effModLower && !GENERIC_MAP_IDS.has(effModClean)) {
-                if (cleanFolderLower === effModLower || cleanFolderLower === `${effModLower}_samplemodmap` || cleanFolderLower === `${effModLower}_templatemap` ||
-                    cleanFolderLower === effModBase || cleanFolderLower === `${effModBase}_samplemodmap` || cleanFolderLower === `${effModBase}_templatemap`) {
-                    if (await isCompleteTemplate(folderPath, isZip)) {
-                        return folder;
-                    }
-                }
-            }
-
-            // 2. Exact Title match if modName didn't match
-            if (targetTitleNorm && !GENERIC_MAP_IDS.has(targetTitleNorm) && targetTitleNorm.length >= 4) {
-                const ufNorm = ultraNorm(cleanFolder);
-                if (ufNorm === targetTitleNorm || ufNorm === `${targetTitleNorm}samplemodmap` || ufNorm.startsWith(targetTitleNorm)) {
-                    if (await isCompleteTemplate(folderPath, isZip)) {
-                        return folder;
-                    }
-                }
+        // Strict 1:1 exact modName match only - NO fuzzy matching, NO title matching, NO suffix matching
+        if (effModLower && cleanFolderLower === effModLower) {
+            if (await isCompleteTemplate(folderPath, isZip)) {
+                return folder;
             }
         }
-        return null;
-    };
-
-    return await checkFolderList(folders, templatesDir);
+    }
+    return null;
 }
 
 async function hasMapTemplate(mapId, mapTitle = null, modName = null) {
