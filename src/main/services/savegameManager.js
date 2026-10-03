@@ -2015,20 +2015,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    // Ensure careerSavegame.xml is updated with densityMapRevision=4 and mapDensityMapRevision=1
-                    if (careerPath && fs.existsSync(careerPath)) {
-                        try {
-                            let cXml = await fs.readFile(careerPath, 'utf8');
-                            if (!cXml.includes('<densityMapRevision>')) {
-                                cXml = cXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>4</densityMapRevision>\n        <mapDensityMapRevision>1</mapDensityMapRevision>');
-                            } else {
-                                cXml = cXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, '<densityMapRevision>4</densityMapRevision>');
-                                cXml = cXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>/i, '<mapDensityMapRevision>1</mapDensityMapRevision>');
-                            }
-                            await fs.writeFile(careerPath, cXml);
-                            console.log(`[CREATE] Applied densityMapRevision=4 and mapDensityMapRevision=1 to careerSavegame.xml for ${savegameIndex}`);
-                        } catch (_) {}
-                    }
+
 
                     // If starting farm or vehicles is disabled, strip farm 1 vehicles
                     if (!includeStartFarm || !includeStartVehicles) {
@@ -6829,22 +6816,33 @@ async function ensureSavegameDensityMaps(savePath) {
                 const curMapRev = settings['@_mapDensityMapRevision'] || settings.mapDensityMapRevision || '';
                 let modified = false;
 
-                if (curRev !== '4' || !careerXml.includes('<densityMapRevision>')) {
-                    if (careerXml.includes('<densityMapRevision>')) {
-                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>4</densityMapRevision>`);
-                    } else {
-                        careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <densityMapRevision>4</densityMapRevision>`);
+                const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
+
+                if (!hasFruitsGdm) {
+                    const revRegex = /<(?:densityMapRevision|mapDensityMapRevision)>.*?<\/(?:densityMapRevision|mapDensityMapRevision)>\r?\n?/gi;
+                    if (revRegex.test(careerXml)) {
+                        careerXml = careerXml.replace(revRegex, '');
+                        modified = true;
                     }
-                    modified = true;
-                }
-                if (curMapRev !== expectedRev || !careerXml.includes('<mapDensityMapRevision>')) {
-                    if (careerXml.includes('<mapDensityMapRevision>')) {
-                        careerXml = careerXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>/i, `<mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
-                    } else {
-                        careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
+                } else {
+                    if (curRev !== '4' || !careerXml.includes('<densityMapRevision>')) {
+                        if (careerXml.includes('<densityMapRevision>')) {
+                            careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>4</densityMapRevision>`);
+                        } else {
+                            careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <densityMapRevision>4</densityMapRevision>`);
+                        }
+                        modified = true;
                     }
-                    modified = true;
+                    if (curMapRev !== expectedRev || !careerXml.includes('<mapDensityMapRevision>')) {
+                        if (careerXml.includes('<mapDensityMapRevision>')) {
+                            careerXml = careerXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>/i, `<mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
+                        } else {
+                            careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
+                        }
+                        modified = true;
+                    }
                 }
+
                 if (modified) {
                     await fs.writeFile(careerPath, careerXml);
                     console.log(`[DENSITY-CHECK] Ensured density revisions (densityMapRevision=4, mapDensityMapRevision=${expectedRev}) in ${savePath}`);
