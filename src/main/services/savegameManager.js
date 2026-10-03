@@ -1581,7 +1581,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     }
 
     if (!savegameData) {
-        // Fallback for fresh uninitialized maps — uses full FS25 revision block (matches Ebony Island & AgroForests)
+        // Fallback for fresh uninitialized maps — uses clean FS25 settings (matches savegame3 backup)
         const settingsBlock = {
             savegameName: savegameName,
             playerName: playerName,
@@ -1608,21 +1608,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             weedsEnabled: 'true',
             limeRequired: 'true',
             isSnowEnabled: 'true',
-            fuelUsage: '2',
-            densityMapRevision: mapDeclaredRev,
-            terrainTextureRevision: '1',
-            terrainLodTextureRevision: '2',
-            splitShapesRevision: '2',
-            tipCollisionRevision: '2',
-            placementCollisionRevision: '2',
-            navigationCollisionRevision: '2',
-            mapDensityMapRevision: mapDeclaredRev,
-            mapTerrainTextureRevision: '1',
-            mapTerrainLodTextureRevision: '1',
-            mapSplitShapesRevision: '1',
-            mapTipCollisionRevision: '1',
-            mapPlacementCollisionRevision: '1',
-            mapNavigationCollisionRevision: '1',
             timeScale: String(timeScale || 1.0),
             isCrossPlatformSavegame: 'false',
             initialPlatformName: 'WIN'
@@ -1636,13 +1621,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     money: String(money),
                     playTime: '0.000000'
                 },
-                mod: modData,
-                mapsSplitShapeFileIds: {
-                    '@_count': '0'
-                },
-                slotSystem: {
-                    '@_slotUsage': '0'
-                }
+                mod: modData
             }
         };
     }
@@ -1659,62 +1638,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         xmlOutput = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n' + xmlOutput;
     }
 
-    // Auto-patch fruitTypes definition into savegame if map omits base game crop definitions
-    if (requiresEngineInit && modZipPath && fs.existsSync(modZipPath)) {
-        try {
-            const AdmZip = require('adm-zip');
-            const zip = new AdmZip(modZipPath);
-            const fruitEntry = zip.getEntries().find(e => /maps_fruitTypes\.xml$/i.test(e.entryName));
-            if (fruitEntry) {
-                const fText = fruitEntry.getData().toString('utf8');
-                if (!fText.includes('wheat.xml')) {
-                    console.log(`[CREATE] Detected custom map fruit list without base game crops in ${path.basename(modZipPath)}. Synthesizing complete fruitTypes in slot...`);
-                    const baseFruitXmlPath = path.join(pathProvider.getFS25DataRoot(), '..', 'Farming Simulator 25', 'data', 'maps', 'maps_fruitTypes.xml');
-                    let baseList = [];
-                    if (fs.existsSync(baseFruitXmlPath)) {
-                        const bText = fs.readFileSync(baseFruitXmlPath, 'utf8');
-                        const matches = bText.match(/<fruitType\s+filename="[^"]+"\s*\/>/gi);
-                        if (matches) baseList = matches;
-                    }
-                    if (baseList.length === 0) {
-                        baseList = [
-                            '<fruitType filename="$data/foliage/wheat/wheat.xml"/>',
-                            '<fruitType filename="$data/foliage/barley/barley.xml"/>',
-                            '<fruitType filename="$data/foliage/canola/canola.xml"/>',
-                            '<fruitType filename="$data/foliage/oat/oat.xml"/>',
-                            '<fruitType filename="$data/foliage/maize/maize.xml"/>',
-                            '<fruitType filename="$data/foliage/sunflower/sunflower.xml"/>',
-                            '<fruitType filename="$data/foliage/soybean/soybean.xml"/>',
-                            '<fruitType filename="$data/foliage/potato/potato.xml"/>',
-                            '<fruitType filename="$data/foliage/rice/rice.xml"/>',
-                            '<fruitType filename="$data/foliage/riceLongGrain/riceLongGrain.xml"/>',
-                            '<fruitType filename="$data/foliage/sugarbeet/sugarbeet.xml"/>',
-                            '<fruitType filename="$data/foliage/sugarcane/sugarcane.xml"/>',
-                            '<fruitType filename="$data/foliage/cotton/cotton.xml"/>',
-                            '<fruitType filename="$data/foliage/sorghum/sorghum.xml"/>',
-                            '<fruitType filename="$data/foliage/grape/grape.xml"/>',
-                            '<fruitType filename="$data/foliage/olive/olive.xml"/>',
-                            '<fruitType filename="$data/foliage/poplar/poplar.xml"/>',
-                            '<fruitType filename="$data/foliage/beetRoot/beetRoot.xml"/>',
-                            '<fruitType filename="$data/foliage/carrot/carrot.xml"/>',
-                            '<fruitType filename="$data/foliage/parsnip/parsnip.xml"/>',
-                            '<fruitType filename="$data/foliage/greenBean/greenBean.xml"/>',
-                            '<fruitType filename="$data/foliage/pea/pea.xml"/>',
-                            '<fruitType filename="$data/foliage/spinach/spinach.xml"/>',
-                            '<fruitType filename="$data/foliage/grass/grass.xml"/>',
-                            '<fruitType filename="$data/foliage/oilseedRadish/oilseedRadish.xml"/>'
-                        ];
-                    }
-                    const customMatches = fText.match(/<fruitType\s+filename="[^"]+"\s*\/>/gi) || [];
-                    const combinedList = [...new Set([...baseList, ...customMatches])];
-                    const mergedXml = `<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<map xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../shared/xml/schema/fruitTypes.xsd">\n    <fruitTypes>\n        ${combinedList.join('\n        ')}\n    </fruitTypes>\n</map>`;
-                    await fs.writeFile(path.join(slotPath, 'maps_fruitTypes.xml'), mergedXml);
-                }
-            }
-        } catch (fErr) {
-            console.warn('[CREATE] Failed to evaluate custom map fruit list:', fErr.message);
-        }
-    }
+
 
     await fs.writeFile(careerPath, xmlOutput);
 
@@ -1856,123 +1780,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, true, true);
-                    console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer and density map files into slot ${savegameIndex}`);
-
-                    // Ensure fields.xml is generated with complete field entries so GIANTS Engine renders full field crops on initial launch
-                    const slotFieldsXml = path.join(slotPath, 'fields.xml');
-                    if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
-                    if (!fs.existsSync(slotFieldsXml)) {
-                        const fEntry = entryByBaseName.get('fields.xml');
-                        if (fEntry) {
-                            await fs.writeFile(slotFieldsXml, fEntry.getData());
-                            console.log(`[CREATE] Extracted starting fields.xml from map ZIP`);
-                        }
-                    }
-
-                    try {
-                        const isAlliklepa = (mapTitle || '').toLowerCase().includes('alliklepa') || (mapId || '').toLowerCase().includes('alliklepa') || (mapModName || '').toLowerCase().includes('alliklepa');
-
-                        // Discover all field IDs declared across the map (from i3d and existing fields.xml)
-                        const fieldIds = new Set();
-                        try {
-                            const i3dEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('.i3d') && !e.entryName.toLowerCase().includes('shape'));
-                            if (i3dEntry) {
-                                const i3dText = i3dEntry.getData().toString('utf8');
-                                const matches = i3dText.match(/name=["']field(\d+)["']/gi);
-                                if (matches) {
-                                    for (const m of matches) {
-                                        const numMatch = m.match(/\d+/);
-                                        if (numMatch) fieldIds.add(parseInt(numMatch[0]));
-                                    }
-                                }
-                            }
-                        } catch (_) {}
-
-                        let fieldList = [];
-                        if (isAlliklepa) {
-                            const ALLIKLEPA_NATIVE_FIELDS = [
-                                { id: 1, fruit: 'WHEAT', growth: 8, ground: 'HARVEST_READY', weed: 5, lime: 1, plow: 1 },
-                                { id: 2, fruit: 'CARROT', growth: 4, ground: 'SOWN', weed: 6, lime: 0, plow: 1, sprayLevel: 1 },
-                                { id: 3, fruit: 'SORGHUM', growth: 4, ground: 'SOWN', weed: 7, lime: 2, plow: 1, sprayLevel: 2 },
-                                { id: 4, fruit: 'MAIZE', growth: 4, ground: 'SOWN', weed: 1, lime: 2, plow: 1, sprayLevel: 1 },
-                                { id: 5, fruit: 'CANOLA', growth: 9, ground: 'HARVEST_READY_OTHER', weed: 3, lime: 2, plow: 1, sprayLevel: 2 },
-                                { id: 6, fruit: 'SUNFLOWER', growth: 5, ground: 'SOWN', weed: 8, lime: 3, plow: 1 },
-                                { id: 7, fruit: 'BEETROOT', growth: 4, ground: 'SOWN', weed: 2, lime: 2, plow: 1 },
-                                { id: 8, fruit: null },
-                                { id: 9, fruit: null },
-                                { id: 10, fruit: 'PARSNIP', growth: 4, ground: 'SOWN', weed: 4, lime: 1, plow: 1, sprayLevel: 1 },
-                                { id: 11, fruit: 'WHEAT', growth: 8, ground: 'HARVEST_READY', weed: 7, lime: 1, plow: 1, sprayLevel: 1 },
-                                { id: 12, fruit: 'BEETROOT', growth: 4, ground: 'SOWN', weed: 4, lime: 1, plow: 1 },
-                                { id: 13, fruit: 'POTATO', growth: 5, ground: 'SOWN', weed: 8, lime: 3, plow: 1 },
-                                { id: 14, fruit: 'COTTON', growth: 8, ground: 'SOWN', weed: 6, lime: 2, plow: 1 },
-                                { id: 15, fruit: 'SPINACH', growth: 5, ground: 'SOWN', weed: 7, lime: 1, plow: 1 },
-                                { id: 16, fruit: 'SOYBEAN', growth: 4, ground: 'SOWN', weed: 4, lime: 2, plow: 1 },
-                                { id: 17, fruit: 'SUGARBEET', growth: 6, ground: 'SOWN', weed: 7, lime: 2, plow: 1 },
-                                { id: 18, fruit: 'ONION', growth: 5, ground: 'SOWN', weed: 7, lime: 2, plow: 1 },
-                                { id: 19, fruit: 'BEETROOT', growth: 4, ground: 'SOWN', weed: 1, lime: 0, plow: 1 },
-                                { id: 20, fruit: 'WHEAT', growth: 8, ground: 'HARVEST_READY', weed: 5, lime: 1, plow: 1 },
-                                { id: 21, fruit: 'OAT', growth: 5, ground: 'HARVEST_READY', weed: 5, lime: 0, plow: 1, sprayLevel: 1 },
-                                { id: 22, fruit: 'MAIZE', growth: 4, ground: 'SOWN', weed: 5, lime: 1, plow: 1, sprayLevel: 2 },
-                                { id: 23, fruit: 'OAT', growth: 5, ground: 'HARVEST_READY', weed: 5, lime: 2, plow: 1, sprayLevel: 1 },
-                                { id: 24, fruit: 'SORGHUM', growth: 4, ground: 'SOWN', weed: 2, lime: 0, plow: 1, sprayLevel: 1 },
-                                { id: 25, fruit: 'SUGARBEET', growth: 6, ground: 'SOWN', weed: 5, lime: 2, plow: 1 },
-                                { id: 26, fruit: 'ONION', growth: 5, ground: 'SOWN', weed: 8, lime: 3, plow: 1 },
-                                { id: 27, fruit: 'SUGARBEET', growth: 6, ground: 'SOWN', weed: 4, lime: 2, plow: 1, sprayLevel: 2 },
-                                { id: 28, fruit: 'WHEAT', growth: 8, ground: 'HARVEST_READY', weed: 8, lime: 1, plow: 1 },
-                                { id: 29, fruit: 'SUGARBEET', growth: 6, ground: 'SOWN', weed: 9, lime: 2, plow: 1 },
-                                { id: 30, fruit: 'SUNFLOWER', growth: 5, ground: 'SOWN', weed: 7, lime: 3, plow: 1, sprayLevel: 2 },
-                                { id: 31, fruit: 'SUNFLOWER', growth: 5, ground: 'SOWN', weed: 5, lime: 2, plow: 1, sprayLevel: 1 },
-                                { id: 32, fruit: 'SUGARBEET', growth: 6, ground: 'SOWN', weed: 6, lime: 3, plow: 1 },
-                                { id: 33, fruit: 'ONION', growth: 5, ground: 'SOWN', weed: 9, lime: 0, plow: 1, sprayLevel: 2 },
-                                { id: 34, fruit: 'BEETROOT', growth: 4, ground: 'SOWN', weed: 2, lime: 2, plow: 1 },
-                                { id: 35, fruit: 'SPINACH', growth: 5, ground: 'SOWN', weed: 6, lime: 1, plow: 1, sprayLevel: 2 },
-                                { id: 36, fruit: 'PEA', growth: 4, ground: 'SOWN', weed: 1, lime: 1, plow: 1, sprayLevel: 2 },
-                                { id: 37, fruit: null, ground: 'CULTIVATED', lime: 2, plow: 1 },
-                                { id: 38, fruit: 'SUNFLOWER', growth: 5, ground: 'SOWN', weed: 8, lime: 1, plow: 1 }
-                            ];
-                            fieldList = ALLIKLEPA_NATIVE_FIELDS.map(f => {
-                                if (!f.fruit) {
-                                    if (f.ground === 'CULTIVATED') {
-                                        return `    <field id="${f.id}" plannedFruit="FALLOW" fruitType="UNKNOWN" growthState="0" lastGrowthState="0" weedState="0" stoneLevel="0" groundType="CULTIVATED" sprayType="NONE" sprayLevel="0" limeLevel="${f.lime ?? 1}" rollerLevel="0" plowLevel="${f.plow ?? 1}" stubbleShredLevel="0" waterLevel="0"/>`;
-                                    }
-                                    return `    <field id="${f.id}" plannedFruit="FALLOW"/>`;
-                                }
-                                return `    <field id="${f.id}" plannedFruit="FALLOW" fruitType="${f.fruit}" growthState="${f.growth}" lastGrowthState="0" weedState="${f.weed ?? 0}" stoneLevel="0" groundType="${f.ground}" sprayType="NONE" sprayLevel="${f.sprayLevel ?? 0}" limeLevel="${f.lime ?? 1}" rollerLevel="0" plowLevel="${f.plow ?? 1}" stubbleShredLevel="0" waterLevel="0"/>`;
-                            });
-                        } else {
-                            if (fieldIds.size === 0) {
-                                for (let i = 1; i <= 38; i++) fieldIds.add(i);
-                            }
-                            const cropCycle = ['WHEAT', 'BARLEY', 'CANOLA', 'OAT', 'MAIZE', 'SOYBEAN', 'SUNFLOWER', 'CARROT', 'BEETROOT', 'SORGHUM'];
-                            const sortedIds = Array.from(fieldIds).sort((a, b) => a - b);
-                            sortedIds.forEach((fId, idx) => {
-                                const crop = cropCycle[idx % cropCycle.length];
-                                const growth = (crop === 'WHEAT' || crop === 'CANOLA') ? 8 : 4;
-                                const ground = (growth >= 8) ? 'HARVEST_READY' : 'SOWN';
-                                fieldList.push(`    <field id="${fId}" plannedFruit="FALLOW" fruitType="${crop}" growthState="${growth}" lastGrowthState="0" weedState="0" stoneLevel="0" groundType="${ground}" sprayType="NONE" sprayLevel="0" limeLevel="1" rollerLevel="0" plowLevel="1" stubbleShredLevel="0" waterLevel="0"/>`);
-                            });
-                        }
-
-                        const completeFieldsXml = `<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<fields>\n${fieldList.join('\n')}\n</fields>\n`;
-                        await fs.writeFile(slotFieldsXml, completeFieldsXml, 'utf8');
-                        console.log(`[CREATE] Generated savegame fields.xml schema with ${fieldList.length} seeded fields.`);
-                    } catch (fErr) {
-                        console.warn('[CREATE] Warning synthesizing fields.xml:', fErr.message);
-                    }
-
-                    // CRITICAL FOR ENGINE CROP INITIALIZATION:
-                    // If an unseeded/zero-crop densityMap_fruits.gdm exists in slotPath, GIANTS engine loads the empty GDM and ignores fields.xml.
-                    // Removing densityMap_fruits.gdm on initial creation forces the engine to parse fields.xml and generate the fruit density map natively with all foliage stalks!
-                    try {
-                        const slotFruitsGdm = path.join(slotPath, 'densityMap_fruits.gdm');
-                        if (fs.existsSync(slotFruitsGdm)) {
-                            await fs.remove(slotFruitsGdm);
-                            console.log(`[CREATE] Removed empty densityMap_fruits.gdm so FS25 natively generates fruit density map from fields.xml`);
-                        }
-                    } catch (gdmErr) {
-                        console.warn(`[CREATE] Could not remove densityMap_fruits.gdm: ${gdmErr.message}`);
-                    }
+                    // For fresh mod map saves without a template, do not extract density maps or fields.xml.
+                    // The engine initializes the map and crops natively from the map mod ZIP.
 
                     // Extract pre-rendered terrain.occluders.cache from map mod ZIP to prevent 55% load hang
                     if (modZipPath && fs.existsSync(modZipPath)) {
@@ -6696,6 +6505,13 @@ async function resolveMapModPath(savePath) {
 async function ensureSavegameDensityMaps(savePath) {
     if (!savePath || !fs.existsSync(savePath)) return 0;
     try {
+        // If the save slot has not been initialized/saved by GIANTS Engine yet, do not inject density files,
+        // revisions, or growth XMLs. Doing so corrupts engine initialization and causes fields to reset to cultivated dirt.
+        const isEngineInitialized = fs.existsSync(path.join(savePath, 'terrain.heightmap.png'));
+        if (!isEngineInitialized) {
+            console.log(`[DENSITY-CHECK] Save slot at ${savePath} is not yet engine-initialized. Skipping density check to allow native engine initialization.`);
+            return 0;
+        }
 
         // 1. Ensure foliage growth state updater XML files exist ONLY when densityMap_fruits.gdm is present
         const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
