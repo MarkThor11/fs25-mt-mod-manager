@@ -414,9 +414,12 @@ async function getMapTemplates() {
  */
 async function deleteMapTemplate(folderName) {
     const templatesDir = getTemplatesPath();
+    const backupDir = path.join(getFs25Path(), 'modManagerTemplates_backup');
     const cleanName = folderName.replace(/\.zip$/i, '');
     const targetDir = path.join(templatesDir, cleanName);
     const targetZip = path.join(templatesDir, `${cleanName}.zip`);
+    const backupDirTarget = path.join(backupDir, cleanName);
+    const backupZipTarget = path.join(backupDir, `${cleanName}.zip`);
     let deleted = false;
 
     if (fs.existsSync(targetZip)) {
@@ -427,6 +430,13 @@ async function deleteMapTemplate(folderName) {
         await fs.remove(targetDir);
         deleted = true;
     }
+    if (fs.existsSync(backupZipTarget)) {
+        await fs.remove(backupZipTarget);
+    }
+    if (fs.existsSync(backupDirTarget)) {
+        await fs.remove(backupDirTarget);
+    }
+    
     return { success: deleted };
 }
 
