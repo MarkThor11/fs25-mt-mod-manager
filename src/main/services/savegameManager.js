@@ -1870,10 +1870,28 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, true, false);
                     console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer/density map files into slot ${savegameIndex}`);
 
-                    // Strategy A: Ensure fields.xml is NOT present in the slot directory so GIANTS Engine reads fields natively from map ZIP
+                    // Ensure fields.xml is extracted and seeded with valid crops so GIANTS Engine renders full field crops on initial launch
                     const slotFieldsXml = path.join(slotPath, 'fields.xml');
+                    if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
+                    if (!fs.existsSync(slotFieldsXml)) {
+                        const fEntry = entryByBaseName.get('fields.xml');
+                        if (fEntry) {
+                            await fs.writeFile(slotFieldsXml, fEntry.getData());
+                            console.log(`[CREATE] Extracted starting fields.xml from map ZIP`);
+                        }
+                    }
                     if (fs.existsSync(slotFieldsXml)) {
-                        try { await fs.remove(slotFieldsXml); } catch (_) {}
+                        try {
+                            let fContent = await fs.readFile(slotFieldsXml, 'utf8');
+                            // Replace any UNKNOWN or missing fruit types in fields.xml with WHEAT so fields populate with crops
+                            if (fContent.includes('UNKNOWN')) {
+                                fContent = fContent.replace(/fruit\s+type="UNKNOWN"/gi, 'fruit type="WHEAT" growthState="HARVESTREADY"');
+                                await fs.writeFile(slotFieldsXml, fContent);
+                                console.log('[CREATE] Sanitized UNKNOWN crop fields in fields.xml to WHEAT');
+                            }
+                        } catch (fErr) {
+                            console.warn('[CREATE] Warning updating fields.xml:', fErr.message);
+                        }
                     }
 
                     // Extract pre-rendered terrain.occluders.cache from map mod ZIP to prevent 55% load hang
