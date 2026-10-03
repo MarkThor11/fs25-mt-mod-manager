@@ -1043,7 +1043,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         const tLow = (title || '').toLowerCase();
         
         // Pass 0: Direct filesystem lookup by mapModName — fastest and most reliable even with cold cache
-        const modsRootForDirect = pathProvider.getModsPath();
+        const modsRootForDirect = pathProvider.getDefaultModsPath();
         if (name) {
             const directZip = path.join(modsRootForDirect, `${name}.zip`);
             if (fs.existsSync(directZip) && fs.statSync(directZip).size > 0) {
@@ -2549,15 +2549,6 @@ async function getAllSavegames() {
             let hasTemplate = false;
             try {
                 hasTemplate = await hasMapTemplate(mapId, mapTitle, mapModName);
-                if (isInitialized && !hasTemplate && mapId && !isOfficialMap(mapId) && canAutoHarvest) {
-                    console.log(`[AUTO-HARVEST] Automatically learning master template for map ${mapId} from savegame slot ${i}...`);
-                    const harvestResult = await adoptSaveAsTemplate(i);
-                    if (harvestResult && harvestResult.success) {
-                        hasTemplate = true;
-                    } else {
-                        console.error(`[AUTO-HARVEST] Failed to automatically learn template for ${mapId}:`, harvestResult ? harvestResult.error : 'Unknown error');
-                    }
-                }
             } catch (e) {
                 console.error('[SAVEGAMES] Failed to check template for', mapId, e);
             }
