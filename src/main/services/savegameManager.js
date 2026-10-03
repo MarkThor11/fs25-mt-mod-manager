@@ -1894,6 +1894,19 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
+                    // CRITICAL FIX FOR CROP RENDERING:
+                    // If densityMap_fruits.gdm exists in slotPath, GIANTS engine skips seeding crops from fields.xml.
+                    // Delete densityMap_fruits.gdm from the slot directory on initial creation so the engine reads fields.xml and builds densityMap_fruits.gdm natively.
+                    const slotFruitsGdm = path.join(slotPath, 'densityMap_fruits.gdm');
+                    if (fs.existsSync(slotFruitsGdm)) {
+                        try {
+                            await fs.unlink(slotFruitsGdm);
+                            console.log(`[CREATE] Removed ${slotFruitsGdm} so FS25 natively generates fruit density map from fields.xml`);
+                        } catch (gdmErr) {
+                            console.warn(`[CREATE] Could not remove densityMap_fruits.gdm: ${gdmErr.message}`);
+                        }
+                    }
+
                     // Extract pre-rendered terrain.occluders.cache from map mod ZIP to prevent 55% load hang
                     if (modZipPath && fs.existsSync(modZipPath)) {
                         try {
