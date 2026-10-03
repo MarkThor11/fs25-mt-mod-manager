@@ -415,26 +415,34 @@ async function getMapTemplates() {
 async function deleteMapTemplate(folderName) {
     const templatesDir = getTemplatesPath();
     const backupDir = path.join(getFs25Path(), 'modManagerTemplates_backup');
-    const cleanName = folderName.replace(/\.zip$/i, '');
-    const targetDir = path.join(templatesDir, cleanName);
-    const targetZip = path.join(templatesDir, `${cleanName}.zip`);
-    const backupDirTarget = path.join(backupDir, cleanName);
-    const backupZipTarget = path.join(backupDir, `${cleanName}.zip`);
+    const cleanName = folderName.replace(/\.zip$/i, '').toLowerCase();
+    const baseName = cleanName.replace(/_crossplay$/i, '').replace(/_cp$/i, '').replace(/_samplemodmap$/i, '').replace(/_templatemap$/i, '');
     let deleted = false;
 
-    if (fs.existsSync(targetZip)) {
-        await fs.remove(targetZip);
-        deleted = true;
+    if (fs.existsSync(templatesDir)) {
+        const files = await fs.readdir(templatesDir);
+        for (const f of files) {
+            const fLow = f.toLowerCase();
+            const fClean = fLow.replace(/\.zip$/i, '');
+            if (fClean === cleanName || fClean === baseName || fClean.includes(baseName) || (baseName.length >= 4 && fClean.startsWith(baseName))) {
+                // Do not delete official base templates
+                const OFFICIAL_MASTER_TEMPLATES = new Set([
+                    'mapus', 'mapeu', 'mapas', 'pdlc_highlandsfishingpack_highlandsfishingmap'
+                ]);
+                if (OFFICIAL_MASTER_TEMPLATES.has(fClean)) continue;
+
+                const targetPath = path.join(templatesDir, f);
+                try {
+                    await fs.remove(targetPath);
+                    deleted = true;
+                    console.log(`[TEMPLATES] Purged map template variation: ${f}`);
+                } catch (e) {}
+            }
+        }
     }
-    if (fs.existsSync(targetDir)) {
-        await fs.remove(targetDir);
-        deleted = true;
-    }
-    if (fs.existsSync(backupZipTarget)) {
-        await fs.remove(backupZipTarget);
-    }
-    if (fs.existsSync(backupDirTarget)) {
-        await fs.remove(backupDirTarget);
+
+    if (fs.existsSync(backupDir)) {
+        try { await fs.remove(backupDir); } catch (e) {}
     }
     
     return { success: deleted };
