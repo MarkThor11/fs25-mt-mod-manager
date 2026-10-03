@@ -1849,7 +1849,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, true, true);
                     console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer files into slot ${savegameIndex}`);
 
-                    // Ensure fields.xml is extracted and seeded with valid crops so GIANTS Engine renders full field crops on initial launch
+                    // Ensure fields.xml is generated with complete field entries so GIANTS Engine renders full field crops on initial launch
                     const slotFieldsXml = path.join(slotPath, 'fields.xml');
                     if (fieldsFile) await extractExactZipFile(fieldsFile, 'fields.xml');
                     if (!fs.existsSync(slotFieldsXml)) {
@@ -1859,18 +1859,49 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             console.log(`[CREATE] Extracted starting fields.xml from map ZIP`);
                         }
                     }
-                    if (fs.existsSync(slotFieldsXml)) {
-                        try {
-                            let fContent = await fs.readFile(slotFieldsXml, 'utf8');
-                            // Replace any UNKNOWN or missing fruit types in fields.xml with WHEAT so fields populate with crops
-                            if (fContent.includes('UNKNOWN')) {
-                                fContent = fContent.replace(/fruit\s+type="UNKNOWN"/gi, 'fruit type="WHEAT" growthState="HARVESTREADY"');
-                                await fs.writeFile(slotFieldsXml, fContent);
-                                console.log('[CREATE] Sanitized UNKNOWN crop fields in fields.xml to WHEAT');
-                            }
-                        } catch (fErr) {
-                            console.warn('[CREATE] Warning updating fields.xml:', fErr.message);
+
+                    try {
+                        let existingFieldsData = null;
+                        if (fs.existsSync(slotFieldsXml)) {
+                            const fRaw = await fs.readFile(slotFieldsXml, 'utf8');
+                            existingFieldsData = parser.parse(fRaw);
                         }
+
+                        // Discover all field IDs declared across the map (from i3d and existing fields.xml)
+                        const fieldIds = new Set();
+                        try {
+                            const i3dEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('.i3d') && !e.entryName.toLowerCase().includes('shape'));
+                            if (i3dEntry) {
+                                const i3dText = i3dEntry.getData().toString('utf8');
+                                const matches = i3dText.match(/name=["']field(\d+)["']/gi);
+                                if (matches) {
+                                    for (const m of matches) {
+                                        const numMatch = m.match(/\d+/);
+                                        if (numMatch) fieldIds.add(parseInt(numMatch[0]));
+                                    }
+                                }
+                            }
+                        } catch (_) {}
+
+                        // If no i3d fields found, populate default range 1..38
+                        if (fieldIds.size === 0) {
+                            for (let i = 1; i <= 38; i++) fieldIds.add(i);
+                        }
+
+                        const cropCycle = ['WHEAT', 'BARLEY', 'CANOLA', 'OAT', 'MAIZE', 'SOYBEAN', 'SUNFLOWER', 'CARROT', 'BEETROOT', 'SORGHUM'];
+                        const fieldList = [];
+                        const sortedIds = Array.from(fieldIds).sort((a, b) => a - b);
+
+                        sortedIds.forEach((fId, idx) => {
+                            const crop = cropCycle[idx % cropCycle.length];
+                            fieldList.push(`    <field fieldId="${fId}" weedState="0">\n        <fruit type="${crop}" growthState="HARVESTREADY"/>\n        <ground type="HARVEST_READY" angle="0"/>\n        <spray type="NONE" level="0"/>\n    </field>`);
+                        });
+
+                        const completeFieldsXml = `<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n<map xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../shared/xml/schema/fields.xsd">\n    <fields>\n${fieldList.join('\n')}\n    </fields>\n</map>`;
+                        await fs.writeFile(slotFieldsXml, completeFieldsXml, 'utf8');
+                        console.log(`[CREATE] Generated comprehensive fields.xml with ${sortedIds.length} seeded fields.`);
+                    } catch (fErr) {
+                        console.warn('[CREATE] Warning synthesizing fields.xml:', fErr.message);
                     }
 
                     // CRITICAL FIX FOR CROP RENDERING:
