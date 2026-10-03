@@ -523,7 +523,6 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         return hasCareer && hasFarms && hasHeightmap && hasEconomy;
     };
 
-    const backupDir = path.join(getFs25Path(), 'modManagerTemplates_backup');
     const folders = await fs.readdir(templatesDir);
     const effModLower = (effectiveModName || '').toLowerCase();
     const effModBase = effModLower.replace(/_crossplay$/i, '').replace(/_cp$/i, '');
@@ -549,12 +548,6 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
                 if (cleanFolderLower === effModLower || cleanFolderLower === `${effModLower}_samplemodmap` || cleanFolderLower === `${effModLower}_templatemap` ||
                     cleanFolderLower === effModBase || cleanFolderLower === `${effModBase}_samplemodmap` || cleanFolderLower === `${effModBase}_templatemap`) {
                     if (await isCompleteTemplate(folderPath, isZip)) {
-                        if (baseDir !== templatesDir) {
-                            try {
-                                await fs.copy(folderPath, path.join(templatesDir, folder));
-                                console.log(`[TEMPLATES] Copied complete template from backup to active: ${folder}`);
-                            } catch (_) {}
-                        }
                         return folder;
                     }
                 }
@@ -565,12 +558,6 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
                 const ufNorm = ultraNorm(cleanFolder);
                 if (ufNorm === targetTitleNorm || ufNorm === `${targetTitleNorm}samplemodmap` || ufNorm.startsWith(targetTitleNorm)) {
                     if (await isCompleteTemplate(folderPath, isZip)) {
-                        if (baseDir !== templatesDir) {
-                            try {
-                                await fs.copy(folderPath, path.join(templatesDir, folder));
-                                console.log(`[TEMPLATES] Copied complete template from backup to active: ${folder}`);
-                            } catch (_) {}
-                        }
                         return folder;
                     }
                 }
@@ -579,18 +566,7 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         return null;
     };
 
-    const directMatch = await checkFolderList(folders, templatesDir);
-    if (directMatch) return directMatch;
-
-    if (fs.existsSync(backupDir)) {
-        try {
-            const backupFolders = await fs.readdir(backupDir);
-            const backupMatch = await checkFolderList(backupFolders, backupDir);
-            if (backupMatch) return backupMatch;
-        } catch (_) {}
-    }
-
-    return null;
+    return await checkFolderList(folders, templatesDir);
 }
 
 async function hasMapTemplate(mapId, mapTitle = null, modName = null) {
