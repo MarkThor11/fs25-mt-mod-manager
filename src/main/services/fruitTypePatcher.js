@@ -74,7 +74,9 @@ function detectExternalFruitTypesPath(zip) {
 function isMissingBaseEntries(parsedXml) {
   const entries = parsedXml?.map?.fruitTypes?.fruitType ?? [];
   const filenames = entries.map((e) => e?.['@_filename'] ?? '');
-  return !filenames.some((f) => f && f.includes('wheat.xml'));
+  const missingBaseFruits = !filenames.some((f) => f && f.includes('wheat.xml'));
+  const missingCategories = !parsedXml?.map?.fruitTypeCategories;
+  return missingBaseFruits || missingCategories;
 }
 
 function buildMergedXml(parsedXml) {
@@ -87,6 +89,19 @@ function buildMergedXml(parsedXml) {
 
   const mergedEntries = [...baseToAdd, ...existingEntries];
 
+  // Try to load base game categories and converters from FS25 install
+  let baseCategories = null;
+  let baseConverters = null;
+  try {
+    const fs25Root = path.join(require('./pathProvider').getFS25DataRoot(), '..', 'Farming Simulator 25', 'data', 'maps', 'maps_fruitTypes.xml');
+    if (fs.existsSync(fs25Root)) {
+      const bXml = fs.readFileSync(fs25Root, 'utf8');
+      const bParsed = parser.parse(bXml);
+      baseCategories = bParsed?.map?.fruitTypeCategories;
+      baseConverters = bParsed?.map?.fruitTypeConverters;
+    }
+  } catch (_) {}
+
   const mergedXml = {
     '?xml': { '@_version': '1.0', '@_encoding': 'utf-8', '@_standalone': 'no' },
     map: {
@@ -95,6 +110,23 @@ function buildMergedXml(parsedXml) {
       fruitTypes: {
         fruitType: mergedEntries,
       },
+      fruitTypeCategories: baseCategories || {
+        fruitTypeCategory: [
+          { '@_name': 'GRAINHEADER', '#text': 'WHEAT BARLEY OAT CANOLA SOYBEAN SORGHUM RICELONGGRAIN' },
+          { '@_name': 'MAIZEHEADER', '#text': 'MAIZE SUNFLOWER' },
+          { '@_name': 'MAIZECUTTER', '#text': 'MAIZE WHEAT BARLEY OAT CANOLA SORGHUM SOYBEAN SUNFLOWER' },
+          { '@_name': 'DIRECTCUTTER', '#text': 'GRASS WHEAT BARLEY OAT CANOLA SORGHUM SOYBEAN SUNFLOWER' },
+          { '@_name': 'SOWINGMACHINE', '#text': 'WHEAT BARLEY OAT CANOLA RICELONGGRAIN OILSEEDRADISH GRASS PEA SPINACH' },
+          { '@_name': 'SUGARCANE_PLANTER', '#text': 'SUGARCANE' },
+          { '@_name': 'PLANTER', '#text': 'MAIZE SORGHUM SUNFLOWER SOYBEAN SUGARBEET COTTON GREENBEAN' },
+          { '@_name': 'PLANTER_SMALL', '#text': 'CARROT PARSNIP BEETROOT SPINACH' },
+          { '@_name': 'WEEDER', '#text': 'OILSEEDRADISH GRASS' },
+          { '@_name': 'TOPLIFTINGHARVESTER', '#text': 'CARROT BEETROOT PARSNIP' },
+          { '@_name': 'MOWER', '#text': 'GRASS WHEAT BARLEY OAT CANOLA SOYBEAN' },
+          { '@_name': 'COMBINE_MOWER', '#text': 'WHEAT BARLEY OAT CANOLA SOYBEAN' }
+        ]
+      },
+      fruitTypeConverters: baseConverters || undefined
     },
   };
 

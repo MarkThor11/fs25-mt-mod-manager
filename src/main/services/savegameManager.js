@@ -1846,8 +1846,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, true, true);
-                    console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer files into slot ${savegameIndex}`);
+                    const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, true, false);
+                    console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer and density map files into slot ${savegameIndex}`);
 
                     // Ensure fields.xml is generated with complete field entries so GIANTS Engine renders full field crops on initial launch
                     const slotFieldsXml = path.join(slotPath, 'fields.xml');
@@ -1904,20 +1904,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         console.warn('[CREATE] Warning synthesizing fields.xml:', fErr.message);
                     }
 
-                    // CRITICAL FIX FOR CROP RENDERING:
-                    // If densityMap_fruits.gdm exists in slotPath (or any subfolder), GIANTS engine skips seeding crops from fields.xml.
-                    // Delete all densityMap_fruits.gdm files from slotPath on initial creation so the engine reads fields.xml and builds densityMap_fruits.gdm natively.
-                    try {
-                        const slotFiles = await fs.readdir(slotPath);
-                        for (const sf of slotFiles) {
-                            if (sf.toLowerCase().includes('densitymap_fruits')) {
-                                await fs.remove(path.join(slotPath, sf)).catch(() => {});
-                                console.log(`[CREATE] Removed ${sf} so FS25 natively generates fruit density map from fields.xml`);
-                            }
-                        }
-                    } catch (gdmErr) {
-                        console.warn(`[CREATE] Could not remove densityMap_fruits.gdm: ${gdmErr.message}`);
-                    }
+
 
                     // Extract pre-rendered terrain.occluders.cache from map mod ZIP to prevent 55% load hang
                     if (modZipPath && fs.existsSync(modZipPath)) {
