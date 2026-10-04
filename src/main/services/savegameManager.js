@@ -1626,13 +1626,19 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         };
     }
 
-    // Ensure densityMapRevision is set in careerSavegame.xml for custom maps
+    // Ensure densityMapRevision is set in careerSavegame.xml for initialized saves
     if (!savegameData.careerSavegame.settings) savegameData.careerSavegame.settings = {};
-    if (!savegameData.careerSavegame.settings.densityMapRevision) {
-        savegameData.careerSavegame.settings.densityMapRevision = mapDeclaredRev || '1';
-    }
-    if (!savegameData.careerSavegame.settings.mapDensityMapRevision) {
-        savegameData.careerSavegame.settings.mapDensityMapRevision = mapDeclaredRev || '1';
+    if (!requiresEngineInit) {
+        if (!savegameData.careerSavegame.settings.densityMapRevision) {
+            savegameData.careerSavegame.settings.densityMapRevision = mapDeclaredRev || '1';
+        }
+        if (!savegameData.careerSavegame.settings.mapDensityMapRevision) {
+            savegameData.careerSavegame.settings.mapDensityMapRevision = mapDeclaredRev || '1';
+        }
+    } else {
+        // For fresh uninitialized saves, omit densityMapRevision so GIANTS Engine runs native crop generation
+        delete savegameData.careerSavegame.settings.densityMapRevision;
+        delete savegameData.careerSavegame.settings.mapDensityMapRevision;
     }
 
     let xmlOutput = builder.build(savegameData);
