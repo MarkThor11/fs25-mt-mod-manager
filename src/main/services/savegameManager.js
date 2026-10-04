@@ -6656,18 +6656,39 @@ async function resolveMapModPath(savePath) {
 async function ensureSavegameDensityMaps(savePath) {
     if (!savePath || !fs.existsSync(savePath)) return 0;
     try {
+        const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
+
         // If the save slot has not been initialized/saved by GIANTS Engine yet, do not inject density files,
         // revisions, or growth XMLs. Doing so corrupts engine initialization and causes fields to reset to cultivated dirt.
-        const isEngineInitialized = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm')) || 
-                                    fs.existsSync(path.join(savePath, 'densityMap_ground.gdm')) || 
-                                    fs.existsSync(path.join(savePath, 'terrain.heightmap.png'));
-        if (!isEngineInitialized) {
-            console.log(`[DENSITY-CHECK] Save slot at ${savePath} is not yet engine-initialized. Skipping density check to allow native engine initialization.`);
+        if (!hasFruitsGdm) {
+            console.log(`[DENSITY-CHECK] Save slot at ${savePath} is missing densityMap_fruits.gdm. Wiping partial terrain files to force native engine initialization.`);
+            
+            // Delete partial terrain files that trick the engine into bypassing crop initialization
+            const filesToWipe = ['terrain.heightmap.png', 'densityMap_ground.gdm', 'densityMap_groundFoliage.gdm', 'densityMap_weed.gdm', 'densityMap_stones.gdm'];
+            for (const f of filesToWipe) {
+                const p = path.join(savePath, f);
+                if (fs.existsSync(p)) {
+                    try { await fs.remove(p); } catch(e){}
+                }
+            }
+
+            // Also strip densityMapRevision from careerSavegame.xml
+            const careerPath = path.join(savePath, 'careerSavegame.xml');
+            if (fs.existsSync(careerPath)) {
+                try {
+                    let careerXml = await fs.readFile(careerPath, 'utf8');
+                    const revRegex = /<(?:densityMapRevision|mapDensityMapRevision)>.*?<\/(?:densityMapRevision|mapDensityMapRevision)>\r?\n?/gi;
+                    if (revRegex.test(careerXml)) {
+                        careerXml = careerXml.replace(revRegex, '');
+                        await fs.writeFile(careerPath, careerXml);
+                    }
+                } catch(e) {}
+            }
+            
             return 0;
         }
 
         // 1. Ensure foliage growth state updater XML files exist ONLY when densityMap_fruits.gdm is present
-        const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
         if (hasFruitsGdm) {
             const growthXmlPath = path.join(savePath, 'densityMap_fruits_growthState.xml');
             const fruitsGrowth = `<?xml version="1.0" encoding="iso-8859-1"?>\n<foliageCropsUpdater currentGrowthIndex="0" applyGrowthCurrentIndex="4294967295" applyGrowthMaxTimePerFrame="0.000000">\n  <growthMasks64 numCells="16384"><![CDATA[XQAAEAAAf+/7v/6jsV7l+D+yqiZV+GhwQXAVD439HkwbikK3GfRpGHGuZiOKik0vow3Zf6bjjCMRU+BZGMV1iuJ3+LaUfwxqwN50SWTi6VxTsgTY90QMq1nkPx4AAA==]]></growthMasks64>\n</foliageCropsUpdater>\n`;
