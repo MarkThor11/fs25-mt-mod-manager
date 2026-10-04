@@ -1118,22 +1118,34 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     let finalMods = (Array.isArray(selectedMods) ? selectedMods : []).filter(m => m && m.modName !== 'FS25_rememberPositions');
     // Add map mod if not already there
     const mapBaseName = (mapModName || '').split('.')[0];
-    const matchedMapMod = isOfficialBaseMap ? null : allMods.find(m => {
-        if (!m || !m.modName) return false;
-        if (modZipPath && m.filePath && path.resolve(m.filePath).toLowerCase() === path.resolve(modZipPath).toLowerCase()) {
-            return true;
+    const matchedMapMod = isOfficialBaseMap ? null : (() => {
+        if (modZipPath) {
+            const byPath = allMods.find(m => m && m.filePath && path.resolve(m.filePath).toLowerCase() === path.resolve(modZipPath).toLowerCase());
+            if (byPath) return byPath;
         }
-        const mLow = m.modName.toLowerCase();
         const rawLow = (mapModName || '').toLowerCase();
         const baseLow = mapBaseName.toLowerCase();
-        const fLow = (m.fileName || '').replace(/\.zip$/i, '').toLowerCase();
-        const tLow = (mapTitle || '').toLowerCase();
+        if (rawLow || baseLow) {
+            const byName = allMods.find(m => {
+                if (!m || !m.modName) return false;
+                const mLow = m.modName.toLowerCase();
+                const fLow = (m.fileName || '').replace(/\.zip$/i, '').toLowerCase();
+                return mLow === rawLow || mLow === baseLow || fLow === rawLow || fLow === baseLow;
+            });
+            if (byName) return byName;
+        }
         const idLow = (mapId || '').toLowerCase();
-        return (m.isMap && (mLow === rawLow || mLow === baseLow || fLow === baseLow || fLow === rawLow ||
-               (m.title && m.title.toLowerCase() === tLow) ||
-               (idLow && !GENERIC_MAP_IDS.has(idLow) && m.mapId && m.mapId.toLowerCase() === idLow))) ||
-               mLow === rawLow || mLow === baseLow || fLow === baseLow || fLow === rawLow;
-    });
+        if (idLow && !GENERIC_MAP_IDS.has(idLow)) {
+            const byId = allMods.find(m => m && m.isMap && m.mapId && m.mapId.toLowerCase() === idLow);
+            if (byId) return byId;
+        }
+        const tLow = (mapTitle || '').toLowerCase();
+        if (tLow) {
+            const byTitle = allMods.find(m => m && m.isMap && m.title && m.title.toLowerCase() === tLow);
+            if (byTitle) return byTitle;
+        }
+        return null;
+    })();
     const canonicalBaseMapName = isOfficialMap(mapId) ? mapId : ((mapTitle || '').toLowerCase() === 'riverbend springs' ? 'MapUS' : (mapTitle || '').toLowerCase() === 'zielonka' ? 'MapEU' : 'MapAS');
     const trueMapModName = isOfficialBaseMap ? canonicalBaseMapName : (matchedMapMod ? matchedMapMod.modName : (mapModName || mapBaseName));
 
