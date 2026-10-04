@@ -1781,10 +1781,12 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     }
 
                     // Extract author starting density maps, infoLayers, and fields.xml from map mod ZIP
+                    // NOTE: Pass skipGdm=true for fresh slots so densityMap_fruits.gdm is NOT extracted.
+                    // This allows GIANTS Engine to treat the slot as truly new, seeding crops from fields.xml natively.
                     if (modZipPath && fs.existsSync(modZipPath)) {
                         try {
-                            const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, false);
-                            console.log(`[CREATE] Extracted ${extractedCount} starting density/infoLayer files into slot ${savegameIndex}`);
+                            const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, true);
+                            console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer/ground files into slot ${savegameIndex}`);
 
                             // Also extract fields.xml from map ZIP if available and not yet extracted
                             if (!fs.existsSync(path.join(slotPath, 'fields.xml'))) {
@@ -6456,7 +6458,9 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
                     if (item.isDirectory()) {
                         await processDirectory(fullP);
                     } else {
-                        const lowerBase = item.name.toLowerCase();
+                        // Skip GDM files when requested
+                        if (skipGdm && lowerBase.endsWith('.gdm')) continue;
+
                         const isDensityFile = 
                             (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm') || 
                             lowerBase.startsWith('infolayer_') ||
@@ -6722,7 +6726,7 @@ async function ensureSavegameDensityMaps(savePath) {
                         modified = true;
                     }
                 } else {
-                    const targetDensityRev = '4';
+                    const targetDensityRev = isOfficialMap(mapId) ? '4' : '1';
                     if (curRev !== targetDensityRev || !careerXml.includes('<densityMapRevision>')) {
                         if (careerXml.includes('<densityMapRevision>')) {
                             careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>${targetDensityRev}</densityMapRevision>`);
