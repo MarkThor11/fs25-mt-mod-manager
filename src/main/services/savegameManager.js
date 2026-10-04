@@ -1906,8 +1906,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         console.warn('[CREATE] Failed to scan placeables for required mods:', placeErr.message);
     }
 
-    // Configure starting farmlands accurately for both template and fresh mod saves
-    await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
+    // Configure starting farmlands for pre-initialized save templates (skip for fresh saves so GIANTS Engine seeds fields natively from fields.xml)
+    if (!requiresEngineInit && fs.existsSync(path.join(slotPath, 'terrain.heightmap.png'))) {
+        await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
+    }
 
     if (requiresEngineInit || !fs.existsSync(path.join(slotPath, 'farms.xml'))) {
         const realUserId = await getPersistentUniqueUserId(fs25Path);
