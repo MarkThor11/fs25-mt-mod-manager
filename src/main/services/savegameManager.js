@@ -1626,10 +1626,15 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         };
     }
 
-    // Write careerSavegame.xml for all paths — the game needs this to know which
-    // map and mods to load. For no-template slots (requiresEngineInit=true) we
-    // write it WITHOUT densityMapRevision so the engine does a proper first-run
-    // crop init from the map ZIP, exactly as it did for Ebony Island / AgroForests.
+    // Ensure densityMapRevision is set in careerSavegame.xml for custom maps
+    if (!savegameData.careerSavegame.settings) savegameData.careerSavegame.settings = {};
+    if (!savegameData.careerSavegame.settings.densityMapRevision) {
+        savegameData.careerSavegame.settings.densityMapRevision = mapDeclaredRev || '1';
+    }
+    if (!savegameData.careerSavegame.settings.mapDensityMapRevision) {
+        savegameData.careerSavegame.settings.mapDensityMapRevision = mapDeclaredRev || '1';
+    }
+
     let xmlOutput = builder.build(savegameData);
     xmlOutput = sanitizeCareerSavegameXml(xmlOutput);
 
@@ -1638,9 +1643,12 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         xmlOutput = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n' + xmlOutput;
     }
 
-
-
     await fs.writeFile(careerPath, xmlOutput);
+
+    // Auto-generate starting farmland.xml for fresh saves
+    if (requiresEngineInit) {
+        await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
+    }
 
     // For no-template first-run slots, skip extracting anything from the map ZIP.
     // The engine handles everything from scratch via its native new-career init path.
