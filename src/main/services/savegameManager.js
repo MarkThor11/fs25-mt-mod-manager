@@ -1785,8 +1785,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     // companion XMLs so GIANTS Engine preserves author field crops without zeroing growth stages.
                     if (modZipPath && fs.existsSync(modZipPath)) {
                         try {
-                            const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, false, true);
-                            console.log(`[CREATE] Extracted ${extractedCount} starting density/GDM files into slot ${savegameIndex} (infoLayers skipped for fresh slot)`);
+                            const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, false);
+                            console.log(`[CREATE] Extracted ${extractedCount} starting density/infoLayer files into slot ${savegameIndex}`);
 
                             // Also extract fields.xml from map ZIP if available and not yet extracted
                             if (!fs.existsSync(path.join(slotPath, 'fields.xml'))) {
@@ -6408,7 +6408,7 @@ function isGdmRuntimeFormat(gdmBuffer) {
  * into a target savegame directory.
  * @param {boolean} skipGdm - If true, skip extracting .gdm files.
  */
-async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite = false, skipGdm = false, skipInfoLayers = false) {
+async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite = false, skipGdm = false) {
     if (!modZipOrDirPath || !fs.existsSync(modZipOrDirPath) || !targetSavePath || !fs.existsSync(targetSavePath)) {
         return 0;
     }
@@ -6431,7 +6431,7 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
 
                 const isDensityFile = 
                     (lowerBase.startsWith('densitymap_') && lowerBase !== 'densitymap_height.gdm') || 
-                    (!skipInfoLayers && lowerBase.startsWith('infolayer_'));
+                    lowerBase.startsWith('infolayer_');
 
                 if (isDensityFile && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.grle') || lowerBase.endsWith('.png'))) {
                     const normPath = entry.entryName.replace(/\\/g, '/').toLowerCase();
