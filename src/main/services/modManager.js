@@ -978,30 +978,6 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                 }
                 linkedCount++;
                 seenFiles.add(modNameLower);
-
-                // Create alias link for variant/crossplay mod names (e.g. FS25_Alliklepa_crossplay -> FS25_Alliklepa)
-                const aliasModName = m.modName.replace(/_(crossplay|pc|unlocked|edit)$/i, '');
-                if (aliasModName && aliasModName.toLowerCase() !== modNameLower) {
-                    const aliasDestPath = path.join(virtualPath, aliasModName + (isZip ? '.zip' : ''));
-                    if (!fs.existsSync(aliasDestPath)) {
-                        try {
-                            if (isZip) {
-                                try { await fs.link(realSource, aliasDestPath); } catch (_) {
-                                    try { await fs.symlink(realSource, aliasDestPath, 'file'); } catch (_) {
-                                        await atomicCopyFile(realSource, aliasDestPath);
-                                    }
-                                }
-                            } else {
-                                try { await fs.symlink(realSource, aliasDestPath, 'junction'); } catch (_) {
-                                    await fs.copy(realSource, aliasDestPath);
-                                }
-                            }
-                            console.log(`[VIRTUAL] Created alias link for mod ${m.modName}: ${aliasModName}`);
-                        } catch (aliasErr) {
-                            console.warn(`[VIRTUAL] Failed to create alias link ${aliasModName}:`, aliasErr.message);
-                        }
-                    }
-                }
             } catch (e) {
                 console.error(`[VIRTUAL] Failed to stage mod ${m.modName} in virtual folder:`, e.message);
                 debugLog(`[VIRTUAL] Link failed for ${m.modName}: ${e.message}`);
