@@ -1795,21 +1795,21 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         try {
                             const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, true);
                             console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer files into slot ${savegameIndex}`);
-
-                            // Also extract fields.xml from map ZIP if available and not yet extracted
-                            if (!fs.existsSync(path.join(slotPath, 'fields.xml'))) {
-                                if (fieldsFile) {
-                                    await extractExactZipFile(fieldsFile, 'fields.xml');
-                                } else {
-                                    const fEntry = entryByBaseName.get('fields.xml');
-                                    if (fEntry) {
-                                        await fs.writeFile(path.join(slotPath, 'fields.xml'), fEntry.getData());
-                                        console.log(`[CREATE] Extracted author fields.xml from map ZIP`);
-                                    }
-                                }
-                            }
                         } catch (dErr) {
                             console.warn('[CREATE] Failed to extract map density files:', dErr.message);
+                        }
+                    }
+
+                    // Extract fields.xml from map ZIP so starting field growth states are defined
+                    if (!fs.existsSync(path.join(slotPath, 'fields.xml'))) {
+                        if (fieldsFile) {
+                            await extractExactZipFile(fieldsFile, 'fields.xml');
+                        } else {
+                            const fEntry = entryByBaseName.get('fields.xml');
+                            if (fEntry) {
+                                await fs.writeFile(path.join(slotPath, 'fields.xml'), fEntry.getData());
+                                console.log(`[CREATE] Extracted author fields.xml from map ZIP`);
+                            }
                         }
                     }
 
