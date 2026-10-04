@@ -952,8 +952,15 @@ async function setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModN
  * Create a new savegame from a template.
  */
 async function createSavegameWithMods(savegameIndex, savegameName, selectedMods, opts = {}) {
+    if (typeof savegameIndex === 'object' && savegameIndex !== null) {
+        opts = savegameIndex;
+        savegameIndex = opts.savegameIndex;
+        savegameName = opts.savegameName;
+        selectedMods = opts.selectedMods;
+    }
+    const cleanIndex = parseInt(savegameIndex, 10) || 1;
     const fs25Path = getFs25Path();
-    const slotPath = path.join(fs25Path, `savegame${savegameIndex}`);
+    const slotPath = path.join(fs25Path, `savegame${cleanIndex}`);
     const templatesDir = getTemplatesPath();
     let requiresEngineInit = false;
     
