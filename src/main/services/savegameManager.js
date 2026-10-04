@@ -2011,57 +2011,59 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             }
         }
 
-        // Ensure careerSavegame.xml density map revisions are consistent.
-        const finalCareerPath = path.join(slotPath, 'careerSavegame.xml');
-        if (fs.existsSync(finalCareerPath)) {
-            let fcXml = await fs.readFile(finalCareerPath, 'utf8');
-            let mapRev = '1';
-            if (modZipPath && fs.existsSync(modZipPath)) {
-                try {
-                    const AdmZip = require('adm-zip');
-                    const zip = new AdmZip(modZipPath);
-                    const mapEntry = zip.getEntries().find(e => {
-                        const norm = e.entryName.toLowerCase();
-                        return norm.endsWith('.xml') && !norm.includes('sound') && !norm.includes('moddesc') && (
-                            norm.endsWith('map.xml') || norm.endsWith('mapeu.xml') || norm.endsWith('mapus.xml') || 
-                            norm.endsWith('mapas.xml') || norm.includes('map')
-                        );
-                    });
-                    if (mapEntry) {
-                        const xml = mapEntry.getData().toString('utf8');
-                        const m = xml.match(/<densityMap\s+[^>]*revision=["'](\d+)["']/i);
-                        if (m) mapRev = m[1];
-                    }
-                } catch (_) {}
-            }
-
-            const revisionTags = [
-                ['terrainTextureRevision', '1'],
-                ['terrainLodTextureRevision', '2'],
-                ['splitShapesRevision', '2'],
-                ['tipCollisionRevision', '2'],
-                ['placementCollisionRevision', '2'],
-                ['mapTerrainTextureRevision', '1'],
-                ['mapTerrainLodTextureRevision', '1'],
-                ['mapSplitShapesRevision', '1'],
-                ['mapTipCollisionRevision', '1'],
-                ['mapPlacementCollisionRevision', '1'],
-                ['mapNavigationCollisionRevision', '1']
-            ];
-            if (isOfficialBaseMap || hasFruitsGdm) {
-                revisionTags.unshift(['densityMapRevision', isOfficialBaseMap ? '4' : (mapRev || '1')]);
-                revisionTags.unshift(['mapDensityMapRevision', mapRev || '1']);
-            }
-
-            for (const [tag, val] of revisionTags) {
-                const tagRegex = new RegExp(`<${tag}>.*?<\\/${tag}>`, 'i');
-                if (tagRegex.test(fcXml)) {
-                    fcXml = fcXml.replace(tagRegex, `<${tag}>${val}</${tag}>`);
-                } else {
-                    fcXml = fcXml.replace(/<settings>/i, `<settings>\n        <${tag}>${val}</${tag}>`);
+        // Ensure careerSavegame.xml density map revisions are consistent for existing/initialized save slots only.
+        if (!requiresEngineInit) {
+            const finalCareerPath = path.join(slotPath, 'careerSavegame.xml');
+            if (fs.existsSync(finalCareerPath)) {
+                let fcXml = await fs.readFile(finalCareerPath, 'utf8');
+                let mapRev = '1';
+                if (modZipPath && fs.existsSync(modZipPath)) {
+                    try {
+                        const AdmZip = require('adm-zip');
+                        const zip = new AdmZip(modZipPath);
+                        const mapEntry = zip.getEntries().find(e => {
+                            const norm = e.entryName.toLowerCase();
+                            return norm.endsWith('.xml') && !norm.includes('sound') && !norm.includes('moddesc') && (
+                                norm.endsWith('map.xml') || norm.endsWith('mapeu.xml') || norm.endsWith('mapus.xml') || 
+                                norm.endsWith('mapas.xml') || norm.includes('map')
+                            );
+                        });
+                        if (mapEntry) {
+                            const xml = mapEntry.getData().toString('utf8');
+                            const m = xml.match(/<densityMap\s+[^>]*revision=["'](\d+)["']/i);
+                            if (m) mapRev = m[1];
+                        }
+                    } catch (_) {}
                 }
+
+                const revisionTags = [
+                    ['terrainTextureRevision', '1'],
+                    ['terrainLodTextureRevision', '2'],
+                    ['splitShapesRevision', '2'],
+                    ['tipCollisionRevision', '2'],
+                    ['placementCollisionRevision', '2'],
+                    ['mapTerrainTextureRevision', '1'],
+                    ['mapTerrainLodTextureRevision', '1'],
+                    ['mapSplitShapesRevision', '1'],
+                    ['mapTipCollisionRevision', '1'],
+                    ['mapPlacementCollisionRevision', '1'],
+                    ['mapNavigationCollisionRevision', '1']
+                ];
+                if (isOfficialBaseMap || hasFruitsGdm) {
+                    revisionTags.unshift(['densityMapRevision', isOfficialBaseMap ? '4' : (mapRev || '1')]);
+                    revisionTags.unshift(['mapDensityMapRevision', mapRev || '1']);
+                }
+
+                for (const [tag, val] of revisionTags) {
+                    const tagRegex = new RegExp(`<${tag}>.*?<\\/${tag}>`, 'i');
+                    if (tagRegex.test(fcXml)) {
+                        fcXml = fcXml.replace(tagRegex, `<${tag}>${val}</${tag}>`);
+                    } else {
+                        fcXml = fcXml.replace(/<settings>/i, `<settings>\n        <${tag}>${val}</${tag}>`);
+                    }
+                }
+                await fs.writeFile(finalCareerPath, fcXml, 'utf8');
             }
-            await fs.writeFile(finalCareerPath, fcXml, 'utf8');
         }
     } catch (_) {}
 
@@ -6632,7 +6634,9 @@ async function ensureSavegameDensityMaps(savePath) {
     try {
         // If the save slot has not been initialized/saved by GIANTS Engine yet, do not inject density files,
         // revisions, or growth XMLs. Doing so corrupts engine initialization and causes fields to reset to cultivated dirt.
-        const isEngineInitialized = fs.existsSync(path.join(savePath, 'terrain.heightmap.png'));
+        const isEngineInitialized = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm')) || 
+                                    fs.existsSync(path.join(savePath, 'densityMap_ground.gdm')) || 
+                                    fs.existsSync(path.join(savePath, 'terrain.heightmap.png'));
         if (!isEngineInitialized) {
             console.log(`[DENSITY-CHECK] Save slot at ${savePath} is not yet engine-initialized. Skipping density check to allow native engine initialization.`);
             return 0;
