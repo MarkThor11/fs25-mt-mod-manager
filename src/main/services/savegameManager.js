@@ -6614,25 +6614,27 @@ async function resolveMapModPath(savePath) {
             mapModName = mapId.split('.')[0];
         }
 
-        // Pass 0: Direct filesystem lookup — most reliable, no scan dependency
+        // Pass 0: Direct filesystem lookup across all configured mod folders
         const modManager = require('./modManager');
-        const modsRoot = modManager.getModsPath();
-        const directZip = path.join(modsRoot, `${mapModName}.zip`);
-        if (fs.existsSync(directZip) && fs.statSync(directZip).size > 0) {
-            return directZip;
-        }
-        // Search one level deep in subfolders
-        try {
-            const subFolders = fs.readdirSync(modsRoot, { withFileTypes: true })
-                .filter(d => d.isDirectory())
-                .map(d => d.name);
-            for (const sub of subFolders) {
-                const subZip = path.join(modsRoot, sub, `${mapModName}.zip`);
-                if (fs.existsSync(subZip) && fs.statSync(subZip).size > 0) {
-                    return subZip;
-                }
+        const configuredRoots = modManager.getModsPaths();
+        for (const root of configuredRoots) {
+            if (!fs.existsSync(root)) continue;
+            const directZip = path.join(root, `${mapModName}.zip`);
+            if (fs.existsSync(directZip) && fs.statSync(directZip).size > 0) {
+                return directZip;
             }
-        } catch (_) {}
+            try {
+                const subFolders = fs.readdirSync(root, { withFileTypes: true })
+                    .filter(d => d.isDirectory())
+                    .map(d => d.name);
+                for (const sub of subFolders) {
+                    const subZip = path.join(root, sub, `${mapModName}.zip`);
+                    if (fs.existsSync(subZip) && fs.statSync(subZip).size > 0) {
+                        return subZip;
+                    }
+                }
+            } catch (_) {}
+        }
 
         const { mods: allMods } = await modManager.scanLocalMods();
         const mapMod = findMapModInSavegame(xmlContent, allMods) || allMods.find(m => m.isMap && (
