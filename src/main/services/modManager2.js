@@ -305,16 +305,6 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 			}
 		}
 
-		if (activeModNames) {
-			const activeArray = Array.from(activeModNames);
-			for (const actName of activeArray) {
-				const basePrefix = actName.replace(/_(crossplay|pc|unlocked|edit)$/i, '');
-				if (basePrefix && basePrefix.toLowerCase() !== actName.toLowerCase()) {
-					activeModNames.add(basePrefix.toLowerCase());
-				}
-			}
-		}
-
 		let linkedCount = 0;
 		const seenFiles = new Set();
 

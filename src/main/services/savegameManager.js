@@ -5479,19 +5479,6 @@ async function syncSubfolderMapDependencies(savePath) {
             seenModNames.add(mapModObj.modName.toLowerCase());
         }
 
-        // Auto-include base map mod companion if current map mod is a crossplay/variant (e.g. FS25_Alliklepa_crossplay -> FS25_Alliklepa)
-        if (mapModObj) {
-            const basePrefix = (mapModObj.modName || '').replace(/_(crossplay|pc|unlocked|edit)$/i, '');
-            if (basePrefix && basePrefix.toLowerCase() !== (mapModObj.modName || '').toLowerCase()) {
-                const baseMapMod = localMods.find(m => m.modName && m.modName.toLowerCase() === basePrefix.toLowerCase());
-                if (baseMapMod && !seenModNames.has(basePrefix.toLowerCase())) {
-                    seenModNames.add(basePrefix.toLowerCase());
-                    modsToEnsure.push(baseMapMod);
-                    console.log(`[SYNC-DEPS] Auto-included base map mod companion for texture resolution: ${baseMapMod.modName}`);
-                }
-            }
-        }
-
         // 1. Check if the map resides in a dedicated subfolder
         if (mapModObj && mapModObj.filePath) {
             try {

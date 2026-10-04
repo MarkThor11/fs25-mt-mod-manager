@@ -878,15 +878,6 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
         // Ensure known engine-crashing/incompatible mods are stripped from activeModNames
         if (activeModNames) {
             INCOMPATIBLE_ENGINE_MODS.forEach(badMod => activeModNames.delete(badMod));
-            // Auto-include base map mod companions for crossplay/variant map mods (e.g. FS25_Alliklepa_crossplay -> FS25_Alliklepa)
-            const activeArray = Array.from(activeModNames);
-            for (const actName of activeArray) {
-                const basePrefix = actName.replace(/_(crossplay|pc|unlocked|edit)$/i, '');
-                if (basePrefix && basePrefix.toLowerCase() !== actName && modsByName.has(basePrefix.toLowerCase())) {
-                    activeModNames.add(basePrefix.toLowerCase());
-                    debugLog(`[VIRTUAL] Auto-included base map mod companion for texture array resolution: ${basePrefix}`);
-                }
-            }
         }
 
         for (const m of mods) {
