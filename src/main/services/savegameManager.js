@@ -5469,10 +5469,11 @@ function findMapModInSavegame(xmlData, localMods = []) {
     if (rawMapId) {
         // If mapId is "FS25_Courtright_Line.CourtrightLineModMap", split('.')[0] gives "FS25_Courtright_Line"
         const prefix = rawMapId.split('.')[0];
-        const matchByPrefix = localMods.find(m => m.isMap && m.modName && m.modName.toLowerCase() === prefix.toLowerCase());
+        const matchByPrefix = localMods.find(m => m.isMap && (
+            (m.modName && m.modName.toLowerCase() === prefix.toLowerCase()) ||
+            (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === prefix.toLowerCase())
+        ));
         if (matchByPrefix) return matchByPrefix;
-
-
     }
 
     if (rawMapTitle) {
