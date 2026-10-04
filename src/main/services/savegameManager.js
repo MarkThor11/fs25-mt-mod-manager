@@ -1646,7 +1646,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     // The engine handles everything from scratch via its native new-career init path.
     // Extracting files (even non-GDM ones) can interfere with that init.
     let extractedGrles = 0;
-    if (modZipPath) {
+    if (modZipPath && !requiresEngineInit) {
         try {
             if (fs.existsSync(modZipPath)) {
                 try {
