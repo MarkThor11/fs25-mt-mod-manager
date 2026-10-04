@@ -2018,11 +2018,32 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     } catch (_) {}
                 }
 
-                if (!fcXml.includes('<densityMapRevision>')) {
-                    fcXml = fcXml.replace(/<settings>/i, `<settings>\n        <densityMapRevision>1</densityMapRevision>\n        <mapDensityMapRevision>${mapRev}</mapDensityMapRevision>`);
+                const revisionTags = [
+                    ['densityMapRevision', '4'],
+                    ['terrainTextureRevision', '1'],
+                    ['terrainLodTextureRevision', '2'],
+                    ['splitShapesRevision', '2'],
+                    ['tipCollisionRevision', '2'],
+                    ['placementCollisionRevision', '2'],
+                    ['navigationCollisionRevision', '2'],
+                    ['mapDensityMapRevision', mapRev || '1'],
+                    ['mapTerrainTextureRevision', '1'],
+                    ['mapTerrainLodTextureRevision', '1'],
+                    ['mapSplitShapesRevision', '1'],
+                    ['mapTipCollisionRevision', '1'],
+                    ['mapPlacementCollisionRevision', '1'],
+                    ['mapNavigationCollisionRevision', '1']
+                ];
+
+                let revsToAdd = '';
+                for (const [tag, val] of revisionTags) {
+                    const tagRegex = new RegExp(`<${tag}>.*?<\\/${tag}>`, 'i');
+                    if (!tagRegex.test(fcXml)) {
+                        revsToAdd += `\n        <${tag}>${val}</${tag}>`;
+                    }
                 }
-                if (!fcXml.includes('<mapDensityMapRevision>')) {
-                    fcXml = fcXml.replace(/<settings>/i, `<settings>\n        <mapDensityMapRevision>${mapRev}</mapDensityMapRevision>`);
+                if (revsToAdd) {
+                    fcXml = fcXml.replace(/<settings>/i, `<settings>${revsToAdd}`);
                 }
                 await fs.writeFile(finalCareerPath, fcXml, 'utf8');
             }
@@ -6469,6 +6490,61 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
     } catch (err) {
         console.error('[DENSITY-EXTRACT] Error during density extraction:', err.message);
     }
+
+    // Ensure all 6 essential ground state infoLayers exist in the savegame directory.
+    // Maps that inherit $data/maps/map.../config/fieldGround.xml (e.g. Alliklepa, CalmLands, etc.)
+    // do not bundle sprayLevel, plowLevel, limeLevel, etc. in their zip.
+    // If these files are missing from the savegame directory, Giants Engine logs:
+    // 'Failed to load DensityMap image .../savegameX/infoLayer_sprayLevel.png ... Loading default density map.'
+    // and resets all fields to bare cultivated dirt!
+    try {
+        const gameDataDir = getGameDataDir();
+        if (gameDataDir) {
+            const groundInfoLayers = [
+                'infoLayer_sprayLevel.grle',
+                'infoLayer_limeLevel.grle',
+                'infoLayer_plowLevel.grle',
+                'infoLayer_stubbleShredLevel.grle',
+                'infoLayer_rollerLevel.grle',
+                'infoLayer_weed.grle'
+            ];
+
+            // Check if any of these are missing
+            const missingLayers = groundInfoLayers.filter(l => !fs.existsSync(path.join(targetSavePath, l)));
+            if (missingLayers.length > 0) {
+                // Determine base map folder: check mod map's map XML or default to mapEU then mapUS
+                let baseFolder = 'mapEU';
+                if (modZipOrDirPath && typeof modZipOrDirPath === 'string' && modZipOrDirPath.toLowerCase().includes('us')) {
+                    baseFolder = 'mapUS';
+                } else if (modZipOrDirPath && typeof modZipOrDirPath === 'string' && modZipOrDirPath.toLowerCase().includes('as')) {
+                    baseFolder = 'mapAS';
+                }
+
+                let sourceDir = path.join(gameDataDir, 'maps', baseFolder, 'data');
+                if (!fs.existsSync(sourceDir)) {
+                    sourceDir = path.join(gameDataDir, 'maps', 'mapEU', 'data');
+                }
+                if (!fs.existsSync(sourceDir)) {
+                    sourceDir = path.join(gameDataDir, 'maps', 'mapUS', 'data');
+                }
+
+                if (fs.existsSync(sourceDir)) {
+                    for (const layerName of missingLayers) {
+                        const srcFile = path.join(sourceDir, layerName);
+                        const dstFile = path.join(targetSavePath, layerName);
+                        if (fs.existsSync(srcFile) && !fs.existsSync(dstFile)) {
+                            await fs.copy(srcFile, dstFile);
+                            extractedCount++;
+                            console.log(`[DENSITY-EXTRACT] Supplied base game fallback infoLayer: ${layerName} -> ${dstFile}`);
+                        }
+                    }
+                }
+            }
+        }
+    } catch (baseErr) {
+        console.warn('[DENSITY-EXTRACT] Warning checking base game fallback infoLayers:', baseErr.message);
+    }
+
     return extractedCount;
 }
 
@@ -6646,7 +6722,7 @@ async function ensureSavegameDensityMaps(savePath) {
                         modified = true;
                     }
                 } else {
-                    const targetDensityRev = isOfficialMap(mapId) ? '4' : '1';
+                    const targetDensityRev = '4';
                     if (curRev !== targetDensityRev || !careerXml.includes('<densityMapRevision>')) {
                         if (careerXml.includes('<densityMapRevision>')) {
                             careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>${targetDensityRev}</densityMapRevision>`);
@@ -6662,6 +6738,32 @@ async function ensureSavegameDensityMaps(savePath) {
                             careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
                         }
                         modified = true;
+                    }
+
+                    const standardRevisions = [
+                        ['terrainTextureRevision', '1'],
+                        ['terrainLodTextureRevision', '2'],
+                        ['splitShapesRevision', '2'],
+                        ['tipCollisionRevision', '2'],
+                        ['placementCollisionRevision', '2'],
+                        ['navigationCollisionRevision', '2'],
+                        ['mapTerrainTextureRevision', '1'],
+                        ['mapTerrainLodTextureRevision', '1'],
+                        ['mapSplitShapesRevision', '1'],
+                        ['mapTipCollisionRevision', '1'],
+                        ['mapPlacementCollisionRevision', '1'],
+                        ['mapNavigationCollisionRevision', '1']
+                    ];
+                    let revAdditions = '';
+                    for (const [tag, val] of standardRevisions) {
+                        const tagRegex = new RegExp(`<${tag}>.*?<\\/${tag}>`, 'i');
+                        if (!tagRegex.test(careerXml)) {
+                            revAdditions += `\n        <${tag}>${val}</${tag}>`;
+                            modified = true;
+                        }
+                    }
+                    if (revAdditions) {
+                        careerXml = careerXml.replace(/<settings>/i, `<settings>${revAdditions}`);
                     }
                 }
 
