@@ -329,8 +329,15 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 				}
 
 				if (name.toLowerCase().endsWith('.zip') || (entry.isDirectory() && fs.existsSync(path.join(sourceDir, name, 'modDesc.xml')))) {
-					const destPath = path.join(virtualPath, name);
 					const srcPath = path.join(sourceDir, name);
+
+					// Skip 0-byte or corrupted files
+					try {
+						const st = await fs.stat(srcPath);
+						if (st && !st.isDirectory() && st.size < 100) continue;
+					} catch (_) { continue; }
+
+					const destPath = path.join(virtualPath, name);
 
 					try {
 						// Remove existing if it somehow persisted
@@ -2306,7 +2313,15 @@ async function syncMirrorLinks(primaryPath) {
 						shouldCreate = true;
 					}
 				} else {
-					console.warn(`[MIRROR] Name conflict: Root file ${modName} exists and is NOT a link. Skipping mirror.`);
+					// Root file exists and is NOT a link. If targetPath in subfolder is also a physical file, or root file is 0 bytes, convert root file to link!
+					const targetStats = await fs.lstat(targetPath).catch(() => null);
+					if ((stats.size < 100) || (targetStats && !targetStats.isSymbolicLink())) {
+						console.log(`[MIRROR] Converting physical/empty duplicate root file ${modName} to link pointing to ${targetPath}`);
+						await fs.remove(mirrorPath);
+						shouldCreate = true;
+					} else {
+						console.warn(`[MIRROR] Name conflict: Root file ${modName} exists and is NOT a link. Skipping mirror.`);
+					}
 				}
 			}
 
