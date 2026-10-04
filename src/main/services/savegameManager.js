@@ -6615,7 +6615,8 @@ async function resolveMapModPath(savePath) {
         }
 
         // Pass 0: Direct filesystem lookup — most reliable, no scan dependency
-        const modsRoot = pathProvider.getModsPath();
+        const modManager = require('./modManager');
+        const modsRoot = modManager.getModsPath();
         const directZip = path.join(modsRoot, `${mapModName}.zip`);
         if (fs.existsSync(directZip) && fs.statSync(directZip).size > 0) {
             return directZip;
@@ -6633,7 +6634,6 @@ async function resolveMapModPath(savePath) {
             }
         } catch (_) {}
 
-        const modManager = require('./modManager');
         const { mods: allMods } = await modManager.scanLocalMods();
         const mapMod = findMapModInSavegame(xmlContent, allMods) || allMods.find(m => m.isMap && (
             (m.modName && m.modName.toLowerCase() === mapModName.toLowerCase()) ||
@@ -7082,5 +7082,7 @@ module.exports = {
     restoreStashedSinglePlayerSaves,
     repairSavegameMapId,
     resetSavegameFieldStates,
-    ensureSavegameDensityMaps
+    ensureSavegameDensityMaps,
+    resolveMapModPath,
+    extractMapDensityFiles
 };
