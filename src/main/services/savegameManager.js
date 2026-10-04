@@ -1806,8 +1806,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    // Extract fields.xml from map ZIP so starting field growth states are defined
-                    if (!fs.existsSync(path.join(slotPath, 'fields.xml'))) {
+                    // Extract fields.xml from map ZIP ONLY for initialized template slots (skip for fresh saves so GIANTS Engine seeds crops natively from densityMap_fruits.gdm)
+                    if (!requiresEngineInit && !fs.existsSync(path.join(slotPath, 'fields.xml'))) {
                         if (fieldsFile) {
                             await extractExactZipFile(fieldsFile, 'fields.xml');
                         } else {
