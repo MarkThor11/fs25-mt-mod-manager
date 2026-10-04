@@ -820,7 +820,7 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 				if (configuredRoots.includes(parentOfMapDir) && !configuredRoots.includes(mapDirResolved)) {
 					debugLog(`[VIRTUAL] Map '${mapModObj.modName}' resides in dedicated subfolder '${path.basename(mapDir)}'. Auto-activating sibling mods.`);
 					mods.forEach(m => {
-						if (!m.filePath || !m.modName) return;
+						if (!m.filePath || !m.modName || m.isMap) return;
 						const mDir = path.resolve(path.dirname(m.filePath)).toLowerCase();
 						if (mDir === mapDirResolved) {
 							activeModNames.add(m.modName.toLowerCase());
@@ -829,7 +829,7 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 				} else if (mapModObj.folder && mapModObj.folder.toLowerCase() !== 'mods' && mapModObj.folder.toLowerCase() !== '') {
 					const folderLower = mapModObj.folder.toLowerCase();
 					mods.forEach(m => {
-						if (m.folder && m.folder.toLowerCase() === folderLower && m.modName) {
+						if (!m.isMap && m.folder && m.folder.toLowerCase() === folderLower && m.modName) {
 							activeModNames.add(m.modName.toLowerCase());
 						}
 					});
