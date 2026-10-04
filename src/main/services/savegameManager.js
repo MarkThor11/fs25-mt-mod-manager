@@ -6505,6 +6505,7 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
                     if (item.isDirectory()) {
                         await processDirectory(fullP);
                     } else {
+                        const lowerBase = item.name.toLowerCase();
                         // Skip GDM files when requested
                         if (skipGdm && lowerBase.endsWith('.gdm')) continue;
 
@@ -6515,16 +6516,18 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
 
                         if (isDensityFile && (lowerBase.endsWith('.gdm') || lowerBase.endsWith('.grle') || lowerBase.endsWith('.png') || lowerBase === 'fields.xml')) {
                             if (lowerBase.endsWith('.gdm')) {
-                                if (isSavegameGdm(fullP) === false && fs.existsSync(fullP)) {
-                                    const fd = nodeFs.openSync(fullP, 'r');
-                                    const buf = Buffer.alloc(4);
-                                    nodeFs.readSync(fd, buf, 0, 4, 0);
-                                    nodeFs.closeSync(fd);
-                                    if (buf[0] === 0x21 && buf[1] === 0x4D && buf[2] === 0x44 && buf[3] === 0x46) {
-                                        console.log(`[DENSITY-EXTRACT] Skipped map editor asset (!MDF) ${item.name}`);
-                                        continue;
+                                try {
+                                    if (fs.existsSync(fullP)) {
+                                        const fd = nodeFs.openSync(fullP, 'r');
+                                        const buf = Buffer.alloc(4);
+                                        nodeFs.readSync(fd, buf, 0, 4, 0);
+                                        nodeFs.closeSync(fd);
+                                        if (buf[0] === 0x21 && buf[1] === 0x4D && buf[2] === 0x44 && buf[3] === 0x46) {
+                                            console.log(`[DENSITY-EXTRACT] Skipped map editor asset (!MDF) ${item.name}`);
+                                            continue;
+                                        }
                                     }
-                                }
+                                } catch (_) {}
                             }
                             const destPath = path.join(targetSavePath, item.name);
                             if (overwrite || !fs.existsSync(destPath)) {
