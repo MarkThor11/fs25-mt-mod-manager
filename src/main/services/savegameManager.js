@@ -1781,9 +1781,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     }
 
                     // Extract author starting density infoLayers and fields.xml from map mod ZIP
-                    // NOTE: Do NOT extract densityMap_fruits.gdm or inject artificial revision tags / growthState XMLs
-                    // into fresh save slots. Letting GIANTS Engine perform native initial seeding preserves crop growth and ground layers.
-                    if (modZipPath && fs.existsSync(modZipPath)) {
+                    // NOTE: Do NOT extract densityMap_fruits.gdm or infoLayers into fresh uninitialized save slots.
+                    // Letting GIANTS Engine perform native initial seeding from the map ZIP preserves crop growth and ground layers.
+                    if (modZipPath && fs.existsSync(modZipPath) && !requiresEngineInit) {
                         try {
                             const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, true);
                             console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer files into slot ${savegameIndex}`);
