@@ -6677,8 +6677,11 @@ async function ensureSavegameDensityMaps(savePath) {
             }
         }
 
+        // Re-evaluate hasFruitsGdm after potential extraction
+        const fruitsGdmNow = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
+
         // 1. Ensure foliage growth state updater XML files exist ONLY when densityMap_fruits.gdm is present
-        if (hasFruitsGdm) {
+        if (fruitsGdmNow) {
             const growthXmlPath = path.join(savePath, 'densityMap_fruits_growthState.xml');
             const fruitsGrowth = `<?xml version="1.0" encoding="iso-8859-1"?>\n<foliageCropsUpdater currentGrowthIndex="0" applyGrowthCurrentIndex="4294967295" applyGrowthMaxTimePerFrame="0.000000">\n  <growthMasks64 numCells="16384"><![CDATA[XQAAEAAAf+/7v/6jsV7l+D+yqiZV+GhwQXAVD439HkwbikK3GfRpGHGuZiOKik0vow3Zf6bjjCMRU+BZGMV1iuJ3+LaUfwxqwN50SWTi6VxTsgTY90QMq1nkPx4AAA==]]></growthMasks64>\n</foliageCropsUpdater>\n`;
             const densityUpdater = `<?xml version="1.0" encoding="iso-8859-1"?>\n<densityMapUpdater updateCycleTime="0.000000" currentUpdateTime="0.000000" currentUpdateIndex="-1" numCellsToUpdate="0.000000" applyUpdateCurrentIndex="-1" applyUpdateMaxTimePerFrame="0.000000">\n</densityMapUpdater>\n`;
