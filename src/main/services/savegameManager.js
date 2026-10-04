@@ -6664,67 +6664,17 @@ async function ensureSavegameDensityMaps(savePath) {
     try {
         const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
 
-        // If densityMap_fruits.gdm is missing, extract density maps directly from the map mod ZIP
+        // On uninitialized save slots without densityMap_fruits.gdm, do not pre-extract binary density maps
+        // or inject synthetic growthState XMLs. Allow GIANTS Engine's native bootstrapper to populate initial crops from map ZIP.
         if (!hasFruitsGdm) {
-            console.log(`[DENSITY-CHECK] Save slot at ${savePath} is missing densityMap_fruits.gdm. Extracting density maps from map mod...`);
-            const mapModPath = await resolveMapModPath(savePath);
-            if (mapModPath && fs.existsSync(mapModPath)) {
-                const extracted = await extractMapDensityFiles(mapModPath, savePath, true, false);
-                console.log(`[DENSITY-CHECK] Extracted ${extracted} density/infoLayer files into ${savePath}`);
-            } else {
-                console.log(`[DENSITY-CHECK] Map mod path not found for ${savePath}. Wiping partial terrain files to force native engine initialization.`);
-                const filesToWipe = ['terrain.heightmap.png', 'densityMap_ground.gdm', 'densityMap_groundFoliage.gdm', 'densityMap_weed.gdm', 'densityMap_stones.gdm'];
-                for (const f of filesToWipe) {
-                    const p = path.join(savePath, f);
-                    if (fs.existsSync(p)) {
-                        try { await fs.remove(p); } catch(e){}
-                    }
-                }
-            }
-        }
-
-        // Re-evaluate hasFruitsGdm after potential extraction
-        const fruitsGdmNow = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
-
-        // 1. Ensure foliage growth state updater XML files exist ONLY when densityMap_fruits.gdm is present
-        if (fruitsGdmNow) {
-            const growthXmlPath = path.join(savePath, 'densityMap_fruits_growthState.xml');
-            const fruitsGrowth = `<?xml version="1.0" encoding="iso-8859-1"?>\n<foliageCropsUpdater currentGrowthIndex="0" applyGrowthCurrentIndex="4294967295" applyGrowthMaxTimePerFrame="0.000000">\n  <growthMasks64 numCells="16384"><![CDATA[XQAAEAAAf+/7v/6jsV7l+D+yqiZV+GhwQXAVD439HkwbikK3GfRpGHGuZiOKik0vow3Zf6bjjCMRU+BZGMV1iuJ3+LaUfwxqwN50SWTi6VxTsgTY90QMq1nkPx4AAA==]]></growthMasks64>\n</foliageCropsUpdater>\n`;
-            const densityUpdater = `<?xml version="1.0" encoding="iso-8859-1"?>\n<densityMapUpdater updateCycleTime="0.000000" currentUpdateTime="0.000000" currentUpdateIndex="-1" numCellsToUpdate="0.000000" applyUpdateCurrentIndex="-1" applyUpdateMaxTimePerFrame="0.000000">\n</densityMapUpdater>\n`;
-
-            if (!fs.existsSync(growthXmlPath)) {
-                try {
-                    await fs.writeFile(growthXmlPath, fruitsGrowth, 'utf8');
-                    console.log(`[DENSITY-CHECK] Created default densityMap_fruits_growthState.xml in ${savePath}`);
-                } catch (e) {}
-            }
-            const weedGrowthPath = path.join(savePath, 'weed_growthState.xml');
-            if (!fs.existsSync(weedGrowthPath)) {
-                try {
-                    await fs.writeFile(weedGrowthPath, densityUpdater, 'utf8');
-                } catch (e) {}
-            }
-            const stoneGrowthPath = path.join(savePath, 'stone_growthState.xml');
-            if (!fs.existsSync(stoneGrowthPath)) {
-                try {
-                    await fs.writeFile(stoneGrowthPath, densityUpdater, 'utf8');
-                } catch (e) {}
-            }
-            const peatGdmPath = path.join(savePath, 'densityMap_peat.gdm');
-            const peatGrowthPath = path.join(savePath, 'densityMap_peat_growthState.xml');
-            if (fs.existsSync(peatGdmPath) && !fs.existsSync(peatGrowthPath)) {
-                try {
-                    await fs.writeFile(peatGrowthPath, fruitsGrowth, 'utf8');
-                } catch (e) {}
-            }
-        } else {
-            // On fresh un-initialized slots, remove stale growth XMLs so GIANTS Engine loads natively without 55% hang
+            console.log(`[DENSITY-CHECK] Fresh/uninitialized save slot at ${savePath}. Omitting pre-extraction so GIANTS Engine populates crops natively.`);
             for (const stateXml of ['densityMap_fruits_growthState.xml', 'weed_growthState.xml', 'stone_growthState.xml', 'densityMapHeight.xml']) {
                 const sPath = path.join(savePath, stateXml);
                 if (fs.existsSync(sPath)) {
                     try { await fs.remove(sPath); } catch (e) {}
                 }
             }
+            return 0;
         }
 
         // 2. Validate fields.xml (only remove if completely devoid of field definitions)
