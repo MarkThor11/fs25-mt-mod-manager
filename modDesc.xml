@@ -1,0 +1,273 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<modDesc descVersion="106">
+    <author>Carl-TG</author>
+    <version>1.0.0.1</version>
+    <contributors>
+       <contributor>Jamo</contributor>
+    </contributors>
+	<title>
+        <en>Alliklepa</en>
+    </title>
+    <description>
+        <en><![CDATA[Welcome To Alliklepa!
+Alliklepa is a fictional estonian style map, with many forests and fields!
+
+Map Includes:
+
+38 fields plus 15 meadows
+8 medium and large forest areas
+5 sellpoints (all ingame products can be sold)
+Main farm with a cicken barn and cow barn
+
+Trees by INF Modding
+
+Changelog 1.0.0.1
+- Peat system updated to the latest version!
+- adjusted visuals of the custom license plates
+
+Hope you enjoy this map!]]></en>
+        <de><![CDATA[Willkommen in Alliklepa!
+Alliklepa ist eine fiktive Karte im estnischen Stil mit vielen Wäldern und Feldern!
+
+Die Karte enthält:
+
+38 Felder plus 15 Wiesen
+8 mittlere und große Waldgebiete
+5 Verkaufsstellen (alle Ingame-Produkte können verkauft werden)
+Haupthof mit Hühnerstall und Kuhstall
+
+Bäume von INF Modding
+
+Änderungsprotokoll 1.0.0.1
+- Torfsystem auf die neueste Version aktualisiert!
+- Angepasste Darstellungen der individuellen Kennzeichen
+
+Viel Spaß mit dieser Karte!]]></de>
+        <fr><![CDATA[Bienvenue à Alliklepa !
+Alliklepa est une carte fictive de style estonien, avec de nombreuses forêts et champs !
+
+La carte comprend :
+
+38 champs et 15 prairies
+8 zones forestières de taille moyenne et grande
+5 points de vente (tous les produits du jeu sont vendables)
+Ferme principale avec un poulailler et une étable
+
+arbres créés par INF Modding
+
+Journal des modifications 1.0.0.1
+- Système de tourbe mis à jour à la dernière version !
+- visuels ajustés des plaques d'immatriculation personnalisées
+
+J'espère que vous apprécierez cette carte !]]></fr>
+        <fi><![CDATA[Tervetuloa Alliklepaan!
+Alliklepa on mielikuvituksellinen Virolais tyylinen kartta jossa on monia metsiä ja peltoja.
+
+Kartta sisältää:
+38 peltoa ja 15 niittyä.
+8 keskikokoista ja suurta metsäpalstaa.
+5 myyntipaikkaa (kaikki pelin omat tuotteet on myytävissä)
+Päätila jossa on kanala ja navetta.
+
+Puut on tehnyt INF Modding
+
+Muutosloki 1.0.0.1
+- Nurmijärjestelmä päivitetty uusimpaan versioon!
+- mukautettujen rekisterikilpien visuaaliset mukautukset
+
+Toivottavasti pidät tästä kartasta!]]></fi>
+    </description>
+    <iconFilename>icon_Alliklepa.png</iconFilename>
+    <multiplayer supported="true"/>
+    <maps>
+        <map id="SampleModMap" className="Mission00" filename="$dataS/scripts/mission00.lua" configFilename="maps/mapEU.xml" defaultVehiclesXMLFilename="maps/config/vehicles.xml" defaultHandToolsXMLFilename="$data/handTools/hands.xml" defaultPlaceablesXMLFilename="maps/config/placeables.xml" defaultItemsXMLFilename="maps/config/items.xml">
+            <title>
+                <en>Alliklepa</en>
+            </title>
+            <description>
+                <en>Alliklepa is a fictional estonian style map!</en>
+                <de>Alliklepa ist eine fiktive Karte im estnischen Stil!</de>
+                <fr>Alliklepa est une carte fictive de style estonien!</fr>
+                <fi>Alliklepa on kuvitteellinen virolaistyylinen kartta!</fi>
+            </description>
+            <iconFilename>preview.png</iconFilename>
+        </map>
+    </maps>
+    
+	<storeItems>
+        <storeItem xmlFilename="placeables/vehicleShop/vehicleShop.xml"/>
+        <storeItem xmlFilename="placeables/sellAll/sellAll.xml"/>
+        <storeItem xmlFilename="placeables/groceryStore/groceryStore.xml"/>
+        <storeItem xmlFilename="placeables/grainMill/grainMill.xml"/>
+        <storeItem xmlFilename="placeables/bakery/bakery.xml"/>
+        <storeItem xmlFilename="placeables/farm1/chickenBarn/chickenBarn.xml"/>
+        <storeItem xmlFilename="placeables/farm1/farmShed/farmShed.xml"/>
+        <storeItem xmlFilename="placeables/farm1/farmShed/farmShed2.xml"/>
+        <storeItem xmlFilename="placeables/farm1/cowBarn/cowBarnMedium.xml"/>
+        <storeItem xmlFilename="placeables/farm1/farmHouse/farmBuilding01Preplaced.xml"/>
+        <storeItem xmlFilename="placeables/farm1/farmHouse/farmBuilding01.xml"/>
+        <storeItem xmlFilename="placeables/sellingStationWood/sellingStationWood.xml"/>
+        <storeItem xmlFilename="placeables/gasStation/gasStation01.xml"/>
+		<!-- train -->
+        <storeItem xmlFilename="$data/vehicles/train/locomotiveUS/forestryLocomotive.xml"/>
+        <storeItem xmlFilename="$data/vehicles/train/wagonTimberUS/wagonTimberUS.xml"/>
+        <storeItem xmlFilename="$data/vehicles/train/wagonFlatBedUS/wagonFlatBedUS.xml"/>
+		<!-- peat -->
+		<storeItem xmlFilename="placeables/peatProduction/xml/greenHouseGlassLarge.xml"/>
+		<storeItem xmlFilename="placeables/peatProduction/xml/greenHouseGlassMedium.xml"/>
+		<storeItem xmlFilename="placeables/peatProduction/xml/greenHouseGlassSmall.xml"/>
+		<storeItem xmlFilename="placeables/peatProduction/xml/peatFactorySmall.xml"/>
+		<storeItem xmlFilename="placeables/peatProduction/pallet/growthPeat.xml"/>
+    </storeItems>
+	
+	<l10n>
+        <text name="mapItem_vehicleShop">
+            <en>Vehicle Store</en>
+            <de>Fahrzeuggeschäft</de>
+            <fr>Magasin de véhicules</fr>
+			<fi>Konekauppa</fi>
+        </text>
+        <text name="mapItem_sellingStationWood">
+            <en>Selling Station Wood</en>
+            <de>Verkaufe Stationsholz</de>
+            <fr>Station de vente de bois</fr>
+			<fi>Puumyynti</fi>
+        </text>
+        <text name="mapItem_sellAll">
+            <en>Storage Bay</en>
+            <de>Lagerbucht</de>
+            <fr>Baie de stockage</fr>
+			<fi>Varasto</fi>
+        </text>
+        <text name="mapItem_smallStore">
+            <en>Grocery Store</en>
+            <de>Lebensmittelgeschäft</de>
+            <fr>Épicerie</fr>
+			<fi>Kauppa</fi>
+        </text>
+        <text name="mapItem_grainSellPoint">
+            <en>Grain Mill</en>
+            <de>Getreidemühle</de>
+            <fr>Moulin à grains</fr>
+			<fi>Viljamylly</fi>
+        </text>
+        <text name="farmItem_chickenBarn1">
+            <en>Chicken Barn</en>
+            <de>Hühnerstall</de>
+            <fr>Poulailler</fr>
+			<fi>Kanala</fi>
+        </text>
+        <text name="farmItem_farmhouse">
+            <en>Farm House</en>
+            <de>Bauernhof</de>
+            <fr>Maison de ferme</fr>
+			<fi>Maatilantalo</fi>
+        </text>
+        <text name="farmItem_farmShed1">
+            <en>Farm Shed</en>
+            <de>Bauernhofschuppen</de>
+            <fr>Hangar de ferme</fr>
+			<fi>Vaja</fi>
+        </text>
+        <text name="farmItem_barnCowMedium">
+            <en>Cow Barn</en>
+            <de>Kuhstall</de>
+            <fr>Étable à vaches</fr>
+			<fi>Navetta</fi>
+        </text>
+        <text name="farmDeco_objects">
+            <en>Farm Objects</en>
+            <de>Farmobjekte</de>
+            <fr>Objets de la ferme</fr>
+			<fi>Koristeet</fi>
+        </text>
+		<!-- peat -->
+		<text name="fillType_peat">
+            <en>Peat</en>
+            <de>Torf</de>
+            <fr>Tourbe</fr>
+        </text>
+        <text name="fillType_peatDry">
+            <en>Peat Dry</en>
+            <de>Torf trocken</de>
+            <fr>Tourbe sèche</fr>
+        </text>
+        <text name="fillType_peatPallet">
+			<en>Growth Peat Pallet</en>
+			<de>Wachstumstorfpalette</de>
+			<fr>Palette de tourbe de croissance</fr>
+		</text>
+		<text name="shopItem_peatFactorySmall">
+			<en>Peat Factory</en>
+			<de>Torffabrik Klein</de>
+			<fr>Petite usine de tourbe</fr>
+		</text>
+		<!-- lights -->
+	    <text name="action_turnlighton">
+            <en>Turn Light On</en>
+            <de>Licht einschalten</de>
+            <fr>Allumer la lumière</fr>
+			<fi>Valot päälle</fi>
+        </text>
+        <text name="action_turnlightout">
+            <en>Turn Light Off</en>
+            <de>Licht ausschalten</de>
+            <fr>Éteindre la lumière</fr>
+			<fi>Valot pois</fi>
+        </text>
+	    <text name="action_fireon">
+            <en>Light Fire</en>
+            <de>Feuer anzünden</de>
+            <fr>Allumer le feu</fr>
+			<fi>Sytytä tuli</fi>
+        </text>
+        <text name="action_fireout">
+            <en>Extinguish Fire</en>
+            <de>Feuer löschen</de>
+            <fr>Éteindre le feu</fr>
+			<fi>Sammuta tuli</fi>
+        </text>
+		<!-- groundTextures -->
+        <text name="groundType_dirtDark">
+            <en>Dirt Dark</en>
+            <de>Schmutz dunkel</de>
+            <fr>Saleté sombre</fr>
+        </text>
+        <text name="groundType_dirtMedium">
+            <en>Dirt Medium</en>
+            <de>Saleté sombre</de>
+            <fr>Saleté moyenne</fr>
+        </text>
+        <text name="groundType_dirtRough">
+            <en>Dirt Rough</en>
+            <de>Schmutz Rau</de>
+            <fr>Saleté Rugueux</fr>
+        </text>
+        <text name="groundType_gravelDirt">
+            <en>Gravel Dirt</en>
+            <de>Kies Erde</de>
+            <fr>Gravier Terre</fr>
+        </text>
+        <text name="groundType_sandGravel">
+            <en>Sand Gravel</en>
+            <de>Sandkies</de>
+            <fr>Sable Gravier</fr>
+        </text>
+        <text name="groundType_concrete1">
+            <en>Tarmac</en>
+            <de>Asphalt</de>
+            <fr>Macadam</fr>
+        </text>
+        <text name="groundType_concrete2">
+            <en>Tarmac Dirt</en>
+            <de>Asphalt und Erde</de>
+            <fr>Tarmac et terre</fr>
+        </text>
+    </l10n>
+			
+	<dependencies>
+        <dependency>FS25_Peat_Equipment_Pack</dependency>
+        <dependency>FS25_SiloPack</dependency>
+    </dependencies>	
+
+</modDesc>
