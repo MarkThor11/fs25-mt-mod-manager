@@ -2019,9 +2019,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 } catch (_) {}
             }
 
-            const targetDensityRev = isOfficialBaseMap ? '4' : (mapRev || '1');
             const revisionTags = [
-                ['densityMapRevision', targetDensityRev],
                 ['terrainTextureRevision', '1'],
                 ['terrainLodTextureRevision', '2'],
                 ['splitShapesRevision', '2'],
@@ -2036,6 +2034,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 ['mapPlacementCollisionRevision', '1'],
                 ['mapNavigationCollisionRevision', '1']
             ];
+            if (isOfficialBaseMap || hasFruitsGdm) {
+                revisionTags.unshift(['densityMapRevision', isOfficialBaseMap ? '4' : (mapRev || '1')]);
+            }
 
             for (const [tag, val] of revisionTags) {
                 const tagRegex = new RegExp(`<${tag}>.*?<\\/${tag}>`, 'i');
