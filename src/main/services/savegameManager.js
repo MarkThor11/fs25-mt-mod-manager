@@ -6705,7 +6705,10 @@ async function ensureSavegameDensityMaps(savePath) {
                 if (mapId && !isOfficialMap(mapId)) {
                     const modPath = await resolveMapModPath(savePath);
                     if (modPath && fs.existsSync(modPath)) {
-                        await extractMapDensityFiles(modPath, savePath, true, true);
+                        // ONLY extract density files if the save has already been initialized and saved by GIANTS engine!
+                        if (isEngineInitialized) {
+                            await extractMapDensityFiles(modPath, savePath, true, true);
+                        }
 
                         const farmlandPath = path.join(savePath, 'farmland.xml');
                         if (!fs.existsSync(farmlandPath)) {
