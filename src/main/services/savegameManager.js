@@ -6078,6 +6078,21 @@ async function prepareServerModsFolder(slotIndex, savePath) {
                         }
                     }
                     linkedCount++;
+
+                    // Alias support for crossplay / variant mod names (e.g. FS25_Alliklepa_crossplay -> FS25_Alliklepa)
+                    const reqAlias = req.modName.replace(/_(crossplay|pc|unlocked|edit)$/i, '');
+                    if (reqAlias && reqAlias.toLowerCase() !== reqNameLower) {
+                        const aliasPath = path.join(targetFolder, `${reqAlias}.zip`);
+                        if (!fs.existsSync(aliasPath)) {
+                            try {
+                                await fs.link(installed.filePath, aliasPath);
+                            } catch (_) {
+                                try { await fs.symlink(installed.filePath, aliasPath, 'file'); } catch (_) {
+                                    try { await fs.copy(installed.filePath, aliasPath); } catch (_) {}
+                                }
+                            }
+                        }
+                    }
                 } else {
                     mismatchedCount++;
                 }

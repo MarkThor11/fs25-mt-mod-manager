@@ -340,6 +340,25 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 						await fs.symlink(srcPath, destPath, type);
 						linkedCount++;
 						seenFiles.add(name.toLowerCase());
+
+						// Alias support for crossplay / variant mod names (e.g. FS25_Alliklepa_crossplay -> FS25_Alliklepa)
+						const ext = name.toLowerCase().endsWith('.zip') ? '.zip' : '';
+						const baseModName = name.slice(0, name.length - ext.length);
+						const aliasModName = baseModName.replace(/_(crossplay|pc|unlocked|edit)$/i, '');
+						if (aliasModName && aliasModName.toLowerCase() !== baseModName.toLowerCase()) {
+							const aliasDestPath = path.join(virtualPath, aliasModName + ext);
+							if (!fs.existsSync(aliasDestPath)) {
+								try {
+									const type = entry.isDirectory() ? 'junction' : 'file';
+									await fs.symlink(srcPath, aliasDestPath, type);
+									debugLog(`[VIRTUAL] Created alias link: ${aliasModName}${ext} -> ${name}`);
+								} catch (e) {
+									if (!entry.isDirectory()) {
+										try { await fs.link(srcPath, aliasDestPath); } catch (_) {}
+									}
+								}
+							}
+						}
 					} catch (e) {
 						debugLog(`[VIRTUAL] Symlink failed for ${name}: ${e.message}`);
 					}
