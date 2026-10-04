@@ -1447,8 +1447,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             } else {
                 // Kinlaig and custom mod maps: use the map's actual default start from its i3d/config files,
                 // or omit coordinates completely so Giants Engine spawns the player at the author's designated playerStart
-                const defaultSpawn = await getMapDefaultStartCoordinates(slotPath);
-                if (defaultSpawn && defaultSpawn.x !== undefined) {
+                const defaultSpawn = await getMapDefaultStartCoordinates(slotPath, true, engineMapId, mapModName || trueMapModName);
+                if (defaultSpawn && defaultSpawn.x !== undefined && (defaultSpawn.x !== 0 || defaultSpawn.y !== 0 || defaultSpawn.z !== 0)) {
                     savegameData.careerSavegame.player['@_spawnPositionX'] = defaultSpawn.x.toFixed(3);
                     savegameData.careerSavegame.player['@_spawnPositionY'] = defaultSpawn.y.toFixed(3);
                     savegameData.careerSavegame.player['@_spawnPositionZ'] = defaultSpawn.z.toFixed(3);
@@ -1475,7 +1475,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         if (engineMapId === 'MapUS')       spawnForPlayers = { x: -128.0,  y: 49.2,  z: -162.0 };
                         else if (engineMapId === 'MapEU')  spawnForPlayers = { x: -263.0,  y: 60.0,  z: 44.0   };
                         else if (engineMapId === 'MapAS')  spawnForPlayers = { x: -528.8,  y: 19.8,  z: -61.1  };
-                        else spawnForPlayers = await getMapDefaultStartCoordinates(slotPath);
+                        else spawnForPlayers = await getMapDefaultStartCoordinates(slotPath, true, engineMapId, mapModName || trueMapModName);
 
                         for (const p of plist) {
                             if (spawnForPlayers && spawnForPlayers.x !== undefined) {
@@ -4151,25 +4151,29 @@ async function repairSavegameMapId(savePath) {
     }
 }
 
-async function getMapDefaultStartCoordinates(savePath, allowFallback = true) {
+async function getMapDefaultStartCoordinates(savePath, allowFallback = true, fallbackMapId = null, fallbackMapModName = null) {
     try {
         const fs = require('fs-extra');
         const path = require('path');
         const { XMLParser } = require('fast-xml-parser');
         
+        let mapId = fallbackMapId;
+        let mapTitle = null;
+        let mapModName = fallbackMapModName;
+
         const careerPath = path.join(savePath, 'careerSavegame.xml');
-        if (!fs.existsSync(careerPath)) return { x: 0, y: 0, z: 0 };
+        if (fs.existsSync(careerPath)) {
+            try {
+                const xmlData = fs.readFileSync(careerPath, 'utf8');
+                const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
+                const obj = parser.parse(xmlData);
+                if (obj && obj.careerSavegame && obj.careerSavegame.settings) {
+                    mapId = obj.careerSavegame.settings.mapId || mapId;
+                    mapTitle = obj.careerSavegame.settings.mapTitle || mapTitle;
+                }
+            } catch (_) {}
+        }
         
-        const xmlData = fs.readFileSync(careerPath, 'utf8');
-        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
-        const obj = parser.parse(xmlData);
-        if (!obj || !obj.careerSavegame) return { x: 0, y: 0, z: 0 };
-        
-        const settings = obj.careerSavegame.settings || {};
-        const mapId = settings.mapId;
-        const mapTitle = settings.mapTitle;
-        
-        let mapModName = null;
         if (mapId && mapId.includes('.')) {
             mapModName = mapId.split('.')[0];
         }
