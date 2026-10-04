@@ -1780,13 +1780,13 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    // Extract author starting density maps, infoLayers, and fields.xml from map mod ZIP
-                    // NOTE (Option B): Extract densityMap_fruits.gdm AND synthesize valid <growthState version="1">
-                    // companion XMLs so GIANTS Engine preserves author field crops without zeroing growth stages.
+                    // Extract author starting density infoLayers and fields.xml from map mod ZIP
+                    // NOTE: Do NOT extract densityMap_fruits.gdm or inject artificial revision tags / growthState XMLs
+                    // into fresh save slots. Letting GIANTS Engine perform native initial seeding preserves crop growth and ground layers.
                     if (modZipPath && fs.existsSync(modZipPath)) {
                         try {
-                            const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, false);
-                            console.log(`[CREATE] Extracted ${extractedCount} starting density/infoLayer files into slot ${savegameIndex}`);
+                            const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, true);
+                            console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer files into slot ${savegameIndex}`);
 
                             // Also extract fields.xml from map ZIP if available and not yet extracted
                             if (!fs.existsSync(path.join(slotPath, 'fields.xml'))) {
@@ -1799,19 +1799,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                                         console.log(`[CREATE] Extracted author fields.xml from map ZIP`);
                                     }
                                 }
-                            }
-
-                            // Write compliant foliageCropsUpdater / densityMapUpdater companion growth state XMLs for GDM layers
-                            if (fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'))) {
-                                const fruitsGrowth = `<?xml version="1.0" encoding="iso-8859-1"?>\n<foliageCropsUpdater currentGrowthIndex="0" applyGrowthCurrentIndex="4294967295" applyGrowthMaxTimePerFrame="0.000000">\n  <growthMasks64 numCells="16384"><![CDATA[XQAAEAAAf+/7v/6jsV7l+D+yqiZV+GhwQXAVD439HkwbikK3GfRpGHGuZiOKik0vow3Zf6bjjCMRU+BZGMV1iuJ3+LaUfwxqwN50SWTi6VxTsgTY90QMq1nkPx4AAA==]]></growthMasks64>\n</foliageCropsUpdater>\n`;
-                                const densityUpdater = `<?xml version="1.0" encoding="iso-8859-1"?>\n<densityMapUpdater updateCycleTime="0.000000" currentUpdateTime="0.000000" currentUpdateIndex="-1" numCellsToUpdate="0.000000" applyUpdateCurrentIndex="-1" applyUpdateMaxTimePerFrame="0.000000">\n</densityMapUpdater>\n`;
-                                await fs.writeFile(path.join(slotPath, 'densityMap_fruits_growthState.xml'), fruitsGrowth, 'utf8');
-                                await fs.writeFile(path.join(slotPath, 'weed_growthState.xml'), densityUpdater, 'utf8');
-                                await fs.writeFile(path.join(slotPath, 'stone_growthState.xml'), densityUpdater, 'utf8');
-                                if (fs.existsSync(path.join(slotPath, 'densityMap_peat.gdm'))) {
-                                    await fs.writeFile(path.join(slotPath, 'densityMap_peat_growthState.xml'), fruitsGrowth, 'utf8');
-                                }
-                                console.log(`[CREATE] Generated FS25 foliageCropsUpdater growthState companion XMLs in slot ${savegameIndex}`);
                             }
                         } catch (dErr) {
                             console.warn('[CREATE] Failed to extract map density files:', dErr.message);
