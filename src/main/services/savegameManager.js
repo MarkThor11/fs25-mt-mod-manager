@@ -6658,34 +6658,23 @@ async function ensureSavegameDensityMaps(savePath) {
     try {
         const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
 
-        // If the save slot has not been initialized/saved by GIANTS Engine yet, do not inject density files,
-        // revisions, or growth XMLs. Doing so corrupts engine initialization and causes fields to reset to cultivated dirt.
+        // If densityMap_fruits.gdm is missing, extract density maps directly from the map mod ZIP
         if (!hasFruitsGdm) {
-            console.log(`[DENSITY-CHECK] Save slot at ${savePath} is missing densityMap_fruits.gdm. Wiping partial terrain files to force native engine initialization.`);
-            
-            // Delete partial terrain files that trick the engine into bypassing crop initialization
-            const filesToWipe = ['terrain.heightmap.png', 'densityMap_ground.gdm', 'densityMap_groundFoliage.gdm', 'densityMap_weed.gdm', 'densityMap_stones.gdm'];
-            for (const f of filesToWipe) {
-                const p = path.join(savePath, f);
-                if (fs.existsSync(p)) {
-                    try { await fs.remove(p); } catch(e){}
+            console.log(`[DENSITY-CHECK] Save slot at ${savePath} is missing densityMap_fruits.gdm. Extracting density maps from map mod...`);
+            const mapModPath = await resolveMapModPath(savePath);
+            if (mapModPath && fs.existsSync(mapModPath)) {
+                const extracted = await extractMapDensityFiles(mapModPath, savePath, true, false);
+                console.log(`[DENSITY-CHECK] Extracted ${extracted} density/infoLayer files into ${savePath}`);
+            } else {
+                console.log(`[DENSITY-CHECK] Map mod path not found for ${savePath}. Wiping partial terrain files to force native engine initialization.`);
+                const filesToWipe = ['terrain.heightmap.png', 'densityMap_ground.gdm', 'densityMap_groundFoliage.gdm', 'densityMap_weed.gdm', 'densityMap_stones.gdm'];
+                for (const f of filesToWipe) {
+                    const p = path.join(savePath, f);
+                    if (fs.existsSync(p)) {
+                        try { await fs.remove(p); } catch(e){}
+                    }
                 }
             }
-
-            // Also strip densityMapRevision from careerSavegame.xml
-            const careerPath = path.join(savePath, 'careerSavegame.xml');
-            if (fs.existsSync(careerPath)) {
-                try {
-                    let careerXml = await fs.readFile(careerPath, 'utf8');
-                    const revRegex = /<(?:densityMapRevision|mapDensityMapRevision)>.*?<\/(?:densityMapRevision|mapDensityMapRevision)>\r?\n?/gi;
-                    if (revRegex.test(careerXml)) {
-                        careerXml = careerXml.replace(revRegex, '');
-                        await fs.writeFile(careerPath, careerXml);
-                    }
-                } catch(e) {}
-            }
-            
-            return 0;
         }
 
         // 1. Ensure foliage growth state updater XML files exist ONLY when densityMap_fruits.gdm is present
