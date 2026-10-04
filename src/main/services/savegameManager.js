@@ -1763,34 +1763,38 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     };
 
                     // Extract template starting XML files for all custom map saves (excluding fields.xml so engine seeds crops natively)
-                    if (includeStartVehicles && defaultVehiclesFile) await extractExactZipFile(defaultVehiclesFile, 'vehicles.xml');
-                    if (defaultPlaceablesFile) await extractExactZipFile(defaultPlaceablesFile, 'placeables.xml');
-                    if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
-                    if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
-                    if (farmlandsFile) await extractExactZipFile(farmlandsFile, 'farmland.xml');
+                    // NOTE: Do NOT extract these into fresh uninitialized save slots, as their presence tricks the GIANTS Engine
+                    // into bypassing the New Savegame Bootstrapper, which breaks native crop seeding and causes bare dirt fields.
+                    if (!requiresEngineInit) {
+                        if (includeStartVehicles && defaultVehiclesFile) await extractExactZipFile(defaultVehiclesFile, 'vehicles.xml');
+                        if (defaultPlaceablesFile) await extractExactZipFile(defaultPlaceablesFile, 'placeables.xml');
+                        if (defaultItemsFile) await extractExactZipFile(defaultItemsFile, 'items.xml');
+                        if (defaultHandToolsFile) await extractExactZipFile(defaultHandToolsFile, 'handTools.xml');
+                        if (farmlandsFile) await extractExactZipFile(farmlandsFile, 'farmland.xml');
 
-                    // Fallback extraction for starting XML files if missing
-                    for (const [targetXml, destName] of [
-                        ['placeables.xml', 'placeables.xml'],
-                        ['items.xml', 'items.xml'],
-                        ['handTools.xml', 'handTools.xml'],
-                        ['farmlands.xml', 'farmland.xml'],
-                        ['farmland.xml', 'farmland.xml']
-                    ]) {
-                        if (!fs.existsSync(path.join(slotPath, destName))) {
-                            const entry = entryByBaseName.get(targetXml);
-                            if (entry) {
-                                await fs.writeFile(path.join(slotPath, destName), entry.getData());
-                                console.log(`[CREATE] Fast fallback extracted ${entry.entryName} -> ${destName}`);
+                        // Fallback extraction for starting XML files if missing
+                        for (const [targetXml, destName] of [
+                            ['placeables.xml', 'placeables.xml'],
+                            ['items.xml', 'items.xml'],
+                            ['handTools.xml', 'handTools.xml'],
+                            ['farmlands.xml', 'farmland.xml'],
+                            ['farmland.xml', 'farmland.xml']
+                        ]) {
+                            if (!fs.existsSync(path.join(slotPath, destName))) {
+                                const entry = entryByBaseName.get(targetXml);
+                                if (entry) {
+                                    await fs.writeFile(path.join(slotPath, destName), entry.getData());
+                                    console.log(`[CREATE] Fast fallback extracted ${entry.entryName} -> ${destName}`);
+                                }
                             }
                         }
-                    }
 
-                    if (includeStartVehicles && !fs.existsSync(path.join(slotPath, 'vehicles.xml'))) {
-                        const entry = entryByBaseName.get('vehicles.xml');
-                        if (entry) {
-                            await fs.writeFile(path.join(slotPath, 'vehicles.xml'), entry.getData());
-                            console.log(`[CREATE] Fast fallback extracted vehicles.xml`);
+                        if (includeStartVehicles && !fs.existsSync(path.join(slotPath, 'vehicles.xml'))) {
+                            const entry = entryByBaseName.get('vehicles.xml');
+                            if (entry) {
+                                await fs.writeFile(path.join(slotPath, 'vehicles.xml'), entry.getData());
+                                console.log(`[CREATE] Fast fallback extracted vehicles.xml`);
+                            }
                         }
                     }
 
@@ -6728,10 +6732,6 @@ async function ensureSavegameDensityMaps(savePath) {
                 if (mapId && !isOfficialMap(mapId)) {
                     const modPath = await resolveMapModPath(savePath);
                     if (modPath && fs.existsSync(modPath)) {
-                        // ONLY extract density files if the save has already been initialized and saved by GIANTS engine!
-                        if (isEngineInitialized) {
-                            await extractMapDensityFiles(modPath, savePath, true, true);
-                        }
 
                         const farmlandPath = path.join(savePath, 'farmland.xml');
                         if (!fs.existsSync(farmlandPath)) {
