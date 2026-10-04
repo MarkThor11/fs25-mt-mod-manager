@@ -1027,26 +1027,29 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         const tLow = (title || '').toLowerCase();
         
         // Pass 0: Direct filesystem lookup by mapModName — fastest and most reliable even with cold cache
-        const modsRootForDirect = pathProvider.getDefaultModsPath();
+        // Pass 0: Direct filesystem lookup by mapModName across all configured mod paths (e.g. drive F:)
         if (name) {
-            const directZip = path.join(modsRootForDirect, `${name}.zip`);
-            if (fs.existsSync(directZip) && fs.statSync(directZip).size > 0) {
-                console.log(`[CREATE] Direct mod ZIP resolved: ${directZip}`);
-                return directZip;
-            }
-            // Also search one level deep in subfolders (map packs often live in their own folder)
-            try {
-                const subFolders = fs.readdirSync(modsRootForDirect, { withFileTypes: true })
-                    .filter(d => d.isDirectory())
-                    .map(d => d.name);
-                for (const sub of subFolders) {
-                    const subZip = path.join(modsRootForDirect, sub, `${name}.zip`);
-                    if (fs.existsSync(subZip) && fs.statSync(subZip).size > 0) {
-                        console.log(`[CREATE] Direct mod ZIP resolved in subfolder: ${subZip}`);
-                        return subZip;
-                    }
+            const allModsDirs = typeof modManager.getModsPaths === 'function' ? modManager.getModsPaths() : [pathProvider.getDefaultModsPath()];
+            for (const modsDir of allModsDirs) {
+                if (!modsDir || !fs.existsSync(modsDir)) continue;
+                const directZip = path.join(modsDir, `${name}.zip`);
+                if (fs.existsSync(directZip) && fs.statSync(directZip).size > 0) {
+                    console.log(`[CREATE] Direct mod ZIP resolved: ${directZip}`);
+                    return directZip;
                 }
-            } catch (_) {}
+                try {
+                    const subFolders = fs.readdirSync(modsDir, { withFileTypes: true })
+                        .filter(d => d.isDirectory())
+                        .map(d => d.name);
+                    for (const sub of subFolders) {
+                        const subZip = path.join(modsDir, sub, `${name}.zip`);
+                        if (fs.existsSync(subZip) && fs.statSync(subZip).size > 0) {
+                            console.log(`[CREATE] Direct mod ZIP resolved in subfolder: ${subZip}`);
+                            return subZip;
+                        }
+                    }
+                } catch (_) {}
+            }
         }
 
         // Pass 1: Match by exact mod name or file basename (unique per mod)
