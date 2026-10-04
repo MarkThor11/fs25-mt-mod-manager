@@ -1780,8 +1780,28 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         }
                     }
 
-                    // For fresh mod map saves without a template, do not extract density maps or fields.xml.
-                    // The engine initializes the map and crops natively from the map mod ZIP.
+                    // Extract author starting density maps, infoLayers, and fields.xml from map mod ZIP
+                    if (modZipPath && fs.existsSync(modZipPath)) {
+                        try {
+                            const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, false);
+                            console.log(`[CREATE] Extracted ${extractedCount} starting density/infoLayer files into slot ${savegameIndex}`);
+
+                            // Also extract fields.xml from map ZIP if available and not yet extracted
+                            if (!fs.existsSync(path.join(slotPath, 'fields.xml'))) {
+                                if (fieldsFile) {
+                                    await extractExactZipFile(fieldsFile, 'fields.xml');
+                                } else {
+                                    const fEntry = entryByBaseName.get('fields.xml');
+                                    if (fEntry) {
+                                        await fs.writeFile(path.join(slotPath, 'fields.xml'), fEntry.getData());
+                                        console.log(`[CREATE] Extracted author fields.xml from map ZIP`);
+                                    }
+                                }
+                            }
+                        } catch (dErr) {
+                            console.warn('[CREATE] Failed to extract map density files:', dErr.message);
+                        }
+                    }
 
                     // Extract pre-rendered terrain.occluders.cache from map mod ZIP to prevent 55% load hang
                     if (modZipPath && fs.existsSync(modZipPath)) {
@@ -1800,8 +1820,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                             console.warn('[CREATE] Occluder extraction warning:', occErr.message);
                         }
                     }
-
-
 
                     // If starting farm or vehicles is disabled, strip farm 1 vehicles
                     if (!includeStartFarm || !includeStartVehicles) {
@@ -1975,28 +1993,38 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         }
 
         // Ensure careerSavegame.xml density map revisions are consistent with densityMap_fruits.gdm.
-        // Skip this entirely for first-run (no-template) slots — we deliberately left
-        // densityMapRevision absent so the engine does a proper crop init from the map ZIP.
-        if (!requiresEngineInit) {
-            const finalCareerPath = path.join(slotPath, 'careerSavegame.xml');
-            if (fs.existsSync(finalCareerPath)) {
-                let fcXml = await fs.readFile(finalCareerPath, 'utf8');
-                const hasFruitsGdm = fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'));
-                if (hasFruitsGdm) {
-                    if (!fcXml.includes('<densityMapRevision>')) {
-                        fcXml = fcXml.replace(/<settings>/i, '<settings>\n        <densityMapRevision>4</densityMapRevision>\n        <mapDensityMapRevision>1</mapDensityMapRevision>');
-                        await fs.writeFile(finalCareerPath, fcXml, 'utf8');
-                    } else if (fcXml.includes('<densityMapRevision>1</densityMapRevision>')) {
-                        fcXml = fcXml.replace(/<densityMapRevision>1<\/densityMapRevision>/g, '<densityMapRevision>4</densityMapRevision>');
-                        await fs.writeFile(finalCareerPath, fcXml, 'utf8');
-                    }
-                } else {
-                    const densityRevRegex = /<(?:densityMapRevision|mapDensityMapRevision)>.*?<\/(?:densityMapRevision|mapDensityMapRevision)>\r?\n?/gi;
-                    if (densityRevRegex.test(fcXml)) {
-                        fcXml = fcXml.replace(densityRevRegex, '');
-                        await fs.writeFile(finalCareerPath, fcXml, 'utf8');
-                    }
+        const finalCareerPath = path.join(slotPath, 'careerSavegame.xml');
+        if (fs.existsSync(finalCareerPath)) {
+            let fcXml = await fs.readFile(finalCareerPath, 'utf8');
+            const hasFruitsGdm = fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'));
+            if (hasFruitsGdm) {
+                let mapRev = '1';
+                if (modZipPath && fs.existsSync(modZipPath)) {
+                    try {
+                        const AdmZip = require('adm-zip');
+                        const zip = new AdmZip(modZipPath);
+                        const mapEntry = zip.getEntries().find(e => {
+                            const norm = e.entryName.toLowerCase();
+                            return norm.endsWith('.xml') && !norm.includes('sound') && !norm.includes('moddesc') && (
+                                norm.endsWith('map.xml') || norm.endsWith('mapeu.xml') || norm.endsWith('mapus.xml') || 
+                                norm.endsWith('mapas.xml') || norm.includes('map')
+                            );
+                        });
+                        if (mapEntry) {
+                            const xml = mapEntry.getData().toString('utf8');
+                            const m = xml.match(/<densityMap\s+[^>]*revision=["'](\d+)["']/i);
+                            if (m) mapRev = m[1];
+                        }
+                    } catch (_) {}
                 }
+
+                if (!fcXml.includes('<densityMapRevision>')) {
+                    fcXml = fcXml.replace(/<settings>/i, `<settings>\n        <densityMapRevision>1</densityMapRevision>\n        <mapDensityMapRevision>${mapRev}</mapDensityMapRevision>`);
+                }
+                if (!fcXml.includes('<mapDensityMapRevision>')) {
+                    fcXml = fcXml.replace(/<settings>/i, `<settings>\n        <mapDensityMapRevision>${mapRev}</mapDensityMapRevision>`);
+                }
+                await fs.writeFile(finalCareerPath, fcXml, 'utf8');
             }
         }
     } catch (_) {}
@@ -6618,11 +6646,12 @@ async function ensureSavegameDensityMaps(savePath) {
                         modified = true;
                     }
                 } else {
-                    if (curRev !== '4' || !careerXml.includes('<densityMapRevision>')) {
+                    const targetDensityRev = isOfficialMap(mapId) ? '4' : '1';
+                    if (curRev !== targetDensityRev || !careerXml.includes('<densityMapRevision>')) {
                         if (careerXml.includes('<densityMapRevision>')) {
-                            careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>4</densityMapRevision>`);
+                            careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>${targetDensityRev}</densityMapRevision>`);
                         } else {
-                            careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <densityMapRevision>4</densityMapRevision>`);
+                            careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <densityMapRevision>${targetDensityRev}</densityMapRevision>`);
                         }
                         modified = true;
                     }
@@ -6638,7 +6667,7 @@ async function ensureSavegameDensityMaps(savePath) {
 
                 if (modified) {
                     await fs.writeFile(careerPath, careerXml);
-                    console.log(`[DENSITY-CHECK] Ensured density revisions (densityMapRevision=4, mapDensityMapRevision=${expectedRev}) in ${savePath}`);
+                    console.log(`[DENSITY-CHECK] Ensured density revisions (densityMapRevision=${isOfficialMap(mapId) ? '4' : '1'}, mapDensityMapRevision=${expectedRev}) in ${savePath}`);
                 }
 
                 // 5. Remove leftover Precision Farming files if Precision Farming mod is not active
