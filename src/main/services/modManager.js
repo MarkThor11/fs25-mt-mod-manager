@@ -597,21 +597,6 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 			const entries = zip.getEntries();
 			for (const entry of entries) {
 				const entryNameLower = entry.entryName.toLowerCase();
-
-				// Auto-fix broken relative paths in map i3d/xml files pointing to missing external mod names (e.g. ../../FS25_Alliklepa/maps/terrain/ -> terrain/)
-				if (entryNameLower.endsWith('.i3d') || entryNameLower.endsWith('.xml')) {
-					try {
-						let textContent = entry.getData().toString('utf8');
-						const badPathRegex = /\.\.\/\.\.\/[A-Za-z0-9_]+\/maps\/terrain\//g;
-						if (badPathRegex.test(textContent)) {
-							debugLog(`[MAP-PATCH] Fixing broken external map directory path in ${entry.entryName} of ${path.basename(mapPath)}`);
-							textContent = textContent.replace(badPathRegex, 'terrain/');
-							zip.updateFile(entry.entryName, Buffer.from(textContent, 'utf8'));
-							patched = true;
-						}
-					} catch (_) {}
-				}
-
 				if (!entryNameLower.endsWith('.xml')) continue;
 
 				let xmlText = entry.getData().toString('utf8');
