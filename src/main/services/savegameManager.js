@@ -6634,7 +6634,7 @@ async function resolveMapModPath(savePath) {
 
         const modManager = require('./modManager');
         const { mods: allMods } = await modManager.scanLocalMods();
-        const mapMod = allMods.find(m => m.isMap && (
+        const mapMod = findMapModInSavegame(xmlContent, allMods) || allMods.find(m => m.isMap && (
             (m.modName && m.modName.toLowerCase() === mapModName.toLowerCase()) ||
             (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === mapModName.toLowerCase())
         ));
