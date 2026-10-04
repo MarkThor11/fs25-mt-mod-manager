@@ -1781,12 +1781,12 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     }
 
                     // Extract author starting density maps, infoLayers, and fields.xml from map mod ZIP
-                    // NOTE: Pass skipGdm=true for fresh slots so densityMap_fruits.gdm is NOT extracted.
-                    // This allows GIANTS Engine to treat the slot as truly new, seeding crops from fields.xml natively.
+                    // NOTE (Option B): Extract densityMap_fruits.gdm AND synthesize valid <growthState version="1">
+                    // companion XMLs so GIANTS Engine preserves author field crops without zeroing growth stages.
                     if (modZipPath && fs.existsSync(modZipPath)) {
                         try {
-                            const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, true);
-                            console.log(`[CREATE] Extracted ${extractedCount} starting infoLayer/ground files into slot ${savegameIndex}`);
+                            const extractedCount = await extractMapDensityFiles(modZipPath, slotPath, false, false);
+                            console.log(`[CREATE] Extracted ${extractedCount} starting density/infoLayer files into slot ${savegameIndex}`);
 
                             // Also extract fields.xml from map ZIP if available and not yet extracted
                             if (!fs.existsSync(path.join(slotPath, 'fields.xml'))) {
@@ -1799,6 +1799,21 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                                         console.log(`[CREATE] Extracted author fields.xml from map ZIP`);
                                     }
                                 }
+                            }
+
+                            // Write compliant version="1" companion growth state XMLs for GDM layers
+                            if (fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'))) {
+                                const fruitsGrowth = `<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<growthState version="1">\n    <fruits/>\n</growthState>\n`;
+                                const weedGrowth = `<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<growthState version="1">\n    <weeds/>\n</growthState>\n`;
+                                const stoneGrowth = `<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<growthState version="1">\n    <stones/>\n</growthState>\n`;
+                                await fs.writeFile(path.join(slotPath, 'densityMap_fruits_growthState.xml'), fruitsGrowth, 'utf8');
+                                await fs.writeFile(path.join(slotPath, 'weed_growthState.xml'), weedGrowth, 'utf8');
+                                await fs.writeFile(path.join(slotPath, 'stone_growthState.xml'), stoneGrowth, 'utf8');
+                                if (fs.existsSync(path.join(slotPath, 'densityMap_peat.gdm'))) {
+                                    const peatGrowth = `<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<growthState version="1">\n    <peat/>\n</growthState>\n`;
+                                    await fs.writeFile(path.join(slotPath, 'densityMap_peat_growthState.xml'), peatGrowth, 'utf8');
+                                }
+                                console.log(`[CREATE] Generated compliant version="1" growthState companion XMLs in slot ${savegameIndex}`);
                             }
                         } catch (dErr) {
                             console.warn('[CREATE] Failed to extract map density files:', dErr.message);
@@ -1984,10 +1999,11 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     // NOTE: Strictly preserve genuine densityMap_fruits.gdm, fields.xml, terrain.occluders.cache,
     // vehicleNavigationCostmap.dat, info layers, split shapes, and placeables.
     try {
+        const hasFruits = fs.existsSync(path.join(slotPath, 'densityMap_fruits.gdm'));
         const remainingFiles = await fs.readdir(slotPath);
         for (const file of remainingFiles) {
             const lower = file.toLowerCase();
-            const isStaleGrowth = lower.endsWith('growthstate.xml') || lower === 'densitymapheight.xml' || lower === 'densitymap_height.gdm' || lower.includes('broken14');
+            const isStaleGrowth = (!hasFruits && lower.endsWith('growthstate.xml')) || lower === 'densitymapheight.xml' || lower === 'densitymap_height.gdm' || lower.includes('broken14');
             const isPf = lower.startsWith('precisionfarming') && !finalMods.some(m => (m?.modName || '').toLowerCase().includes('precisionfarming'));
             if (isStaleGrowth || isPf) {
                 await fs.remove(path.join(slotPath, file)).catch(() => {});
@@ -2020,8 +2036,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     } catch (_) {}
                 }
 
+                const targetDensityRev = isOfficialBaseMap ? '4' : '1';
                 const revisionTags = [
-                    ['densityMapRevision', '4'],
+                    ['densityMapRevision', targetDensityRev],
                     ['terrainTextureRevision', '1'],
                     ['terrainLodTextureRevision', '2'],
                     ['splitShapesRevision', '2'],
@@ -6627,9 +6644,28 @@ async function ensureSavegameDensityMaps(savePath) {
             const growthXmlPath = path.join(savePath, 'densityMap_fruits_growthState.xml');
             if (!fs.existsSync(growthXmlPath)) {
                 try {
-                    const defaultGrowthXml = `<?xml version="1.0" encoding="iso-8859-1"?>\n<foliageCropsUpdater currentGrowthIndex="0" applyGrowthCurrentIndex="4294967295" applyGrowthMaxTimePerFrame="0.000000">\n  <growthMasks64 numCells="16384"><![CDATA[XQAAEAAAf+/7v/6jsV7l+D+yqiZV+GhwQXAVD439HkwbikK3GfRpGHGuZiOKik0vow3Zf6bjjCMRU+BZGMV1iuJ3+LaUfwxqwN50SWTi6VxTsgTY90QMq1nkPx4AAA==]]></growthMasks64>\n</foliageCropsUpdater>`;
+                    const defaultGrowthXml = `<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<growthState version="1">\n    <fruits/>\n</growthState>\n`;
                     await fs.writeFile(growthXmlPath, defaultGrowthXml, 'utf8');
                     console.log(`[DENSITY-CHECK] Created default densityMap_fruits_growthState.xml in ${savePath}`);
+                } catch (e) {}
+            }
+            const weedGrowthPath = path.join(savePath, 'weed_growthState.xml');
+            if (!fs.existsSync(weedGrowthPath)) {
+                try {
+                    await fs.writeFile(weedGrowthPath, `<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<growthState version="1">\n    <weeds/>\n</growthState>\n`, 'utf8');
+                } catch (e) {}
+            }
+            const stoneGrowthPath = path.join(savePath, 'stone_growthState.xml');
+            if (!fs.existsSync(stoneGrowthPath)) {
+                try {
+                    await fs.writeFile(stoneGrowthPath, `<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<growthState version="1">\n    <stones/>\n</growthState>\n`, 'utf8');
+                } catch (e) {}
+            }
+            const peatGdmPath = path.join(savePath, 'densityMap_peat.gdm');
+            const peatGrowthPath = path.join(savePath, 'densityMap_peat_growthState.xml');
+            if (fs.existsSync(peatGdmPath) && !fs.existsSync(peatGrowthPath)) {
+                try {
+                    await fs.writeFile(peatGrowthPath, `<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<growthState version="1">\n    <peat/>\n</growthState>\n`, 'utf8');
                 } catch (e) {}
             }
         } else {
