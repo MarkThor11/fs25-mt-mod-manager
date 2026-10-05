@@ -2685,6 +2685,21 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 </div>
               )}
 
+              {!isPlaying && !isRecentlyExited && save.hasTemplate && (
+                <div style={{ 
+                  background: 'rgba(var(--accent-rgb), 0.25)', 
+                  border: '1px solid var(--accent)',
+                  color: 'var(--accent)', 
+                  fontSize: 10, 
+                  fontWeight: 900, 
+                  padding: '3px 8px', 
+                  borderRadius: 5, 
+                  letterSpacing: 0.5, 
+                  boxShadow: '0 0 10px rgba(var(--accent-rgb), 0.4)' 
+                }}>
+                  AUTOMATED
+                </div>
+              )}
               {!isPlaying && !isRecentlyExited && !save.hasTemplate && !save.isInitialized && (
                 <div style={{ 
                   background: 'var(--accent)', 
@@ -2710,7 +2725,6 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ fontWeight: 800, fontSize: '1.25rem', color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>{save.farmName}</div>
-                        <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', background: 'rgba(var(--accent-rgb), 0.2)', padding: '2px 8px', borderRadius: 4, border: '1px solid var(--accent-dim)' }}>FARM #{save.index}</span>
                     </div>
                 )}
                 {/* Line 2: Map & Creator */}
