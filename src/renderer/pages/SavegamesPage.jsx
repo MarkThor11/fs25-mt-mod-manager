@@ -2685,34 +2685,35 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 </div>
               )}
 
-              {!isPlaying && !isRecentlyExited && save.hasTemplate && (
-                <div style={{ 
-                  background: 'rgba(var(--accent-rgb), 0.25)', 
-                  border: '1px solid var(--accent)',
-                  color: 'var(--accent)', 
-                  fontSize: 10, 
-                  fontWeight: 900, 
-                  padding: '3px 8px', 
-                  borderRadius: 5, 
-                  letterSpacing: 0.5, 
-                  boxShadow: '0 0 10px rgba(var(--accent-rgb), 0.4)' 
-                }}>
-                  AUTOMATED
-                </div>
-              )}
-              {!isPlaying && !isRecentlyExited && !save.hasTemplate && !save.isInitialized && (
-                <div style={{ 
-                  background: 'var(--accent)', 
-                  color: 'white', 
-                  fontSize: 10, 
-                  fontWeight: 900, 
-                  padding: '3px 8px', 
-                  borderRadius: 5, 
-                  letterSpacing: 0.5, 
-                  boxShadow: '0 0 10px var(--accent)' 
-                }}>
-                  READY FOR FIRST LAUNCH
-                </div>
+              {!isPlaying && !isRecentlyExited && (
+                save.hasTemplate ? (
+                  <div style={{ 
+                    background: 'rgba(var(--accent-rgb), 0.25)', 
+                    border: '1px solid var(--accent)',
+                    color: 'var(--accent)', 
+                    fontSize: 10, 
+                    fontWeight: 900, 
+                    padding: '3px 8px', 
+                    borderRadius: 5, 
+                    letterSpacing: 0.5, 
+                    boxShadow: '0 0 10px rgba(var(--accent-rgb), 0.4)' 
+                  }}>
+                    AUTOMATED
+                  </div>
+                ) : (
+                  <div style={{ 
+                    background: 'var(--accent)', 
+                    color: 'white', 
+                    fontSize: 10, 
+                    fontWeight: 900, 
+                    padding: '3px 8px', 
+                    borderRadius: 5, 
+                    letterSpacing: 0.5, 
+                    boxShadow: '0 0 10px var(--accent)' 
+                  }}>
+                    READY FOR FIRST LAUNCH
+                  </div>
+                )
               )}
             </div>
             <div style={{ flex: 1, zIndex: 1, paddingLeft: 34, paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
