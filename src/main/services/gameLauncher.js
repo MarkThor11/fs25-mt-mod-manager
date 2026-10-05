@@ -317,8 +317,7 @@ async function launch(options = {}) {
     if (isServerSave) {
       console.log(`[LAUNCH] Savegame ${options.savegameIndex} is a Multiplayer Server save. Bypassing singleplayer autoStart so game launches to Multiplayer menu.`);
     } else if (needsManualInit) {
-      console.log(`[LAUNCH] Savegame ${options.savegameIndex} is pre-populated for first launch. Passing -autoStartSavegameId ${options.savegameIndex} to open Career selection menu directly to this slot.`);
-      args.push('-autoStartSavegameId', String(options.savegameIndex));
+      console.log(`[LAUNCH] Savegame ${options.savegameIndex} is pre-populated for first launch. Opening game menu so player can select and load pre-filled slot.`);
     } else {
       console.log(`[LAUNCH] Target savegame ${options.savegameIndex} auto-starting into map.`);
       if (options.autoStart !== false) {
@@ -337,7 +336,7 @@ async function launch(options = {}) {
     }
   }
 
-  if (options.autoStart && !args.includes('-autoStart')) {
+  if (options.autoStart && !needsManualInit && !args.includes('-autoStart')) {
     args.push('-autoStart');
   }
 
