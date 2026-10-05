@@ -2685,7 +2685,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 </div>
               )}
 
-              {!isPlaying && !isRecentlyExited && save.hasTemplate && (
+              {!isPlaying && !isRecentlyExited && save.hasTemplate && save.isInitialized && (
                 <div style={{ 
                   background: 'rgba(var(--accent-rgb), 0.25)', 
                   border: '1px solid var(--accent)',
@@ -2700,7 +2700,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                   AUTOMATED
                 </div>
               )}
-              {!isPlaying && !isRecentlyExited && !save.hasTemplate && !save.isInitialized && (
+              {!isPlaying && !isRecentlyExited && !save.isInitialized && (
                 <div style={{ 
                   background: 'var(--accent)', 
                   color: 'white', 
