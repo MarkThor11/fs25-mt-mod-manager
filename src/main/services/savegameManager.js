@@ -1676,12 +1676,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     await fs.writeFile(careerPath, xmlOutput);
 
-    // Configure starting farmlands for pre-initialized save templates only.
-    // For fresh uninitialized saves (requiresEngineInit === true), omit farmland.xml so GIANTS Engine initializes farmlands & crops natively from map ZIP.
-    if (!requiresEngineInit) {
-        await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
-    }
-
     // Map ZIP is handed to GIANTS Engine 100% untouched as an installed mod.
     // No ZIP opening or file extraction is performed by the manager.
 
@@ -1748,8 +1742,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         console.warn('[CREATE] Failed to scan placeables for required mods:', placeErr.message);
     }
 
-    // Configure starting farmlands for the savegame
-    await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
+    // Configure starting farmlands for pre-initialized save templates only
+    if (!requiresEngineInit) {
+        await setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModName, includeStartFarm);
+    }
 
     if (requiresEngineInit || !fs.existsSync(path.join(slotPath, 'farms.xml'))) {
         const realUserId = await getPersistentUniqueUserId(fs25Path);
