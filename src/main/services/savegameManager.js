@@ -550,10 +550,13 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
         if (!stat.isDirectory() && !isZip) continue;
 
-        // Strict 1:1 exact modName match only - NO fuzzy matching, NO title matching, NO suffix matching
-        if (effModLower && cleanFolderLower === effModLower) {
-            if (await isCompleteTemplate(folderPath, isZip)) {
-                return folder;
+        // Strict exact modName match only - folder name or prefix before underscore/dot must match effectiveModName exactly
+        if (effModLower) {
+            const folderModName = cleanFolderLower.split('_samplemodmap')[0].split('.')[0];
+            if (cleanFolderLower === effModLower || folderModName === effModLower) {
+                if (await isCompleteTemplate(folderPath, isZip)) {
+                    return folder;
+                }
             }
         }
     }
