@@ -2726,7 +2726,6 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                 ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ fontWeight: 800, fontSize: '1.25rem', color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>{save.farmName}</div>
-                        <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', background: 'rgba(var(--accent-rgb), 0.2)', padding: '2px 8px', borderRadius: 4, border: '1px solid var(--accent-dim)' }}>FARM #{save.index}</span>
                     </div>
                 )}
                 {/* Line 2: Map & Creator */}
