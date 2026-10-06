@@ -702,7 +702,7 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
         if (!stat.isDirectory() && !isZip) continue;
 
-        // Match template if folder name or mod prefix matches effectiveModName
+        // Match template if folder name or mod name matches effectiveModName exactly
         if (effModLower) {
             const folderModName = cleanFolderLower.split('_samplemodmap')[0].split('.')[0];
             if (cleanFolderLower === effModLower || folderModName === effModLower || fNorm === cleanStr(effModLower)) {
