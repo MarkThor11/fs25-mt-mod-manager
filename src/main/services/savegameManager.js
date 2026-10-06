@@ -307,14 +307,20 @@ async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null,
                         if (imgData && imgData.length > 0) {
                             // Check if image is PNG (starts with 89504e47)
                             if (imgData.length >= 8 && imgData[0] === 0x89 && imgData[1] === 0x50 && imgData[2] === 0x4e && imgData[3] === 0x47) {
-                                await fs.writeFile(saveImgPath, imgData);
+                                try {
+                                    const sharp = require('sharp');
+                                    const resizedBuf = await sharp(imgData).resize(256, 256).png().toBuffer();
+                                    await fs.writeFile(saveImgPath, resizedBuf);
+                                } catch (_) {
+                                    await fs.writeFile(saveImgPath, imgData);
+                                }
                                 console.log(`[SAVEGAME-IMAGE] Extracted PNG ${entry.entryName} to ${saveImgPath}`);
                                 return;
                             }
                             // Try converting non-PNG (e.g. DDS/JPG) with Sharp if possible
                             try {
                                 const sharp = require('sharp');
-                                const pngBuf = await sharp(imgData).png().toBuffer();
+                                const pngBuf = await sharp(imgData).resize(256, 256).png().toBuffer();
                                 await fs.writeFile(saveImgPath, pngBuf);
                                 console.log(`[SAVEGAME-IMAGE] Converted ${entry.entryName} to PNG at ${saveImgPath}`);
                                 return;
@@ -331,7 +337,7 @@ async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null,
                     try {
                         const sharp = require('sharp');
                         const hBuf = heightmapEntry.getData();
-                        const pngBuf = await sharp(hBuf).resize(512, 512).png().toBuffer();
+                        const pngBuf = await sharp(hBuf).resize(256, 256).png().toBuffer();
                         await fs.writeFile(saveImgPath, pngBuf);
                         console.log(`[SAVEGAME-IMAGE] Rendered heightmap preview to ${saveImgPath}`);
                         return;
@@ -342,23 +348,23 @@ async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null,
             }
         }
 
-        // Fallback 2: Generate a clean styled PNG card image with map title & save slot so GIANTS Engine displays high quality preview
+        // Fallback 2: Generate a clean styled 256x256 PNG card image with map title & save slot so GIANTS Engine displays high quality preview
         try {
             const sharp = require('sharp');
             const cleanTitle = (mapTitle || path.basename(slotPath)).replace(/[<>&'"]/g, '');
             const svgCard = Buffer.from(
-                `<svg width="1024" height="576" xmlns="http://www.w3.org/2000/svg">` +
+                `<svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">` +
                 `<rect width="100%" height="100%" fill="#111827"/>` +
-                `<rect x="20" y="20" width="984" height="536" rx="24" fill="#1f2937" stroke="#374151" stroke-width="4"/>` +
-                `<circle cx="512" cy="240" r="140" fill="#15803d" opacity="0.3"/>` +
-                `<path d="M512 140 L600 310 L424 310 Z" fill="#22c55e" opacity="0.5"/>` +
-                `<text x="50%" y="440" text-anchor="middle" fill="#ffffff" font-size="44" font-family="Segoe UI, Arial, sans-serif" font-weight="bold">${cleanTitle}</text>` +
-                `<text x="50%" y="490" text-anchor="middle" fill="#9ca3af" font-size="28" font-family="Segoe UI, Arial, sans-serif">MODDED SAVEGAME</text>` +
+                `<rect x="10" y="10" width="236" height="236" rx="16" fill="#1f2937" stroke="#374151" stroke-width="3"/>` +
+                `<circle cx="128" cy="105" r="55" fill="#15803d" opacity="0.4"/>` +
+                `<path d="M128 60 L165 135 L91 135 Z" fill="#22c55e" opacity="0.6"/>` +
+                `<text x="50%" y="190" text-anchor="middle" fill="#ffffff" font-size="20" font-family="Segoe UI, Arial, sans-serif" font-weight="bold">${cleanTitle}</text>` +
+                `<text x="50%" y="215" text-anchor="middle" fill="#9ca3af" font-size="13" font-family="Segoe UI, Arial, sans-serif">SAVED GAME</text>` +
                 `</svg>`
             );
-            const cardPng = await sharp(svgCard).png().toBuffer();
+            const cardPng = await sharp(svgCard).resize(256, 256).png().toBuffer();
             await fs.writeFile(saveImgPath, cardPng);
-            console.log(`[SAVEGAME-IMAGE] Created styled SVG placeholder PNG at ${saveImgPath}`);
+            console.log(`[SAVEGAME-IMAGE] Created styled SVG placeholder PNG (256x256) at ${saveImgPath}`);
             return;
         } catch (cardErr) {
             console.warn(`[SAVEGAME-IMAGE] Styled card fallback failed:`, cardErr.message);
