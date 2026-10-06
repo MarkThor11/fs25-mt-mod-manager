@@ -249,6 +249,110 @@ function isOfficialMap(mapId) {
            lower.includes('highlandsfishing');
 }
 
+/**
+ * Ensures that a savegame directory contains a savegame.png preview image.
+ * FS25 in-game UI displays a green warning triangle icon if savegame.png is missing.
+ */
+async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null, mapId = null, modZipPath = null) {
+    if (!slotPath || !fs.existsSync(slotPath)) return;
+    if (!fs.existsSync(path.join(slotPath, 'careerSavegame.xml'))) return;
+    const saveImgPath = path.join(slotPath, 'savegame.png');
+    if (fs.existsSync(saveImgPath) && fs.statSync(saveImgPath).size > 0) return;
+
+    try {
+        let zipPath = modZipPath;
+        if (!zipPath && savePathOrModName(slotPath, mapModName, mapId)) {
+            zipPath = await resolveMapModPath(slotPath);
+        }
+
+        // Try extracting preview/icon from map ZIP
+        if (zipPath && fs.existsSync(zipPath)) {
+            try {
+                const AdmZip = require('adm-zip');
+                const zip = new AdmZip(zipPath);
+                const entries = zip.getEntries();
+                
+                // Extract iconFilename from modDesc.xml and handle .dds vs .png extension variants
+                let iconRelPath = null;
+                const mdEntry = zip.getEntry('modDesc.xml');
+                if (mdEntry) {
+                    const mdXml = mdEntry.getData().toString('utf8');
+                    const iconMatch = mdXml.match(/<iconFilename>([^<]+)<\/iconFilename>/i) || 
+                                     mdXml.match(/<icon[^>]*>([^<]+)<\/icon>/i) ||
+                                     mdXml.match(/iconFilename=["']([^"']+)["']/i);
+                    if (iconMatch && iconMatch[1]) {
+                        iconRelPath = iconMatch[1].trim().replace(/\\/g, '/');
+                    }
+                }
+
+                const rawCandidates = [
+                    iconRelPath,
+                    iconRelPath ? iconRelPath.replace(/\.png$/i, '.dds') : null,
+                    iconRelPath ? iconRelPath.replace(/\.dds$/i, '.png') : null,
+                    'preview.png', 'preview.dds',
+                    'icon.png', 'icon.dds',
+                    'icon_map.png', 'icon_map.dds',
+                    'store_icon.png', 'store_icon.dds',
+                    'map_preview.png', 'map_preview.dds'
+                ].filter(Boolean);
+
+                for (const candidate of rawCandidates) {
+                    const candidateClean = candidate.toLowerCase();
+                    const entry = zip.getEntry(candidate) || entries.find(e => {
+                        const eLow = e.entryName.toLowerCase();
+                        return eLow === candidateClean || eLow.endsWith('/' + candidateClean) || path.basename(eLow) === candidateClean;
+                    });
+                    if (entry && !entry.isDirectory) {
+                        const imgData = entry.getData();
+                        if (imgData && imgData.length > 0) {
+                            await fs.writeFile(saveImgPath, imgData);
+                            console.log(`[SAVEGAME-IMAGE] Extracted ${entry.entryName} to ${saveImgPath}`);
+                            return;
+                        }
+                    }
+                }
+
+                // Fallback: any image directly in root or maps/ with icon or preview in name (exclude terrain weight maps)
+                const anyIcon = entries.find(e => {
+                    if (e.isDirectory) return false;
+                    const low = e.entryName.toLowerCase();
+                    if (low.includes('weight') || low.includes('terrain') || low.includes('density')) return false;
+                    return (low.endsWith('.png') || low.endsWith('.dds') || low.endsWith('.jpg')) && 
+                           (low.includes('icon') || low.includes('preview') || low.includes('overview'));
+                });
+                if (anyIcon) {
+                    const imgData = anyIcon.getData();
+                    if (imgData && imgData.length > 0) {
+                        await fs.writeFile(saveImgPath, imgData);
+                        console.log(`[SAVEGAME-IMAGE] Fallback extracted ${anyIcon.entryName} to ${saveImgPath}`);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn(`[SAVEGAME-IMAGE] Failed extracting image from ZIP ${zipPath}:`, e.message);
+            }
+        }
+
+        // Base game / Official map fallback images from master templates if available
+        const templatesDir = getTemplatesPath();
+        const masterFolders = ['MapUS', 'MapEU', 'MapAS', 'pdlc_highlandsFishingPack_HighlandsFishingMap'];
+        for (const mf of masterFolders) {
+            const templateImg = path.join(templatesDir, mf, 'savegame.png');
+            if (fs.existsSync(templateImg)) {
+                await fs.copy(templateImg, saveImgPath);
+                console.log(`[SAVEGAME-IMAGE] Copied official template savegame.png from ${mf} to ${saveImgPath}`);
+                return;
+            }
+        }
+    } catch (err) {
+        console.warn(`[SAVEGAME-IMAGE] Could not ensure savegame.png for ${slotPath}:`, err.message);
+    }
+}
+
+function savePathOrModName(slotPath, mapModName, mapId) {
+    return !!(mapModName || mapId || fs.existsSync(path.join(slotPath, 'careerSavegame.xml')));
+}
+
 let cachedMapMods = null;
 let lastModsScan = 0;
 
@@ -480,6 +584,23 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         effectiveModName = mapId;
     }
 
+    // Try resolving exact zip filename from installed mods if effectiveModName is missing or generic
+    if (!effectiveModName || ['map', 'samplemodmap'].includes(effectiveModName.toLowerCase())) {
+        try {
+            const modManager = require('./modManager');
+            const { mods: allMods } = modManager.getLastScanResult() || {};
+            if (allMods) {
+                const matched = allMods.find(m => m.isMap && (
+                    (mapId && m.mapId && m.mapId.toLowerCase() === mapId.toLowerCase()) ||
+                    (mapTitle && m.title && m.title.toLowerCase() === mapTitle.toLowerCase())
+                ));
+                if (matched && matched.modName) {
+                    effectiveModName = matched.modName;
+                }
+            }
+        } catch (_) {}
+    }
+
     const OFFICIAL_MASTER_TEMPLATES = new Set([
         'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap'
     ]);
@@ -556,10 +677,10 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         const isZip = stat.isFile() && folder.toLowerCase().endsWith('.zip');
         if (!stat.isDirectory() && !isZip) continue;
 
-        // Strict exact modName match only - folder name or prefix before underscore/dot must match effectiveModName exactly
+        // Match template if folder name or mod prefix matches effectiveModName
         if (effModLower) {
             const folderModName = cleanFolderLower.split('_samplemodmap')[0].split('.')[0];
-            if (cleanFolderLower === effModLower || folderModName === effModLower) {
+            if (cleanFolderLower === effModLower || folderModName === effModLower || fNorm === cleanStr(effModLower)) {
                 if (await isCompleteTemplate(folderPath, isZip)) {
                     return folder;
                 }
@@ -1895,6 +2016,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         }
     } catch (_) {}
 
+    await ensureSavegameImage(slotPath, mapModName, mapTitle, mapId, modZipPath);
+
     return { success: true, path: slotPath, requiresEngineInit, mapId };
 }
 
@@ -2219,6 +2342,10 @@ async function getAllSavegames() {
             } catch (e) {
                 console.error('[SAVEGAMES] Failed to check template for', mapId, e);
             }
+
+            try {
+                await ensureSavegameImage(savePath, mapModName, mapTitle, mapId);
+            } catch (_) {}
 
             // Read environment.xml for accurate current month, day, time, and weather
             let currentPeriod = 6;
@@ -5639,14 +5766,8 @@ async function adoptSaveAsTemplate(saveIndex) {
             mapModName = mapId.split('.')[0];
         }
         
-        // Construct template name
-        let templateFolder = mapId.replace(/[^a-z0-9]/gi, '_');
-        if (mapModName) {
-            const cleanMod = mapModName.replace(/[^a-z0-9]/gi, '_');
-            if (!templateFolder.toLowerCase().startsWith(cleanMod.toLowerCase())) {
-                templateFolder = `${cleanMod}_${templateFolder}`;
-            }
-        }
+        // Construct template name strictly matching the map ZIP name
+        let templateFolder = mapModName ? mapModName : mapId.replace(/[^a-z0-9]/gi, '_');
         
         const templatesDir = getTemplatesPath();
         const destPath = path.join(templatesDir, templateFolder);
@@ -6482,6 +6603,7 @@ async function resolveMapModPath(savePath) {
 async function ensureSavegameDensityMaps(savePath) {
     if (!savePath || !fs.existsSync(savePath)) return 0;
     try {
+        await ensureSavegameImage(savePath);
         const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
 
         // On uninitialized save slots without densityMap_fruits.gdm, do not pre-extract binary density maps
@@ -6855,6 +6977,7 @@ module.exports = {
     repairSavegameMapId,
     resetSavegameFieldStates,
     ensureSavegameDensityMaps,
+    ensureSavegameImage,
     resolveMapModPath,
     extractMapDensityFiles
 };

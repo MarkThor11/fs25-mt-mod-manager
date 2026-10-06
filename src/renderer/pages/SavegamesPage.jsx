@@ -2700,7 +2700,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                   }}>
                     AUTOMATED
                   </div>
-                ) : (
+                ) : (wasPlayed ? null : (
                   <div style={{ 
                     background: 'var(--accent)', 
                     color: 'white', 
@@ -2713,7 +2713,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
                   }}>
                     READY FOR FIRST LAUNCH
                   </div>
-                )
+                ))
               )}
             </div>
             <div style={{ flex: 1, zIndex: 1, paddingLeft: 34, paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
