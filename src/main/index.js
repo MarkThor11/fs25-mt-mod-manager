@@ -299,21 +299,43 @@ function createWindow() {
     mainWindow.loadFile(indexPath);
   }
 
-  mainWindow.on('close', async (event) => {
-    try {
-      const isRunning = await gameLauncher.isGameRunning();
-      if (isRunning) {
-        event.preventDefault();
-        dialog.showMessageBox(mainWindow, {
-          type: 'warning',
-          buttons: ['OK'],
-          defaultId: 0,
-          title: 'Farming Simulator 25 is Running',
-          message: 'Farming Simulator 25 is currently running.\n\nPlease exit the game first before closing the Mod Manager to prevent savegame corruption and sync errors.'
-        });
-        return;
+  let isCheckingClose = false;
+  let isForceClosing = false;
+
+  mainWindow.on('close', (event) => {
+    if (isForceClosing) {
+      return;
+    }
+
+    // Synchronously cancel the close event first
+    event.preventDefault();
+
+    if (isCheckingClose) return;
+    isCheckingClose = true;
+
+    (async () => {
+      try {
+        const isRunning = await gameLauncher.isGameRunning();
+        if (isRunning) {
+          isCheckingClose = false;
+          dialog.showMessageBox(mainWindow, {
+            type: 'warning',
+            buttons: ['OK'],
+            defaultId: 0,
+            title: 'Farming Simulator 25 is Running',
+            message: 'Farming Simulator 25 is currently running.\n\nPlease exit the game first before closing the Mod Manager to prevent savegame corruption and sync errors.'
+          });
+        } else {
+          isForceClosing = true;
+          isCheckingClose = false;
+          mainWindow.close();
+        }
+      } catch (_) {
+        isForceClosing = true;
+        isCheckingClose = false;
+        mainWindow.close();
       }
-    } catch (_) {}
+    })();
   });
 
   mainWindow.on('closed', () => {
