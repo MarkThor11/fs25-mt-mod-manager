@@ -1986,7 +1986,22 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         }
     } catch (_) {}
 
-    await ensureSavegameImage(slotPath, mapModName, mapTitle, mapId, modZipPath);
+    if (requiresEngineInit) {
+        // Save slot is completely empty for native GIANTS Engine first-run initialization.
+        // Remove all written files from slot directory and store user settings in .mm_pending_settings.json
+        const pendingSettings = {
+            savegameName: savegameName || 'New Farming Career',
+            money: money !== undefined ? money : 1000000,
+            mapId: mapId,
+            mapTitle: mapTitle,
+            mapModName: mapModName
+        };
+        await fs.emptyDir(slotPath);
+        await fs.writeJson(path.join(slotPath, '.mm_pending_settings.json'), pendingSettings, { spaces: 2 });
+        console.log(`[CREATE] Slot ${savegameIndex} cleared for clean FS25 native map initialization. Wrote .mm_pending_settings.json.`);
+    } else {
+        await ensureSavegameImage(slotPath, mapModName, mapTitle, mapId, modZipPath);
+    }
 
     return { success: true, path: slotPath, requiresEngineInit, mapId };
 }
