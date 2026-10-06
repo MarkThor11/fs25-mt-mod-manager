@@ -2490,7 +2490,7 @@ const [activeTab, setActiveTab] = useState('general');
 }
 
 function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, onExport, onToggleMode, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop, isPlaying, isGameRunning, recentlyExitedSlots }) {
-    const isEmpty = save.modCount === 0 && (save.farmName || '').startsWith('Empty');
+    const isEmpty = Boolean(save.isEmpty);
     const [isDragOver, setIsDragOver] = useState(false);
     
     const isRecentlyExited = Boolean(
