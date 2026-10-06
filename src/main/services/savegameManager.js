@@ -1984,64 +1984,24 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 await fs.remove(path.join(slotPath, file)).catch(() => {});
             }
         }
-
-        // Ensure careerSavegame.xml density map revisions are consistent for existing/initialized save slots only.
-        if (!requiresEngineInit) {
-            const finalCareerPath = path.join(slotPath, 'careerSavegame.xml');
-            if (fs.existsSync(finalCareerPath)) {
-                let fcXml = await fs.readFile(finalCareerPath, 'utf8');
-                let mapRev = '1';
-                if (modZipPath && fs.existsSync(modZipPath)) {
-                    try {
-                        const AdmZip = require('adm-zip');
-                        const zip = new AdmZip(modZipPath);
-                        const mapEntry = zip.getEntries().find(e => {
-                            const norm = e.entryName.toLowerCase();
-                            return norm.endsWith('.xml') && !norm.includes('sound') && !norm.includes('moddesc') && (
-                                norm.endsWith('map.xml') || norm.endsWith('mapeu.xml') || norm.endsWith('mapus.xml') || 
-                                norm.endsWith('mapas.xml') || norm.includes('map')
-                            );
-                        });
-                        if (mapEntry) {
-                            const xml = mapEntry.getData().toString('utf8');
-                            const m = xml.match(/<densityMap\s+[^>]*revision=["'](\d+)["']/i);
-                            if (m) mapRev = m[1];
-                        }
-                    } catch (_) {}
-                }
-
-                const revisionTags = [
-                    ['terrainTextureRevision', '1'],
-                    ['terrainLodTextureRevision', '2'],
-                    ['splitShapesRevision', '2'],
-                    ['tipCollisionRevision', '2'],
-                    ['placementCollisionRevision', '2'],
-                    ['mapTerrainTextureRevision', '1'],
-                    ['mapTerrainLodTextureRevision', '1'],
-                    ['mapSplitShapesRevision', '1'],
-                    ['mapTipCollisionRevision', '1'],
-                    ['mapPlacementCollisionRevision', '1'],
-                    ['mapNavigationCollisionRevision', '1']
-                ];
-                if (isOfficialBaseMap || hasFruitsGdm) {
-                    revisionTags.unshift(['densityMapRevision', isOfficialBaseMap ? '4' : (mapRev || '1')]);
-                    revisionTags.unshift(['mapDensityMapRevision', mapRev || '1']);
-                }
-
-                for (const [tag, val] of revisionTags) {
-                    const tagRegex = new RegExp(`<${tag}>.*?<\\/${tag}>`, 'i');
-                    if (tagRegex.test(fcXml)) {
-                        fcXml = fcXml.replace(tagRegex, `<${tag}>${val}</${tag}>`);
-                    } else {
-                        fcXml = fcXml.replace(/<settings>/i, `<settings>\n        <${tag}>${val}</${tag}>`);
-                    }
-                }
-                await fs.writeFile(finalCareerPath, fcXml, 'utf8');
-            }
-        }
     } catch (_) {}
 
-    await ensureSavegameImage(slotPath, mapModName, mapTitle, mapId, modZipPath);
+    if (requiresEngineInit) {
+        // Save slot is completely empty for native GIANTS Engine first-run initialization.
+        // Remove all written files from slot directory and store user settings in .mm_pending_settings.json
+        const pendingSettings = {
+            savegameName: savegameName || 'New Farming Career',
+            money: money !== undefined ? money : 1000000,
+            mapId: mapId,
+            mapTitle: mapTitle,
+            mapModName: mapModName
+        };
+        await fs.emptyDir(slotPath);
+        await fs.writeJson(path.join(slotPath, '.mm_pending_settings.json'), pendingSettings, { spaces: 2 });
+        console.log(`[CREATE] Slot ${savegameIndex} cleared for clean FS25 native map initialization. Wrote .mm_pending_settings.json.`);
+    } else {
+        await ensureSavegameImage(slotPath, mapModName, mapTitle, mapId, modZipPath);
+    }
 
     return { success: true, path: slotPath, requiresEngineInit, mapId };
 }
