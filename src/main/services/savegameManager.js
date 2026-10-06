@@ -342,21 +342,27 @@ async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null,
             }
         }
 
-        // Fallback 2: Generate a clean placeholder PNG card image so GIANTS Engine never shows a green triangle
+        // Fallback 2: Generate a clean styled PNG card image with map title & save slot so GIANTS Engine displays high quality preview
         try {
             const sharp = require('sharp');
-            const placeholderPng = await sharp({
-                create: {
-                    width: 512,
-                    height: 512,
-                    channels: 4,
-                    background: { r: 40, g: 120, b: 60, alpha: 1 }
-                }
-            }).png().toBuffer();
-            await fs.writeFile(saveImgPath, placeholderPng);
-            console.log(`[SAVEGAME-IMAGE] Created valid placeholder PNG at ${saveImgPath}`);
+            const cleanTitle = (mapTitle || path.basename(slotPath)).replace(/[<>&'"]/g, '');
+            const svgCard = Buffer.from(
+                `<svg width="1024" height="576" xmlns="http://www.w3.org/2000/svg">` +
+                `<rect width="100%" height="100%" fill="#111827"/>` +
+                `<rect x="20" y="20" width="984" height="536" rx="24" fill="#1f2937" stroke="#374151" stroke-width="4"/>` +
+                `<circle cx="512" cy="240" r="140" fill="#15803d" opacity="0.3"/>` +
+                `<path d="M512 140 L600 310 L424 310 Z" fill="#22c55e" opacity="0.5"/>` +
+                `<text x="50%" y="440" text-anchor="middle" fill="#ffffff" font-size="44" font-family="Segoe UI, Arial, sans-serif" font-weight="bold">${cleanTitle}</text>` +
+                `<text x="50%" y="490" text-anchor="middle" fill="#9ca3af" font-size="28" font-family="Segoe UI, Arial, sans-serif">MODDED SAVEGAME</text>` +
+                `</svg>`
+            );
+            const cardPng = await sharp(svgCard).png().toBuffer();
+            await fs.writeFile(saveImgPath, cardPng);
+            console.log(`[SAVEGAME-IMAGE] Created styled SVG placeholder PNG at ${saveImgPath}`);
             return;
-        } catch (_) {}
+        } catch (cardErr) {
+            console.warn(`[SAVEGAME-IMAGE] Styled card fallback failed:`, cardErr.message);
+        }
     } catch (err) {
         console.warn(`[SAVEGAME-IMAGE] Could not ensure savegame.png for ${slotPath}:`, err.message);
     }
