@@ -4430,21 +4430,23 @@ export default function SavegamesPage() {
                                 </div>
                             </div>
 
-                            <div style={{ padding: '20px', background: 'var(--bg-tertiary)', borderRadius: 16, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 16 }}>
-                                <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
-                                    <Zap size={22} />
+                            {!mapHasTemplate && (
+                                <div style={{ padding: '20px', background: 'var(--bg-tertiary)', borderRadius: 16, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 16 }}>
+                                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                                        <Zap size={22} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: 800, fontSize: 15 }}>Auto-launch to initialize map</div>
+                                        <div style={{ fontSize: 12, opacity: 0.6, marginTop: 2 }}>Uninitialized modded maps require one launch to build the world files. We'll handle this automatically.</div>
+                                    </div>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={autoLaunchOnCreate} 
+                                        onChange={e => setAutoLaunchOnCreate(e.target.checked)}
+                                        style={{ width: 24, height: 24, cursor: 'pointer', accentColor: 'var(--accent)' }}
+                                    />
                                 </div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 800, fontSize: 15 }}>Auto-launch to initialize map</div>
-                                    <div style={{ fontSize: 12, opacity: 0.6, marginTop: 2 }}>Modded maps require one launch to build the world files. We'll handle this automatically.</div>
-                                </div>
-                                <input 
-                                    type="checkbox" 
-                                    checked={autoLaunchOnCreate} 
-                                    onChange={e => setAutoLaunchOnCreate(e.target.checked)}
-                                    style={{ width: 24, height: 24, cursor: 'pointer', accentColor: 'var(--accent)' }}
-                                />
-                            </div>
+                            )}
                         </div>
                     )}
 
