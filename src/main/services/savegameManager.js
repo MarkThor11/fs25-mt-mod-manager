@@ -3111,7 +3111,8 @@ async function cleanSteamRemoteCacheForSlot(slotIndex) {
             const accounts = await fs.readdir(basePath);
             for (const acc of accounts) {
                 for (const appId of appIds) {
-                    const vdfPath = path.join(basePath, acc, appId, 'remotecache.vdf');
+                    const appDir = path.join(basePath, acc, appId);
+                    const vdfPath = path.join(appDir, 'remotecache.vdf');
                     if (fs.existsSync(vdfPath)) {
                         try {
                             const content = await fs.readFile(vdfPath, 'utf8');
@@ -3122,6 +3123,25 @@ async function cleanSteamRemoteCacheForSlot(slotIndex) {
                             }
                         } catch (e) {
                             console.warn(`[STEAM-CLOUD] Could not clean remotecache for account ${acc} app ${appId}:`, e.message);
+                        }
+                    }
+
+                    // Remove local Steam Cloud cache folders for this slot to prevent Steam from restoring deleted saves
+                    const remoteDir = path.join(appDir, 'remote');
+                    if (fs.existsSync(remoteDir)) {
+                        try {
+                            const cloudSaveDir = path.join(remoteDir, `savegame${slotIndex}`);
+                            if (fs.existsSync(cloudSaveDir)) {
+                                await fs.remove(cloudSaveDir);
+                                console.log(`[STEAM-CLOUD] Removed local Steam Cloud cached folder: ${cloudSaveDir}`);
+                            }
+                            const cloudFs25SaveDir = path.join(remoteDir, 'FarmingSimulator2025', `savegame${slotIndex}`);
+                            if (fs.existsSync(cloudFs25SaveDir)) {
+                                await fs.remove(cloudFs25SaveDir);
+                                console.log(`[STEAM-CLOUD] Removed local Steam Cloud cached FS25 folder: ${cloudFs25SaveDir}`);
+                            }
+                        } catch (e) {
+                            console.warn(`[STEAM-CLOUD] Could not clean remote directory for slot ${slotIndex}:`, e.message);
                         }
                     }
                 }
@@ -3150,7 +3170,7 @@ async function deleteSavegame(target) {
         savePath = path.resolve(savePath);
     }
 
-    // 1. Steam Cloud sync prevention: Clean up entries from Steam's remotecache.vdf
+    // 1. Steam Cloud sync prevention: Clean up entries from Steam's remotecache.vdf and local cloud cache
     if (slotIndex) {
         await cleanSteamRemoteCacheForSlot(slotIndex);
     }
@@ -3186,34 +3206,30 @@ async function deleteSavegame(target) {
         return { success: true };
     }
 
-    // 4. Mark careerSavegame.xml as invalid tombstone first so any pending sync treats it as empty
-    try {
-        const careerFile = path.join(savePath, 'careerSavegame.xml');
-        if (fs.existsSync(careerFile)) {
-            await fs.writeFile(careerFile, '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n<careerSavegame revision="2" valid="false"/>\n', 'utf8');
-        }
-    } catch (_) {}
-
-    // 5. Remove the savegame directory from disk
+    // 4. Remove all files inside savePath (especially careerSavegame.xml) then remove the directory.
+    // Deleting careerSavegame.xml immediately ensures FS25 sees slot as empty even if folder removal is delayed.
     let retries = 5;
     let deleted = false;
     while (retries > 0) {
         try {
+            const files = await fs.readdir(savePath);
+            for (const file of files) {
+                await fs.remove(path.join(savePath, file)).catch(() => {});
+            }
             await fs.remove(savePath);
             deleted = true;
             break;
         } catch (err) {
             retries--;
             if (retries === 0) {
-                console.error(`[SAVEGAMES] Error deleting savegame at ${savePath}: ${err.message}. Attempting inner file cleanup fallback...`);
-                // Fallback: If folder is locked by OS/Cloud sync, delete inner files first
+                console.error(`[SAVEGAMES] Error deleting savegame at ${savePath}: ${err.message}`);
                 try {
                     const files = await fs.readdir(savePath);
                     for (const file of files) {
                         await fs.remove(path.join(savePath, file)).catch(() => {});
                     }
                     await fs.remove(savePath).catch(() => {});
-                    deleted = true;
+                    deleted = !fs.existsSync(path.join(savePath, 'careerSavegame.xml'));
                 } catch (fallbackErr) {
                     return { success: false, error: `File locked by OS or cloud sync: ${err.message}` };
                 }
@@ -6564,16 +6580,13 @@ async function ensureSavegameDensityMaps(savePath) {
                         modified = true;
                     }
                 } else {
-                    const targetDensityRev = isOfficialMap(mapId) ? '4' : '1';
-                    if (curRev !== targetDensityRev || !careerXml.includes('<densityMapRevision>')) {
-                        if (careerXml.includes('<densityMapRevision>')) {
-                            careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>${targetDensityRev}</densityMapRevision>`);
-                        } else {
-                            careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <densityMapRevision>${targetDensityRev}</densityMapRevision>`);
-                        }
+                    // Strictly preserve engine-generated densityMapRevision and mapDensityMapRevision if already present in careerSavegame.xml
+                    if (!curRev && !careerXml.includes('<densityMapRevision>')) {
+                        const targetDensityRev = isOfficialMap(mapId) ? '4' : '1';
+                        careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <densityMapRevision>${targetDensityRev}</densityMapRevision>`);
                         modified = true;
                     }
-                    if (curMapRev !== expectedRev || !careerXml.includes('<mapDensityMapRevision>')) {
+                    if (expectedRev && (!curMapRev || !careerXml.includes('<mapDensityMapRevision>'))) {
                         if (careerXml.includes('<mapDensityMapRevision>')) {
                             careerXml = careerXml.replace(/<mapDensityMapRevision>.*?<\/mapDensityMapRevision>/i, `<mapDensityMapRevision>${expectedRev}</mapDensityMapRevision>`);
                         } else {
