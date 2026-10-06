@@ -305,45 +305,58 @@ async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null,
                     if (entry && !entry.isDirectory) {
                         const imgData = entry.getData();
                         if (imgData && imgData.length > 0) {
-                            await fs.writeFile(saveImgPath, imgData);
-                            console.log(`[SAVEGAME-IMAGE] Extracted ${entry.entryName} to ${saveImgPath}`);
-                            return;
+                            // Check if image is PNG (starts with 89504e47)
+                            if (imgData.length >= 8 && imgData[0] === 0x89 && imgData[1] === 0x50 && imgData[2] === 0x4e && imgData[3] === 0x47) {
+                                await fs.writeFile(saveImgPath, imgData);
+                                console.log(`[SAVEGAME-IMAGE] Extracted PNG ${entry.entryName} to ${saveImgPath}`);
+                                return;
+                            }
+                            // Try converting non-PNG (e.g. DDS/JPG) with Sharp if possible
+                            try {
+                                const sharp = require('sharp');
+                                const pngBuf = await sharp(imgData).png().toBuffer();
+                                await fs.writeFile(saveImgPath, pngBuf);
+                                console.log(`[SAVEGAME-IMAGE] Converted ${entry.entryName} to PNG at ${saveImgPath}`);
+                                return;
+                            } catch (_) {
+                                // Sharp cannot decode raw DDS, continue to check other candidates or terrain heightmap
+                            }
                         }
                     }
                 }
 
-                // Fallback: any image directly in root or maps/ with icon or preview in name (exclude terrain weight maps)
-                const anyIcon = entries.find(e => {
-                    if (e.isDirectory) return false;
-                    const low = e.entryName.toLowerCase();
-                    if (low.includes('weight') || low.includes('terrain') || low.includes('density')) return false;
-                    return (low.endsWith('.png') || low.endsWith('.dds') || low.endsWith('.jpg')) && 
-                           (low.includes('icon') || low.includes('preview') || low.includes('overview'));
-                });
-                if (anyIcon) {
-                    const imgData = anyIcon.getData();
-                    if (imgData && imgData.length > 0) {
-                        await fs.writeFile(saveImgPath, imgData);
-                        console.log(`[SAVEGAME-IMAGE] Fallback extracted ${anyIcon.entryName} to ${saveImgPath}`);
+                // Fallback 1: check for terrain.heightmap.png inside map mod or template ZIP
+                const heightmapEntry = entries.find(e => e.entryName.toLowerCase().endsWith('terrain.heightmap.png'));
+                if (heightmapEntry) {
+                    try {
+                        const sharp = require('sharp');
+                        const hBuf = heightmapEntry.getData();
+                        const pngBuf = await sharp(hBuf).resize(512, 512).png().toBuffer();
+                        await fs.writeFile(saveImgPath, pngBuf);
+                        console.log(`[SAVEGAME-IMAGE] Rendered heightmap preview to ${saveImgPath}`);
                         return;
-                    }
+                    } catch (_) {}
                 }
             } catch (e) {
                 console.warn(`[SAVEGAME-IMAGE] Failed extracting image from ZIP ${zipPath}:`, e.message);
             }
         }
 
-        // Base game / Official map fallback images from master templates if available
-        const templatesDir = getTemplatesPath();
-        const masterFolders = ['MapUS', 'MapEU', 'MapAS', 'pdlc_highlandsFishingPack_HighlandsFishingMap'];
-        for (const mf of masterFolders) {
-            const templateImg = path.join(templatesDir, mf, 'savegame.png');
-            if (fs.existsSync(templateImg)) {
-                await fs.copy(templateImg, saveImgPath);
-                console.log(`[SAVEGAME-IMAGE] Copied official template savegame.png from ${mf} to ${saveImgPath}`);
-                return;
-            }
-        }
+        // Fallback 2: Generate a clean placeholder PNG card image so GIANTS Engine never shows a green triangle
+        try {
+            const sharp = require('sharp');
+            const placeholderPng = await sharp({
+                create: {
+                    width: 512,
+                    height: 512,
+                    channels: 4,
+                    background: { r: 40, g: 120, b: 60, alpha: 1 }
+                }
+            }).png().toBuffer();
+            await fs.writeFile(saveImgPath, placeholderPng);
+            console.log(`[SAVEGAME-IMAGE] Created valid placeholder PNG at ${saveImgPath}`);
+            return;
+        } catch (_) {}
     } catch (err) {
         console.warn(`[SAVEGAME-IMAGE] Could not ensure savegame.png for ${slotPath}:`, err.message);
     }
