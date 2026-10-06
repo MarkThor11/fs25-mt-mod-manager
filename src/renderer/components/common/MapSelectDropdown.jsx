@@ -65,11 +65,10 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
-  // Check if a mod map has an automation template
+  // Check if a mod map has an automation template using ZIP name
   const checkModHasTemplate = useMemo(() => {
     const clean = (s) => (s || '').toLowerCase().trim();
     const norm = (s) => clean(s).replace(/[^a-z0-9]/g, '');
-    const ultraNorm = (s) => norm(s).replace(/^(?:fs\d{2}|pdlc)/, '');
 
     const OFFICIAL_TEMPLATES = new Set([
       'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap'
@@ -82,24 +81,33 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
     ]);
 
     return (mod) => {
-      if (!templates || templates.length === 0 || !mod || !mod.modName) return false;
-      const mNameLow = (mod.modName || '').toLowerCase();
-      const mNameNorm = norm(mod.modName);
-      const utTitle = ultraNorm(mod.title);
+      if (!templates || templates.length === 0 || !mod) return false;
 
-      if (GENERIC_MAP_NAMES.has(mNameNorm)) return false;
+      // Primary zip name identifier (e.g. FS25_Alliklepa_CP from FS25_Alliklepa_CP.zip)
+      const rawZip = mod.fileName || mod.filePath || mod.zipName || '';
+      const zipName = rawZip.split(/[/\\]/).pop().replace(/\.zip$/i, '');
+      const zipNorm = norm(zipName);
+      const mNameNorm = norm(mod.modName);
+
+      const effectiveNorm = (zipNorm && !GENERIC_MAP_NAMES.has(zipNorm)) ? zipNorm : mNameNorm;
+      if (!effectiveNorm || GENERIC_MAP_NAMES.has(effectiveNorm)) return false;
 
       return templates.some((t) => {
         const cleanTId = (t.id || '').replace(/\.zip$/i, '').toLowerCase();
         if (OFFICIAL_TEMPLATES.has(cleanTId)) return false;
 
-        const tModName = (t.modName || '').toLowerCase();
-        if (tModName && tModName === mNameLow) return true;
-        if (cleanTId === mNameLow || cleanTId.startsWith(mNameLow + '_') || cleanTId.startsWith(mNameLow + '.')) return true;
+        const tIdNorm = norm(cleanTId);
 
-        if (utTitle && !GENERIC_MAP_NAMES.has(utTitle) && utTitle.length >= 4) {
-          const utId = ultraNorm(t.id);
-          if (utId === utTitle || utId.startsWith(utTitle + '_')) return true;
+        // 1. Strict Exact Match by ZIP name (or normalized zip name)
+        if (tIdNorm === effectiveNorm || cleanTId === (zipName || '').toLowerCase()) {
+          return true;
+        }
+
+        // 2. Suffix Match: e.g. template named zipName_samplemodmap or zipName.samplemodmap
+        if (effectiveNorm.length >= 4) {
+          if (tIdNorm === effectiveNorm + 'samplemodmap' || tIdNorm.startsWith(effectiveNorm + '_samplemodmap')) {
+            return true;
+          }
         }
 
         return false;
@@ -126,7 +134,10 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
                                        .trim();
         const displayTitle = isCP ? `${baseTitle} (CP)` : baseTitle;
 
-        const val = `${m.mapId || m.modName}|${m.title}|${m.modName}|${m.iconData || ''}|${m.filePath || ''}`;
+        const rawZip = m.fileName || m.filePath || m.modName || '';
+        const zipName = rawZip.split(/[/\\]/).pop().replace(/\.zip$/i, '');
+
+        const val = `${m.mapId || zipName || m.modName}|${m.title}|${zipName || m.modName}|${m.iconData || ''}|${m.filePath || ''}`;
         const hasTemplate = checkModHasTemplate(m);
 
         return {

@@ -363,17 +363,23 @@ async function getMapTemplates() {
             const tModClean = (templateModName || '').toLowerCase();
             const fLower = baseName.toLowerCase();
 
-            // Find the most specific matching mod (longest matching modName first)
+            // Find the most specific matching mod (prioritize exact ZIP name match over internal modName)
             const matchedMod = mapMods
                 .filter(m => {
+                    const mZip = (m.fileName || m.filePath || '').split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
                     const mName = (m.modName || '').toLowerCase();
-                    if (!mName) return false;
-                    if (tModClean && mName === tModClean) return true;
-                    if (fLower === mName) return true;
-                    if (fLower.startsWith(mName + '_')) return true;
+                    if (mZip && (fLower === mZip || fLower.startsWith(mZip + '_') || fLower.startsWith(mZip + '.'))) return true;
+                    if (mName && (fLower === mName || fLower.startsWith(mName + '_') || fLower.startsWith(mName + '.'))) return true;
+                    if (tModClean && (mZip === tModClean || mName === tModClean)) return true;
                     return false;
                 })
-                .sort((a, b) => (b.modName || '').length - (a.modName || '').length)[0] || null;
+                .sort((a, b) => {
+                    const aZip = (a.fileName || a.filePath || '').split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
+                    const bZip = (b.fileName || b.filePath || '').split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
+                    if (aZip === fLower && bZip !== fLower) return -1;
+                    if (bZip === fLower && aZip !== fLower) return 1;
+                    return bZip.length - aZip.length;
+                })[0] || null;
 
             let dlcInfo = null;
             if (!matchedMod) {
