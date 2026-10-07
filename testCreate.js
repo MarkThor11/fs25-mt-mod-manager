@@ -1,1 +1,0 @@
-const sm = require('./src/main/services/savegameManager.js'); sm.createSavegameWithMods(10, 'Test', [{modName:'FS25_Alliklepa_crossplay', isMap:true, filePath:'C:\\Users\\Mark\\Documents\\My Games\\FarmingSimulator2025\\mods\\FS25_Alliklepa_crossplay.zip'}]).then(console.log).catch(console.error);
