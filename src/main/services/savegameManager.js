@@ -1986,7 +1986,22 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         }
     } catch (_) {}
 
-    await ensureSavegameImage(slotPath, mapModName, mapTitle, mapId, modZipPath);
+    if (requiresEngineInit) {
+        // Save slot is completely empty for native GIANTS Engine first-run initialization.
+        // Remove all written files from slot directory and store user settings in .mm_pending_settings.json
+        const pendingSettings = {
+            savegameName: savegameName || 'New Farming Career',
+            money: money !== undefined ? money : 1000000,
+            mapId: mapId,
+            mapTitle: mapTitle,
+            mapModName: mapModName
+        };
+        await fs.emptyDir(slotPath);
+        await fs.writeJson(path.join(slotPath, '.mm_pending_settings.json'), pendingSettings, { spaces: 2 });
+        console.log(`[CREATE] Slot ${savegameIndex} cleared for clean FS25 native map initialization. Wrote .mm_pending_settings.json.`);
+    } else {
+        await ensureSavegameImage(slotPath, mapModName, mapTitle, mapId, modZipPath);
+    }
 
     return { success: true, path: slotPath, requiresEngineInit, mapId };
 }
@@ -2231,9 +2246,36 @@ async function getAllSavegames() {
     for (let i = 1; i <= 20; i++) {
         try {
             const savePath = path.join(fs25Path, `savegame${i}`);
-            if (!fs.existsSync(savePath) || !fs.existsSync(path.join(savePath, 'careerSavegame.xml'))) continue;
+            const pendingFile = path.join(savePath, '.mm_pending_settings.json');
+            const careerFile = path.join(savePath, 'careerSavegame.xml');
 
-            const xml = await fs.readFile(path.join(savePath, 'careerSavegame.xml'), 'utf8');
+            if (fs.existsSync(pendingFile) && !fs.existsSync(careerFile)) {
+                try {
+                    const pending = await fs.readJson(pendingFile);
+                    savegames.push({
+                        index: i,
+                        folderName: `savegame${i}`,
+                        path: savePath,
+                        farmName: pending.savegameName || 'New Farming Career',
+                        playerName: 'Farmer',
+                        mapId: pending.mapId,
+                        mapTitle: pending.mapTitle,
+                        isInitialized: false,
+                        hasTemplate: false,
+                        isGhost: true,
+                        isServerSave: false,
+                        money: pending.money !== undefined ? pending.money : 1000000,
+                        playTime: 0,
+                        modCount: 0,
+                        mods: []
+                    });
+                    continue;
+                } catch (_) {}
+            }
+
+            if (!fs.existsSync(savePath) || !fs.existsSync(careerFile)) continue;
+
+            const xml = await fs.readFile(careerFile, 'utf8');
             const data = parser.parse(xml);
             if (!data || !data.careerSavegame) continue;
             if (data.careerSavegame['@_valid'] === 'false' || data.careerSavegame['@_valid'] === false) {
