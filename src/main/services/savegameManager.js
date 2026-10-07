@@ -1994,7 +1994,11 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             money: money !== undefined ? money : 1000000,
             mapId: mapId,
             mapTitle: mapTitle,
-            mapModName: mapModName
+            mapModName: mapModName,
+            // Resolved map mod name + full mod list: the slot is emptied below, so the
+            // virtual mods builder cannot read them from careerSavegame.xml on first launch.
+            resolvedMapModName: isOfficialBaseMap ? null : (trueMapModName || null),
+            mods: finalMods.filter(m => m && m.modName).map(m => m.modName)
         };
         await fs.emptyDir(slotPath);
         await fs.writeJson(path.join(slotPath, '.mm_pending_settings.json'), pendingSettings, { spaces: 2 });

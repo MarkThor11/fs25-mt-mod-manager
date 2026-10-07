@@ -803,6 +803,34 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 				} catch (e) {
 					console.warn(`[VIRTUAL] Failed to read savegame mods for slot ${savegameIndex}:`, e.message);
 				}
+
+				// FIRST LAUNCH: slot is intentionally empty (no careerSavegame.xml) and the
+				// user's chosen map + mods are stored in .mm_pending_settings.json instead.
+				const pendingPath = path.join(savePath, '.mm_pending_settings.json');
+				if (!fs.existsSync(path.join(savePath, 'careerSavegame.xml')) && fs.existsSync(pendingPath)) {
+					try {
+						const pending = await fs.readJson(pendingPath);
+						if (Array.isArray(pending.mods)) {
+							pending.mods.forEach(n => { if (n) activeModNames.add(String(n).toLowerCase()); });
+						}
+						const candidates = [pending.resolvedMapModName, pending.mapModName]
+							.filter(Boolean)
+							.map(n => String(n).replace(/\.zip$/i, '').toLowerCase());
+						if (!mapModObj) {
+							mapModObj = mods.find(m => m.modName && candidates.includes(m.modName.toLowerCase()))
+								|| (pending.mapId ? mods.find(m => m.isMap && m.mapId && m.mapId.toLowerCase() === String(pending.mapId).toLowerCase()) : null)
+								|| (pending.mapTitle ? mods.find(m => m.isMap && m.title && m.title.toLowerCase() === String(pending.mapTitle).toLowerCase()) : null)
+								|| null;
+						}
+						if (mapModObj && mapModObj.modName) {
+							mapModName = mapModObj.modName.toLowerCase();
+							activeModNames.add(mapModName);
+						}
+						console.log(`[VIRTUAL] First-launch slot ${savegameIndex}: using pending settings (map: ${mapModObj ? mapModObj.modName : 'none'}, mods: ${Array.isArray(pending.mods) ? pending.mods.length : 0}).`);
+					} catch (pErr) {
+						console.warn(`[VIRTUAL] Failed to read pending settings for slot ${savegameIndex}:`, pErr.message);
+					}
+				}
 			}
 		}
 

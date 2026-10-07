@@ -319,25 +319,8 @@ async function launch(options = {}) {
     if (fs.existsSync(pendingSettingsPath)) {
       console.log(`[LAUNCH] Detected pending settings for slot ${options.savegameIndex}. Forcing manual init.`);
       needsManualInit = true;
-      // Keep targetModsPath (virtual folder) – do NOT null it.
-      try {
-        const pending = JSON.parse(fs.readFileSync(pendingSettingsPath, 'utf8'));
-        const mapFolderName = pending.mapModName;
-        if (mapFolderName) {
-          const modMgr = require('./modManager');
-          const defaultModsPath = modMgr.getDefaultModsPath(); // user’s standard mods folder
-          const srcMapPath = path.join(defaultModsPath, mapFolderName);
-          if (fs.existsSync(srcMapPath)) {
-            const destMapPath = path.join(targetModsPath, mapFolderName);
-            await modMgr.safeMove(srcMapPath, destMapPath, { overwrite: true });
-            console.log(`[LAUNCH] Copied pending map "${mapFolderName}" into virtual mods folder for slot ${options.savegameIndex}.`);
-          } else {
-            console.warn(`[LAUNCH] Map folder "${srcMapPath}" not found – map will not appear in selection.`);
-          }
-        }
-      } catch (e) {
-        console.warn(`[LAUNCH] Failed to copy pending map: ${e.message}`);
-      }
+      // The selected map + mods are linked into the virtual mods folder by
+      // modManager.prepareVirtualModsFolder (reads .mm_pending_settings.json).
     }
 
 
