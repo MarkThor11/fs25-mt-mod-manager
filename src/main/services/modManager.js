@@ -28,6 +28,7 @@ const INCOMPATIBLE_ENGINE_MODS = new Set([
 
 const activeInstalls = new Map();
 const downloadQueue = [];
+const updatesInFlight = new Set();
 let activeCount = 0;
 const MAX_CONCURRENT_INSTALLS = 1;
 const activeBatchTasks = new Set();
@@ -2597,8 +2598,8 @@ async function processQueue() {
 	*/
 async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category, subFolder = null, techData = null, oldPath = null, recoveryPath = null) {
 	// Check if already in queue or active
-	if (activeInstalls.has(modId) || downloadQueue.some(t => t.modId === modId)) {
-		return { success: false, error: 'Already in progress or queued' };
+	if (activeInstalls.has(String(modId)) || downloadQueue.some(t => String(t.modId) === String(modId))) {
+		return { success: false, duplicate: true, error: 'Already in progress or queued' };
 	}
 
 	// ── DISK SPACE SAFETY CHECK ──
@@ -3743,6 +3744,22 @@ async function checkForUpdates() {
 	* Update a specific mod.
 */
 async function updateMod(modFileName, modId, onProgress) {
+	// Duplicate request guard: if this mod is already updating/downloading/queued, do nothing.
+	// Without this, a second request re-copies the old file over the backup mid-download
+	// and reports a false "Download failed" to the UI.
+	const strId = String(modId);
+	if (updatesInFlight.has(strId) || activeInstalls.has(strId) || downloadQueue.some(t => String(t.modId) === strId)) {
+		return { success: false, duplicate: true, error: 'Already in progress or queued' };
+	}
+	updatesInFlight.add(strId);
+	try {
+		return await updateModInternal(modFileName, modId, onProgress);
+	} finally {
+		updatesInFlight.delete(strId);
+	}
+}
+
+async function updateModInternal(modFileName, modId, onProgress) {
 	const modsPath = getModsPath();
 	const currentPath = await findModPath(modFileName);
 	const originalPath = currentPath || path.join(modsPath, modFileName);

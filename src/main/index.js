@@ -1112,7 +1112,7 @@ ipcMain.handle('localMods:updateMod', async (_, { modFileName, modId }) => {
     });
     if (result && result.success) {
       mainWindow?.webContents.send('download:status', { modId, status: 'success', fileName: modFileName });
-    } else {
+    } else if (!result?.duplicate) {
       mainWindow?.webContents.send('download:status', { modId, status: 'error', error: result?.error || 'Update failed' });
     }
     return result;
@@ -1144,7 +1144,7 @@ ipcMain.handle('localMods:repairCorruptMod', async (_, { fileName, modId, allPat
     });
     if (result && result.success) {
       mainWindow?.webContents.send('download:status', { modId, status: 'success', fileName, isBackground: true });
-    } else {
+    } else if (!result?.duplicate) {
       mainWindow?.webContents.send('download:status', { modId, status: 'error', error: result?.error || 'Repair failed', isBackground: true });
     }
     return result;
