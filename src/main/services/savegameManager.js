@@ -6582,11 +6582,21 @@ async function extractMapDensityFiles(modZipOrDirPath, targetSavePath, overwrite
 async function resolveMapModPath(savePath) {
     try {
         const careerPath = path.join(savePath, 'careerSavegame.xml');
-        if (!fs.existsSync(careerPath)) return null;
-        const xmlContent = await fs.readFile(careerPath, 'utf8');
-        const parsed = parser.parse(xmlContent);
-        const settings = parsed?.careerSavegame?.settings || {};
-        const mapId = settings['@_mapId'] || settings.mapId;
+        const pendingPath = path.join(savePath, '.mm_pending_settings.json');
+        let mapId = null;
+
+        if (fs.existsSync(careerPath)) {
+            const xmlContent = await fs.readFile(careerPath, 'utf8');
+            const parsed = parser.parse(xmlContent);
+            const settings = parsed?.careerSavegame?.settings || {};
+            mapId = settings['@_mapId'] || settings.mapId;
+        } else if (fs.existsSync(pendingPath)) {
+            try {
+                const pending = await fs.readJson(pendingPath);
+                mapId = pending.resolvedMapModName || pending.mapModName || pending.mapId;
+            } catch (_) {}
+        }
+
         if (!mapId || isOfficialMap(mapId)) return null;
 
         let mapModName = mapId;
@@ -6617,7 +6627,8 @@ async function resolveMapModPath(savePath) {
         }
 
         const { mods: allMods } = await modManager.scanLocalMods();
-        const mapMod = findMapModInSavegame(xmlContent, allMods) || allMods.find(m => m.isMap && (
+        const xmlContent = fs.existsSync(careerPath) ? await fs.readFile(careerPath, 'utf8').catch(() => null) : null;
+        const mapMod = (xmlContent ? findMapModInSavegame(xmlContent, allMods) : null) || allMods.find(m => m.isMap && (
             (m.modName && m.modName.toLowerCase() === mapModName.toLowerCase()) ||
             (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === mapModName.toLowerCase())
         ));

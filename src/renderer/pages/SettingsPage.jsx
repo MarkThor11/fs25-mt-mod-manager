@@ -1445,7 +1445,7 @@ export default function SettingsPage() {
         <div className="settings-row" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px dashed var(--border)' }}>
           <div>
             <div className="settings-row__label" style={{ color: '#ef4444' }}>Uninstall Application</div>
-            <div className="settings-row__desc">Launch the uninstaller for the installed desktop build so you can continue testing in dev mode.</div>
+            <div className="settings-row__desc">Safely remove the application and restore your system settings.</div>
           </div>
           <div className="settings-row__control">
             <button 
