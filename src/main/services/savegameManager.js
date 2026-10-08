@@ -255,13 +255,26 @@ function isOfficialMap(mapId) {
  */
 async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null, mapId = null, modZipPath = null) {
     if (!slotPath || !fs.existsSync(slotPath)) return;
-    if (!fs.existsSync(path.join(slotPath, 'careerSavegame.xml'))) return;
+    const pendingPath = path.join(slotPath, '.mm_pending_settings.json');
+    if (!fs.existsSync(path.join(slotPath, 'careerSavegame.xml')) && !fs.existsSync(pendingPath)) return;
     const saveImgPath = path.join(slotPath, 'savegame.png');
     if (fs.existsSync(saveImgPath) && fs.statSync(saveImgPath).size > 0) return;
 
+    if (!mapModName || !mapTitle || !mapId) {
+        if (fs.existsSync(pendingPath)) {
+            try {
+                const pendingData = fs.readJsonSync(pendingPath);
+                if (pendingData) {
+                    mapModName = mapModName || pendingData.resolvedMapModName || pendingData.mapModName;
+                    mapTitle = mapTitle || pendingData.mapTitle;
+                    mapId = mapId || pendingData.mapId;
+                }
+            } catch (_) {}
+        }
+    }
     try {
         let zipPath = modZipPath;
-        if (!zipPath && savePathOrModName(slotPath, mapModName, mapId)) {
+        if (!zipPath && (mapModName || mapId)) {
             zipPath = await resolveMapModPath(slotPath);
         }
 
@@ -1478,7 +1491,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         if (lowEngineId === 'mapus' || (mapTitle || '').toLowerCase() === 'riverbend springs') engineMapId = 'MapUS';
         else if (lowEngineId === 'mapeu' || (mapTitle || '').toLowerCase() === 'zielonka') engineMapId = 'MapEU';
         else if (lowEngineId === 'mapas' || (mapTitle || '').toLowerCase() === 'hutan pantai') engineMapId = 'MapAS';
-        else if (lowEngineId.includes('highlandsfishing') || (effectiveMapModName || '').toLowerCase().includes('highlandsfishing')) {
+        else if (lowEngineId.includes('highlandsfishing') || (effectiveMapModName || '').toLowerCase().includes('highlandsfishing') || (mapTitle || '').toLowerCase() === 'kinlaig') {
             engineMapId = 'pdlc_highlandsFishingPack.HighlandsFishingMap';
         }
     } else if (effectiveMapModName) {
@@ -1621,6 +1634,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 savegameData.careerSavegame.player['@_spawnPositionX'] = '-528.800';
                 savegameData.careerSavegame.player['@_spawnPositionY'] = '19.800';
                 savegameData.careerSavegame.player['@_spawnPositionZ'] = '-61.100';
+            } else if (engineMapId === 'pdlc_highlandsFishingPack.HighlandsFishingMap' || (mapId || '').toLowerCase().includes('highlandsfishing') || (mapTitle || '').toLowerCase() === 'kinlaig') {
+                savegameData.careerSavegame.player['@_spawnPositionX'] = '-896.000';
+                savegameData.careerSavegame.player['@_spawnPositionY'] = '135.700';
+                savegameData.careerSavegame.player['@_spawnPositionZ'] = '190.000';
             } else {
                 // Kinlaig and custom mod maps: use the map's actual default start from its i3d/config files,
                 // or omit coordinates completely so Giants Engine spawns the player at the author's designated playerStart
@@ -2256,6 +2273,9 @@ async function getAllSavegames() {
             if (fs.existsSync(pendingFile) && !fs.existsSync(careerFile)) {
                 try {
                     const pending = await fs.readJson(pendingFile);
+                    try {
+                        await ensureSavegameImage(savePath, pending.resolvedMapModName || pending.mapModName, pending.mapTitle, pending.mapId);
+                    } catch (_) {}
                     savegames.push({
                         index: i,
                         folderName: `savegame${i}`,
