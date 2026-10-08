@@ -1844,6 +1844,36 @@ ipcMain.handle('system:enableDevMode', async () => {
   });
 });
 
+ipcMain.handle('system:uninstallApp', async () => {
+  const { exec } = require('child_process');
+  const path = require('path');
+  const fs = require('fs');
+
+  return new Promise((resolve) => {
+    if (process.platform !== 'win32') {
+      return resolve({ success: false, error: 'Uninstall handler is only supported on Windows.' });
+    }
+
+    const uninstallerPath = path.join(process.env.LOCALAPPDATA || '', 'Programs', 'fs25-mt-mod-manager', 'Uninstall FS25 MT Mod Manager.exe');
+    if (fs.existsSync(uninstallerPath)) {
+      exec(`"${uninstallerPath}"`, (err) => {
+        if (err) return resolve({ success: false, error: err.message });
+        resolve({ success: true, method: 'uninstaller' });
+      });
+      return;
+    }
+
+    // Fallback: Launch Windows Apps & Features / Installed Apps settings page
+    exec('start ms-settings:appsfeatures', (err) => {
+      if (err) {
+        // Legacy Windows control panel fallback
+        exec('control appwiz.cpl', () => {});
+      }
+      resolve({ success: true, method: 'settings' });
+    });
+  });
+});
+
 ipcMain.handle('shell:openExternal', (_, url) => shell.openExternal(url));
 ipcMain.handle('shell:showItemInFolder', (_, filePath) => shell.showItemInFolder(filePath));
 ipcMain.handle('shell:openPath', (_, dirPath) => shell.openPath(dirPath));

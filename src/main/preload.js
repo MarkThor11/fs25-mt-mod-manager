@@ -193,7 +193,8 @@ contextBridge.exposeInMainWorld('api', {
 
   system: {
     checkDevMode: () => ipcRenderer.invoke('system:checkDevMode'),
-    enableDevMode: () => ipcRenderer.invoke('system:enableDevMode')
+    enableDevMode: () => ipcRenderer.invoke('system:enableDevMode'),
+    uninstallApp: () => ipcRenderer.invoke('system:uninstallApp')
   },
 
   // Shell

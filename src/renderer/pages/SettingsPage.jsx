@@ -1441,6 +1441,31 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+
+        <div className="settings-row" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px dashed var(--border)' }}>
+          <div>
+            <div className="settings-row__label" style={{ color: '#ef4444' }}>Uninstall Application</div>
+            <div className="settings-row__desc">Launch the uninstaller for the installed desktop build so you can continue testing in dev mode.</div>
+          </div>
+          <div className="settings-row__control">
+            <button 
+              className="btn btn--danger btn--sm" 
+              onClick={async () => {
+                if (window.api?.system?.uninstallApp) {
+                  useToastStore.getState().info('Launching application uninstaller...');
+                  const res = await window.api.system.uninstallApp();
+                  if (!res.success) {
+                    useToastStore.getState().error(`Uninstall failed: ${res.error}`);
+                  }
+                } else {
+                  useToastStore.getState().warning('Uninstall option is available in desktop builds.');
+                }
+              }}
+            >
+              <Trash2 size={14} /> Uninstall App
+            </button>
+          </div>
+        </div>
       </CollapsibleSection>
 
       {/* About */}
