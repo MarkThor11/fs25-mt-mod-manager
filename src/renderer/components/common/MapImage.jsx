@@ -14,7 +14,27 @@ export const MAP_PREVIEWS = {
   'Highlands Fishing Map': mapKinlaig,
 };
 
-const MapImage = ({ mapTitle, mapId, mods, opacity = 0.25 }) => {
+const MapImage = ({ mapTitle, mapId, mods, savePath, opacity = 0.25 }) => {
+  // 0. Primary slot savegame.png match
+  if (savePath) {
+    const saveImgUrl = `mod-icon://icon?path=${encodeURIComponent(savePath + '/savegame.png')}`;
+    return (
+      <img 
+        src={saveImgUrl} 
+        alt="" 
+        style={{ 
+          width: '100%', 
+          height: '100%', 
+          objectFit: 'cover'
+        }} 
+        onError={(e) => {
+          // Hide broken image so fallback layers render cleanly
+          e.target.style.display = 'none';
+        }}
+      />
+    );
+  }
+
   // 1. Base map match (16:9 full-bleed landscape photos)
   if (MAP_PREVIEWS[mapTitle]) {
     const isKinlaig = mapTitle.includes('Kinlaig') || mapTitle.includes('Highlands');
