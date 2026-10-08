@@ -6872,4 +6872,6 @@ module.exports = {
 	consolidateDependencies,
 	patchMapDensityHeightTypesIfNeeded,
 	MAP_DEPENDENCIES_FOLDER,
+	decodeDDS,
+	getImageDimensions,
 };

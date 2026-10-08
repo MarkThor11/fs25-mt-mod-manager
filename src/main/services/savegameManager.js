@@ -331,7 +331,7 @@ async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null,
                                 console.log(`[SAVEGAME-IMAGE] Extracted PNG ${entry.entryName} to ${saveImgPath}`);
                                 return;
                             }
-                            // Try converting non-PNG (e.g. DDS/JPG) with Sharp if possible
+                            // Try converting non-PNG (e.g. DDS/JPG) to PNG if possible
                             try {
                                 const sharp = require('sharp');
                                 const pngBuf = await sharp(imgData).resize(256, 256).png().toBuffer();
@@ -339,7 +339,27 @@ async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null,
                                 console.log(`[SAVEGAME-IMAGE] Converted ${entry.entryName} to PNG at ${saveImgPath}`);
                                 return;
                             } catch (_) {
-                                // Sharp cannot decode raw DDS, continue to check other candidates or terrain heightmap
+                                // Sharp cannot decode raw DDS; use modManager's built-in decodeDDS
+                                try {
+                                    const modManager = require('./modManager');
+                                    const info = modManager.getImageDimensions(imgData);
+                                    if (info && info.type === 'dds' && (info.format === 'dxt1' || info.format === 'dxt5')) {
+                                        const safeW = Math.min(info.width, 2048);
+                                        const safeH = Math.min(info.height, 2048);
+                                        const rgbaBuf = modManager.decodeDDS(imgData, safeW, safeH, info.format, info.dataOffset);
+                                        if (rgbaBuf && rgbaBuf.length === safeW * safeH * 4) {
+                                            const sharp = require('sharp');
+                                            const convertedPng = await sharp(rgbaBuf, {
+                                                raw: { width: safeW, height: safeH, channels: 4 }
+                                            }).resize(256, 256).png().toBuffer();
+                                            await fs.writeFile(saveImgPath, convertedPng);
+                                            console.log(`[SAVEGAME-IMAGE] Decoded DDS ${entry.entryName} to PNG at ${saveImgPath}`);
+                                            return;
+                                        }
+                                    }
+                                } catch (ddsErr) {
+                                    console.warn(`[SAVEGAME-IMAGE] DDS decoding failed for ${entry.entryName}:`, ddsErr.message);
+                                }
                             }
                         }
                     }
