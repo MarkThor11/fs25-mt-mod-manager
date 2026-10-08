@@ -15,8 +15,10 @@ export const MAP_PREVIEWS = {
 };
 
 const MapImage = ({ mapTitle, mapId, mods, savePath, opacity = 0.25 }) => {
-  // 0. Primary slot savegame.png match
-  if (savePath) {
+  const [saveImgFailed, setSaveImgFailed] = React.useState(false);
+
+  // 0. Primary slot savegame.png match if it exists and hasn't failed to load
+  if (savePath && !saveImgFailed) {
     const saveImgUrl = `mod-icon://icon?path=${encodeURIComponent(savePath + '/savegame.png')}`;
     return (
       <img 
@@ -27,9 +29,8 @@ const MapImage = ({ mapTitle, mapId, mods, savePath, opacity = 0.25 }) => {
           height: '100%', 
           objectFit: 'cover'
         }} 
-        onError={(e) => {
-          // Hide broken image so fallback layers render cleanly
-          e.target.style.display = 'none';
+        onError={() => {
+          setSaveImgFailed(true);
         }}
       />
     );

@@ -244,9 +244,10 @@ function getElementText(xml, tag) {
 function isOfficialMap(mapId) {
     if (!mapId) return false;
     const lower = mapId.toLowerCase();
-    return ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(lower) || 
+    return ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'kinlaig'].includes(lower) || 
            lower.startsWith('pdlc_') || 
-           lower.includes('highlandsfishing');
+           lower.includes('highlandsfishing') ||
+           lower.includes('kinlaig');
 }
 
 /**
@@ -1153,9 +1154,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     const startFarmFlag = includeStartFarm ? 'true' : 'false';
 
     const isOfficialBaseMap = isOfficialMap(mapId) || isOfficialMap(mapModName) || 
-        ['riverbend springs', 'zielonka', 'hutan pantai'].includes((mapTitle || '').toLowerCase()) ||
-        ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes((mapId || '').toLowerCase()) ||
-        ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes((mapModName || '').toLowerCase());
+        ['riverbend springs', 'zielonka', 'hutan pantai', 'kinlaig', 'highlands fishing expansion', 'highlands fishing map'].includes((mapTitle || '').toLowerCase()) ||
+        ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'kinlaig', 'pdlc_highlandsfishingpack'].includes((mapId || '').toLowerCase()) ||
+        ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'kinlaig', 'pdlc_highlandsfishingpack'].includes((mapModName || '').toLowerCase());
 
     // 1. Prepare Slot
     if (fs.existsSync(slotPath)) {
@@ -2019,6 +2020,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         };
         await fs.emptyDir(slotPath);
         await fs.writeJson(path.join(slotPath, '.mm_pending_settings.json'), pendingSettings, { spaces: 2 });
+        await ensureSavegameImage(slotPath, mapModName, mapTitle, mapId, modZipPath);
         console.log(`[CREATE] Slot ${savegameIndex} cleared for clean FS25 native map initialization. Wrote .mm_pending_settings.json.`);
     } else {
         await ensureSavegameImage(slotPath, mapModName, mapTitle, mapId, modZipPath);
