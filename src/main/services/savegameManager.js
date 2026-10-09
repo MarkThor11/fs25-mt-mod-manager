@@ -1690,7 +1690,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         if (engineMapId === 'MapUS')       spawnForPlayers = { x: -128.0,  y: 49.2,  z: -162.0 };
                         else if (engineMapId === 'MapEU')  spawnForPlayers = { x: -263.0,  y: 60.0,  z: 44.0   };
                         else if (engineMapId === 'MapAS')  spawnForPlayers = { x: -528.8,  y: 19.8,  z: -61.1  };
-                        else spawnForPlayers = await getMapDefaultStartCoordinates(slotPath, true, engineMapId, mapModName || trueMapModName);
+                        else if (engineMapId === 'pdlc_highlandsFishingPack.HighlandsFishingMap' || (mapId || '').toLowerCase().includes('highlandsfishing') || (mapTitle || '').toLowerCase() === 'kinlaig') {
+                            spawnForPlayers = { x: -896.0, y: 135.7, z: 190.0 };
+                        } else spawnForPlayers = await getMapDefaultStartCoordinates(slotPath, true, engineMapId, mapModName || trueMapModName);
 
                         for (const p of plist) {
                             if (spawnForPlayers && spawnForPlayers.x !== undefined) {
