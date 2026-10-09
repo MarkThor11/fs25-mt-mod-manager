@@ -297,7 +297,37 @@ async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null,
             zipPath = await resolveMapModPath(slotPath);
         }
 
-        // Try extracting preview/icon from map ZIP
+        // Base game official maps (MapUS, MapEU, MapAS, Kinlaig): check local bundled assets or app assets
+        if (effectiveMapId && isOfficialMap(effectiveMapId)) {
+            try {
+                const sharp = require('sharp');
+                const lowerId = effectiveMapId.toLowerCase();
+                let assetFileName = null;
+                if (lowerId === 'mapus' || (effectiveMapTitle || '').toLowerCase() === 'riverbend springs') assetFileName = 'map_us.png';
+                else if (lowerId === 'mapeu' || (effectiveMapTitle || '').toLowerCase() === 'zielonka') assetFileName = 'map_eu.png';
+                else if (lowerId === 'mapas' || (effectiveMapTitle || '').toLowerCase() === 'hutan pantai') assetFileName = 'map_as.png';
+                else if (lowerId.includes('highlands') || lowerId.includes('kinlaig') || (effectiveMapTitle || '').toLowerCase() === 'kinlaig') assetFileName = 'map_kinlaig.jpg';
+
+                if (assetFileName) {
+                    const candidatePaths = [
+                        path.join(__dirname, '../assets', assetFileName),
+                        path.join(__dirname, '../../dist/assets', assetFileName),
+                        path.join(process.cwd(), 'src/renderer/assets', assetFileName),
+                        path.join(process.cwd(), 'dist/assets', assetFileName)
+                    ];
+                    for (const cp of candidatePaths) {
+                        if (fs.existsSync(cp)) {
+                            const pngBuf = await sharp(cp).resize(256, 256).png().toBuffer();
+                            await fs.writeFile(saveImgPath, pngBuf);
+                            console.log(`[SAVEGAME-IMAGE] Created official base map PNG (256x256) for ${effectiveMapId} from ${cp}`);
+                            return;
+                        }
+                    }
+                }
+            } catch (baseImgErr) {
+                console.warn('[SAVEGAME-IMAGE] Base game image copy failed:', baseImgErr.message);
+            }
+        }
         if (zipPath && fs.existsSync(zipPath)) {
             try {
                 const AdmZip = require('adm-zip');
