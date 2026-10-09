@@ -204,16 +204,18 @@ async function launch(options = {}) {
   let targetModsPath = options.modsPath;
   const modManager = require('./modManager');
 
-  if (options.savegameIndex) {
-    try {
-      const savegameManager = require('./savegameManager');
+  try {
+    const savegameManager = require('./savegameManager');
+    if (options.savegameIndex) {
       const fs25Path = pathProvider.getFS25DataRoot();
       const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
       await savegameManager.cleanupBridgeModFromSavegame(savePath);
       await savegameManager.ensureSavegameDensityMaps(savePath);
-    } catch (e) {
-      console.error('[LAUNCH] Failed to pre-process savegame files:', e.message);
     }
+    // Ensure savegame.png preview image is verified for ALL active save slots before game launches
+    await savegameManager.getAllSavegames().catch(() => {});
+  } catch (e) {
+    console.error('[LAUNCH] Failed to pre-process savegame files:', e.message);
   }
 
   if (!targetModsPath) {
