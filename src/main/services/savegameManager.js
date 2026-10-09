@@ -262,6 +262,19 @@ async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null,
     if (fs.existsSync(saveImgPath) && fs.statSync(saveImgPath).size > 0) return;
 
     if (!mapModName || !mapTitle || !mapId) {
+        const careerPath = path.join(slotPath, 'careerSavegame.xml');
+        if (fs.existsSync(careerPath)) {
+            try {
+                const xmlContent = fs.readFileSync(careerPath, 'utf8');
+                const parsed = parser.parse(xmlContent);
+                const settings = parsed?.careerSavegame?.settings || {};
+                mapId = mapId || settings['@_mapId'] || settings.mapId;
+                mapTitle = mapTitle || settings['@_mapTitle'] || settings.mapTitle;
+                if (mapId && mapId.includes('.')) {
+                    mapModName = mapModName || mapId.split('.')[0];
+                }
+            } catch (_) {}
+        }
         if (fs.existsSync(pendingPath)) {
             try {
                 const pendingData = fs.readJsonSync(pendingPath);
@@ -275,7 +288,7 @@ async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null,
     }
     try {
         let zipPath = modZipPath;
-        if (!zipPath && (mapModName || mapId)) {
+        if (!zipPath) {
             zipPath = await resolveMapModPath(slotPath);
         }
 
