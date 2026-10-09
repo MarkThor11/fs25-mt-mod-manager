@@ -261,30 +261,35 @@ async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null,
     const saveImgPath = path.join(slotPath, 'savegame.png');
     if (fs.existsSync(saveImgPath) && fs.statSync(saveImgPath).size > 0) return;
 
-    if (!mapModName || !mapTitle || !mapId) {
-        const careerPath = path.join(slotPath, 'careerSavegame.xml');
-        if (fs.existsSync(careerPath)) {
-            try {
-                const xmlContent = fs.readFileSync(careerPath, 'utf8');
-                const parsed = parser.parse(xmlContent);
-                const settings = parsed?.careerSavegame?.settings || {};
-                mapId = mapId || settings['@_mapId'] || settings.mapId;
-                mapTitle = mapTitle || settings['@_mapTitle'] || settings.mapTitle;
-                if (mapId && mapId.includes('.')) {
-                    mapModName = mapModName || mapId.split('.')[0];
-                }
-            } catch (_) {}
-        }
-        if (fs.existsSync(pendingPath)) {
-            try {
-                const pendingData = fs.readJsonSync(pendingPath);
-                if (pendingData) {
-                    mapModName = mapModName || pendingData.resolvedMapModName || pendingData.mapModName;
-                    mapTitle = mapTitle || pendingData.mapTitle;
-                    mapId = mapId || pendingData.mapId;
-                }
-            } catch (_) {}
-        }
+    let effectiveMapModName = mapModName;
+    let effectiveMapTitle = mapTitle;
+    let effectiveMapId = mapId;
+
+    const careerPath = path.join(slotPath, 'careerSavegame.xml');
+    if (fs.existsSync(careerPath)) {
+        try {
+            let xmlContent = fs.readFileSync(careerPath, 'utf8');
+            if (xmlContent.charCodeAt(0) === 0xFEFF) {
+                xmlContent = xmlContent.slice(1);
+            }
+            const parsed = parser.parse(xmlContent);
+            const settings = parsed?.careerSavegame?.settings || {};
+            effectiveMapId = effectiveMapId || settings['@_mapId'] || settings.mapId;
+            effectiveMapTitle = effectiveMapTitle || settings['@_mapTitle'] || settings.mapTitle;
+            if (effectiveMapId && typeof effectiveMapId === 'string' && effectiveMapId.includes('.')) {
+                effectiveMapModName = effectiveMapModName || effectiveMapId.split('.')[0];
+            }
+        } catch (_) {}
+    }
+    if (fs.existsSync(pendingPath)) {
+        try {
+            const pendingData = fs.readJsonSync(pendingPath);
+            if (pendingData) {
+                effectiveMapModName = effectiveMapModName || pendingData.resolvedMapModName || pendingData.mapModName;
+                effectiveMapTitle = effectiveMapTitle || pendingData.mapTitle;
+                effectiveMapId = effectiveMapId || pendingData.mapId;
+            }
+        } catch (_) {}
     }
     try {
         let zipPath = modZipPath;
@@ -398,7 +403,7 @@ async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null,
         // Fallback 2: Generate a clean styled 256x256 PNG card image with map title & save slot so GIANTS Engine displays high quality preview
         try {
             const sharp = require('sharp');
-            const cleanTitle = (mapTitle || path.basename(slotPath)).replace(/[<>&'"]/g, '');
+            const cleanTitle = (effectiveMapTitle || mapTitle || path.basename(slotPath)).replace(/[<>&'"]/g, '');
             const svgCard = Buffer.from(
                 `<svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">` +
                 `<rect width="100%" height="100%" fill="#111827"/>` +
@@ -2418,7 +2423,9 @@ async function getAllSavegames() {
 
             try {
                 await ensureSavegameImage(savePath, mapModName, mapTitle, mapId);
-            } catch (_) {}
+            } catch (imgErr) {
+                console.warn('[SAVEGAMES] ensureSavegameImage error:', imgErr.message);
+            }
 
             // Read environment.xml for accurate current month, day, time, and weather
             let currentPeriod = 6;
@@ -6623,7 +6630,10 @@ async function resolveMapModPath(savePath) {
         let mapId = null;
 
         if (fs.existsSync(careerPath)) {
-            const xmlContent = await fs.readFile(careerPath, 'utf8');
+            let xmlContent = await fs.readFile(careerPath, 'utf8');
+            if (xmlContent.charCodeAt(0) === 0xFEFF) {
+                xmlContent = xmlContent.slice(1);
+            }
             const parsed = parser.parse(xmlContent);
             const settings = parsed?.careerSavegame?.settings || {};
             mapId = settings['@_mapId'] || settings.mapId;
