@@ -1054,31 +1054,72 @@ export default function InstalledModsPage() {
   const [tagSearch, setTagSearch] = useState('');
   const [tagSortBy, setTagSortBy] = useState('count'); // 'count' or 'alpha'
 
+  // Helper to normalize raw category strings into clean canonical display names
+  const normalizeCategoryName = (cat) => {
+    if (!cat) return null;
+    let s = String(cat).trim();
+    if (!s || s.length > 40 || s.includes('<') || s.includes('\n') || s.includes('\r')) return null;
+    if (s.startsWith('CATEGORY:')) {
+      s = s.substring(9).trim();
+    }
+    const lower = s.toLowerCase().replace(/[\s_\-]+/g, '');
+    if (['generic', 'skipped', 'dlc', 'unknown', 'latest'].includes(lower)) return null;
+    if (lower.includes('map')) return 'Maps';
+
+    // Canonical FS25 / ModHub category mappings
+    if (lower.includes('mower')) return 'Mowers';
+    if (lower.includes('plow') || lower.includes('plough')) return 'Plows';
+    if (lower.includes('cultivat')) return 'Cultivators';
+    if (lower.includes('seeder') || lower.includes('seeding')) return 'Seeders';
+    if (lower.includes('planter')) return 'Planters';
+    if (lower.includes('sprayer')) return 'Sprayers';
+    if (lower.includes('baler') || lower.includes('baling')) return 'Balers';
+    if (lower.includes('tedder')) return 'Tedders';
+    if (lower.includes('windrower')) return 'Windrowers';
+    if (lower.includes('leveler')) return 'Levelers';
+    if (lower.includes('roller')) return 'Rollers';
+    if (lower.includes('mulcher')) return 'Mulchers';
+    if (lower.includes('weeder')) return 'Weeders';
+    if (lower.includes('slurry') || lower.includes('manure') || lower.includes('spreader')) return 'Fertilizer & Spreading';
+    
+    if (lower === 'tractorss' || lower === 'smalltractors') return 'Small Tractors';
+    if (lower === 'tractorsm' || lower === 'mediumtractors') return 'Medium Tractors';
+    if (lower === 'tractorsl' || lower === 'largetractors') return 'Large Tractors';
+    if (lower.includes('tractor')) return 'Tractors';
+    
+    if (lower.includes('combine') || lower.includes('harvester')) return 'Combines';
+    if (lower.includes('header') || lower.includes('cutter')) return 'Headers & Cutters';
+    if (lower.includes('trailer')) return 'Trailers';
+    if (lower.includes('truck')) return 'Trucks';
+    if (lower.includes('car') || lower.includes('vehicle')) return 'Vehicles';
+    if (lower.includes('loader') || lower.includes('telehandler') || lower.includes('forklift')) return 'Loaders';
+    if (lower.includes('shed') || lower.includes('building') || lower.includes('hall')) return 'Sheds & Buildings';
+    if (lower.includes('silo')) return 'Silos';
+    if (lower.includes('prefab')) return 'Prefabs';
+    if (lower.includes('object') || lower.includes('prop')) return 'Objects & Misc';
+
+    if (s.includes(' - ')) {
+      const parts = s.split(' - ').map(p => p.trim());
+      const mainNorm = normalizeCategoryName(parts[0]);
+      const subNorm = normalizeCategoryName(parts[1]);
+      return subNorm || mainNorm || parts[0];
+    }
+
+    return s.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
+  };
+
   // Helper to extract main category and sub-category from category strings
   const parseModCategory = (cat, isMap) => {
     if (isMap) return { main: 'Maps', sub: null };
     if (!cat) return { main: null, sub: null };
     let s = String(cat).trim();
-    if (!s || s.length > 35 || s.includes('<') || s.includes('\n') || s.includes('\r')) return { main: null, sub: null };
-    if (s.startsWith('CATEGORY:')) {
-      s = s.substring(9).trim();
-    }
-    const lower = s.toLowerCase();
-    if (['generic', 'skipped', 'dlc', 'unknown', 'latest'].includes(lower)) return { main: null, sub: null };
-    if (lower.includes('map')) return { main: 'Maps', sub: null };
-
-    let main = s;
-    let sub = null;
+    if (s.startsWith('CATEGORY:')) s = s.substring(9).trim();
     if (s.includes(' - ')) {
       const parts = s.split(' - ').map(p => p.trim());
-      main = parts[0];
-      sub = parts[1] || null;
+      return { main: normalizeCategoryName(parts[0]), sub: normalizeCategoryName(parts[1]) };
     }
-    const toTitle = (str) => {
-      if (!str) return null;
-      return str.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
-    };
-    return { main: toTitle(main), sub: toTitle(sub) };
+    const norm = normalizeCategoryName(s);
+    return { main: norm, sub: null };
   };
 
   // Helper for backward compatibility and filtering
@@ -1088,7 +1129,6 @@ export default function InstalledModsPage() {
   };
 
   // Helper to map any mod to an intuitive high-level "Key Filter"
-  // Focuses strictly on multi-subcategory roundups (Tractors, Combines, Implements, Trailers, Loaders, Vehicles) and Maps.
   const getModKeyFilter = (mod) => {
     if (!mod) return null;
     if (mod.isMap) return 'Maps';
@@ -1118,64 +1158,47 @@ export default function InstalledModsPage() {
     return null;
   };
 
-  // Helper to determine if a mod matches a given tag name
+  // Helper to determine if a mod matches a given tag name (strictly via mod.category, mod.tags, and functional flags)
   const doesModMatchTag = useCallback((m, tag) => {
     if (!m || !tag || typeof tag !== 'string') return false;
     const tLower = tag.toLowerCase().trim();
     if (!tLower) return false;
 
     // 1. Built-in / Functional Filter Tags
-    if (tLower === 'maps') return Boolean(m.isMap || (m.category && m.category.toLowerCase().includes('map')));
+    if (tLower === 'maps') return Boolean(m.isMap || (m.category && String(m.category).toLowerCase().includes('map')));
     if (tLower === 'crossplay') return Boolean(m.isCrossplay);
     if (tLower === 'lock-updates') return Boolean((m.tags || []).includes('lock-updates'));
     
-    // 2. Key Filters (Tractors, Combines, Implements, Trailers, Loaders, Vehicles, Trucks)
+    // 2. Key Filters
     const kf = getModKeyFilter(m);
     if (kf && kf.toLowerCase() === tLower) return true;
 
-    // 3. Stem for singular/plural matching (e.g., "mowers" <-> "mower", "plows" <-> "plow")
-    const tStem = (tLower.length > 3 && tLower.endsWith('s')) ? tLower.slice(0, -1) : tLower;
-
-    // Check main and sub parsed category
+    // 3. Category matching (from mod's explicit category field)
     const { main, sub } = parseModCategory(m.category, m.isMap);
     if (main) {
       const mainLower = main.toLowerCase();
-      if (mainLower === tLower || mainLower === tStem) return true;
-      if (tStem.length >= 4 && (mainLower.includes(tStem) || tLower.includes(mainLower))) return true;
+      if (mainLower === tLower || normalizeCategoryName(main)?.toLowerCase() === tLower) return true;
     }
     if (sub) {
       const subLower = sub.toLowerCase();
-      if (subLower === tLower || subLower === tStem) return true;
-      if (tStem.length >= 4 && (subLower.includes(tStem) || tLower.includes(subLower))) return true;
+      if (subLower === tLower || normalizeCategoryName(sub)?.toLowerCase() === tLower) return true;
+    }
+    if (m.category) {
+      const rawNorm = normalizeCategoryName(m.category);
+      if (rawNorm && rawNorm.toLowerCase() === tLower) return true;
+      if (String(m.category).toLowerCase().trim() === tLower) return true;
     }
 
-    // Check custom mod tags
+    // 4. Custom mod tags (m.tags array)
     if (m.tags && Array.isArray(m.tags)) {
       for (let i = 0; i < m.tags.length; i++) {
         const t = m.tags[i];
         if (!t) continue;
-        const tClean = String(t).toLowerCase().trim();
-        if (tClean === tLower || tClean === tStem) return true;
-        if (tStem.length >= 4 && tClean.includes(tStem)) return true;
-        const norm = normalizeCategory(tClean);
-        if (norm) {
-          const normLower = norm.toLowerCase();
-          if (normLower === tLower || normLower === tStem) return true;
-        }
+        const tClean = String(t).trim();
+        if (tClean.toLowerCase() === tLower) return true;
+        const norm = normalizeCategoryName(tClean);
+        if (norm && norm.toLowerCase() === tLower) return true;
       }
-    }
-
-    // Check raw mod category
-    if (m.category) {
-      const catLower = String(m.category).toLowerCase().trim();
-      if (catLower === tLower || catLower === tStem) return true;
-      if (tStem.length >= 4 && catLower.includes(tStem)) return true;
-    }
-
-    // Title / Filename matching for key category terms
-    if (tStem.length >= 4) {
-      const titleLower = (m.title || m.fileName || '').toLowerCase();
-      if (titleLower.includes(tStem)) return true;
     }
 
     return false;
