@@ -652,7 +652,8 @@ const LazyModList = ({
   const [visibleCount, setVisibleCount] = useState(20);
   const sentinelRef = React.useRef(null);
   const { toggleFavoriteMod, toggleFavoriteAuthor, toggleMustHaveMod } = useModHubStore();
-  const { installedTagFilter: selectedTags = [], setInstalledTagFilter: setSelectedTags } = useSettingsStore();
+  const { installedTagFilter: rawSelectedTags, setInstalledTagFilter: setSelectedTags } = useSettingsStore();
+  const selectedTags = Array.isArray(rawSelectedTags) ? rawSelectedTags : [];
 
   useEffect(() => {
     setVisibleCount(20);
@@ -1002,8 +1003,9 @@ export default function InstalledModsPage() {
     hiddenFolders, toggleHiddenFolder, installedModsViewMode, setInstalledModsViewMode,
     folderOrder, setFolderOrder, folderZooms, setFolderZoom, isInternalDragging, setIsInternalDragging,
     iconOnlyFolders, toggleIconOnlyFolder, isOnline, isLoaded, modUpdateMode, modsPaths, modsPath,
-    showTagBar, setShowTagBar, installedTagFilter: selectedTags, setInstalledTagFilter: setSelectedTags
+    showTagBar, setShowTagBar, installedTagFilter: rawSelectedTags, setInstalledTagFilter: setSelectedTags
   } = useSettingsStore();
+  const selectedTags = Array.isArray(rawSelectedTags) ? rawSelectedTags : [];
   const { toggleFavoriteMod, toggleFavoriteAuthor, favoriteMods, favoriteAuthors } = useModHubStore();
   const sessionInstalled = useDownloadStore((s) => s.sessionInstalled);
   const activeDownloadsKeysStr = useDownloadStore((s) => Object.keys(s.activeDownloads || {}).sort().join(','));
@@ -1384,8 +1386,9 @@ export default function InstalledModsPage() {
           if (!isModFav && !isAuthorFav) return false;
         }
 
-        if (selectedTags.length > 0) {
+        if (Array.isArray(selectedTags) && selectedTags.length > 0) {
           const hasMatch = selectedTags.some(tag => {
+            if (!tag || typeof tag !== 'string') return false;
             const tLower = tag.toLowerCase();
             if (tLower === 'maps') return m.isMap;
             if (tLower === 'crossplay') return m.isCrossplay;

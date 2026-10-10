@@ -659,7 +659,7 @@ export const useSettingsStore = create((set) => ({
     if (window.api?.settings) await window.api.settings.set('showTagBar', String(val)).catch(console.error);
   },
 
-  setInstalledTagFilter: (tags) => set({ installedTagFilter: tags }),
+  setInstalledTagFilter: (tags) => set({ installedTagFilter: Array.isArray(tags) ? tags : [] }),
 
   setSelectiveLoading: async (val) => {
     set({ selectiveLoading: val });
