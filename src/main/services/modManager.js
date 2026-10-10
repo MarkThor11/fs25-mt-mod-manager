@@ -947,13 +947,12 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
             }
 
             // FILTER: If we are in selective mode, only link if:
-            // 1. It is in the active set for this savegame (which includes the chosen map mod).
-            // 2. OR: If launching an ALREADY-INITIALIZED career savegame (!isNewSlot), link map mods referenced
-            //    by other save slots so their save cards render preview images when quitting to the career menu.
-            // When initializing a NEW save slot (isNewSlot === true), we do NOT link any other savegame maps.
-            // This guarantees that the new game map selection carousel ONLY displays the map selected in the app!
+            // 1. It is in the active set for this savegame (which includes the chosen map mod), OR
+            // 2. It is a map mod referenced by an existing save slot (savegameMapNames), so all save cards
+            //    in the Career menu always render their preview images without missing-mod warning triangles.
+            // This isolates the map selection carousel from the 300+ unused installed maps while keeping all save slot images intact.
             if (activeModNames && !activeModNames.has(modNameLower)) {
-                if (isNewSlot || !m.isMap || !savegameMapNames.has(modNameLower)) {
+                if (!m.isMap || !savegameMapNames.has(modNameLower)) {
                     continue;
                 }
             }
