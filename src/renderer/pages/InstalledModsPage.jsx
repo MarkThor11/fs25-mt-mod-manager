@@ -1236,6 +1236,32 @@ export default function InstalledModsPage() {
   // memos (filteredMods, modLookupIndex, folders, etc.) recompute across 3k mods.
   const mods = useDeferredValue(rawMods);
 
+  const favModIdsSet = useMemo(() => {
+    const set = new Set();
+    (favoriteMods || []).forEach(fv => {
+      if (fv.modId) set.add(String(fv.modId));
+      if (fv.fileName) set.add(fv.fileName);
+    });
+    return set;
+  }, [favoriteMods]);
+
+  const mustHaveIdsSet = useMemo(() => {
+    const set = new Set();
+    (favoriteMods || []).filter(fv => fv.isMustHave).forEach(fv => {
+      if (fv.modId) set.add(String(fv.modId));
+      if (fv.fileName) set.add(fv.fileName);
+    });
+    return set;
+  }, [favoriteMods]);
+
+  const favAuthorsSet = useMemo(() => {
+    return new Set((favoriteAuthors || []).map(fa => (fa.name || '').toLowerCase()));
+  }, [favoriteAuthors]);
+
+  const updateFileNamesSet = useMemo(() => {
+    return new Set((updates || []).map(u => u.fileName));
+  }, [updates]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [updatingMod, setUpdatingMod] = useState(null);
@@ -1351,8 +1377,21 @@ export default function InstalledModsPage() {
     // 1. Built-in / Functional Filter Tags
     if (tLower === 'maps') return Boolean(m.isMap || (effCat && String(effCat).toLowerCase().includes('map')));
     if (tLower === 'crossplay') return Boolean(m.isCrossplay);
-    if (tLower === 'lock-updates') return Boolean((m.tags || []).includes('lock-updates'));
-    
+    if (tLower === 'lock-updates' || tLower === 'auto-updates locked') return Boolean((m.tags || []).includes('lock-updates'));
+    if (tLower === 'pinned' || tLower === 'pinned mods' || tLower === 'must-have' || tLower === 'must-haves') {
+      const modIdStr = m.modId ? String(m.modId) : null;
+      return Boolean(m.isMustHave || (modIdStr && mustHaveIdsSet.has(modIdStr)) || (m.fileName && mustHaveIdsSet.has(m.fileName)));
+    }
+    if (tLower === 'favorites' || tLower === 'favorite mods' || tLower === 'favorite') {
+      const modIdStr = m.modId ? String(m.modId) : null;
+      const isFavMod = (modIdStr && favModIdsSet.has(modIdStr)) || (m.fileName && favModIdsSet.has(m.fileName));
+      const isFavAuth = m.author && favAuthorsSet.has(m.author.toLowerCase());
+      return Boolean(isFavMod || isFavAuth);
+    }
+    if (tLower === 'updates' || tLower === 'updates available' || tLower === 'has-updates') {
+      return Boolean(m.fileName && updateFileNamesSet.has(m.fileName));
+    }
+
     // 2. Category matching (from mod's resolved ModHub category field)
     const { main, sub } = parseModCategory(effCat, m.isMap);
     if (main && main.toLowerCase() === tLower) return true;
@@ -1373,7 +1412,7 @@ export default function InstalledModsPage() {
     }
 
     return false;
-  }, [getEffectiveModCategory]);
+  }, [getEffectiveModCategory, mustHaveIdsSet, favModIdsSet, favAuthorsSet, updateFileNamesSet]);
 
   // Compute clean structured tags: Key Filters (Rounded up concepts), Categories (Main ModHub categories), Subcategories, and Custom User Tags
   const { keyFilters, functionalTags, categoryTags, customTags, allUniqueTags } = useMemo(() => {
@@ -1461,6 +1500,35 @@ export default function InstalledModsPage() {
 
     // Key Filters (Top Section)
     const kfList = [];
+
+    // Pinned Mods (Must-Haves)
+    const pinnedCount = countForTag('Pinned Mods');
+    if (pinnedCount > 0) {
+      kfList.push({ name: 'Pinned Mods', label: 'Pinned (Must-Have)', count: pinnedCount, isFunctional: true });
+      assignedTagNamesLower.add('pinned mods');
+      assignedTagNamesLower.add('pinned');
+      assignedTagNamesLower.add('must-have');
+      assignedTagNamesLower.add('must-haves');
+    }
+
+    // Favorites
+    const favCount = countForTag('Favorites');
+    if (favCount > 0) {
+      kfList.push({ name: 'Favorites', label: 'Favorites', count: favCount, isFunctional: true });
+      assignedTagNamesLower.add('favorites');
+      assignedTagNamesLower.add('favorite mods');
+      assignedTagNamesLower.add('favorite');
+    }
+
+    // Updates Available
+    const updatesCount = countForTag('Updates Available');
+    if (updatesCount > 0) {
+      kfList.push({ name: 'Updates Available', label: 'Updates Available', count: updatesCount, isFunctional: true });
+      assignedTagNamesLower.add('updates available');
+      assignedTagNamesLower.add('updates');
+      assignedTagNamesLower.add('has-updates');
+    }
+
     if (hasCrossplay) {
       const c = countForTag('Crossplay');
       if (c > 0) {
@@ -1482,6 +1550,7 @@ export default function InstalledModsPage() {
       if (c > 0) {
         kfList.push({ name: 'lock-updates', label: 'Auto-Updates Locked', count: c, isFunctional: true });
         assignedTagNamesLower.add('lock-updates');
+        assignedTagNamesLower.add('auto-updates locked');
       }
     }
     kfList.sort(sortFn);
@@ -1617,23 +1686,6 @@ export default function InstalledModsPage() {
       stopScrolling();
     };
   }, [isInternalDragging]);
-
-  const favModIdsSet = useMemo(() => {
-    const set = new Set();
-    favoriteMods.forEach(fv => {
-      if (fv.modId) set.add(String(fv.modId));
-      if (fv.fileName) set.add(fv.fileName);
-    });
-    return set;
-  }, [favoriteMods]);
-
-  const favAuthorsSet = useMemo(() => {
-    return new Set(favoriteAuthors.map(fa => (fa.name || '').toLowerCase()));
-  }, [favoriteAuthors]);
-
-  const updateFileNamesSet = useMemo(() => {
-    return new Set(updates.map(u => u.fileName));
-  }, [updates]);
 
   const driveStats = useMemo(() => {
     if (!modsPaths || modsPaths.length === 0) return [];
