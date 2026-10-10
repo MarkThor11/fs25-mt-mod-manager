@@ -23,6 +23,224 @@ const getDriveLetter = (filePath) => {
   return match ? match[1].toUpperCase() : '';
 };
 
+// --- GIANTS MODHUB CATEGORY DIRECTORY ---
+const MODHUB_CATEGORY_MAP = {
+  // Official & Top-level Filters
+  officialmods: { main: 'Official Mods', sub: null },
+  latest: { main: 'Latest', sub: null },
+  gameplay: { main: 'Gameplay', sub: null },
+
+  // Maps
+  mapeurope: { main: 'Maps', sub: 'European Maps' },
+  mapnorthamerica: { main: 'Maps', sub: 'North American Maps' },
+  mapsouthamerica: { main: 'Maps', sub: 'South American Maps' },
+  mapothers: { main: 'Maps', sub: 'Other/Fantasy Maps' },
+  maps: { main: 'Maps', sub: null },
+
+  // Drivables
+  tractorss: { main: 'Drivables', sub: 'Small Tractors' },
+  tractorsm: { main: 'Drivables', sub: 'Medium Tractors' },
+  tractorsl: { main: 'Drivables', sub: 'Large Tractors' },
+  trucks: { main: 'Drivables', sub: 'Trucks' },
+  cars: { main: 'Drivables', sub: 'Cars & Bikes' },
+  miscdrivables: { main: 'Drivables', sub: 'Miscellaneous' },
+
+  // Loaders
+  frontloadervehicles: { main: 'Loaders', sub: 'Front Loader Vehicles' },
+  frontloaders: { main: 'Loaders', sub: 'Front Loaders' },
+  frontloadertools: { main: 'Loaders', sub: 'Front Loader Tools' },
+  teleloadervehicles: { main: 'Loaders', sub: 'Telehandlers' },
+  teleloadertools: { main: 'Loaders', sub: 'Telehandler Tools' },
+  wheelloadervehicles: { main: 'Loaders', sub: 'Wheel Loaders' },
+  wheelloadertools: { main: 'Loaders', sub: 'Wheel Loader Tools' },
+  skidsteervehicles: { main: 'Loaders', sub: 'Skid Steer Loaders' },
+  skidsteertools: { main: 'Loaders', sub: 'Skid Steer Loader Tools' },
+  forklifts: { main: 'Loaders', sub: 'Forklifts' },
+
+  // Trailers
+  trailers: { main: 'Trailers', sub: 'Trailers' },
+  augerwagons: { main: 'Trailers', sub: 'Auger Wagons' },
+  trailerschangingsystem: { main: 'Trailers', sub: 'Changing Systems' },
+  trailersflatbed: { main: 'Trailers', sub: 'Flatbed Trailers' },
+  lowloaders: { main: 'Trailers', sub: 'Low Loaders' },
+  trailerssemi: { main: 'Trailers', sub: 'Semi Trailers' },
+
+  // Soil Cultivation
+  plows: { main: 'Soil Cultivation', sub: 'Plows' },
+  cultivators: { main: 'Soil Cultivation', sub: 'Cultivators' },
+  discharrows: { main: 'Soil Cultivation', sub: 'Disc Harrows' },
+  powerharrows: { main: 'Soil Cultivation', sub: 'Power Harrows' },
+  subsoilers: { main: 'Soil Cultivation', sub: 'Subsoilers' },
+  spaders: { main: 'Soil Cultivation', sub: 'Spaders' },
+  stonepickers: { main: 'Soil Cultivation', sub: 'Stone Pickers' },
+  mulchers: { main: 'Soil Cultivation', sub: 'Mulchers' },
+
+  // Seeding
+  seeders: { main: 'Seeding', sub: 'Seeders' },
+  planters: { main: 'Seeding', sub: 'Planters' },
+  seedtanks: { main: 'Seeding', sub: 'Seed Tanks' },
+  palletseeds: { main: 'Seeding', sub: 'Seeds' },
+
+  // Yield Improvements
+  sprayers: { main: 'Yield Improvements', sub: 'Sprayers' },
+  fertilizerspreaders: { main: 'Yield Improvements', sub: 'Fertilizer Spreaders' },
+  slurrytanks: { main: 'Yield Improvements', sub: 'Slurry Tankers' },
+  slurrytools: { main: 'Yield Improvements', sub: 'Slurry Tools' },
+  slurrytransport: { main: 'Yield Improvements', sub: 'Slurry Transport' },
+  manurespreaders: { main: 'Yield Improvements', sub: 'Manure Spreaders' },
+  weeders: { main: 'Yield Improvements', sub: 'Weeders' },
+  rollers: { main: 'Yield Improvements', sub: 'Rollers' },
+  palletfertilizerherbicide: { main: 'Yield Improvements', sub: 'Consumables' },
+
+  // Combine Harvesting
+  harvesters: { main: 'Combine Harvesting', sub: 'Harvesters' },
+  cutters: { main: 'Combine Harvesting', sub: 'Grain Headers' },
+  cornheaders: { main: 'Combine Harvesting', sub: 'Corn Headers' },
+  specialheaders: { main: 'Combine Harvesting', sub: 'Special Headers' },
+  cuttertrailers: { main: 'Combine Harvesting', sub: 'Header Trailers' },
+  combinewindrower: { main: 'Combine Harvesting', sub: 'Windrower' },
+
+  // Forage Harvesting
+  forageharvesters: { main: 'Forage Harvesting', sub: 'Harvesters' },
+  forageharvestercutters: { main: 'Forage Harvesting', sub: 'Headers' },
+  forageharvestercuttertrailers: { main: 'Forage Harvesting', sub: 'Header Trailers' },
+  leveler: { main: 'Forage Harvesting', sub: 'Levelers' },
+  silocompaction: { main: 'Forage Harvesting', sub: 'Silo Compaction' },
+  palletsilage: { main: 'Forage Harvesting', sub: 'Consumables' },
+
+  // Grassland
+  mowers: { main: 'Grassland', sub: 'Mowers' },
+  tedders: { main: 'Grassland', sub: 'Tedders' },
+  windrowers: { main: 'Grassland', sub: 'Windrowers' },
+  loaderwagons: { main: 'Grassland', sub: 'Forage Wagons' },
+  grasslandcare: { main: 'Grassland', sub: 'Grassland Care' },
+  palletgrassland: { main: 'Grassland', sub: 'Consumables' },
+
+  // Baling
+  balerssquare: { main: 'Baling', sub: 'Square balers' },
+  balersround: { main: 'Baling', sub: 'Round Balers' },
+  baleloaders: { main: 'Baling', sub: 'Transport' },
+  balewrappers: { main: 'Baling', sub: 'Wrappers' },
+  balingmisc: { main: 'Baling', sub: 'Miscellaneous' },
+  palletbaling: { main: 'Baling', sub: 'Consumables' },
+
+  // Animals
+  foragemixers: { main: 'Animals', sub: 'Forage Mixers' },
+  barrels: { main: 'Animals', sub: 'Barrels' },
+  animaltransport: { main: 'Animals', sub: 'Animal Transport' },
+  strawblowers: { main: 'Animals', sub: 'Straw Blowers' },
+  palletanimals: { main: 'Animals', sub: 'Food' },
+
+  // Rootcrops
+  beetharvesters: { main: 'Rootcrops', sub: 'Beet Harvesters' },
+  beetharvestercutters: { main: 'Rootcrops', sub: 'Beet Harvester Headers' },
+  beetloading: { main: 'Rootcrops', sub: 'Beet Loading' },
+  potatoplanting: { main: 'Rootcrops', sub: 'Potato Planters' },
+  potatoharvesting: { main: 'Rootcrops', sub: 'Potato Technology' },
+
+  // Vegetables
+  vegetableplanters: { main: 'Vegetables', sub: 'Vegetable Planters' },
+  vegetableharvesters: { main: 'Vegetables', sub: 'Vegetable Harvesters' },
+  spinachharvesters: { main: 'Vegetables', sub: 'Spinach Harvesters' },
+  greenbeanharvesters: { main: 'Vegetables', sub: 'Green Bean Harvesters' },
+  peaharvesters: { main: 'Vegetables', sub: 'Pea Harvesters' },
+  palletvegetables: { main: 'Vegetables', sub: 'Consumables' },
+
+  // Special Crops
+  riceplanters: { main: 'Special Crops', sub: 'Rice Planters' },
+  riceharvesters: { main: 'Special Crops', sub: 'Rice Harvesters' },
+  sugarcaneplanters: { main: 'Special Crops', sub: 'Sugarcane Planters' },
+  sugarcaneharvesters: { main: 'Special Crops', sub: 'Sugarcane Harvesters' },
+  sugarcanetransport: { main: 'Special Crops', sub: 'Sugarcane Transport' },
+  cottonharvesters: { main: 'Special Crops', sub: 'Cotton Harvesters' },
+  cottontransport: { main: 'Special Crops', sub: 'Cotton Transport' },
+  specialcropspallets: { main: 'Special Crops', sub: 'Consumables' },
+
+  // Grapes & Olives
+  grapeharvesters: { main: 'Grapes & Olives', sub: 'Grape Harvesters' },
+  oliveharvesters: { main: 'Grapes & Olives', sub: 'Olive Harvesters' },
+  grapetrailers: { main: 'Grapes & Olives', sub: 'Grape Trailers' },
+  grapetools: { main: 'Grapes & Olives', sub: 'Grape Tools' },
+
+  // Forestry
+  forestryharvesters: { main: 'Forestry', sub: 'Harvesters' },
+  forestryforwarders: { main: 'Forestry', sub: 'Forwarders' },
+  forestryexcavators: { main: 'Forestry', sub: 'Excavators' },
+  forestryexcavatortools: { main: 'Forestry', sub: 'Excavator Tools' },
+  woodtransport: { main: 'Forestry', sub: 'Wood Transport' },
+  woodchippers: { main: 'Forestry', sub: 'Wood Chippers' },
+  forestrymulchers: { main: 'Forestry', sub: 'Mulchers' },
+  forestrywinches: { main: 'Forestry', sub: 'Winches' },
+  forestryplanters: { main: 'Forestry', sub: 'Tree Planters' },
+  forestrystumpcutters: { main: 'Forestry', sub: 'Stump Cutters' },
+  forestrymisc: { main: 'Forestry', sub: 'Miscellaneous' },
+  palletforestry: { main: 'Forestry', sub: 'Saplings' },
+
+  // Miscellaneous
+  weights: { main: 'Miscellaneous', sub: 'Weights' },
+  belts: { main: 'Miscellaneous', sub: 'Belt Systems' },
+  winterequipment: { main: 'Miscellaneous', sub: 'Winter Equipment' },
+  misc: { main: 'Miscellaneous', sub: 'Miscellaneous' },
+
+  // Objects
+  pallets: { main: 'Objects', sub: 'Pallets' },
+  bigbags: { main: 'Objects', sub: 'Big Bags' },
+  bigbagpallets: { main: 'Objects', sub: 'Big Bag Pallets' },
+  bales: { main: 'Objects', sub: 'Bales' },
+  ibc: { main: 'Objects', sub: 'Pallet Tanks' },
+  objectanimal: { main: 'Objects', sub: 'Animals' },
+  objectmisc: { main: 'Objects', sub: 'Miscellaneous' },
+
+  // Hand Tools
+  chainsaws: { main: 'Hand Tools', sub: 'Chainsaws' },
+  shovels: { main: 'Hand Tools', sub: 'Shovels' },
+  flashlights: { main: 'Hand Tools', sub: 'Flashlights' },
+  markingspray: { main: 'Hand Tools', sub: 'Marking spray' },
+  handtoolsmisc: { main: 'Hand Tools', sub: 'Miscellaneous' },
+
+  // Placeable
+  animalpens: { main: 'Placeable', sub: 'Animal Pens' },
+  fences: { main: 'Placeable', sub: 'Fences' },
+  trees: { main: 'Placeable', sub: 'Trees' },
+  storages: { main: 'Placeable', sub: 'Storages' },
+  containers: { main: 'Placeable', sub: 'Containers' },
+  dieseltanks: { main: 'Placeable', sub: 'Diesel Tanks' },
+  watertanks: { main: 'Placeable', sub: 'Water Tanks' },
+  fillabletanks: { main: 'Placeable', sub: 'Fillable Tanks' },
+  silos: { main: 'Placeable', sub: 'Grain Silos' },
+  siloextensions: { main: 'Placeable', sub: 'Silo Extensions' },
+  sheds: { main: 'Placeable', sub: 'Sheds' },
+  gardensheds: { main: 'Placeable', sub: 'Garden Sheds' },
+  farmhouses: { main: 'Placeable', sub: 'Farmhouses' },
+  beehives: { main: 'Placeable', sub: 'Beehives' },
+  generators: { main: 'Placeable', sub: 'Power Generators' },
+  floodlighting: { main: 'Placeable', sub: 'Floodlighting' },
+  decoration: { main: 'Placeable', sub: 'Decoration' },
+  productionpoints: { main: 'Placeable', sub: 'Production Sites' },
+  sellingpoints: { main: 'Placeable', sub: 'Selling Points' },
+  placeablemisc: { main: 'Placeable', sub: 'Miscellaneous' },
+
+  // Package & Prefab
+  package: { main: 'Package', sub: 'Package' },
+  prefab: { main: 'Prefab', sub: 'Prefab' }
+};
+
+// Populate reverse lookup keys for Main category labels and Subcategory labels
+Object.values(MODHUB_CATEGORY_MAP).forEach(entry => {
+  if (entry.main) {
+    const mainKey = entry.main.toLowerCase().replace(/[\s_\-]+/g, '');
+    if (!MODHUB_CATEGORY_MAP[mainKey]) {
+      MODHUB_CATEGORY_MAP[mainKey] = { main: entry.main, sub: null };
+    }
+  }
+  if (entry.sub) {
+    const subKey = entry.sub.toLowerCase().replace(/[\s_\-]+/g, '');
+    if (!MODHUB_CATEGORY_MAP[subKey]) {
+      MODHUB_CATEGORY_MAP[subKey] = entry;
+    }
+  }
+});
+
 const getPathLabel = (rootPath) => {
   if (!rootPath) return '';
   const drive = getDriveLetter(rootPath);
@@ -1066,66 +1284,9 @@ export default function InstalledModsPage() {
     if (['generic', 'skipped', 'dlc', 'unknown', 'latest'].includes(lower)) return { main: null, sub: null };
     if (lower.includes('map')) return { main: 'Maps', sub: null };
 
-    // Explicit ModHub Category & Subcategory Dictionary
-    // Tractors & Vehicles
-    if (lower === 'tractorss' || lower === 'smalltractors') return { main: 'Vehicles', sub: 'Small Tractors' };
-    if (lower === 'tractorsm' || lower === 'mediumtractors') return { main: 'Vehicles', sub: 'Medium Tractors' };
-    if (lower === 'tractorsl' || lower === 'largetractors') return { main: 'Vehicles', sub: 'Large Tractors' };
-    if (lower.includes('tractor')) return { main: 'Vehicles', sub: 'Tractors' };
-    if (lower.includes('truck')) return { main: 'Vehicles', sub: 'Trucks' };
-    if (lower.includes('car') || lower.includes('vehicle') || lower.includes('drivable')) return { main: 'Vehicles', sub: 'Cars & Vehicles' };
-
-    // Combines & Cutters
-    if (lower.includes('forageharvester') || lower.includes('forageharvesting')) return { main: 'Vehicles', sub: 'Forage Harvesting' };
-    if (lower.includes('combine') || lower.includes('harvester')) return { main: 'Vehicles', sub: 'Combines' };
-    if (lower.includes('header') || lower.includes('cutter')) return { main: 'Implements', sub: 'Headers & Cutters' };
-
-    // Loaders
-    if (lower.includes('frontloader')) return { main: 'Vehicles', sub: 'Front Loaders' };
-    if (lower.includes('telehandler')) return { main: 'Vehicles', sub: 'Telehandlers' };
-    if (lower.includes('wheelloader')) return { main: 'Vehicles', sub: 'Wheel Loaders' };
-    if (lower.includes('skidsteer')) return { main: 'Vehicles', sub: 'Skid Steers' };
-    if (lower.includes('forklift')) return { main: 'Vehicles', sub: 'Forklifts' };
-    if (lower.includes('loader')) return { main: 'Vehicles', sub: 'Loaders' };
-
-    // Implements & Tools
-    if (lower.includes('mower') || lower.includes('grassland')) return { main: 'Implements', sub: 'Mowers' };
-    if (lower.includes('plow') || lower.includes('plough') || lower.includes('subsoiler') || lower.includes('spader')) return { main: 'Implements', sub: 'Plows' };
-    if (lower.includes('cultivat') || lower.includes('harrow')) return { main: 'Implements', sub: 'Cultivators' };
-    if (lower.includes('seeder') || lower.includes('seeding')) return { main: 'Implements', sub: 'Seeders' };
-    if (lower.includes('planter')) return { main: 'Implements', sub: 'Planters' };
-    if (lower.includes('sprayer')) return { main: 'Implements', sub: 'Sprayers' };
-    if (lower.includes('baler') || lower.includes('baling') || lower.includes('wrapper')) return { main: 'Implements', sub: 'Balers' };
-    if (lower.includes('tedder')) return { main: 'Implements', sub: 'Tedders' };
-    if (lower.includes('windrower')) return { main: 'Implements', sub: 'Windrowers' };
-    if (lower.includes('roller')) return { main: 'Implements', sub: 'Rollers' };
-    if (lower.includes('mulcher')) return { main: 'Implements', sub: 'Mulchers' };
-    if (lower.includes('weeder')) return { main: 'Implements', sub: 'Weeders' };
-    if (lower.includes('slurry') || lower.includes('manure') || lower.includes('spreader') || lower.includes('fertilizer')) return { main: 'Implements', sub: 'Fertilizer & Spreading' };
-    if (lower.includes('rootcrop') || lower.includes('potato') || lower.includes('beet')) return { main: 'Implements', sub: 'Rootcrops' };
-    if (lower.includes('cotton') || lower.includes('specialcrop')) return { main: 'Implements', sub: 'Special Crops' };
-    if (lower.includes('woodtransport') || lower.includes('forestry')) return { main: 'Implements', sub: 'Forestry & Wood Transport' };
-    if (lower.includes('weight')) return { main: 'Implements', sub: 'Weights' };
-
-    // Trailers
-    if (lower.includes('augerwagon') || lower.includes('graincart')) return { main: 'Implements', sub: 'Auger Wagons' };
-    if (lower.includes('animaltransport')) return { main: 'Implements', sub: 'Animal Transport' };
-    if (lower.includes('lowloader') || lower.includes('flatbed')) return { main: 'Implements', sub: 'Low Loaders & Flatbeds' };
-    if (lower.includes('trailer') || lower.includes('tipper')) return { main: 'Implements', sub: 'Trailers' };
-
-    // Placeables & Buildings
-    if (lower.includes('shed') || lower.includes('hall') || lower.includes('building')) return { main: 'Placeables', sub: 'Sheds & Buildings' };
-    if (lower.includes('silo')) return { main: 'Placeables', sub: 'Silos' };
-    if (lower.includes('farmhouse')) return { main: 'Placeables', sub: 'Farmhouses' };
-    if (lower.includes('production') || lower.includes('factory')) return { main: 'Placeables', sub: 'Productions' };
-    if (lower.includes('animal')) return { main: 'Placeables', sub: 'Animal Pens' };
-    if (lower.includes('placeable')) return { main: 'Placeables', sub: 'Placeables' };
-
-    // Packs & Gameplay
-    if (lower.includes('package') || lower.includes('pack')) return { main: 'Packs & Gameplay', sub: 'Package' };
-    if (lower.includes('gameplay') || lower.includes('script')) return { main: 'Packs & Gameplay', sub: 'Gameplay' };
-    if (lower.includes('prefab')) return { main: 'Packs & Gameplay', sub: 'Prefabs' };
-    if (lower.includes('object') || lower.includes('prop') || lower.includes('decoration') || lower.includes('misc')) return { main: 'Objects & Misc', sub: 'Objects & Misc' };
+    if (MODHUB_CATEGORY_MAP[lower]) {
+      return MODHUB_CATEGORY_MAP[lower];
+    }
 
     if (s.includes(' - ')) {
       const parts = s.split(' - ').map(p => p.trim());
