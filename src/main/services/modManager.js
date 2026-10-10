@@ -971,8 +971,8 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                 continue;
             }
 
-            // Auto-patch map mods missing <densityMapHeightTypes> to prevent Divide by Zero crash at 55% map load
-            if (m.isMap || (mapModName && modNameLower === mapModName)) {
+            // Auto-patch the specific map mod being launched if missing <densityMapHeightTypes> to prevent Divide by Zero crash at 55% map load
+            if (mapModName && modNameLower === mapModName) {
                 patchMapDensityHeightTypesIfNeeded(realSource);
             }
 
