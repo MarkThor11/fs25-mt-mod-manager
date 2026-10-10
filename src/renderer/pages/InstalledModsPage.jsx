@@ -1,5 +1,5 @@
 import { CustomSlider } from '../components/common/CustomSlider';
-import React, { useEffect, useState, useMemo, useDeferredValue } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useDeferredValue } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
