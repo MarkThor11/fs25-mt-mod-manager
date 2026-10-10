@@ -2029,7 +2029,7 @@ async function performScan(manualPaths = null) {
 				version = tracked.remote_version || tracked.local_version;
 			}
 
-			const isCrossplay = isCrossplayMod(title, calculatedModId, remoteMod);
+			const isCrossplay = isCrossplayMod(title, calculatedModId, remoteMod, entryName);
 
 			mods.push({
 				title,
@@ -2771,26 +2771,64 @@ function isMapCategory(category) {
 /**
  * Detects if a mod/map is Crossplay compatible.
  */
-function isCrossplayMod(modTitle, modId = null, remoteModOrDetail = null) {
+function isCrossplayMod(modTitle, modId = null, remoteModOrDetail = null, fileName = null) {
 	const title = (modTitle || '').toLowerCase();
-	if (title.includes('crossplay') || title.includes('(cp)') || title.includes('[cp]')) {
+	const fName = (fileName || '').toLowerCase();
+	if (
+		title.includes('crossplay') || title.includes('(cp)') || title.includes('[cp]') ||
+		fName.includes('crossplay') || fName.includes('(cp)') || fName.includes('[cp]')
+	) {
 		return true;
 	}
 
 	let target = remoteModOrDetail;
-	if (!target && modId) {
+	if (!target && (modId || modTitle || fileName)) {
 		const pool = cache.getModHubMetadataPool();
-		const cleanId = String(modId).replace(/^0+/, '');
-		target = pool[cleanId] || pool[String(modId)] || null;
+		if (modId) {
+			const cleanId = String(modId).replace(/^0+/, '');
+			target = pool[cleanId] || pool[String(modId)] || null;
+		}
+		if (!target && fileName) {
+			const cleanFileId = fileName.toLowerCase().replace(/\.zip$/i, '');
+			const cleanPrefix = cleanFileId.replace(/^(?:fs25|fs22|pdlc)_/i, '');
+			const cleanAlphanum = cleanPrefix.replace(/[^a-z0-9]/g, '');
+			target = pool[cleanFileId] || pool[cleanPrefix] || (cleanAlphanum ? pool[cleanAlphanum] : null);
+		}
+		if (!target && modTitle) {
+			const cleanTitleKey = modTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+			target = pool[cleanTitleKey] || pool._byCleanTitle?.[cleanTitleKey] || null;
+		}
 	}
 
 	if (target) {
-		const targetTitle = (target.title || target.modhub_title || '').toLowerCase();
+		const targetTitle = (target.title || target.modhub_title || target.name || '').toLowerCase();
 		if (targetTitle.includes('crossplay') || targetTitle.includes('(cp)') || targetTitle.includes('[cp]')) {
 			return true;
 		}
-		const fileName = (target.fileName || target.localFileName || target.file_path || '').toLowerCase();
-		if (fileName.includes('crossplay') || fileName.includes('(cp)') || fileName.includes('[cp]')) {
+		const targetFileName = (target.fileName || target.localFileName || target.file_path || '').toLowerCase();
+		if (targetFileName.includes('crossplay') || targetFileName.includes('(cp)') || targetFileName.includes('[cp]')) {
+			return true;
+		}
+		if (target.isCrossplay === true || target.is_crossplay === true) {
+			return true;
+		}
+		const platformText = (
+			target.platforms || 
+			target.platform || 
+			target.metadata?.Platform || 
+			target.metadata?.platform || 
+			''
+		).toLowerCase();
+
+		if (
+			platformText.includes('ps5') || 
+			platformText.includes('ps4') || 
+			platformText.includes('xbs') || 
+			platformText.includes('xb1') || 
+			platformText.includes('s2') || 
+			platformText.includes('console') ||
+			platformText.includes('crossplay')
+		) {
 			return true;
 		}
 	}

@@ -1368,7 +1368,7 @@ export default function InstalledModsPage() {
 
     // 1. Built-in / Functional Filter Tags
     if (tLower === 'maps') return Boolean(m.isMap || (effCat && String(effCat).toLowerCase().includes('map')));
-    if (tLower === 'crossplay') return Boolean(m.isCrossplay);
+    if (tLower === 'crossplay') return Boolean(m.isCrossplay || (m.tags || []).includes('crossplay') || /crossplay|\(cp\)|\[cp\]/i.test(m.title || '') || /crossplay|\(cp\)|\[cp\]/i.test(m.fileName || '') || /crossplay|\(cp\)|\[cp\]/i.test(m.modName || ''));
     if (tLower === 'lock-updates' || tLower === 'auto-updates locked') return Boolean((m.tags || []).includes('lock-updates'));
     if (tLower === 'pinned' || tLower === 'pinned mods' || tLower === 'must-have' || tLower === 'must-haves') {
       const modIdStr = m.modId ? String(m.modId) : null;
