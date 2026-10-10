@@ -1121,28 +1121,62 @@ export default function InstalledModsPage() {
   // Helper to determine if a mod matches a given tag name
   const doesModMatchTag = useCallback((m, tag) => {
     if (!m || !tag || typeof tag !== 'string') return false;
-    const tLower = tag.toLowerCase();
+    const tLower = tag.toLowerCase().trim();
+    if (!tLower) return false;
+
+    // 1. Built-in / Functional Filter Tags
     if (tLower === 'maps') return Boolean(m.isMap || (m.category && m.category.toLowerCase().includes('map')));
     if (tLower === 'crossplay') return Boolean(m.isCrossplay);
     if (tLower === 'lock-updates') return Boolean((m.tags || []).includes('lock-updates'));
     
+    // 2. Key Filters (Tractors, Combines, Implements, Trailers, Loaders, Vehicles, Trucks)
     const kf = getModKeyFilter(m);
     if (kf && kf.toLowerCase() === tLower) return true;
 
-    const { main, sub } = parseModCategory(m.category, m.isMap);
-    if (main && main.toLowerCase() === tLower) return true;
-    if (sub && sub.toLowerCase() === tLower) return true;
+    // 3. Stem for singular/plural matching (e.g., "mowers" <-> "mower", "plows" <-> "plow")
+    const tStem = (tLower.length > 3 && tLower.endsWith('s')) ? tLower.slice(0, -1) : tLower;
 
+    // Check main and sub parsed category
+    const { main, sub } = parseModCategory(m.category, m.isMap);
+    if (main) {
+      const mainLower = main.toLowerCase();
+      if (mainLower === tLower || mainLower === tStem) return true;
+      if (tStem.length >= 4 && (mainLower.includes(tStem) || tLower.includes(mainLower))) return true;
+    }
+    if (sub) {
+      const subLower = sub.toLowerCase();
+      if (subLower === tLower || subLower === tStem) return true;
+      if (tStem.length >= 4 && (subLower.includes(tStem) || tLower.includes(subLower))) return true;
+    }
+
+    // Check custom mod tags
     if (m.tags && Array.isArray(m.tags)) {
       for (let i = 0; i < m.tags.length; i++) {
         const t = m.tags[i];
         if (!t) continue;
-        const tClean = String(t).toLowerCase();
-        if (tClean === tLower || normalizeCategory(tClean)?.toLowerCase() === tLower) return true;
+        const tClean = String(t).toLowerCase().trim();
+        if (tClean === tLower || tClean === tStem) return true;
+        if (tStem.length >= 4 && tClean.includes(tStem)) return true;
+        const norm = normalizeCategory(tClean);
+        if (norm) {
+          const normLower = norm.toLowerCase();
+          if (normLower === tLower || normLower === tStem) return true;
+        }
       }
     }
 
-    if (m.category && m.category.toLowerCase() === tLower) return true;
+    // Check raw mod category
+    if (m.category) {
+      const catLower = String(m.category).toLowerCase().trim();
+      if (catLower === tLower || catLower === tStem) return true;
+      if (tStem.length >= 4 && catLower.includes(tStem)) return true;
+    }
+
+    // Title / Filename matching for key category terms
+    if (tStem.length >= 4) {
+      const titleLower = (m.title || m.fileName || '').toLowerCase();
+      if (titleLower.includes(tStem)) return true;
+    }
 
     return false;
   }, []);
