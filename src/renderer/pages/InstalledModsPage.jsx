@@ -1118,35 +1118,75 @@ export default function InstalledModsPage() {
     return null;
   };
 
+  // Helper to determine if a mod matches a given tag name
+  const doesModMatchTag = useCallback((m, tag) => {
+    if (!m || !tag || typeof tag !== 'string') return false;
+    const tLower = tag.toLowerCase();
+    if (tLower === 'maps') return Boolean(m.isMap || (m.category && m.category.toLowerCase().includes('map')));
+    if (tLower === 'crossplay') return Boolean(m.isCrossplay);
+    if (tLower === 'lock-updates') return Boolean((m.tags || []).includes('lock-updates'));
+    
+    const kf = getModKeyFilter(m);
+    if (kf && kf.toLowerCase() === tLower) return true;
+
+    const { main, sub } = parseModCategory(m.category, m.isMap);
+    if (main && main.toLowerCase() === tLower) return true;
+    if (sub && sub.toLowerCase() === tLower) return true;
+
+    if (m.tags && Array.isArray(m.tags)) {
+      for (let i = 0; i < m.tags.length; i++) {
+        const t = m.tags[i];
+        if (!t) continue;
+        const tClean = String(t).toLowerCase();
+        if (tClean === tLower || normalizeCategory(tClean)?.toLowerCase() === tLower) return true;
+      }
+    }
+
+    if (m.category && m.category.toLowerCase() === tLower) return true;
+
+    return false;
+  }, []);
+
   // Compute clean structured tags: Key Filters (Rounded up concepts), Categories (Main ModHub categories), Subcategories, and Custom User Tags
   const { keyFilters, functionalTags, categoryTags, customTags, allUniqueTags } = useMemo(() => {
-    const keyFilterCounts = {};
-    const mainCatCounts = {};
-    const subCatCounts = {};
-    const customCounts = {};
-    let crossplayCount = 0;
-    let lockedCount = 0;
+    const eligibleMods = mods.filter(m => {
+      if (!m || m.isDLC || m.folder === 'DLC') return false;
+      if (selectedDriveFilter !== 'ALL') {
+        const rootNorm = selectedDriveFilter.replace(/\\/g, '/').toLowerCase();
+        const rootWithSlash = rootNorm.endsWith('/') ? rootNorm : rootNorm + '/';
+        const p = (m.filePath || '').replace(/\\/g, '/').toLowerCase();
+        if (!p.startsWith(rootWithSlash)) return false;
+      }
+      return true;
+    });
 
-    for (let i = 0; i < mods.length; i++) {
-      const mod = mods[i];
-      if (!mod || mod.isDLC || mod.folder === 'DLC') continue;
+    const candidateKeyFilters = new Set();
+    const candidateMainCats = new Set();
+    const candidateSubCats = new Set();
+    const candidateCustomTags = new Set();
 
-      if (mod.isCrossplay) crossplayCount++;
-      if ((mod.tags || []).includes('lock-updates')) lockedCount++;
+    let hasCrossplay = false;
+    let hasLockedUpdates = false;
+
+    for (let i = 0; i < eligibleMods.length; i++) {
+      const mod = eligibleMods[i];
+
+      if (mod.isCrossplay) hasCrossplay = true;
+      if ((mod.tags || []).includes('lock-updates')) hasLockedUpdates = true;
 
       // 1. Key Filters (Rounded up concepts: Tractors, Combines, Implements, etc.)
       const kf = getModKeyFilter(mod);
       if (kf) {
-        keyFilterCounts[kf] = (keyFilterCounts[kf] || 0) + 1;
+        candidateKeyFilters.add(kf);
       }
 
       // 2. ModHub Main categories & Subcategories
       const { main, sub } = parseModCategory(mod.category, mod.isMap);
       if (main && main !== 'Maps') {
-        mainCatCounts[main] = (mainCatCounts[main] || 0) + 1;
+        candidateMainCats.add(main);
       }
       if (sub) {
-        subCatCounts[sub] = (subCatCounts[sub] || 0) + 1;
+        candidateSubCats.add(sub);
       }
 
       // 3. User & Functional Tags
@@ -1168,44 +1208,90 @@ export default function InstalledModsPage() {
             normalizedTag.toLowerCase() === 'unknown'
           ) continue;
 
-          customCounts[trimmed] = (customCounts[trimmed] || 0) + 1;
+          candidateCustomTags.add(trimmed);
         }
       }
     }
 
-    const sortFn = (a, b) => {
-      if (tagSortBy === 'alpha') {
-        return a[0].localeCompare(b[0]);
+    const countForTag = (tagName) => {
+      let count = 0;
+      for (let i = 0; i < eligibleMods.length; i++) {
+        if (doesModMatchTag(eligibleMods[i], tagName)) count++;
       }
-      return b[1] - a[1] || a[0].localeCompare(b[0]);
+      return count;
     };
 
-    // Curated Key Filters (Top Section)
-    const kfList = Object.entries(keyFilterCounts)
-      .sort(sortFn)
-      .map(([name, count]) => ({ name, label: name, count, isKeyFilter: true }));
+    const sortFn = (a, b) => {
+      if (tagSortBy === 'alpha') {
+        return a.label.localeCompare(b.label);
+      }
+      return b.count - a.count || a.label.localeCompare(b.label);
+    };
 
-    if (crossplayCount > 0) {
-      kfList.unshift({ name: 'Crossplay', label: 'Crossplay', count: crossplayCount, isFunctional: true });
+    const assignedTagNamesLower = new Set();
+
+    // Key Filters (Top Section)
+    const kfList = [];
+    if (hasCrossplay) {
+      const c = countForTag('Crossplay');
+      if (c > 0) {
+        kfList.push({ name: 'Crossplay', label: 'Crossplay', count: c, isFunctional: true });
+        assignedTagNamesLower.add('crossplay');
+      }
     }
-    if (lockedCount > 0) {
-      kfList.push({ name: 'lock-updates', label: 'Auto-Updates Locked', count: lockedCount, isFunctional: true });
+
+    Array.from(candidateKeyFilters).forEach(kf => {
+      const c = countForTag(kf);
+      if (c > 0) {
+        kfList.push({ name: kf, label: kf, count: c, isKeyFilter: true });
+        assignedTagNamesLower.add(kf.toLowerCase());
+      }
+    });
+
+    if (hasLockedUpdates) {
+      const c = countForTag('lock-updates');
+      if (c > 0) {
+        kfList.push({ name: 'lock-updates', label: 'Auto-Updates Locked', count: c, isFunctional: true });
+        assignedTagNamesLower.add('lock-updates');
+      }
     }
+    kfList.sort(sortFn);
 
     // Categories (ModHub Main categories)
-    const mainCategories = Object.entries(mainCatCounts)
-      .sort(sortFn)
-      .map(([name, count]) => ({ name, label: name, count, isMainCategory: true }));
+    const mainCategories = [];
+    Array.from(candidateMainCats).forEach(main => {
+      if (assignedTagNamesLower.has(main.toLowerCase())) return;
+      const c = countForTag(main);
+      if (c > 0) {
+        mainCategories.push({ name: main, label: main, count: c, isMainCategory: true });
+        assignedTagNamesLower.add(main.toLowerCase());
+      }
+    });
+    mainCategories.sort(sortFn);
 
     // Subcategories (Granular types like Small Tractors, Low Loaders, Sheds)
-    const subCategories = Object.entries(subCatCounts)
-      .sort(sortFn)
-      .map(([name, count]) => ({ name, label: name, count, isCategory: true }));
+    const subCategories = [];
+    Array.from(candidateSubCats).forEach(sub => {
+      if (assignedTagNamesLower.has(sub.toLowerCase())) return;
+      const c = countForTag(sub);
+      if (c > 0) {
+        subCategories.push({ name: sub, label: sub, count: c, isCategory: true });
+        assignedTagNamesLower.add(sub.toLowerCase());
+      }
+    });
+    subCategories.sort(sortFn);
 
     // User/custom tags
-    const custom = Object.entries(customCounts)
-      .sort(sortFn)
-      .map(([name, count]) => ({ name, label: name, count, isCustom: true }));
+    const custom = [];
+    Array.from(candidateCustomTags).forEach(customTag => {
+      if (assignedTagNamesLower.has(customTag.toLowerCase())) return;
+      const c = countForTag(customTag);
+      if (c > 0) {
+        custom.push({ name: customTag, label: customTag, count: c, isCustom: true });
+        assignedTagNamesLower.add(customTag.toLowerCase());
+      }
+    });
+    custom.sort(sortFn);
 
     const all = [...kfList, ...mainCategories, ...subCategories, ...custom];
     return {
@@ -1215,7 +1301,7 @@ export default function InstalledModsPage() {
       customTags: custom,
       allUniqueTags: all
     };
-  }, [mods, tagSortBy]);
+  }, [mods, selectedDriveFilter, tagSortBy, doesModMatchTag]);
 
   const [selectedMods, setSelectedMods] = useState([]);
   const savegames = useSavegameStore(s => s.savegames);
@@ -1387,25 +1473,7 @@ export default function InstalledModsPage() {
         }
 
         if (Array.isArray(selectedTags) && selectedTags.length > 0) {
-          const hasMatch = selectedTags.some(tag => {
-            if (!tag || typeof tag !== 'string') return false;
-            const tLower = tag.toLowerCase();
-            if (tLower === 'maps') return m.isMap;
-            if (tLower === 'crossplay') return m.isCrossplay;
-            if (tLower === 'lock-updates') return (m.tags || []).includes('lock-updates');
-            
-            const kf = getModKeyFilter(m);
-            if (kf && kf.toLowerCase() === tLower) return true;
-
-            const { main, sub } = parseModCategory(m.category, m.isMap);
-            if (main && main.toLowerCase() === tLower) return true;
-            if (sub && sub.toLowerCase() === tLower) return true;
-
-            return (m.tags || []).some(t => {
-              const tClean = String(t).toLowerCase();
-              return tClean === tLower || normalizeCategory(tClean)?.toLowerCase() === tLower;
-            }) || (m.category && m.category.toLowerCase() === tLower);
-          });
+          const hasMatch = selectedTags.some(tag => doesModMatchTag(m, tag));
           if (!hasMatch) return false;
         }
 
