@@ -918,8 +918,10 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                 continue;
             }
 
-            // FILTER: If we are in selective mode, only link if it's in the active set
-            if (activeModNames && !activeModNames.has(modNameLower)) {
+            // FILTER: If we are in selective mode, only link if it's in the active set OR if it's a map mod.
+            // Map mods MUST be present in the active mods directory so GIANTS Engine's in-game save screen
+            // can load the map's icon and preview image for other existing save slots on the menu.
+            if (activeModNames && !activeModNames.has(modNameLower) && !m.isMap) {
                 continue;
             }
 
