@@ -1301,13 +1301,13 @@ export default function InstalledModsPage() {
   // Helper to extract ModHub main category and sub-category from category strings
   const parseModCategory = (cat, isMap) => {
     if (isMap) return { main: 'Maps', sub: null };
-    if (!cat) return { main: 'Miscellaneous', sub: 'Miscellaneous' };
+    if (!cat) return { main: null, sub: null };
     let s = String(cat).trim();
     if (s.startsWith('CATEGORY:')) s = s.substring(9).trim();
-    if (!s || s.length > 50 || s.includes('<') || s.includes('\n') || s.includes('\r')) return { main: 'Miscellaneous', sub: 'Miscellaneous' };
+    if (!s || s.length > 50 || s.includes('<') || s.includes('\n') || s.includes('\r')) return { main: null, sub: null };
     
     const lower = s.toLowerCase().replace(/[\s_\-]+/g, '');
-    if (['generic', 'skipped', 'dlc', 'unknown', 'latest'].includes(lower)) return { main: 'Miscellaneous', sub: 'Miscellaneous' };
+    if (['generic', 'skipped', 'dlc', 'unknown', 'latest'].includes(lower)) return { main: null, sub: null };
     if (lower.includes('map')) return { main: 'Maps', sub: null };
 
     if (MODHUB_CATEGORY_MAP[lower]) {
@@ -1327,69 +1327,65 @@ export default function InstalledModsPage() {
     return { main: 'Objects & Misc', sub: titleCase };
   };
 
-  // Helper to resolve effective ModHub category for a mod (joining modCache metadata + deep fallback for non-ModHub mods)
+  // Helper to resolve effective ModHub category for a mod by querying modCache with complete key normalization
   const getEffectiveModCategory = useCallback((m) => {
-    if (!m) return 'misc';
+    if (!m) return null;
     if (m.isMap) return 'Maps';
 
-    // 1. ModHub Cache lookup by modId
+    // 1. ModHub Cache lookup by modId (raw, stripped leading zeros, padded 8 digits)
     if (m.modId) {
-      const key = String(m.modId).replace(/^0+/, '');
-      if (modCache[key]?.category) return modCache[key].category;
-      if (modCache[m.modId]?.category) return modCache[m.modId].category;
+      const cleanId = String(m.modId).replace(/^0+/, '');
+      const paddedId = cleanId.padStart(8, '0');
+      for (const k of [cleanId, paddedId, `id_${cleanId}`, `id_${paddedId}`, String(m.modId)]) {
+        if (modCache[k]?.category) return modCache[k].category;
+      }
     }
 
-    // 2. ModHub Cache lookup by fileName / modName
-    if (m.fileName && modCache[`file_${m.fileName}`]?.category) {
-      return modCache[`file_${m.fileName}`].category;
-    }
-    if (m.modName && modCache[m.modName]?.category) {
-      return modCache[m.modName].category;
+    // 2. ModHub Cache lookup by fileName (case-insensitive & normalized variants)
+    if (m.fileName) {
+      const base = String(m.fileName).split(/[/\\]/).pop().toLowerCase();
+      const noZip = base.replace(/\.zip$/i, '');
+      const noPrefix = noZip.replace(/^(?:fs25|fs22|pdlc)_/i, '');
+      const cleanAlphanum = noPrefix.replace(/[^a-z0-9]/g, '');
+
+      for (const k of [
+        base,
+        noZip,
+        noPrefix,
+        cleanAlphanum,
+        `file_${base}`,
+        `file_${noZip}`,
+        `file_${m.fileName}`
+      ]) {
+        if (modCache[k]?.category) return modCache[k].category;
+      }
     }
 
-    // 3. Mod's explicit category property
+    // 3. ModHub Cache lookup by modName or title
+    if (m.modName) {
+      const normModName = String(m.modName).toLowerCase().trim();
+      const cleanModName = normModName.replace(/[^a-z0-9]/g, '');
+      for (const k of [normModName, cleanModName, `title_${cleanModName}`]) {
+        if (modCache[k]?.category) return modCache[k].category;
+      }
+    }
+
+    if (m.title) {
+      const normTitle = String(m.title).toLowerCase().trim();
+      const cleanTitle = normTitle.replace(/[^a-z0-9]/g, '');
+      for (const k of [normTitle, cleanTitle, `title_${cleanTitle}`]) {
+        if (modCache[k]?.category) return modCache[k].category;
+      }
+      if (modCache._byCleanTitle && modCache._byCleanTitle[cleanTitle]?.category) {
+        return modCache._byCleanTitle[cleanTitle].category;
+      }
+    }
+
+    // 4. Mod's explicit category property from XML
     if (m.category) return m.category;
     if (m.extraContent) return m.extraContent;
 
-    // 4. Keyword Fallback for non-ModHub mods so 100% of installed mods/maps are categorized
-    const str = `${m.fileName || ''} ${m.title || ''} ${m.modName || ''}`.toLowerCase();
-    if (str.includes('map')) return 'Maps';
-    if (str.includes('tractor')) {
-      if (str.includes('small')) return 'tractorsS';
-      if (str.includes('large') || str.includes('big')) return 'tractorsL';
-      return 'tractorsM';
-    }
-    if (str.includes('truck')) return 'trucks';
-    if (str.includes('car') || str.includes('vehicle')) return 'cars';
-    if (str.includes('trailer') || str.includes('tipper')) return 'trailers';
-    if (str.includes('auger') || str.includes('graincart')) return 'augerWagons';
-    if (str.includes('lowloader') || str.includes('flatbed')) return 'lowloaders';
-    if (str.includes('plow') || str.includes('plough') || str.includes('subsoiler')) return 'plows';
-    if (str.includes('cultivat') || str.includes('harrow')) return 'cultivators';
-    if (str.includes('seeder') || str.includes('seed')) return 'seeders';
-    if (str.includes('planter')) return 'planters';
-    if (str.includes('sprayer')) return 'sprayers';
-    if (str.includes('spreader') || str.includes('fertilizer') || str.includes('slurry') || str.includes('manure')) return 'fertilizerSpreaders';
-    if (str.includes('mower') || str.includes('mow')) return 'mowers';
-    if (str.includes('tedder')) return 'tedders';
-    if (str.includes('windrower')) return 'windrowers';
-    if (str.includes('baler') || str.includes('bale')) return 'balersRound';
-    if (str.includes('harvester') || str.includes('combine')) return 'harvesters';
-    if (str.includes('cutter') || str.includes('header')) return 'cutters';
-    if (str.includes('frontloader') || str.includes('loader')) return 'frontLoaders';
-    if (str.includes('telehandler')) return 'teleLoaderVehicles';
-    if (str.includes('wheelloader')) return 'wheelLoaderVehicles';
-    if (str.includes('forklift')) return 'forklifts';
-    if (str.includes('wood') || str.includes('forestry') || str.includes('tree') || str.includes('log')) return 'forestryMisc';
-    if (str.includes('shed') || str.includes('hall') || str.includes('barn') || str.includes('building')) return 'sheds';
-    if (str.includes('silo')) return 'silos';
-    if (str.includes('animal') || str.includes('cow') || str.includes('pig') || str.includes('chicken') || str.includes('pen')) return 'animalpens';
-    if (str.includes('production') || str.includes('factory')) return 'productionPoints';
-    if (str.includes('weight')) return 'weights';
-    if (str.includes('pack') || str.includes('package')) return 'package';
-    if (str.includes('script') || str.includes('gameplay') || str.includes('gui') || str.includes('menu')) return 'gameplay';
-
-    return 'misc';
+    return null;
   }, [modCache]);
 
   // Helper for backward compatibility and filtering
