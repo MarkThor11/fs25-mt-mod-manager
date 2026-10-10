@@ -1301,13 +1301,13 @@ export default function InstalledModsPage() {
   // Helper to extract ModHub main category and sub-category from category strings
   const parseModCategory = (cat, isMap) => {
     if (isMap) return { main: 'Maps', sub: null };
-    if (!cat) return { main: null, sub: null };
+    if (!cat) return { main: 'Miscellaneous', sub: 'Miscellaneous' };
     let s = String(cat).trim();
     if (s.startsWith('CATEGORY:')) s = s.substring(9).trim();
-    if (!s || s.length > 50 || s.includes('<') || s.includes('\n') || s.includes('\r')) return { main: null, sub: null };
+    if (!s || s.length > 50 || s.includes('<') || s.includes('\n') || s.includes('\r')) return { main: 'Miscellaneous', sub: 'Miscellaneous' };
     
     const lower = s.toLowerCase().replace(/[\s_\-]+/g, '');
-    if (['generic', 'skipped', 'dlc', 'unknown', 'latest'].includes(lower)) return { main: null, sub: null };
+    if (['generic', 'skipped', 'dlc', 'unknown', 'latest'].includes(lower)) return { main: 'Miscellaneous', sub: 'Miscellaneous' };
     if (lower.includes('map')) return { main: 'Maps', sub: null };
 
     if (MODHUB_CATEGORY_MAP[lower]) {
@@ -1327,9 +1327,9 @@ export default function InstalledModsPage() {
     return { main: 'Objects & Misc', sub: titleCase };
   };
 
-  // Helper to resolve effective ModHub category for a mod (joining modCache metadata)
+  // Helper to resolve effective ModHub category for a mod (joining modCache metadata + deep fallback for non-ModHub mods)
   const getEffectiveModCategory = useCallback((m) => {
-    if (!m) return null;
+    if (!m) return 'misc';
     if (m.isMap) return 'Maps';
 
     // 1. ModHub Cache lookup by modId
@@ -1349,8 +1349,47 @@ export default function InstalledModsPage() {
 
     // 3. Mod's explicit category property
     if (m.category) return m.category;
+    if (m.extraContent) return m.extraContent;
 
-    return null;
+    // 4. Keyword Fallback for non-ModHub mods so 100% of installed mods/maps are categorized
+    const str = `${m.fileName || ''} ${m.title || ''} ${m.modName || ''}`.toLowerCase();
+    if (str.includes('map')) return 'Maps';
+    if (str.includes('tractor')) {
+      if (str.includes('small')) return 'tractorsS';
+      if (str.includes('large') || str.includes('big')) return 'tractorsL';
+      return 'tractorsM';
+    }
+    if (str.includes('truck')) return 'trucks';
+    if (str.includes('car') || str.includes('vehicle')) return 'cars';
+    if (str.includes('trailer') || str.includes('tipper')) return 'trailers';
+    if (str.includes('auger') || str.includes('graincart')) return 'augerWagons';
+    if (str.includes('lowloader') || str.includes('flatbed')) return 'lowloaders';
+    if (str.includes('plow') || str.includes('plough') || str.includes('subsoiler')) return 'plows';
+    if (str.includes('cultivat') || str.includes('harrow')) return 'cultivators';
+    if (str.includes('seeder') || str.includes('seed')) return 'seeders';
+    if (str.includes('planter')) return 'planters';
+    if (str.includes('sprayer')) return 'sprayers';
+    if (str.includes('spreader') || str.includes('fertilizer') || str.includes('slurry') || str.includes('manure')) return 'fertilizerSpreaders';
+    if (str.includes('mower') || str.includes('mow')) return 'mowers';
+    if (str.includes('tedder')) return 'tedders';
+    if (str.includes('windrower')) return 'windrowers';
+    if (str.includes('baler') || str.includes('bale')) return 'balersRound';
+    if (str.includes('harvester') || str.includes('combine')) return 'harvesters';
+    if (str.includes('cutter') || str.includes('header')) return 'cutters';
+    if (str.includes('frontloader') || str.includes('loader')) return 'frontLoaders';
+    if (str.includes('telehandler')) return 'teleLoaderVehicles';
+    if (str.includes('wheelloader')) return 'wheelLoaderVehicles';
+    if (str.includes('forklift')) return 'forklifts';
+    if (str.includes('wood') || str.includes('forestry') || str.includes('tree') || str.includes('log')) return 'forestryMisc';
+    if (str.includes('shed') || str.includes('hall') || str.includes('barn') || str.includes('building')) return 'sheds';
+    if (str.includes('silo')) return 'silos';
+    if (str.includes('animal') || str.includes('cow') || str.includes('pig') || str.includes('chicken') || str.includes('pen')) return 'animalpens';
+    if (str.includes('production') || str.includes('factory')) return 'productionPoints';
+    if (str.includes('weight')) return 'weights';
+    if (str.includes('pack') || str.includes('package')) return 'package';
+    if (str.includes('script') || str.includes('gameplay') || str.includes('gui') || str.includes('menu')) return 'gameplay';
+
+    return 'misc';
   }, [modCache]);
 
   // Helper for backward compatibility and filtering
@@ -1361,8 +1400,6 @@ export default function InstalledModsPage() {
 
   // Helper to map any mod to an intuitive high-level "Key Filter"
   const getModKeyFilter = useCallback((mod) => {
-    if (!mod) return null;
-    if (mod.isMap) return 'Maps';
     return null;
   }, []);
 
@@ -1382,7 +1419,7 @@ export default function InstalledModsPage() {
       const modIdStr = m.modId ? String(m.modId) : null;
       return Boolean(m.isMustHave || (modIdStr && mustHaveIdsSet.has(modIdStr)) || (m.fileName && mustHaveIdsSet.has(m.fileName)));
     }
-    if (tLower === 'favorites' || tLower === 'favorite mods' || tLower === 'favorite') {
+    if (tLower === 'favorites' || tLower === 'favourites' || tLower === 'favorite mods' || tLower === 'favourite mods') {
       const modIdStr = m.modId ? String(m.modId) : null;
       const isFavMod = (modIdStr && favModIdsSet.has(modIdStr)) || (m.fileName && favModIdsSet.has(m.fileName));
       const isFavAuth = m.author && favAuthorsSet.has(m.author.toLowerCase());
@@ -1427,37 +1464,24 @@ export default function InstalledModsPage() {
       return true;
     });
 
-    const candidateKeyFilters = new Set();
     const candidateMainCats = new Set();
     const candidateSubCats = new Set();
     const candidateCustomTags = new Set();
 
-    let hasCrossplay = false;
-    let hasLockedUpdates = false;
-
     for (let i = 0; i < eligibleMods.length; i++) {
       const mod = eligibleMods[i];
 
-      if (mod.isCrossplay) hasCrossplay = true;
-      if ((mod.tags || []).includes('lock-updates')) hasLockedUpdates = true;
-
-      // 1. Key Filters (Rounded up concepts: Tractors, Combines, Implements, etc.)
-      const kf = getModKeyFilter(mod);
-      if (kf) {
-        candidateKeyFilters.add(kf);
-      }
-
-      // 2. ModHub Main categories & Subcategories (resolved via ModHub cache)
+      // 1. ModHub Main categories & Subcategories (resolved via ModHub cache + fallback)
       const effCat = getEffectiveModCategory(mod);
       const { main, sub } = parseModCategory(effCat, mod.isMap);
-      if (main && main !== 'Maps') {
+      if (main && main.toLowerCase() !== 'prefab' && main.toLowerCase() !== 'prefabs') {
         candidateMainCats.add(main);
       }
-      if (sub) {
+      if (sub && sub.toLowerCase() !== 'prefab' && sub.toLowerCase() !== 'prefabs') {
         candidateSubCats.add(sub);
       }
 
-      // 3. User & Functional Tags
+      // 2. User & Functional Tags
       if (Array.isArray(mod.tags)) {
         for (let j = 0; j < mod.tags.length; j++) {
           const rawTag = mod.tags[j];
@@ -1467,7 +1491,7 @@ export default function InstalledModsPage() {
           if (trimmed.startsWith('<') || trimmed.endsWith('>')) continue;
           if (trimmed.includes('{') || trimmed.includes('}')) continue;
           const lower = trimmed.toLowerCase();
-          if (['dlc', 'lock-updates', 'maps', 'generic', 'skipped', 'unknown'].includes(lower)) continue;
+          if (['dlc', 'lock-updates', 'maps', 'generic', 'skipped', 'unknown', 'prefab', 'prefabs'].includes(lower)) continue;
 
           const normalizedTag = normalizeCategory(trimmed) || trimmed;
           if (
@@ -1501,58 +1525,40 @@ export default function InstalledModsPage() {
     // Key Filters (Top Section)
     const kfList = [];
 
+    // Favourites
+    const favCount = countForTag('Favourites');
+    kfList.push({ name: 'Favourites', label: 'Favourites', count: favCount, isFunctional: true });
+    assignedTagNamesLower.add('favourites');
+    assignedTagNamesLower.add('favorites');
+    assignedTagNamesLower.add('favorite mods');
+    assignedTagNamesLower.add('favourite mods');
+
     // Pinned Mods (Must-Haves)
     const pinnedCount = countForTag('Pinned Mods');
-    if (pinnedCount > 0) {
-      kfList.push({ name: 'Pinned Mods', label: 'Pinned (Must-Have)', count: pinnedCount, isFunctional: true });
-      assignedTagNamesLower.add('pinned mods');
-      assignedTagNamesLower.add('pinned');
-      assignedTagNamesLower.add('must-have');
-      assignedTagNamesLower.add('must-haves');
-    }
-
-    // Favorites
-    const favCount = countForTag('Favorites');
-    if (favCount > 0) {
-      kfList.push({ name: 'Favorites', label: 'Favorites', count: favCount, isFunctional: true });
-      assignedTagNamesLower.add('favorites');
-      assignedTagNamesLower.add('favorite mods');
-      assignedTagNamesLower.add('favorite');
-    }
+    kfList.push({ name: 'Pinned Mods', label: 'Pinned Mods', count: pinnedCount, isFunctional: true });
+    assignedTagNamesLower.add('pinned mods');
+    assignedTagNamesLower.add('pinned');
+    assignedTagNamesLower.add('must-have');
+    assignedTagNamesLower.add('must-haves');
 
     // Updates Available
     const updatesCount = countForTag('Updates Available');
-    if (updatesCount > 0) {
-      kfList.push({ name: 'Updates Available', label: 'Updates Available', count: updatesCount, isFunctional: true });
-      assignedTagNamesLower.add('updates available');
-      assignedTagNamesLower.add('updates');
-      assignedTagNamesLower.add('has-updates');
-    }
+    kfList.push({ name: 'Updates Available', label: 'Updates Available', count: updatesCount, isFunctional: true });
+    assignedTagNamesLower.add('updates available');
+    assignedTagNamesLower.add('updates');
+    assignedTagNamesLower.add('has-updates');
 
-    if (hasCrossplay) {
-      const c = countForTag('Crossplay');
-      if (c > 0) {
-        kfList.push({ name: 'Crossplay', label: 'Crossplay', count: c, isFunctional: true });
-        assignedTagNamesLower.add('crossplay');
-      }
-    }
+    // Auto-Updates Locked
+    const lockedCount = countForTag('lock-updates');
+    kfList.push({ name: 'lock-updates', label: 'Auto-Updates Locked', count: lockedCount, isFunctional: true });
+    assignedTagNamesLower.add('lock-updates');
+    assignedTagNamesLower.add('auto-updates locked');
 
-    Array.from(candidateKeyFilters).forEach(kf => {
-      const c = countForTag(kf);
-      if (c > 0) {
-        kfList.push({ name: kf, label: kf, count: c, isKeyFilter: true });
-        assignedTagNamesLower.add(kf.toLowerCase());
-      }
-    });
+    // Crossplay
+    const crossplayCount = countForTag('Crossplay');
+    kfList.push({ name: 'Crossplay', label: 'Crossplay', count: crossplayCount, isFunctional: true });
+    assignedTagNamesLower.add('crossplay');
 
-    if (hasLockedUpdates) {
-      const c = countForTag('lock-updates');
-      if (c > 0) {
-        kfList.push({ name: 'lock-updates', label: 'Auto-Updates Locked', count: c, isFunctional: true });
-        assignedTagNamesLower.add('lock-updates');
-        assignedTagNamesLower.add('auto-updates locked');
-      }
-    }
     kfList.sort(sortFn);
 
     // Categories (ModHub Main categories)
