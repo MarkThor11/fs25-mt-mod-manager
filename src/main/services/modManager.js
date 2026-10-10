@@ -909,6 +909,26 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
             INCOMPATIBLE_ENGINE_MODS.forEach(badMod => activeModNames.delete(badMod));
         }
 
+        // Collect map mod names referenced by any existing savegame slots so GIANTS Engine can display their images on the save selection menu,
+        // without polluting the map selection list with all 300+ installed maps.
+        const savegameMapNames = new Set();
+        try {
+            const fs25DataRoot = getFS25DataRoot();
+            for (let i = 1; i <= 20; i++) {
+                const cPath = path.join(fs25DataRoot, `savegame${i}`, 'careerSavegame.xml');
+                if (fs.existsSync(cPath)) {
+                    const cXml = fs.readFileSync(cPath, 'utf8');
+                    const mMatch = cXml.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || cXml.match(/mapId="([^"]+)"/i);
+                    if (mMatch && mMatch[1]) {
+                        const mName = mMatch[1].split('.')[0].toLowerCase();
+                        if (!['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlc_highlandsfishingpack'].includes(mName)) {
+                            savegameMapNames.add(mName);
+                        }
+                    }
+                }
+            }
+        } catch (_) {}
+
         for (const m of mods) {
             const modNameLower = m.modName.toLowerCase();
             
@@ -923,11 +943,14 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                 continue;
             }
 
-            // FILTER: If we are in selective mode, only link if it's in the active set OR if it's a map mod.
-            // Map mods MUST be present in the active mods directory so GIANTS Engine's in-game save screen
-            // can load the map's icon and preview image for other existing save slots on the menu.
-            if (activeModNames && !activeModNames.has(modNameLower) && !m.isMap) {
-                continue;
+            // FILTER: If we are in selective mode, only link if:
+            // 1. It is in the active set for this savegame (including the selected map), OR
+            // 2. It is a map mod referenced by an existing save slot (so its savegame preview image renders).
+            // This prevents all 300+ installed map mods from appearing on the new game map selection screen!
+            if (activeModNames && !activeModNames.has(modNameLower)) {
+                if (!m.isMap || !savegameMapNames.has(modNameLower)) {
+                    continue;
+                }
             }
 
             if (seenFiles.has(modNameLower)) {
