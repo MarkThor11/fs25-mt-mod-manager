@@ -652,6 +652,7 @@ const LazyModList = ({
   const [visibleCount, setVisibleCount] = useState(20);
   const sentinelRef = React.useRef(null);
   const { toggleFavoriteMod, toggleFavoriteAuthor, toggleMustHaveMod } = useModHubStore();
+  const { installedTagFilter: selectedTags = [], setInstalledTagFilter: setSelectedTags } = useSettingsStore();
 
   useEffect(() => {
     setVisibleCount(20);
