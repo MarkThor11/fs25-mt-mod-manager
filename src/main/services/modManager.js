@@ -912,6 +912,11 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
         for (const m of mods) {
             const modNameLower = m.modName.toLowerCase();
             
+            // EXCLUDE: Never link official DLC packages into the mods folder (engine loads them natively from pdlc/)
+            if (m.isDLC) {
+                continue;
+            }
+
             // EXCLUDE: Never link engine-crashing/incompatible mods
             if (INCOMPATIBLE_ENGINE_MODS.has(modNameLower)) {
                 console.log(`[VIRTUAL] Excluding incompatible engine-crashing mod: ${m.modName}`);
