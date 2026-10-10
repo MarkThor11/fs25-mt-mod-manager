@@ -1327,63 +1327,22 @@ export default function InstalledModsPage() {
     return { main: 'Objects & Misc', sub: titleCase };
   };
 
-  // Helper to resolve effective ModHub category for a mod by querying modCache with complete key normalization
+  // Helper to resolve effective ModHub category for a mod directly from mod properties
   const getEffectiveModCategory = useCallback((m) => {
     if (!m) return null;
     if (m.isMap) return 'Maps';
-
-    // 1. ModHub Cache lookup by modId (raw, stripped leading zeros, padded 8 digits)
-    if (m.modId) {
-      const cleanId = String(m.modId).replace(/^0+/, '');
-      const paddedId = cleanId.padStart(8, '0');
-      for (const k of [cleanId, paddedId, `id_${cleanId}`, `id_${paddedId}`, String(m.modId)]) {
-        if (modCache[k]?.category) return modCache[k].category;
-      }
-    }
-
-    // 2. ModHub Cache lookup by fileName (case-insensitive & normalized variants)
-    if (m.fileName) {
-      const base = String(m.fileName).split(/[/\\]/).pop().toLowerCase();
-      const noZip = base.replace(/\.zip$/i, '');
-      const noPrefix = noZip.replace(/^(?:fs25|fs22|pdlc)_/i, '');
-      const cleanAlphanum = noPrefix.replace(/[^a-z0-9]/g, '');
-
-      for (const k of [
-        base,
-        noZip,
-        noPrefix,
-        cleanAlphanum,
-        `file_${base}`,
-        `file_${noZip}`,
-        `file_${m.fileName}`
-      ]) {
-        if (modCache[k]?.category) return modCache[k].category;
-      }
-    }
-
-    // 3. ModHub Cache lookup by modName or title
-    if (m.modName) {
-      const normModName = String(m.modName).toLowerCase().trim();
-      const cleanModName = normModName.replace(/[^a-z0-9]/g, '');
-      for (const k of [normModName, cleanModName, `title_${cleanModName}`]) {
-        if (modCache[k]?.category) return modCache[k].category;
-      }
-    }
-
-    if (m.title) {
-      const normTitle = String(m.title).toLowerCase().trim();
-      const cleanTitle = normTitle.replace(/[^a-z0-9]/g, '');
-      for (const k of [normTitle, cleanTitle, `title_${cleanTitle}`]) {
-        if (modCache[k]?.category) return modCache[k].category;
-      }
-      if (modCache._byCleanTitle && modCache._byCleanTitle[cleanTitle]?.category) {
-        return modCache._byCleanTitle[cleanTitle].category;
-      }
-    }
-
-    // 4. Mod's explicit category property from XML
     if (m.category) return m.category;
     if (m.extraContent) return m.extraContent;
+
+    if (m.modId) {
+      const cleanId = String(m.modId).replace(/^0+/, '');
+      if (modCache[cleanId]?.category) return modCache[cleanId].category;
+      if (modCache[m.modId]?.category) return modCache[m.modId].category;
+    }
+
+    if (m.fileName && modCache[m.fileName]?.category) {
+      return modCache[m.fileName].category;
+    }
 
     return null;
   }, [modCache]);

@@ -2035,7 +2035,7 @@ async function performScan(manualPaths = null) {
 				title,
 				author,
 				version,
-				category: modDesc?.category || null,
+				category: modDesc?.category || remoteMod?.category || tracked?.category || null,
 				size: size,
 				fileName: subFolder ? `${subFolder}/${entryName}` : entryName,
 				filePath: targetPath,
