@@ -1006,7 +1006,7 @@ export default function InstalledModsPage() {
     showTagBar, setShowTagBar, installedTagFilter: rawSelectedTags, setInstalledTagFilter: setSelectedTags
   } = useSettingsStore();
   const selectedTags = Array.isArray(rawSelectedTags) ? rawSelectedTags : [];
-  const { toggleFavoriteMod, toggleFavoriteAuthor, favoriteMods, favoriteAuthors } = useModHubStore();
+  const { toggleFavoriteMod, toggleFavoriteAuthor, favoriteMods, favoriteAuthors, modCache = {} } = useModHubStore();
   const sessionInstalled = useDownloadStore((s) => s.sessionInstalled);
   const activeDownloadsKeysStr = useDownloadStore((s) => Object.keys(s.activeDownloads || {}).sort().join(','));
   const activeDownloadsKeys = useMemo(() => activeDownloadsKeysStr ? activeDownloadsKeysStr.split(',') : [], [activeDownloadsKeysStr]);
@@ -1188,6 +1188,32 @@ export default function InstalledModsPage() {
     return { main: titleCase, sub: null };
   };
 
+  // Helper to resolve effective ModHub category for a mod (joining modCache metadata)
+  const getEffectiveModCategory = useCallback((m) => {
+    if (!m) return null;
+    if (m.isMap) return 'Maps';
+
+    // 1. ModHub Cache lookup by modId
+    if (m.modId) {
+      const key = String(m.modId).replace(/^0+/, '');
+      if (modCache[key]?.category) return modCache[key].category;
+      if (modCache[m.modId]?.category) return modCache[m.modId].category;
+    }
+
+    // 2. ModHub Cache lookup by fileName / modName
+    if (m.fileName && modCache[`file_${m.fileName}`]?.category) {
+      return modCache[`file_${m.fileName}`].category;
+    }
+    if (m.modName && modCache[m.modName]?.category) {
+      return modCache[m.modName].category;
+    }
+
+    // 3. Mod's explicit category property
+    if (m.category) return m.category;
+
+    return null;
+  }, [modCache]);
+
   // Helper for backward compatibility and filtering
   const normalizeCategory = (cat, isMap) => {
     const parsed = parseModCategory(cat, isMap);
@@ -1195,10 +1221,11 @@ export default function InstalledModsPage() {
   };
 
   // Helper to map any mod to an intuitive high-level "Key Filter"
-  const getModKeyFilter = (mod) => {
+  const getModKeyFilter = useCallback((mod) => {
     if (!mod) return null;
     if (mod.isMap) return 'Maps';
-    const cat = String(mod.category || '').toLowerCase();
+    const catStr = getEffectiveModCategory(mod);
+    const cat = String(catStr || '').toLowerCase();
     if (cat.includes('map')) return 'Maps';
     if (cat.includes('tractor')) return 'Tractors';
     if (cat.includes('combine') || cat.includes('harvester')) return 'Combines';
@@ -1222,16 +1249,18 @@ export default function InstalledModsPage() {
       return 'Loaders';
     }
     return null;
-  };
+  }, [getEffectiveModCategory]);
 
-  // Helper to determine if a mod matches a given tag name (strictly via mod.category, mod.tags, and functional flags)
+  // Helper to determine if a mod matches a given tag name
   const doesModMatchTag = useCallback((m, tag) => {
     if (!m || !tag || typeof tag !== 'string') return false;
     const tLower = tag.toLowerCase().trim();
     if (!tLower) return false;
 
+    const effCat = getEffectiveModCategory(m);
+
     // 1. Built-in / Functional Filter Tags
-    if (tLower === 'maps') return Boolean(m.isMap || (m.category && String(m.category).toLowerCase().includes('map')));
+    if (tLower === 'maps') return Boolean(m.isMap || (effCat && String(effCat).toLowerCase().includes('map')));
     if (tLower === 'crossplay') return Boolean(m.isCrossplay);
     if (tLower === 'lock-updates') return Boolean((m.tags || []).includes('lock-updates'));
     
@@ -1239,11 +1268,11 @@ export default function InstalledModsPage() {
     const kf = getModKeyFilter(m);
     if (kf && kf.toLowerCase() === tLower) return true;
 
-    // 3. Category matching (from mod's explicit category field)
-    const { main, sub } = parseModCategory(m.category, m.isMap);
+    // 3. Category matching (from mod's resolved ModHub category field)
+    const { main, sub } = parseModCategory(effCat, m.isMap);
     if (main && main.toLowerCase() === tLower) return true;
     if (sub && sub.toLowerCase() === tLower) return true;
-    if (m.category && String(m.category).toLowerCase().trim() === tLower) return true;
+    if (effCat && String(effCat).toLowerCase().trim() === tLower) return true;
 
     // 4. Custom mod tags (m.tags array)
     if (m.tags && Array.isArray(m.tags)) {
@@ -1259,7 +1288,7 @@ export default function InstalledModsPage() {
     }
 
     return false;
-  }, []);
+  }, [getEffectiveModCategory, getModKeyFilter]);
 
   // Compute clean structured tags: Key Filters (Rounded up concepts), Categories (Main ModHub categories), Subcategories, and Custom User Tags
   const { keyFilters, functionalTags, categoryTags, customTags, allUniqueTags } = useMemo(() => {
@@ -1294,8 +1323,9 @@ export default function InstalledModsPage() {
         candidateKeyFilters.add(kf);
       }
 
-      // 2. ModHub Main categories & Subcategories
-      const { main, sub } = parseModCategory(mod.category, mod.isMap);
+      // 2. ModHub Main categories & Subcategories (resolved via ModHub cache)
+      const effCat = getEffectiveModCategory(mod);
+      const { main, sub } = parseModCategory(effCat, mod.isMap);
       if (main && main !== 'Maps') {
         candidateMainCats.add(main);
       }
