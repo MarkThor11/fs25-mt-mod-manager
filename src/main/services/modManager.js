@@ -755,6 +755,7 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 		}
 		let mapModName = null;
 		let mapModObj = null;
+		let isNewSlot = false;
 
 		if (savegameIndex) {
 			const savegameManager = require('./savegameManager');
@@ -807,8 +808,10 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 
 				// FIRST LAUNCH: slot is intentionally empty (no careerSavegame.xml) and the
 				// user's chosen map + mods are stored in .mm_pending_settings.json instead.
+				isNewSlot = false;
 				const pendingPath = path.join(savePath, '.mm_pending_settings.json');
 				if (!fs.existsSync(path.join(savePath, 'careerSavegame.xml')) && fs.existsSync(pendingPath)) {
+					isNewSlot = true;
 					try {
 						const pending = await fs.readJson(pendingPath);
 						if (Array.isArray(pending.mods)) {
@@ -944,11 +947,13 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
             }
 
             // FILTER: If we are in selective mode, only link if:
-            // 1. It is in the active set for this savegame (including the selected map), OR
-            // 2. It is a map mod referenced by an existing save slot (so its savegame preview image renders).
-            // This prevents all 300+ installed map mods from appearing on the new game map selection screen!
+            // 1. It is in the active set for this savegame (which includes the chosen map mod).
+            // 2. OR: If launching an ALREADY-INITIALIZED career savegame (!isNewSlot), link map mods referenced
+            //    by other save slots so their save cards render preview images when quitting to the career menu.
+            // When initializing a NEW save slot (isNewSlot === true), we do NOT link any other savegame maps.
+            // This guarantees that the new game map selection carousel ONLY displays the map selected in the app!
             if (activeModNames && !activeModNames.has(modNameLower)) {
-                if (!m.isMap || !savegameMapNames.has(modNameLower)) {
+                if (isNewSlot || !m.isMap || !savegameMapNames.has(modNameLower)) {
                     continue;
                 }
             }
