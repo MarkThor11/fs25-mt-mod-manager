@@ -1054,61 +1054,7 @@ export default function InstalledModsPage() {
   const [tagSearch, setTagSearch] = useState('');
   const [tagSortBy, setTagSortBy] = useState('count'); // 'count' or 'alpha'
 
-  // Helper to normalize raw category strings into clean canonical display names
-  const normalizeCategoryName = (cat) => {
-    if (!cat) return null;
-    let s = String(cat).trim();
-    if (!s || s.length > 40 || s.includes('<') || s.includes('\n') || s.includes('\r')) return null;
-    if (s.startsWith('CATEGORY:')) {
-      s = s.substring(9).trim();
-    }
-    const lower = s.toLowerCase().replace(/[\s_\-]+/g, '');
-    if (['generic', 'skipped', 'dlc', 'unknown', 'latest'].includes(lower)) return null;
-    if (lower.includes('map')) return 'Maps';
-
-    // Canonical FS25 / ModHub category mappings
-    if (lower.includes('mower')) return 'Mowers';
-    if (lower.includes('plow') || lower.includes('plough')) return 'Plows';
-    if (lower.includes('cultivat')) return 'Cultivators';
-    if (lower.includes('seeder') || lower.includes('seeding')) return 'Seeders';
-    if (lower.includes('planter')) return 'Planters';
-    if (lower.includes('sprayer')) return 'Sprayers';
-    if (lower.includes('baler') || lower.includes('baling')) return 'Balers';
-    if (lower.includes('tedder')) return 'Tedders';
-    if (lower.includes('windrower')) return 'Windrowers';
-    if (lower.includes('leveler')) return 'Levelers';
-    if (lower.includes('roller')) return 'Rollers';
-    if (lower.includes('mulcher')) return 'Mulchers';
-    if (lower.includes('weeder')) return 'Weeders';
-    if (lower.includes('slurry') || lower.includes('manure') || lower.includes('spreader')) return 'Fertilizer & Spreading';
-    
-    if (lower === 'tractorss' || lower === 'smalltractors') return 'Small Tractors';
-    if (lower === 'tractorsm' || lower === 'mediumtractors') return 'Medium Tractors';
-    if (lower === 'tractorsl' || lower === 'largetractors') return 'Large Tractors';
-    if (lower.includes('tractor')) return 'Tractors';
-    
-    if (lower.includes('combine') || lower.includes('harvester')) return 'Combines';
-    if (lower.includes('header') || lower.includes('cutter')) return 'Headers & Cutters';
-    if (lower.includes('trailer')) return 'Trailers';
-    if (lower.includes('truck')) return 'Trucks';
-    if (lower.includes('car') || lower.includes('vehicle')) return 'Vehicles';
-    if (lower.includes('loader') || lower.includes('telehandler') || lower.includes('forklift')) return 'Loaders';
-    if (lower.includes('shed') || lower.includes('building') || lower.includes('hall')) return 'Sheds & Buildings';
-    if (lower.includes('silo')) return 'Silos';
-    if (lower.includes('prefab')) return 'Prefabs';
-    if (lower.includes('object') || lower.includes('prop')) return 'Objects & Misc';
-
-    if (s.includes(' - ')) {
-      const parts = s.split(' - ').map(p => p.trim());
-      const mainNorm = normalizeCategoryName(parts[0]);
-      const subNorm = normalizeCategoryName(parts[1]);
-      return subNorm || mainNorm || parts[0];
-    }
-
-    return s.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
-  };
-
-  // Helper to extract main category and sub-category from category strings
+  // Helper to extract ModHub main category and sub-category from category strings
   const parseModCategory = (cat, isMap) => {
     if (isMap) return { main: 'Maps', sub: null };
     if (!cat) return { main: null, sub: null };
@@ -1120,72 +1066,78 @@ export default function InstalledModsPage() {
     if (['generic', 'skipped', 'dlc', 'unknown', 'latest'].includes(lower)) return { main: null, sub: null };
     if (lower.includes('map')) return { main: 'Maps', sub: null };
 
-    // Explicit FS25 Category & Subcategory Dictionary
-    // Tractors
-    if (lower === 'tractorss' || lower === 'smalltractors') return { main: 'Tractors', sub: 'Small Tractors' };
-    if (lower === 'tractorsm' || lower === 'mediumtractors') return { main: 'Tractors', sub: 'Medium Tractors' };
-    if (lower === 'tractorsl' || lower === 'largetractors') return { main: 'Tractors', sub: 'Large Tractors' };
-    if (lower.includes('tractor')) return { main: 'Tractors', sub: null };
-
-    // Vehicles & Trucks
-    if (lower.includes('truck')) return { main: 'Trucks', sub: null };
-    if (lower.includes('car') || lower.includes('vehicle')) return { main: 'Vehicles', sub: null };
+    // Explicit ModHub Category & Subcategory Dictionary
+    // Tractors & Vehicles
+    if (lower === 'tractorss' || lower === 'smalltractors') return { main: 'Vehicles', sub: 'Small Tractors' };
+    if (lower === 'tractorsm' || lower === 'mediumtractors') return { main: 'Vehicles', sub: 'Medium Tractors' };
+    if (lower === 'tractorsl' || lower === 'largetractors') return { main: 'Vehicles', sub: 'Large Tractors' };
+    if (lower.includes('tractor')) return { main: 'Vehicles', sub: 'Tractors' };
+    if (lower.includes('truck')) return { main: 'Vehicles', sub: 'Trucks' };
+    if (lower.includes('car') || lower.includes('vehicle') || lower.includes('drivable')) return { main: 'Vehicles', sub: 'Cars & Vehicles' };
 
     // Combines & Cutters
-    if (lower.includes('forageharvester')) return { main: 'Combines', sub: 'Forage Harvesters' };
-    if (lower.includes('combine') || lower.includes('harvester')) return { main: 'Combines', sub: null };
-    if (lower.includes('header') || lower.includes('cutter')) return { main: 'Headers & Cutters', sub: null };
-
-    // Implements
-    if (lower.includes('mower')) return { main: 'Mowers', sub: null };
-    if (lower.includes('plow') || lower.includes('plough') || lower.includes('subsoiler') || lower.includes('spader')) return { main: 'Plows', sub: null };
-    if (lower.includes('cultivat') || lower.includes('harrow')) return { main: 'Cultivators', sub: null };
-    if (lower.includes('seeder') || lower.includes('seeding')) return { main: 'Seeders', sub: null };
-    if (lower.includes('planter')) return { main: 'Planters', sub: null };
-    if (lower.includes('sprayer')) return { main: 'Sprayers', sub: null };
-    if (lower.includes('baler') || lower.includes('baling') || lower.includes('wrapper')) return { main: 'Balers', sub: null };
-    if (lower.includes('tedder')) return { main: 'Tedders', sub: null };
-    if (lower.includes('windrower')) return { main: 'Windrowers', sub: null };
-    if (lower.includes('roller')) return { main: 'Rollers', sub: null };
-    if (lower.includes('mulcher')) return { main: 'Mulchers', sub: null };
-    if (lower.includes('weeder')) return { main: 'Weeders', sub: null };
-    if (lower.includes('slurry') || lower.includes('manure') || lower.includes('spreader') || lower.includes('fertilizer')) return { main: 'Fertilizer & Spreading', sub: null };
+    if (lower.includes('forageharvester') || lower.includes('forageharvesting')) return { main: 'Vehicles', sub: 'Forage Harvesting' };
+    if (lower.includes('combine') || lower.includes('harvester')) return { main: 'Vehicles', sub: 'Combines' };
+    if (lower.includes('header') || lower.includes('cutter')) return { main: 'Implements', sub: 'Headers & Cutters' };
 
     // Loaders
-    if (lower.includes('frontloader')) return { main: 'Loaders', sub: 'Front Loaders' };
-    if (lower.includes('telehandler')) return { main: 'Loaders', sub: 'Telehandlers' };
-    if (lower.includes('wheelloader')) return { main: 'Loaders', sub: 'Wheel Loaders' };
-    if (lower.includes('skidsteer')) return { main: 'Loaders', sub: 'Skid Steers' };
-    if (lower.includes('forklift')) return { main: 'Loaders', sub: 'Forklifts' };
-    if (lower.includes('loader')) return { main: 'Loaders', sub: null };
+    if (lower.includes('frontloader')) return { main: 'Vehicles', sub: 'Front Loaders' };
+    if (lower.includes('telehandler')) return { main: 'Vehicles', sub: 'Telehandlers' };
+    if (lower.includes('wheelloader')) return { main: 'Vehicles', sub: 'Wheel Loaders' };
+    if (lower.includes('skidsteer')) return { main: 'Vehicles', sub: 'Skid Steers' };
+    if (lower.includes('forklift')) return { main: 'Vehicles', sub: 'Forklifts' };
+    if (lower.includes('loader')) return { main: 'Vehicles', sub: 'Loaders' };
+
+    // Implements & Tools
+    if (lower.includes('mower') || lower.includes('grassland')) return { main: 'Implements', sub: 'Mowers' };
+    if (lower.includes('plow') || lower.includes('plough') || lower.includes('subsoiler') || lower.includes('spader')) return { main: 'Implements', sub: 'Plows' };
+    if (lower.includes('cultivat') || lower.includes('harrow')) return { main: 'Implements', sub: 'Cultivators' };
+    if (lower.includes('seeder') || lower.includes('seeding')) return { main: 'Implements', sub: 'Seeders' };
+    if (lower.includes('planter')) return { main: 'Implements', sub: 'Planters' };
+    if (lower.includes('sprayer')) return { main: 'Implements', sub: 'Sprayers' };
+    if (lower.includes('baler') || lower.includes('baling') || lower.includes('wrapper')) return { main: 'Implements', sub: 'Balers' };
+    if (lower.includes('tedder')) return { main: 'Implements', sub: 'Tedders' };
+    if (lower.includes('windrower')) return { main: 'Implements', sub: 'Windrowers' };
+    if (lower.includes('roller')) return { main: 'Implements', sub: 'Rollers' };
+    if (lower.includes('mulcher')) return { main: 'Implements', sub: 'Mulchers' };
+    if (lower.includes('weeder')) return { main: 'Implements', sub: 'Weeders' };
+    if (lower.includes('slurry') || lower.includes('manure') || lower.includes('spreader') || lower.includes('fertilizer')) return { main: 'Implements', sub: 'Fertilizer & Spreading' };
+    if (lower.includes('rootcrop') || lower.includes('potato') || lower.includes('beet')) return { main: 'Implements', sub: 'Rootcrops' };
+    if (lower.includes('cotton') || lower.includes('specialcrop')) return { main: 'Implements', sub: 'Special Crops' };
+    if (lower.includes('woodtransport') || lower.includes('forestry')) return { main: 'Implements', sub: 'Forestry & Wood Transport' };
+    if (lower.includes('weight')) return { main: 'Implements', sub: 'Weights' };
 
     // Trailers
-    if (lower.includes('augerwagon') || lower.includes('graincart')) return { main: 'Trailers', sub: 'Auger Wagons' };
-    if (lower.includes('animaltransport')) return { main: 'Trailers', sub: 'Animal Transport' };
-    if (lower.includes('lowloader') || lower.includes('flatbed')) return { main: 'Trailers', sub: 'Low Loaders & Flatbeds' };
-    if (lower.includes('trailer') || lower.includes('tipper')) return { main: 'Trailers', sub: null };
+    if (lower.includes('augerwagon') || lower.includes('graincart')) return { main: 'Implements', sub: 'Auger Wagons' };
+    if (lower.includes('animaltransport')) return { main: 'Implements', sub: 'Animal Transport' };
+    if (lower.includes('lowloader') || lower.includes('flatbed')) return { main: 'Implements', sub: 'Low Loaders & Flatbeds' };
+    if (lower.includes('trailer') || lower.includes('tipper')) return { main: 'Implements', sub: 'Trailers' };
 
-    // Buildings & Placeables
-    if (lower.includes('shed') || lower.includes('hall')) return { main: 'Sheds & Buildings', sub: 'Sheds' };
-    if (lower.includes('silo')) return { main: 'Silos', sub: null };
-    if (lower.includes('farmhouse')) return { main: 'Sheds & Buildings', sub: 'Farmhouses' };
-    if (lower.includes('production') || lower.includes('factory')) return { main: 'Sheds & Buildings', sub: 'Productions' };
-    if (lower.includes('animal')) return { main: 'Sheds & Buildings', sub: 'Animal Pens' };
-    if (lower.includes('building') || lower.includes('placeable')) return { main: 'Sheds & Buildings', sub: null };
-    if (lower.includes('prefab')) return { main: 'Prefabs', sub: null };
-    if (lower.includes('object') || lower.includes('prop') || lower.includes('decoration')) return { main: 'Objects & Misc', sub: null };
+    // Placeables & Buildings
+    if (lower.includes('shed') || lower.includes('hall') || lower.includes('building')) return { main: 'Placeables', sub: 'Sheds & Buildings' };
+    if (lower.includes('silo')) return { main: 'Placeables', sub: 'Silos' };
+    if (lower.includes('farmhouse')) return { main: 'Placeables', sub: 'Farmhouses' };
+    if (lower.includes('production') || lower.includes('factory')) return { main: 'Placeables', sub: 'Productions' };
+    if (lower.includes('animal')) return { main: 'Placeables', sub: 'Animal Pens' };
+    if (lower.includes('placeable')) return { main: 'Placeables', sub: 'Placeables' };
+
+    // Packs & Gameplay
+    if (lower.includes('package') || lower.includes('pack')) return { main: 'Packs & Gameplay', sub: 'Package' };
+    if (lower.includes('gameplay') || lower.includes('script')) return { main: 'Packs & Gameplay', sub: 'Gameplay' };
+    if (lower.includes('prefab')) return { main: 'Packs & Gameplay', sub: 'Prefabs' };
+    if (lower.includes('object') || lower.includes('prop') || lower.includes('decoration') || lower.includes('misc')) return { main: 'Objects & Misc', sub: 'Objects & Misc' };
 
     if (s.includes(' - ')) {
       const parts = s.split(' - ').map(p => p.trim());
       const mParsed = parseModCategory(parts[0], false);
       const sParsed = parseModCategory(parts[1], false);
-      const mainName = mParsed.main || mParsed.sub || parts[0];
-      const subName = sParsed.sub || sParsed.main || parts[1];
+      const mainName = mParsed.main || parts[0];
+      const subName = sParsed.sub || parts[1];
       return { main: mainName, sub: mainName !== subName ? subName : null };
     }
 
     const titleCase = s.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
-    return { main: titleCase, sub: null };
+    return { main: 'Objects & Misc', sub: titleCase };
   };
 
   // Helper to resolve effective ModHub category for a mod (joining modCache metadata)
@@ -1224,32 +1176,8 @@ export default function InstalledModsPage() {
   const getModKeyFilter = useCallback((mod) => {
     if (!mod) return null;
     if (mod.isMap) return 'Maps';
-    const catStr = getEffectiveModCategory(mod);
-    const cat = String(catStr || '').toLowerCase();
-    if (cat.includes('map')) return 'Maps';
-    if (cat.includes('tractor')) return 'Tractors';
-    if (cat.includes('combine') || cat.includes('harvester')) return 'Combines';
-    if (cat.includes('trailer')) return 'Trailers';
-    if (cat.includes('truck')) return 'Trucks';
-    if (cat.includes('car') || cat.includes('bike')) return 'Vehicles';
-    if (
-      cat.includes('cultivat') || cat.includes('plow') || cat.includes('seeder') ||
-      cat.includes('planter') || cat.includes('roller') || cat.includes('spreader') ||
-      cat.includes('sprayer') || cat.includes('mower') || cat.includes('tedder') ||
-      cat.includes('windrower') || cat.includes('baler') || cat.includes('header') ||
-      cat.includes('loader tool') || cat.includes('spader') || cat.includes('subsoiler') ||
-      cat.includes('disc harrow') || cat.includes('weeder') || cat.includes('mulcher') ||
-      cat.includes('belt system') || cat.includes('leveler') || cat.includes('compaction') ||
-      cat.includes('winch') || cat.includes('tree planter') || cat.includes('stump cutter') ||
-      cat.includes('chainsaw') || cat.includes('shovel')
-    ) {
-      return 'Implements';
-    }
-    if (cat.includes('loader') || cat.includes('telehandler') || cat.includes('forklift') || cat.includes('excavator') || cat.includes('forwarder')) {
-      return 'Loaders';
-    }
     return null;
-  }, [getEffectiveModCategory]);
+  }, []);
 
   // Helper to determine if a mod matches a given tag name
   const doesModMatchTag = useCallback((m, tag) => {
@@ -1264,17 +1192,13 @@ export default function InstalledModsPage() {
     if (tLower === 'crossplay') return Boolean(m.isCrossplay);
     if (tLower === 'lock-updates') return Boolean((m.tags || []).includes('lock-updates'));
     
-    // 2. Key Filters
-    const kf = getModKeyFilter(m);
-    if (kf && kf.toLowerCase() === tLower) return true;
-
-    // 3. Category matching (from mod's resolved ModHub category field)
+    // 2. Category matching (from mod's resolved ModHub category field)
     const { main, sub } = parseModCategory(effCat, m.isMap);
     if (main && main.toLowerCase() === tLower) return true;
     if (sub && sub.toLowerCase() === tLower) return true;
     if (effCat && String(effCat).toLowerCase().trim() === tLower) return true;
 
-    // 4. Custom mod tags (m.tags array)
+    // 3. Custom mod tags (m.tags array)
     if (m.tags && Array.isArray(m.tags)) {
       for (let i = 0; i < m.tags.length; i++) {
         const t = m.tags[i];
@@ -1288,7 +1212,7 @@ export default function InstalledModsPage() {
     }
 
     return false;
-  }, [getEffectiveModCategory, getModKeyFilter]);
+  }, [getEffectiveModCategory]);
 
   // Compute clean structured tags: Key Filters (Rounded up concepts), Categories (Main ModHub categories), Subcategories, and Custom User Tags
   const { keyFilters, functionalTags, categoryTags, customTags, allUniqueTags } = useMemo(() => {
