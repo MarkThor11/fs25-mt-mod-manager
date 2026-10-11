@@ -73,6 +73,7 @@ export const useSettingsStore = create((set) => ({
   installedTagFilter: [],
   selectiveLoading: true,
   autoDownloadMapDeps: true,
+  standaloneReadyOnExit: true,
   nickname: '',
   hasPromptedConsolidation: false,
 
@@ -204,6 +205,7 @@ export const useSettingsStore = create((set) => ({
         showTagBar: settings.showTagBar === 'true',
         selectiveLoading: settings.selectiveLoading !== 'false',
         autoDownloadMapDeps: settings.autoDownloadMapDeps !== 'false',
+        standaloneReadyOnExit: settings.standaloneReadyOnExit !== 'false',
         nickname: settings.nickname || '',
         hasPromptedConsolidation: settings.hasPromptedConsolidation === 'true',
         isLoaded: true,
@@ -664,6 +666,11 @@ export const useSettingsStore = create((set) => ({
   setSelectiveLoading: async (val) => {
     set({ selectiveLoading: val });
     if (window.api?.settings) await window.api.settings.set('selectiveLoading', String(val));
+  },
+
+  setStandaloneReadyOnExit: async (val) => {
+    set({ standaloneReadyOnExit: val });
+    if (window.api?.settings) await window.api.settings.set('standaloneReadyOnExit', String(val));
   },
 
   setNickname: async (nickname) => {

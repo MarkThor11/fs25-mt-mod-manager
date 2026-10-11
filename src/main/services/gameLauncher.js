@@ -448,6 +448,15 @@ async function restoreGlobalGameSettings() {
   } catch (e) {
     console.error('[LAUNCH] Failed to restore stashed saves on game exit:', e.message);
   }
+  try {
+    const modManager = require('./modManager');
+    const defaultMods = modManager.getDefaultModsPath();
+    if (defaultMods) {
+      await modManager.syncMirrorLinks(defaultMods);
+    }
+  } catch (e) {
+    console.error('[LAUNCH] Failed to sync mirror links on game exit:', e.message);
+  }
 }
 
 let isMonitoringExit = false;

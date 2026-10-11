@@ -59,13 +59,13 @@ export default function SettingsPage() {
     autoStart, conflictSensitivity, cloudBackupPath,
     homeShowHero, homeShowStats, homeShowLatest, homeShowDownloaded, homeShowUpdates,
     appFullscreen, rememberModHubPage, modUpdateMode, skipDeleteConfirm, backupRetention,
-    badgeDuration, selectiveLoading, autoDownloadMapDeps,
+    badgeDuration, selectiveLoading, autoDownloadMapDeps, standaloneReadyOnExit,
     setTheme, setModsPath, addModsPath, removeModsPath, setGamePath, setLaunchPreference,
     setSavegameSlot, setEnableCheats, setSkipModDialog, setSkipIntro, toggleHiddenFolder,
     setHasSeenGuide, setAutoStart, setConflictSensitivity, setCloudBackupPath, setBackupRetention,
     setHomeShowHero, setHomeShowStats, setHomeShowLatest, setHomeShowDownloaded, setHomeShowUpdates,
     setAppFullscreen, setRememberModHubPage, setModUpdateMode, setSkipDeleteConfirm,
-    setBadgeDuration, setSelectiveLoading, setAutoDownloadMapDeps,
+    setBadgeDuration, setSelectiveLoading, setAutoDownloadMapDeps, setStandaloneReadyOnExit,
   } = useSettingsStore();
 
   const [detectedGamePath, setDetectedGamePath] = useState('');
@@ -1150,6 +1150,26 @@ export default function SettingsPage() {
                 type="checkbox"
                 checked={selectiveLoading}
                 onChange={(e) => setSelectiveLoading(e.target.checked)}
+              />
+              <div className="toggle__track" />
+              <div className="toggle__thumb" />
+            </label>
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <div>
+            <div className="settings-row__label">Standalone Ready on Exit (Recommended)</div>
+            <div className="settings-row__desc">
+              When closing the manager, automatically restore all quarantined savegames and reset mod loading overrides so launching directly from Steam or Desktop works normally.
+            </div>
+          </div>
+          <div className="settings-row__control">
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={standaloneReadyOnExit !== false}
+                onChange={(e) => setStandaloneReadyOnExit(e.target.checked)}
               />
               <div className="toggle__track" />
               <div className="toggle__thumb" />

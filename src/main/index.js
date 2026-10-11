@@ -1968,6 +1968,11 @@ app.whenReady().then(() => {
       }
     }).catch(() => {});
 
+    // Auto-restore any quarantined single player saves from prior abnormal shutdown
+    try {
+      savegameManager.restoreStashedSinglePlayerSaves().catch(() => {});
+    } catch (e) {}
+
     // Ensure all mods stored in dedicated map/category subfolders are mirrored to the primary mods directory
     try {
       const defaultMods = modManager.getDefaultModsPath();
@@ -2048,9 +2053,24 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('before-quit', () => {
+let isQuittingCleanly = false;
+
+app.on('before-quit', async (event) => {
+  if (isQuittingCleanly) return;
+
   try {
-    gameLauncher.disableModsDirectoryOverride();
-  } catch (e) {}
+    const shouldRestore = cache.getSetting('standaloneReadyOnExit') !== 'false';
+    if (shouldRestore) {
+      event.preventDefault();
+      await gameLauncher.restoreGlobalGameSettings();
+      isQuittingCleanly = true;
+      app.quit();
+      return;
+    }
+  } catch (e) {
+    console.error('[EXIT] Error restoring standalone game state on quit:', e);
+  }
+
+  isQuittingCleanly = true;
   cache.close();
 });
