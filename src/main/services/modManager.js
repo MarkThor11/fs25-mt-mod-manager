@@ -2055,7 +2055,16 @@ async function performScan(manualPaths = null) {
 				version = tracked.remote_version || tracked.local_version;
 			}
 
-			const isCrossplay = isCrossplayMod(title, calculatedModId, remoteMod, entryName);
+			let resolvedTechData = modDesc?.techData || null;
+			if (!resolvedTechData && remoteMod?.techData) {
+				resolvedTechData = remoteMod.techData;
+			} else if (!resolvedTechData && tracked?.technical_data) {
+				try {
+					resolvedTechData = typeof tracked.technical_data === 'string' ? JSON.parse(tracked.technical_data) : tracked.technical_data;
+				} catch (_) {}
+			} else if (!resolvedTechData && (tracked?.hp || tracked?.price)) {
+				resolvedTechData = { hp: tracked.hp, price: tracked.price };
+			}
 
 			mods.push({
 				title,
@@ -2077,7 +2086,7 @@ async function performScan(manualPaths = null) {
 				conflicts: modDesc?.conflicts || [],
 				scripts: modDesc?.scripts || [],
 				specializations: modDesc?.specializations || [],
-				techData: modDesc?.techData || null,
+				techData: resolvedTechData,
 				modId: calculatedModId,
 				iconFile: modDesc?.iconFile || '',
 				iconData: iconBase64 && iconBase64.startsWith('CATEGORY:') ? iconBase64 : null,

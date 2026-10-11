@@ -264,11 +264,10 @@ export const useModHubStore = create((set, get) => ({
       const needsTrailerCapRescrape = isTrailerOrTanker && cap === 0 && unitCap === 0 && descHasCap;
 
       return (
-        (cap === 0 && unitCap === 0) ||
+        needsTrailerCapRescrape ||
         (cap > 0 && cap < 1000 && unitCap === 0) ||
         (capMin > 0 && capMin < 1000 && capMax > 10000) || // model-number bleed (e.g. NX200 → cMin=200)
-        needsPriceRescrape ||
-        needsTrailerCapRescrape
+        needsPriceRescrape
       );
     };
     const needsScan = mods.some(m => !m.techData || !m.techData.scraped || !m.dependencies || needsRescrape(m));
@@ -1026,7 +1025,9 @@ export const useModHubStore = create((set, get) => ({
       })();
 
       const enrichedMods = uniqueAllMods.map(mod => {
-          const cachedMod = modCache[String(mod.modId)];
+          const rawId = mod?.modId ? String(mod.modId) : '';
+          const cleanId = rawId.replace(/^0+/, '');
+          const cachedMod = modCache[rawId] || (cleanId ? modCache[cleanId] : null);
           if (cachedMod?.techData) {
             const catStr = (mod.category || cachedMod.category || cachedMod.metadata?.Category || '').toLowerCase();
             const titleStr = (mod.title || cachedMod.title || '').toLowerCase();
@@ -1050,32 +1051,12 @@ export const useModHubStore = create((set, get) => ({
               }
             }
           }
-          // Don't apply stale or mis-parsed techData — let deep scan re-fetch
-          const cachedCap = cachedMod?.techData?.capacity ?? 0;
-          const cachedCapMin = cachedMod?.techData?.capacityMin ?? 0;
-          const cachedCapMax = cachedMod?.techData?.capacityMax ?? 0;
-          const cachedUnit = cachedMod?.techData?.unitCapacity ?? 0;
           const cachedPrice = cachedMod?.techData?.price ?? 0;
-          const cachedPriceMin = cachedMod?.techData?.priceMin ?? cachedPrice;
-          const cachedPriceMax = cachedMod?.techData?.priceMax ?? cachedPrice;
-          const isPackMod = (mod.title || cachedMod?.title || '').toLowerCase().includes('pack') || (mod.category || cachedMod?.category || '').toLowerCase().includes('package');
-          const descHasPrices = cachedMod?.description && /(?:base\s+price|configuration\s+price|prices?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]*[$€£]?\s*[\d'’\s,.]+/i.test(cachedMod.description);
-          const priceStale = (
-            (isPackMod && cachedPriceMin === cachedPriceMax && descHasPrices) ||
-            (cachedPrice < 500 && descHasPrices)
-          );
-
-          const cachedIsStale = cachedMod?.techData?.scraped && (
-            (cachedCap === 0 && cachedUnit === 0) ||
-            (cachedCap > 0 && cachedCap < 1000 && cachedUnit === 0) ||
-            (cachedCapMin > 0 && cachedCapMin < 1000 && cachedCapMax > 10000) ||
-            priceStale
-          );
-          if (cachedMod?.techData && !cachedIsStale) {
+          if (cachedMod?.techData) {
             if (!cachedMod.techData.priceMin && cachedPrice > 0) cachedMod.techData.priceMin = cachedPrice;
             if (!cachedMod.techData.priceMax && cachedPrice > 0) cachedMod.techData.priceMax = cachedPrice;
           }
-          const effectiveCached = (cachedMod && !cachedIsStale) ? cachedMod : cachedMod ? { ...cachedMod, techData: undefined } : null;
+          const effectiveCached = cachedMod || null;
           let enriched = effectiveCached ? { ...mod, ...effectiveCached } : { ...mod };
 
           // Badge First-Seen Tracking

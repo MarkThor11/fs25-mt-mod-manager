@@ -1130,7 +1130,10 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
         </div>
         
         {(() => {
-          const showPrice = mod.techData?.price > 0 && !hidePrice;
+          const rawPrice = mod.techData?.price ?? mod.price ?? (mod.metadata?.Price ? parseInt(String(mod.metadata.Price).replace(/[^0-9]/g, ''), 10) : 0);
+          const priceMin = mod.techData?.priceMin ?? rawPrice;
+          const priceMax = mod.techData?.priceMax ?? rawPrice;
+          const showPrice = rawPrice > 0 && !hidePrice;
           const isTechFilterActive = activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < 2000 || activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < 1000000 || activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < 1000000;
           const showEstimated = isSmartMatchEnabled || isTechFilterActive;
           const hasHP = mod.techData?.hp > 0 && !hideHP && !hidePower && (!mod.techData.hpIsRecommendation || showEstimated);
@@ -1146,7 +1149,10 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           const isNoCap = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k)) ||
                           catStr.includes('gameplay') || catStr.includes('script') ||
                           titleStr.includes('script') || descStr.includes('with this script');
-          const showCap = mod.techData?.capacity > 0 && !isNoCap;
+          const rawCap = mod.techData?.capacity ?? (mod.metadata?.Capacity ? parseInt(String(mod.metadata.Capacity).replace(/[^0-9]/g, ''), 10) : 0);
+          const capMin = mod.techData?.capacityMin ?? rawCap;
+          const capMax = mod.techData?.capacityMax ?? rawCap;
+          const showCap = rawCap > 0 && !isNoCap;
           const BOGUS_UNITS = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'];
           const isBogusUnit = BOGUS_UNITS.includes((mod.techData?.unitCapacityType || '').toLowerCase());
           const isVehicle = mod.techData?.isDrivable;
@@ -1159,9 +1165,9 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
               {showPrice && (
                 <div className="mod-card__tech-item" title="Price">
                   <span style={{ fontSize: 12 }}>$</span>
-                  {mod.techData.priceMin && mod.techData.priceMax && mod.techData.priceMin !== mod.techData.priceMax
-                    ? `${mod.techData.priceMin.toLocaleString()} - ${mod.techData.priceMax.toLocaleString()}`
-                    : mod.techData.price.toLocaleString()}
+                  {priceMin && priceMax && priceMin !== priceMax
+                    ? `${priceMin.toLocaleString()} - ${priceMax.toLocaleString()}`
+                    : rawPrice.toLocaleString()}
                 </div>
               )}
               {hasHP && (
@@ -1183,9 +1189,9 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
               {showCap && (
                 <div className="mod-card__tech-item" title="Capacity">
                   <Layers size={14} />
-                  {mod.techData.capacityMin && mod.techData.capacityMax && mod.techData.capacityMin !== mod.techData.capacityMax
-                    ? `${mod.techData.capacityMin.toLocaleString()} - ${mod.techData.capacityMax.toLocaleString()}`
-                    : mod.techData.capacity.toLocaleString()} L
+                  {capMin && capMax && capMin !== capMax
+                    ? `${capMin.toLocaleString()} - ${capMax.toLocaleString()}`
+                    : rawCap.toLocaleString()} L
                 </div>
               )}
               {showUnitCap && (

@@ -145,7 +145,9 @@ export default function ModHubPage() {
     const raw = (categoryAllMods && categoryAllMods.length > 0) ? categoryAllMods : (mods || []);
     return raw.map(m => {
       if (!m) return m;
-      const cached = modCache[m.modId];
+      const rawId = m.modId ? String(m.modId) : '';
+      const cleanId = rawId.replace(/^0+/, '');
+      const cached = modCache[rawId] || (cleanId ? modCache[cleanId] : null);
       if (cached) {
         return {
           ...m,

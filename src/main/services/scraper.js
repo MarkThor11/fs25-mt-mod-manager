@@ -766,7 +766,7 @@ function parseModDetailFromHtml(html, modId) {
       return { min: 0, max: 0 };
     }
     
-    const parts = lower.split(/[\/-]|(?:\s+to\s+)|(?:\s+bis\s+)|(?:\s+à\s+)/);
+    const parts = lower.split(/[\/–—~-]|(?:\s+to\s+)|(?:\s+bis\s+)|(?:\s+à\s+)|(?:\s+a\s+)/);
     const cleanedParts = parts.map(p => {
       const cleaned = p.replace(/[$€£]/g, '').replace(/(\d+)[\s,.](\d{3})/g, '$1$2').replace(/[^0-9]/g, '');
       return parseInt(cleaned, 10) || 0;
@@ -783,7 +783,7 @@ function parseModDetailFromHtml(html, modId) {
     const key = k.toLowerCase();
     const valStr = (v || '').toString().toLowerCase();
 
-    if (key.includes('price') || key.includes('preis') || key.includes('prix')) {
+    if (key.includes('price') || key.includes('preis') || key.includes('prix') || key.includes('precio') || key.includes('prezzo') || key.includes('cena') || key.includes('preço')) {
       const p = parseRange(valStr); techData.price = p.max; techData.priceMin = p.min; techData.priceMax = p.max;
     }
     
@@ -816,7 +816,7 @@ function parseModDetailFromHtml(html, modId) {
       
       if (key.includes('required') || key.includes('requirement')) techData.hpIsRequirement = true;
     }
-    else if (key.includes('capacity') || key.includes('kapazität') || key.includes('capacité')) {
+    else if (key.includes('capacity') || key.includes('kapazität') || key.includes('capacité') || key.includes('fassungsvermögen') || key.includes('capacidad') || key.includes('capacità') || key.includes('pojemność')) {
       const c = parseRange(valStr); techData.capacity = c.max; techData.capacityMin = c.min; techData.capacityMax = c.max;
     }
     else if (key.includes('speed') || key.includes('km/h') || key.includes('mph') || key.includes('geschwindigkeit')) {
@@ -840,14 +840,17 @@ function parseModDetailFromHtml(html, modId) {
       .filter(Boolean);
 
     // 1. Price scan across lines (extracts min and max prices across packs & variants)
-    const pricePrefixRe = /^(?:[-*•\s]*)(?:base\s+price|configuration\s+price|prices?\s*(?:and\s+capacity)?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]*(.*)/i;
+    const pricePrefixRe = /^(?:[-*•\s]*)(?:base\s+price|configuration\s+price|prices?\s*(?:and\s+capacity)?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|precio(?:\s*(?:desde))?|prezzo|cena|preço|cost|kosten)[:\-\s]*(.*)/i;
     const descPrices = [];
     let inPriceBlock = false;
 
     const extractPricesFromText = (str, list) => {
-      const tokenRe = /(?:[$€£]\s*)(\d[\d'’\s,.]*\d|\d+)|(\d[\d'’\s,.]*\d|\d+)\s*[$€£]/g;
+      // 1. First extract numbers with currency symbols: $1000 or 1000€
+      const tokenWithCurrRe = /(?:[$€£]\s*)(\d[\d'’\s,.]*\d|\d+)|(\d[\d'’\s,.]*\d|\d+)\s*[$€£]/g;
       let match;
-      while ((match = tokenRe.exec(str)) !== null) {
+      let matchedAnyWithCurr = false;
+      while ((match = tokenWithCurrRe.exec(str)) !== null) {
+        matchedAnyWithCurr = true;
         let s = (match[1] || match[2]).replace(/['’]/g, '');
         let val = 0;
         if (/^\d{1,3}[,.\s]\d{3}$/.test(s)) {
@@ -858,6 +861,23 @@ function parseModDetailFromHtml(html, modId) {
           val = parseInt(s.replace(/[^0-9]/g, ''), 10);
         }
         if (val >= 50 && val < 50000000) list.push(val);
+      }
+
+      // 2. If no currency tokens found, extract standalone formatted numbers (e.g. 24.000 - 40.000)
+      if (!matchedAnyWithCurr) {
+        const numTokenRe = /(?<![a-zA-Z])(\d[\d'’\s,.]*\d|\d+)(?![a-zA-Z])/g;
+        while ((match = numTokenRe.exec(str)) !== null) {
+          let s = match[1].replace(/['’]/g, '').trim();
+          let val = 0;
+          if (/^\d{1,3}[,.\s]\d{3}$/.test(s)) {
+            val = parseInt(s.replace(/[,.\s]/g, ''), 10);
+          } else if (/^\d{1,3}(?:[,.\s]\d{3})+$/.test(s)) {
+            val = parseInt(s.replace(/[,.\s]/g, ''), 10);
+          } else {
+            val = parseInt(s.replace(/[^0-9]/g, ''), 10);
+          }
+          if (val >= 50 && val < 50000000) list.push(val);
+        }
       }
     };
 
@@ -871,7 +891,7 @@ function parseModDetailFromHtml(html, modId) {
           continue;
         }
       } else if (inPriceBlock) {
-        if (/^[-*•]/.test(line) && /[$€£]/.test(line)) {
+        if (/^[-*•]/.test(line)) {
           extractPricesFromText(line, descPrices);
           continue;
         } else {
@@ -899,7 +919,7 @@ function parseModDetailFromHtml(html, modId) {
     } else if (techData.price === 0 || techData.price < 500) {
       // Fallback regex on stripped text
       const descText = description.replace(/<[^>]*>/g, ' ');
-      const priceMatch = descText.match(/(?:base\s+price|configuration\s+price|prices?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]*([$€£]?\s*[\d'’\s,.]*\d|\d+)/i) || descText.match(/([$€£]\s*[\d'’\s,.]*\d)/i);
+      const priceMatch = descText.match(/(?:base\s+price|configuration\s+price|prices?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|precio|prezzo|cena|cost|kosten)[:\-\s]*([$€£]?\s*[\d'’\s,.]*\d|\d+)/i) || descText.match(/([$€£]\s*[\d'’\s,.]*\d)/i);
       if (priceMatch && priceMatch[1]) {
         let s = priceMatch[1].replace(/[$€£'’]/g, '').trim();
         let parsedPrice = 0;
@@ -992,8 +1012,8 @@ function parseModDetailFromHtml(html, modId) {
                        catStr.includes('gameplay') || catStr.includes('script') ||
                        titleStr.includes('script') || descStr.includes('with this script');
 
-    // 3. Litre Capacity scan across lines
-    if (techData.capacity === 0 && !isNoCapCat) {
+    // 3. Litre Capacity scan across lines — run even if base capacity exists to catch multi-capacity ranges!
+    if (!isNoCapCat) {
       // Parse a numeric string with optional k-suffix (thousand). Supports European 16.500 / 30.000, 16,500, Swiss 21'000, or decimals.
       const parseCapNum = (str, kSuffix) => {
         if (!str) return 0;
@@ -1022,7 +1042,7 @@ function parseModDetailFromHtml(html, modId) {
       };
 
       // Lines that mention capacity keyword (matches delimiter like ":" or mid-line e.g. "Bale Transport / Capacity 17,000" or header)
-      const capLineRe  = /(?:capact?i(?:ty|ties)|kapazität|capacité|fassungsvermögen|inhalt|tank\s*capacity|load\s*capacity)(?:[:\-\s/]+|\s+from\s+|\s*$)(.*)/i;
+      const capLineRe  = /(?:capact?i(?:ty|ties)|kapazität|capacité|volume|volumen|ladevolumen|pojemność|capacidad|capacità|tank\s*inhalt|grain\s*tank|korntank|bunker|fassungsvermögen|inhalt|tank\s*capacity|load\s*capacity)(?:[:\-\s/]+|\s+from\s+|\s*$)(.*)/i;
       const litreUnitRe = /liters?|litres?|\bl\b|m³|m3|cubic/i;
 
       // Numbers: not preceded by a letter (avoids model codes like NX200),
@@ -1084,9 +1104,18 @@ function parseModDetailFromHtml(html, modId) {
       }
 
       if (overallMin !== null && overallMax !== null) {
-        techData.capacityMin = overallMin;
-        techData.capacityMax = overallMax;
-        techData.capacity = overallMax;
+        if (!techData.capacity || techData.capacity === 0) {
+          techData.capacityMin = overallMin;
+          techData.capacityMax = overallMax;
+          techData.capacity = overallMax;
+        } else {
+          // Table capacity already exists — broaden bounds with description configs!
+          if (!techData.capacityMin || overallMin < techData.capacityMin) techData.capacityMin = overallMin;
+          if (!techData.capacityMax || overallMax > techData.capacityMax) {
+            techData.capacityMax = overallMax;
+            techData.capacity = overallMax;
+          }
+        }
       }
     }
 

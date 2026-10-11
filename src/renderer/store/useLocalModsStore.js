@@ -118,6 +118,7 @@ export const useLocalModsStore = create((set, get) => ({
         technicalName: modInfo.technicalName || '',
         dependencies: modInfo.dependencies || [],
         modId: idStr,
+        techData: modInfo.techData || null,
         tags: modInfo.tags || []
       };
       const nextMods = [...s.mods, newMod];
@@ -142,6 +143,7 @@ export const useLocalModsStore = create((set, get) => ({
             technicalName: m.technicalName,
             dependencies: m.dependencies,
             modId: m.modId,
+            techData: m.techData,
             iconData: m.iconData,
             tags: m.tags
           }));
