@@ -364,8 +364,17 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
 
   const hideCapacity = useMemo(() => {
     if (isModPack || mod.isMap || isMapCategory(mod.category)) return true;
+    const cat = (mod.category || '').toLowerCase();
+    const title = (mod.title || '').toLowerCase();
+    const noCapKeywords = [
+      'gameplay', 'script', 'prefab', 'chainsaw', 'flashlight', 'handtool',
+      'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
+      'plow', 'cultivator', 'subsoiler', 'spader', 'mulcher', 'roller',
+      'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car'
+    ];
+    if (noCapKeywords.some(k => cat.includes(k) || title.includes('script'))) return true;
     return false;
-  }, [isModPack, mod.isMap, mod.category]);
+  }, [isModPack, mod.isMap, mod.category, mod.title]);
 
   const isMatchable = useMemo(() => {
     const titleLow = (mod.title || '').toLowerCase();
@@ -1103,12 +1112,18 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           const showPrice = mod.techData?.price > 0 && !hidePrice;
           const isTechFilterActive = activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < 2000 || activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < 1000000 || activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < 1000000;
           const showEstimated = isSmartMatchEnabled || isTechFilterActive;
-          const hasHP = mod.techData?.hp > 0 && !hideHP && !hidePower && (!mod.techData.hpIsRecommendation || showEstimated);
-          const showCap = mod.techData?.capacity > 0 && !hideCapacity && !hidePower;
+          const noCapKeywords = [
+            'gameplay', 'script', 'prefab', 'chainsaw', 'flashlight', 'handtool',
+            'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
+            'plow', 'cultivator', 'subsoiler', 'spader', 'mulcher', 'roller',
+            'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car'
+          ];
+          const isNoCap = noCapKeywords.some(k => (mod.category || '').toLowerCase().includes(k) || (mod.title || '').toLowerCase().includes('script'));
+          const showCap = mod.techData?.capacity > 0 && !hideCapacity && !hidePower && !isNoCap;
           const BOGUS_UNITS = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'];
           const isBogusUnit = BOGUS_UNITS.includes((mod.techData?.unitCapacityType || '').toLowerCase());
           const isVehicle = mod.techData?.isDrivable;
-          const showUnitCap = mod.techData?.unitCapacity > 0 && !hideCapacity && !isBogusUnit && !isVehicle;
+          const showUnitCap = mod.techData?.unitCapacity > 0 && !hideCapacity && !isBogusUnit && !isVehicle && !isNoCap;
 
           if (!showPrice && !hasHP && !showCap && !showUnitCap) return null;
 

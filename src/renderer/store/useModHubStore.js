@@ -66,6 +66,13 @@ export const DRIVABLE_FILTERS = [
 
 export const BOGUS_UNIT_TYPES = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'];
 
+export const NO_CAPACITY_KEYWORDS = [
+  'gameplay', 'script', 'prefab', 'chainsaw', 'flashlight', 'handtool',
+  'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
+  'plow', 'cultivator', 'subsoiler', 'spader', 'mulcher', 'roller',
+  'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car'
+];
+
 export const useModHubStore = create((set, get) => ({
 
   // State
@@ -143,15 +150,27 @@ export const useModHubStore = create((set, get) => ({
       const pruned = {};
       let hasPruned = false;
       Object.entries(cache || {}).forEach(([k, v]) => {
-        // Sanitize bogus unit capacity in existing cached items
-        if (v?.techData?.unitCapacity) {
-          const uType = (v.techData.unitCapacityType || '').toLowerCase();
-          const catFilter = (v.category || '').split(':')[1] || '';
-          const isVehicle = DRIVABLE_FILTERS.includes(catFilter) || v.techData?.isDrivable;
-          if (BOGUS_UNIT_TYPES.includes(uType) || isVehicle) {
+        // Sanitize capacity and unit capacity in existing cached items
+        if (v?.techData) {
+          const catStr = (v.category || v.metadata?.Category || '').toLowerCase();
+          const titleStr = (v.title || '').toLowerCase();
+          const isNoCap = NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes('script'));
+          if (isNoCap) {
+            if (v.techData.capacity > 0 || v.techData.unitCapacity > 0) hasPruned = true;
+            v.techData.capacity = 0;
+            v.techData.capacityMin = 0;
+            v.techData.capacityMax = 0;
             v.techData.unitCapacity = 0;
             v.techData.unitCapacityType = '';
-            hasPruned = true;
+          } else if (v.techData.unitCapacity) {
+            const uType = (v.techData.unitCapacityType || '').toLowerCase();
+            const catFilter = (v.category || '').split(':')[1] || '';
+            const isVehicle = DRIVABLE_FILTERS.includes(catFilter) || v.techData?.isDrivable;
+            if (BOGUS_UNIT_TYPES.includes(uType) || isVehicle) {
+              v.techData.unitCapacity = 0;
+              v.techData.unitCapacityType = '';
+              hasPruned = true;
+            }
           }
         }
         // If it has a timestamp, prune if older than 30 days. 
@@ -950,13 +969,24 @@ export const useModHubStore = create((set, get) => ({
 
       const enrichedMods = uniqueAllMods.map(mod => {
           const cachedMod = modCache[String(mod.modId)];
-          if (cachedMod?.techData?.unitCapacity) {
-            const uType = (cachedMod.techData.unitCapacityType || '').toLowerCase();
-            const catFilter = (mod.category || cachedMod.category || '').split(':')[1] || '';
-            const isVehicle = DRIVABLE_FILTERS.includes(catFilter) || cachedMod.techData?.isDrivable;
-            if (BOGUS_UNIT_TYPES.includes(uType) || isVehicle) {
+          if (cachedMod?.techData) {
+            const catStr = (mod.category || cachedMod.category || '').toLowerCase();
+            const titleStr = (mod.title || cachedMod.title || '').toLowerCase();
+            const isNoCap = NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes('script'));
+            if (isNoCap) {
+              cachedMod.techData.capacity = 0;
+              cachedMod.techData.capacityMin = 0;
+              cachedMod.techData.capacityMax = 0;
               cachedMod.techData.unitCapacity = 0;
               cachedMod.techData.unitCapacityType = '';
+            } else if (cachedMod.techData.unitCapacity) {
+              const uType = (cachedMod.techData.unitCapacityType || '').toLowerCase();
+              const catFilter = (mod.category || cachedMod.category || '').split(':')[1] || '';
+              const isVehicle = DRIVABLE_FILTERS.includes(catFilter) || cachedMod.techData?.isDrivable;
+              if (BOGUS_UNIT_TYPES.includes(uType) || isVehicle) {
+                cachedMod.techData.unitCapacity = 0;
+                cachedMod.techData.unitCapacityType = '';
+              }
             }
           }
           // Don't apply stale or mis-parsed techData — let deep scan re-fetch
@@ -1129,7 +1159,16 @@ export const useModHubStore = create((set, get) => ({
       techSpecs: detail.techSpecs || {}
     };
     const techData = { ...rawTechData, scraped: true };
-    if (isVehicleCategory || BOGUS_UNIT_TYPES.includes((techData.unitCapacityType || '').toLowerCase())) {
+    const catStr = (mod.category || detail.category || detail.metadata?.Category || '').toLowerCase();
+    const titleStr = (mod.title || detail.title || '').toLowerCase();
+    const isNoCap = NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes('script'));
+    if (isNoCap) {
+      techData.capacity = 0;
+      techData.capacityMin = 0;
+      techData.capacityMax = 0;
+      techData.unitCapacity = 0;
+      techData.unitCapacityType = '';
+    } else if (isVehicleCategory || BOGUS_UNIT_TYPES.includes((techData.unitCapacityType || '').toLowerCase())) {
       techData.unitCapacity = 0;
       techData.unitCapacityType = '';
     }

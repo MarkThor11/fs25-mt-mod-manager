@@ -702,12 +702,26 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
         const unitType = (cached.techData?.unitCapacityType || '').toLowerCase();
         const isBogusUnit = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'].includes(unitType);
         const catStr = (cached.category || cached.metadata?.Category || '').toLowerCase();
+        const titleStr = (cached.title || '').toLowerCase();
+        const noCapKeywords = [
+          'gameplay', 'script', 'prefab', 'chainsaw', 'flashlight', 'handtool',
+          'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
+          'plow', 'cultivator', 'subsoiler', 'spader', 'mulcher', 'roller',
+          'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car'
+        ];
+        const isNoCap = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes('script'));
         const isVehicle = /(?:tractor|traktor|truck|lkw|car|auto|pkw|harvester|mähdrescher|forage|häcksler|excavator|bagger|loader|radlader|teleskoplader|forklift|gabelstapler)/i.test(catStr) || cached.techData?.isDrivable;
-        if (cached.techData && (isBogusUnit || isVehicle)) {
+        if (cached.techData && isNoCap) {
+          cached.techData.capacity = 0;
+          cached.techData.capacityMin = 0;
+          cached.techData.capacityMax = 0;
+          cached.techData.unitCapacity = 0;
+          cached.techData.unitCapacityType = '';
+        } else if (cached.techData && (isBogusUnit || isVehicle)) {
           cached.techData.unitCapacity = 0;
           cached.techData.unitCapacityType = '';
         }
-        const unitCap = (isBogusUnit || isVehicle) ? 0 : rawUnitCap;
+        const unitCap = (isNoCap || isBogusUnit || isVehicle) ? 0 : rawUnitCap;
         const needsCapacityRescrape = cached.techData?.scraped && (
           (cap === 0 && unitCap === 0) ||                              // no capacity at all
           (cap > 0 && cap < 1000 && unitCap === 0) ||                 // tiny litre = mis-parse
@@ -805,12 +819,26 @@ ipcMain.handle('modhub:getBatchDetails', async (_, modIds) => {
       const unitType = (cached.techData?.unitCapacityType || '').toLowerCase();
       const isBogusUnit = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'].includes(unitType);
       const catStr = (cached.category || cached.metadata?.Category || '').toLowerCase();
+      const titleStr = (cached.title || '').toLowerCase();
+      const noCapKeywords = [
+        'gameplay', 'script', 'prefab', 'chainsaw', 'flashlight', 'handtool',
+        'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
+        'plow', 'cultivator', 'subsoiler', 'spader', 'mulcher', 'roller',
+        'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car'
+      ];
+      const isNoCap = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes('script'));
       const isVehicle = /(?:tractor|traktor|truck|lkw|car|auto|pkw|harvester|mähdrescher|forage|häcksler|excavator|bagger|loader|radlader|teleskoplader|forklift|gabelstapler)/i.test(catStr) || cached.techData?.isDrivable;
-      if (cached.techData && (isBogusUnit || isVehicle)) {
+      if (cached.techData && isNoCap) {
+        cached.techData.capacity = 0;
+        cached.techData.capacityMin = 0;
+        cached.techData.capacityMax = 0;
+        cached.techData.unitCapacity = 0;
+        cached.techData.unitCapacityType = '';
+      } else if (cached.techData && (isBogusUnit || isVehicle)) {
         cached.techData.unitCapacity = 0;
         cached.techData.unitCapacityType = '';
       }
-      const unitCap = (isBogusUnit || isVehicle) ? 0 : rawUnitCap;
+      const unitCap = (isNoCap || isBogusUnit || isVehicle) ? 0 : rawUnitCap;
       const needsRescrape = cached.techData?.scraped && (
         (cap === 0 && unitCap === 0) ||
         (cap > 0 && cap < 1000 && unitCap === 0) ||

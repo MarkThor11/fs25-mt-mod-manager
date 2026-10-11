@@ -845,7 +845,17 @@ async function fetchModDetail(modId) {
     }
     }
 
-    if (techData.capacity === 0) {
+    const catStr = (metadata['Category'] || metadata['category'] || '').toLowerCase();
+    const titleStr = (title || '').toLowerCase();
+    const noCapKeywords = [
+      'gameplay', 'script', 'prefab', 'map', 'chainsaw', 'flashlight', 'handtool',
+      'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
+      'plow', 'cultivator', 'subsoiler', 'spader', 'mulcher', 'roller',
+      'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car'
+    ];
+    const isNoCapCat = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes('script'));
+
+    if (techData.capacity === 0 && !isNoCapCat) {
       // Split raw HTML on visual line breaks BEFORE stripping tags
       const rawLines = description
         .replace(/<br[^>]*>/gi, '\n')
@@ -983,11 +993,16 @@ async function fetchModDetail(modId) {
       }
     }
 
-    // Safety guard: ensure drivable vehicles and bogus unit types are never assigned unit capacity
+    // Safety guard: ensure drivable vehicles, script/gameplay mods, and bogus unit types are never assigned unit capacity
     const BOGUS_UNITS = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'];
-    if (isVehicleCat || BOGUS_UNITS.includes((techData.unitCapacityType || '').toLowerCase())) {
+    if (isNoCapCat || isVehicleCat || BOGUS_UNITS.includes((techData.unitCapacityType || '').toLowerCase())) {
       techData.unitCapacity = 0;
       techData.unitCapacityType = '';
+    }
+    if (isNoCapCat) {
+      techData.capacity = 0;
+      techData.capacityMin = 0;
+      techData.capacityMax = 0;
     }
 
     // Guard: if unit capacity was found but litre capacity is tiny (< 1000 L),
