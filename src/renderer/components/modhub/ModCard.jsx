@@ -1104,6 +1104,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           const isTechFilterActive = activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < 2000 || activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < 1000000 || activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < 1000000;
           const showEstimated = isSmartMatchEnabled || isTechFilterActive;
           const hasHP = mod.techData?.hp > 0 && !hideHP && !hidePower && (!mod.techData.hpIsRecommendation || showEstimated);
+          const showCap = mod.techData?.capacity > 0 && !hideCapacity && !hidePower;
           const BOGUS_UNITS = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'];
           const isBogusUnit = BOGUS_UNITS.includes((mod.techData?.unitCapacityType || '').toLowerCase());
           const isVehicle = mod.techData?.isDrivable;
