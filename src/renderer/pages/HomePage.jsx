@@ -177,11 +177,8 @@ export default function HomePage() {
       setLoadingTopDownloaded(false);
     }
   };
-  const latestSave = [...savegames]
-    .filter(s => !s.isGhost && s.playerName)
-    .sort((a, b) => new Date(b.lastSaved) - new Date(a.lastSaved))[0];
-    
-  const rawName = nickname || latestSave?.playerName || (savegames.find(s => !s.isGhost && s.playerName)?.playerName) || 'Farmer';
+  const nonFarmerSave = savegames.find(s => !s.isGhost && s.playerName && s.playerName !== 'Farmer');
+  const rawName = nickname || (latestSave?.playerName && latestSave.playerName !== 'Farmer' ? latestSave.playerName : null) || nonFarmerSave?.playerName || latestSave?.playerName || 'Farmer';
   
   const handleSaveName = () => {
     const trimmed = tempName.trim();

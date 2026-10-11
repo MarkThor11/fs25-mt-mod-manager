@@ -2515,12 +2515,37 @@ async function getAllSavegames() {
                 }
             }
 
+            // Extract player name from settings or farms.xml (FS25 primary nickname storage)
+            let detectedPlayerName = settings['@_playerName'] || settings.playerName || null;
+            if ((!detectedPlayerName || detectedPlayerName === 'Farmer') && fs.existsSync(farmsFile)) {
+                try {
+                    const farmsXml = await fs.readFile(farmsFile, 'utf8');
+                    const farmsData = parser.parse(farmsXml);
+                    if (farmsData?.farms?.farm) {
+                        const farmList = Array.isArray(farmsData.farms.farm) ? farmsData.farms.farm : [farmsData.farms.farm];
+                        for (const f of farmList) {
+                            if (f.players?.player) {
+                                const playerList = Array.isArray(f.players.player) ? f.players.player : [f.players.player];
+                                for (const p of playerList) {
+                                    const nick = p['@_lastNickname'] || p.lastNickname || p['@_nickname'] || p.nickname || p['@_name'] || p.name;
+                                    if (nick && nick !== 'Farm Member') {
+                                        detectedPlayerName = nick;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (detectedPlayerName) break;
+                        }
+                    }
+                } catch (e) {}
+            }
+
             savegames.push({
                 index: i,
                 folderName: `savegame${i}`,
                 path: savePath,
                 farmName: settings['@_savegameName'] || settings.savegameName || 'Unnamed Farm',
-                playerName: settings['@_playerName'] || settings.playerName || 'Farmer',
+                playerName: detectedPlayerName || 'Farmer',
                 mapId,
                 mapTitle,
                 isInitialized,
