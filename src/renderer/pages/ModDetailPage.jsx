@@ -100,36 +100,65 @@ export default function ModDetailPage() {
   const { favoriteMods, toggleFavoriteMod, toggleMustHaveMod } = useModHubStore();
   
   const localMod = useMemo(() => {
-    if (!mod) return null;
-    const targetCleanId = (modId || mod.modId) ? String(modId || mod.modId).replace(/^0+/, '') : null;
+    if (!mod || !localMods || localMods.length === 0) return null;
+    const cleanModId = (modId || mod.modId) ? String(modId || mod.modId).replace(/^0+/, '') : null;
 
-    // 1. Try exact ID match (with leading zero normalization)
-    if (targetCleanId) {
-      const idMatch = localMods.find(lm => lm.modId && String(lm.modId).replace(/^0+/, '') === targetCleanId);
+    // 1. Try exact ModHub ID match (with leading zero normalization)
+    if (cleanModId) {
+      const idMatch = localMods.find(lm => lm.modId && String(lm.modId).replace(/^0+/, '') === cleanModId);
       if (idMatch) return idMatch;
     }
 
-    // 2. Try fileName match (stripping FS25/FS22 prefix)
+    // Helper functions for names
+    const cleanStr = (s) => s ? String(s).trim().toLowerCase() : '';
     const getBaseName = (str) => {
       if (!str) return '';
       const match = str.match(/([^/\\]+)\.zip$/i) || [null, str];
       return match[1].replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
     };
-    
-    const remoteFileName = getBaseName(mod.fileName || mod.downloadUrl);
-    if (remoteFileName) {
+
+    const remoteFileStr = mod.fileName || (mod.downloadUrl ? mod.downloadUrl.split('?')[0].split('/').pop() : null);
+    const remoteExactFile = remoteFileStr ? cleanStr(remoteFileStr.split(/[/\\]/).pop()) : null;
+    const remoteBase = remoteFileStr ? getBaseName(remoteFileStr) : null;
+
+    // 2. Physical filename check (exact zip name or base name)
+    if (remoteFileStr) {
       const fileMatch = localMods.find(lm => {
-         if (!lm.fileName) return false;
-         return getBaseName(lm.fileName) === remoteFileName;
+        if (!lm.fileName) return false;
+        const cleanLmId = lm.modId ? String(lm.modId).replace(/^0+/, '') : null;
+        if (cleanModId && cleanLmId && cleanModId !== cleanLmId) return false;
+
+        const lmExactFile = cleanStr(lm.fileName.split(/[/\\]/).pop());
+        if (remoteExactFile && lmExactFile === remoteExactFile) return true;
+        const lmBase = getBaseName(lm.fileName);
+        return remoteBase && lmBase === remoteBase;
       });
       if (fileMatch) return fileMatch;
     }
 
-    // 3. Try clean alphanumeric title match
-    const cleanModTitle = (mod.title || '').replace(/\([^)]+\)/g, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+    // 3. Technical mod name check
+    if (mod.modName) {
+      const remoteName = cleanStr(mod.modName);
+      const nameMatch = localMods.find(lm => {
+        const cleanLmId = lm.modId ? String(lm.modId).replace(/^0+/, '') : null;
+        if (cleanModId && cleanLmId && cleanModId !== cleanLmId) return false;
+
+        const lmName = cleanStr(lm.modName);
+        if (lmName && lmName === remoteName) return true;
+        const lmBase = getBaseName(lm.modName);
+        return remoteBase && lmBase === remoteBase;
+      });
+      if (nameMatch) return nameMatch;
+    }
+
+    // 4. Try clean alphanumeric title match (safeguarded against ID collision)
+    const cleanModTitle = cleanStr((mod.title || '').replace(/\([^)]+\)/g, '').replace(/[^a-z0-9]/gi, ''));
     if (cleanModTitle) {
       const titleMatch = localMods.find(lm => {
-        const cleanLmTitle = (lm.title || '').replace(/\([^)]+\)/g, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+        const cleanLmId = lm.modId ? String(lm.modId).replace(/^0+/, '') : null;
+        if (cleanModId && cleanLmId && cleanModId !== cleanLmId) return false;
+
+        const cleanLmTitle = cleanStr((lm.title || '').replace(/\([^)]+\)/g, '').replace(/[^a-z0-9]/gi, ''));
         return cleanLmTitle && cleanLmTitle === cleanModTitle;
       });
       if (titleMatch) return titleMatch;
@@ -140,6 +169,7 @@ export default function ModDetailPage() {
 
   const hasUpdate = useMemo(() => {
     if (!mod || !localMod) return false;
+    if (!mod.version || !localMod.version) return false;
     // remote (mod.version) > installed (localMod.version)
     return compareVersions(mod.version, localMod.version) > 0;
   }, [mod, localMod]);

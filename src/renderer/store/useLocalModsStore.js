@@ -29,8 +29,13 @@ function reconcileUpdates(currentUpdates, localMods) {
     if (!local) return false; // If not installed locally, it's not a local update
     if (!u.remoteVersion || !local.version || local.version === 'Unknown' || local.version === 'Invalid') return false;
 
-    const parts1 = String(local.version).split(/[.-]/).map(p => parseInt(p, 10) || 0);
-    const parts2 = String(u.remoteVersion).split(/[.-]/).map(p => parseInt(p, 10) || 0);
+    const cleanVersion = (v) => {
+      if (!v) return '';
+      return String(v).trim().replace(/^[vV]/, '').replace(/[^0-9.-]/g, '');
+    };
+
+    const parts1 = cleanVersion(local.version).split(/[.-]/).map(p => parseInt(p, 10) || 0);
+    const parts2 = cleanVersion(u.remoteVersion).split(/[.-]/).map(p => parseInt(p, 10) || 0);
     const maxLen = Math.max(parts1.length, parts2.length);
 
     for (let i = 0; i < maxLen; i++) {

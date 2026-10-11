@@ -9,8 +9,20 @@ const fs = require('fs-extra');
  * Returns positive if v2 > v1, negative if v1 > v2, 0 if equal.
  */
 function compareVersions(v1, v2) {
-  const parts1 = String(v1).split(/[.-]/).map(p => parseInt(p, 10) || 0);
-  const parts2 = String(v2).split(/[.-]/).map(p => parseInt(p, 10) || 0);
+  const cleanVersion = (v) => {
+    if (!v) return '';
+    return String(v).trim().replace(/^[vV]/, '').replace(/[^0-9.-]/g, '');
+  };
+
+  const s1 = cleanVersion(v1);
+  const s2 = cleanVersion(v2);
+
+  if (!s1 && !s2) return 0;
+  if (!s1) return 1;
+  if (!s2) return -1;
+
+  const parts1 = s1.split(/[.-]/).map(p => parseInt(p, 10) || 0);
+  const parts2 = s2.split(/[.-]/).map(p => parseInt(p, 10) || 0);
   
   const maxLength = Math.max(parts1.length, parts2.length);
   for (let i = 0; i < maxLength; i++) {
