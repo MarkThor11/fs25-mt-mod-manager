@@ -448,7 +448,7 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
             <LocalModIcon mod={mod} />
             
             {/* Overlay Controls (Star - Heart - Pin) */}
-            {!mod.isDLC && isIconOnly && (
+            {isIconOnly && (
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', gap: 8, padding: '8px 12px', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)', zIndex: 30 }} onClick={e => e.stopPropagation()}>
                     <button 
                         onClick={() => toggleFavoriteMod(mod)}
@@ -480,26 +480,28 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
                     >
                         <Pin size={16} fill={isMustHave ? "currentColor" : "none"} strokeWidth={isMustHave ? 2.5 : 2} />
                     </button>
-                    <button 
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            const { setModTags } = useLocalModsStore.getState();
-                            const isLocked = (mod.tags || []).includes('lock-updates');
-                            const newTags = isLocked 
-                                ? mod.tags.filter(t => t !== 'lock-updates') 
-                                : [...(mod.tags || []), 'lock-updates'];
-                            setModTags(mod.fileName || mod.modId, [...new Set(newTags)]);
-                            useToastStore.getState().success(isLocked ? `Auto-updates unlocked for ${mod.title}` : `Auto-updates locked for ${mod.title}`);
-                        }}
-                        style={{ 
-                            color: (mod.tags || []).includes('lock-updates') ? 'var(--danger)' : 'rgba(255,255,255,0.8)', 
-                            filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))', 
-                            background: 'transparent', border: 'none', padding: 0, cursor: 'pointer'
-                        }}
-                        title={(mod.tags || []).includes('lock-updates') ? "Unlock auto-updates for this mod" : "Lock mod version (Disable auto-update)"}
-                    >
-                        <Lock size={16} fill={(mod.tags || []).includes('lock-updates') ? "currentColor" : "none"} />
-                    </button>
+                    {!mod.isDLC && (
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const { setModTags } = useLocalModsStore.getState();
+                                const isLocked = (mod.tags || []).includes('lock-updates');
+                                const newTags = isLocked 
+                                    ? mod.tags.filter(t => t !== 'lock-updates') 
+                                    : [...(mod.tags || []), 'lock-updates'];
+                                setModTags(mod.fileName || mod.modId, [...new Set(newTags)]);
+                                useToastStore.getState().success(isLocked ? `Auto-updates unlocked for ${mod.title}` : `Auto-updates locked for ${mod.title}`);
+                            }}
+                            style={{ 
+                                color: (mod.tags || []).includes('lock-updates') ? 'var(--danger)' : 'rgba(255,255,255,0.8)', 
+                                filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))', 
+                                background: 'transparent', border: 'none', padding: 0, cursor: 'pointer'
+                            }}
+                            title={(mod.tags || []).includes('lock-updates') ? "Unlock auto-updates for this mod" : "Lock mod version (Disable auto-update)"}
+                        >
+                            <Lock size={16} fill={(mod.tags || []).includes('lock-updates') ? "currentColor" : "none"} />
+                        </button>
+                    )}
                 </div>
             )}
 
@@ -547,33 +549,6 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
                     <div style={{ background: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 900, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
                         DLC
                     </div>
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); toggleFavoriteMod(mod); }}
-                        style={{ color: isFavMod ? '#fbbf24' : 'white', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.8))', padding: 0, height: 18, display: 'flex', alignItems: 'center', background: 'transparent', border: 'none' }}
-                        title="Favorite Mod"
-                    >
-                        <Star size={18} fill={isFavMod ? 'currentColor' : 'none'} />
-                    </button>
-                    <button 
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            toggleMustHaveMod(mod);
-                        }}
-                        style={{ 
-                            color: isMustHave ? 'var(--accent)' : 'white', 
-                            opacity: 1,
-                            cursor: 'pointer',
-                            filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.8))', 
-                            padding: 0, 
-                            height: 18, 
-                            display: 'flex', 
-                            alignItems: 'center',
-                            background: 'transparent', border: 'none'
-                        }}
-                        title={isMustHave ? "Remove from Must-Haves" : "Mark as Must-Have"}
-                    >
-                        <Pin size={18} fill={isMustHave ? "currentColor" : "none"} strokeWidth={isMustHave ? 2.5 : 2} />
-                    </button>
                 </div>
             )}
 
@@ -635,7 +610,6 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
                     {mod.title}
                 </div>
                 
-                {!mod.isDLC && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12, height: 38 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: isFavAuthor ? 'var(--danger)' : 'var(--text-secondary)', fontWeight: 600, fontSize: 13 }}>
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{authorName}</span>
@@ -672,28 +646,29 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
                             >
                                 <Pin size={14} fill={isMustHave ? "currentColor" : "none"} strokeWidth={isMustHave ? 2.5 : 2} />
                             </button>
-                            <button 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const { setModTags } = useLocalModsStore.getState();
-                                    const isLocked = (mod.tags || []).includes('lock-updates');
-                                    const newTags = isLocked 
-                                        ? mod.tags.filter(t => t !== 'lock-updates') 
-                                        : [...(mod.tags || []), 'lock-updates'];
-                                    setModTags(mod.fileName || mod.modId, [...new Set(newTags)]);
-                                    useToastStore.getState().success(isLocked ? `Auto-updates unlocked for ${mod.title}` : `Auto-updates locked for ${mod.title}`);
-                                }}
-                                style={{ 
-                                    color: (mod.tags || []).includes('lock-updates') ? 'var(--danger)' : 'var(--text-muted)', 
-                                    background: 'transparent', border: 'none', padding: 0, display: 'flex', cursor: 'pointer'
-                                }}
-                                title={(mod.tags || []).includes('lock-updates') ? "Unlock auto-updates for this mod" : "Lock mod version (Disable auto-update)"}
-                            >
-                                <Lock size={14} fill={(mod.tags || []).includes('lock-updates') ? "currentColor" : "none"} />
-                            </button>
+                            {!mod.isDLC && (
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const { setModTags } = useLocalModsStore.getState();
+                                        const isLocked = (mod.tags || []).includes('lock-updates');
+                                        const newTags = isLocked 
+                                            ? mod.tags.filter(t => t !== 'lock-updates') 
+                                            : [...(mod.tags || []), 'lock-updates'];
+                                        setModTags(mod.fileName || mod.modId, [...new Set(newTags)]);
+                                        useToastStore.getState().success(isLocked ? `Auto-updates unlocked for ${mod.title}` : `Auto-updates locked for ${mod.title}`);
+                                    }}
+                                    style={{ 
+                                        color: (mod.tags || []).includes('lock-updates') ? 'var(--danger)' : 'var(--text-muted)', 
+                                        background: 'transparent', border: 'none', padding: 0, display: 'flex', cursor: 'pointer'
+                                    }}
+                                    title={(mod.tags || []).includes('lock-updates') ? "Unlock auto-updates for this mod" : "Lock mod version (Disable auto-update)"}
+                                >
+                                    <Lock size={14} fill={(mod.tags || []).includes('lock-updates') ? "currentColor" : "none"} />
+                                </button>
+                            )}
                         </div>
                     </div>
-                )}
                 
                 <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
