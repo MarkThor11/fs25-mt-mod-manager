@@ -127,16 +127,19 @@ export default function ModHubPage() {
 
   const handleSearch = useCallback((value) => {
     setSearchInput(value);
-    if (searchTimeout) clearTimeout(searchTimeout);
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+      setSearchTimeout(null);
+    }
+    if (!value || !value.trim()) {
+      searchMods('');
+      return;
+    }
     const timeout = setTimeout(() => {
-      if (value.trim()) {
-        searchMods(value);
-      } else {
-        fetchMods();
-      }
+      searchMods(value);
     }, 500);
     setSearchTimeout(timeout);
-  }, [searchTimeout, searchMods, fetchMods]);
+  }, [searchTimeout, searchMods]);
 
   const sourceMods = useMemo(() => {
     const raw = (categoryAllMods && categoryAllMods.length > 0) ? categoryAllMods : (mods || []);
@@ -578,7 +581,14 @@ export default function ModHubPage() {
                   <X 
                     size={14} 
                     style={{ position: 'absolute', right: 10, cursor: 'pointer', opacity: 0.5, top: '50%', transform: 'translateY(-50%)' }} 
-                    onClick={() => handleSearch('')} 
+                    onClick={() => {
+                      if (searchTimeout) {
+                        clearTimeout(searchTimeout);
+                        setSearchTimeout(null);
+                      }
+                      setSearchInput('');
+                      searchMods('');
+                    }} 
                   />
                 )}
               </div>

@@ -789,7 +789,11 @@ export const useModHubStore = create((set, get) => ({
     const { currentFilter, authorFilter, modCache, categories } = get();
     
     // Determine target filter
-    const f = filter !== undefined ? filter : currentFilter;
+    let f = filter !== undefined ? filter : currentFilter;
+    if (f === 'search' && !get().searchQuery?.trim()) {
+      f = get().previousFilter || localStorage.getItem('modhub_filter') || 'latest';
+      set({ currentFilter: f, previousFilter: null, searchQuery: '' });
+    }
     const searchPart = f === 'search' ? `_${get().searchQuery}` : '';
     const cacheKey = `${f}_${authorFilter?.name || 'none'}${searchPart}`;
     const now = Date.now();
@@ -1015,18 +1019,41 @@ export const useModHubStore = create((set, get) => ({
   },
 
   searchMods: async (query) => {
-    if (!query.trim()) {
-      get().fetchMods();
-      return;
+    if (!query || !query.trim()) {
+      const state = get();
+      const restoredFilter = (state.previousFilter && state.previousFilter !== 'search')
+        ? state.previousFilter
+        : ((state.currentFilter && state.currentFilter !== 'search')
+            ? state.currentFilter
+            : (localStorage.getItem('modhub_filter') || 'latest'));
+
+      set({
+        searchQuery: '',
+        currentFilter: restoredFilter,
+        previousFilter: null,
+        currentPage: 0,
+        error: null,
+        categoryAllMods: [],
+        mods: []
+      });
+
+      return await get().fetchMods(restoredFilter, 0);
     }
-    const requestId = get().lastRequestId + 1;
+
+    const state = get();
+    const prevFilter = state.currentFilter === 'search'
+      ? (state.previousFilter || 'latest')
+      : (state.currentFilter || 'latest');
+
+    const requestId = state.lastRequestId + 1;
     set({ 
       isLoading: true, 
       error: null, 
-      searchQuery: query, 
+      searchQuery: query.trim(), 
       lastRequestId: requestId, 
       mods: [],
       currentFilter: 'search',
+      previousFilter: prevFilter,
       authorFilter: null,
       activeFilters: { ...DEFAULT_ACTIVE_FILTERS },
       isSmartMatchEnabled: false,
