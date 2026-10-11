@@ -2066,6 +2066,8 @@ async function performScan(manualPaths = null) {
 				resolvedTechData = { hp: tracked.hp, price: tracked.price };
 			}
 
+			const isCrossplay = isCrossplayMod(title, calculatedModId, remoteMod, entryName);
+
 			mods.push({
 				title,
 				author,
