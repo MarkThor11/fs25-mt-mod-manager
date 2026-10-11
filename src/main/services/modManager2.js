@@ -404,6 +404,7 @@ function scanDLCs(pdlcPath) {
                 description: mapping?.description || '',
                 iconFile: null,
                 isMap: !!mapping?.isMap,
+                size: stats.size || 0,
                 mtime: stats.mtimeMs,
                 isDLC: true,
                 folder: 'DLC',

@@ -697,7 +697,7 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
                 
                 <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {!mod.isDLC && (
+                        {!mod.isDLC ? (
                             <>
                                 <span style={{ fontSize: 11, fontWeight: 800, color: status === 'update' ? 'var(--warning)' : 'var(--text-primary)' }}>
                                     {status === 'update' ? `v${mod.version} ➔ v${updateInfo.remoteVersion}` : `v${mod.version}`}
@@ -727,6 +727,31 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
                                     )}
                                 </div>
                             </>
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                                    {formatSize(mod.size)}
+                                </span>
+                                {mod.filePath && getDriveLetter(mod.filePath) && (
+                                    <span 
+                                        style={{ 
+                                            fontSize: 9, 
+                                            fontWeight: 800, 
+                                            padding: '1px 5px', 
+                                            borderRadius: 4, 
+                                            background: 'rgba(255,255,255,0.07)', 
+                                            color: 'var(--text-secondary)', 
+                                            border: '1px solid var(--border)', 
+                                            display: 'inline-flex', 
+                                            alignItems: 'center', 
+                                            gap: 3 
+                                        }}
+                                        title={`Stored on Drive ${getDriveLetter(mod.filePath)}`}
+                                    >
+                                        <HardDrive size={9} /> {getDriveLetter(mod.filePath)}
+                                    </span>
+                                )}
+                            </div>
                         )}
                     </div>
 
@@ -1111,29 +1136,25 @@ const LazyModList = ({
               </div>
 
               <div style={{ width: 110, textAlign: 'right', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                {!mod.isDLC && (
-                  <>
-                    <span>{formatSize(mod.size)}</span>
-                    {mod.filePath && getDriveLetter(mod.filePath) && (
-                      <span 
-                        style={{ 
-                          fontSize: 9, 
-                          fontWeight: 800, 
-                          padding: '1px 5px', 
-                          borderRadius: 4, 
-                          background: 'rgba(255,255,255,0.07)', 
-                          color: 'var(--text-secondary)', 
-                          border: '1px solid var(--border)', 
-                          display: 'inline-flex', 
-                          alignItems: 'center', 
-                          gap: 3 
-                        }}
-                        title={`Stored on Drive ${getDriveLetter(mod.filePath)}`}
-                      >
-                        <HardDrive size={9} /> {getDriveLetter(mod.filePath)}
-                      </span>
-                    )}
-                  </>
+                <span>{formatSize(mod.size)}</span>
+                {mod.filePath && getDriveLetter(mod.filePath) && (
+                  <span 
+                    style={{ 
+                      fontSize: 9, 
+                      fontWeight: 800, 
+                      padding: '1px 5px', 
+                      borderRadius: 4, 
+                      background: 'rgba(255,255,255,0.07)', 
+                      color: 'var(--text-secondary)', 
+                      border: '1px solid var(--border)', 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: 3 
+                    }}
+                    title={`Stored on Drive ${getDriveLetter(mod.filePath)}`}
+                  >
+                    <HardDrive size={9} /> {getDriveLetter(mod.filePath)}
+                  </span>
                 )}
               </div>
 

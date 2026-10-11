@@ -384,7 +384,7 @@ export default function ModDetailPage() {
                       ...(local.iconData ? [local.iconData] : []),
                       ...(local.extraImages || [])
                   ],
-                  fileSize: local.size ? `${(local.size / (1024 * 1024)).toFixed(2)} MB` : null
+                  fileSize: local.size ? (local.size >= 1024 * 1024 * 1024 ? `${(local.size / (1024 * 1024 * 1024)).toFixed(2)} GB` : `${(local.size / (1024 * 1024)).toFixed(2)} MB`) : null
               };
               
               if (local.modId) effectiveModId = local.modId;
@@ -398,7 +398,7 @@ export default function ModDetailPage() {
                       ...(local.iconData ? [local.iconData] : []),
                       ...(local.extraImages || [])
                   ],
-                  fileSize: local.size ? `${(local.size / (1024 * 1024)).toFixed(2)} MB` : null
+                  fileSize: local.size ? (local.size >= 1024 * 1024 * 1024 ? `${(local.size / (1024 * 1024 * 1024)).toFixed(2)} GB` : `${(local.size / (1024 * 1024)).toFixed(2)} MB`) : null
               };
           }
       }
@@ -1246,23 +1246,19 @@ export default function ModDetailPage() {
 
           {/* Metadata Card */}
           <div className="mod-detail__meta-card">
-            {!mod.isDLC && (
-              <>
-                <div className="mod-detail__meta-row">
-                  <span className="mod-detail__meta-label">Version</span>
-                  <span className="mod-detail__meta-value">{mod.version || '—'}</span>
-                </div>
-                <div className="mod-detail__meta-row">
-                  <span className="mod-detail__meta-label">Author</span>
-                  <span className="mod-detail__meta-value">{mod.author || '—'}</span>
-                </div>
-                {mod.fileSize && (
-                  <div className="mod-detail__meta-row">
-                    <span className="mod-detail__meta-label">File Size</span>
-                    <span className="mod-detail__meta-value">{mod.fileSize}</span>
-                  </div>
-                )}
-              </>
+            <div className="mod-detail__meta-row">
+              <span className="mod-detail__meta-label">Version</span>
+              <span className="mod-detail__meta-value">{mod.version || '—'}</span>
+            </div>
+            <div className="mod-detail__meta-row">
+              <span className="mod-detail__meta-label">Author</span>
+              <span className="mod-detail__meta-value">{mod.author || '—'}</span>
+            </div>
+            {mod.fileSize && (
+              <div className="mod-detail__meta-row">
+                <span className="mod-detail__meta-label">File Size</span>
+                <span className="mod-detail__meta-value">{mod.fileSize}</span>
+              </div>
             )}
             <div className="mod-detail__meta-row">
               <span className="mod-detail__meta-label">Rating</span>
