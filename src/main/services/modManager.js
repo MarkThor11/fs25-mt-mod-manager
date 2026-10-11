@@ -1975,23 +1975,29 @@ async function performScan(manualPaths = null) {
 			let version = modDesc?.version || 'Unknown';
             let dependencies = modDesc?.dependencies || [];
 
-			const relativePath = subFolder ? `${subFolder}/${entryName}` : entryName;
+			const relativePath = (subFolder ? `${subFolder}/${entryName}` : entryName).replace(/\\/g, '/');
 			
-			let calculatedModId = modDesc?.modId || null;
+			let calculatedModId = modDesc?.modId ? String(modDesc.modId).replace(/^0+/, '') : null;
 			let tracked = null;
 			if (!calculatedModId) {
-				tracked = trackingFileMap.get(relativePath) || trackingFileMap.get(entryName) || trackingFileMap.get(entryName.toLowerCase());
+				tracked = trackingFileMap.get(relativePath) || 
+				          trackingFileMap.get(relativePath.toLowerCase()) ||
+				          trackingFileMap.get(entryName) || 
+				          trackingFileMap.get(entryName.toLowerCase());
 				if (tracked?.mod_id) {
-					calculatedModId = tracked.mod_id;
+					calculatedModId = String(tracked.mod_id).replace(/^0+/, '');
 				} else {
 					const trackedBase = trackingBaseNameMap.get(entryName.toLowerCase());
 					if (trackedBase?.mod_id) {
-						calculatedModId = trackedBase.mod_id;
+						calculatedModId = String(trackedBase.mod_id).replace(/^0+/, '');
 						tracked = trackedBase;
 					}
 				}
 			} else {
-				tracked = trackingFileMap.get(relativePath) || trackingFileMap.get(entryName) || trackingFileMap.get(entryName.toLowerCase());
+				tracked = trackingFileMap.get(relativePath) || 
+				          trackingFileMap.get(relativePath.toLowerCase()) ||
+				          trackingFileMap.get(entryName) || 
+				          trackingFileMap.get(entryName.toLowerCase());
 			}
 
 			const cleanFileId = entryName.toLowerCase().replace('.zip', '');
@@ -2024,6 +2030,25 @@ async function performScan(manualPaths = null) {
 					version = remoteMod.version;
 				}
 				if (title === entryName.replace('.zip', '') && remoteMod.title) title = remoteMod.title;
+			}
+
+			// Ensure modDesc remembers calculatedModId for persistent local cache
+			if (calculatedModId && modDesc && !modDesc.modId) {
+				modDesc.modId = calculatedModId;
+				try { cache.setLocalModCache(fullPath, mtime, size, modDesc, iconBase64, fileHash, storeBase64); } catch (e) {}
+			}
+
+			// Persist tracking if identified but not yet in tracking table
+			if (calculatedModId && !tracked) {
+				try {
+					cache.setModTracking(calculatedModId, {
+						localFileName: relativePath,
+						modhubTitle: remoteMod?.title || title,
+						category: modDesc?.category || remoteMod?.category,
+						localVersion: version,
+						remoteVersion: remoteMod?.version || version
+					});
+				} catch (_) {}
 			}
 
 			if ((version === 'Unknown' || version === 'Invalid') && (tracked?.remote_version || tracked?.local_version)) {
@@ -3097,13 +3122,20 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 							}
 
 							debugLog(`[INSTALL] Finalized file moved to: ${savePath}`);
-							const relativePath = path.relative(getModsPath(), savePath);
-							cache.setModTracking(modId, {
-								localFileName: relativePath,
-								modhubTitle: modTitle,
-								category: category,
-								techData: techData
-							});
+							try {
+								await registerDownloadedFile(savePath, modId, modTitle, category, techData);
+							} catch (e) {
+								const cleanModId = modId ? String(modId).replace(/^0+/, '') : null;
+								const relativePath = path.relative(getModsPath(), savePath).replace(/\\/g, '/');
+								if (cleanModId) {
+									cache.setModTracking(cleanModId, {
+										localFileName: relativePath,
+										modhubTitle: modTitle,
+										category: category,
+										techData: techData
+									});
+								}
+							}
 							cache.removePendingDownload(String(modId));
 							activeInstalls.delete(String(modId));
 							cleanupInternal();
@@ -3220,8 +3252,9 @@ async function registerDownloadedFile(savePath, modId, modTitle, category, techD
 		const stats = nodeFs.statSync(savePath);
 		let modDesc = parseModDesc(savePath);
 		
+		const cleanModId = modId ? String(modId).replace(/^0+/, '') : null;
 		const pool = cache.getModHubMetadataPool();
-		const poolItem = modId ? pool[String(modId)] : null;
+		const poolItem = cleanModId ? (pool[cleanModId] || pool[String(modId)]) : null;
 		const resolvedVersion = modDesc?.version || modVersion || poolItem?.version || '1.0.0.0';
 		
 		if (!modDesc) {
@@ -3234,21 +3267,27 @@ async function registerDownloadedFile(savePath, modId, modTitle, category, techD
 			modDesc.version = resolvedVersion;
 		}
 
+		if (cleanModId) {
+			modDesc.modId = cleanModId;
+		}
+
 		const iconBase64 = await getModIcon(savePath, modDesc.iconFile, modDesc, null, false).catch(() => 'CATEGORY:generic');
-		const relativePath = path.relative(getModsPath(), savePath);
+		const relativePath = path.relative(getModsPath(), savePath).replace(/\\/g, '/');
 		const folder = path.dirname(relativePath) === '.' ? '' : path.dirname(relativePath);
 		const cleanFileName = path.basename(savePath);
 
 		// Cache single mod entry
 		cache.setLocalModCache(savePath, stats.mtimeMs, stats.size, modDesc, iconBase64, null, 'CATEGORY:skipped');
-		cache.setModTracking(modId, {
-			localFileName: relativePath,
-			modhubTitle: modTitle || poolItem?.title || modDesc.title,
-			category: category || poolItem?.category,
-			techData: techData,
-			localVersion: resolvedVersion,
-			remoteVersion: poolItem?.version || resolvedVersion
-		});
+		if (cleanModId) {
+			cache.setModTracking(cleanModId, {
+				localFileName: relativePath,
+				modhubTitle: modTitle || poolItem?.title || modDesc.title,
+				category: category || poolItem?.category,
+				techData: techData,
+				localVersion: resolvedVersion,
+				remoteVersion: poolItem?.version || resolvedVersion
+			});
+		}
 
 		// Incrementally update lastScanResult.mods in memory
 		if (lastScanResult && Array.isArray(lastScanResult.mods)) {

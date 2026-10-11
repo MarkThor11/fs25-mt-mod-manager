@@ -370,11 +370,16 @@ function getAllModTrackingMap() {
   const rows = db.prepare('SELECT * FROM mod_tracking').all();
   const map = new Map();
   for (const r of rows) {
-    if (r.mod_id) map.set(`ID_${r.mod_id}`, r);
+    if (r.mod_id) {
+      const cleanId = String(r.mod_id).replace(/^0+/, '');
+      map.set(`ID_${cleanId}`, r);
+      map.set(`ID_${r.mod_id}`, r);
+    }
     if (r.local_file_name) {
       const clean = r.local_file_name.replace(/\\/g, '/');
       const base = clean.split('/').pop().toLowerCase();
       map.set(`FILE_${clean.toLowerCase()}`, r);
+      map.set(`FILE_${clean}`, r);
       map.set(`FILE_${base}`, r);
     }
   }
@@ -382,13 +387,21 @@ function getAllModTrackingMap() {
 }
 
 function getModTracking(modId) {
-  if (!db) return null;
-  return db.prepare('SELECT * FROM mod_tracking WHERE mod_id = ?').get(modId);
+  if (!db || !modId) return null;
+  const rawId = String(modId);
+  const cleanId = rawId.replace(/^0+/, '');
+  return db.prepare('SELECT * FROM mod_tracking WHERE mod_id = ? OR mod_id = ?').get(cleanId, rawId);
 }
 
 function setModTracking(modId, data) {
-  if (!db) return;
+  if (!db || !modId) return;
+  const rawId = String(modId);
+  const cleanId = rawId.replace(/^0+/, '');
+  const normFile = data.localFileName ? String(data.localFileName).replace(/\\/g, '/') : null;
   try {
+    if (cleanId && rawId !== cleanId) {
+      db.prepare('DELETE FROM mod_tracking WHERE mod_id = ?').run(rawId);
+    }
     db.prepare(`
       INSERT INTO mod_tracking (
         mod_id, local_file_name, local_version, remote_version, 
@@ -409,8 +422,8 @@ function setModTracking(modId, data) {
           ELSE category 
         END
     `).run(
-      modId, 
-      data.localFileName || null, 
+      cleanId || rawId, 
+      normFile, 
       data.localVersion || null, 
       data.remoteVersion || null, 
       Date.now(), 
@@ -585,10 +598,19 @@ function getAllModTracking() {
 }
 
 function getModTrackingByFile(identifier) {
-  if (!db) return null;
+  if (!db || !identifier) return null;
+  const raw = String(identifier);
+  const cleanId = raw.replace(/^0+/, '');
+  const cleanFile = raw.replace(/\\/g, '/').toLowerCase();
+  const base = cleanFile.split('/').pop();
   return db.prepare(`
-    SELECT * FROM mod_tracking WHERE mod_id = ? OR LOWER(local_file_name) = LOWER(?)
-  `).get(identifier, String(identifier));
+    SELECT * FROM mod_tracking 
+    WHERE mod_id = ? OR mod_id = ? 
+       OR LOWER(local_file_name) = ? 
+       OR LOWER(local_file_name) = ?
+       OR LOWER(local_file_name) LIKE ?
+       OR LOWER(local_file_name) LIKE ?
+  `).get(cleanId, raw, cleanFile, base, '%/' + base, '%\\' + base);
 }
 
 function getModTrackingByBaseName(fileName) {

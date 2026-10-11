@@ -130,18 +130,38 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     if (getInstalledVersion) return getInstalledVersion(mod);
     // Fallback for callers that don't provide the lookup
     if (!localMods) return null;
+    const cleanModId = mod.modId ? String(mod.modId).replace(/^0+/, '') : null;
+    const remoteFileStr = mod.fileName || (mod.downloadUrl ? mod.downloadUrl.split('?')[0].split('/').pop() : null);
+    const getBaseName = (str) => {
+      if (!str) return '';
+      const match = str.match(/([^/\\]+)\.zip$/i) || [null, str];
+      return match[1].replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+    };
+    const remoteBase = remoteFileStr ? getBaseName(remoteFileStr) : null;
+    const remoteFileName = remoteFileStr ? remoteFileStr.split(/[/\\]/).pop().toLowerCase() : null;
+
     const match = localMods.find(lm => {
-      if (mod.modId && lm.modId) {
-        return String(lm.modId).replace(/^0+/, '') === String(mod.modId).replace(/^0+/, '');
+      const cleanLmId = lm.modId ? String(lm.modId).replace(/^0+/, '') : null;
+      if (cleanModId && cleanLmId) {
+        return cleanModId === cleanLmId;
       }
-      if (mod.modId) {
-        // Mod has an official ModHub ID; do not falsely match sibling PC/Crossplay versions by title
+
+      // Check physical filename
+      if (lm.fileName) {
+        const localFileName = lm.fileName.split(/[/\\]/).pop().toLowerCase();
+        if (remoteFileName && localFileName === remoteFileName) return true;
+        const localBase = getBaseName(lm.fileName);
+        if (remoteBase && localBase === remoteBase) return true;
+      }
+
+      // If both have official ModHub IDs and differ, do not falsely cross-match
+      if (cleanModId && cleanLmId && cleanModId !== cleanLmId) {
         return false;
       }
+
       const remoteTitle = (mod.title || '').trim().toLowerCase();
       const localTitle = (lm.title || '').trim().toLowerCase();
       const localName = (lm.modName || '').trim().toLowerCase();
-      
       return (remoteTitle && (remoteTitle === localTitle || remoteTitle === localName));
     });
     return match?.version || null;

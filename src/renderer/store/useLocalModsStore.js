@@ -114,13 +114,44 @@ export const useLocalModsStore = create((set, get) => ({
         isMap: !!modInfo.isMap,
         mapId: modInfo.mapId || null,
         mapTitle: modInfo.mapTitle || null,
-        modName: modInfo.modName || '',
+        modName: modInfo.modName || (modInfo.fileName ? modInfo.fileName.replace(/\.zip$/i, '') : ''),
         technicalName: modInfo.technicalName || '',
         dependencies: modInfo.dependencies || [],
-        modId: modInfo.modId || null,
+        modId: idStr,
         tags: modInfo.tags || []
       };
       const nextMods = [...s.mods, newMod];
+
+      // Immediately persist fresh mods cache to settings so it survives app restarts
+      try {
+        if (window.api?.settings) {
+          const lightweightMods = nextMods.map(m => ({
+            title: m.title,
+            author: m.author,
+            version: m.version,
+            category: m.category,
+            size: m.size,
+            fileName: m.fileName,
+            filePath: m.filePath,
+            folder: m.folder,
+            isDLC: m.isDLC,
+            isMap: m.isMap,
+            mapId: m.mapId,
+            mapTitle: m.mapTitle,
+            modName: m.modName,
+            technicalName: m.technicalName,
+            dependencies: m.dependencies,
+            modId: m.modId,
+            iconData: m.iconData,
+            tags: m.tags
+          }));
+          window.api.settings.set('modCache', JSON.stringify({
+            mods: lightweightMods,
+            allFolders: s.allFolders || []
+          })).catch(() => {});
+        }
+      } catch (_) {}
+
       return {
         mods: nextMods,
         modCount: computeModCount(nextMods)

@@ -503,10 +503,12 @@ if (window.api?.on) {
         useToastStore.getState().success(`${displayTitle} installed successfully!`, { id: `dl-toast-${strId}` });
 
         // Instantly register mod and update badge counter in UI
+        const cleanModFileName = fileName || active?.fileName || `${strId}.zip`;
         useLocalModsStore.getState().addInstalledMod({
           modId: strId,
           title: displayTitle,
-          fileName: fileName || active?.fileName || `${strId}.zip`,
+          fileName: cleanModFileName,
+          modName: cleanModFileName.replace(/\.zip$/i, ''),
           folder: data?.subFolder || active?.subFolder || '',
           category: data?.category || active?.category || null,
           isMap: isMapCategory(data?.category || active?.category) || (!active?.category && !data?.category && !!active?.isMap)
@@ -579,10 +581,12 @@ if (window.api?.on) {
           useDownloadStore.getState().addSessionInstalled(strKey, finalTitle);
 
           // Instantly register mod and update badge counter in UI
+          const finalModFileName = (modName ? `${modName}.zip` : `${strKey}.zip`);
           useLocalModsStore.getState().addInstalledMod({
             modId: modId || strKey,
             title: finalTitle,
-            fileName: `${modName || strKey}.zip`,
+            fileName: finalModFileName,
+            modName: finalModFileName.replace(/\.zip$/i, ''),
             folder: parentId || '',
             category: null
           });
