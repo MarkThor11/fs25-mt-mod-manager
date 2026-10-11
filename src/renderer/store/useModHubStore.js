@@ -253,10 +253,15 @@ export const useModHubStore = create((set, get) => ({
       const price = m.techData?.price ?? 0;
       const priceMin = m.techData?.priceMin ?? price;
       const priceMax = m.techData?.priceMax ?? price;
-      const isPack = (m.title || '').toLowerCase().includes('pack') || (m.category || '').toLowerCase().includes('package');
+      const descHasPriceRange = m.description && (
+        /(?:[$€£]?\s*\d[\d'’\s,.]*\d|\d+)\s*(?:[$€£]?)\s*(?:[-–—~]|\s+to\s+|\s+bis\s+|\s+à\s+)\s*(?:[$€£]?\s*\d[\d'’\s,.]*\d|\d+)\s*(?:[$€£]?)/i.test(m.description) ||
+        (m.description.match(/(?:base\s+price|configuration\s+price|prices?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]*[$€£]?\s*[\d'’\s,.]+/gi) || []).length > 1 ||
+        (m.description.match(/[$€£]\s*[\d'’\s,.]*\d/g) || []).length > 1
+      );
       const descHasPrices = m.description && /(?:base\s+price|configuration\s+price|prices?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]*[$€£]?\s*[\d'’\s,.]+/i.test(m.description);
+      const isMultiItem = /(?:pack|package|series|collection|set|trailers|haul|transporter)/i.test(m.title || '') || /(?:pack|package|collection|set)/i.test(m.category || '');
       const needsPriceRescrape = (
-        (isPack && priceMin === priceMax && descHasPrices) ||
+        ((isMultiItem || descHasPriceRange) && priceMin === priceMax && (descHasPriceRange || descHasPrices)) ||
         (price < 500 && descHasPrices)
       );
       const isTrailerOrTanker = /(?:trailer|tipper|kipper|slurry|spreader|tanker|wagon|dumper|chaser|auger|manure)/i.test(m.category || m.title);

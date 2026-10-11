@@ -845,17 +845,30 @@ function parseModDetailFromHtml(html, modId) {
     let inPriceBlock = false;
 
     const extractPricesFromText = (str, list) => {
-      // 1. First extract numbers with currency symbols: $1000 or 1000€
+      // 1. First look for explicit range expressions like "$24,000 - 40,000", "24.000 - 40.000 €", "from $24,000 to $40,000"
+      const rangeRe = /(?:[$€£]\s*)?((?:\d{1,3}(?:[.,\s]\d{3})+|\d+))\s*(?:[$€£])?\s*(?:[-–—~]|\s+to\s+|\s+bis\s+|\s+à\s+|\s+a\s+)\s*(?:[$€£]\s*)?((?:\d{1,3}(?:[.,\s]\d{3})+|\d+))\s*(?:[$€£])?/gi;
+      let rMatch;
+      while ((rMatch = rangeRe.exec(str)) !== null) {
+        [rMatch[1], rMatch[2]].forEach(s => {
+          if (!s) return;
+          s = s.replace(/['’]/g, '').trim();
+          let val = 0;
+          if (/^\d{1,3}[,.\s]\d{3}$/.test(s) || /^\d{1,3}(?:[,.\s]\d{3})+$/.test(s)) {
+            val = parseInt(s.replace(/[,.\s]/g, ''), 10);
+          } else {
+            val = parseInt(s.replace(/[^0-9]/g, ''), 10);
+          }
+          if (val >= 50 && val < 50000000) list.push(val);
+        });
+      }
+
+      // 2. Extract numbers with currency symbols: $1000 or 1000€
       const tokenWithCurrRe = /(?:[$€£]\s*)(\d[\d'’\s,.]*\d|\d+)|(\d[\d'’\s,.]*\d|\d+)\s*[$€£]/g;
       let match;
-      let matchedAnyWithCurr = false;
       while ((match = tokenWithCurrRe.exec(str)) !== null) {
-        matchedAnyWithCurr = true;
         let s = (match[1] || match[2]).replace(/['’]/g, '');
         let val = 0;
-        if (/^\d{1,3}[,.\s]\d{3}$/.test(s)) {
-          val = parseInt(s.replace(/[,.\s]/g, ''), 10);
-        } else if (/^\d{1,3}(?:[,.\s]\d{3})+$/.test(s)) {
+        if (/^\d{1,3}[,.\s]\d{3}$/.test(s) || /^\d{1,3}(?:[,.\s]\d{3})+$/.test(s)) {
           val = parseInt(s.replace(/[,.\s]/g, ''), 10);
         } else {
           val = parseInt(s.replace(/[^0-9]/g, ''), 10);
@@ -863,21 +876,17 @@ function parseModDetailFromHtml(html, modId) {
         if (val >= 50 && val < 50000000) list.push(val);
       }
 
-      // 2. If no currency tokens found, extract standalone formatted numbers (e.g. 24.000 - 40.000)
-      if (!matchedAnyWithCurr) {
-        const numTokenRe = /(?<![a-zA-Z])(\d[\d'’\s,.]*\d|\d+)(?![a-zA-Z])/g;
-        while ((match = numTokenRe.exec(str)) !== null) {
-          let s = match[1].replace(/['’]/g, '').trim();
-          let val = 0;
-          if (/^\d{1,3}[,.\s]\d{3}$/.test(s)) {
-            val = parseInt(s.replace(/[,.\s]/g, ''), 10);
-          } else if (/^\d{1,3}(?:[,.\s]\d{3})+$/.test(s)) {
-            val = parseInt(s.replace(/[,.\s]/g, ''), 10);
-          } else {
-            val = parseInt(s.replace(/[^0-9]/g, ''), 10);
-          }
-          if (val >= 50 && val < 50000000) list.push(val);
+      // 3. Also extract standalone formatted numbers (e.g. 24.000 or 40,000 or single prices)
+      const numTokenRe = /(?<![a-zA-Z])(\d[\d'’\s,.]*\d|\d+)(?![a-zA-Z])/g;
+      while ((match = numTokenRe.exec(str)) !== null) {
+        let s = match[1].replace(/['’]/g, '').trim();
+        let val = 0;
+        if (/^\d{1,3}[,.\s]\d{3}$/.test(s) || /^\d{1,3}(?:[,.\s]\d{3})+$/.test(s)) {
+          val = parseInt(s.replace(/[,.\s]/g, ''), 10);
+        } else {
+          val = parseInt(s.replace(/[^0-9]/g, ''), 10);
         }
+        if (val >= 50 && val < 50000000) list.push(val);
       }
     };
 
@@ -915,6 +924,11 @@ function parseModDetailFromHtml(html, modId) {
         // Broaden known price range if description lists wider bounds
         if (!techData.priceMin || dMin < techData.priceMin) techData.priceMin = dMin;
         if (!techData.priceMax || dMax > techData.priceMax) techData.priceMax = dMax;
+        // If table gave a single price (priceMin === priceMax) but description revealed multiple prices
+        if (dMin < dMax && techData.priceMin === techData.priceMax) {
+          techData.priceMin = Math.min(techData.priceMin, dMin);
+          techData.priceMax = Math.max(techData.priceMax, dMax);
+        }
       }
     } else if (techData.price === 0 || techData.price < 500) {
       // Fallback regex on stripped text
