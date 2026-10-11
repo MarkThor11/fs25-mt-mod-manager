@@ -292,7 +292,20 @@ export const useModHubStore = create((set, get) => ({
       });
 
       // Update UI with what we found in cache immediately
-      set({ mods: [...updatedMods] });
+      const updatedMap = new Map(updatedMods.map(m => [m.modId, m]));
+      set(state => {
+        const newModCache = { ...state.modCache };
+        updatedMods.forEach(m => {
+          if (m.modId && m.techData) {
+            newModCache[String(m.modId)] = { ...(newModCache[String(m.modId)] || {}), ...m };
+          }
+        });
+        return {
+          mods: [...updatedMods],
+          categoryAllMods: (state.categoryAllMods || []).map(cm => updatedMap.get(cm.modId) || cm),
+          modCache: newModCache
+        };
+      });
 
       // Deduplicate — a mod may appear in both "missing" and "needsRescrape" paths
       const uniqueMissingIds = [...new Set(stillMissingIds)];
@@ -308,10 +321,20 @@ export const useModHubStore = create((set, get) => ({
                  set(state => {
                    const newMods = [...state.mods];
                    const idx = newMods.findIndex(m => m.modId === modId);
+                   let enriched = null;
                    if (idx !== -1) {
-                     newMods[idx] = get().enrichModWithDetail(newMods[idx], detail);
+                     enriched = get().enrichModWithDetail(newMods[idx], detail);
+                     newMods[idx] = enriched;
                    }
-                   return { mods: newMods };
+                   const newModCache = {
+                     ...state.modCache,
+                     [String(modId)]: { ...(state.modCache[String(modId)] || {}), ...(enriched || detail) }
+                   };
+                   return {
+                     mods: newMods,
+                     categoryAllMods: (state.categoryAllMods || []).map(cm => (cm.modId === modId && enriched) ? enriched : cm),
+                     modCache: newModCache
+                   };
                  });
                }
              } catch (e) {
@@ -865,15 +888,28 @@ export const useModHubStore = create((set, get) => ({
     if (cached && !isPrefetch && !isOverpopulatedGlobalFeed && !bustCache) {
       const isStale = now - cached.timestamp > 1800000; // 30 minutes stale for UI
       
+      const mappedMods = (cached.allMods || []).map(m => {
+        if (!m?.modId) return m;
+        const individual = modCache[String(m.modId)];
+        if (individual?.techData) {
+          return {
+            ...m,
+            ...individual,
+            techData: { ...(m.techData || {}), ...individual.techData }
+          };
+        }
+        return m;
+      });
+
       set({ 
-        categoryAllMods: cached.allMods || [],
-        mods: cached.allMods || [],
+        categoryAllMods: mappedMods,
+        mods: mappedMods,
         isLoading: false
       });
 
       if (!isStale) {
         console.log(`[MODHUB] [CACHE HIT] ${cacheKey}`);
-        return cached.allMods;
+        return mappedMods;
       }
       console.log(`[MODHUB] [STALE] Revalidating: ${cacheKey}`);
     }

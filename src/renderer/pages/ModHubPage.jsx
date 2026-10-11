@@ -150,8 +150,8 @@ export default function ModHubPage() {
         return {
           ...m,
           ...cached,
-          techData: m.techData || cached.techData,
-          dependencies: m.dependencies || cached.dependencies
+          techData: cached.techData ? { ...(m.techData || {}), ...cached.techData } : m.techData,
+          dependencies: cached.dependencies || m.dependencies
         };
       }
       return m;

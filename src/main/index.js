@@ -850,6 +850,7 @@ ipcMain.handle('modhub:getBatchDetails', async (_, modIds) => {
         cached.techData.unitCapacity = 0;
         cached.techData.unitCapacityType = '';
       }
+      const unitCap = (isNoCap || isBogusUnit || isVehicle) ? 0 : rawUnitCap;
       const price = cached.techData?.price ?? 0;
       const priceMin = cached.techData?.priceMin ?? price;
       const priceMax = cached.techData?.priceMax ?? price;
