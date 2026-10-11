@@ -251,12 +251,21 @@ export const useModHubStore = create((set, get) => ({
       const priceMin = m.techData?.priceMin ?? price;
       const priceMax = m.techData?.priceMax ?? price;
       const isPack = (m.title || '').toLowerCase().includes('pack') || (m.category || '').toLowerCase().includes('package');
-      const needsPriceRescrape = isPack && priceMin === priceMax && m.description && /(?:prices?|preis|prix)[:\-\s]*[$€£]?\s*[\d\s,.]+/i.test(m.description);
+      const descHasPrices = m.description && /(?:base\s+price|configuration\s+price|prices?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]*[$€£]?\s*[\d'’\s,.]+/i.test(m.description);
+      const needsPriceRescrape = (
+        (isPack && priceMin === priceMax && descHasPrices) ||
+        (price < 500 && descHasPrices)
+      );
+      const isTrailerOrTanker = /(?:trailer|tipper|kipper|slurry|spreader|tanker|wagon|dumper|chaser|auger|manure)/i.test(m.category || m.title);
+      const descHasCap = m.description && /(?:capact?i(?:ty|ties)|kapazität|capacité|volume|inhalte|fassungsvermögen|inhalt)[:\-\s/]+.*?\d/i.test(m.description);
+      const needsTrailerCapRescrape = isTrailerOrTanker && cap === 0 && unitCap === 0 && descHasCap;
+
       return (
         (cap === 0 && unitCap === 0) ||
         (cap > 0 && cap < 1000 && unitCap === 0) ||
         (capMin > 0 && capMin < 1000 && capMax > 10000) || // model-number bleed (e.g. NX200 → cMin=200)
-        needsPriceRescrape
+        needsPriceRescrape ||
+        needsTrailerCapRescrape
       );
     };
     const needsScan = mods.some(m => !m.techData || !m.techData.scraped || !m.dependencies || needsRescrape(m));
@@ -1044,13 +1053,17 @@ export const useModHubStore = create((set, get) => ({
           const cachedPriceMin = cachedMod?.techData?.priceMin ?? cachedPrice;
           const cachedPriceMax = cachedMod?.techData?.priceMax ?? cachedPrice;
           const isPackMod = (mod.title || cachedMod?.title || '').toLowerCase().includes('pack') || (mod.category || cachedMod?.category || '').toLowerCase().includes('package');
-          const packPriceStale = isPackMod && cachedPriceMin === cachedPriceMax && cachedMod?.description && /(?:prices?|preis|prix)[:\-\s]*[$€£]?\s*[\d\s,.]+/i.test(cachedMod.description);
+          const descHasPrices = cachedMod?.description && /(?:base\s+price|configuration\s+price|prices?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]*[$€£]?\s*[\d'’\s,.]+/i.test(cachedMod.description);
+          const priceStale = (
+            (isPackMod && cachedPriceMin === cachedPriceMax && descHasPrices) ||
+            (cachedPrice < 500 && descHasPrices)
+          );
 
           const cachedIsStale = cachedMod?.techData?.scraped && (
             (cachedCap === 0 && cachedUnit === 0) ||
             (cachedCap > 0 && cachedCap < 1000 && cachedUnit === 0) ||
             (cachedCapMin > 0 && cachedCapMin < 1000 && cachedCapMax > 10000) ||
-            packPriceStale
+            priceStale
           );
           if (cachedMod?.techData && !cachedIsStale) {
             if (!cachedMod.techData.priceMin && cachedPrice > 0) cachedMod.techData.priceMin = cachedPrice;

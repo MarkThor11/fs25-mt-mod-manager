@@ -738,7 +738,11 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
         }
 
         const isPackMod = (cached.title || '').toLowerCase().includes('pack') || (catStr || '').includes('package');
-        const needsPriceRescrape = cached.techData?.scraped && isPackMod && priceMin === priceMax && cached.description && /(?:prices?|preis|prix)[:\-\s]*[$€£]?\s*[\d\s,.]+/i.test(cached.description);
+        const descHasPrices = cached.description && /(?:base\s+price|configuration\s+price|prices?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]*[$€£]?\s*[\d'’\s,.]+/i.test(cached.description);
+        const needsPriceRescrape = cached.techData?.scraped && (
+          (isPackMod && priceMin === priceMax && descHasPrices) ||
+          (price < 500 && descHasPrices)
+        );
 
         if (!needsCapacityRescrape && !needsPriceRescrape) {
           if (!cached.fileName) {
@@ -859,7 +863,11 @@ ipcMain.handle('modhub:getBatchDetails', async (_, modIds) => {
         if (!cached.techData.priceMax && price > 0) cached.techData.priceMax = price;
       }
       const isPackMod = (cached.title || '').toLowerCase().includes('pack') || (catStr || '').includes('package');
-      const needsPriceRescrape = cached.techData?.scraped && isPackMod && priceMin === priceMax && cached.description && /(?:prices?|preis|prix)[:\-\s]*[$€£]?\s*[\d\s,.]+/i.test(cached.description);
+      const descHasPrices = cached.description && /(?:base\s+price|configuration\s+price|prices?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]*[$€£]?\s*[\d'’\s,.]+/i.test(cached.description);
+      const needsPriceRescrape = cached.techData?.scraped && (
+        (isPackMod && priceMin === priceMax && descHasPrices) ||
+        (price < 500 && descHasPrices)
+      );
 
       const needsRescrape = cached.techData?.scraped && (
         (cap === 0 && unitCap === 0) ||

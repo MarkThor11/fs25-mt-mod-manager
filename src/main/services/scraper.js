@@ -836,19 +836,31 @@ async function fetchModDetail(modId) {
       .filter(Boolean);
 
     // 1. Price scan across lines (extracts min and max prices across packs & variants)
-    const priceLineRe = /^(?:[-*•\s]*)(?:prices?|preis|prix|cost|kosten)[:\-\s]+([$€£]?\s*[\d\s,.]+(?:\s*[-–tobisà]+\s*[$€£]?\s*[\d\s,.]+)?\s*[$€£]?)/i;
+    const pricePrefixRe = /(?:base\s+price|configuration\s+price|prices?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]+(.*)/i;
     const descPrices = [];
     for (const line of rawLines) {
-      const pm = line.match(priceLineRe);
+      const pm = line.match(pricePrefixRe);
       if (pm && pm[1]) {
-        const nums = (pm[1].match(/\d[\d,.]*\d|\d+/g) || []).map(n => parseInt(n.replace(/[,.]/g, ''), 10));
-        for (const n of nums) if (n > 0 && n < 50000000) descPrices.push(n);
+        const tokenRe = /(?:[$€£]\s*)?(\d[\d'’\s,.]*\d|\d+)(?:\s*[$€£])?/g;
+        let match;
+        while ((match = tokenRe.exec(pm[1])) !== null) {
+          let s = match[1].replace(/['’]/g, '');
+          let val = 0;
+          if (/^\d{1,3}[,.\s]\d{3}$/.test(s)) {
+            val = parseInt(s.replace(/[,.\s]/g, ''), 10);
+          } else if (/^\d{1,3}(?:[,.\s]\d{3})+$/.test(s)) {
+            val = parseInt(s.replace(/[,.\s]/g, ''), 10);
+          } else {
+            val = parseInt(s.replace(/[^0-9]/g, ''), 10);
+          }
+          if (val >= 50 && val < 50000000) descPrices.push(val);
+        }
       }
     }
     if (descPrices.length > 0) {
       const dMin = Math.min(...descPrices);
       const dMax = Math.max(...descPrices);
-      if (!techData.price || techData.price === 0) {
+      if (!techData.price || techData.price === 0 || (techData.price < 500 && dMax >= 500)) {
         techData.price = dMax;
         techData.priceMin = dMin;
         techData.priceMax = dMax;
@@ -857,13 +869,19 @@ async function fetchModDetail(modId) {
         if (!techData.priceMin || dMin < techData.priceMin) techData.priceMin = dMin;
         if (!techData.priceMax || dMax > techData.priceMax) techData.priceMax = dMax;
       }
-    } else if (techData.price === 0) {
-      // Fallback single regex on stripped text
+    } else if (techData.price === 0 || techData.price < 500) {
+      // Fallback regex on stripped text
       const descText = description.replace(/<[^>]*>/g, ' ');
-      const priceMatch = descText.match(/(?:price|preis|prix|cost|from|base price)[:\-\s]*([$€£]?\s*\d[\d\s,.]*\s*[$€£]?)/i) || descText.match(/([$€£]\s*\d[\d\s,.]*|\d[\d\s,.]*\s*[$€£])/i);
+      const priceMatch = descText.match(/(?:base\s+price|configuration\s+price|prices?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]*([$€£]?\s*[\d'’\s,.]*\d|\d+)/i) || descText.match(/([$€£]\s*[\d'’\s,.]*\d)/i);
       if (priceMatch && priceMatch[1]) {
-        const parsedPrice = parseInt(priceMatch[1].replace(/[^0-9]/g, ''), 10) || 0;
-        if (parsedPrice > 0 && parsedPrice < 50000000) {
+        let s = priceMatch[1].replace(/[$€£'’]/g, '').trim();
+        let parsedPrice = 0;
+        if (/^\d{1,3}[,.\s]\d{3}$/.test(s)) {
+          parsedPrice = parseInt(s.replace(/[,.\s]/g, ''), 10);
+        } else {
+          parsedPrice = parseInt(s.replace(/[^0-9]/g, ''), 10) || 0;
+        }
+        if (parsedPrice >= 50 && parsedPrice < 50000000) {
           techData.price = parsedPrice;
           techData.priceMin = parsedPrice;
           techData.priceMax = parsedPrice;
@@ -946,10 +964,10 @@ async function fetchModDetail(modId) {
 
     // 3. Litre Capacity scan across lines
     if (techData.capacity === 0 && !isNoCapCat) {
-      // Parse a numeric string with optional k-suffix (thousand). Supports European 16.500 / 30.000, 16,500, or decimals.
+      // Parse a numeric string with optional k-suffix (thousand). Supports European 16.500 / 30.000, 16,500, Swiss 21'000, or decimals.
       const parseCapNum = (str, kSuffix) => {
         if (!str) return 0;
-        let s = str.trim();
+        let s = str.replace(/['’]/g, '').trim();
         let k = kSuffix || '';
         if (s.toLowerCase().endsWith('k')) {
           k = 'k';
@@ -973,26 +991,29 @@ async function fetchModDetail(modId) {
         return val;
       };
 
-      // Lines that mention capacity keyword (including common modder typos like 'capactity') AND a litre/cubic unit
-      const capLineRe  = /capact?i(?:ty|ties)|kapazität|capacité|volume|inhalte|fassungsvermögen|inhalt|tank|load|configurations?/i;
+      // Lines that mention capacity keyword (including common modder typos like 'capactity')
+      const capLineRe  = /^(?:[-*•\s]*)(?:capact?i(?:ty|ties)|kapazität|capacité|volume|inhalte|fassungsvermögen|inhalt|tank\s*capacity|load\s*capacity)[:\-\s/]+(.*)/i;
       const litreUnitRe = /liters?|litres?|\bl\b|m³|m3|cubic/i;
 
       // Numbers: not preceded by a letter (avoids model codes like NX200),
-      // support space/comma thousand sep, optional trailing dot for decimals like "40."
-      const numTokenRe = /(?<![a-zA-Z])(\d[\d\s,]*(?:\.\d*)?)(k?)/gi;
+      // support space/comma/apostrophe thousand sep, optional trailing dot for decimals like "40."
+      const numTokenRe = /(?<![a-zA-Z])(\d[\d'’\s,]*(?:\.\d*)?)(k?)/gi;
 
       let overallMin = null;
       let overallMax = null;
 
       for (const line of rawLines) {
-        if (!capLineRe.test(line) || !litreUnitRe.test(line)) continue;
+        if (/(?:price|preis|prix|cost|kosten)/i.test(line)) continue;
+        const cm = line.match(capLineRe);
+        if (!cm) continue;
+        const hasLitre = litreUnitRe.test(line);
         const isCubic = /(m³|m3|cubic)/i.test(line);
         const lineNums = [];
         numTokenRe.lastIndex = 0;
         let nt;
-        while ((nt = numTokenRe.exec(line)) !== null) {
+        while ((nt = numTokenRe.exec(cm[1])) !== null) {
           const val = parseCapNum(nt[1], nt[2]);
-          if (isCubic ? val > 0 : val >= 100) {
+          if (isCubic ? val > 0 : (hasLitre ? val >= 100 : val >= 500)) {
             const litreVal = Math.round(isCubic && val < 1000 ? val * 1000 : val);
             if (litreVal < 50000000) lineNums.push(litreVal);
           }
