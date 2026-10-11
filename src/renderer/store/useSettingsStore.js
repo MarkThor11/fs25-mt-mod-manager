@@ -657,7 +657,11 @@ export const useSettingsStore = create((set) => ({
     if (window.api?.settings) await window.api.settings.set('showTagBar', String(val)).catch(console.error);
   },
 
-  setInstalledTagFilter: (tags) => set({ installedTagFilter: Array.isArray(tags) ? tags : [] }),
+  setInstalledTagFilter: (tagsOrUpdater) => set((state) => {
+    const current = Array.isArray(state.installedTagFilter) ? state.installedTagFilter : [];
+    const next = typeof tagsOrUpdater === 'function' ? tagsOrUpdater(current) : tagsOrUpdater;
+    return { installedTagFilter: Array.isArray(next) ? next : [] };
+  }),
 
   setNickname: async (nickname) => {
     set({ nickname });
