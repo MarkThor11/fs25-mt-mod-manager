@@ -71,7 +71,6 @@ export const useSettingsStore = create((set) => ({
   expandedFolders: { '': true },
   showTagBar: false,
   installedTagFilter: [],
-  selectiveLoading: true,
   autoDownloadMapDeps: true,
   nickname: '',
   hasPromptedConsolidation: false,
@@ -202,7 +201,6 @@ export const useSettingsStore = create((set) => ({
         badgeDuration: settings.badgeDuration || '48h',
         expandedFolders: settings.expandedFolders ? JSON.parse(settings.expandedFolders) : { '': true },
         showTagBar: settings.showTagBar === 'true',
-        selectiveLoading: settings.selectiveLoading !== 'false',
         autoDownloadMapDeps: settings.autoDownloadMapDeps !== 'false',
         nickname: settings.nickname || '',
         hasPromptedConsolidation: settings.hasPromptedConsolidation === 'true',
@@ -660,11 +658,6 @@ export const useSettingsStore = create((set) => ({
   },
 
   setInstalledTagFilter: (tags) => set({ installedTagFilter: Array.isArray(tags) ? tags : [] }),
-
-  setSelectiveLoading: async (val) => {
-    set({ selectiveLoading: val });
-    if (window.api?.settings) await window.api.settings.set('selectiveLoading', String(val));
-  },
 
   setNickname: async (nickname) => {
     set({ nickname });

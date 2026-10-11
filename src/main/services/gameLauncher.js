@@ -246,9 +246,7 @@ async function launch(options = {}) {
     }
 
     if (!targetModsPath) {
-      const cache = require('./cache');
-      const isSelectiveEnabled = cache.getSetting('selectiveLoading') !== 'false';
-      const effectiveIndex = isSelectiveEnabled ? options.savegameIndex : null;
+      const effectiveIndex = options.savegameIndex || null;
       
       console.log(`[LAUNCH] ${effectiveIndex ? `Selective (Savegame ${effectiveIndex})` : 'Global'} Mod Synthesis...`);
       targetModsPath = await modManager.prepareVirtualModsFolder(effectiveIndex);

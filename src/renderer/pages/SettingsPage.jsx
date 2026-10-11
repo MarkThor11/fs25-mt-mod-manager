@@ -59,13 +59,13 @@ export default function SettingsPage() {
     autoStart, conflictSensitivity, cloudBackupPath,
     homeShowHero, homeShowStats, homeShowLatest, homeShowDownloaded, homeShowUpdates,
     appFullscreen, rememberModHubPage, modUpdateMode, skipDeleteConfirm, backupRetention,
-    badgeDuration, selectiveLoading, autoDownloadMapDeps,
+    badgeDuration, autoDownloadMapDeps,
     setTheme, setModsPath, addModsPath, removeModsPath, setGamePath, setLaunchPreference,
     setSavegameSlot, setEnableCheats, setSkipModDialog, setSkipIntro, toggleHiddenFolder,
     setHasSeenGuide, setAutoStart, setConflictSensitivity, setCloudBackupPath, setBackupRetention,
     setHomeShowHero, setHomeShowStats, setHomeShowLatest, setHomeShowDownloaded, setHomeShowUpdates,
     setAppFullscreen, setRememberModHubPage, setModUpdateMode, setSkipDeleteConfirm,
-    setBadgeDuration, setSelectiveLoading, setAutoDownloadMapDeps,
+    setBadgeDuration, setAutoDownloadMapDeps,
   } = useSettingsStore();
 
   const [detectedGamePath, setDetectedGamePath] = useState('');
@@ -1136,26 +1136,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="settings-row">
-          <div>
-            <div className="settings-row__label">Selective Mod Loading (Recommended)</div>
-            <div className="settings-row__desc">
-              When launching a specific savegame, only required mods are activated. 
-              <strong style={{ color: 'var(--accent)', marginLeft: 8 }}>Reduces startup time by up to 80%.</strong>
-            </div>
-          </div>
-          <div className="settings-row__control">
-            <label className="toggle">
-              <input
-                type="checkbox"
-                checked={selectiveLoading}
-                onChange={(e) => setSelectiveLoading(e.target.checked)}
-              />
-              <div className="toggle__track" />
-              <div className="toggle__thumb" />
-            </label>
-          </div>
-        </div>
 
         <div className="settings-row">
           <div>
