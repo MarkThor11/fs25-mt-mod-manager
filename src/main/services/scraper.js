@@ -481,6 +481,10 @@ async function fetchModsByAuthor(authorId, page = 0) {
 async function fetchModDetail(modId) {
   const url = `${MOD_URL}?mod_id=${modId}&title=fs2025&lang=en&country=gb`;
   const html = await throttledFetch(url);
+  return parseModDetailFromHtml(html, modId);
+}
+
+function parseModDetailFromHtml(html, modId) {
   const $ = cheerio.load(html);
 
   const paddedId = String(modId).padStart(8, '0');
@@ -836,25 +840,48 @@ async function fetchModDetail(modId) {
       .filter(Boolean);
 
     // 1. Price scan across lines (extracts min and max prices across packs & variants)
-    const pricePrefixRe = /(?:base\s+price|configuration\s+price|prices?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]+(.*)/i;
+    const pricePrefixRe = /^(?:[-*•\s]*)(?:base\s+price|configuration\s+price|prices?\s*(?:and\s+capacity)?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]*(.*)/i;
     const descPrices = [];
+    let inPriceBlock = false;
+
+    const extractPricesFromText = (str, list) => {
+      const tokenRe = /(?:[$€£]\s*)(\d[\d'’\s,.]*\d|\d+)|(\d[\d'’\s,.]*\d|\d+)\s*[$€£]/g;
+      let match;
+      while ((match = tokenRe.exec(str)) !== null) {
+        let s = (match[1] || match[2]).replace(/['’]/g, '');
+        let val = 0;
+        if (/^\d{1,3}[,.\s]\d{3}$/.test(s)) {
+          val = parseInt(s.replace(/[,.\s]/g, ''), 10);
+        } else if (/^\d{1,3}(?:[,.\s]\d{3})+$/.test(s)) {
+          val = parseInt(s.replace(/[,.\s]/g, ''), 10);
+        } else {
+          val = parseInt(s.replace(/[^0-9]/g, ''), 10);
+        }
+        if (val >= 50 && val < 50000000) list.push(val);
+      }
+    };
+
     for (const line of rawLines) {
       const pm = line.match(pricePrefixRe);
-      if (pm && pm[1]) {
-        const tokenRe = /(?:[$€£]\s*)?(\d[\d'’\s,.]*\d|\d+)(?:\s*[$€£])?/g;
-        let match;
-        while ((match = tokenRe.exec(pm[1])) !== null) {
-          let s = match[1].replace(/['’]/g, '');
-          let val = 0;
-          if (/^\d{1,3}[,.\s]\d{3}$/.test(s)) {
-            val = parseInt(s.replace(/[,.\s]/g, ''), 10);
-          } else if (/^\d{1,3}(?:[,.\s]\d{3})+$/.test(s)) {
-            val = parseInt(s.replace(/[,.\s]/g, ''), 10);
-          } else {
-            val = parseInt(s.replace(/[^0-9]/g, ''), 10);
-          }
-          if (val >= 50 && val < 50000000) descPrices.push(val);
+      if (pm) {
+        if (pm[1] && pm[1].trim()) {
+          extractPricesFromText(pm[1], descPrices);
+        } else {
+          inPriceBlock = true;
+          continue;
         }
+      } else if (inPriceBlock) {
+        if (/^[-*•]/.test(line) && /[$€£]/.test(line)) {
+          extractPricesFromText(line, descPrices);
+          continue;
+        } else {
+          inPriceBlock = false;
+        }
+      }
+
+      // Model-level or inline prices (e.g. "- 60-21: from $42,500" or "Trailer: 44.000$" or "DBL8: 11500$")
+      if (/[$€£]/.test(line) && !/(?:kph|mph|km\/h|working\s*width|arbeitsbreite)/i.test(line)) {
+        extractPricesFromText(line, descPrices);
       }
     }
     if (descPrices.length > 0) {
@@ -954,13 +981,16 @@ async function fetchModDetail(modId) {
 
     const catStr = (metadata['Category'] || metadata['category'] || '').toLowerCase();
     const titleStr = (title || '').toLowerCase();
+    const descStr = (description || '').toLowerCase();
     const noCapKeywords = [
       'gameplay', 'script', 'prefab', 'map', 'chainsaw', 'flashlight', 'handtool',
       'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
       'plow', 'cultivator', 'subsoiler', 'spader', 'mulcher', 'roller',
       'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car'
     ];
-    const isNoCapCat = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes('script'));
+    const isNoCapCat = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k)) ||
+                       catStr.includes('gameplay') || catStr.includes('script') ||
+                       titleStr.includes('script') || descStr.includes('with this script');
 
     // 3. Litre Capacity scan across lines
     if (techData.capacity === 0 && !isNoCapCat) {
@@ -991,8 +1021,8 @@ async function fetchModDetail(modId) {
         return val;
       };
 
-      // Lines that mention capacity keyword (including common modder typos like 'capactity')
-      const capLineRe  = /^(?:[-*•\s]*)(?:capact?i(?:ty|ties)|kapazität|capacité|volume|inhalte|fassungsvermögen|inhalt|tank\s*capacity|load\s*capacity)[:\-\s/]+(.*)/i;
+      // Lines that mention capacity keyword (matches delimiter like ":" or mid-line e.g. "Bale Transport / Capacity 17,000" or header)
+      const capLineRe  = /(?:capact?i(?:ty|ties)|kapazität|capacité|fassungsvermögen|inhalt|tank\s*capacity|load\s*capacity)(?:[:\-\s/]+|\s+from\s+|\s*$)(.*)/i;
       const litreUnitRe = /liters?|litres?|\bl\b|m³|m3|cubic/i;
 
       // Numbers: not preceded by a letter (avoids model codes like NX200),
@@ -1001,28 +1031,55 @@ async function fetchModDetail(modId) {
 
       let overallMin = null;
       let overallMax = null;
+      let inCapBlock = false;
 
       for (const line of rawLines) {
-        if (/(?:price|preis|prix|cost|kosten)/i.test(line)) continue;
         const cm = line.match(capLineRe);
-        if (!cm) continue;
-        const hasLitre = litreUnitRe.test(line);
-        const isCubic = /(m³|m3|cubic)/i.test(line);
-        const lineNums = [];
-        numTokenRe.lastIndex = 0;
-        let nt;
-        while ((nt = numTokenRe.exec(cm[1])) !== null) {
-          const val = parseCapNum(nt[1], nt[2]);
-          if (isCubic ? val > 0 : (hasLitre ? val >= 100 : val >= 500)) {
-            const litreVal = Math.round(isCubic && val < 1000 ? val * 1000 : val);
-            if (litreVal < 50000000) lineNums.push(litreVal);
+        let scanText = '';
+        if (cm) {
+          if (cm[1] && cm[1].trim()) {
+            scanText = cm[1];
+          } else {
+            inCapBlock = true;
+            continue;
           }
+        } else if (inCapBlock) {
+          if (/(?:config|price|color|wheel|tire|fahr|engine|speed|power|working\s*speed)/i.test(line) && !litreUnitRe.test(line)) {
+            inCapBlock = false;
+            continue;
+          }
+          if (litreUnitRe.test(line) || /^[-*•]/.test(line)) {
+            scanText = line;
+          } else {
+            inCapBlock = false;
+            continue;
+          }
+        } else if (litreUnitRe.test(line) && !/(?:speed|power|hp|kw|width|weight|version|v\d)/i.test(line)) {
+          // Explicit litre unit token on line (e.g. "12000 liter" or "34.000 l")
+          scanText = line;
         }
-        if (lineNums.length > 0) {
-          const lineMin = Math.min(...lineNums);
-          const lineMax = Math.max(...lineNums);
-          if (overallMin === null || lineMin < overallMin) overallMin = lineMin;
-          if (overallMax === null || lineMax > overallMax) overallMax = lineMax;
+
+        if (scanText) {
+          // Strip prices from scanText to avoid mistaking $8500 as 8500L
+          const cleanedText = scanText.replace(/[$€£]\s*\d[\d,.]*|\d[\d,.]*\s*[$€£]/g, '');
+          const hasLitre = litreUnitRe.test(cleanedText);
+          const isCubic = /(m³|m3|cubic)/i.test(cleanedText);
+          const lineNums = [];
+          numTokenRe.lastIndex = 0;
+          let nt;
+          while ((nt = numTokenRe.exec(cleanedText)) !== null) {
+            const val = parseCapNum(nt[1], nt[2]);
+            if (isCubic ? val > 0 : (hasLitre ? val >= 100 : val >= 500)) {
+              const litreVal = Math.round(isCubic && val < 1000 ? val * 1000 : val);
+              if (litreVal < 50000000) lineNums.push(litreVal);
+            }
+          }
+          if (lineNums.length > 0) {
+            const lineMin = Math.min(...lineNums);
+            const lineMax = Math.max(...lineNums);
+            if (overallMin === null || lineMin < overallMin) overallMin = lineMin;
+            if (overallMax === null || lineMax > overallMax) overallMax = lineMax;
+          }
         }
       }
 
@@ -1404,4 +1461,4 @@ async function fetchTrueModCount() {
   }
 }
 
-module.exports = { fetchModList, fetchModDetail, searchMods, fetchModsByAuthor, fetchTrueModCount, getPHPSESSID, clearSession };
+module.exports = { fetchModList, fetchModDetail, parseModDetailFromHtml, searchMods, fetchModsByAuthor, fetchTrueModCount, getPHPSESSID, clearSession };

@@ -201,6 +201,14 @@ export default function ModHubPage() {
       const hiddenModIds = hiddenMods.map(m => m.modId);
       if (hiddenModIds.includes(mod.modId)) return false;
 
+      // Category cross-contamination guard (e.g. placeables appearing under gameplay)
+      if (currentFilter === 'gameplay') {
+        const modCat = (mod.category || mod.metadata?.Category || '').toLowerCase();
+        if (modCat.includes('placeable') || modCat.includes('storage') || modCat.includes('shed') || modCat.includes('silo')) {
+          return false;
+        }
+      }
+
       // Brand filter (multi-select)
       if (activeFilters.brands.length > 0) {
         if (!matchesBrand(mod, activeFilters.brands)) return false;

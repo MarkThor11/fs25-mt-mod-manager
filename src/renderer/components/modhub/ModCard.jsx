@@ -1114,13 +1114,18 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           const isTechFilterActive = activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < 2000 || activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < 1000000 || activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < 1000000;
           const showEstimated = isSmartMatchEnabled || isTechFilterActive;
           const hasHP = mod.techData?.hp > 0 && !hideHP && !hidePower && (!mod.techData.hpIsRecommendation || showEstimated);
+          const catStr = (mod.category || mod.metadata?.Category || '').toLowerCase();
+          const titleStr = (mod.title || '').toLowerCase();
+          const descStr = (mod.description || '').toLowerCase();
           const noCapKeywords = [
-            'gameplay', 'script', 'prefab', 'chainsaw', 'flashlight', 'handtool',
+            'gameplay', 'script', 'prefab', 'map', 'chainsaw', 'flashlight', 'handtool',
             'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
             'plow', 'cultivator', 'subsoiler', 'spader', 'mulcher', 'roller',
             'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car'
           ];
-          const isNoCap = noCapKeywords.some(k => (mod.category || '').toLowerCase().includes(k) || (mod.title || '').toLowerCase().includes('script'));
+          const isNoCap = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k)) ||
+                          catStr.includes('gameplay') || catStr.includes('script') ||
+                          titleStr.includes('script') || descStr.includes('with this script');
           const showCap = mod.techData?.capacity > 0 && !hideCapacity && !hidePower && !isNoCap;
           const BOGUS_UNITS = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'];
           const isBogusUnit = BOGUS_UNITS.includes((mod.techData?.unitCapacityType || '').toLowerCase());

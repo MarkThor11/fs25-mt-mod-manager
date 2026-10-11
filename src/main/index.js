@@ -703,13 +703,16 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
         const isBogusUnit = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'].includes(unitType);
         const catStr = (cached.category || cached.metadata?.Category || '').toLowerCase();
         const titleStr = (cached.title || '').toLowerCase();
+        const descStr = (cached.description || '').toLowerCase();
         const noCapKeywords = [
-          'gameplay', 'script', 'prefab', 'chainsaw', 'flashlight', 'handtool',
+          'gameplay', 'script', 'prefab', 'map', 'chainsaw', 'flashlight', 'handtool',
           'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
           'plow', 'cultivator', 'subsoiler', 'spader', 'mulcher', 'roller',
           'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car'
         ];
-        const isNoCap = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes('script'));
+        const isNoCap = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k)) ||
+                        catStr.includes('gameplay') || catStr.includes('script') ||
+                        titleStr.includes('script') || descStr.includes('with this script');
         const isVehicle = /(?:tractor|traktor|truck|lkw|car|auto|pkw|harvester|mähdrescher|forage|häcksler|excavator|bagger|loader|radlader|teleskoplader|forklift|gabelstapler)/i.test(catStr) || cached.techData?.isDrivable;
         if (cached.techData && isNoCap) {
           cached.techData.capacity = 0;

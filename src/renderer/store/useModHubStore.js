@@ -154,7 +154,10 @@ export const useModHubStore = create((set, get) => ({
         if (v?.techData) {
           const catStr = (v.category || v.metadata?.Category || '').toLowerCase();
           const titleStr = (v.title || '').toLowerCase();
-          const isNoCap = NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes('script'));
+          const descStr = (v.description || '').toLowerCase();
+          const isNoCap = NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes(k)) ||
+                          catStr.includes('gameplay') || catStr.includes('script') ||
+                          titleStr.includes('script') || descStr.includes('with this script');
           if (isNoCap) {
             if (v.techData.capacity > 0 || v.techData.unitCapacity > 0) hasPruned = true;
             v.techData.capacity = 0;
@@ -1025,9 +1028,12 @@ export const useModHubStore = create((set, get) => ({
       const enrichedMods = uniqueAllMods.map(mod => {
           const cachedMod = modCache[String(mod.modId)];
           if (cachedMod?.techData) {
-            const catStr = (mod.category || cachedMod.category || '').toLowerCase();
+            const catStr = (mod.category || cachedMod.category || cachedMod.metadata?.Category || '').toLowerCase();
             const titleStr = (mod.title || cachedMod.title || '').toLowerCase();
-            const isNoCap = NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes('script'));
+            const descStr = (cachedMod.description || '').toLowerCase();
+            const isNoCap = NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes(k)) ||
+                            catStr.includes('gameplay') || catStr.includes('script') ||
+                            titleStr.includes('script') || descStr.includes('with this script');
             if (isNoCap) {
               cachedMod.techData.capacity = 0;
               cachedMod.techData.capacityMin = 0;
