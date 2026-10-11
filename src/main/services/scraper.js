@@ -747,6 +747,34 @@ async function fetchModDetail(modId) {
     return parseInt(cleaned, 10) || 0;
   };
 
+  // Helper to parse min and max from formatted strings (e.g. "16.500 - 30.000 l", "24,000 - 40,000 €", "100 - 150 hp")
+  const parseRange = (str) => {
+    if (!str) return { min: 0, max: 0 };
+    const lower = str.toString().toLowerCase();
+    const isCubicMeter = lower.includes('m³') || lower.includes('m3');
+    
+    if (isCubicMeter) {
+      const match = lower.replace(/,/g, '.').match(/([\d.]+)/);
+      if (match && match[1]) {
+        const val = Math.round(parseFloat(match[1]) * 1000);
+        return { min: val, max: val };
+      }
+      return { min: 0, max: 0 };
+    }
+    
+    const parts = lower.split(/[\/-]|(?:\s+to\s+)|(?:\s+bis\s+)|(?:\s+à\s+)/);
+    const cleanedParts = parts.map(p => {
+      const cleaned = p.replace(/[$€£]/g, '').replace(/(\d+)[\s,.](\d{3})/g, '$1$2').replace(/[^0-9]/g, '');
+      return parseInt(cleaned, 10) || 0;
+    }).filter(n => n > 0);
+    
+    if (cleanedParts.length === 0) return { min: 0, max: 0 };
+    return { 
+      min: Math.min(...cleanedParts), 
+      max: Math.max(...cleanedParts) 
+    };
+  };
+
   Object.entries(metadata).forEach(([k, v]) => {
     const key = k.toLowerCase();
     const valStr = (v || '').toString().toLowerCase();
@@ -795,54 +823,115 @@ async function fetchModDetail(modId) {
     }
   });
 
-  // ── Description Deep Scan for Price & HP Fallbacks ──
+  // ── Description Deep Scan for Price, HP & Capacity Ranges/Fallbacks ──
   if (description) {
-    const descText = description.replace(/<[^>]*>/g, ' ');
-    
-    // Price regex fallback in description e.g. "Price: $125,000", "Preis: 150.000 €", "from $42,500", "Base price: 327500 $"
-    if (techData.price === 0) {
+    const rawLines = description
+      .replace(/<br[^>]*>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<\/li>/gi, '\n')
+      .replace(/<\/div>/gi, '\n')
+      .replace(/<[^>]*>/g, '')
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean);
+
+    // 1. Price scan across lines (extracts min and max prices across packs & variants)
+    const priceLineRe = /^(?:[-*•\s]*)(?:prices?|preis|prix|cost|kosten)[:\-\s]+([$€£]?\s*[\d\s,.]+(?:\s*[-–tobisà]+\s*[$€£]?\s*[\d\s,.]+)?\s*[$€£]?)/i;
+    const descPrices = [];
+    for (const line of rawLines) {
+      const pm = line.match(priceLineRe);
+      if (pm && pm[1]) {
+        const nums = (pm[1].match(/\d[\d,.]*\d|\d+/g) || []).map(n => parseInt(n.replace(/[,.]/g, ''), 10));
+        for (const n of nums) if (n > 0 && n < 50000000) descPrices.push(n);
+      }
+    }
+    if (descPrices.length > 0) {
+      const dMin = Math.min(...descPrices);
+      const dMax = Math.max(...descPrices);
+      if (!techData.price || techData.price === 0) {
+        techData.price = dMax;
+        techData.priceMin = dMin;
+        techData.priceMax = dMax;
+      } else {
+        // Broaden known price range if description lists wider bounds
+        if (!techData.priceMin || dMin < techData.priceMin) techData.priceMin = dMin;
+        if (!techData.priceMax || dMax > techData.priceMax) techData.priceMax = dMax;
+      }
+    } else if (techData.price === 0) {
+      // Fallback single regex on stripped text
+      const descText = description.replace(/<[^>]*>/g, ' ');
       const priceMatch = descText.match(/(?:price|preis|prix|cost|from|base price)[:\-\s]*([$€£]?\s*\d[\d\s,.]*\s*[$€£]?)/i) || descText.match(/([$€£]\s*\d[\d\s,.]*|\d[\d\s,.]*\s*[$€£])/i);
       if (priceMatch && priceMatch[1]) {
         const parsedPrice = parseInt(priceMatch[1].replace(/[^0-9]/g, ''), 10) || 0;
         if (parsedPrice > 0 && parsedPrice < 50000000) {
           techData.price = parsedPrice;
+          techData.priceMin = parsedPrice;
+          techData.priceMax = parsedPrice;
         }
       }
     }
 
-    if (techData.hp === 0) {
-      const descLower = descText.toLowerCase();
-    
-    // Catch common patterns in sentences: "Power: 150 hp", "425 Horsepower", "150 CV", etc.
-    const leadPatterns = [
+    // 2. Horsepower scan across lines
+    const hpLineRe = /^(?:[-*•\s]*)(?:power|leistung|puissance|horsepower|engine power|motorleistung|required power|leistung required|power requirement)[:\-\s]+(.*)$/i;
+    const descHps = [];
+    let hpRequirementDetected = false;
+    for (const line of rawLines) {
+      const hm = line.match(hpLineRe);
+      if (hm && hm[1]) {
+        const matches = hm[1].match(/(\d+)\s*(?:hp|cv|ps|pk|ch|kw|bhp|horsepower)?/gi);
+        if (matches) {
+          for (const mat of matches) {
+            const numMatch = mat.match(/(\d+)/);
+            if (numMatch) {
+              let hp = parseInt(numMatch[1], 10);
+              if (/kw/i.test(mat)) hp = Math.round(hp * 1.36);
+              if (hp > 15 && hp < 2000) descHps.push(hp);
+            }
+          }
+        }
+        if (/required|requirement|benötigt/i.test(line)) hpRequirementDetected = true;
+      }
+    }
+    if (descHps.length > 0) {
+      const hMin = Math.min(...descHps);
+      const hMax = Math.max(...descHps);
+      if (!techData.hp || techData.hp === 0) {
+        techData.hp = hMax;
+        techData.hpMin = hMin;
+        techData.hpMax = hMax;
+        if (hpRequirementDetected) techData.hpIsRequirement = true;
+      } else {
+        if (!techData.hpMin || hMin < techData.hpMin) techData.hpMin = hMin;
+        if (!techData.hpMax || hMax > techData.hpMax) techData.hpMax = hMax;
+      }
+    } else if (techData.hp === 0) {
+      // Fallback single regex on stripped text
+      const descText = description.replace(/<[^>]*>/g, ' ');
+      const leadPatterns = [
         /(?:horsepower|power|performance|requirement|required|leistung|puissance|output)[:\-\s]*(\d+)/i,
         /(\d+)\s*(?:hp|cv|ps|pk|ch|kw|bhp|horsepower)/i,
-        /\+\s*power[:\s]*(\d+)/i // Used in packs (e.g. + Power: 100)
-    ];
-    
-    for (const pattern of leadPatterns) {
+        /\+\s*power[:\s]*(\d+)/i
+      ];
+      for (const pattern of leadPatterns) {
         const match = descText.match(pattern);
         if (match && match[1]) {
-            const fullMatch = match[0];
-            // Exclusion check for model strings or version numbers
-            if (/[\/-]\d+/.test(fullMatch)) continue;
-
-            let hp = parseInt(match[1], 10);
-            if (descText.includes(match[1] + ' kw') || descText.includes(match[1] + 'kw')) {
-                hp = Math.round(hp * 1.36);
+          const fullMatch = match[0];
+          if (/[\/-]\d+/.test(fullMatch)) continue;
+          let hp = parseInt(match[1], 10);
+          if (descText.includes(match[1] + ' kw') || descText.includes(match[1] + 'kw')) {
+            hp = Math.round(hp * 1.36);
+          }
+          if (hp > 15 && hp < 2000) {
+            techData.hp = hp;
+            techData.hpMin = hp;
+            techData.hpMax = hp;
+            if (pattern.source.includes('required') || pattern.source.includes('requirement') || descText.includes('required power')) {
+              techData.hpIsRequirement = true;
             }
-
-            // Sanity check: ensure it's a realistic tractor power value
-            if (hp > 15 && hp < 2000) { 
-                techData.hp = hp;
-                // If the pattern implies requirement, mark it
-                if (pattern.source.includes('required') || pattern.source.includes('requirement') || descText.includes('required power')) {
-                    techData.hpIsRequirement = true;
-                }
-                break;
-            }
+            break;
+          }
         }
-    }
+      }
     }
 
     const catStr = (metadata['Category'] || metadata['category'] || '').toLowerCase();
@@ -855,28 +944,37 @@ async function fetchModDetail(modId) {
     ];
     const isNoCapCat = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes('script'));
 
+    // 3. Litre Capacity scan across lines
     if (techData.capacity === 0 && !isNoCapCat) {
-      // Split raw HTML on visual line breaks BEFORE stripping tags
-      const rawLines = description
-        .replace(/<br[^>]*>/gi, '\n')
-        .replace(/<\/p>/gi, '\n')
-        .replace(/<\/li>/gi, '\n')
-        .replace(/<\/div>/gi, '\n')
-        .replace(/<[^>]*>/g, '')
-        .split('\n')
-        .map(l => l.trim())
-        .filter(Boolean);
-
-      // Parse a numeric string with optional k-suffix (thousand). Preserves decimals for cubic m³.
+      // Parse a numeric string with optional k-suffix (thousand). Supports European 16.500 / 30.000, 16,500, or decimals.
       const parseCapNum = (str, kSuffix) => {
-        const cleaned = str.replace(/[\s,]/g, '').replace(/\.(\d{3})/g, '$1');
-        let val = parseFloat(cleaned) || 0;
-        if (kSuffix && kSuffix.toLowerCase() === 'k') val *= 1000;
+        if (!str) return 0;
+        let s = str.trim();
+        let k = kSuffix || '';
+        if (s.toLowerCase().endsWith('k')) {
+          k = 'k';
+          s = s.slice(0, -1);
+        }
+        let val = 0;
+        if (/^\d{1,3}[.,\s]\d{3}$/.test(s)) {
+          val = parseInt(s.replace(/[.,\s]/g, ''), 10);
+        } else if (/^\d{1,3}(?:[.,\s]\d{3})+(?:[.,]\d+)?$/.test(s)) {
+          const parts = s.split(/[.,\s]/);
+          const last = parts[parts.length - 1];
+          if (last.length === 3) {
+            val = parseInt(parts.join(''), 10);
+          } else {
+            val = parseFloat(parts.slice(0, -1).join('') + '.' + last);
+          }
+        } else {
+          val = parseFloat(s.replace(/,/g, '.').replace(/\s/g, '')) || 0;
+        }
+        if (k.toLowerCase() === 'k') val *= 1000;
         return val;
       };
 
-      // Lines that mention capacity keyword AND a litre/cubic unit
-      const capLineRe  = /capaci(?:ty|ties)|kapazität|capacité|volume|inhalte|fassungsvermögen|inhalt|tank|load|configurations?/i;
+      // Lines that mention capacity keyword (including common modder typos like 'capactity') AND a litre/cubic unit
+      const capLineRe  = /capact?i(?:ty|ties)|kapazität|capacité|volume|inhalte|fassungsvermögen|inhalt|tank|load|configurations?/i;
       const litreUnitRe = /liters?|litres?|\bl\b|m³|m3|cubic/i;
 
       // Numbers: not preceded by a letter (avoids model codes like NX200),
@@ -917,7 +1015,7 @@ async function fetchModDetail(modId) {
     // Second fallback on full stripped text
     if (techData.capacity === 0) {
       const fullText = description.replace(/<[^>]*>/g, ' ');
-      const litreMatch = fullText.match(/capacity[:\s-]*(from\s+)?(\d[\d\s,]*(?:\.\d*)?)(k?)\s*(?:[-–to]+\s*(\d[\d\s,]*(?:\.\d*)?)(k?))?\s*(liters?|litres?|l\b|m³|m3|cubic)/i);
+      const litreMatch = fullText.match(/capact?ity[:\s-]*(from\s+)?(\d[\d\s,]*(?:\.\d*)?)(k?)\s*(?:[-–to]+\s*(\d[\d\s,]*(?:\.\d*)?)(k?))?\s*(liters?|litres?|l\b|m³|m3|cubic)/i);
       if (litreMatch) {
         const parseKNum = (s, k) => { const c = (s||'').replace(/[\s,]/g,'').replace(/\.(\d{3})/g,'$1'); let v = parseFloat(c)||0; if (k && k.toLowerCase()==='k') v*=1000; return v; };
         const isCubic = /(m³|m3|cubic)/i.test(litreMatch[6] || '');
@@ -934,7 +1032,6 @@ async function fetchModDetail(modId) {
 
     // Unit-based capacity — always attempt, runs independently of litre capacity
     // Covers: animals, bales, logs, big bags, pallets, round bales, square bales etc.
-    const catStr = (metadata['Category'] || metadata['category'] || '').toLowerCase();
     const isVehicleCat = /(?:tractor|traktor|truck|lkw|car|auto|pkw|harvester|mähdrescher|forage|häcksler|excavator|bagger|loader|radlader|teleskoplader|forklift|gabelstapler)/i.test(catStr);
 
     if (!techData.unitCapacity && !isVehicleCat) {
