@@ -2059,14 +2059,11 @@ app.on('before-quit', async (event) => {
   if (isQuittingCleanly) return;
 
   try {
-    const shouldRestore = cache.getSetting('standaloneReadyOnExit') !== 'false';
-    if (shouldRestore) {
-      event.preventDefault();
-      await gameLauncher.restoreGlobalGameSettings();
-      isQuittingCleanly = true;
-      app.quit();
-      return;
-    }
+    event.preventDefault();
+    await gameLauncher.restoreGlobalGameSettings();
+    isQuittingCleanly = true;
+    app.quit();
+    return;
   } catch (e) {
     console.error('[EXIT] Error restoring standalone game state on quit:', e);
   }
