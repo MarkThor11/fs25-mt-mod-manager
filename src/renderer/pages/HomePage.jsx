@@ -177,6 +177,9 @@ export default function HomePage() {
       setLoadingTopDownloaded(false);
     }
   };
+  const latestSave = [...savegames]
+    .filter(s => !s.isGhost && s.playerName)
+    .sort((a, b) => new Date(b.lastSaved || b.lastSaveDate || 0) - new Date(a.lastSaved || a.lastSaveDate || 0))[0];
   const nonFarmerSave = savegames.find(s => !s.isGhost && s.playerName && s.playerName !== 'Farmer');
   const rawName = nickname || (latestSave?.playerName && latestSave.playerName !== 'Farmer' ? latestSave.playerName : null) || nonFarmerSave?.playerName || latestSave?.playerName || 'Farmer';
   
