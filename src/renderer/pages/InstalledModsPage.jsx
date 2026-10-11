@@ -2548,8 +2548,8 @@ export default function InstalledModsPage() {
             />
             {searchQuery && (
               <X 
-                size={14} 
-                style={{ position: 'absolute', right: 10, cursor: 'pointer', opacity: 0.5 }} 
+                size={16} 
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.5 }} 
                 onClick={() => setSearchQuery('')} 
                 className="hover-opacity-1"
               />
