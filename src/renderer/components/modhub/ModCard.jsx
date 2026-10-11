@@ -1126,11 +1126,11 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           const isNoCap = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k)) ||
                           catStr.includes('gameplay') || catStr.includes('script') ||
                           titleStr.includes('script') || descStr.includes('with this script');
-          const showCap = mod.techData?.capacity > 0 && !hideCapacity && !hidePower && !isNoCap;
+          const showCap = mod.techData?.capacity > 0 && !isNoCap;
           const BOGUS_UNITS = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'];
           const isBogusUnit = BOGUS_UNITS.includes((mod.techData?.unitCapacityType || '').toLowerCase());
           const isVehicle = mod.techData?.isDrivable;
-          const showUnitCap = mod.techData?.unitCapacity > 0 && !hideCapacity && !isBogusUnit && !isVehicle && !isNoCap;
+          const showUnitCap = mod.techData?.unitCapacity > 0 && !isBogusUnit && !isVehicle && !isNoCap;
 
           if (!showPrice && !hasHP && !showCap && !showUnitCap) return null;
 
