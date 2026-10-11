@@ -3455,8 +3455,9 @@ export default function SavegamesPage() {
     
     // Priority 1: Hero Banner nickname setting
     const heroNickname = useSettingsStore.getState().nickname;
-    // Priority 2: Existing savegame player name
-    const existingPlayerName = savegames.find(s => s.playerName && s.playerName !== 'Farmer' && s.playerName !== 'Player')?.playerName
+    // Priority 2: Existing Single Player savegame player name
+    const existingPlayerName = savegames.find(s => s.singlePlayerName && s.singlePlayerName !== 'Farmer' && s.singlePlayerName !== 'Player')?.singlePlayerName
+      || savegames.find(s => s.playerName && s.playerName !== 'Farmer' && s.playerName !== 'Player')?.playerName
       || savegames.find(s => s.playerName)?.playerName;
     
     const chosenName = heroNickname?.trim() || existingPlayerName?.trim();

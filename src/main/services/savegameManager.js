@@ -2515,9 +2515,14 @@ async function getAllSavegames() {
                 }
             }
 
-            // Extract player name from settings or farms.xml (FS25 primary nickname storage)
-            let detectedPlayerName = settings['@_playerName'] || settings.playerName || null;
-            if ((!detectedPlayerName || detectedPlayerName === 'Farmer') && fs.existsSync(farmsFile)) {
+            // Extract player names:
+            // 1. Single Player name is strictly stored in careerSavegame.xml under <settings><playerName>
+            const rawSinglePlayerName = settings['@_playerName'] || settings.playerName || null;
+            const singlePlayerName = (rawSinglePlayerName && rawSinglePlayerName !== 'Farmer' && rawSinglePlayerName !== 'Player') ? rawSinglePlayerName : null;
+
+            // 2. Multiplayer nickname is stored in farms.xml under <player lastNickname="...">
+            let mpPlayerName = null;
+            if (fs.existsSync(farmsFile)) {
                 try {
                     const farmsXml = await fs.readFile(farmsFile, 'utf8');
                     const farmsData = parser.parse(farmsXml);
@@ -2529,12 +2534,12 @@ async function getAllSavegames() {
                                 for (const p of playerList) {
                                     const nick = p['@_lastNickname'] || p.lastNickname || p['@_nickname'] || p.nickname || p['@_name'] || p.name;
                                     if (nick && nick !== 'Farm Member') {
-                                        detectedPlayerName = nick;
+                                        mpPlayerName = nick;
                                         break;
                                     }
                                 }
                             }
-                            if (detectedPlayerName) break;
+                            if (mpPlayerName) break;
                         }
                     }
                 } catch (e) {}
@@ -2545,7 +2550,9 @@ async function getAllSavegames() {
                 folderName: `savegame${i}`,
                 path: savePath,
                 farmName: settings['@_savegameName'] || settings.savegameName || 'Unnamed Farm',
-                playerName: detectedPlayerName || 'Farmer',
+                playerName: singlePlayerName || (serverMeta ? (mpPlayerName || 'Farmer') : 'Farmer'),
+                singlePlayerName: singlePlayerName || null,
+                mpPlayerName: mpPlayerName || null,
                 mapId,
                 mapTitle,
                 isInitialized,
@@ -2607,6 +2614,21 @@ async function getAllSavegames() {
             console.error(`[SAVEGAMES] Error scanning savegame slot ${i}:`, slotErr);
         }
     }
+    // Auto-propagate canonical Single Player name to slots where FS25 omitted the <playerName> XML tag
+    const canonicalSPName = savegames.find(s => s.singlePlayerName && s.singlePlayerName !== 'Farmer')?.singlePlayerName || null;
+    if (canonicalSPName) {
+        for (const sg of savegames) {
+            if (!sg.isServerSave) {
+                if (!sg.singlePlayerName || sg.singlePlayerName === 'Farmer') {
+                    sg.singlePlayerName = canonicalSPName;
+                }
+                if (!sg.playerName || sg.playerName === 'Farmer') {
+                    sg.playerName = canonicalSPName;
+                }
+            }
+        }
+    }
+
     debugLog(`[SAVEGAMES] Scan complete. Total slots found: ${savegames.length}`);
     return { savegames };
 }

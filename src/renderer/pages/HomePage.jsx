@@ -178,10 +178,14 @@ export default function HomePage() {
     }
   };
   const latestSave = [...savegames]
-    .filter(s => !s.isGhost && s.playerName)
+    .filter(s => !s.isGhost && (s.singlePlayerName || s.playerName))
     .sort((a, b) => new Date(b.lastSaved || b.lastSaveDate || 0) - new Date(a.lastSaved || a.lastSaveDate || 0))[0];
-  const nonFarmerSave = savegames.find(s => !s.isGhost && s.playerName && s.playerName !== 'Farmer');
-  const rawName = nickname || (latestSave?.playerName && latestSave.playerName !== 'Farmer' ? latestSave.playerName : null) || nonFarmerSave?.playerName || latestSave?.playerName || 'Farmer';
+  const spSave = savegames.find(s => !s.isGhost && s.singlePlayerName && s.singlePlayerName !== 'Farmer');
+  const rawName = nickname 
+    || spSave?.singlePlayerName 
+    || (latestSave?.singlePlayerName && latestSave.singlePlayerName !== 'Farmer' ? latestSave.singlePlayerName : null)
+    || (latestSave?.playerName && latestSave.playerName !== 'Farmer' ? latestSave.playerName : null) 
+    || 'Farmer';
   
   const handleSaveName = () => {
     const trimmed = tempName.trim();
