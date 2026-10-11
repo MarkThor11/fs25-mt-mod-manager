@@ -728,7 +728,19 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
           (capMin > 0 && capMin < 1000 && capMax > 10000)             // model-number bleed in min
         );
 
-        if (!needsCapacityRescrape) {
+        // Re-scrape if priceMin is missing or packs with description have single price
+        const price = cached.techData?.price ?? 0;
+        const priceMin = cached.techData?.priceMin ?? price;
+        const priceMax = cached.techData?.priceMax ?? price;
+        if (cached.techData) {
+          if (!cached.techData.priceMin && price > 0) cached.techData.priceMin = price;
+          if (!cached.techData.priceMax && price > 0) cached.techData.priceMax = price;
+        }
+
+        const isPackMod = (cached.title || '').toLowerCase().includes('pack') || (catStr || '').includes('package');
+        const needsPriceRescrape = cached.techData?.scraped && isPackMod && priceMin === priceMax && cached.description && /(?:prices?|preis|prix)[:\-\s]*[$€£]?\s*[\d\s,.]+/i.test(cached.description);
+
+        if (!needsCapacityRescrape && !needsPriceRescrape) {
           if (!cached.fileName) {
             cached.fileName = cached.downloadUrl.split('/').pop().split('?')[0];
             cache.set(cacheKey, cached, 7 * 24 * 60 * 60 * 1000);
@@ -838,11 +850,21 @@ ipcMain.handle('modhub:getBatchDetails', async (_, modIds) => {
         cached.techData.unitCapacity = 0;
         cached.techData.unitCapacityType = '';
       }
-      const unitCap = (isNoCap || isBogusUnit || isVehicle) ? 0 : rawUnitCap;
+      const price = cached.techData?.price ?? 0;
+      const priceMin = cached.techData?.priceMin ?? price;
+      const priceMax = cached.techData?.priceMax ?? price;
+      if (cached.techData) {
+        if (!cached.techData.priceMin && price > 0) cached.techData.priceMin = price;
+        if (!cached.techData.priceMax && price > 0) cached.techData.priceMax = price;
+      }
+      const isPackMod = (cached.title || '').toLowerCase().includes('pack') || (catStr || '').includes('package');
+      const needsPriceRescrape = cached.techData?.scraped && isPackMod && priceMin === priceMax && cached.description && /(?:prices?|preis|prix)[:\-\s]*[$€£]?\s*[\d\s,.]+/i.test(cached.description);
+
       const needsRescrape = cached.techData?.scraped && (
         (cap === 0 && unitCap === 0) ||
         (cap > 0 && cap < 1000 && unitCap === 0) ||
-        (capMin > 0 && capMin < 1000 && capMax > 10000)
+        (capMin > 0 && capMin < 1000 && capMax > 10000) ||
+        needsPriceRescrape
       );
       if (!needsRescrape) {
         results[id] = cached;

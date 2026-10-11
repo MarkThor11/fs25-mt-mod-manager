@@ -172,6 +172,10 @@ export const useModHubStore = create((set, get) => ({
               hasPruned = true;
             }
           }
+          if (v.techData.price > 0) {
+            if (!v.techData.priceMin) v.techData.priceMin = v.techData.price;
+            if (!v.techData.priceMax) v.techData.priceMax = v.techData.price;
+          }
         }
         // If it has a timestamp, prune if older than 30 days. 
         // If it lacks a timestamp (like our new metadata pool), treat it as fresh.
@@ -236,17 +240,23 @@ export const useModHubStore = create((set, get) => ({
     const { mods, isDeepScanning } = get();
     if (isDeepScanning || mods.length === 0) return;
     
-    // Re-scan mods scraped but with missing, suspiciously small, or model-bleed capacity
+    // Re-scan mods scraped but with missing, suspiciously small, or model-bleed capacity, or missing pack price ranges
     const needsRescrape = (m) => {
       if (!m.techData?.scraped) return false;
       const cap = m.techData?.capacity ?? 0;
       const capMin = m.techData?.capacityMin ?? 0;
       const capMax = m.techData?.capacityMax ?? 0;
       const unitCap = m.techData?.unitCapacity ?? 0;
+      const price = m.techData?.price ?? 0;
+      const priceMin = m.techData?.priceMin ?? price;
+      const priceMax = m.techData?.priceMax ?? price;
+      const isPack = (m.title || '').toLowerCase().includes('pack') || (m.category || '').toLowerCase().includes('package');
+      const needsPriceRescrape = isPack && priceMin === priceMax && m.description && /(?:prices?|preis|prix)[:\-\s]*[$€£]?\s*[\d\s,.]+/i.test(m.description);
       return (
         (cap === 0 && unitCap === 0) ||
         (cap > 0 && cap < 1000 && unitCap === 0) ||
-        (capMin > 0 && capMin < 1000 && capMax > 10000) // model-number bleed (e.g. NX200 → cMin=200)
+        (capMin > 0 && capMin < 1000 && capMax > 10000) || // model-number bleed (e.g. NX200 → cMin=200)
+        needsPriceRescrape
       );
     };
     const needsScan = mods.some(m => !m.techData || !m.techData.scraped || !m.dependencies || needsRescrape(m));
@@ -994,11 +1004,22 @@ export const useModHubStore = create((set, get) => ({
           const cachedCapMin = cachedMod?.techData?.capacityMin ?? 0;
           const cachedCapMax = cachedMod?.techData?.capacityMax ?? 0;
           const cachedUnit = cachedMod?.techData?.unitCapacity ?? 0;
+          const cachedPrice = cachedMod?.techData?.price ?? 0;
+          const cachedPriceMin = cachedMod?.techData?.priceMin ?? cachedPrice;
+          const cachedPriceMax = cachedMod?.techData?.priceMax ?? cachedPrice;
+          const isPackMod = (mod.title || cachedMod?.title || '').toLowerCase().includes('pack') || (mod.category || cachedMod?.category || '').toLowerCase().includes('package');
+          const packPriceStale = isPackMod && cachedPriceMin === cachedPriceMax && cachedMod?.description && /(?:prices?|preis|prix)[:\-\s]*[$€£]?\s*[\d\s,.]+/i.test(cachedMod.description);
+
           const cachedIsStale = cachedMod?.techData?.scraped && (
             (cachedCap === 0 && cachedUnit === 0) ||
             (cachedCap > 0 && cachedCap < 1000 && cachedUnit === 0) ||
-            (cachedCapMin > 0 && cachedCapMin < 1000 && cachedCapMax > 10000)
+            (cachedCapMin > 0 && cachedCapMin < 1000 && cachedCapMax > 10000) ||
+            packPriceStale
           );
+          if (cachedMod?.techData && !cachedIsStale) {
+            if (!cachedMod.techData.priceMin && cachedPrice > 0) cachedMod.techData.priceMin = cachedPrice;
+            if (!cachedMod.techData.priceMax && cachedPrice > 0) cachedMod.techData.priceMax = cachedPrice;
+          }
           const effectiveCached = (cachedMod && !cachedIsStale) ? cachedMod : cachedMod ? { ...cachedMod, techData: undefined } : null;
           let enriched = effectiveCached ? { ...mod, ...effectiveCached } : { ...mod };
 
@@ -1150,6 +1171,8 @@ export const useModHubStore = create((set, get) => ({
 
     const rawTechData = detail.techData || {
       price: priceValue,
+      priceMin: priceValue,
+      priceMax: priceValue,
       hp: hpMax,
       hpMin: hpMin,
       hpMax: hpMax,
@@ -1158,7 +1181,12 @@ export const useModHubStore = create((set, get) => ({
       isDrivable: isVehicleCategory,
       techSpecs: detail.techSpecs || {}
     };
-    const techData = { ...rawTechData, scraped: true };
+    const techData = {
+      priceMin: rawTechData.priceMin || rawTechData.price || priceValue,
+      priceMax: rawTechData.priceMax || rawTechData.price || priceValue,
+      ...rawTechData,
+      scraped: true
+    };
     const catStr = (mod.category || detail.category || detail.metadata?.Category || '').toLowerCase();
     const titleStr = (mod.title || detail.title || '').toLowerCase();
     const isNoCap = NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes('script'));

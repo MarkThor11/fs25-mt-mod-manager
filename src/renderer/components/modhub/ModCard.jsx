@@ -644,6 +644,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
         ...mod,
         ...detail,
         techData: {
+          ...(detail.techData || {}),
           hp: hpIsRecommendation ? recommendedHp : hpMax,
           hpMin: hpIsRecommendation ? recommendedHp : hpMin,
           hpMax: hpIsRecommendation ? recommendedHp : hpMax,
@@ -651,7 +652,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           hpIsRequirement: finalIsRequester,
           hpIsRecommendation,
           isDrivable: isVehicleCategory,
-          price: parseInt((detail.metadata['Price'] || '0').replace(/\D/g,'')) || 0
+          price: detail.techData?.price || parseInt((detail.metadata['Price'] || '0').replace(/\D/g,'')) || 0
         }
       };
       
