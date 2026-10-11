@@ -35,7 +35,7 @@ export default function ModHubPage() {
   const {
     mods, currentFilter, currentPage, totalPages,
     isLoading, error, categories, isDeepScanning, modCache,
-    activeFilters, favoriteAuthors, authorFilter, authorFilterSource, previousFilter, hardcodedBrands, hiddenMods,
+    activeFilters: rawActiveFilters, favoriteAuthors, authorFilter, authorFilterSource, previousFilter, hardcodedBrands, hiddenMods,
     setFilter, setPage, fetchMods, fetchCategories, searchMods,
     fetchDetailsForCurrentPage, setFilters, resetFilters, setAuthorFilter,
     selectedCompareIds, clearCompare, pageSize, setPageSize,
@@ -43,6 +43,20 @@ export default function ModHubPage() {
     selectedHP, setSelectedHP, hpMatchMode, setHpMatchMode,
     categoryTotalMods, categoryAllMods
   } = useModHubStore();
+
+  const activeFilters = useMemo(() => {
+    const f = rawActiveFilters || {};
+    return {
+      brands: Array.isArray(f.brands) ? f.brands : [],
+      priceRange: Array.isArray(f.priceRange) && f.priceRange.length >= 2 ? f.priceRange : [0, Infinity],
+      hpRange: Array.isArray(f.hpRange) && f.hpRange.length >= 2 ? f.hpRange : [0, Infinity],
+      capRange: Array.isArray(f.capRange) && f.capRange.length >= 2 ? f.capRange : [0, Infinity],
+      unitRange: Array.isArray(f.unitRange) && f.unitRange.length >= 2 ? f.unitRange : [0, Infinity],
+      platforms: Array.isArray(f.platforms) ? f.platforms : [],
+      hideRequired: Boolean(f.hideRequired),
+      hideInstalled: Boolean(f.hideInstalled)
+    };
+  }, [rawActiveFilters]);
   
   const isOnline = useSettingsStore(s => s.isOnline);
   const { modHubZoom, setModHubZoom, modHubIconOnly, setModHubIconOnly } = useSettingsStore();
@@ -781,7 +795,9 @@ export default function ModHubPage() {
 
         {(activeFilters.brands.length > 0 || authorFilter || activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < globalMax.price || 
           activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < globalMax.hp || 
-          activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap || activeFilters.platforms.length > 0 || activeFilters.hideRequired || activeFilters.hideInstalled) && (
+          activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap || 
+          activeFilters.unitRange[0] > 0 || activeFilters.unitRange[1] < globalMax.unit ||
+          activeFilters.platforms.length > 0 || activeFilters.hideRequired || activeFilters.hideInstalled) && (
           <div className="filter-chips">
             {authorFilter && (
               <div className="filter-chip filter-chip--author">
@@ -1102,7 +1118,7 @@ export default function ModHubPage() {
               </div>
               
               <div className="filter-summary">
-                {!authorFilter && (activeFilters.brands?.length || 0) === 0 && activeFilters.priceRange[0] === 0 && activeFilters.priceRange[1] >= globalMax.price && activeFilters.hpRange[0] === 0 && activeFilters.hpRange[1] >= globalMax.hp && activeFilters.capRange[0] === 0 && activeFilters.capRange[1] >= globalMax.cap && (activeFilters.platforms?.length || 0) === 0 && !activeFilters.hideRequired && !activeFilters.hideInstalled ? (
+                {!authorFilter && (activeFilters.brands?.length || 0) === 0 && activeFilters.priceRange[0] === 0 && activeFilters.priceRange[1] >= globalMax.price && activeFilters.hpRange[0] === 0 && activeFilters.hpRange[1] >= globalMax.hp && activeFilters.capRange[0] === 0 && activeFilters.capRange[1] >= globalMax.cap && activeFilters.unitRange[0] === 0 && activeFilters.unitRange[1] >= globalMax.unit && (activeFilters.platforms?.length || 0) === 0 && !activeFilters.hideRequired && !activeFilters.hideInstalled ? (
                   <div className="filter-summary__empty">No filters active</div>
                 ) : (
                   <div className="filter-summary__list">
@@ -1139,6 +1155,11 @@ export default function ModHubPage() {
                     {(activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < globalMax.cap) && (
                       <div className="chip" onClick={() => setFilters({ capRange: [0, Infinity] })}>
                         {activeFilters.capRange[0] > 0 ? `${activeFilters.capRange[0].toLocaleString()}L+` : `Capacity Range`} <X size={10} />
+                      </div>
+                    )}
+                    {(activeFilters.unitRange[0] > 0 || activeFilters.unitRange[1] < globalMax.unit) && (
+                      <div className="chip" onClick={() => setFilters({ unitRange: [0, Infinity] })}>
+                        {activeFilters.unitRange[0] > 0 ? `${activeFilters.unitRange[0]}+` : `Units Range`} <X size={10} />
                       </div>
                     )}
                   </div>

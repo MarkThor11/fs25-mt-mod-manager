@@ -45,6 +45,17 @@ const loadFavMods = () => {
   }
 };
 
+export const DEFAULT_ACTIVE_FILTERS = {
+  brands: [],
+  priceRange: [0, Infinity],
+  hpRange: [0, Infinity],
+  capRange: [0, Infinity],
+  unitRange: [0, Infinity],
+  platforms: [],
+  hideRequired: false,
+  hideInstalled: false,
+};
+
 export const useModHubStore = create((set, get) => ({
 
   // State
@@ -65,16 +76,7 @@ export const useModHubStore = create((set, get) => ({
   searchQuery: '',
   isDeepScanning: false,
   categories: [],
-  activeFilters: {
-    brands: [],
-    priceRange: [0, Infinity],
-    hpRange: [0, Infinity],
-    capRange: [0, Infinity],
-    unitRange: [0, Infinity],
-    platforms: [],
-    hideRequired: false,
-    hideInstalled: false,
-  },
+  activeFilters: { ...DEFAULT_ACTIVE_FILTERS },
   favoriteAuthors: JSON.parse(localStorage.getItem('fav_authors') || '[]'),
   favoriteMods: loadFavMods(),
   hiddenMods: JSON.parse(localStorage.getItem('hidden_mods') || '[]'),
@@ -278,7 +280,7 @@ export const useModHubStore = create((set, get) => ({
 
   setFilters: (filters) => {
     set((state) => ({ 
-      activeFilters: { ...state.activeFilters, ...filters },
+      activeFilters: { ...DEFAULT_ACTIVE_FILTERS, ...(state.activeFilters || {}), ...filters },
       currentPage: 0
     }));
     get().fetchMods();
@@ -292,15 +294,7 @@ export const useModHubStore = create((set, get) => ({
     const state = get();
     const restoredFilter = state.authorFilter ? (state.previousFilter || state.currentFilter) : state.currentFilter;
     set({
-      activeFilters: {
-        brands: [],
-        priceRange: [0, Infinity],
-        hpRange: [0, Infinity],
-        capRange: [0, Infinity],
-        platforms: [],
-        hideRequired: false,
-        hideInstalled: false
-      },
+      activeFilters: { ...DEFAULT_ACTIVE_FILTERS },
       authorFilter: null,
       authorFilterSource: null,
       previousFilter: null,
@@ -686,7 +680,7 @@ export const useModHubStore = create((set, get) => ({
 
   setFilters: (filters) => {
     set((state) => ({ 
-      activeFilters: { ...state.activeFilters, ...filters },
+      activeFilters: { ...DEFAULT_ACTIVE_FILTERS, ...(state.activeFilters || {}), ...filters },
       currentPage: 0
     }));
   },
@@ -1034,13 +1028,7 @@ export const useModHubStore = create((set, get) => ({
       mods: [],
       currentFilter: 'search',
       authorFilter: null,
-      activeFilters: {
-        brands: [],
-        priceRange: [0, 10000000],
-        hpRange: [0, 10000],
-        capRange: [0, 10000000],
-        platforms: [],
-      },
+      activeFilters: { ...DEFAULT_ACTIVE_FILTERS },
       isSmartMatchEnabled: false,
       powerReference: null,
     });
