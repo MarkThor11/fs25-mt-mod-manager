@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { useLocalModsStore } from './useLocalModsStore';
 import { useToastStore } from './useToastStore';
+import { useSettingsStore } from './useSettingsStore';
 
 export const useSavegameStore = create((set, get) => ({
   savegames: [],
@@ -66,6 +67,16 @@ export const useSavegameStore = create((set, get) => ({
       // Save to cache asynchronously
       if (window.api?.settings) {
         window.api.settings.set('savegamesCache', JSON.stringify(freshSavegames)).catch(() => {});
+        // Auto-persist detected Single Player name to settings so it's remembered immediately on future launches
+        const spName = freshSavegames.find(s => s.singlePlayerName && s.singlePlayerName !== 'Farmer')?.singlePlayerName;
+        if (spName) {
+          window.api.settings.get('nickname').then((currentNick) => {
+            if (!currentNick || currentNick === 'Farmer') {
+              window.api.settings.set('nickname', spName);
+              useSettingsStore.getState().setNickname(spName);
+            }
+          }).catch(() => {});
+        }
       }
     } catch (err) {
       set({ error: err.message, isLoading: false });

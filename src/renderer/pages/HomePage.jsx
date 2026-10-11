@@ -196,6 +196,16 @@ export default function HomePage() {
     setIsEditingName(false);
   };
 
+  // Auto-persist detected Single Player name to persistent settings so it's remembered immediately on future launches
+  useEffect(() => {
+    if (!nickname || nickname === 'Farmer') {
+      const detectedName = spSave?.singlePlayerName || (latestSave?.singlePlayerName && latestSave.singlePlayerName !== 'Farmer' ? latestSave.singlePlayerName : null);
+      if (detectedName && detectedName !== 'Farmer') {
+        setNickname(detectedName);
+      }
+    }
+  }, [nickname, spSave, latestSave, setNickname]);
+
   // Slideshow State & Engine
   const [slideshowList, setSlideshowList] = useState([]);
   const [slideIndex, setSlideIndex] = useState(0);
