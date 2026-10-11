@@ -698,7 +698,16 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
         const cap = cached.techData?.capacity ?? 0;
         const capMin = cached.techData?.capacityMin ?? 0;
         const capMax = cached.techData?.capacityMax ?? 0;
-        const unitCap = cached.techData?.unitCapacity ?? 0;
+        const rawUnitCap = cached.techData?.unitCapacity ?? 0;
+        const unitType = (cached.techData?.unitCapacityType || '').toLowerCase();
+        const isBogusUnit = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'].includes(unitType);
+        const catStr = (cached.category || cached.metadata?.Category || '').toLowerCase();
+        const isVehicle = /(?:tractor|traktor|truck|lkw|car|auto|pkw|harvester|mähdrescher|forage|häcksler|excavator|bagger|loader|radlader|teleskoplader|forklift|gabelstapler)/i.test(catStr) || cached.techData?.isDrivable;
+        if (cached.techData && (isBogusUnit || isVehicle)) {
+          cached.techData.unitCapacity = 0;
+          cached.techData.unitCapacityType = '';
+        }
+        const unitCap = (isBogusUnit || isVehicle) ? 0 : rawUnitCap;
         const needsCapacityRescrape = cached.techData?.scraped && (
           (cap === 0 && unitCap === 0) ||                              // no capacity at all
           (cap > 0 && cap < 1000 && unitCap === 0) ||                 // tiny litre = mis-parse
@@ -792,7 +801,16 @@ ipcMain.handle('modhub:getBatchDetails', async (_, modIds) => {
       const cap = cached.techData?.capacity ?? 0;
       const capMin = cached.techData?.capacityMin ?? 0;
       const capMax = cached.techData?.capacityMax ?? 0;
-      const unitCap = cached.techData?.unitCapacity ?? 0;
+      const rawUnitCap = cached.techData?.unitCapacity ?? 0;
+      const unitType = (cached.techData?.unitCapacityType || '').toLowerCase();
+      const isBogusUnit = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'].includes(unitType);
+      const catStr = (cached.category || cached.metadata?.Category || '').toLowerCase();
+      const isVehicle = /(?:tractor|traktor|truck|lkw|car|auto|pkw|harvester|mähdrescher|forage|häcksler|excavator|bagger|loader|radlader|teleskoplader|forklift|gabelstapler)/i.test(catStr) || cached.techData?.isDrivable;
+      if (cached.techData && (isBogusUnit || isVehicle)) {
+        cached.techData.unitCapacity = 0;
+        cached.techData.unitCapacityType = '';
+      }
+      const unitCap = (isBogusUnit || isVehicle) ? 0 : rawUnitCap;
       const needsRescrape = cached.techData?.scraped && (
         (cap === 0 && unitCap === 0) ||
         (cap > 0 && cap < 1000 && unitCap === 0) ||

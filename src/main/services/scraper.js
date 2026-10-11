@@ -924,7 +924,10 @@ async function fetchModDetail(modId) {
 
     // Unit-based capacity — always attempt, runs independently of litre capacity
     // Covers: animals, bales, logs, big bags, pallets, round bales, square bales etc.
-    if (!techData.unitCapacity) {
+    const catStr = (metadata['Category'] || metadata['category'] || '').toLowerCase();
+    const isVehicleCat = /(?:tractor|traktor|truck|lkw|car|auto|pkw|harvester|mähdrescher|forage|häcksler|excavator|bagger|loader|radlader|teleskoplader|forklift|gabelstapler)/i.test(catStr);
+
+    if (!techData.unitCapacity && !isVehicleCat) {
       const UNIT_TYPES = [
         'cows?', 'cattle', 'calves?', 'pigs?', 'piglets?', 'sheep', 'lambs?', 'horses?', 'chickens?',
         'goats?', 'rabbits?', 'animals?', 'kühe?', 'tiere?', 'schweine?',
@@ -932,11 +935,8 @@ async function fetchModDetail(modId) {
         'logs?', 'trunks?', 'stämme?',
         'bigbags?', 'big\\s*bags?', 'ibc',
         'pallets?', 'paletten?',
-        'pieces?', 'units?', 'items?',
         'sacks?', 'bags?', 'säcke?',
-        'packs?', 'pakete?',
-        'skids?',
-        'tonnes?'
+        'skids?'
       ];
       const unitRegex = new RegExp(
         `(\\d[\\d,. ]*\\d|\\d+)\\s*(?:x\\s*)?(${UNIT_TYPES.join('|')})(?:[\\s,./]|$)`,
@@ -953,19 +953,26 @@ async function fetchModDetail(modId) {
         .map(l => l.trim())
         .filter(Boolean);
       // Prefer lines that also contain a capacity/capacity-related keyword
-      const capacityKeywordRe = /(capacity|kapazität|capacité|load|payload|volume|bale|tier|animal|aufnahme|fassungsverm)/i;
+      const capacityKeywordRe = /(capacity|kapazität|capacité|load|payload|volume|bale|tier|animal|aufnahme|fassungsverm|holds?|holds up to|plätze|stall)/i;
       let bestMatch = null;
       let bestCount = 0;
       for (const line of rawSearchLines) {
+        // Skip lines that look like pack/version descriptions or mod titles
+        if (/\b(?:mod\s*pack|pack|update|version|v\d)\b/i.test(line) && !capacityKeywordRe.test(line)) continue;
+
         const m = line.match(unitRegex);
         if (m) {
           const count = parseFloat(m[1].replace(/[, ]/g, ''));
           if (count > 0 && count < 100000) {
-            // Prefer matches from lines that have context keywords, and prefer higher counts (more specific)
             const hasContext = capacityKeywordRe.test(line);
-            if (!bestMatch || (hasContext && !bestMatch.hasContext) || count > bestCount) {
-              bestMatch = { count, type: m[2].toLowerCase().replace(/\s+/g, ' ').trim(), hasContext };
-              bestCount = count;
+            // ONLY consider matches if they have capacity context, OR if the unit is explicitly an animal/bale/pallet type
+            const isExplicitCargoType = /^(cows?|cattle|calves?|pigs?|piglets?|sheep|lambs?|horses?|chickens?|goats?|rabbits?|animals?|kühe?|tiere?|schweine?|bales?|round\s*bales?|square\s*bales?|rundballen|ballen|logs?|stämme?|pallets?|paletten?|bigbags?|ibc)$/i.test(m[2].trim());
+
+            if (hasContext || isExplicitCargoType) {
+              if (!bestMatch || (hasContext && !bestMatch.hasContext) || (hasContext === !!bestMatch.hasContext && count > bestCount)) {
+                bestMatch = { count, type: m[2].toLowerCase().replace(/\s+/g, ' ').trim(), hasContext };
+                bestCount = count;
+              }
             }
           }
         }
@@ -974,6 +981,13 @@ async function fetchModDetail(modId) {
         techData.unitCapacity = bestMatch.count;
         techData.unitCapacityType = bestMatch.type;
       }
+    }
+
+    // Safety guard: ensure drivable vehicles and bogus unit types are never assigned unit capacity
+    const BOGUS_UNITS = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'];
+    if (isVehicleCat || BOGUS_UNITS.includes((techData.unitCapacityType || '').toLowerCase())) {
+      techData.unitCapacity = 0;
+      techData.unitCapacityType = '';
     }
 
     // Guard: if unit capacity was found but litre capacity is tiny (< 1000 L),

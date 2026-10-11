@@ -56,6 +56,16 @@ export const DEFAULT_ACTIVE_FILTERS = {
   hideInstalled: false,
 };
 
+export const DRIVABLE_FILTERS = [
+  'tractorsS', 'tractorsM', 'tractorsL', 'trucks', 'cars', 'miscDrivables',
+  'frontLoaderVehicles', 'teleLoaderVehicles', 'wheelLoaderVehicles', 'skidSteerVehicles', 'forklifts',
+  'harvesters', 'forageHarvesters', 'beetHarvesters', 'potatoHarvesting', 'vegetableHarvesters',
+  'riceHarvesters', 'sugarcaneHarvesters', 'cottonHarvesters', 'grapeHarvesters', 'oliveHarvesters',
+  'forestryHarvesters', 'forestryForwarders', 'forestryExcavators'
+];
+
+export const BOGUS_UNIT_TYPES = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'];
+
 export const useModHubStore = create((set, get) => ({
 
   // State
@@ -133,6 +143,17 @@ export const useModHubStore = create((set, get) => ({
       const pruned = {};
       let hasPruned = false;
       Object.entries(cache || {}).forEach(([k, v]) => {
+        // Sanitize bogus unit capacity in existing cached items
+        if (v?.techData?.unitCapacity) {
+          const uType = (v.techData.unitCapacityType || '').toLowerCase();
+          const catFilter = (v.category || '').split(':')[1] || '';
+          const isVehicle = DRIVABLE_FILTERS.includes(catFilter) || v.techData?.isDrivable;
+          if (BOGUS_UNIT_TYPES.includes(uType) || isVehicle) {
+            v.techData.unitCapacity = 0;
+            v.techData.unitCapacityType = '';
+            hasPruned = true;
+          }
+        }
         // If it has a timestamp, prune if older than 30 days. 
         // If it lacks a timestamp (like our new metadata pool), treat it as fresh.
         if (!v.timestamp || (now - v.timestamp < (30 * 24 * 60 * 60 * 1000))) {
@@ -929,6 +950,15 @@ export const useModHubStore = create((set, get) => ({
 
       const enrichedMods = uniqueAllMods.map(mod => {
           const cachedMod = modCache[String(mod.modId)];
+          if (cachedMod?.techData?.unitCapacity) {
+            const uType = (cachedMod.techData.unitCapacityType || '').toLowerCase();
+            const catFilter = (mod.category || cachedMod.category || '').split(':')[1] || '';
+            const isVehicle = DRIVABLE_FILTERS.includes(catFilter) || cachedMod.techData?.isDrivable;
+            if (BOGUS_UNIT_TYPES.includes(uType) || isVehicle) {
+              cachedMod.techData.unitCapacity = 0;
+              cachedMod.techData.unitCapacityType = '';
+            }
+          }
           // Don't apply stale or mis-parsed techData — let deep scan re-fetch
           const cachedCap = cachedMod?.techData?.capacity ?? 0;
           const cachedCapMin = cachedMod?.techData?.capacityMin ?? 0;
@@ -1066,14 +1096,7 @@ export const useModHubStore = create((set, get) => ({
 
   enrichModWithDetail: (mod, detail) => {
     const filter = (mod.category || detail.category || '').split(':')[1] || '';
-    const drivableFilters = [
-      'tractorsS', 'tractorsM', 'tractorsL', 'trucks', 'cars', 'miscDrivables',
-      'frontLoaderVehicles', 'teleLoaderVehicles', 'wheelLoaderVehicles', 'skidSteerVehicles', 'forklifts',
-      'harvesters', 'forageHarvesters', 'beetHarvesters', 'potatoHarvesting', 'vegetableHarvesters',
-      'riceHarvesters', 'sugarcaneHarvesters', 'cottonHarvesters', 'grapeHarvesters', 'oliveHarvesters',
-      'forestryHarvesters', 'forestryForwarders', 'forestryExcavators'
-    ];
-    const isVehicleCategory = drivableFilters.includes(filter);
+    const isVehicleCategory = DRIVABLE_FILTERS.includes(filter);
 
     const priceValue = parseInt((detail.metadata?.['Price'] || '0').replace(/\D/g,'')) || 0;
     
@@ -1106,6 +1129,10 @@ export const useModHubStore = create((set, get) => ({
       techSpecs: detail.techSpecs || {}
     };
     const techData = { ...rawTechData, scraped: true };
+    if (isVehicleCategory || BOGUS_UNIT_TYPES.includes((techData.unitCapacityType || '').toLowerCase())) {
+      techData.unitCapacity = 0;
+      techData.unitCapacityType = '';
+    }
 
     let brand = detail.metadata?.['Manufacturer'] || detail.metadata?.['Brand'] || '';
     return { ...mod, ...detail, techData, brand };

@@ -172,7 +172,10 @@ export default function ModHubPage() {
         if (m.techData.price > maxPrice) maxPrice = m.techData.price;
         if (m.techData.hp > maxHp) maxHp = m.techData.hp;
         if (m.techData.capacity > maxCap) maxCap = m.techData.capacity;
-        if (m.techData.unitCapacity > maxUnit) maxUnit = m.techData.unitCapacity;
+        if (m.techData.unitCapacity > maxUnit) {
+          const isBogus = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'].includes((m.techData.unitCapacityType || '').toLowerCase());
+          if (!isBogus && !m.techData.isDrivable) maxUnit = m.techData.unitCapacity;
+        }
       }
     });
 
@@ -242,7 +245,8 @@ export default function ModHubPage() {
 
       // Unit Capacity Range Check (cows, bales, logs, etc.)
       if (activeFilters.unitRange[0] > 0 || activeFilters.unitRange[1] < globalMax.unit) {
-        const uVal = mod.techData?.unitCapacity || 0;
+        const isBogus = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'].includes((mod.techData?.unitCapacityType || '').toLowerCase());
+        const uVal = (!isBogus && !mod.techData?.isDrivable) ? (mod.techData?.unitCapacity || 0) : 0;
         // Exclude mods with no unit capacity data when filter is active
         if (uVal === 0) return false;
         if (uVal < activeFilters.unitRange[0] || uVal > activeFilters.unitRange[1]) return false;
