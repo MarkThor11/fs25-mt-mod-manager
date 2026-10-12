@@ -188,8 +188,9 @@ export const useModHubStore = create((set, get) => ({
             if (!v.techData.priceMin) v.techData.priceMin = v.techData.price;
             if (!v.techData.priceMax) v.techData.priceMax = v.techData.price;
           }
-          // Repair corrupt capacity range (e.g. 1500 - 91000 L from La Campagne)
-          if (v.techData.capacityMin === 1500 && v.techData.capacityMax >= 50000) {
+          // Repair corrupt capacity range (e.g. 1500 - 91000 L from La Campagne or 5000 per-side from Horsch)
+          if ((v.techData.capacityMin === 1500 && v.techData.capacityMax >= 50000) ||
+              (v.techData.capacityMin === 5000 && v.techData.capacityMax <= 10000 && /total/i.test(v.description || ''))) {
             v.techData.scraped = false; // forces re-scrape
             hasPruned = true;
           }
@@ -284,7 +285,8 @@ export const useModHubStore = create((set, get) => ({
       const descHasCap = m.description && /(?:capact?i(?:ty|ties)|kapazit[aä]t|capacit[eé]|volume|volumen|inhalte?|fassungsverm[oö]gen|inhalt)[:\-\s/]+.*?\d/i.test(m.description);
       const needsTrailerCapRescrape = isTrailerOrTanker && (
         (cap === 0 && unitCap === 0 && descHasCap) ||
-        (capMin === 1500 && capMax >= 50000)
+        (capMin === 1500 && capMax >= 50000) ||
+        (capMin === 5000 && capMax <= 10000 && /total/i.test(m.description || ''))
       );
 
       return (

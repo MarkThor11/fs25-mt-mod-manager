@@ -319633,7 +319633,7 @@
       "scraped": true,
       "priceMin": 15000,
       "priceMax": 20000,
-      "capacityMin": 5000,
+      "capacityMin": 8000,
       "capacityMax": 10000
     },
     "releasedDate": "16.09.2026",

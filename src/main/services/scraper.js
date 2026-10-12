@@ -1123,19 +1123,43 @@ function parseModDetailFromHtml(html, modId) {
         }
 
         if (lineCaps.length === 0 && capMentionRe.test(cleanedText)) {
-          capAfterKeywordRe.lastIndex = 0;
-          let m;
-          while ((m = capAfterKeywordRe.exec(cleanedText)) !== null) {
-            const isCubic = /(m³|m3|cubic)/i.test(m[3] || m[6] || cleanedText);
-            const hasLitre = /liters?|litres?|\bl\b/i.test(m[3] || m[6] || cleanedText);
-            [ { valStr: m[1], k: m[2] }, { valStr: m[4], k: m[5] } ].forEach(({ valStr, k }) => {
-              if (!valStr) return;
-              const v = parseCapNum(valStr, k);
-              if (isCubic ? v > 0 : (hasLitre ? v >= 100 : v >= 500)) {
-                const litreVal = Math.round(isCubic && v < 1000 ? v * 1000 : v);
-                if (litreVal >= 100 && litreVal < 50000000) lineCaps.push(litreVal);
-              }
-            });
+          // If a capacity line clarifies an overall total (e.g. "5,000L per side (10,000L total)" or "total: 10,000L"),
+          // prioritize the vehicle's total capacity rather than the single-compartment partition.
+          const parenMatch = cleanedText.match(/\(([^)]*?(?:total|in\s*total|gesamt|au\s*total|og[óo]lem)[^)]*)\)/i);
+          let totalNumMatch = null;
+          if (parenMatch) {
+            totalNumMatch = parenMatch[1].match(/([0-9][0-9.,'\s]*[0-9]|[0-9]+)\s*(k?)\s*(m³|m3|cubic|liters?|litres?|l(?![a-zA-Z]))?/i);
+          } else {
+            const afterMatch = cleanedText.match(/(?:total|in\s*total|gesamt|au\s*total|og[óo]lem)[:\s]+([0-9][0-9.,'\s]*[0-9]|[0-9]+)\s*(k?)\s*(m³|m3|cubic|liters?|litres?|l(?![a-zA-Z]))?/i);
+            const beforeMatch = cleanedText.match(/([0-9][0-9.,'\s]*[0-9]|[0-9]+)\s*(k?)\s*(m³|m3|cubic|liters?|litres?|l(?![a-zA-Z]))?\s*(?:total|in\s*total|gesamt|au\s*total|og[óo]lem)\b/i);
+            totalNumMatch = afterMatch || beforeMatch;
+          }
+
+          if (totalNumMatch) {
+            const isCubic = /(m³|m3|cubic)/i.test(totalNumMatch[3] || cleanedText);
+            const hasLitre = /liters?|litres?|l(?![a-zA-Z])/i.test(totalNumMatch[3] || cleanedText);
+            const v = parseCapNum(totalNumMatch[1], totalNumMatch[2]);
+            if (isCubic ? v > 0 : (hasLitre ? v >= 100 : v >= 500)) {
+              const litreVal = Math.round(isCubic && v < 1000 ? v * 1000 : v);
+              if (litreVal >= 100 && litreVal < 50000000) lineCaps.push(litreVal);
+            }
+          }
+
+          if (lineCaps.length === 0) {
+            capAfterKeywordRe.lastIndex = 0;
+            let m;
+            while ((m = capAfterKeywordRe.exec(cleanedText)) !== null) {
+              const isCubic = /(m³|m3|cubic)/i.test(m[3] || m[6] || cleanedText);
+              const hasLitre = /liters?|litres?|\bl\b/i.test(m[3] || m[6] || cleanedText);
+              [ { valStr: m[1], k: m[2] }, { valStr: m[4], k: m[5] } ].forEach(({ valStr, k }) => {
+                if (!valStr) return;
+                const v = parseCapNum(valStr, k);
+                if (isCubic ? v > 0 : (hasLitre ? v >= 100 : v >= 500)) {
+                  const litreVal = Math.round(isCubic && v < 1000 ? v * 1000 : v);
+                  if (litreVal >= 100 && litreVal < 50000000) lineCaps.push(litreVal);
+                }
+              });
+            }
           }
 
           if (lineCaps.length === 0) {

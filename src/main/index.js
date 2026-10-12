@@ -881,7 +881,8 @@ ipcMain.handle('modhub:getBatchDetails', async (_, modIds) => {
       const descHasCap = cached.description && /(?:capact?i(?:ty|ties)|kapazit[aä]t|capacit[eé]|volume|volumen|inhalte?|fassungsverm[oö]gen|inhalt)[:\-\s/]+.*?\d/i.test(cached.description);
       const needsTrailerCapRescrape = isTrailerOrTanker && (
         (cap === 0 && unitCap === 0 && descHasCap) ||
-        (capMin === 1500 && capMax >= 50000) // Catches old corrupt La Campagne cache (1,500 - 91,000)
+        (capMin === 1500 && capMax >= 50000) || // Catches old corrupt La Campagne cache (1,500 - 91,000)
+        (capMin === 5000 && capMax <= 10000 && /total/i.test(cached.description || '')) // Catches per-side 5,000L vs total 10,000L
       );
 
       const needsRescrape = cached.techData?.scraped && (
