@@ -1703,10 +1703,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 savegameData.careerSavegame.player['@_spawnPositionX'] = '-528.800';
                 savegameData.careerSavegame.player['@_spawnPositionY'] = '19.800';
                 savegameData.careerSavegame.player['@_spawnPositionZ'] = '-61.100';
-            } else if (engineMapId === 'pdlc_highlandsFishingPack.HighlandsFishingMap' || (mapId || '').toLowerCase().includes('highlandsfishing') || (mapTitle || '').toLowerCase() === 'kinlaig') {
-                savegameData.careerSavegame.player['@_spawnPositionX'] = '-896.000';
-                savegameData.careerSavegame.player['@_spawnPositionY'] = '135.700';
-                savegameData.careerSavegame.player['@_spawnPositionZ'] = '190.000';
             } else {
                 // Kinlaig and custom mod maps: use the map's actual default start from its i3d/config files,
                 // or omit coordinates completely so Giants Engine spawns the player at the author's designated playerStart
@@ -1738,9 +1734,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         if (engineMapId === 'MapUS')       spawnForPlayers = { x: -128.0,  y: 49.2,  z: -162.0 };
                         else if (engineMapId === 'MapEU')  spawnForPlayers = { x: -263.0,  y: 60.0,  z: 44.0   };
                         else if (engineMapId === 'MapAS')  spawnForPlayers = { x: -528.8,  y: 19.8,  z: -61.1  };
-                        else if (engineMapId === 'pdlc_highlandsFishingPack.HighlandsFishingMap' || (mapId || '').toLowerCase().includes('highlandsfishing') || (mapTitle || '').toLowerCase() === 'kinlaig') {
-                            spawnForPlayers = { x: -896.0, y: 135.7, z: 190.0 };
-                        } else spawnForPlayers = await getMapDefaultStartCoordinates(slotPath, true, engineMapId, mapModName || trueMapModName);
+                        else spawnForPlayers = await getMapDefaultStartCoordinates(slotPath, true, engineMapId, mapModName || trueMapModName);
 
                         for (const p of plist) {
                             if (spawnForPlayers && spawnForPlayers.x !== undefined) {
@@ -4328,7 +4322,7 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true, fal
             } else if (mapId === 'MapAS' || mapTitle === 'Hutan Pantai') {
                 return { x: -528.8, y: 19.8, z: -61.1 };
             } else if (mapId === 'pdlc_highlandsFishingPack.HighlandsFishingMap' || (mapId || '').toLowerCase().includes('highlandsfishing') || (mapTitle || '').toLowerCase() === 'kinlaig') {
-                return { x: -896.0, y: 135.7, z: 190.0 };
+                return null;
             }
         }
 
@@ -6775,7 +6769,54 @@ async function ensureSavegameDensityMaps(savePath) {
     if (!savePath || !fs.existsSync(savePath)) return 0;
     try {
         await ensureSavegameImage(savePath);
-        const hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
+        let hasFruitsGdm = fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm'));
+
+        // If fruits density map is missing on an official/templated savegame, restore it from master template
+        if (!hasFruitsGdm) {
+            const careerPath = path.join(savePath, 'careerSavegame.xml');
+            if (fs.existsSync(careerPath)) {
+                try {
+                    const cXml = await fs.readFile(careerPath, 'utf8');
+                    const parsed = parser.parse(cXml);
+                    const settings = parsed?.careerSavegame?.settings || {};
+                    const sMapId = settings['@_mapId'] || settings.mapId;
+                    const sMapTitle = settings['@_mapTitle'] || settings.mapTitle;
+                    const templateFolder = await resolveTemplateFolder(sMapId, null, sMapTitle);
+                    if (templateFolder) {
+                        const templateFruitsPath = path.join(getTemplatesPath(), templateFolder, 'densityMap_fruits.gdm');
+                        if (fs.existsSync(templateFruitsPath)) {
+                            await fs.copy(templateFruitsPath, path.join(savePath, 'densityMap_fruits.gdm'));
+                            console.log(`[DENSITY-CHECK] Restored missing densityMap_fruits.gdm from template ${templateFolder} to ${savePath}`);
+                            hasFruitsGdm = true;
+                        }
+                    }
+                } catch (tErr) {
+                    console.warn('[DENSITY-CHECK] Failed to restore template densityMap_fruits.gdm:', tErr.message);
+                }
+            }
+        }
+
+        // Clean up bogus header-cutter spawn point (-896.000 135.700 190.000) from Kinlaig savegame files if present
+        try {
+            const careerPath = path.join(savePath, 'careerSavegame.xml');
+            if (fs.existsSync(careerPath)) {
+                let careerXml = await fs.readFile(careerPath, 'utf8');
+                if (careerXml.includes('-896.000')) {
+                    careerXml = careerXml.replace(/\s*<player\s+spawnPositionX=["']-896\.000["'][^>]*\/>/gi, '');
+                    await fs.writeFile(careerPath, careerXml, 'utf8');
+                    console.log(`[SPAWN-FIX] Cleaned erroneous -896.000 spawn point from careerSavegame.xml in ${savePath}`);
+                }
+            }
+            const playersPath = path.join(savePath, 'players.xml');
+            if (fs.existsSync(playersPath)) {
+                let playersXml = await fs.readFile(playersPath, 'utf8');
+                if (playersXml.includes('-896.000')) {
+                    playersXml = playersXml.replace(/\s*<spawn\s+position=["']-896\.000\s+135\.700\s+190\.000["'][^>]*\/>/gi, '');
+                    await fs.writeFile(playersPath, playersXml, 'utf8');
+                    console.log(`[SPAWN-FIX] Cleaned erroneous -896.000 spawn point from players.xml in ${savePath}`);
+                }
+            }
+        } catch (_) {}
 
         // On uninitialized save slots without densityMap_fruits.gdm, do not pre-extract binary density maps
         // or inject synthetic growthState XMLs. Allow GIANTS Engine's native bootstrapper to populate initial crops from map ZIP.
@@ -6983,8 +7024,10 @@ async function resetSavegameFieldStates(savePath) {
                     const cXml = await fs.readFile(careerPath, 'utf8');
                     const cData = parser.parse(cXml);
                     const mapId = cData?.careerSavegame?.settings?.['@_mapId'] || cData?.careerSavegame?.settings?.mapId;
+                    const mapTitle = cData?.careerSavegame?.settings?.['@_mapTitle'] || cData?.careerSavegame?.settings?.mapTitle;
                     if (mapId) {
-                        const tPath = path.join(getTemplatesPath(), mapId);
+                        const templateFolder = await resolveTemplateFolder(mapId, null, mapTitle);
+                        const tPath = templateFolder ? path.join(getTemplatesPath(), templateFolder) : path.join(getTemplatesPath(), mapId);
                         if (fs.existsSync(tPath)) {
                             for (const fn of ['densityMap_fruits.gdm', 'fields.xml', 'densityMap_ground.gdm', 'densityMap_weed.gdm', 'densityMap_stones.gdm']) {
                                 const srcF = path.join(tPath, fn);
