@@ -728,7 +728,8 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
         const needsCapacityRescrape = cached.techData?.scraped && (
           (cap === 0 && unitCap === 0) ||                              // no capacity at all
           (cap > 0 && cap < 1000 && unitCap === 0) ||                 // tiny litre = mis-parse
-          (capMin > 0 && capMin < 1000 && capMax > 10000)             // model-number bleed in min
+          (capMin > 0 && capMin < 1000 && capMax > 10000) ||          // model-number bleed in min
+          (capMin === 1500 && capMax >= 50000)                        // corrupt La Campagne cache
         );
 
         // Re-scrape if priceMin is missing or packs with description have single price
@@ -744,7 +745,8 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
         const descHasPrices = cached.description && /(?:base\s+price|configuration\s+price|prices?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]*[$€£]?\s*[\d'’\s,.]+/i.test(cached.description);
         const needsPriceRescrape = cached.techData?.scraped && (
           (isPackMod && priceMin === priceMax && descHasPrices) ||
-          (price < 500 && descHasPrices)
+          (price < 500 && descHasPrices) ||
+          (priceMin > 0 && priceMin < 500 && descHasPrices)
         );
 
         if (!needsCapacityRescrape && !needsPriceRescrape) {

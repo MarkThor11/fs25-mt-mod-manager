@@ -176,8 +176,22 @@ export const useModHubStore = create((set, get) => ({
             }
           }
           if (v.techData.price > 0) {
+            // Repair corrupt price range if priceMin is ridiculously low (e.g. model code 60) or price is 2025
+            if (v.techData.priceMin > 0 && v.techData.priceMin < 500 && v.techData.priceMax > 5000) {
+              v.techData.priceMin = v.techData.priceMax;
+              hasPruned = true;
+            }
+            if (v.techData.price === 2025 && v.techData.priceMax > 5000) {
+              v.techData.price = v.techData.priceMax;
+              hasPruned = true;
+            }
             if (!v.techData.priceMin) v.techData.priceMin = v.techData.price;
             if (!v.techData.priceMax) v.techData.priceMax = v.techData.price;
+          }
+          // Repair corrupt capacity range (e.g. 1500 - 91000 L from La Campagne)
+          if (v.techData.capacityMin === 1500 && v.techData.capacityMax >= 50000) {
+            v.techData.scraped = false; // forces re-scrape
+            hasPruned = true;
           }
         }
         // If it has a timestamp, prune if older than 30 days. 
