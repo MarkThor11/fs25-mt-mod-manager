@@ -440,6 +440,36 @@ function disableModsDirectoryOverride() {
  */
 async function restoreGlobalGameSettings() {
   disableModsDirectoryOverride();
+
+  // Restore gameSettings.xml menu music setting if it was muted
+  try {
+    const fs25DataRoot = pathProvider.getFS25DataRoot();
+    const gameSettingsPath = path.join(fs25DataRoot, 'gameSettings.xml');
+    if (fs.existsSync(gameSettingsPath)) {
+      let settingsXml = fs.readFileSync(gameSettingsPath, 'utf8');
+      if (/<music>\s*0(?:\.0+)?\s*<\/music>/i.test(settingsXml)) {
+        settingsXml = settingsXml.replace(/<music>\s*0(?:\.0+)?\s*<\/music>/ig, '<music>0.700000</music>');
+        fs.writeFileSync(gameSettingsPath, settingsXml, 'utf8');
+        console.log('[LAUNCH] Restored default menu music in gameSettings.xml');
+      }
+    }
+  } catch (e) {
+    console.warn('[LAUNCH] Failed to restore menu music setting:', e.message);
+  }
+
+  // Restore game.xml graphics settings from backup if an original was saved
+  try {
+    const systemOptimizer = require('./systemOptimizer');
+    const dataRoot = pathProvider.getFS25DataRoot();
+    const backupGameXml = path.join(dataRoot, 'game.xml.original');
+    if (fs.existsSync(backupGameXml)) {
+      await systemOptimizer.optimizeRevert();
+      console.log('[LAUNCH] Restored game.xml from original backup');
+    }
+  } catch (e) {
+    // Ignore if not present
+  }
+
   try {
     const savegameManager = require('./savegameManager');
     await savegameManager.restoreStashedSinglePlayerSaves();
