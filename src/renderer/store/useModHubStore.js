@@ -1084,6 +1084,51 @@ export const useModHubStore = create((set, get) => ({
       if (f === 'latest') {
         const recentMods = enrichedMods.filter(m => m.isNew || m.isUpdate);
         displayMods = recentMods.length > 0 ? recentMods : enrichedMods.slice(0, 24);
+      } else if (f && f !== 'search' && !authorFilter) {
+        // Category cross-contamination guard at store level
+        const fLower = f.toLowerCase();
+        const isLoadersFilter = fLower === 'aggregate:loaders' || 
+          ['frontloadervehicles', 'frontloaders', 'frontloadertools', 'teleloadervehicles', 'teleloadertools', 'wheelloadervehicles', 'wheelloadertools', 'skidsteervehicles', 'skidsteertools', 'forklifts'].includes(fLower);
+
+        displayMods = enrichedMods.filter(m => {
+          const modCat = (m.category || m.metadata?.Category || '').toLowerCase();
+          if (!modCat) return true; // keep if metadata not yet fetched
+
+          if (fLower === 'gameplay') {
+            if (modCat.includes('placeable') || modCat.includes('storage') || modCat.includes('shed') || modCat.includes('silo')) {
+              return false;
+            }
+          }
+
+          if (isLoadersFilter) {
+            if (modCat.includes('tractor') || modCat.includes('traktor') || modCat.includes('truck') || modCat.includes('car') || modCat.includes('combine')) {
+              return false;
+            }
+          }
+
+          if (categories && categories.length > 0 && modCat.includes(' - ')) {
+            let activeParent = null;
+            if (f.startsWith('aggregate:')) {
+              const pName = f.split(':')[1];
+              activeParent = categories.find(c => c.label.toLowerCase() === pName.toLowerCase());
+            } else {
+              for (const cat of categories) {
+                if (cat.filter === f) { activeParent = cat; break; }
+                if (cat.children?.some(sub => sub.filter === f)) { activeParent = cat; break; }
+              }
+            }
+
+            if (activeParent) {
+              const [modParent] = modCat.split(' - ').map(s => s.trim().toLowerCase());
+              const topLevelNames = categories.map(c => c.label.toLowerCase());
+              if (topLevelNames.includes(modParent) && modParent !== activeParent.label.toLowerCase()) {
+                return false;
+              }
+            }
+          }
+
+          return true;
+        });
       }
 
       // ── UPDATE FRONTEND CACHE ──

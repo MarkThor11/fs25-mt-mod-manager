@@ -203,11 +203,67 @@ export default function ModHubPage() {
       const hiddenModIds = hiddenMods.map(m => m.modId);
       if (hiddenModIds.includes(mod.modId)) return false;
 
-      // Category cross-contamination guard (e.g. placeables appearing under gameplay)
-      if (currentFilter === 'gameplay') {
+      // Category cross-contamination guard
+      if (currentFilter && currentFilter !== 'search' && !authorFilter) {
         const modCat = (mod.category || mod.metadata?.Category || '').toLowerCase();
-        if (modCat.includes('placeable') || modCat.includes('storage') || modCat.includes('shed') || modCat.includes('silo')) {
-          return false;
+        
+        if (currentFilter === 'gameplay') {
+          if (modCat.includes('placeable') || modCat.includes('storage') || modCat.includes('shed') || modCat.includes('silo')) {
+            return false;
+          }
+        }
+
+        // Check if viewing Loaders (aggregate or subcategories)
+        const isLoadersFilter = currentFilter === 'aggregate:Loaders' || 
+          ['frontloadervehicles', 'frontloaders', 'frontloadertools', 'teleloadervehicles', 'teleloadertools', 'wheelloadervehicles', 'wheelloadertools', 'skidsteervehicles', 'skidsteertools', 'forklifts'].includes(currentFilter.toLowerCase());
+
+        if (isLoadersFilter && modCat) {
+          // If the mod has category metadata and is explicitly classified under Tractors, Cars, Trucks, Combines, etc., exclude it
+          if (modCat.includes('tractor') || modCat.includes('traktor') || modCat.includes('truck') || modCat.includes('car') || modCat.includes('combine')) {
+            return false;
+          }
+        }
+
+        // Generic category family guard: when viewing a known category parent/sub, verify mod metadata category matches if available
+        if (categories && categories.length > 0 && modCat) {
+          let activeParent = null;
+          let activeChild = null;
+
+          if (currentFilter.startsWith('aggregate:')) {
+            const pName = currentFilter.split(':')[1];
+            activeParent = categories.find(c => c.label.toLowerCase() === pName.toLowerCase());
+          } else {
+            for (const cat of categories) {
+              if (cat.filter === currentFilter) {
+                activeParent = cat;
+                break;
+              }
+              if (cat.children) {
+                for (const sub of cat.children) {
+                  if (sub.filter === currentFilter) {
+                    activeParent = cat;
+                    activeChild = sub;
+                    break;
+                  }
+                }
+                if (activeParent) break;
+              }
+            }
+          }
+
+          if (activeParent) {
+            const parentLabelLower = activeParent.label.toLowerCase();
+            // If modCat has " - " separator (e.g., "Drivables - Large Tractors" or "Loaders - Front Loader Vehicles")
+            if (modCat.includes(' - ')) {
+              const [modParent] = modCat.split(' - ').map(s => s.trim().toLowerCase());
+              // Disallow if the mod explicitly belongs to another top-level category family
+              // (e.g. mod is "drivables" but active category is "loaders", "trailers", "baling", etc.)
+              const topLevelNames = categories.map(c => c.label.toLowerCase());
+              if (topLevelNames.includes(modParent) && modParent !== parentLabelLower) {
+                return false;
+              }
+            }
+          }
         }
       }
 
