@@ -97,7 +97,7 @@ export default function ModDetailPage() {
   // DRIVER: useDownloadStore handles the global "background" state
   const { activeDownloads, batchProgress, addDownload, removeDownload, cancelDownload, sessionInstalled } = useDownloadStore();
   const { mods: localMods } = useLocalModsStore();
-  const { favoriteMods, toggleFavoriteMod, toggleMustHaveMod } = useModHubStore();
+  const { favoriteMods, toggleFavoriteMod, toggleMustHaveMod, modCache, loadCache } = useModHubStore();
   
   const localMod = useMemo(() => {
     if (!mod || !localMods || localMods.length === 0) return null;
@@ -346,19 +346,27 @@ export default function ModDetailPage() {
 
   const images = useMemo(() => {
     if (!mod) return [];
-    const rawImages = mod.images && mod.images.length > 0 ? mod.images : [];
+    let rawImages = (mod.images && mod.images.length > 0) ? mod.images : (mod.image ? [mod.image] : []);
+    if ((!rawImages || rawImages.length === 0) && mod.iconData) {
+      rawImages = [mod.iconData];
+    }
     const unique = [];
     const seen = new Set();
     rawImages.forEach(img => {
-      // Use full URL as key for DLCs to ensure all screenshots show even if they have weird paths
-      const key = mod.isDLC ? img : (img.split('/').pop().split('?')[0]);
+      if (!img) return;
+      let normalized = img;
+      if (normalized.startsWith('//')) {
+        normalized = `https:${normalized}`;
+      }
+      const isDataOrDlc = mod.isDLC || normalized.startsWith('data:') || normalized.startsWith('file:');
+      const key = isDataOrDlc ? normalized : (normalized.split('/').pop().split('?')[0]);
       if (key && !seen.has(key)) {
-        unique.push(img);
+        unique.push(normalized);
         seen.add(key);
       }
     });
     return unique;
-  }, [mod?.images, mod?.isDLC]);
+  }, [mod?.images, mod?.image, mod?.iconData, mod?.isDLC]);
 
   useEffect(() => {
     loadModDetail();
@@ -374,24 +382,57 @@ export default function ModDetailPage() {
   }, [localMod?.filePath]);
 
   const resolveProxy = async (url) => {
-    if (!url || proxiedImages[url]) return;
-    if (url.startsWith('data:') || url.startsWith('file:')) {
-        setProxiedImages(prev => ({ ...prev, [url]: url }));
-        return;
+    if (!url) return;
+    let targetUrl = url;
+    if (targetUrl.startsWith('//')) {
+      targetUrl = `https:${targetUrl}`;
     }
+    if (proxiedImages[targetUrl] || proxiedImages[url]) return;
+    if (targetUrl.startsWith('data:') || targetUrl.startsWith('file:')) {
+      setProxiedImages(prev => ({ ...prev, [url]: targetUrl, [targetUrl]: targetUrl }));
+      return;
+    }
+    if (!window.api?.images?.proxy) return;
     try {
-      const proxied = await window.api.images.proxy(url);
-      setProxiedImages(prev => ({ ...prev, [url]: proxied }));
+      const proxied = await window.api.images.proxy(targetUrl);
+      if (proxied) {
+        setProxiedImages(prev => ({ ...prev, [url]: proxied, [targetUrl]: proxied }));
+        setImageFailures(prev => {
+          if (!prev[url] && !prev[targetUrl]) return prev;
+          const next = { ...prev };
+          delete next[url];
+          delete next[targetUrl];
+          return next;
+        });
+      } else {
+        setImageFailures(prev => ({ ...prev, [url]: true, [targetUrl]: true }));
+      }
     } catch (err) {
       console.error('Proxy failed:', err);
+      setImageFailures(prev => ({ ...prev, [url]: true, [targetUrl]: true }));
     }
   };
 
   useEffect(() => {
-    if (mod?.images) {
-      mod.images.forEach(img => resolveProxy(img));
+    if (images && images.length > 0) {
+      images.forEach(img => resolveProxy(img));
     }
-  }, [mod]);
+  }, [images]);
+
+  const getImageSrc = (imgUrl) => {
+    if (!imgUrl) return null;
+    if (imgUrl.startsWith('data:') || imgUrl.startsWith('file:')) return imgUrl;
+    return proxiedImages[imgUrl] || null;
+  };
+
+  const formattedDescription = useMemo(() => {
+    if (!mod?.description) return '';
+    const desc = String(mod.description).trim();
+    if (!desc.includes('<br') && !desc.includes('<p') && !desc.includes('<div') && desc.includes('\n')) {
+      return desc.replace(/\n/g, '<br />');
+    }
+    return desc;
+  }, [mod?.description]);
 
   const loadModDetail = async () => {
     setLoading(true);
@@ -522,7 +563,68 @@ export default function ModDetailPage() {
           }
       };
 
-      // If local mod data exists, render it immediately to prevent skeleton loading screens
+      // Check store's modCache or load it if empty
+      let currentCache = modCache || {};
+      if (Object.keys(currentCache).length === 0 && loadCache) {
+          try {
+              await loadCache();
+              currentCache = useModHubStore.getState().modCache || {};
+          } catch (_) {}
+      }
+
+      // Match in cache by effectiveModId or fileName
+      let cachedEntry = null;
+      if (effectiveModId) {
+          cachedEntry = currentCache[String(effectiveModId)] || currentCache[String(effectiveModId).replace(/^0+/, '')];
+      }
+      if (!cachedEntry && fileName) {
+          const decodedFile = decodeURIComponent(fileName);
+          const rawTargetName = decodedFile.replace(/\.zip$/i, '').toLowerCase().trim();
+          const cleanTargetName = rawTargetName.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/gi, '');
+          cachedEntry = Object.values(currentCache).find(m => {
+              if (!m) return false;
+              if (m.modId && effectiveModId && String(m.modId) === String(effectiveModId)) return true;
+              if (m.fileName) {
+                  const mFile = m.fileName.replace(/\.zip$/i, '').toLowerCase().trim();
+                  if (mFile === rawTargetName) return true;
+                  const mBase = mFile.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/gi, '');
+                  if (mBase && cleanTargetName && mBase === cleanTargetName) return true;
+              }
+              if (m.modName) {
+                  const mName = m.modName.toLowerCase().trim();
+                  if (mName === rawTargetName) return true;
+                  const mBase = mName.replace(/^(?:fs25|fs22|pdlc)_/i, '').replace(/[^a-z0-9]/gi, '');
+                  if (mBase && cleanTargetName && mBase === cleanTargetName) return true;
+              }
+              return false;
+          });
+      }
+
+      if (cachedEntry) {
+          if (!effectiveModId && cachedEntry.modId) {
+              effectiveModId = cachedEntry.modId;
+          }
+          modData = {
+              ...cachedEntry,
+              ...(modData || {}),
+              title: modData?.title || cachedEntry.title,
+              author: cachedEntry.author || modData?.author,
+              // Cached/remote description takes precedence over empty or unformatted local XML
+              description: (cachedEntry.description && cachedEntry.description.trim().length > 0)
+                  ? cachedEntry.description
+                  : (modData?.description || ''),
+              // Screenshots take precedence over single icon
+              images: (cachedEntry.images && cachedEntry.images.length > 0)
+                  ? cachedEntry.images
+                  : (modData?.images && modData.images.length > 0 ? modData.images : (cachedEntry.image ? [cachedEntry.image] : [])),
+              techData: { ...(cachedEntry.techData || {}), ...(modData?.techData || {}) },
+              metadata: { ...(cachedEntry.metadata || {}), ...(modData?.metadata || {}) }
+          };
+      } else if (!modData && effectiveModId && currentCache[String(effectiveModId)]) {
+          modData = { ...currentCache[String(effectiveModId)] };
+      }
+
+      // If local or cached mod data exists, render it immediately to prevent skeleton loading screens
       if (modData) {
           setMod(modData);
           setLoading(false);
@@ -532,10 +634,11 @@ export default function ModDetailPage() {
       if (!effectiveModId && isOnline && modData) {
           try {
               const query = (modData.title || modData.modName || fileName || '').replace(/\.zip$/i, '').trim();
-              if (query && window.api?.modhub?.search) {
-                  const searchRes = await window.api.modhub.search({ query, page: 0 });
+              const cleanQuery = query.replace(/^(?:fs25|fs22|pdlc)[_\\s]/i, '').replace(/[_\\-]/g, ' ').trim();
+              if (cleanQuery && window.api?.modhub?.search) {
+                  const searchRes = await window.api.modhub.search({ query: cleanQuery, page: 0 });
                   if (searchRes && searchRes.mods && searchRes.mods.length > 0) {
-                      const cleanTarget = query.toLowerCase().replace(/[^a-z0-9]/g, '');
+                      const cleanTarget = cleanQuery.toLowerCase().replace(/[^a-z0-9]/g, '');
                       const match = searchRes.mods.find(m => {
                           const mTitle = (m.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
                           const mFile = (m.fileName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -551,7 +654,7 @@ export default function ModDetailPage() {
           }
       }
 
-      // 1. Resolve remote map/mod data asynchronously if online
+      // Resolve remote map/mod data asynchronously if online
       if (effectiveModId) {
           try {
               const remote = await window.api.modhub.fetchModDetail({ modId: effectiveModId });
@@ -560,8 +663,14 @@ export default function ModDetailPage() {
                   const updatedModData = {
                       ...(modData || {}),
                       ...remote,
-                      // Preserve local icon and images if remote has fewer images
-                      images: (remote.images && remote.images.length > 0) ? remote.images : (modData?.images || []),
+                      // Remote description takes precedence over empty local description
+                      description: (remote.description && remote.description.trim().length > 0)
+                          ? remote.description
+                          : (modData?.description || ''),
+                      // Remote screenshots take precedence over local single icon
+                      images: (remote.images && remote.images.length > 0)
+                          ? remote.images
+                          : (modData?.images && modData.images.length > 0 ? modData.images : (remote.image ? [remote.image] : [])),
                       metadata: { ...(modData?.metadata || {}), ...(remote.metadata || {}) },
                       techData: { ...(modData?.techData || {}), ...(remote.techData || {}) }
                   };
@@ -575,9 +684,11 @@ export default function ModDetailPage() {
                           setResolvedMetadata(prev => ({ ...prev, ...resolvedMetaUpdate }));
                       }
                   }).catch(() => {});
+              } else if (!modData && remote) {
+                  setMod(remote);
               }
           } catch (err) {
-              console.warn('Remote fetch failed, falling back to local metadata');
+              console.warn('Remote fetch failed, falling back to local/cached metadata');
           }
       } else if (modId) {
           const result = await window.api.modhub.fetchModDetail({ modId });
@@ -791,17 +902,37 @@ export default function ModDetailPage() {
         <div>
           {/* Gallery */}
           <div className="mod-detail__gallery">
-            {images.length > 0 ? (
-              <img 
-                src={proxiedImages[images[activeImage]] || images[activeImage]} 
-                alt={mod.title} 
-                onError={(e) => { 
-                  setImageFailures(prev => ({ ...prev, [images[activeImage]]: true }));
-                  if (activeImage < images.length - 1) setActiveImage(prev => prev + 1);
-                }}
-                style={{ display: imageFailures[images[activeImage]] ? 'none' : 'block' }}
-              />
-            ) : (
+            {images.length > 0 ? (() => {
+              const currentImg = images[activeImage] || images[0];
+              const currentSrc = getImageSrc(currentImg);
+              const hasFailed = imageFailures[currentImg];
+
+              if (hasFailed) {
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
+                    <Package size={64} />
+                  </div>
+                );
+              }
+
+              if (!currentSrc) {
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
+                    <RefreshCw size={36} className="spin" style={{ opacity: 0.6 }} />
+                  </div>
+                );
+              }
+
+              return (
+                <img 
+                  src={currentSrc} 
+                  alt={mod.title} 
+                  onError={() => { 
+                    setImageFailures(prev => ({ ...prev, [currentImg]: true }));
+                  }}
+                />
+              );
+            })() : (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
                 <Package size={64} />
               </div>
@@ -810,22 +941,32 @@ export default function ModDetailPage() {
 
           {images.length > 1 && (
             <div className="mod-detail__gallery-thumbs">
-              {images.map((img, idx) => (
-                <div
-                  key={idx}
-                  className={`mod-detail__gallery-thumb ${idx === activeImage ? 'mod-detail__gallery-thumb--active' : ''}`}
-                  onClick={() => setActiveImage(idx)}
-                >
-                  <img 
-                    src={proxiedImages[img] || img} 
-                    alt={`Screenshot ${idx + 1}`} 
-                    onError={(e) => {
-                      setImageFailures(prev => ({ ...prev, [img]: true }));
-                    }}
-                    style={{ opacity: imageFailures[img] ? 0.3 : 1, filter: imageFailures[img] ? 'grayscale(1)' : 'none' }}
-                  />
-                </div>
-              ))}
+              {images.map((img, idx) => {
+                const thumbSrc = getImageSrc(img);
+                const hasFailed = imageFailures[img];
+                return (
+                  <div
+                    key={idx}
+                    className={`mod-detail__gallery-thumb ${idx === activeImage ? 'mod-detail__gallery-thumb--active' : ''}`}
+                    onClick={() => setActiveImage(idx)}
+                  >
+                    {thumbSrc ? (
+                      <img 
+                        src={thumbSrc} 
+                        alt={`Screenshot ${idx + 1}`} 
+                        onError={() => {
+                          setImageFailures(prev => ({ ...prev, [img]: true }));
+                        }}
+                        style={{ opacity: hasFailed ? 0.3 : 1, filter: hasFailed ? 'grayscale(1)' : 'none' }}
+                      />
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', background: 'rgba(255,255,255,0.03)' }}>
+                        <Package size={20} style={{ opacity: 0.4 }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -838,14 +979,14 @@ export default function ModDetailPage() {
             </div>
           )}
 
-          {mod.description && (
+          {formattedDescription && (
             <div style={{ marginTop: 'var(--sp-6)' }}>
               <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 'var(--sp-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Info size={14} /> Description
               </div>
               <div
                 className="mod-detail__desc"
-                dangerouslySetInnerHTML={{ __html: mod.description }}
+                dangerouslySetInnerHTML={{ __html: formattedDescription }}
               />
             </div>
           )}
