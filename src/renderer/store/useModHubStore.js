@@ -262,11 +262,15 @@ export const useModHubStore = create((set, get) => ({
       const isMultiItem = /(?:pack|package|series|collection|set|trailers|haul|transporter)/i.test(m.title || '') || /(?:pack|package|collection|set)/i.test(m.category || '');
       const needsPriceRescrape = (
         ((isMultiItem || descHasPriceRange) && priceMin === priceMax && (descHasPriceRange || descHasPrices)) ||
-        (price < 500 && descHasPrices)
+        (price < 500 && descHasPrices) ||
+        (priceMin > 0 && priceMin < 500 && descHasPrices)
       );
       const isTrailerOrTanker = /(?:trailer|tipper|kipper|slurry|spreader|tanker|wagon|dumper|chaser|auger|manure)/i.test(m.category || m.title);
       const descHasCap = m.description && /(?:capact?i(?:ty|ties)|kapazit[aä]t|capacit[eé]|volume|volumen|inhalte?|fassungsverm[oö]gen|inhalt)[:\-\s/]+.*?\d/i.test(m.description);
-      const needsTrailerCapRescrape = isTrailerOrTanker && cap === 0 && unitCap === 0 && descHasCap;
+      const needsTrailerCapRescrape = isTrailerOrTanker && (
+        (cap === 0 && unitCap === 0 && descHasCap) ||
+        (capMin === 1500 && capMax >= 50000)
+      );
 
       return (
         needsTrailerCapRescrape ||

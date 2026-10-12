@@ -869,12 +869,16 @@ ipcMain.handle('modhub:getBatchDetails', async (_, modIds) => {
       const descHasPrices = cached.description && /(?:base\s+price|configuration\s+price|prices?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|cost|kosten)[:\-\s]*[$€£]?\s*[\d'’\s,.]+/i.test(cached.description);
       const needsPriceRescrape = cached.techData?.scraped && (
         (isPackMod && priceMin === priceMax && descHasPrices) ||
-        (price < 500 && descHasPrices)
+        (price < 500 && descHasPrices) ||
+        (priceMin > 0 && priceMin < 500 && descHasPrices)
       );
 
       const isTrailerOrTanker = /(?:trailer|tipper|kipper|slurry|spreader|tanker|wagon|dumper|chaser|auger|manure)/i.test(catStr || titleStr);
       const descHasCap = cached.description && /(?:capact?i(?:ty|ties)|kapazit[aä]t|capacit[eé]|volume|volumen|inhalte?|fassungsverm[oö]gen|inhalt)[:\-\s/]+.*?\d/i.test(cached.description);
-      const needsTrailerCapRescrape = isTrailerOrTanker && cap === 0 && unitCap === 0 && descHasCap;
+      const needsTrailerCapRescrape = isTrailerOrTanker && (
+        (cap === 0 && unitCap === 0 && descHasCap) ||
+        (capMin === 1500 && capMax >= 50000) // Catches old corrupt La Campagne cache (1,500 - 91,000)
+      );
 
       const needsRescrape = cached.techData?.scraped && (
         needsTrailerCapRescrape ||

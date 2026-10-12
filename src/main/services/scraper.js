@@ -858,11 +858,13 @@ function parseModDetailFromHtml(html, modId) {
     let inPriceBlock = false;
 
     const extractPricesFromText = (str, list) => {
-      // 1. First look for explicit range expressions like "$24,000 - 40,000", "24.000 - 40.000 €", "from $24,000 to $40,000"
-      const rangeRe = /(?:[$€£]\s*)?((?:\d{1,3}(?:[.,\s]\d{3})+|\d+))\s*(?:[$€£])?\s*(?:[-–—~]|\s+to\s+|\s+bis\s+|\s+à\s+|\s+a\s+)\s*(?:[$€£]\s*)?((?:\d{1,3}(?:[.,\s]\d{3})+|\d+))\s*(?:[$€£])?/gi;
+      // 1. Explicit currency range expressions like "$42,500 - $68,500", "24.000 - 40.000 €", "from $24,000 to $40,000"
+      const currRangeRe = /(?:[$€£]\s*)(\d[\d'’\s,.]*\d|\d+)\s*(?:[-–—~]|\s+to\s+|\s+bis\s+|\s+à\s+|\s+a\s+)\s*(?:[$€£]\s*)?(\d[\d'’\s,.]*\d|\d+)|(\d[\d'’\s,.]*\d|\d+)\s*[$€£]?\s*(?:[-–—~]|\s+to\s+|\s+bis\s+|\s+à\s+|\s+a\s+)\s*(\d[\d'’\s,.]*\d|\d+)\s*[$€£]/gi;
       let rMatch;
-      while ((rMatch = rangeRe.exec(str)) !== null) {
-        [rMatch[1], rMatch[2]].forEach(s => {
+      while ((rMatch = currRangeRe.exec(str)) !== null) {
+        const p1Str = rMatch[1] || rMatch[3];
+        const p2Str = rMatch[2] || rMatch[4];
+        [p1Str, p2Str].forEach(s => {
           if (!s) return;
           s = s.replace(/['’]/g, '').trim();
           let val = 0;
@@ -871,7 +873,7 @@ function parseModDetailFromHtml(html, modId) {
           } else {
             val = parseInt(s.replace(/[^0-9]/g, ''), 10);
           }
-          if (val >= 50 && val < 50000000) list.push(val);
+          if (val >= 100 && val < 50000000) list.push(val);
         });
       }
 
@@ -886,12 +888,12 @@ function parseModDetailFromHtml(html, modId) {
         } else {
           val = parseInt(s.replace(/[^0-9]/g, ''), 10);
         }
-        if (val >= 50 && val < 50000000) list.push(val);
+        if (val >= 100 && val < 50000000) list.push(val);
       }
 
-      // 3. Also extract standalone formatted numbers (e.g. 24.000 or 40,000 or single prices)
-      const numTokenRe = /(?<![a-zA-Z])(\d[\d'’\s,.]*\d|\d+)(?![a-zA-Z])/g;
-      while ((match = numTokenRe.exec(str)) !== null) {
+      // 3. Numbers following explicit price keywords without currency symbol: Price: 15,000 or Base price: 25.000
+      const kwPriceRe = /(?:base\s+price|configuration\s+price|prices?\s*(?:and\s+capacity)?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|precio(?:\s*(?:desde))?|prezzo|cena|preço|cost|kosten)[:\-\s]+([0-9][0-9'’\s,.]*[0-9]|[0-9]+)/gi;
+      while ((match = kwPriceRe.exec(str)) !== null) {
         let s = match[1].replace(/['’]/g, '').trim();
         let val = 0;
         if (/^\d{1,3}[,.\s]\d{3}$/.test(s) || /^\d{1,3}(?:[,.\s]\d{3})+$/.test(s)) {
@@ -899,7 +901,7 @@ function parseModDetailFromHtml(html, modId) {
         } else {
           val = parseInt(s.replace(/[^0-9]/g, ''), 10);
         }
-        if (val >= 50 && val < 50000000) list.push(val);
+        if (val >= 500 && val < 50000000) list.push(val);
       }
     };
 
@@ -1077,55 +1079,97 @@ function parseModDetailFromHtml(html, modId) {
       // support space/comma/apostrophe thousand sep, optional trailing dot for decimals like "40."
       const numTokenRe = /(?<![a-zA-Z])(\d[\d'’\s,]*(?:\.\d*)?)(k?)/gi;
 
+      // Regex for capacity expressions:
+      // Pattern 1: Capacity keyword followed by number(s): "capacity from 20.25 m³ to 27.50 m³", "load capacity ranging from 20.25 m³ to 31.00 m³", "Kapazität: 14.000 - 39.000 l"
+      const capAfterKeywordRe = /(?:capact?i(?:ty|ties)|kapazit[aä]t|capacit[eé]|volume|volumen|ladevolumen|pojemno[sś][cć]|capacidad|capacit[aà]|tank\s*inhalt|grain\s*tank|korntank|bunker|fassungsverm[oö]gen|inhalt|tank\s*capacity|load\s*capacity)[^0-9\n\r]*([0-9][0-9.,'\s]*[0-9]|[0-9]+)\s*(k?)\s*(m³|m3|cubic|liters?|litres?|\bl\b)?(?:\s*(?:[-–—~]|to|bis|à|a)\s*([0-9][0-9.,'\s]*[0-9]|[0-9]+)\s*(k?)\s*(m³|m3|cubic|liters?|litres?|\bl\b)?)?/gi;
+      // Pattern 2: Number followed by capacity keyword: "33,000 liter capacity", "14000 l kapazität"
+      const capBeforeKeywordRe = /([0-9][0-9.,'\s]*[0-9]|[0-9]+)\s*(k?)\s*(m³|m3|cubic|liters?|litres?|\bl\b)?(?:\s*(?:[-–—~]|to|bis|à|a)\s*([0-9][0-9.,'\s]*[0-9]|[0-9]+)\s*(k?)\s*(m³|m3|cubic|liters?|litres?|\bl\b)?)?\s*(?:capact?i(?:ty|ties)|kapazit[aä]t|capacit[eé]|volume|volumen|ladevolumen|pojemno[sś][cć]|capacidad|capacit[aà]|tank\s*inhalt|grain\s*tank|korntank|bunker|fassungsverm[oö]gen|inhalt)/gi;
+
       let overallMin = null;
       let overallMax = null;
       let inCapBlock = false;
 
       for (const line of rawLines) {
-        let scanText = '';
         if (capHeaderOnlyRe.test(line)) {
           inCapBlock = true;
           continue;
-        } else if (inCapBlock) {
-          if (/(?:config|price|color|wheel|tire|fahr|engine|speed|power|working\s*speed)/i.test(line) && !litreUnitRe.test(line)) {
-            inCapBlock = false;
-            continue;
-          }
-          if (litreUnitRe.test(line) || /^[-*•]/.test(line)) {
-            scanText = line;
-          } else {
-            inCapBlock = false;
-            continue;
-          }
-        } else if (capMentionRe.test(line)) {
-          // Line explicitly mentions capacity / volume / inhalt / tank
-          scanText = line;
-        } else if (litreUnitRe.test(line) && !/(?:speed|power|hp|kw|width|weight|version|v\d)/i.test(line)) {
-          // Explicit litre unit token on line (e.g. "12000 liter" or "34.000 l")
-          scanText = line;
         }
 
-        if (scanText) {
-          // Strip prices from scanText to avoid mistaking $8500 as 8500L
-          const cleanedText = scanText.replace(/[$€£]\s*\d[\d,.]*|\d[\d,.]*\s*[$€£]/g, '');
-          const hasLitre = litreUnitRe.test(cleanedText);
+        // Clean out prices first to avoid mistaking $8,500 as 8,500 L
+        const cleanedText = line.replace(/[$€£]\s*\d[\d,.]*|\d[\d,.]*\s*[$€£]/g, '');
+        const lineCaps = [];
+
+        if (inCapBlock) {
+          if (/(?:config|price|color|wheel|tire|fahr|engine|speed|power|working\s*speed)/i.test(cleanedText) && !litreUnitRe.test(cleanedText)) {
+            inCapBlock = false;
+          } else if (litreUnitRe.test(cleanedText) || /^[-*•]/.test(cleanedText)) {
+            const isCubic = /(m³|m3|cubic)/i.test(cleanedText);
+            const hasLitre = litreUnitRe.test(cleanedText);
+            numTokenRe.lastIndex = 0;
+            let nt;
+            while ((nt = numTokenRe.exec(cleanedText)) !== null) {
+              const val = parseCapNum(nt[1], nt[2]);
+              if (isCubic ? val > 0 : (hasLitre ? val >= 100 : val >= 500)) {
+                const litreVal = Math.round(isCubic && val < 1000 ? val * 1000 : val);
+                if (litreVal >= 100 && litreVal < 50000000) lineCaps.push(litreVal);
+              }
+            }
+          } else {
+            inCapBlock = false;
+          }
+        }
+
+        if (lineCaps.length === 0 && capMentionRe.test(cleanedText)) {
+          capAfterKeywordRe.lastIndex = 0;
+          let m;
+          while ((m = capAfterKeywordRe.exec(cleanedText)) !== null) {
+            const isCubic = /(m³|m3|cubic)/i.test(m[3] || m[6] || cleanedText);
+            const hasLitre = /liters?|litres?|\bl\b/i.test(m[3] || m[6] || cleanedText);
+            [ { valStr: m[1], k: m[2] }, { valStr: m[4], k: m[5] } ].forEach(({ valStr, k }) => {
+              if (!valStr) return;
+              const v = parseCapNum(valStr, k);
+              if (isCubic ? v > 0 : (hasLitre ? v >= 100 : v >= 500)) {
+                const litreVal = Math.round(isCubic && v < 1000 ? v * 1000 : v);
+                if (litreVal >= 100 && litreVal < 50000000) lineCaps.push(litreVal);
+              }
+            });
+          }
+
+          if (lineCaps.length === 0) {
+            capBeforeKeywordRe.lastIndex = 0;
+            while ((m = capBeforeKeywordRe.exec(cleanedText)) !== null) {
+              const isCubic = /(m³|m3|cubic)/i.test(m[3] || m[6] || cleanedText);
+              const hasLitre = /liters?|litres?|\bl\b/i.test(m[3] || m[6] || cleanedText);
+              [ { valStr: m[1], k: m[2] }, { valStr: m[4], k: m[5] } ].forEach(({ valStr, k }) => {
+                if (!valStr) return;
+                const v = parseCapNum(valStr, k);
+                if (isCubic ? v > 0 : (hasLitre ? v >= 100 : v >= 500)) {
+                  const litreVal = Math.round(isCubic && v < 1000 ? v * 1000 : v);
+                  if (litreVal >= 100 && litreVal < 50000000) lineCaps.push(litreVal);
+                }
+              });
+            }
+          }
+        } else if (lineCaps.length === 0 && litreUnitRe.test(cleanedText) && !/(?:speed|power|hp|kw|width|weight|version|v\d)/i.test(cleanedText)) {
+          // Explicit litre unit token on line (e.g. "12000 liter" or "34.000 l")
           const isCubic = /(m³|m3|cubic)/i.test(cleanedText);
-          const lineNums = [];
+          const hasLitre = litreUnitRe.test(cleanedText);
           numTokenRe.lastIndex = 0;
           let nt;
           while ((nt = numTokenRe.exec(cleanedText)) !== null) {
             const val = parseCapNum(nt[1], nt[2]);
             if (isCubic ? val > 0 : (hasLitre ? val >= 100 : val >= 500)) {
               const litreVal = Math.round(isCubic && val < 1000 ? val * 1000 : val);
-              if (litreVal < 50000000) lineNums.push(litreVal);
+              if (litreVal >= 100 && litreVal < 50000000) lineCaps.push(litreVal);
             }
           }
-          if (lineNums.length > 0) {
-            const lineMin = Math.min(...lineNums);
-            const lineMax = Math.max(...lineNums);
-            if (overallMin === null || lineMin < overallMin) overallMin = lineMin;
-            if (overallMax === null || lineMax > overallMax) overallMax = lineMax;
-          }
+        }
+
+        if (lineCaps.length > 0) {
+          const lineMin = Math.min(...lineCaps);
+          const lineMax = Math.max(...lineCaps);
+          if (overallMin === null || lineMin < overallMin) overallMin = lineMin;
+          if (overallMax === null || lineMax > overallMax) overallMax = lineMax;
         }
       }
 
