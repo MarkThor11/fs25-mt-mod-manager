@@ -855,7 +855,9 @@ function parseModDetailFromHtml(html, modId) {
     // 1. Price scan across lines (extracts min and max prices across packs & variants)
     const pricePrefixRe = /^(?:[-*•\s]*)(?:base\s+price|configuration\s+price|prices?\s*(?:and\s+capacity)?\s*(?:from|ab|à partir de)?|preis(?:\s*(?:ab|von))?|prix(?:\s*(?:à partir de))?|precio(?:\s*(?:desde))?|prezzo|cena|preço|cost|kosten)[:\-\s]*(.*)/i;
     const descPrices = [];
+    const addonPrices = [];
     let inPriceBlock = false;
+    const upgradeRe = /(?:\+\s*[$€£]?\s*([0-9][0-9'’\s,.]*[0-9]|[0-9]+)|[$€£]?\s*([0-9][0-9'’\s,.]*[0-9]|[0-9]+)\s*[$€£]?\s*(?:extra|more|zus[aä]tzlich|aufpreis|zusatzkosten)|(?:extra|aufpreis|zusatzkosten)[:\s]*[$€£]?\s*([0-9][0-9'’\s,.]*[0-9]|[0-9]+))/i;
 
     const extractPricesFromText = (str, list) => {
       // 1. Explicit currency range expressions like "$42,500 - $68,500", "24.000 - 40.000 €", "from $24,000 to $40,000"
@@ -906,6 +908,21 @@ function parseModDetailFromHtml(html, modId) {
     };
 
     for (const line of rawLines) {
+      // Check for upgrade / option add-on prices (e.g. "+ $1,000 for extra capacity", "(+ 1.000 €)", "Aufpreis: 2.500 €")
+      const um = line.match(upgradeRe);
+      if (um) {
+        let s = (um[1] || um[2] || um[3]).replace(/['’]/g, '').trim();
+        let val = 0;
+        if (/^\d{1,3}[,.\s]\d{3}$/.test(s) || /^\d{1,3}(?:[,.\s]\d{3})+$/.test(s)) {
+          val = parseInt(s.replace(/[,.\s]/g, ''), 10);
+        } else {
+          val = parseInt(s.replace(/[^0-9]/g, ''), 10);
+        }
+        if (val >= 50 && val < 5000000) {
+          addonPrices.push(val);
+        }
+      }
+
       const pm = line.match(pricePrefixRe);
       if (pm) {
         if (pm[1] && pm[1].trim()) {
@@ -916,7 +933,7 @@ function parseModDetailFromHtml(html, modId) {
         }
       } else if (inPriceBlock) {
         if (/^[-*•]/.test(line)) {
-          extractPricesFromText(line, descPrices);
+          if (!um) extractPricesFromText(line, descPrices);
           continue;
         } else {
           inPriceBlock = false;
@@ -924,11 +941,8 @@ function parseModDetailFromHtml(html, modId) {
       }
 
       // Model-level or inline prices (e.g. "- 60-21: from $42,500" or "Trailer: 44.000$" or "DBL8: 11500$")
-      // Ignore upgrade/option prices like "+ $1,000" or "(+ 1.000 €)" or "extra $500"
-      if (/[$€£]/.test(line) && !/(?:kph|mph|km\/h|working\s*width|arbeitsbreite)/i.test(line)) {
-        if (!/\+\s*[$€£]?\s*[\d,.]+|[$€£]\s*[\d,.]+\s*(?:extra|more)/i.test(line)) {
-          extractPricesFromText(line, descPrices);
-        }
+      if (!um && /[$€£]/.test(line) && !/(?:kph|mph|km\/h|working\s*width|arbeitsbreite)/i.test(line)) {
+        extractPricesFromText(line, descPrices);
       }
     }
     if (descPrices.length > 0) {
@@ -965,6 +979,17 @@ function parseModDetailFromHtml(html, modId) {
           techData.priceMin = parsedPrice;
           techData.priceMax = parsedPrice;
         }
+      }
+    }
+
+    // Addon / upgrade configurations: add top upgrade cost to priceMax to form the complete price range
+    if (addonPrices.length > 0) {
+      const maxAddon = Math.max(...addonPrices);
+      const currentBase = techData.priceMin || techData.price || 0;
+      if (currentBase > 0) {
+        techData.priceMin = currentBase;
+        techData.priceMax = (techData.priceMax || currentBase) + maxAddon;
+        techData.price = techData.priceMax;
       }
     }
 
