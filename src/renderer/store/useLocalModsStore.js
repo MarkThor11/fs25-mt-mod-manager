@@ -385,6 +385,8 @@ export const useLocalModsStore = create((set, get) => ({
     });
 
     await Promise.allSettled(updatePromises);
+    // After batch completes, perform a rescan to sync versions and UI
+    await get().scanMods(null, false);
   },
 
   uninstallMod: async (modFileName, folder = null) => {

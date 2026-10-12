@@ -2576,8 +2576,8 @@ async function runInstallTask(task) {
 		
 		// ── SUCCESS CLEANUP/BACKUP ──
 		if (result.success) {
-			const modsPath = getModsPath();
-			const backupsDir = path.join(modsPath, 'backups');
+			const targetDir = oldPath ? path.dirname(oldPath) : (result.filePath ? path.dirname(result.filePath) : getModsPath());
+			const backupsDir = path.join(targetDir, 'backups');
 			const bakPath = oldPath ? path.join(backupsDir, `${path.basename(oldPath)}.bak`) : null;
 			
 			if (oldPath && fs.existsSync(oldPath)) {
@@ -2674,7 +2674,8 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 	}
 
 	// ── DISK SPACE SAFETY CHECK ──
-	const spaceCheck = checkFreeDiskSpace(subFolder ? path.join(getModsPath(), subFolder) : getModsPath());
+	const targetDiskPath = subFolder ? (path.isAbsolute(subFolder) ? subFolder : path.join(getModsPath(), subFolder)) : getModsPath();
+	const spaceCheck = checkFreeDiskSpace(targetDiskPath);
 	if (!spaceCheck.ok) {
 		console.warn(`[QUEUE] Refusing to queue ${modTitle}: ${spaceCheck.error}`);
 		broadcastStatus?.(modId, 'error');
@@ -3886,7 +3887,8 @@ async function updateModInternal(modFileName, modId, onProgress) {
 	const modsPath = getModsPath();
 	const currentPath = await findModPath(modFileName);
 	const originalPath = currentPath || path.join(modsPath, modFileName);
-	const backupsDir = path.join(modsPath, 'backups');
+	const targetDir = path.dirname(originalPath);
+	const backupsDir = path.join(targetDir, 'backups');
 	const backupPath = path.join(backupsDir, `${path.basename(originalPath)}.bak`);
 	
 	try {
@@ -3894,10 +3896,17 @@ async function updateModInternal(modFileName, modId, onProgress) {
 		let subFolder = null;
 		if (currentPath) {
 			const relative = path.relative(modsPath, currentPath);
-			const parts = relative.split(path.sep);
-			if (parts.length > 1) {
-				subFolder = parts.slice(0, -1).join(path.sep);
-				console.log(`[UPDATE] Mod is in subfolder, persisting: ${subFolder}`);
+			// Check if currentPath is under modsPath and in a subfolder
+			if (!relative.startsWith('..') && !path.isAbsolute(relative)) {
+				const parts = relative.split(path.sep);
+				if (parts.length > 1) {
+					subFolder = parts.slice(0, -1).join(path.sep);
+					console.log(`[UPDATE] Mod is in subfolder relative to modsPath, persisting: ${subFolder}`);
+				}
+			} else {
+				// Mod is on a secondary drive or outside modsPath; use its absolute containing directory
+				subFolder = targetDir;
+				console.log(`[UPDATE] Mod is on secondary drive/folder, persisting targetDir: ${subFolder}`);
 			}
 		}
 
@@ -3906,11 +3915,11 @@ async function updateModInternal(modFileName, modId, onProgress) {
 		const directUrl = detail?.downloadUrl || null;
 		const category = (detail?.category || '').toUpperCase();
 		
-		// 3. Backup the old version to dedicated backups directory
+		// 3. Backup the old version to dedicated backups directory (dereferencing symlinks if any)
 		if (fs.existsSync(originalPath)) {
 			await fs.ensureDir(backupsDir);
 			if (fs.existsSync(backupPath)) await fs.remove(backupPath);
-			await fs.copy(originalPath, backupPath);
+			await fs.copy(originalPath, backupPath, { dereference: true });
 		}
 		
 		// 4. Download and install (respecting subFolder)
