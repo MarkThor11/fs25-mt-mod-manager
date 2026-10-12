@@ -729,7 +729,9 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
           (cap === 0 && unitCap === 0) ||                              // no capacity at all
           (cap > 0 && cap < 1000 && unitCap === 0) ||                 // tiny litre = mis-parse
           (capMin > 0 && capMin < 1000 && capMax > 10000) ||          // model-number bleed in min
-          (capMin === 1500 && capMax >= 50000)                        // corrupt La Campagne cache
+          (capMin === 1500 && capMax >= 50000) ||                     // corrupt La Campagne cache
+          (modId === '368618' && (capMin !== 8000 || capMax !== 10000)) ||
+          (capMin === 5000 && capMax <= 10000 && /total/i.test(cached.description || ''))
         );
 
         // Re-scrape if priceMin is missing or packs with description have single price
@@ -882,6 +884,7 @@ ipcMain.handle('modhub:getBatchDetails', async (_, modIds) => {
       const needsTrailerCapRescrape = isTrailerOrTanker && (
         (cap === 0 && unitCap === 0 && descHasCap) ||
         (capMin === 1500 && capMax >= 50000) || // Catches old corrupt La Campagne cache (1,500 - 91,000)
+        (id === '368618' && (capMin !== 8000 || capMax !== 10000)) ||
         (capMin === 5000 && capMax <= 10000 && /total/i.test(cached.description || '')) // Catches per-side 5,000L vs total 10,000L
       );
 
