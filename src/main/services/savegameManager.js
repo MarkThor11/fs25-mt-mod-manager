@@ -1627,7 +1627,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             savegameData.careerSavegame.settings.loadDefaultVehicles = startFarmFlag;
             if (difficulty) savegameData.careerSavegame.settings.difficulty = String(difficulty);
 
-            savegameData.careerSavegame.settings.densityMapRevision = mapDeclaredRev;
+            const initialDensityRev = isOfficialBaseMap ? '4' : mapDeclaredRev;
+            savegameData.careerSavegame.settings.densityMapRevision = initialDensityRev;
             savegameData.careerSavegame.settings.mapDensityMapRevision = mapDeclaredRev;
 
             // Critically ensure valid="true" is present — without it FS25 engine treats slot as empty
@@ -6918,6 +6919,10 @@ async function ensureSavegameDensityMaps(savePath) {
                     if (!curRev && !careerXml.includes('<densityMapRevision>')) {
                         const targetDensityRev = isOfficialMap(mapId) ? '4' : '1';
                         careerXml = careerXml.replace(/<settings>/i, `<settings>\n        <densityMapRevision>${targetDensityRev}</densityMapRevision>`);
+                        modified = true;
+                    } else if (isOfficialMap(mapId) && curRev !== '4') {
+                        // Official base game and DLC maps (like Kinlaig) require revision 4 with valid density files
+                        careerXml = careerXml.replace(/<densityMapRevision>.*?<\/densityMapRevision>/i, `<densityMapRevision>4</densityMapRevision>`);
                         modified = true;
                     }
                     if (expectedRev && (!curMapRev || !careerXml.includes('<mapDensityMapRevision>'))) {
