@@ -31,12 +31,14 @@
         <helperBuyFertilizer>true</helperBuyFertilizer>
         <helperSlurrySource>2</helperSlurrySource>
         <helperManureSource>2</helperManureSource>
+        <densityMapRevision>4</densityMapRevision>
         <terrainTextureRevision>1</terrainTextureRevision>
         <terrainLodTextureRevision>2</terrainLodTextureRevision>
         <splitShapesRevision>2</splitShapesRevision>
         <tipCollisionRevision>2</tipCollisionRevision>
         <placementCollisionRevision>2</placementCollisionRevision>
         <navigationCollisionRevision>2</navigationCollisionRevision>
+        <mapDensityMapRevision>1</mapDensityMapRevision>
         <mapTerrainTextureRevision>1</mapTerrainTextureRevision>
         <mapTerrainLodTextureRevision>1</mapTerrainLodTextureRevision>
         <mapSplitShapesRevision>1</mapSplitShapesRevision>
