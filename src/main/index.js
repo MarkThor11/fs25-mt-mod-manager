@@ -2018,6 +2018,12 @@ ipcMain.handle('mods:probePath', async (event, path) => {
 // ── App lifecycle ──
 app.whenReady().then(() => {
   cache.init();
+  try {
+    // Automatically detect and register all storage drives (e.g. F:\mods4, D:\mods) on startup
+    modManager.getModsPaths();
+  } catch (e) {
+    console.warn('[STARTUP] Failed auto-registering mod paths:', e.message);
+  }
 
   if (cache.get('mods_best_0')) {
     console.log('[CACHE] Purging stale Top Rated cache...');

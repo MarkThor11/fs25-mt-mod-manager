@@ -543,12 +543,51 @@ function getModsPaths() {
 	if (pathsJson) {
 		try {
 			const paths = JSON.parse(pathsJson);
-			if (Array.isArray(paths) && paths.length > 0) return paths;
+			if (Array.isArray(paths) && paths.length > 1) return paths;
+			if (Array.isArray(paths) && paths.length === 1) {
+				// If only 1 path was configured, auto-merge any other detected storage directories (e.g. F:\mods4, D:\mods)
+				const detected = detectAllModsPaths().map(d => d.path);
+				const merged = [...paths];
+				for (const dp of detected) {
+					if (!merged.some(p => p.toLowerCase() === dp.toLowerCase())) {
+						merged.push(dp);
+					}
+				}
+				if (merged.length > paths.length) {
+					// Save merged paths so they persist
+					try {
+						cache.setSetting('modsPaths', JSON.stringify(merged));
+					} catch (_) {}
+					return merged;
+				}
+				return paths;
+			}
 		} catch (e) {}
 	}
-	// Fallback to old single 'modsPath' or default
+	// Fallback when modsPaths is not set: automatically gather all detected paths
+	const detected = detectAllModsPaths().map(d => d.path);
 	const singlePath = cache.getSetting('modsPath') || getDefaultModsPath();
-	return [singlePath];
+	const initial = [singlePath];
+	for (const dp of detected) {
+		if (!initial.some(p => p.toLowerCase() === dp.toLowerCase())) {
+			initial.push(dp);
+		}
+	}
+	// Prioritize F:\mods4 as primary if F:\mods4 exists and has mods, or keep the existing first
+	const fMods = initial.find(p => p.toLowerCase().startsWith('f:\\mods4'));
+	if (fMods) {
+		const reordered = [fMods, ...initial.filter(p => p !== fMods)];
+		try {
+			cache.setSetting('modsPaths', JSON.stringify(reordered));
+			cache.setSetting('modsPath', fMods);
+		} catch (_) {}
+		return reordered;
+	}
+	try {
+		cache.setSetting('modsPaths', JSON.stringify(initial));
+		cache.setSetting('modsPath', initial[0]);
+	} catch (_) {}
+	return initial;
 }
 
 /**
@@ -1241,7 +1280,9 @@ function detectAllModsPaths() {
 							const parts = linkTarget.slice(drive.length).split(/[\\/]/).filter(Boolean);
 							if (parts.length > 0) {
 								const rootFolder = path.join(drive, parts[0]);
-								if (fs.existsSync(rootFolder) && fs.statSync(rootFolder).isDirectory()) {
+								// Ignore system root folders like C:\Users, C:\Windows, C:\Program Files
+								const isSystemDir = /^[a-zA-Z]:\\(Users|Windows|Program Files|Program Files \(x86\)|ProgramData)$/i.test(rootFolder);
+								if (!isSystemDir && fs.existsSync(rootFolder) && fs.statSync(rootFolder).isDirectory()) {
 									potentialPaths.push({ path: rootFolder, type: `Linked Storage (${drive[0].toUpperCase()}:)` });
 								}
 							}
