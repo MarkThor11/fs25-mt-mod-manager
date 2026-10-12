@@ -685,6 +685,19 @@ function parseModDetailFromHtml(html, modId) {
     }
   });
 
+  // ── Category & Type Flags ──
+  const category = (metadata['Category'] || metadata['category'] || '').trim();
+  const isMap = isMapCategory(category);
+  const isPack = category.toLowerCase().includes('package') || title.toLowerCase().includes('pack');
+
+  // ── Brand ──
+  let brand = metadata['Manufacturer'] || metadata['Brand'] || '';
+  if (!brand) {
+    Object.entries(metadata).forEach(([k, v]) => {
+      if (k.toLowerCase().includes('brand') || k.toLowerCase().includes('manufac')) brand = v;
+    });
+  }
+
   // ── Version ──
   let version = metadata['Released'] || metadata['Released date'] || ''; // Prioritize Released date for decay tracking
   let releasedDate = metadata['Released'] || metadata['Released date'] || '';
@@ -1248,20 +1261,6 @@ function parseModDetailFromHtml(html, modId) {
       techData.capacityMax = 0;
     }
   }
-
-  // ── Brand ──
-  let brand = metadata['Manufacturer'] || metadata['Brand'] || '';
-  if (!brand) {
-    Object.entries(metadata).forEach(([k, v]) => {
-      if (k.toLowerCase().includes('brand') || k.toLowerCase().includes('manufac')) brand = v;
-    });
-  }
-
-  // ── Category ──
-  // ── Category & Type Flags ──
-  const category = (metadata['Category'] || metadata['category'] || '').trim();
-  const isMap = isMapCategory(category);
-  const isPack = category.toLowerCase().includes('package') || title.toLowerCase().includes('pack');
 
   // ── Dependencies (Required Mods) ──
   const dependencies = [];
