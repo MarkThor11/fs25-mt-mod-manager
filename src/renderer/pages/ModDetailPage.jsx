@@ -528,13 +528,43 @@ export default function ModDetailPage() {
           setLoading(false);
       }
 
-      // 1. Resolve remote map data asynchronously if online
+      // If we don't have an effectiveModId but are online and have a title/fileName, try to find the mod on ModHub
+      if (!effectiveModId && isOnline && modData) {
+          try {
+              const query = (modData.title || modData.modName || fileName || '').replace(/\.zip$/i, '').trim();
+              if (query && window.api?.modhub?.search) {
+                  const searchRes = await window.api.modhub.search({ query, page: 0 });
+                  if (searchRes && searchRes.mods && searchRes.mods.length > 0) {
+                      const cleanTarget = query.toLowerCase().replace(/[^a-z0-9]/g, '');
+                      const match = searchRes.mods.find(m => {
+                          const mTitle = (m.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                          const mFile = (m.fileName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                          return mTitle === cleanTarget || mFile === cleanTarget || mTitle.includes(cleanTarget) || cleanTarget.includes(mTitle);
+                      }) || searchRes.mods[0];
+                      if (match && match.modId) {
+                          effectiveModId = match.modId;
+                      }
+                  }
+              }
+          } catch (e) {
+              console.warn('Search for remote ModHub details failed:', e);
+          }
+      }
+
+      // 1. Resolve remote map/mod data asynchronously if online
       if (effectiveModId) {
           try {
               const remote = await window.api.modhub.fetchModDetail({ modId: effectiveModId });
               if (remote && !remote.error) {
                   const remoteDeps = remote.dependencies || [];
-                  const updatedModData = { ...(modData || {}), ...remote };
+                  const updatedModData = {
+                      ...(modData || {}),
+                      ...remote,
+                      // Preserve local icon and images if remote has fewer images
+                      images: (remote.images && remote.images.length > 0) ? remote.images : (modData?.images || []),
+                      metadata: { ...(modData?.metadata || {}), ...(remote.metadata || {}) },
+                      techData: { ...(modData?.techData || {}), ...(remote.techData || {}) }
+                  };
                   if (remoteDeps.length > 0) updatedModData.dependencies = remoteDeps;
                   
                   setMod(updatedModData);
@@ -1297,9 +1327,16 @@ export default function ModDetailPage() {
                 {mod.rating || '—'}
               </span>
             </div>
+            {/* Category */}
+            {(mod.category || mod.metadata?.Category) && (
+              <div className="mod-detail__meta-row">
+                <span className="mod-detail__meta-label">Category</span>
+                <span className="mod-detail__meta-value">{mod.category || mod.metadata?.Category}</span>
+              </div>
+            )}
             {/* Additional metadata from scraper */}
             {mod.metadata && Object.entries(mod.metadata).map(([key, value]) => {
-              if (['author', 'version', 'file size'].includes(key.toLowerCase())) return null;
+              if (['author', 'version', 'file size', 'category'].includes(key.toLowerCase())) return null;
               return (
                 <div className="mod-detail__meta-row" key={key}>
                   <span className="mod-detail__meta-label" style={{ textTransform: 'capitalize' }}>{key}</span>
@@ -1307,6 +1344,68 @@ export default function ModDetailPage() {
                 </div>
               );
             })}
+            {/* Technical Specifications (Price, HP, Capacity, Speed, Weight) */}
+            {(() => {
+              const tech = mod.techData;
+              if (!tech) return null;
+              const isMap = Boolean(mod.isMap || isMapCategory(mod.category) || isMapCategory(mod.metadata?.Category));
+              const price = tech.price || (tech.priceMin && tech.priceMax ? tech.priceMin : 0);
+              const priceDisplay = (tech.priceMin && tech.priceMax && tech.priceMin !== tech.priceMax) 
+                ? `$${tech.priceMin.toLocaleString()} - $${tech.priceMax.toLocaleString()}`
+                : (price > 0 ? `$${price.toLocaleString()}` : null);
+              const hpDisplay = (tech.hpMin && tech.hpMax && tech.hpMin !== tech.hpMax)
+                ? `${tech.hpMin} - ${tech.hpMax} HP`
+                : (tech.hp > 0 ? `${tech.hp} HP` : null);
+              const capDisplay = (tech.capacityMin && tech.capacityMax && tech.capacityMin !== tech.capacityMax)
+                ? `${tech.capacityMin.toLocaleString()} - ${tech.capacityMax.toLocaleString()} L`
+                : (tech.capacity > 0 ? `${tech.capacity.toLocaleString()} L` : null);
+              const unitCapDisplay = (tech.unitCapacity > 0 && tech.unitCapacityType)
+                ? `${tech.unitCapacity.toLocaleString()} ${tech.unitCapacityType}`
+                : null;
+              const speedDisplay = tech.speed > 0 ? `${tech.speed} km/h` : null;
+              const weightDisplay = tech.weight > 0 ? `${tech.weight} t` : null;
+
+              return (
+                <>
+                  {!isMap && priceDisplay && (
+                    <div className="mod-detail__meta-row">
+                      <span className="mod-detail__meta-label">Price</span>
+                      <span className="mod-detail__meta-value">{priceDisplay}</span>
+                    </div>
+                  )}
+                  {!isMap && hpDisplay && (
+                    <div className="mod-detail__meta-row">
+                      <span className="mod-detail__meta-label">{tech.hpIsRequirement ? 'Power Required' : 'Power'}</span>
+                      <span className="mod-detail__meta-value">{hpDisplay}</span>
+                    </div>
+                  )}
+                  {!isMap && capDisplay && (
+                    <div className="mod-detail__meta-row">
+                      <span className="mod-detail__meta-label">Capacity</span>
+                      <span className="mod-detail__meta-value">{capDisplay}</span>
+                    </div>
+                  )}
+                  {!isMap && unitCapDisplay && (
+                    <div className="mod-detail__meta-row">
+                      <span className="mod-detail__meta-label">Unit Capacity</span>
+                      <span className="mod-detail__meta-value">{unitCapDisplay}</span>
+                    </div>
+                  )}
+                  {!isMap && speedDisplay && (
+                    <div className="mod-detail__meta-row">
+                      <span className="mod-detail__meta-label">Max Speed</span>
+                      <span className="mod-detail__meta-value">{speedDisplay}</span>
+                    </div>
+                  )}
+                  {!isMap && weightDisplay && (
+                    <div className="mod-detail__meta-row">
+                      <span className="mod-detail__meta-label">Weight</span>
+                      <span className="mod-detail__meta-value">{weightDisplay}</span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Custom Tagging Section */}
