@@ -1068,8 +1068,9 @@ function parseModDetailFromHtml(html, modId) {
         return val;
       };
 
-      // Lines that mention capacity keyword (matches delimiter like ":" or mid-line e.g. "Bale Transport / Capacity 17,000" or header)
-      const capLineRe  = /(?:capact?i(?:ty|ties)|kapazität|capacité|volume|volumen|ladevolumen|pojemność|capacidad|capacità|tank\s*inhalt|grain\s*tank|korntank|bunker|fassungsvermögen|inhalt|tank\s*capacity|load\s*capacity)(?:[:\-\s/]+|\s+from\s+|\s*$)(.*)/i;
+      // Headers that introduce a list of capacities below them
+      const capHeaderOnlyRe = /^(?:[-*•\s]*)(?:capact?i(?:ty|ties)|kapazit[aä]t|capacit[eé]|volume|volumen|ladevolumen|pojemno[sś][cć]|capacidad|capacit[aà]|tank\s*inhalt|grain\s*tank|korntank|bunker|fassungsverm[oö]gen|inhalt|tank\s*capacity|load\s*capacity)[:\s-]*$/i;
+      const capMentionRe = /(?:capact?i(?:ty|ties)|kapazit[aä]t|capacit[eé]|volume|volumen|ladevolumen|pojemno[sś][cć]|capacidad|capacit[aà]|tank\s*inhalt|grain\s*tank|korntank|bunker|fassungsverm[oö]gen|inhalt|tank\s*capacity|load\s*capacity)/i;
       const litreUnitRe = /liters?|litres?|\bl\b|m³|m3|cubic/i;
 
       // Numbers: not preceded by a letter (avoids model codes like NX200),
@@ -1081,15 +1082,10 @@ function parseModDetailFromHtml(html, modId) {
       let inCapBlock = false;
 
       for (const line of rawLines) {
-        const cm = line.match(capLineRe);
         let scanText = '';
-        if (cm) {
-          if (cm[1] && cm[1].trim()) {
-            scanText = cm[1];
-          } else {
-            inCapBlock = true;
-            continue;
-          }
+        if (capHeaderOnlyRe.test(line)) {
+          inCapBlock = true;
+          continue;
         } else if (inCapBlock) {
           if (/(?:config|price|color|wheel|tire|fahr|engine|speed|power|working\s*speed)/i.test(line) && !litreUnitRe.test(line)) {
             inCapBlock = false;
@@ -1101,6 +1097,9 @@ function parseModDetailFromHtml(html, modId) {
             inCapBlock = false;
             continue;
           }
+        } else if (capMentionRe.test(line)) {
+          // Line explicitly mentions capacity / volume / inhalt / tank
+          scanText = line;
         } else if (litreUnitRe.test(line) && !/(?:speed|power|hp|kw|width|weight|version|v\d)/i.test(line)) {
           // Explicit litre unit token on line (e.g. "12000 liter" or "34.000 l")
           scanText = line;
