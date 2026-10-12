@@ -2791,6 +2791,13 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 			if (detail?.title && (!resolvedTitle || resolvedTitle === `Mod ${strModId}` || resolvedTitle === strModId)) {
 				resolvedTitle = detail.title;
 			}
+			if (detail?.title && detail.title.toLowerCase().includes('not found') && !downloadUrl) {
+				debugLog(`[QUEUE] Mod ${modId} cannot be queued: ${detail.title}`);
+				try { cache.removePendingDownload(strModId); } catch (_) {}
+				broadcastStatus?.(modId, 'error', { title: resolvedTitle, error: 'Mod not found on ModHub' });
+				onProgress?.({ status: 'error', error: 'Mod not found on ModHub' });
+				return { success: false, error: 'Mod not found on ModHub' };
+			}
 		} catch (e) {
 			debugLog(`[QUEUE] Scraper failed for ${modId}: ${e.message}`);
 		}
@@ -2805,6 +2812,14 @@ async function enqueueInstall(modId, modTitle, downloadUrl, onProgress, category
 		if (pool[strModId]?.title) {
 			resolvedTitle = pool[strModId].title;
 		}
+	}
+
+	if (resolvedTitle && resolvedTitle.toLowerCase().includes('not found') && !downloadUrl) {
+		debugLog(`[QUEUE] Rejecting queue task for invalid mod ${modId} ("${resolvedTitle}")`);
+		try { cache.removePendingDownload(strModId); } catch (_) {}
+		broadcastStatus?.(modId, 'error', { title: resolvedTitle, error: 'Mod not found on ModHub' });
+		onProgress?.({ status: 'error', error: 'Mod not found on ModHub' });
+		return { success: false, error: 'Mod not found on ModHub' };
 	}
 
 	downloadQueue.push({ modId, modTitle: resolvedTitle, downloadUrl, onProgress, category, subFolder, techData, oldPath, recoveryPath });
@@ -6653,6 +6668,13 @@ async function resumePendingDownloads(onProgress) {
 		let title = item.mod_title;
 		if (!title || title === `Mod ${strId}` || title === strId) {
 			if (pool[strId]?.title) title = pool[strId].title;
+		}
+
+		// If title indicates mod was not found or is dead, purge it from pending database and do not resume
+		if ((title && title.toLowerCase().includes('not found')) || (item.mod_title && item.mod_title.toLowerCase().includes('not found'))) {
+			console.log(`[RESUME] Purging dead/non-existent pending download: ${strId} ("${title || item.mod_title}")`);
+			try { cache.removePendingDownload(strId); } catch (_) {}
+			continue;
 		}
 
 		// Calculate relative subfolder if target_dir was stored as absolute path

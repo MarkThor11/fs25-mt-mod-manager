@@ -959,7 +959,15 @@ ipcMain.handle('mods:getPending', async () => {
   const pending = cache.getPendingDownloads();
   const pool = cache.getModHubMetadataPool();
   return pending
-    .filter(item => item && (item.received_bytes || 0) > 0)
+    .filter(item => {
+      if (!item) return false;
+      const title = item.mod_title || '';
+      if (title.toLowerCase().includes('not found')) {
+        try { cache.removePendingDownload(String(item.mod_id)); } catch (_) {}
+        return false;
+      }
+      return (item.received_bytes || 0) > 0;
+    })
     .map(item => {
       let title = item.mod_title;
       const strId = String(item.mod_id);
