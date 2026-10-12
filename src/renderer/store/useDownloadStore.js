@@ -514,6 +514,12 @@ if (window.api?.on) {
           isMap: isMapCategory(data?.category || active?.category) || (!active?.category && !data?.category && !!active?.isMap)
         });
 
+        // Instantly remove from pending updates count in store and localStorage
+        useLocalModsStore.getState().removeUpdate(strId);
+        if (cleanModFileName) {
+          useLocalModsStore.getState().removeUpdate(cleanModFileName);
+        }
+
         // Trigger debounced scan so we do not freeze disk if multiple downloads finish
         useDownloadStore.getState().triggerScan();
 
@@ -600,6 +606,12 @@ if (window.api?.on) {
                 setTimeout(() => useDownloadStore.getState().removeBatch(parentId), 3000);
               }
             }
+          }
+
+          // Instantly remove from pending updates count in store and localStorage
+          useLocalModsStore.getState().removeUpdate(strKey);
+          if (finalModFileName) {
+            useLocalModsStore.getState().removeUpdate(finalModFileName);
           }
 
           useDownloadStore.getState().triggerScan();

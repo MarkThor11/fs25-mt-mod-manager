@@ -98,35 +98,63 @@ export const useLocalModsStore = create((set, get) => ({
     set((s) => {
       const idStr = modInfo.modId ? String(modInfo.modId).replace(/^0+/, '') : null;
       const fileLower = (modInfo.fileName || '').toLowerCase();
-      const existing = s.mods.some(m => {
+      const existingIndex = s.mods.findIndex(m => {
         const mId = m.modId ? String(m.modId).replace(/^0+/, '') : null;
         if (idStr && mId && idStr === mId) return true;
         if (fileLower && m.fileName && m.fileName.toLowerCase() === fileLower) return true;
         return false;
       });
-      if (existing) return s;
 
-      const newMod = {
-        title: modInfo.title || `Mod ${modInfo.modId || ''}`,
-        author: modInfo.author || 'Unknown',
-        version: modInfo.version || '1.0.0.0',
-        category: modInfo.category || null,
-        size: modInfo.size || 0,
-        fileName: modInfo.fileName || `${modInfo.modId || 'mod'}.zip`,
-        filePath: modInfo.filePath || '',
-        folder: modInfo.folder || '',
-        isDLC: false,
-        isMap: !!modInfo.isMap,
-        mapId: modInfo.mapId || null,
-        mapTitle: modInfo.mapTitle || null,
-        modName: modInfo.modName || (modInfo.fileName ? modInfo.fileName.replace(/\.zip$/i, '') : ''),
-        technicalName: modInfo.technicalName || '',
-        dependencies: modInfo.dependencies || [],
-        modId: idStr,
-        techData: modInfo.techData || null,
-        tags: modInfo.tags || []
-      };
-      const nextMods = [...s.mods, newMod];
+      let nextMods;
+      if (existingIndex >= 0) {
+        const existing = s.mods[existingIndex];
+        const updated = {
+          ...existing,
+          title: modInfo.title || existing.title,
+          version: modInfo.version || modInfo.remoteVersion || existing.version,
+          fileName: modInfo.fileName || existing.fileName,
+          folder: modInfo.folder || existing.folder,
+          category: modInfo.category || existing.category,
+          size: modInfo.size || existing.size,
+          techData: modInfo.techData || existing.techData
+        };
+        nextMods = [...s.mods];
+        nextMods[existingIndex] = updated;
+      } else {
+        const newMod = {
+          title: modInfo.title || `Mod ${modInfo.modId || ''}`,
+          author: modInfo.author || 'Unknown',
+          version: modInfo.version || '1.0.0.0',
+          category: modInfo.category || null,
+          size: modInfo.size || 0,
+          fileName: modInfo.fileName || `${modInfo.modId || 'mod'}.zip`,
+          filePath: modInfo.filePath || '',
+          folder: modInfo.folder || '',
+          isDLC: false,
+          isMap: !!modInfo.isMap,
+          mapId: modInfo.mapId || null,
+          mapTitle: modInfo.mapTitle || null,
+          modName: modInfo.modName || (modInfo.fileName ? modInfo.fileName.replace(/\.zip$/i, '') : ''),
+          technicalName: modInfo.technicalName || '',
+          dependencies: modInfo.dependencies || [],
+          modId: idStr,
+          techData: modInfo.techData || null,
+          tags: modInfo.tags || []
+        };
+        nextMods = [...s.mods, newMod];
+      }
+
+      // Immediately clear from updates list if this completed mod was in updates
+      const cleanUpdates = (s.updates || []).filter(u => {
+        if (!u) return false;
+        if (idStr && u.modId && String(u.modId).replace(/^0+/, '') === idStr) return false;
+        if (fileLower && u.fileName && u.fileName.toLowerCase() === fileLower) return false;
+        return true;
+      });
+
+      try {
+        localStorage.setItem('mod_updates', JSON.stringify(cleanUpdates));
+      } catch (_) {}
 
       // Immediately persist fresh mods cache to settings so it survives app restarts
       try {
@@ -161,7 +189,8 @@ export const useLocalModsStore = create((set, get) => ({
 
       return {
         mods: nextMods,
-        modCount: computeModCount(nextMods)
+        modCount: computeModCount(nextMods),
+        updates: cleanUpdates
       };
     });
   },
@@ -385,8 +414,8 @@ export const useLocalModsStore = create((set, get) => ({
     });
 
     await Promise.allSettled(updatePromises);
-    // After batch completes, perform a rescan to sync versions and UI
-    await get().scanMods(null, false);
+    // After batch completes, perform a forced rescan to sync versions and UI
+    await get().scanMods(null, true);
   },
 
   uninstallMod: async (modFileName, folder = null) => {
@@ -449,6 +478,22 @@ export const useLocalModsStore = create((set, get) => ({
     } catch (err) {
       return { success: false, error: err.message };
     }
+  },
+
+  removeUpdate: (modIdentifier) => {
+    if (!modIdentifier) return;
+    const strId = String(modIdentifier);
+    const remaining = (get().updates || []).filter((u) => {
+      if (!u) return false;
+      if (u.fileName && u.fileName === strId) return false;
+      if (u.modId && String(u.modId) === strId) return false;
+      if (u.technicalName && u.technicalName === strId) return false;
+      return true;
+    });
+    set({ updates: remaining });
+    try {
+      localStorage.setItem('mod_updates', JSON.stringify(remaining));
+    } catch (_) {}
   },
   
   syncMetadata: async () => {
