@@ -725,13 +725,13 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
           cached.techData.unitCapacityType = '';
         }
         const unitCap = (isNoCap || isBogusUnit || isVehicle) ? 0 : rawUnitCap;
+        const descHasMultiChamberOrTotal = cached.description && /(?:per\s*(?:side|chamber|compartment|tank|box)|pro\s*(?:seite|kammer)|par\s*c[oô]t[eé]|\b(?:total|in\s*total|gesamt|au\s*total|og[óo]lem)\b)/i.test(cached.description);
         const needsCapacityRescrape = cached.techData?.scraped && (
           (cap === 0 && unitCap === 0) ||                              // no capacity at all
           (cap > 0 && cap < 1000 && unitCap === 0) ||                 // tiny litre = mis-parse
           (capMin > 0 && capMin < 1000 && capMax > 10000) ||          // model-number bleed in min
           (capMin === 1500 && capMax >= 50000) ||                     // corrupt La Campagne cache
-          (modId === '368618' && (capMin !== 8000 || capMax !== 10000)) ||
-          (capMin === 5000 && capMax <= 10000 && /total/i.test(cached.description || ''))
+          (isTrailerOrTanker && descHasMultiChamberOrTotal && capMin === capMax) // multi-chamber or total described but flattened
         );
 
         // Re-scrape if priceMin is missing or packs with description have single price
@@ -881,11 +881,11 @@ ipcMain.handle('modhub:getBatchDetails', async (_, modIds) => {
 
       const isTrailerOrTanker = /(?:trailer|tipper|kipper|slurry|spreader|tanker|wagon|dumper|chaser|auger|manure)/i.test(catStr || titleStr);
       const descHasCap = cached.description && /(?:capact?i(?:ty|ties)|kapazit[aä]t|capacit[eé]|volume|volumen|inhalte?|fassungsverm[oö]gen|inhalt)[:\-\s/]+.*?\d/i.test(cached.description);
+      const descHasMultiChamberOrTotal = cached.description && /(?:per\s*(?:side|chamber|compartment|tank|box)|pro\s*(?:seite|kammer)|par\s*c[oô]t[eé]|\b(?:total|in\s*total|gesamt|au\s*total|og[óo]lem)\b)/i.test(cached.description);
       const needsTrailerCapRescrape = isTrailerOrTanker && (
         (cap === 0 && unitCap === 0 && descHasCap) ||
         (capMin === 1500 && capMax >= 50000) || // Catches old corrupt La Campagne cache (1,500 - 91,000)
-        (id === '368618' && (capMin !== 8000 || capMax !== 10000)) ||
-        (capMin === 5000 && capMax <= 10000 && /total/i.test(cached.description || '')) // Catches per-side 5,000L vs total 10,000L
+        (descHasMultiChamberOrTotal && capMin === capMax) // multi-chamber or total described but flat single capacity
       );
 
       const needsRescrape = cached.techData?.scraped && (

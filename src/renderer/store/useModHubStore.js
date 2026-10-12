@@ -188,17 +188,8 @@ export const useModHubStore = create((set, get) => ({
             if (!v.techData.priceMin) v.techData.priceMin = v.techData.price;
             if (!v.techData.priceMax) v.techData.priceMax = v.techData.price;
           }
-          // Repair corrupt capacity range (e.g. 1500 - 91000 L from La Campagne or 5000 per-side from Horsch)
-          if (v.modId === '368618' || k === '368618' || (v.techData.capacityMin === 5000 && /total/i.test(v.description || ''))) {
-            v.techData.capacityMin = 8000;
-            v.techData.capacityMax = 10000;
-            v.techData.capacity = 10000;
-            v.techData.priceMin = 15000;
-            v.techData.priceMax = 20000;
-            v.techData.price = 20000;
-            v.techData.scraped = true;
-            hasPruned = true;
-          } else if (v.techData.capacityMin === 1500 && v.techData.capacityMax >= 50000) {
+          // Repair corrupt capacity range (e.g. 1500 - 91000 L from old La Campagne)
+          if (v.techData.capacityMin === 1500 && v.techData.capacityMax >= 50000) {
             v.techData.scraped = false; // forces re-scrape
             hasPruned = true;
           }
@@ -291,11 +282,11 @@ export const useModHubStore = create((set, get) => ({
       );
       const isTrailerOrTanker = /(?:trailer|tipper|kipper|slurry|spreader|tanker|wagon|dumper|chaser|auger|manure)/i.test(m.category || m.title);
       const descHasCap = m.description && /(?:capact?i(?:ty|ties)|kapazit[aä]t|capacit[eé]|volume|volumen|inhalte?|fassungsverm[oö]gen|inhalt)[:\-\s/]+.*?\d/i.test(m.description);
+      const descHasMultiChamberOrTotal = m.description && /(?:per\s*(?:side|chamber|compartment|tank|box)|pro\s*(?:seite|kammer)|par\s*c[oô]t[eé]|\b(?:total|in\s*total|gesamt|au\s*total|og[óo]lem)\b)/i.test(m.description);
       const needsTrailerCapRescrape = isTrailerOrTanker && (
         (cap === 0 && unitCap === 0 && descHasCap) ||
         (capMin === 1500 && capMax >= 50000) ||
-        (m.modId === '368618' && (capMin !== 8000 || capMax !== 10000)) ||
-        (capMin === 5000 && capMax <= 10000 && /total/i.test(m.description || ''))
+        (descHasMultiChamberOrTotal && capMin === capMax)
       );
 
       return (

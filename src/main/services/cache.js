@@ -213,11 +213,6 @@ function getModHubMetadataPool() {
     if (!rawKey || !item) return;
     const strKey = String(rawKey).trim();
     if (!strKey) return;
-    if ((item.modId === '368618' || strKey === '368618') && item.techData) {
-      if (item.techData.capacityMin === 5000) item.techData.capacityMin = 8000;
-      if (item.techData.capacityMax < 10000) item.techData.capacityMax = 10000;
-      if (item.techData.capacity < 10000) item.techData.capacity = 10000;
-    }
     if (!pool[strKey]) pool[strKey] = item;
     
     // Numeric ID variants (raw, stripped of leading zeroes, padded to 8 digits)
