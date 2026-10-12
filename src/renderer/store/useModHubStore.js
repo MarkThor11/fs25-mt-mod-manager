@@ -277,7 +277,8 @@ export const useModHubStore = create((set, get) => ({
       const needsPriceRescrape = (
         ((isMultiItem || descHasPriceRange) && priceMin === priceMax && (descHasPriceRange || descHasPrices)) ||
         (price < 500 && descHasPrices) ||
-        (priceMin > 0 && priceMin < 500 && descHasPrices)
+        (priceMin > 0 && priceMin < 500 && descHasPrices) ||
+        (!isMultiItem && priceMin > 0 && priceMin <= 2500 && priceMax >= 10000 && descHasPrices)
       );
       const isTrailerOrTanker = /(?:trailer|tipper|kipper|slurry|spreader|tanker|wagon|dumper|chaser|auger|manure)/i.test(m.category || m.title);
       const descHasCap = m.description && /(?:capact?i(?:ty|ties)|kapazit[aä]t|capacit[eé]|volume|volumen|inhalte?|fassungsverm[oö]gen|inhalt)[:\-\s/]+.*?\d/i.test(m.description);

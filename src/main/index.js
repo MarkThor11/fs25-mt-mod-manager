@@ -746,7 +746,8 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
         const needsPriceRescrape = cached.techData?.scraped && (
           (isPackMod && priceMin === priceMax && descHasPrices) ||
           (price < 500 && descHasPrices) ||
-          (priceMin > 0 && priceMin < 500 && descHasPrices)
+          (priceMin > 0 && priceMin < 500 && descHasPrices) ||
+          (!isPackMod && priceMin > 0 && priceMin <= 2500 && priceMax >= 10000 && descHasPrices) // upgrade cost bleed (e.g. + $1,000)
         );
 
         if (!needsCapacityRescrape && !needsPriceRescrape) {
@@ -872,7 +873,8 @@ ipcMain.handle('modhub:getBatchDetails', async (_, modIds) => {
       const needsPriceRescrape = cached.techData?.scraped && (
         (isPackMod && priceMin === priceMax && descHasPrices) ||
         (price < 500 && descHasPrices) ||
-        (priceMin > 0 && priceMin < 500 && descHasPrices)
+        (priceMin > 0 && priceMin < 500 && descHasPrices) ||
+        (!isPackMod && priceMin > 0 && priceMin <= 2500 && priceMax >= 10000 && descHasPrices)
       );
 
       const isTrailerOrTanker = /(?:trailer|tipper|kipper|slurry|spreader|tanker|wagon|dumper|chaser|auger|manure)/i.test(catStr || titleStr);

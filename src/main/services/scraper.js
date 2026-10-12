@@ -924,8 +924,11 @@ function parseModDetailFromHtml(html, modId) {
       }
 
       // Model-level or inline prices (e.g. "- 60-21: from $42,500" or "Trailer: 44.000$" or "DBL8: 11500$")
+      // Ignore upgrade/option prices like "+ $1,000" or "(+ 1.000 €)" or "extra $500"
       if (/[$€£]/.test(line) && !/(?:kph|mph|km\/h|working\s*width|arbeitsbreite)/i.test(line)) {
-        extractPricesFromText(line, descPrices);
+        if (!/\+\s*[$€£]?\s*[\d,.]+|[$€£]\s*[\d,.]+\s*(?:extra|more)/i.test(line)) {
+          extractPricesFromText(line, descPrices);
+        }
       }
     }
     if (descPrices.length > 0) {
