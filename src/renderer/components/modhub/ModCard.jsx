@@ -1133,13 +1133,14 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           const rawPrice = mod.techData?.price ?? mod.price ?? (mod.metadata?.Price ? parseInt(String(mod.metadata.Price).replace(/[^0-9]/g, ''), 10) : 0);
           const priceMin = mod.techData?.priceMin ?? rawPrice;
           const priceMax = mod.techData?.priceMax ?? rawPrice;
-          const showPrice = rawPrice > 0 && !hidePrice;
-          const isTechFilterActive = activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < 2000 || activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < 1000000 || activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < 1000000;
-          const showEstimated = isSmartMatchEnabled || isTechFilterActive;
-          const hasHP = mod.techData?.hp > 0 && !hideHP && !hidePower && (!mod.techData.hpIsRecommendation || showEstimated);
           const catStr = (mod.category || mod.metadata?.Category || '').toLowerCase();
           const titleStr = (mod.title || '').toLowerCase();
           const descStr = (mod.description || '').toLowerCase();
+          const isMap = Boolean(mod.isMap || isMapCategory(mod.category) || isMapCategory(mod.metadata?.Category) || catStr.includes('map') || titleStr.includes('map'));
+          const showPrice = rawPrice > 0 && !hidePrice && !isMap;
+          const isTechFilterActive = activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < 2000 || activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < 1000000 || activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < 1000000;
+          const showEstimated = isSmartMatchEnabled || isTechFilterActive;
+          const hasHP = mod.techData?.hp > 0 && !hideHP && !hidePower && (!mod.techData.hpIsRecommendation || showEstimated) && !isMap;
           const noCapKeywords = [
             'gameplay', 'script', 'prefab', 'map', 'chainsaw', 'flashlight', 'handtool',
             'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',

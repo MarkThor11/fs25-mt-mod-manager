@@ -1223,6 +1223,23 @@ function parseModDetailFromHtml(html, modId) {
       techData.capacityMax = 0;
     }
 
+    // Safety guard: Maps and map packages are locations/environments, not purchasable store items.
+    // Reset any prices, horsepowers, or capacities extracted from descriptions of maps.
+    const isMap = isMapCategory(category) || isMapCategory(metadata['Category'] || metadata['category']) || catStr.includes('map') || titleStr.includes('map');
+    if (isMap) {
+      techData.price = 0;
+      techData.priceMin = 0;
+      techData.priceMax = 0;
+      techData.hp = 0;
+      techData.hpMin = 0;
+      techData.hpMax = 0;
+      techData.capacity = 0;
+      techData.capacityMin = 0;
+      techData.capacityMax = 0;
+      techData.unitCapacity = 0;
+      techData.unitCapacityType = '';
+    }
+
     // Guard: if unit capacity was found but litre capacity is tiny (< 1000 L),
     // the litre value is almost certainly a mis-parse — discard it.
     if (techData.unitCapacity > 0 && techData.capacity > 0 && techData.capacity < 1000) {
