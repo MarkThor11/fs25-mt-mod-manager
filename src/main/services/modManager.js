@@ -1205,6 +1205,53 @@ function detectAllModsPaths() {
 		}
 	}
 	
+	// 3. Scan available system drives for common root mod folders (e.g. F:\mods4, D:\mods, E:\mods)
+	const driveLetters = 'CDEFGHIJKLMNOPQRSTUVWXYZ';
+	const commonFolderNames = ['mods4', 'mods', 'FS25_mods', 'fs25_mods'];
+	for (const letter of driveLetters) {
+		const root = `${letter}:${path.sep}`;
+		if (fs.existsSync(root)) {
+			for (const folderName of commonFolderNames) {
+				const candidate = path.join(root, folderName);
+				// Avoid re-adding standard C:\mods unless it actually exists and has content
+				if (fs.existsSync(candidate)) {
+					try {
+						const stats = fs.statSync(candidate);
+						if (stats.isDirectory()) {
+							potentialPaths.push({ path: candidate, type: `Drive ${letter}: Storage` });
+						}
+					} catch (_) {}
+				}
+			}
+		}
+	}
+
+	// 4. Inspect symbolic links in default mods folder to uncover underlying physical storage drives
+	for (const p of potentialPaths.slice()) {
+		if (fs.existsSync(p.path)) {
+			try {
+				const entries = fs.readdirSync(p.path, { withFileTypes: true });
+				for (const entry of entries.slice(0, 50)) {
+					if (entry.isSymbolicLink()) {
+						const fullP = path.join(p.path, entry.name);
+						const linkTarget = fs.readlinkSync(fullP).replace(/^\\\\\?\\/, '');
+						if (path.isAbsolute(linkTarget)) {
+							const parsed = path.parse(linkTarget);
+							const drive = parsed.root;
+							const parts = linkTarget.slice(drive.length).split(/[\\/]/).filter(Boolean);
+							if (parts.length > 0) {
+								const rootFolder = path.join(drive, parts[0]);
+								if (fs.existsSync(rootFolder) && fs.statSync(rootFolder).isDirectory()) {
+									potentialPaths.push({ path: rootFolder, type: `Linked Storage (${drive[0].toUpperCase()}:)` });
+								}
+							}
+						}
+					}
+				}
+			} catch (_) {}
+		}
+	}
+
 	// Deduplicate by path
 	const seen = new Set();
 	return potentialPaths.filter(p => {
