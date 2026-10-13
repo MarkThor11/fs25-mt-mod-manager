@@ -21,9 +21,14 @@ async function ensureSession() {
   if (phpsessid) return phpsessid;
   if (sessionPromise) return sessionPromise;
 
-  sessionPromise = new Promise((resolve, reject) => {
+  sessionPromise = new Promise((resolve) => {
     console.log('[SCRAPER] Establishing new session with ModHub...');
-    https.get(BASE_URL, (res) => {
+    const req = https.get(BASE_URL, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      timeout: 8000
+    }, (res) => {
       const cookies = res.headers['set-cookie'] || [];
       const sessionCookie = cookies.find(c => c.startsWith('PHPSESSID='));
       if (sessionCookie) {
@@ -32,11 +37,22 @@ async function ensureSession() {
       } else {
         console.warn('[SCRAPER] No PHPSESSID found, requests might fallback to Latest.');
       }
+      res.resume();
       sessionPromise = null; // Clear promise but keep phpsessid
       resolve(phpsessid);
-    }).on('error', (err) => {
+    });
+
+    req.on('timeout', () => {
+      console.warn('[SCRAPER] Session handshake timed out. Proceeding without session cookie.');
+      req.destroy();
       sessionPromise = null;
-      reject(err);
+      resolve(null);
+    });
+
+    req.on('error', (err) => {
+      console.warn(`[SCRAPER] Session handshake error: ${err.message}. Proceeding without session cookie.`);
+      sessionPromise = null;
+      resolve(null);
     });
   });
 
@@ -163,7 +179,7 @@ async function throttledFetch(url) {
       reject(err);
     });
 
-    req.setTimeout(30000, () => {
+    req.setTimeout(12000, () => {
       req.destroy(new Error('Request timed out'));
     });
   });

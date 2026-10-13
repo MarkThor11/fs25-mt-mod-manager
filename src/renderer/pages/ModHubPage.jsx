@@ -251,14 +251,14 @@ export default function ModHubPage() {
             }
           }
 
-          if (activeParent) {
+          if (activeParent && activeParent.children && activeParent.children.length > 0) {
             const parentLabelLower = activeParent.label.toLowerCase();
             // If modCat has " - " separator (e.g., "Drivables - Large Tractors" or "Loaders - Front Loader Vehicles")
             if (modCat.includes(' - ')) {
               const [modParent] = modCat.split(' - ').map(s => s.trim().toLowerCase());
               // Disallow if the mod explicitly belongs to another top-level category family
               // (e.g. mod is "drivables" but active category is "loaders", "trailers", "baling", etc.)
-              const topLevelNames = categories.map(c => c.label.toLowerCase());
+              const topLevelNames = categories.filter(c => c.children && c.children.length > 0).map(c => c.label.toLowerCase());
               if (topLevelNames.includes(modParent) && modParent !== parentLabelLower) {
                 return false;
               }

@@ -1064,9 +1064,31 @@ export const useModHubStore = create((set, get) => ({
 
       let allRawMods = [];
 
-      if (f.startsWith('aggregate:')) {
+      if (f === 'all') {
+        // Collect all mods from store's known pool & cached categories
+        const pool = new Map();
+        Object.values(get().modCache || {}).forEach(item => {
+          if (item?.allMods && Array.isArray(item.allMods)) {
+            item.allMods.forEach(m => { if (m?.modId) pool.set(String(m.modId), m); });
+          } else if (item?.modId) {
+            pool.set(String(item.modId), item);
+          }
+        });
+        (get().mods || []).forEach(m => { if (m?.modId) pool.set(String(m.modId), m); });
+        (get().categoryAllMods || []).forEach(m => { if (m?.modId) pool.set(String(m.modId), m); });
+
+        // If pool is empty or limited, fetch top feeds to populate
+        if (pool.size === 0) {
+          const [latestMods, dlMods] = await Promise.all([
+            fetchAllPagesForFilter('latest'),
+            fetchAllPagesForFilter('downloads')
+          ]);
+          [...latestMods, ...dlMods].forEach(m => { if (m?.modId) pool.set(String(m.modId), m); });
+        }
+        allRawMods = Array.from(pool.values());
+      } else if (f.startsWith('aggregate:')) {
         const catLabel = f.split(':')[1];
-        const parentCat = (categories || []).find(c => c.label === catLabel);
+        const parentCat = (categories || []).find(c => c.label.toLowerCase() === catLabel.toLowerCase());
         const childFilters = parentCat?.children?.map(c => c.filter).filter(Boolean) || [];
 
         const childResults = await Promise.all(childFilters.map(cf => fetchAllPagesForFilter(cf)));
@@ -1188,9 +1210,9 @@ export const useModHubStore = create((set, get) => ({
               }
             }
 
-            if (activeParent) {
+            if (activeParent && activeParent.children && activeParent.children.length > 0) {
               const [modParent] = modCat.split(' - ').map(s => s.trim().toLowerCase());
-              const topLevelNames = categories.map(c => c.label.toLowerCase());
+              const topLevelNames = categories.filter(c => c.children && c.children.length > 0).map(c => c.label.toLowerCase());
               if (topLevelNames.includes(modParent) && modParent !== activeParent.label.toLowerCase()) {
                 return false;
               }
