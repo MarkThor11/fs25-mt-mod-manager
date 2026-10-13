@@ -823,6 +823,12 @@
   font-size: var(--fs-sm);
 }
 
+.sort-bar__select option,
+select.btn option {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
+
 .sort-bar__search {
   flex: 1;
   max-width: 320px;

@@ -82,6 +82,11 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
+select option {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
