@@ -45,6 +45,40 @@ const loadFavMods = () => {
   }
 };
 
+const loadFavAuthors = () => {
+  try {
+    const raw = localStorage.getItem('fav_authors');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    let migrated = false;
+    const seen = new Set();
+    const fixed = [];
+    for (const a of parsed) {
+      if (!a) continue;
+      const name = typeof a === 'string' ? a.trim() : (a.name || a.id || '').trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (seen.has(key)) {
+        migrated = true;
+        continue;
+      }
+      seen.add(key);
+      const id = (typeof a === 'object' && a.id !== undefined && a.id !== null) ? String(a.id) : name;
+      if (typeof a !== 'object' || a.id !== id || a.name !== name) {
+        migrated = true;
+      }
+      fixed.push({ id, name });
+    }
+    if (migrated) {
+      localStorage.setItem('fav_authors', JSON.stringify(fixed));
+    }
+    return fixed;
+  } catch (e) {
+    return [];
+  }
+};
+
 export const DEFAULT_ACTIVE_FILTERS = {
   brands: [],
   priceRange: [0, Infinity],
@@ -94,7 +128,7 @@ export const useModHubStore = create((set, get) => ({
   isDeepScanning: false,
   categories: [],
   activeFilters: { ...DEFAULT_ACTIVE_FILTERS },
-  favoriteAuthors: JSON.parse(localStorage.getItem('fav_authors') || '[]'),
+  favoriteAuthors: loadFavAuthors(),
   favoriteMods: loadFavMods(),
   hiddenMods: JSON.parse(localStorage.getItem('hidden_mods') || '[]'),
   authorFilter: null, // { id: string, name: string }
@@ -524,13 +558,28 @@ export const useModHubStore = create((set, get) => ({
   },
 
   toggleFavoriteAuthor: (author) => {
+    if (!author) return;
+    const authorName = (typeof author === 'string' ? author : (author.name || author.id || '')).trim();
+    if (!authorName) return;
+    const authorId = (typeof author === 'object' && author.id !== undefined && author.id !== null) ? String(author.id) : authorName;
+    const normName = authorName.toLowerCase();
     const { favoriteAuthors } = get();
-    const exists = favoriteAuthors.find(a => a.id === author.id);
+
+    const exists = favoriteAuthors.some(a => {
+      const aName = (a.name || a.id || '').trim().toLowerCase();
+      const aId = String(a.id ?? '');
+      return (authorId && aId === authorId) || aName === normName;
+    });
+
     let newFavs;
     if (exists) {
-      newFavs = favoriteAuthors.filter(a => a.id !== author.id);
+      newFavs = favoriteAuthors.filter(a => {
+        const aName = (a.name || a.id || '').trim().toLowerCase();
+        const aId = String(a.id ?? '');
+        return !((authorId && aId === authorId) || aName === normName);
+      });
     } else {
-      newFavs = [...favoriteAuthors, author];
+      newFavs = [...favoriteAuthors, { id: authorId, name: authorName }];
     }
     set({ favoriteAuthors: newFavs });
     localStorage.setItem('fav_authors', JSON.stringify(newFavs));

@@ -1023,7 +1023,7 @@ const LazyModList = ({
                             <button onClick={() => toggleFavoriteMod(mod)} style={{ color: isFavMod ? '#fbbf24' : 'white', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' }}>
                                 <Star size={14} fill={isFavMod ? 'currentColor' : 'none'} />
                             </button>
-                            <button onClick={() => toggleFavoriteAuthor({ name: authorName, id: mod.modId || authorName })} style={{ color: isFavAuthor ? 'var(--danger)' : 'white', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' }}>
+                            <button onClick={() => toggleFavoriteAuthor({ name: authorName, id: authorName })} style={{ color: isFavAuthor ? 'var(--danger)' : 'white', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' }}>
                                 <Heart size={14} fill={isFavAuthor ? 'currentColor' : 'none'} />
                             </button>
                         </div>

@@ -79,7 +79,13 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
   const localMods = useLocalModsStore((s) => s.mods);
 
   
-  const isFavorite = favoriteAuthors.some(a => a.id === mod.authorId || a.id === mod.author);
+  const isFavorite = favoriteAuthors.some(a => {
+    const aName = (a.name || a.id || '').trim().toLowerCase();
+    const modAuthor = (mod.author || '').trim().toLowerCase();
+    const aId = String(a.id ?? '');
+    const modAuthorId = String(mod.authorId ?? '');
+    return (modAuthorId && aId === modAuthorId) || (modAuthor && aName === modAuthor);
+  });
   const isModFav = favoriteMods.some(m => m.isFavorite !== false && ((m.modId && mod.modId && String(m.modId) === String(mod.modId)) || (m.fileName && mod.fileName && m.fileName === mod.fileName)));
   const isMustHave = useMemo(() => {
     const fm = favoriteMods.find(m => 
