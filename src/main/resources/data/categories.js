@@ -1,5 +1,10 @@
 const CATEGORIES = [
   {
+    label: 'All Mods',
+    filter: 'all',
+    icon: 'layout-grid',
+  },
+  {
     label: 'Official Mods',
     filter: 'officialMods',
     icon: 'badge-check',

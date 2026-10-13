@@ -225,7 +225,7 @@ export default function ModHubPage() {
         }
 
         // Generic category family guard: when viewing a known category parent/sub, verify mod metadata category matches if available
-        if (categories && categories.length > 0 && modCat) {
+        if (categories && categories.length > 0 && modCat && currentFilter !== 'all') {
           let activeParent = null;
           let activeChild = null;
 

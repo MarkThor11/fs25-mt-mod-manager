@@ -1154,7 +1154,7 @@ export const useModHubStore = create((set, get) => ({
       if (f === 'latest') {
         const recentMods = enrichedMods.filter(m => m.isNew || m.isUpdate);
         displayMods = recentMods.length > 0 ? recentMods : enrichedMods.slice(0, 24);
-      } else if (f && f !== 'search' && !authorFilter) {
+      } else if (f && f !== 'search' && f !== 'all' && !authorFilter) {
         // Category cross-contamination guard at store level
         const fLower = f.toLowerCase();
         const isLoadersFilter = fLower === 'aggregate:loaders' || 
