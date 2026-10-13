@@ -12,6 +12,12 @@ export const useToastStore = create((set, get) => ({
    * @param {number|object} options - Duration in ms OR an options object { duration, id }
    */
   addToast: (type, message, options = {}) => {
+    let safeMessage = message;
+    if (typeof safeMessage === 'object' && safeMessage !== null) {
+      safeMessage = safeMessage.message || safeMessage.error || safeMessage.name || JSON.stringify(safeMessage);
+    } else {
+      safeMessage = String(safeMessage ?? '');
+    }
     const duration = typeof options === 'number' ? options : (options?.duration || (type === 'success' ? 2500 : 4000));
     const customId = typeof options === 'object' ? options?.id : null;
     
@@ -30,13 +36,13 @@ export const useToastStore = create((set, get) => ({
           const newId = oldToast.id;
           const timer = duration > 0 ? setTimeout(() => get().removeToast(newId), duration) : null;
           
-          newToasts[existingIndex] = { ...oldToast, type, message, exiting: false, timer };
+          newToasts[existingIndex] = { ...oldToast, type, message: safeMessage, exiting: false, timer };
           return { toasts: newToasts };
         }
       }
 
       // Suppress duplicate active toasts with the exact same message
-      const isDuplicateMessage = state.toasts.some(t => !t.exiting && t.message === message);
+      const isDuplicateMessage = state.toasts.some(t => !t.exiting && t.message === safeMessage);
       if (isDuplicateMessage) {
         return state;
       }
@@ -45,7 +51,7 @@ export const useToastStore = create((set, get) => ({
       const timer = duration > 0 ? setTimeout(() => get().removeToast(id), duration) : null;
       
       return {
-        toasts: [...state.toasts, { id, customId, type, message, exiting: false, timer }],
+        toasts: [...state.toasts, { id, customId, type, message: safeMessage, exiting: false, timer }],
       };
     });
   },
