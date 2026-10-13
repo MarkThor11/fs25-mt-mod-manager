@@ -2,8 +2,10 @@
 
 A premium desktop application for managing mods, savegames, and system performance for **Farming Simulator 25**.
 
-![App Version](https://img.shields.io/badge/version-1.0.6-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
+
+### 📥 Download
+Download the latest Windows installer (.exe) from the [Releases](https://github.com/MarkThor11/fs25-mt-mod-manager/releases) page.
 
 ## 🚀 Key Features
 
@@ -21,6 +23,5 @@ A premium desktop application for managing mods, savegames, and system performan
 - **Styling**: Vanilla CSS (Premium Dark Mode)
 - **Database**: SQLite (via better-sqlite3)
 - **Icons**: Lucide React
-
 
 *Not affiliated with GIANTS Software.*
