@@ -529,7 +529,7 @@ export default function ProfilesPage() {
     const trimmed = newName.trim();
     if (trimmed && trimmed !== profiles.find(p => p.id === id)?.name) {
       const p = profiles.find(p => p.id === id);
-      await updateProfile(id, { ...p, name: trimmed });
+      await updateProfile(id, trimmed, p?.mods || [], p?.options || {});
       if (selectedProfileId === id) setProfileName(trimmed);
       useToastStore.getState().success(`Renamed to ${trimmed}`);
     }

@@ -18,7 +18,13 @@ async function getProfiles() {
       return { profiles: [] };
     }
     const data = await fs.readJson(profilesPath);
-    return { profiles: data.profiles || [] };
+    const rawList = Array.isArray(data?.profiles) ? data.profiles : [];
+    // Sanitize any existing corrupt profile records where name was stored as an object
+    const cleanProfiles = rawList.map(p => ({
+      ...p,
+      name: (typeof p?.name === 'object' && p?.name !== null) ? (p.name.name || 'Game Template') : (String(p?.name || 'Game Template'))
+    }));
+    return { profiles: cleanProfiles };
   } catch (err) {
     console.error('Failed to read profiles:', err);
     return { error: err.message, profiles: [] };
@@ -29,22 +35,26 @@ async function createProfile(name, mods, options = {}) {
   const profilesPath = getProfilesPath();
   try {
     const { profiles } = await getProfiles();
+    const safeName = (typeof name === 'object' && name !== null) ? (name.name || 'New Profile') : (name || 'New Profile');
+    const safeMods = Array.isArray(mods) ? mods : (typeof name === 'object' && Array.isArray(name?.mods) ? name.mods : []);
+    const safeOptions = (typeof options === 'object' && options !== null) ? options : (typeof name === 'object' && name?.options ? name.options : {});
+
     const newProfile = {
       id: Date.now().toString(),
-      name,
-      mods: mods || [],
+      name: safeName,
+      mods: safeMods,
       options: {
-        money: options.money || 1000000,
-        initialLoan: options.initialLoan || 0,
-        mapId: options.mapId || 'MapUS',
-        mapTitle: options.mapTitle || 'Riverbend Springs',
-        difficulty: options.difficulty || 1,
-        economicDifficulty: options.economicDifficulty || 'NORMAL',
-        fixedSeasonLength: options.fixedSeasonLength || 1,
-        timeScale: options.timeScale || 1.0,
-        startMonth: options.startMonth || 3,
-        loadDefaultFarm: options.loadDefaultFarm !== undefined ? options.loadDefaultFarm : true,
-        ...options
+        money: safeOptions.money || 1000000,
+        initialLoan: safeOptions.initialLoan || 0,
+        mapId: safeOptions.mapId || 'MapUS',
+        mapTitle: safeOptions.mapTitle || 'Riverbend Springs',
+        difficulty: safeOptions.difficulty || 1,
+        economicDifficulty: safeOptions.economicDifficulty || 'NORMAL',
+        fixedSeasonLength: safeOptions.fixedSeasonLength || 1,
+        timeScale: safeOptions.timeScale || 1.0,
+        startMonth: safeOptions.startMonth || 3,
+        loadDefaultFarm: safeOptions.loadDefaultFarm !== undefined ? safeOptions.loadDefaultFarm : true,
+        ...safeOptions
       }
     };
     profiles.push(newProfile);
@@ -62,13 +72,17 @@ async function updateProfile(id, name, mods, options = {}) {
     const index = profiles.findIndex(p => p.id === id);
     if (index === -1) throw new Error('Profile not found');
     
+    const safeName = (typeof name === 'object' && name !== null) ? (name.name || 'Untitled Template') : (name || profiles[index].name || 'Untitled Template');
+    const safeMods = Array.isArray(mods) ? mods : (typeof name === 'object' && Array.isArray(name?.mods) ? name.mods : (profiles[index].mods || []));
+    const safeOptions = (typeof options === 'object' && options !== null) ? options : (typeof name === 'object' && name?.options ? name.options : {});
+
     profiles[index] = { 
       ...profiles[index], 
-      name, 
-      mods,
+      name: safeName, 
+      mods: safeMods,
       options: {
         ...(profiles[index].options || {}),
-        ...options
+        ...safeOptions
       }
     };
     await fs.writeJson(profilesPath, { profiles }, { spaces: 2 });
