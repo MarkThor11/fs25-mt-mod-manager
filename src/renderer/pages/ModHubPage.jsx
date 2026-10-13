@@ -1,4 +1,5 @@
 import { CustomSlider } from '../components/common/CustomSlider';
+import CustomSelect from '../components/common/CustomSelect';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Search, RefreshCw, SlidersHorizontal, Tag, Zap, Layers, X, DollarSign, Heart, ArrowLeft, LayoutGrid, ChevronLeft, ChevronRight, Milestone, Globe, Package, Download } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -755,38 +756,36 @@ export default function ModHubPage() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginLeft: 'auto' }}>
               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>Show:</span>
-              <select 
-                className="btn btn--secondary btn--sm" 
-                style={{ height: '32px', border: '1px solid var(--border-subtle)', background: 'var(--bg-card)' }}
+              <CustomSelect
                 value={pageSize}
-                onChange={(e) => setPageSize(parseInt(e.target.value, 10))}
-              >
-                <option value="24">24</option>
-                <option value="48">48</option>
-                <option value="72">72</option>
-                <option value="96">96</option>
-              </select>
+                onChange={(val) => setPageSize(parseInt(val, 10))}
+                options={[
+                  { value: 24, label: '24' },
+                  { value: 48, label: '48' },
+                  { value: 72, label: '72' },
+                  { value: 96, label: '96' }
+                ]}
+              />
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>Sort:</span>
-              <select 
-                className="btn btn--secondary btn--sm" 
-                style={{ height: '32px', border: '1px solid var(--border-subtle)', background: 'var(--bg-card)' }}
+              <CustomSelect
                 value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-              >
-                <option value="latest">Latest</option>
-                <option value="downloads">Most Downloaded</option>
-                <option value="rating">Top Rated</option>
-                <option value="name">A-Z</option>
-                <option value="price_low">Price: Lowest</option>
-                <option value="price_high">Price: Highest</option>
-                <option value="hp_low">Power: Lowest</option>
-                <option value="hp_high">Power: Highest</option>
-                <option value="cap_low">Capacity: Lowest</option>
-                <option value="cap_high">Capacity: Highest</option>
-              </select>
+                onChange={(val) => setSortOrder(val)}
+                options={[
+                  { value: 'latest', label: 'Latest' },
+                  { value: 'downloads', label: 'Most Downloaded' },
+                  { value: 'rating', label: 'Top Rated' },
+                  { value: 'name', label: 'A-Z' },
+                  { value: 'price_low', label: 'Price: Lowest' },
+                  { value: 'price_high', label: 'Price: Highest' },
+                  { value: 'hp_low', label: 'Power: Lowest' },
+                  { value: 'hp_high', label: 'Power: Highest' },
+                  { value: 'cap_low', label: 'Capacity: Lowest' },
+                  { value: 'cap_high', label: 'Capacity: Highest' }
+                ]}
+              />
             </div>
 
             <button 
