@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useModHubStore } from '../store/useModHubStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { compareVersions, resolveRecursiveDependencies, matchModWithDependency, isMapCategory } from '../utils/modUtils';
+import { compareVersions, resolveRecursiveDependencies, matchModWithDependency, isMapCategory, isModMatch } from '../utils/modUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 
 
@@ -183,23 +183,15 @@ export default function ModDetailPage() {
   const downloadProgress = currentDownload?.progress || 0;
 
   const isModFav = useMemo(() => {
-    if (!mod) return false;
-    const targetId = modId || mod.modId;
-    return favoriteMods.some(f => 
-      f.isFavorite !== false && (
-        (targetId && f.modId && String(f.modId) === String(targetId)) || 
-        (mod.fileName && f.fileName && f.fileName === mod.fileName)
-      )
-    );
+    if (!mod && !modId) return false;
+    const targetObj = mod || { modId };
+    return favoriteMods.some(f => f.isFavorite !== false && isModMatch(f, targetObj));
   }, [mod, modId, favoriteMods]);
 
   const isMustHave = useMemo(() => {
-    if (!mod) return false;
-    const targetId = modId || mod.modId;
-    return favoriteMods.some(f => 
-      ((targetId && f.modId && String(f.modId) === String(targetId)) || 
-       (mod.fileName && f.fileName && f.fileName === mod.fileName)) && f.isMustHave
-    );
+    if (!mod && !modId) return false;
+    const targetObj = mod || { modId };
+    return favoriteMods.some(f => f.isMustHave && isModMatch(f, targetObj));
   }, [mod, modId, favoriteMods]);
   const isOnline = useSettingsStore(s => s.isOnline);
   const { conflicts, missingDependencies, setModTags, restoreModVersion, scanMods } = useLocalModsStore();

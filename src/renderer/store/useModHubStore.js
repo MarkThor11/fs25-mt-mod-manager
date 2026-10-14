@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useSettingsStore } from './useSettingsStore';
+import { isModMatch } from '../utils/modUtils';
 
 const HARDCODED_BRANDS = [
   "John Deere", "Case IH", "New Holland", "Fendt", "Massey Ferguson", 
@@ -600,17 +601,14 @@ export const useModHubStore = create((set, get) => ({
 
   toggleFavoriteMod: async (mod) => {
     const { favoriteMods } = get();
-    const exists = favoriteMods.find(m => 
-      (m.modId && mod.modId && String(m.modId) === String(mod.modId)) || 
-      (m.fileName && mod.fileName && m.fileName === mod.fileName)
-    );
+    const exists = favoriteMods.find(m => isModMatch(m, mod));
     let newFavs;
     if (exists) {
       const nextIsFavorite = !(exists.isFavorite !== false);
       if (!nextIsFavorite && !exists.isMustHave) {
-        newFavs = favoriteMods.filter(m => m !== exists);
+        newFavs = favoriteMods.filter(m => !isModMatch(m, mod));
       } else {
-        newFavs = favoriteMods.map(m => m === exists ? { ...m, isFavorite: nextIsFavorite } : m);
+        newFavs = favoriteMods.map(m => isModMatch(m, mod) ? { ...m, isFavorite: nextIsFavorite } : m);
       }
     } else {
       // Enrichment: If favoriting from a local source, try to find the full remote data in our cache
@@ -728,13 +726,7 @@ export const useModHubStore = create((set, get) => ({
 
   toggleMustHaveMod: async (mod) => {
     const { favoriteMods } = get();
-    const modId = mod.modId;
-    const fileName = mod.fileName ? mod.fileName.split(/[\\/\\]/).pop() : (mod.modName ? `${mod.modName}.zip` : undefined);
-
-    const exists = favoriteMods.find(m =>
-      (m.modId && modId && String(m.modId) === String(modId)) ||
-      (m.fileName && fileName && m.fileName === fileName)
-    );
+    const exists = favoriteMods.find(m => isModMatch(m, mod));
 
     if (!exists) {
       // Add as must-have only, NOT favorite
@@ -801,9 +793,9 @@ export const useModHubStore = create((set, get) => ({
 
     let newFavs;
     if (!nextIsMustHave && !currentIsFavorite) {
-      newFavs = favoriteMods.filter(m => m !== exists);
+      newFavs = favoriteMods.filter(m => !isModMatch(m, mod));
     } else {
-      newFavs = favoriteMods.map(m => m === exists ? { ...m, isMustHave: nextIsMustHave } : m);
+      newFavs = favoriteMods.map(m => isModMatch(m, mod) ? { ...m, isMustHave: nextIsMustHave } : m);
     }
 
     set({ favoriteMods: newFavs });

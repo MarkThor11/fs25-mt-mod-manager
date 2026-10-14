@@ -6,7 +6,7 @@ import { useToastStore } from '../../store/useToastStore';
 import { useModHubStore } from '../../store/useModHubStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useLocalModsStore } from '../../store/useLocalModsStore';
-import { compareVersions, matchModWithDependency, isMapCategory } from '../../utils/modUtils';
+import { compareVersions, matchModWithDependency, isMapCategory, isModMatch } from '../../utils/modUtils';
 
 const CategoryPlaceholder = ({ category, size = 100, hideZap = false }) => {
   const Icon = useMemo(() => {
@@ -86,13 +86,11 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     const modAuthorId = String(mod.authorId ?? '');
     return (modAuthorId && aId === modAuthorId) || (modAuthor && aName === modAuthor);
   });
-  const isModFav = favoriteMods.some(m => m.isFavorite !== false && ((m.modId && mod.modId && String(m.modId) === String(mod.modId)) || (m.fileName && mod.fileName && m.fileName === mod.fileName)));
+  const isModFav = favoriteMods.some(m => m.isFavorite !== false && isModMatch(m, mod));
   const isMustHave = useMemo(() => {
-    const fm = favoriteMods.find(m => 
-      (m.modId && mod.modId && String(m.modId) === String(mod.modId)) || (m.fileName && mod.fileName && m.fileName === mod.fileName)
-    );
+    const fm = favoriteMods.find(m => isModMatch(m, mod));
     return fm?.isMustHave || false;
-  }, [favoriteMods, mod.modId, mod.fileName]);
+  }, [favoriteMods, mod]);
   const addDownload = useDownloadStore((s) => s.addDownload);
   const removeDownload = useDownloadStore((s) => s.removeDownload);
   const cancelDownload = useDownloadStore((s) => s.cancelDownload);

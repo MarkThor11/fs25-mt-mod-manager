@@ -338,3 +338,36 @@ export const getActiveConflictsForSave = (activeModNames, allConflicts) => {
 
   return conflictsMap;
 };
+
+/**
+ * Standardized check to see if two mod objects refer to the same mod
+ * Handles ModHub ID matching (normalizing strings and stripping leading zeroes),
+ * filename matching (normalizing slashes and stripping .zip), and title matching.
+ */
+export const isModMatch = (a, b) => {
+  if (!a || !b) return false;
+
+  // 1. Match by modId
+  const aId = a.modId != null && a.modId !== '' ? String(a.modId).replace(/^0+/, '').trim() : null;
+  const bId = b.modId != null && b.modId !== '' ? String(b.modId).replace(/^0+/, '').trim() : null;
+  if (aId && bId && aId === bId) return true;
+
+  // 2. Match by fileName / modName / technicalName
+  const aFile = a.fileName || a.modName || a.technicalName;
+  const bFile = b.fileName || b.modName || b.technicalName;
+  if (aFile && bFile) {
+    const aNorm = normalizeForMatching(aFile);
+    const bNorm = normalizeForMatching(bFile);
+    if (aNorm && bNorm && aNorm === bNorm) return true;
+  }
+
+  // 3. Fallback: match by title if both titles exist and are non-empty
+  if (a.title && b.title) {
+    const cleanTitleA = String(a.title).toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+    const cleanTitleB = String(b.title).toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+    if (cleanTitleA && cleanTitleB && cleanTitleA === cleanTitleB) return true;
+  }
+
+  return false;
+};
+

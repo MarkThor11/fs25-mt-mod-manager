@@ -15,7 +15,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { useModHubStore } from '../store/useModHubStore';
 import { useProfileStore } from '../store/useProfileStore';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
-import { resolveRecursiveDependencies, matchModWithDependency, normalizeForMatching } from '../utils/modUtils';
+import { resolveRecursiveDependencies, matchModWithDependency, normalizeForMatching, isModMatch } from '../utils/modUtils';
 
 const getDriveLetter = (filePath) => {
   if (!filePath) return '';
@@ -428,8 +428,8 @@ const LocalModIcon = React.memo(({ mod }) => {
 
 const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpdate, onUninstall, status, updateInfo, isUpdating, formatSize, isIconOnly }) => {
   const { toggleFavoriteMod, favoriteMods, toggleFavoriteAuthor, favoriteAuthors, toggleMustHaveMod } = useModHubStore();
-  const isFavMod = favoriteMods.some(f => f.isFavorite !== false && ((f.modId && mod.modId && String(f.modId) === String(mod.modId)) || (f.fileName && mod.fileName && f.fileName === mod.fileName)));
-  const isMustHave = favoriteMods.some(m => ((m.modId && mod.modId && String(m.modId) === String(mod.modId)) || (m.fileName && mod.fileName && m.fileName === mod.fileName)) && m.isMustHave);
+  const isFavMod = favoriteMods.some(f => f.isFavorite !== false && isModMatch(f, mod));
+  const isMustHave = favoriteMods.some(m => m.isMustHave && isModMatch(m, mod));
   const authorName = mod.author || 'Unknown';
   const isFavAuthor = favoriteAuthors.some(f => f.name.toLowerCase() === authorName.toLowerCase());
 
@@ -971,11 +971,12 @@ const LazyModList = ({
           const updateInfo = getUpdateInfo(mod);
           const isUpdating = updatingMod === mod.fileName || (mod.modId && activeDownloadsKeys.includes(String(mod.modId)));
           const isSelected = selectedMods.includes(mod.fileName);
-          const modIdKey = mod.modId ? String(mod.modId) : mod.fileName;
-          const isFavMod = favModIds.has(modIdKey);
+          const cleanModId = mod.modId ? String(mod.modId).replace(/^0+/, '') : null;
+          const cleanFile = mod.fileName ? normalizeForMatching(mod.fileName) : null;
+          const isFavMod = (cleanModId && favModIds.has(cleanModId)) || (cleanFile && favModIds.has(cleanFile));
           const authorName = mod.author || 'Unknown';
           const isFavAuthor = favAuthorNames.has(authorName.toLowerCase());
-          const isMustHave = mustHaveIds.has(modIdKey);
+          const isMustHave = (cleanModId && mustHaveIds.has(cleanModId)) || (cleanFile && mustHaveIds.has(cleanFile));
 
           return (
             <div 
@@ -1260,9 +1261,9 @@ export default function InstalledModsPage() {
 
   const favModIdsSet = useMemo(() => {
     const set = new Set();
-    (favoriteMods || []).forEach(fv => {
-      if (fv.modId) set.add(String(fv.modId));
-      if (fv.fileName) set.add(fv.fileName);
+    (favoriteMods || []).filter(fv => fv.isFavorite !== false).forEach(fv => {
+      if (fv.modId) set.add(String(fv.modId).replace(/^0+/, ''));
+      if (fv.fileName) set.add(normalizeForMatching(fv.fileName));
     });
     return set;
   }, [favoriteMods]);
@@ -1270,8 +1271,8 @@ export default function InstalledModsPage() {
   const mustHaveIdsSet = useMemo(() => {
     const set = new Set();
     (favoriteMods || []).filter(fv => fv.isMustHave).forEach(fv => {
-      if (fv.modId) set.add(String(fv.modId));
-      if (fv.fileName) set.add(fv.fileName);
+      if (fv.modId) set.add(String(fv.modId).replace(/^0+/, ''));
+      if (fv.fileName) set.add(normalizeForMatching(fv.fileName));
     });
     return set;
   }, [favoriteMods]);
@@ -1393,12 +1394,14 @@ export default function InstalledModsPage() {
     if (tLower === 'crossplay') return Boolean(m.isCrossplay || (m.tags || []).includes('crossplay') || /crossplay|\(cp\)|\[cp\]/i.test(m.title || '') || /crossplay|\(cp\)|\[cp\]/i.test(m.fileName || '') || /crossplay|\(cp\)|\[cp\]/i.test(m.modName || ''));
     if (tLower === 'lock-updates' || tLower === 'auto-updates locked') return Boolean((m.tags || []).includes('lock-updates'));
     if (tLower === 'pinned' || tLower === 'pinned mods' || tLower === 'must-have' || tLower === 'must-haves') {
-      const modIdStr = m.modId ? String(m.modId) : null;
-      return Boolean(m.isMustHave || (modIdStr && mustHaveIdsSet.has(modIdStr)) || (m.fileName && mustHaveIdsSet.has(m.fileName)));
+      const cleanModId = m.modId ? String(m.modId).replace(/^0+/, '') : null;
+      const cleanFile = m.fileName ? normalizeForMatching(m.fileName) : null;
+      return Boolean(m.isMustHave || (cleanModId && mustHaveIdsSet.has(cleanModId)) || (cleanFile && mustHaveIdsSet.has(cleanFile)));
     }
     if (tLower === 'favorites' || tLower === 'favourites' || tLower === 'favorite mods' || tLower === 'favourite mods') {
-      const modIdStr = m.modId ? String(m.modId) : null;
-      const isFavMod = (modIdStr && favModIdsSet.has(modIdStr)) || (m.fileName && favModIdsSet.has(m.fileName));
+      const cleanModId = m.modId ? String(m.modId).replace(/^0+/, '') : null;
+      const cleanFile = m.fileName ? normalizeForMatching(m.fileName) : null;
+      const isFavMod = (cleanModId && favModIdsSet.has(cleanModId)) || (cleanFile && favModIdsSet.has(cleanFile));
       const isFavAuth = m.author && favAuthorsSet.has(m.author.toLowerCase());
       return Boolean(isFavMod || isFavAuth);
     }
@@ -1731,7 +1734,9 @@ export default function InstalledModsPage() {
 
       if (!isDLCItem) {
         if (showOnlyFavorites) {
-          const isModFav = (m.modId && favModIdsSet.has(String(m.modId))) || favModIdsSet.has(m.fileName);
+          const cleanModId = m.modId ? String(m.modId).replace(/^0+/, '') : null;
+          const cleanFile = m.fileName ? normalizeForMatching(m.fileName) : null;
+          const isModFav = (cleanModId && favModIdsSet.has(cleanModId)) || (cleanFile && favModIdsSet.has(cleanFile));
           const isAuthorFav = m.author && favAuthorsSet.has(m.author.toLowerCase());
           if (!isModFav && !isAuthorFav) return false;
         }
@@ -1978,9 +1983,23 @@ export default function InstalledModsPage() {
     return Object.values(folders).flatMap(f => f.mods);
   }, [folders]);
 
-  const favModIds = useMemo(() => new Set(favoriteMods.map(f => f.modId ? String(f.modId) : f.fileName)), [favoriteMods]);
-  const mustHaveIds = useMemo(() => new Set(favoriteMods.filter(f => f.isMustHave).map(f => f.modId ? String(f.modId) : f.fileName)), [favoriteMods]);
-  const favAuthorNames = useMemo(() => new Set(favoriteAuthors.map(f => f.name.toLowerCase())), [favoriteAuthors]);
+  const favModIds = useMemo(() => {
+    const set = new Set();
+    (favoriteMods || []).filter(f => f.isFavorite !== false).forEach(f => {
+      if (f.modId) set.add(String(f.modId).replace(/^0+/, ''));
+      if (f.fileName) set.add(normalizeForMatching(f.fileName));
+    });
+    return set;
+  }, [favoriteMods]);
+  const mustHaveIds = useMemo(() => {
+    const set = new Set();
+    (favoriteMods || []).filter(f => f.isMustHave).forEach(f => {
+      if (f.modId) set.add(String(f.modId).replace(/^0+/, ''));
+      if (f.fileName) set.add(normalizeForMatching(f.fileName));
+    });
+    return set;
+  }, [favoriteMods]);
+  const favAuthorNames = useMemo(() => new Set((favoriteAuthors || []).map(f => (f.name || '').toLowerCase())), [favoriteAuthors]);
 
 
 
