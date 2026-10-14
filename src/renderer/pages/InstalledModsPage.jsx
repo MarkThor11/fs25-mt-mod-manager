@@ -2533,7 +2533,20 @@ export default function InstalledModsPage() {
       </div>
 
       {/* Toolbar & Search */}
-      <div className="sort-bar" style={{ borderRadius: 'var(--radius-lg)', padding: '8px 16px', background: 'var(--bg-card)', border: '1px solid var(--border)', marginBottom: 'var(--sp-6)', gap: 12 }}>
+      <div className="sort-bar" style={{ 
+        position: 'sticky',
+        top: 0,
+        zIndex: 40,
+        borderRadius: 'var(--radius-lg)', 
+        padding: '8px 16px', 
+        background: 'var(--bg-card)', 
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        border: '1px solid var(--border)', 
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+        marginBottom: 'var(--sp-6)', 
+        gap: 12 
+      }}>
         <button 
           className="btn btn--primary btn--sm" 
           onClick={() => setShowFolderInput(!showFolderInput)}
