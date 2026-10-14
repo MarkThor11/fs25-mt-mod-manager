@@ -18,7 +18,7 @@ export default function DiagnosticsPage() {
     try {
       const report = {
         app: 'FS25 MT Mod Manager',
-        version: '1.1.0',
+        version: '1.1.4',
         platform: window.navigator.platform,
         timestamp: new Date().toISOString(),
         stats: {
@@ -78,7 +78,7 @@ export default function DiagnosticsPage() {
           </p>
 
           <div style={{ background: 'var(--bg-tertiary)', padding: 16, borderRadius: 8, border: '1px solid var(--border)', fontSize: 11, fontFamily: 'monospace', color: 'var(--text-tertiary)', overflow: 'hidden' }}>
-            <div style={{ marginBottom: 4 }}>App: FS25 MT Mod Manager v1.1.0</div>
+            <div style={{ marginBottom: 4 }}>App: FS25 MT Mod Manager v1.1.4</div>
             <div style={{ marginBottom: 4 }}>OS: {window.navigator.platform}</div>
             <div style={{ marginBottom: 4 }}>Mods: {modCount} | Saves: {savegameCount}</div>
             <div style={{ opacity: 0.5 }}>[Click button below to copy full JSON]</div>
