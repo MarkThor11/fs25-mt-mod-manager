@@ -693,6 +693,42 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpack', 'mapforest'
     ]);
 
+    const OFFICIAL_MASTER_TEMPLATES = new Set([
+        'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap'
+    ]);
+
+    const targetMapIdNorm = ultraNorm(mapId);
+    const targetTitleNorm = ultraNorm(effMapTitle);
+
+    // Official base maps (Riverbend Springs, Zielonka, Hutan Pantai, Kinlaig) ALWAYS resolve
+    // to their master base game templates first, regardless of custom mod maps sharing mapUS id.
+    const isBaseGameLaunch = isOfficialMap(mapId) || ['riverbendsprings', 'zielonka', 'hutanpantai', 'kinlaig'].includes(targetTitleNorm);
+
+    if (isBaseGameLaunch && (!effMapModName || isOfficialMap(effMapModName))) {
+        const OFFICIAL_FOLDER_MAP = {
+            'mapus': 'MapUS',
+            'mapeu': 'MapEU',
+            'mapas': 'MapAS',
+            'highlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+            'highlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+            'pdlchighlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+        };
+        const officialByTitle = {
+            'riverbendsprings': 'MapUS',
+            'zielonka': 'MapEU',
+            'hutanpantai': 'MapAS',
+            'kinlaig': 'pdlc_highlandsFishingPack_HighlandsFishingMap'
+        };
+        const officialTarget = OFFICIAL_FOLDER_MAP[targetMapIdNorm] || officialByTitle[targetTitleNorm];
+        if (officialTarget) {
+            const folderPath = path.join(templatesDir, officialTarget);
+            if (fs.existsSync(folderPath) || fs.existsSync(`${folderPath}.zip`)) {
+                return officialTarget;
+            }
+        }
+        return null;
+    }
+
     let effectiveModName = effMapModName;
     if (!effectiveModName && mapId && mapId.includes('.')) {
         effectiveModName = mapId.split('.')[0];
@@ -716,41 +752,6 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
                 }
             }
         } catch (_) {}
-    }
-
-    const OFFICIAL_MASTER_TEMPLATES = new Set([
-        'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap'
-    ]);
-
-    const targetMapIdNorm = ultraNorm(mapId);
-    const targetTitleNorm = ultraNorm(effMapTitle);
-
-    const isBaseGameLaunch = (!effectiveModName || isOfficialMap(effectiveModName)) &&
-        (isOfficialMap(mapId) || ['riverbendsprings', 'zielonka', 'hutanpantai', 'kinlaig'].includes(targetTitleNorm));
-
-    if (isBaseGameLaunch) {
-        const OFFICIAL_FOLDER_MAP = {
-            'mapus': 'MapUS',
-            'mapeu': 'MapEU',
-            'mapas': 'MapAS',
-            'highlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
-            'highlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
-            'pdlchighlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
-        };
-        const officialByTitle = {
-            'riverbendsprings': 'MapUS',
-            'zielonka': 'MapEU',
-            'hutanpantai': 'MapAS',
-            'kinlaig': 'pdlc_highlandsFishingPack_HighlandsFishingMap'
-        };
-        const officialTarget = OFFICIAL_FOLDER_MAP[targetMapIdNorm] || officialByTitle[targetTitleNorm];
-        if (officialTarget) {
-            const folderPath = path.join(templatesDir, officialTarget);
-            if (fs.existsSync(folderPath) || fs.existsSync(`${folderPath}.zip`)) {
-                return officialTarget;
-            }
-        }
-        return null;
     }
 
     // Helper: Verify template is complete with required career configuration and engine world files
@@ -1250,7 +1251,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         ? modManager.getLastScanResult().mods
         : (cache.getAllLocalModCache() || []);
 
-    if ((!allMods || allMods.length === 0) && typeof modManager.scanLocalMods === 'function') {
+    if (!isOfficialBaseMap && (!allMods || allMods.length === 0) && typeof modManager.scanLocalMods === 'function') {
         try {
             const scanRes = await modManager.scanLocalMods();
             allMods = (scanRes && scanRes.mods) ? scanRes.mods : [];
