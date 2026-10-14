@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { CustomSlider } from '../components/common/CustomSlider';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Save, Package, PlayCircle, Coins, Map, Settings, Info, DollarSign, Share2, Download, Copy, RefreshCw, AlertCircle, Pin, Search, ChevronLeft, ChevronRight, Folder, ChevronDown, Truck, Users, Globe, Eye, Palette, MapPin, Ruler, Thermometer, Maximize, Radio, Video, Gamepad2, Volume2, LayoutGrid, List, Pencil, Sliders } from 'lucide-react';
+import { CheckSquare, Plus, Trash2, Save, Package, PlayCircle, Coins, Map, Settings, Info, DollarSign, Share2, Download, Copy, RefreshCw, AlertCircle, Pin, Search, ChevronLeft, ChevronRight, Folder, ChevronDown, Truck, Users, Globe, Eye, Palette, MapPin, Ruler, Thermometer, Maximize, Radio, Video, Gamepad2, Volume2, LayoutGrid, List, Pencil, Sliders } from 'lucide-react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useModHubStore } from '../store/useModHubStore';
 import { useToastStore } from '../store/useToastStore';
@@ -76,6 +76,7 @@ export default function ProfilesPage() {
   const [selectedBrand, setSelectedBrand] = useState('');
   const [includeMustHaves, setIncludeMustHaves] = useState(true);
   const [activeTab, setActiveTab] = useState('general');
+  const [isSelectedSectionOpen, setIsSelectedSectionOpen] = useState(true);
   const [renamingProfileId, setRenamingProfileId] = useState(null);
   const [renamingValue, setRenamingValue] = useState('');
   
@@ -1102,6 +1103,123 @@ export default function ProfilesPage() {
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
+                        {/* COLLAPSIBLE SELECTED MODS SECTION */}
+                        {(() => {
+                          const explicitlySelected = installedMods.filter(m => selectedMods.has(m.modName));
+                          if (explicitlySelected.length === 0) return null;
+                          return (
+                            <div style={{ 
+                              background: 'var(--bg-secondary)', 
+                              borderRadius: 'var(--radius-md)', 
+                              border: '1px solid var(--accent)', 
+                              overflow: 'hidden', 
+                              marginBottom: 'var(--sp-2)' 
+                            }}>
+                              <div 
+                                onClick={() => setIsSelectedSectionOpen(prev => !prev)}
+                                style={{ 
+                                  padding: '10px 14px', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'space-between', 
+                                  background: 'rgba(var(--accent-rgb), 0.1)', 
+                                  cursor: 'pointer', 
+                                  borderBottom: isSelectedSectionOpen ? '1px solid var(--border-subtle)' : 'none' 
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+                                  <ChevronDown size={18} style={{ color: 'var(--accent)', transform: isSelectedSectionOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }} />
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <CheckSquare size={14} style={{ color: 'var(--accent)' }} />
+                                    <span style={{ fontWeight: 800, fontSize: 'var(--fs-sm)', letterSpacing: '0.5px', color: 'var(--accent)' }}>
+                                      SELECTED MODS ({explicitlySelected.length})
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {isSelectedSectionOpen && (
+                                <div style={{ padding: 'var(--sp-3)', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 'var(--sp-2)' }}>
+                                  {explicitlySelected.map(mod => {
+                                    const mBasename = mod.fileName ? mod.fileName.split(/[\\/\\]/).pop().toLowerCase() : (mod.modName ? `${mod.modName.toLowerCase()}.zip` : '');
+                                    const isMustHave = favoriteMods.some(f => f.isMustHave && (
+                                      (f.modId && mod.modId && String(f.modId) === String(mod.modId)) || 
+                                      (f.fileName && f.fileName.toLowerCase() === mBasename)
+                                    ));
+                                    const isConflict = false; // Profiles page checks or conflicts
+                                    const isPCOnly = (mod.scripts && mod.scripts.length > 0) || (mod.specializations && mod.specializations.length > 0);
+
+                                    return (
+                                      <div 
+                                        key={mod.modName} 
+                                        onClick={() => toggleMod(mod.modName)}
+                                        className="mod-template-item mod-template-item--active"
+                                        style={{ 
+                                          display: 'flex', 
+                                          alignItems: 'center', 
+                                          gap: '12px', 
+                                          padding: '8px 12px',
+                                          background: 'var(--accent-dim)',
+                                          borderRadius: 'var(--radius-md)',
+                                          border: '2px solid var(--accent)',
+                                          boxShadow: '0 2px 8px rgba(var(--accent-rgb), 0.1)',
+                                          transition: 'all 0.15s ease',
+                                          cursor: 'pointer'
+                                        }}
+                                        title="Click to deselect"
+                                      >
+                                        <div style={{ 
+                                          width: 56, 
+                                          height: 56, 
+                                          borderRadius: 6, 
+                                          background: 'rgba(255, 255, 255, 0.03)', 
+                                          border: '1px solid var(--border-subtle)', 
+                                          display: 'flex', 
+                                          alignItems: 'center', 
+                                          justifyContent: 'center', 
+                                          overflow: 'hidden',
+                                          flexShrink: 0
+                                        }}>
+                                          <ProfileModImage mod={mod} zoom={56} isList={true} />
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div 
+                                            className="mod-card__title" 
+                                            title={mod.title || mod.modName}
+                                            style={{ 
+                                              fontSize: 'var(--fs-sm)', 
+                                              color: 'var(--text-primary)',
+                                              whiteSpace: 'nowrap',
+                                              overflow: 'hidden',
+                                              textOverflow: 'ellipsis',
+                                              fontWeight: 800
+                                            }}
+                                          >
+                                            {mod.title || mod.modName}
+                                          </div>
+                                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', display: 'flex', gap: 8, marginTop: 2 }}>
+                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mod.author || 'Unknown'}</span>
+                                            <span>v{mod.version || '1.0.0.0'}</span>
+                                          </div>
+                                          {isPCOnly && (
+                                            <span className="pc-only-badge" style={{ marginTop: 2 }}>PC ONLY</span>
+                                          )}
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                          {isMustHave && (
+                                            <Pin size={14} fill="var(--accent)" style={{ color: 'var(--accent)' }} />
+                                          )}
+                                          <CheckSquare size={16} style={{ color: 'var(--accent)' }} />
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
                         {(() => {
                           const allFolderNames = Object.keys(groupedMods).sort((a,b) => a === 'MAIN' ? -1 : b === 'MAIN' ? 1 : a.localeCompare(b));
                           

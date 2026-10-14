@@ -615,6 +615,7 @@ const [activeTab, setActiveTab] = useState('general');
   const activeModalConflicts = getActiveConflictsForSave(selectedMods, useLocalModsStore.getState().conflicts);
   const { mods: installedMods } = useLocalModsStore();
   const [expandedFolders, setExpandedFolders] = useState(new Set(['MAIN']));
+  const [isEditorSelectedSectionOpen, setIsEditorSelectedSectionOpen] = useState(true);
   const [fleetCleanPct, setFleetCleanPct] = useState(100);
   const [fleetRepairPct, setFleetRepairPct] = useState(100);
   const [fleetPaintPct, setFleetPaintPct] = useState(100);
@@ -2208,8 +2209,104 @@ const [activeTab, setActiveTab] = useState('general');
                         </button>
                       </div>
 
-                      <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 8, border: '1px solid var(--border)' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 8, padding: '8px 4px' }}>
+                      <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 8, border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {/* SELECTED MODS SECTION */}
+                        {(() => {
+                          const explicitlySelected = installedMods.filter(m => selectedMods.has(m.modName));
+                          if (explicitlySelected.length === 0) return null;
+                          return (
+                            <div style={{ paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+                              <div 
+                                onClick={() => setIsEditorSelectedSectionOpen(prev => !prev)}
+                                style={{ 
+                                  fontSize: 11, 
+                                  fontWeight: 800, 
+                                  color: 'var(--accent)', 
+                                  letterSpacing: 1, 
+                                  marginBottom: isEditorSelectedSectionOpen ? 8 : 0, 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'space-between',
+                                  padding: '6px 8px',
+                                  borderRadius: 6,
+                                  cursor: 'pointer',
+                                  background: 'rgba(var(--accent-rgb), 0.12)'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <CheckSquare size={12} />
+                                  <span>SELECTED MODS ({explicitlySelected.length})</span>
+                                </div>
+                                <ChevronDown size={14} style={{ transform: isEditorSelectedSectionOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }} />
+                              </div>
+
+                              {isEditorSelectedSectionOpen && (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 8, marginTop: 4 }}>
+                                  {explicitlySelected.map(m => {
+                                    const conflictData = activeModalConflicts && activeModalConflicts.get(m.modName);
+                                    const isConflicting = !!conflictData;
+                                    const mBasename = m.fileName ? m.fileName.split(/[\\/\\]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : '');
+                                    const isMustHave = useModHubStore.getState().favoriteMods.some(f => f.isMustHave && (
+                                        (f.modId && m.modId && String(f.modId) === String(m.modId)) || 
+                                        (f.fileName && f.fileName.toLowerCase() === mBasename)
+                                    ));
+                                    return (
+                                      <div
+                                        key={m.modName}
+                                        onClick={() => toggleMod(m.modName)}
+                                        style={{ 
+                                          display: 'flex', 
+                                          alignItems: 'center', 
+                                          gap: 12, 
+                                          padding: '8px', 
+                                          fontSize: 14, 
+                                          cursor: 'pointer', 
+                                          borderRadius: 10, 
+                                          background: isConflicting ? 'rgba(255, 100, 0, 0.08)' : 'var(--accent-dim)', 
+                                          border: `2px solid ${isConflicting ? 'rgba(255, 100, 0, 0.7)' : 'var(--accent)'}`, 
+                                          transition: 'all 0.15s',
+                                          contentVisibility: 'auto',
+                                          containIntrinsicSize: '64px 80px'
+                                        }} 
+                                        className="hover-bg-subtle"
+                                        title="Click to deselect"
+                                      >
+                                        <MiniModIcon mod={m} size={64} />
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12, overflow: 'hidden' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+                                              <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title || m.modName}</span>
+                                              <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'} • v{m.version}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                              {isMustHave && <Pin size={14} fill="var(--accent)" style={{ opacity: 0.8 }} />}
+                                              {usedMods.has(m.modName.toLowerCase()) && (
+                                                <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent)', background: 'rgba(var(--accent-rgb), 0.18)', padding: '2px 6px', borderRadius: 4, letterSpacing: 0.5 }}>IN USE</span>
+                                              )}
+                                              {isConflicting && (
+                                                <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictInfoMod(m); }} style={{ cursor: 'pointer', color: 'orange', padding: '2px 4px', display: 'flex' }} title="Show conflict details">
+                                                  <ShieldAlert size={16} />
+                                                </div>
+                                              )}
+                                              <Check size={14} style={{ color: 'var(--accent)' }} />
+                                            </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* AVAILABLE / FILTERED MODS SECTION */}
+                        <div>
+                          {selectedMods.size > 0 && (
+                            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: 1, marginBottom: 8, paddingLeft: 4 }}>
+                              AVAILABLE MODS
+                            </div>
+                          )}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 8, padding: '0 4px' }}>
                           {(() => {
                               let list = [];
                               if (selectedFolder === 'ALL') {
@@ -2325,6 +2422,7 @@ const [activeTab, setActiveTab] = useState('general');
                                 );
                               });
                           })()}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -4534,93 +4632,207 @@ export default function SavegamesPage() {
                                       !mustHaveMods.some(mh => mh.title === m.title && mh.author === m.author)
                                   ));
 
+                                  const explicitlySelectedMods = otherMods.filter(m => modalSelectedMods.has(m.modName));
+                                  const availableMods = otherMods.filter(m => !modalSelectedMods.has(m.modName));
+
                                   return (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                        {/* PINNED MUST-HAVES */}
                                         {mustHaveMods.length > 0 && includeMustHaves && (
-                                          <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-                                            <div style={{ fontSize: 10, fontWeight: 900, color: 'var(--accent)', letterSpacing: 1, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 8 }}>
-                                              <Pin size={10} fill="var(--accent)" /> PINNED MUST-HAVES
+                                          <div style={{ paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+                                            <div 
+                                              onClick={() => setIsModalPinnedSectionOpen(prev => !prev)}
+                                              style={{ 
+                                                fontSize: 11, 
+                                                fontWeight: 800, 
+                                                color: 'var(--accent)', 
+                                                letterSpacing: 1, 
+                                                marginBottom: isModalPinnedSectionOpen ? 8 : 0, 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'space-between',
+                                                padding: '6px 8px',
+                                                borderRadius: 6,
+                                                cursor: 'pointer',
+                                                background: 'rgba(var(--accent-rgb), 0.08)'
+                                              }}
+                                            >
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <Pin size={12} fill="var(--accent)" />
+                                                <span>PINNED MUST-HAVES ({mustHaveMods.length})</span>
+                                              </div>
+                                              <ChevronDown size={14} style={{ transform: isModalPinnedSectionOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }} />
                                             </div>
-                                            {mustHaveMods.map(m => {
-                                              const conflictData = activeModalConflicts && activeModalConflicts.get(m.modName);
-                                              const isConflicting = !!conflictData;
-                                              return (
+
+                                            {isModalPinnedSectionOpen && (
+                                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
+                                                {mustHaveMods.map(m => {
+                                                  const conflictData = activeModalConflicts && activeModalConflicts.get(m.modName);
+                                                  const isConflicting = !!conflictData;
+                                                  return (
+                                                    <div 
+                                                      key={m.modName} 
+                                                      style={{ 
+                                                          display: 'flex', 
+                                                          alignItems: 'center', 
+                                                          gap: 12, 
+                                                          padding: '8px', 
+                                                          fontSize: 14, 
+                                                          cursor: 'default', 
+                                                          borderRadius: 10, 
+                                                          background: isConflicting ? 'rgba(255, 100, 0, 0.05)' : 'rgba(var(--accent-rgb), 0.1)', 
+                                                          border: `2px solid ${isConflicting ? 'rgba(255, 100, 0, 0.5)' : 'var(--accent)'}`, 
+                                                          opacity: isConflicting ? 1 : 0.8, 
+                                                          contentVisibility: 'auto',
+                                                          containIntrinsicSize: '64px 80px'
+                                                      }} 
+                                                      title={`Version: ${m.version}`}
+                                                    >
+                                                      <div style={{ flexShrink: 0 }}>
+                                                        <MiniModIcon mod={m} size={64} />
+                                                      </div>
+                                                      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                                                          <span style={{ color: isConflicting ? 'orange' : 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</span>
+                                                          <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author} • v{m.version}</span>
+                                                      </div>
+                                                      {isConflicting && (
+                                                        <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictInfoMod(m); }} style={{ cursor: 'pointer', color: 'orange', padding: '2px 4px', display: 'flex' }} title="Show conflict details">
+                                                          <ShieldAlert size={16} />
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {/* EXPLICITLY SELECTED MODS */}
+                                        {explicitlySelectedMods.length > 0 && (
+                                          <div style={{ paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+                                            <div 
+                                              onClick={() => setIsModalSelectedSectionOpen(prev => !prev)}
+                                              style={{ 
+                                                fontSize: 11, 
+                                                fontWeight: 800, 
+                                                color: 'var(--accent)', 
+                                                letterSpacing: 1, 
+                                                marginBottom: isModalSelectedSectionOpen ? 8 : 0, 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'space-between',
+                                                padding: '6px 8px',
+                                                borderRadius: 6,
+                                                cursor: 'pointer',
+                                                background: 'rgba(var(--accent-rgb), 0.12)'
+                                              }}
+                                            >
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <CheckSquare size={12} />
+                                                <span>SELECTED MODS ({explicitlySelectedMods.length})</span>
+                                              </div>
+                                              <ChevronDown size={14} style={{ transform: isModalSelectedSectionOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }} />
+                                            </div>
+
+                                            {isModalSelectedSectionOpen && (
+                                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
+                                                {explicitlySelectedMods.map(m => {
+                                                  const conflictData = activeModalConflicts && activeModalConflicts.get(m.modName);
+                                                  const isConflicting = !!conflictData;
+                                                  return (
+                                                    <div 
+                                                      key={m.modName} 
+                                                      onClick={() => toggleModalModSelection(m.modName)}
+                                                      style={{ 
+                                                          display: 'flex', 
+                                                          alignItems: 'center', 
+                                                          gap: 12, 
+                                                          padding: '8px', 
+                                                          fontSize: 14, 
+                                                          cursor: 'pointer', 
+                                                          borderRadius: 10, 
+                                                          background: isConflicting ? 'rgba(255, 100, 0, 0.08)' : 'var(--accent-dim)', 
+                                                          border: `2px solid ${isConflicting ? 'rgba(255, 100, 0, 0.7)' : 'var(--accent)'}`, 
+                                                          transition: 'all 0.15s',
+                                                          contentVisibility: 'auto',
+                                                          containIntrinsicSize: '64px 80px'
+                                                      }} 
+                                                      className="hover-bg-subtle"
+                                                      title="Click to deselect"
+                                                    >
+                                                      <div style={{ flexShrink: 0 }}>
+                                                        <MiniModIcon mod={m} size={64} />
+                                                      </div>
+                                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
+                                                          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+                                                            <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</span>
+                                                            <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'} • v{m.version}</span>
+                                                          </div>
+                                                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                                            {isConflicting && (
+                                                              <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictInfoMod(m); }} style={{ cursor: 'pointer', color: 'orange', padding: '2px 4px', display: 'flex' }} title="Show conflict details">
+                                                                <ShieldAlert size={16} />
+                                                              </div>
+                                                            )}
+                                                            <Check size={14} style={{ color: 'var(--accent)' }} />
+                                                          </div>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                        
+                                        {/* REMAINING AVAILABLE MODS */}
+                                        <div>
+                                          {(mustHaveMods.length > 0 || explicitlySelectedMods.length > 0) && (
+                                            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: 1, marginBottom: 8, paddingLeft: 8 }}>
+                                              AVAILABLE MODS ({availableMods.length})
+                                            </div>
+                                          )}
+                                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                              {availableMods.map(m => (
                                               <div 
                                                 key={m.modName} 
+                                                onClick={() => toggleModalModSelection(m.modName)}
                                                 style={{ 
                                                     display: 'flex', 
                                                     alignItems: 'center', 
                                                     gap: 12, 
                                                     padding: '8px', 
                                                     fontSize: 14, 
-                                                    cursor: 'default', 
+                                                    cursor: 'pointer', 
                                                     borderRadius: 10, 
-                                                    background: isConflicting ? 'rgba(255, 100, 0, 0.05)' : 'rgba(var(--accent-rgb), 0.1)', 
-                                                    border: `2px solid ${isConflicting ? 'rgba(255, 100, 0, 0.5)' : 'var(--accent)'}`, 
-                                                    opacity: isConflicting ? 1 : 0.8, 
-                                                    marginBottom: 4,
+                                                    background: (activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'rgba(255, 100, 0, 0.05)' : 'transparent', 
+                                                    border: `2px solid ${(activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'rgba(255, 100, 0, 0.6)' : 'transparent'}`, 
+                                                    transition: 'all 0.15s',
                                                     contentVisibility: 'auto',
                                                     containIntrinsicSize: '64px 80px'
                                                 }} 
-                                                title={`Version: ${m.version}`}
+                                                className="hover-bg-subtle"
                                               >
-                                                <div style={{ flexShrink: 0 }}>
-                                                  <MiniModIcon mod={m} size={64} />
-                                                </div>
-                                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                                                    <span style={{ color: isConflicting ? 'orange' : 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</span>
-                                                    <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author} • v{m.version}</span>
-                                                </div>
-                                                {isConflicting && (
-                                                  <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictInfoMod(m); }} style={{ cursor: 'pointer', color: 'orange', padding: '2px 4px', display: 'flex' }} title="Show conflict details">
-                                                    <ShieldAlert size={16} />
+                                                  <div style={{ flexShrink: 0 }}>
+                                                    <MiniModIcon mod={m} size={64} />
                                                   </div>
-                                                )}
+                                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
+                                                      <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+                                                        <span style={{ fontWeight: 700, fontSize: 13, color: (activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</span>
+                                                        <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'} • v{m.version}</span>
+                                                      </div>
+                                                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                                        {(activeModalConflicts && activeModalConflicts.get(m.modName)) && (
+                                                          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictInfoMod(m); }} style={{ cursor: 'pointer', color: 'orange', padding: '2px 4px', display: 'flex' }} title="Show conflict details">
+                                                            <ShieldAlert size={16} />
+                                                          </div>
+                                                        )}
+                                                      </div>
+                                                  </div>
                                               </div>
-                                              );
-                                            })}
+                                              ))}
                                           </div>
-                                        )}
-                                        
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                            {(includeMustHaves ? otherMods : deduplicate(allValidMods)).map(m => (
-                                            <div 
-  key={m.modName} 
-  onClick={() => toggleModalModSelection(m.modName)}
-  style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: 12, 
-      padding: '8px', 
-      fontSize: 14, 
-      cursor: 'pointer', 
-      borderRadius: 10, 
-      background: (activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'rgba(255, 100, 0, 0.05)' : (modalSelectedMods.has(m.modName) ? 'var(--accent-dim)' : 'transparent'), 
-      border: `2px solid ${(activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'rgba(255, 100, 0, 0.6)' : (modalSelectedMods.has(m.modName) ? 'var(--accent)' : 'transparent')}`, 
-      transition: 'all 0.15s',
-      contentVisibility: 'auto',
-      containIntrinsicSize: '64px 80px'
-  }} 
-  className="hover-bg-subtle"
->
-    <div style={{ flexShrink: 0 }}>
-      <MiniModIcon mod={m} size={64} />
-    </div>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
-          <span style={{ fontWeight: 700, fontSize: 13, color: (activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</span>
-          <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'} • v{m.version}</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          {(activeModalConflicts && activeModalConflicts.get(m.modName)) && (
-            <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictInfoMod(m); }} style={{ cursor: 'pointer', color: 'orange', padding: '2px 4px', display: 'flex' }} title="Show conflict details">
-              <ShieldAlert size={16} />
-            </div>
-          )}
-        </div>
-    </div>
-</div>
-                                            ))}
                                         </div>
                                       </div>
                                   );
