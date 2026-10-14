@@ -666,7 +666,17 @@ async function deleteMapTemplate(folderName) {
 }
 
 async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) {
-    if (!mapId && !mapModName) return null;
+    // Gracefully handle argument swapping if mapTitle was passed in second position
+    let effMapModName = mapModName;
+    let effMapTitle = mapTitle;
+    if (effMapModName && !effMapTitle) {
+        const lowerMod = String(effMapModName).toLowerCase();
+        if (lowerMod === 'riverbend springs' || lowerMod === 'zielonka' || lowerMod === 'hutan pantai' || lowerMod === 'kinlaig' || effMapModName.includes(' ')) {
+            effMapTitle = effMapModName;
+            effMapModName = null;
+        }
+    }
+    if (!mapId && !effMapModName && !effMapTitle) return null;
     const templatesDir = getTemplatesPath();
     if (!fs.existsSync(templatesDir)) return null;
 
@@ -683,7 +693,7 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpack', 'mapforest'
     ]);
 
-    let effectiveModName = mapModName;
+    let effectiveModName = effMapModName;
     if (!effectiveModName && mapId && mapId.includes('.')) {
         effectiveModName = mapId.split('.')[0];
     }
@@ -699,7 +709,7 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
             if (allMods) {
                 const matched = allMods.find(m => m.isMap && (
                     (mapId && m.mapId && m.mapId.toLowerCase() === mapId.toLowerCase()) ||
-                    (mapTitle && m.title && m.title.toLowerCase() === mapTitle.toLowerCase())
+                    (effMapTitle && m.title && m.title.toLowerCase() === effMapTitle.toLowerCase())
                 ));
                 if (matched && matched.modName) {
                     effectiveModName = matched.modName;
@@ -713,7 +723,7 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
     ]);
 
     const targetMapIdNorm = ultraNorm(mapId);
-    const targetTitleNorm = ultraNorm(mapTitle);
+    const targetTitleNorm = ultraNorm(effMapTitle);
 
     const isBaseGameLaunch = (!effectiveModName || isOfficialMap(effectiveModName)) &&
         (isOfficialMap(mapId) || ['riverbendsprings', 'zielonka', 'hutanpantai', 'kinlaig'].includes(targetTitleNorm));
@@ -2343,6 +2353,10 @@ async function getAllSavegames() {
                     try {
                         await ensureSavegameImage(savePath, pending.resolvedMapModName || pending.mapModName, pending.mapTitle, pending.mapId);
                     } catch (_) {}
+                    let hasTemplate = false;
+                    try {
+                        hasTemplate = await hasMapTemplate(pending.mapId, pending.mapTitle, pending.resolvedMapModName || pending.mapModName);
+                    } catch (_) {}
                     savegames.push({
                         index: i,
                         folderName: `savegame${i}`,
@@ -2352,8 +2366,8 @@ async function getAllSavegames() {
                         mapId: pending.mapId,
                         mapTitle: pending.mapTitle,
                         isInitialized: false,
-                        hasTemplate: false,
-                        isGhost: true,
+                        hasTemplate,
+                        isGhost: !hasTemplate,
                         isServerSave: false,
                         money: pending.money !== undefined ? pending.money : 1000000,
                         playTime: 0,
