@@ -6,6 +6,7 @@ import { useProfileStore } from '../store/useProfileStore';
 import { useModHubStore } from '../store/useModHubStore';
 import { useToastStore } from '../store/useToastStore';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useSavegameStore } from '../store/useSavegameStore';
 import SaveSlotModal from '../components/profiles/SaveSlotModal';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 
