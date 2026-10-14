@@ -9,6 +9,60 @@ let activePlayingSlot = null;
 let lastLaunchedSlot = null;
 
 /**
+ * Given any detected path (directory, launcher exe, or x64 exe), resolves to the real 64-bit game executable.
+ */
+function resolveRealGameExecutable(inputPath) {
+  if (!inputPath || typeof inputPath !== 'string') return null;
+  const clean = inputPath.trim().replace(/^"(.*)"$/, '$1');
+
+  // Candidate paths in order of preference
+  const candidates = [];
+
+  const stat = (() => {
+    try { return fs.statSync(clean); } catch (_) { return null; }
+  })();
+
+  if (stat && stat.isDirectory()) {
+    candidates.push(path.join(clean, 'x64', 'FarmingSimulator2025Game.exe'));
+    candidates.push(path.join(clean, 'FarmingSimulator2025Game.exe'));
+    candidates.push(path.join(clean, 'FarmingSimulator2025.exe'));
+  } else {
+    // If input is an executable path
+    const dir = path.dirname(clean);
+    const base = path.basename(clean).toLowerCase();
+
+    if (base === 'farmingsimulator2025game.exe' && fs.existsSync(clean)) {
+      return clean;
+    }
+
+    // Try x64 subfolder relative to launcher
+    candidates.push(path.join(dir, 'x64', 'FarmingSimulator2025Game.exe'));
+    candidates.push(path.join(dir, 'FarmingSimulator2025Game.exe'));
+
+    // Check if path is in "Program Files (x86)" and also check "Program Files"
+    if (dir.toLowerCase().includes('program files (x86)')) {
+      const p64Dir = dir.replace(/program files \(x86\)/i, 'Program Files');
+      candidates.push(path.join(p64Dir, 'x64', 'FarmingSimulator2025Game.exe'));
+      candidates.push(path.join(p64Dir, 'FarmingSimulator2025Game.exe'));
+      candidates.push(path.join(p64Dir, 'FarmingSimulator2025.exe'));
+    }
+
+    // Fallback: the input file itself if it exists
+    if (fs.existsSync(clean)) {
+      candidates.push(clean);
+    }
+  }
+
+  for (const cand of candidates) {
+    if (cand && fs.existsSync(cand)) {
+      return cand;
+    }
+  }
+
+  return clean;
+}
+
+/**
  * Common Farming Simulator 25 install paths.
  */
 const COMMON_PATHS = {
@@ -17,8 +71,10 @@ const COMMON_PATHS = {
     'C:\\Program Files\\Steam\\steamapps\\common\\Farming Simulator 25\\x64\\FarmingSimulator2025Game.exe',
     'D:\\SteamLibrary\\steamapps\\common\\Farming Simulator 25\\x64\\FarmingSimulator2025Game.exe',
     'E:\\SteamLibrary\\steamapps\\common\\Farming Simulator 25\\x64\\FarmingSimulator2025Game.exe',
-    'C:\\Program Files (x86)\\Farming Simulator 2025\\x64\\FarmingSimulator2025Game.exe',
     'C:\\Program Files\\Farming Simulator 2025\\x64\\FarmingSimulator2025Game.exe',
+    'C:\\Program Files (x86)\\Farming Simulator 2025\\x64\\FarmingSimulator2025Game.exe',
+    'C:\\Program Files\\Farming Simulator 2025\\FarmingSimulator2025.exe',
+    'C:\\Program Files (x86)\\Farming Simulator 2025\\FarmingSimulator2025.exe',
   ],
   darwin: [
     '/Applications/Farming Simulator 2025.app',
@@ -47,11 +103,8 @@ async function getRegistryPath() {
       const match = stdout.match(/REG_SZ\s+(.*)/);
       if (match && match[1]) {
         const installDir = match[1].trim();
-        const exePath = path.join(installDir, 'x64', 'FarmingSimulator2025Game.exe');
-        if (fs.existsSync(exePath)) return exePath;
-        // Fallback to launcher if game.exe missing
-        const launcherPath = path.join(installDir, 'FarmingSimulator2025.exe');
-        if (fs.existsSync(launcherPath)) return launcherPath;
+        const resolved = resolveRealGameExecutable(installDir);
+        if (resolved && fs.existsSync(resolved)) return resolved;
       }
     } catch (e) { /* ignore single key fail */ }
   }
@@ -114,16 +167,14 @@ async function detectGamePath() {
   // 1. Check if user has set a custom path
   const cache = require('./cache');
   let customPath = cache.getSetting('gamePath');
-  if (customPath && fs.existsSync(customPath)) {
-    // AUTO-CORRECTION: If the user selected the launcher, upgrade it to the actual game exe
-    if (customPath.toLowerCase().endsWith('farmingsimulator2025.exe')) {
-      const x64Path = path.join(path.dirname(customPath), 'x64', 'FarmingSimulator2025Game.exe');
-      if (fs.existsSync(x64Path)) {
-        console.log('[LAUNCH] Auto-correcting custom path to x64 Game executable');
-        customPath = x64Path;
-      }
+  if (customPath) {
+    const resolved = resolveRealGameExecutable(customPath);
+    if (resolved && fs.existsSync(resolved)) {
+      return { path: resolved, source: 'settings' };
     }
-    return { path: customPath, source: 'settings' };
+    if (fs.existsSync(customPath)) {
+      return { path: customPath, source: 'settings' };
+    }
   }
 
   // 2. Try Registry detection (Giants/Retail)
@@ -145,8 +196,9 @@ async function detectGamePath() {
   const paths = COMMON_PATHS[platform] || [];
   
   for (const p of paths) {
-    if (fs.existsSync(p)) {
-      return { path: p, source: 'common' };
+    const resolved = resolveRealGameExecutable(p);
+    if (resolved && fs.existsSync(resolved)) {
+      return { path: resolved, source: 'common' };
     }
   }
 
@@ -160,7 +212,13 @@ async function detectGamePath() {
  * @param {number} options.savegameIndex - Savegame index to load
  */
 async function launch(options = {}) {
-  const gamePath = options.gamePath || (await detectGamePath()).path;
+  let gamePath = options.gamePath || (await detectGamePath()).path;
+  if (gamePath) {
+    const resolved = resolveRealGameExecutable(gamePath);
+    if (resolved && fs.existsSync(resolved)) {
+      gamePath = resolved;
+    }
+  }
   
   // ── AUTOMATED SYSTEM OPTIMIZATION ──
   const cache = require('./cache');

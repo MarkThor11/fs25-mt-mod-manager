@@ -1870,6 +1870,15 @@ ipcMain.handle('game:launch', async (_, options) => {
     const result = await gameLauncher.launch(launchOptions);
     
     if (result.success && result.child) {
+      result.child.on('error', (spawnErr) => {
+        console.error('[LAUNCH] Child process spawn error:', spawnErr);
+        mainWindow?.webContents.send('game:exited', { 
+          savegameIndex: options.savegameIndex,
+          exitCode: -1,
+          error: spawnErr.message
+        });
+      });
+
       result.child.on('close', async (code) => {
         // Steam DRM / Detached process guard:
         // When launched via Steam/Epic, the initial spawned child often exits immediately (code 0)
