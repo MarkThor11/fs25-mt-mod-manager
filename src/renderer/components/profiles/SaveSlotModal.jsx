@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X, PlayCircle, PlusCircle, AlertCircle } from 'lucide-react';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 export default function SaveSlotModal({ onClose, onCreate, profile }) {
   const [savegames, setSavegames] = useState([]);
