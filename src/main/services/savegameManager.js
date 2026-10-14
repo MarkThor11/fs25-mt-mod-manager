@@ -1704,9 +1704,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 savegameData.careerSavegame.player = {};
             }
             if (engineMapId === 'MapUS') {
-                savegameData.careerSavegame.player['@_spawnPositionX'] = '-128.000';
-                savegameData.careerSavegame.player['@_spawnPositionY'] = '49.200';
-                savegameData.careerSavegame.player['@_spawnPositionZ'] = '-162.000';
+                savegameData.careerSavegame.player['@_spawnPositionX'] = '-783.801';
+                savegameData.careerSavegame.player['@_spawnPositionY'] = '46.977';
+                savegameData.careerSavegame.player['@_spawnPositionZ'] = '132.735';
             } else if (engineMapId === 'MapEU') {
                 savegameData.careerSavegame.player['@_spawnPositionX'] = '-263.000';
                 savegameData.careerSavegame.player['@_spawnPositionY'] = '60.000';
@@ -1743,7 +1743,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                     if (pData?.players?.player) {
                         const plist = Array.isArray(pData.players.player) ? pData.players.player : [pData.players.player];
                         let spawnForPlayers = null;
-                        if (engineMapId === 'MapUS')       spawnForPlayers = { x: -128.0,  y: 49.2,  z: -162.0 };
+                        if (engineMapId === 'MapUS')       spawnForPlayers = { x: -783.801, y: 46.977, z: 132.735 };
                         else if (engineMapId === 'MapEU')  spawnForPlayers = { x: -263.0,  y: 60.0,  z: 44.0   };
                         else if (engineMapId === 'MapAS')  spawnForPlayers = { x: -528.8,  y: 19.8,  z: -61.1  };
                         else spawnForPlayers = await getMapDefaultStartCoordinates(slotPath, true, engineMapId, mapModName || trueMapModName);
@@ -4277,7 +4277,7 @@ async function repairSavegameMapId(savePath) {
                 // If Riverbend/Zielonka spawn coordinates were mistakenly set on this custom map, clear them so engine uses custom map spawn
                 if (obj.careerSavegame.player) {
                     const posX = obj.careerSavegame.player['@_spawnPositionX'];
-                    if (posX === '-128.000' || posX === '-263.000' || posX === '-528.800') {
+                    if (posX === '-783.801' || posX === '-128.000' || posX === '-263.000' || posX === '-528.800') {
                         delete obj.careerSavegame.player['@_spawnPositionX'];
                         delete obj.careerSavegame.player['@_spawnPositionY'];
                         delete obj.careerSavegame.player['@_spawnPositionZ'];
@@ -4332,7 +4332,7 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true, fal
 
         if (!mapModName || isOfficialMap(mapModName) || isOfficialMap(mapId)) {
             if (mapId === 'MapUS' || mapTitle === 'Riverbend Springs') {
-                return { x: -128.0, y: 49.2, z: -162.0 };
+                return { x: -783.801, y: 46.977, z: 132.735 };
             } else if (mapId === 'MapEU' || mapTitle === 'Zielonka') {
                 return { x: -263.0, y: 60.0, z: 44.0 };
             } else if (mapId === 'MapAS' || mapTitle === 'Hutan Pantai') {
