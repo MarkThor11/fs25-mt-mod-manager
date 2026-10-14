@@ -334,11 +334,34 @@ const LocalModIcon = React.memo(({ mod }) => {
       }
   }
 
-  if (finalImageUrl && !finalImageUrl.startsWith('CATEGORY:') && (!error || isDLCOverride)) {
+  // Resolve remote DLC images via main process proxy to bypass 403 hotlink protection
+  const [proxiedUrl, setProxiedUrl] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (finalImageUrl && finalImageUrl.startsWith('http')) {
+      if (window.api?.images?.proxy) {
+        window.api.images.proxy(finalImageUrl).then((res) => {
+          if (isMounted) setProxiedUrl(res || finalImageUrl);
+        }).catch(() => {
+          if (isMounted) setProxiedUrl(finalImageUrl);
+        });
+      } else {
+        setProxiedUrl(finalImageUrl);
+      }
+    } else {
+      setProxiedUrl(null);
+    }
+    return () => { isMounted = false; };
+  }, [finalImageUrl]);
+
+  const activeSrc = proxiedUrl || finalImageUrl;
+
+  if (activeSrc && !activeSrc.startsWith('CATEGORY:') && (!error || isDLCOverride)) {
       return (
         <div style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
           <img 
-            src={finalImageUrl} 
+            src={activeSrc} 
             style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid var(--border)' }} 
             alt={mod.title || ""} 
             loading="lazy" 
