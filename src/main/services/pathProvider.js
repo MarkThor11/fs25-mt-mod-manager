@@ -55,6 +55,8 @@ function getAllFS25DataRoots() {
             path.join(root, 'FarmingSimulator2025'),
             path.join(root, 'My Games', 'Farming Simulator 25'),
             path.join(root, 'Farming Simulator 25'),
+            path.join(root, 'Library', 'Application Support', 'FarmingSimulator2025'),
+            path.join(root, 'Library', 'Containers', 'com.giants.farmingsimulator2025', 'Data', 'Library', 'Application Support', 'FarmingSimulator2025'),
         ];
         
         for (const profilePath of possibleProfiles) {

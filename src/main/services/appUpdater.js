@@ -2,6 +2,20 @@ const { autoUpdater } = require('electron-updater');
 const { ipcMain } = require('electron');
 
 function initAppUpdater(mainWindow) {
+  // On macOS, updates are hosted in the dedicated Mac releases repo
+  if (process.platform === 'darwin') {
+    try {
+      autoUpdater.setFeedURL({
+        provider: 'github',
+        owner: 'MarkThor11',
+        repo: 'fs25-mt-mod-manager-for-mac'
+      });
+      console.log('[UPDATER] Feed URL configured for macOS: MarkThor11/fs25-mt-mod-manager-for-mac');
+    } catch (e) {
+      console.error('[UPDATER] Failed to set macOS feed URL:', e);
+    }
+  }
+
   // autoUpdater.autoDownload = false; // We want to control when it downloads
 
   autoUpdater.on('checking-for-update', () => {

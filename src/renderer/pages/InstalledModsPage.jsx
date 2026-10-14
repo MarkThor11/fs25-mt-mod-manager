@@ -316,14 +316,17 @@ const LocalModIcon = React.memo(({ mod }) => {
   };
 
   const titleLower = (mod.title || "").toLowerCase();
+  const fileLower = (mod.fileName || "").toLowerCase();
+  const modNameLower = (mod.modName || "").toLowerCase();
+  const pathLower = (mod.filePath || "").toLowerCase();
   let finalImageUrl = imageUrl;
   let isDLCOverride = false;
 
   // For DLC mods, ALWAYS prefer the official cover image from farming-simulator.com
   // This handles: missing icons, CATEGORY: fallbacks, and cached-but-broken icons
-  if (mod.isDLC) {
+  if (mod.isDLC || mod.folder === 'DLC' || fileLower.endsWith('.dlc') || fileLower.startsWith('pdlc_')) {
       for (const [key, url] of Object.entries(DLC_ICONS)) {
-          if (titleLower.includes(key)) {
+          if (titleLower.includes(key) || fileLower.includes(key) || modNameLower.includes(key) || pathLower.includes(key)) {
               finalImageUrl = url;
               isDLCOverride = true;
               break;

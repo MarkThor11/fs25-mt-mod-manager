@@ -1829,11 +1829,14 @@ async function performScan(manualPaths = null) {
         const gameDir = path.dirname(gameInfo.path);
         const possiblePdlc = path.join(gameDir, 'pdlc');
         const possiblePdlcRoot = path.join(path.dirname(gameDir), 'pdlc'); 
+        const macBundlePdlc = path.join(gameInfo.path, 'Contents', 'Resources', 'pdlc');
         
         if (nodeFs.existsSync(possiblePdlc)) {
             gamePdlcPath = possiblePdlc;
         } else if (nodeFs.existsSync(possiblePdlcRoot)) {
             gamePdlcPath = possiblePdlcRoot;
+        } else if (nodeFs.existsSync(macBundlePdlc)) {
+            gamePdlcPath = macBundlePdlc;
         }
     }
 
