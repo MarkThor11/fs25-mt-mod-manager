@@ -2994,6 +2994,8 @@ export default function SavegamesPage() {
   const [createPlayerName, setCreatePlayerName] = useState('Farmer');
   const [createSlot, setCreateSlot] = useState('1');
   const [modalSelectedMods, setModalSelectedMods] = useState(new Set());
+  const [isModalSelectedSectionOpen, setIsModalSelectedSectionOpen] = useState(true);
+  const [isModalPinnedSectionOpen, setIsModalPinnedSectionOpen] = useState(true);
   const [creating, setCreating] = useState(false);
 
   // Advanced start states
