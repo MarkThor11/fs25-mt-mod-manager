@@ -1345,17 +1345,17 @@ export default function InstalledModsPage() {
       return MODHUB_CATEGORY_MAP[lower];
     }
 
-    if (s.includes(' - ')) {
-      const parts = s.split(' - ').map(p => p.trim());
-      const mParsed = parseModCategory(parts[0], false);
-      const sParsed = parseModCategory(parts[1], false);
-      const mainName = mParsed.main || parts[0];
-      const subName = sParsed.sub || parts[1];
-      return { main: mainName, sub: mainName !== subName ? subName : null };
-    }
-
     if (['other', 'others', 'script', 'scripts'].includes(lower)) {
       return { main: 'Gameplay', sub: null };
+    }
+
+    if (s.includes(' - ')) {
+      const parts = s.split(' - ').map(p => p.trim());
+      let mParsed = parseModCategory(parts[0], false);
+      let sParsed = parseModCategory(parts[1], false);
+      let mainName = mParsed.main || parts[0];
+      let subName = sParsed.sub || parts[1];
+      return { main: mainName, sub: mainName !== subName ? subName : null };
     }
 
     const titleCase = s.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
@@ -1424,6 +1424,15 @@ export default function InstalledModsPage() {
     // 2. Category matching (from mod's resolved ModHub category field)
     const { main, sub } = parseModCategory(effCat, m.isMap);
     const isMainCatFilter = MAIN_CATEGORY_NAMES.has(tLower);
+
+    // Objects specific guard: ensure placeable barns/pens and traffic lights don't match Objects
+    if (tLower === 'objects') {
+      const titleLower = (m.title || '').toLowerCase();
+      if (titleLower.includes('pig barn') || titleLower.includes('cow barn') || titleLower.includes('sheep barn') || titleLower.includes('horse barn') || titleLower.includes('animal pen') || titleLower.includes('traffic lights')) {
+        return false;
+      }
+    }
+
     if (isMainCatFilter) {
       if (main && main.toLowerCase() === tLower) return true;
     } else {
