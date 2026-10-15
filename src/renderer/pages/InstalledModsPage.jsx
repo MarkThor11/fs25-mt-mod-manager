@@ -225,6 +225,11 @@ const MODHUB_CATEGORY_MAP = {
   prefab: { main: 'Prefab', sub: 'Prefab' }
 };
 
+// Set of all canonical ModHub Main Category names (lowercased)
+const MAIN_CATEGORY_NAMES = new Set(
+  Object.values(MODHUB_CATEGORY_MAP).map(e => e.main.toLowerCase()).concat(['maps'])
+);
+
 // Populate reverse lookup keys: Main category labels first so they have absolute priority
 Object.values(MODHUB_CATEGORY_MAP).forEach(entry => {
   if (entry.main) {
@@ -1418,8 +1423,13 @@ export default function InstalledModsPage() {
 
     // 2. Category matching (from mod's resolved ModHub category field)
     const { main, sub } = parseModCategory(effCat, m.isMap);
-    if (main && main.toLowerCase() === tLower) return true;
-    if (sub && sub.toLowerCase() === tLower) return true;
+    const isMainCatFilter = MAIN_CATEGORY_NAMES.has(tLower);
+    if (isMainCatFilter) {
+      if (main && main.toLowerCase() === tLower) return true;
+    } else {
+      if (sub && sub.toLowerCase() === tLower) return true;
+      if (main && main.toLowerCase() === tLower) return true;
+    }
     if (effCat && String(effCat).toLowerCase().trim() === tLower) return true;
 
     // 3. Custom mod tags (m.tags array)
@@ -1430,8 +1440,12 @@ export default function InstalledModsPage() {
         const tClean = String(t).trim();
         if (tClean.toLowerCase() === tLower) return true;
         const norm = parseModCategory(tClean, false);
-        if (norm.main && norm.main.toLowerCase() === tLower) return true;
-        if (norm.sub && norm.sub.toLowerCase() === tLower) return true;
+        if (isMainCatFilter) {
+          if (norm.main && norm.main.toLowerCase() === tLower) return true;
+        } else {
+          if (norm.sub && norm.sub.toLowerCase() === tLower) return true;
+          if (norm.main && norm.main.toLowerCase() === tLower) return true;
+        }
       }
     }
 
