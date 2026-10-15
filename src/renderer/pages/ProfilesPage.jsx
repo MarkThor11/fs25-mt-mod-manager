@@ -609,6 +609,12 @@ export default function ProfilesPage() {
                 type="text"
                 value={profileName}
                 onChange={(e) => setProfileName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur();
+                    handleSave();
+                  }
+                }}
                 style={{ fontSize: 'var(--fs-xl)', fontWeight: 'var(--fw-bold)', background: 'transparent',  borderBottom: '2px solid var(--border)', padding: 'var(--sp-1) 0', color: 'var(--text-primary)', flex: 1, outline: 'none' }}
                 placeholder="Template Name"
               />
