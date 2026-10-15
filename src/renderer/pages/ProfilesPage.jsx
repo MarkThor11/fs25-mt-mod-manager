@@ -586,14 +586,14 @@ export default function ProfilesPage() {
               gap: 8
             }}
           >
-            {p.name}
+            {selectedProfile?.id === p.id ? (profileName || p.name) : p.name}
             <span style={{ 
               background: 'rgba(255,255,255,0.1)', 
               padding: '2px 6px', 
               borderRadius: 10, 
               fontSize: '10px' 
             }}>
-              {(p.mods || []).length}
+              {selectedProfile?.id === p.id ? selectedMods.size : (p.mods || []).length}
             </span>
           </button>
         ))}
