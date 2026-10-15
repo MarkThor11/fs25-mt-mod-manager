@@ -1150,7 +1150,7 @@ export default function ProfilesPage() {
                                         }}>
                                           <ProfileModImage mod={mod} zoom={56} isList={true} />
                                         </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                                           <div 
                                             className="mod-card__title" 
                                             title={mod.title || mod.modName}
@@ -1165,13 +1165,15 @@ export default function ProfilesPage() {
                                           >
                                             {mod.title || mod.modName}
                                           </div>
-                                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', display: 'flex', gap: 8, marginTop: 2 }}>
-                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mod.author || 'Unknown'}</span>
-                                            <span>v{mod.version || '1.0.0.0'}</span>
+                                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {mod.author || 'Unknown'}
                                           </div>
                                           {isPCOnly && (
                                             <span className="pc-only-badge" style={{ marginTop: 2 }}>PC ONLY</span>
                                           )}
+                                          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 'auto', paddingTop: 2 }}>
+                                            <span>v{mod.version || '1.0.0.0'}</span>
+                                          </div>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                                           {isMustHave && (
@@ -1407,7 +1409,7 @@ export default function ProfilesPage() {
                                                 </div>
                                               )}
                                             </div>
-                                            <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+                                            <div style={{ flex: 1, minWidth: 0, textAlign: 'center', display: 'flex', flexDirection: 'column' }}>
                                               <div 
                                                   className="mod-card__title"
                                                   style={{ 
@@ -1424,12 +1426,12 @@ export default function ProfilesPage() {
                                                 {zoom >= 160 && (
                                                   <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
                                                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.8 }}>{mod.author || 'Unknown'}</div>
-                                                    <div style={{ display: 'flex', justifyContent: 'center', gap: 4, opacity: 0.7 }}>
-                                                      <span>v{mod.version || '1.0.0.0'}</span>
-                                                    </div>
                                                   </div>
                                                 )}
                                               {isPCOnly && <div className="pc-only-badge">PC ONLY</div>}
+                                              <div style={{ marginTop: 'auto', paddingTop: 4, fontSize: 10, color: 'var(--text-tertiary)', opacity: 0.7 }}>
+                                                <span>v{mod.version || '1.0.0.0'}</span>
+                                              </div>
                                             </div>
                                             <input
                                               type="checkbox"
@@ -1476,7 +1478,7 @@ export default function ProfilesPage() {
                                           }}>
                                             <ProfileModImage mod={mod} zoom={listIconSize} isList={true} />
                                           </div>
-                                          <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                                             <div 
                                                 className="mod-card__title" 
                                                 title={mod.title || mod.modName}
@@ -1490,13 +1492,15 @@ export default function ProfilesPage() {
                                               >
                                               {mod.title || mod.modName}
                                             </div>
-                                              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', display: 'flex', gap: 12, marginTop: 4 }}>
+                                              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', marginTop: 4 }}>
                                                 <span>{mod.author || 'Unknown'}</span>
-                                                <span>v{mod.version || '1.0.0.0'}</span>
                                               </div>
                                             {isPCOnly && (
                                               <span className="pc-only-badge">PC ONLY</span>
                                             )}
+                                            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 'auto', paddingTop: 2 }}>
+                                              <span>v{mod.version || '1.0.0.0'}</span>
+                                            </div>
                                           </div>
                                           <button 
                                             className="pin-btn" 

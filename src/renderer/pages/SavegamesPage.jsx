@@ -2277,9 +2277,14 @@ const [activeTab, setActiveTab] = useState('general');
                                       >
                                         <MiniModIcon mod={m} size={64} />
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12, overflow: 'hidden' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
-                                              <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title || m.modName}</span>
-                                              <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'} • v{m.version}</span>
+                                            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, minHeight: 48, justifyContent: 'space-between' }}>
+                                              <div>
+                                                <div style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title || m.modName}</div>
+                                                <div style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'}</div>
+                                              </div>
+                                              {m.version && (
+                                                <div style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>v{m.version}</div>
+                                              )}
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                                               {isMustHave && <Pin size={14} fill="var(--accent)" style={{ opacity: 0.8 }} />}
@@ -2389,9 +2394,14 @@ const [activeTab, setActiveTab] = useState('general');
                                   >
                                     <MiniModIcon mod={m} size={64} />
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12, overflow: 'hidden' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
-                                          <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title || m.modName}</span>
-                                          <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'} • v{m.version}</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, minHeight: 48, justifyContent: 'space-between' }}>
+                                          <div>
+                                            <div style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title || m.modName}</div>
+                                            <div style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'}</div>
+                                          </div>
+                                          {m.version && (
+                                            <div style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>v{m.version}</div>
+                                          )}
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                                           {isMustHave && <Pin size={14} fill="var(--accent)" style={{ opacity: 0.8 }} />}
@@ -4723,9 +4733,14 @@ export default function SavegamesPage() {
                                                       <div style={{ flexShrink: 0 }}>
                                                         <MiniModIcon mod={m} size={64} />
                                                       </div>
-                                                      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                                                          <span style={{ color: isConflicting ? 'orange' : 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</span>
-                                                          <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author} • v{m.version}</span>
+                                                       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 48, justifyContent: 'space-between' }}>
+                                                         <div>
+                                                           <div style={{ color: isConflicting ? 'orange' : 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</div>
+                                                           <div style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author}</div>
+                                                         </div>
+                                                         {m.version && (
+                                                           <div style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>v{m.version}</div>
+                                                         )}
                                                       </div>
                                                       {isConflicting && (
                                                         <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConflictInfoMod(m); }} style={{ cursor: 'pointer', color: 'orange', padding: '2px 4px', display: 'flex' }} title="Show conflict details">
@@ -4797,9 +4812,14 @@ export default function SavegamesPage() {
                                                         <MiniModIcon mod={m} size={64} />
                                                       </div>
                                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
-                                                          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
-                                                            <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</span>
-                                                            <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'} • v{m.version}</span>
+                                                           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, minHeight: 48, justifyContent: 'space-between' }}>
+                                                             <div>
+                                                               <div style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</div>
+                                                               <div style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'}</div>
+                                                             </div>
+                                                             {m.version && (
+                                                               <div style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>v{m.version}</div>
+                                                             )}
                                                           </div>
                                                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                                                             {isConflicting && (
@@ -4850,9 +4870,14 @@ export default function SavegamesPage() {
                                                     <MiniModIcon mod={m} size={64} />
                                                   </div>
                                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
-                                                      <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
-                                                        <span style={{ fontWeight: 700, fontSize: 13, color: (activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</span>
-                                                        <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'} • v{m.version}</span>
+                                                       <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, minHeight: 48, justifyContent: 'space-between' }}>
+                                                         <div>
+                                                           <div style={{ fontWeight: 700, fontSize: 13, color: (activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</div>
+                                                           <div style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'}</div>
+                                                         </div>
+                                                         {m.version && (
+                                                           <div style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>v{m.version}</div>
+                                                         )}
                                                       </div>
                                                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                                                         {(activeModalConflicts && activeModalConflicts.get(m.modName)) && (
