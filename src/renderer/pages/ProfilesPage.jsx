@@ -619,7 +619,7 @@ export default function ProfilesPage() {
               </button>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, marginTop: 'var(--sp-4)' }}>
+            <div style={{ flex: 1, overflowY: activeTab === 'mods' ? 'hidden' : 'auto', minHeight: 0, marginTop: 'var(--sp-4)', display: 'flex', flexDirection: 'column' }}>
               {activeTab === 'general' && (
                 <>
                   <div className="settings-tab-content">
@@ -948,7 +948,7 @@ export default function ProfilesPage() {
 
               {activeTab === 'mods' && (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                  <div style={{ marginBottom: 'var(--sp-3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--sp-3)' }}>
+                  <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-card)', paddingBottom: 'var(--sp-3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--sp-3)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-4)' }}>
                       <h3 className="section-title" style={{ margin: 0 }}>Select Mods</h3>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', background: 'var(--bg-secondary)', padding: '2px 10px', borderRadius: '100px', border: '1px solid var(--border-subtle)' }}>

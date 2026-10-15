@@ -963,7 +963,7 @@ const [activeTab, setActiveTab] = useState('general');
         </div>
 
         {/* Content */}
-        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', flex: 1, overflowY: 'auto', minHeight: 0 }}>
+        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', flex: 1, overflowY: activeTab === 'mods' ? 'hidden' : 'auto', minHeight: 0 }}>
           
           {save.isEditorLocked && (
             <div style={{ 
@@ -1962,7 +1962,7 @@ const [activeTab, setActiveTab] = useState('general');
 
           {activeTab === 'mods' && (
                     <div className="settings-tab-content animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)', flex: 1, minHeight: 0 }}>
-                      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-secondary)', paddingBottom: 6, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                         <div className="search-input-wrapper" style={{ flex: '0 0 250px', position: 'relative' }}>
                           <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
                           <input type="text" placeholder="Search installed mods..." value={modSearchQuery} onChange={e => setModSearchQuery(e.target.value)} style={{ width: '100%', paddingLeft: 32 }} />
@@ -4574,7 +4574,7 @@ export default function SavegamesPage() {
 
                     {createActiveTab === 'mods' && (
                         <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-secondary)', paddingBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none', background: 'var(--bg-tertiary)', padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)' }}>
                                         <input 
