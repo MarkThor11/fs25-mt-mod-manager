@@ -1319,7 +1319,7 @@ export default function InstalledModsPage() {
   }, []);
   
   const [tagSearch, setTagSearch] = useState('');
-  const [tagSortBy, setTagSortBy] = useState('count'); // 'count' or 'alpha'
+  const [tagSortBy, setTagSortBy] = useState('count'); // 'count', 'alpha', 'date', or 'author'
 
   // Helper to extract ModHub main category and sub-category from category strings
   const parseModCategory = (cat, isMap) => {
@@ -1485,16 +1485,54 @@ export default function InstalledModsPage() {
       }
     }
 
-    const countForTag = (tagName) => {
-      let count = 0;
-      for (let i = 0; i < eligibleMods.length; i++) {
-        if (doesModMatchTag(eligibleMods[i], tagName)) count++;
+    const tagStatsMap = new Map();
+    const getTagStats = (tagName) => {
+      let stats = tagStatsMap.get(tagName);
+      if (!stats) {
+        let count = 0;
+        let maxDate = 0;
+        const authorCounts = new Map();
+        for (let i = 0; i < eligibleMods.length; i++) {
+          const mod = eligibleMods[i];
+          if (doesModMatchTag(mod, tagName)) {
+            count++;
+            const d = mod.mtime || (mod.releaseDate ? new Date(mod.releaseDate).getTime() : 0) || 0;
+            if (d > maxDate) maxDate = d;
+            if (mod.author && mod.author !== 'Unknown') {
+              authorCounts.set(mod.author, (authorCounts.get(mod.author) || 0) + 1);
+            }
+          }
+        }
+        let topAuthor = '';
+        let maxAuthCount = 0;
+        for (const [author, authCount] of authorCounts.entries()) {
+          if (authCount > maxAuthCount) {
+            maxAuthCount = authCount;
+            topAuthor = author;
+          }
+        }
+        stats = { count, maxDate, primaryAuthor: topAuthor || '' };
+        tagStatsMap.set(tagName, stats);
       }
-      return count;
+      return stats;
     };
 
     const sortFn = (a, b) => {
       if (tagSortBy === 'alpha') {
+        return a.label.localeCompare(b.label);
+      }
+      if (tagSortBy === 'date') {
+        const dateDiff = (b.maxDate || 0) - (a.maxDate || 0);
+        if (dateDiff !== 0) return dateDiff;
+        return a.label.localeCompare(b.label);
+      }
+      if (tagSortBy === 'author') {
+        const authA = a.primaryAuthor || '';
+        const authB = b.primaryAuthor || '';
+        if (authA && !authB) return -1;
+        if (!authA && authB) return 1;
+        const authComp = authA.localeCompare(authB);
+        if (authComp !== 0) return authComp;
         return a.label.localeCompare(b.label);
       }
       return b.count - a.count || a.label.localeCompare(b.label);
@@ -1506,37 +1544,37 @@ export default function InstalledModsPage() {
     const kfList = [];
 
     // Favourites
-    const favCount = countForTag('Favourites');
-    kfList.push({ name: 'Favourites', label: 'Favourites', count: favCount, isFunctional: true });
+    const favStats = getTagStats('Favourites');
+    kfList.push({ name: 'Favourites', label: 'Favourites', count: favStats.count, maxDate: favStats.maxDate, primaryAuthor: favStats.primaryAuthor, isFunctional: true });
     assignedTagNamesLower.add('favourites');
     assignedTagNamesLower.add('favorites');
     assignedTagNamesLower.add('favorite mods');
     assignedTagNamesLower.add('favourite mods');
 
     // Pinned Mods (Must-Haves)
-    const pinnedCount = countForTag('Pinned Mods');
-    kfList.push({ name: 'Pinned Mods', label: 'Pinned Mods', count: pinnedCount, isFunctional: true });
+    const pinnedStats = getTagStats('Pinned Mods');
+    kfList.push({ name: 'Pinned Mods', label: 'Pinned Mods', count: pinnedStats.count, maxDate: pinnedStats.maxDate, primaryAuthor: pinnedStats.primaryAuthor, isFunctional: true });
     assignedTagNamesLower.add('pinned mods');
     assignedTagNamesLower.add('pinned');
     assignedTagNamesLower.add('must-have');
     assignedTagNamesLower.add('must-haves');
 
     // Updates Available
-    const updatesCount = countForTag('Updates Available');
-    kfList.push({ name: 'Updates Available', label: 'Updates Available', count: updatesCount, isFunctional: true });
+    const updatesStats = getTagStats('Updates Available');
+    kfList.push({ name: 'Updates Available', label: 'Updates Available', count: updatesStats.count, maxDate: updatesStats.maxDate, primaryAuthor: updatesStats.primaryAuthor, isFunctional: true });
     assignedTagNamesLower.add('updates available');
     assignedTagNamesLower.add('updates');
     assignedTagNamesLower.add('has-updates');
 
     // Auto-Updates Locked
-    const lockedCount = countForTag('lock-updates');
-    kfList.push({ name: 'lock-updates', label: 'Auto-Updates Locked', count: lockedCount, isFunctional: true });
+    const lockedStats = getTagStats('lock-updates');
+    kfList.push({ name: 'lock-updates', label: 'Auto-Updates Locked', count: lockedStats.count, maxDate: lockedStats.maxDate, primaryAuthor: lockedStats.primaryAuthor, isFunctional: true });
     assignedTagNamesLower.add('lock-updates');
     assignedTagNamesLower.add('auto-updates locked');
 
     // Crossplay
-    const crossplayCount = countForTag('Crossplay');
-    kfList.push({ name: 'Crossplay', label: 'Crossplay', count: crossplayCount, isFunctional: true });
+    const crossplayStats = getTagStats('Crossplay');
+    kfList.push({ name: 'Crossplay', label: 'Crossplay', count: crossplayStats.count, maxDate: crossplayStats.maxDate, primaryAuthor: crossplayStats.primaryAuthor, isFunctional: true });
     assignedTagNamesLower.add('crossplay');
 
     kfList.sort(sortFn);
@@ -1545,9 +1583,9 @@ export default function InstalledModsPage() {
     const mainCategories = [];
     Array.from(candidateMainCats).forEach(main => {
       if (assignedTagNamesLower.has(main.toLowerCase())) return;
-      const c = countForTag(main);
-      if (c > 0) {
-        mainCategories.push({ name: main, label: main, count: c, isMainCategory: true });
+      const stats = getTagStats(main);
+      if (stats.count > 0) {
+        mainCategories.push({ name: main, label: main, count: stats.count, maxDate: stats.maxDate, primaryAuthor: stats.primaryAuthor, isMainCategory: true });
         assignedTagNamesLower.add(main.toLowerCase());
       }
     });
@@ -1557,9 +1595,9 @@ export default function InstalledModsPage() {
     const subCategories = [];
     Array.from(candidateSubCats).forEach(sub => {
       if (assignedTagNamesLower.has(sub.toLowerCase())) return;
-      const c = countForTag(sub);
-      if (c > 0) {
-        subCategories.push({ name: sub, label: sub, count: c, isCategory: true });
+      const stats = getTagStats(sub);
+      if (stats.count > 0) {
+        subCategories.push({ name: sub, label: sub, count: stats.count, maxDate: stats.maxDate, primaryAuthor: stats.primaryAuthor, isCategory: true });
         assignedTagNamesLower.add(sub.toLowerCase());
       }
     });
@@ -1569,9 +1607,9 @@ export default function InstalledModsPage() {
     const custom = [];
     Array.from(candidateCustomTags).forEach(customTag => {
       if (assignedTagNamesLower.has(customTag.toLowerCase())) return;
-      const c = countForTag(customTag);
-      if (c > 0) {
-        custom.push({ name: customTag, label: customTag, count: c, isCustom: true });
+      const stats = getTagStats(customTag);
+      if (stats.count > 0) {
+        custom.push({ name: customTag, label: customTag, count: stats.count, maxDate: stats.maxDate, primaryAuthor: stats.primaryAuthor, isCustom: true });
         assignedTagNamesLower.add(customTag.toLowerCase());
       }
     });
@@ -2971,6 +3009,44 @@ export default function InstalledModsPage() {
                   title="Sort alphabetically (A to Z)"
                 >
                   A-Z
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTagSortBy('date')}
+                  style={{
+                    height: 26,
+                    padding: '0 8px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    borderRadius: 4,
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: tagSortBy === 'date' ? 'var(--primary)' : 'transparent',
+                    color: tagSortBy === 'date' ? '#fff' : 'var(--text-muted)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Sort by date (newest first)"
+                >
+                  Date
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTagSortBy('author')}
+                  style={{
+                    height: 26,
+                    padding: '0 8px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    borderRadius: 4,
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: tagSortBy === 'author' ? 'var(--primary)' : 'transparent',
+                    color: tagSortBy === 'author' ? '#fff' : 'var(--text-muted)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Sort by author (alphabetical)"
+                >
+                  Author
                 </button>
               </div>
 
