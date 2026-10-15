@@ -17,6 +17,7 @@ import { useModHubStore } from '../store/useModHubStore';
 import { useDownloadStore } from '../store/useDownloadStore';
 import MapImage, { MAP_PREVIEWS } from '../components/common/MapImage';
 import { resolveRecursiveDependencies, matchModWithDependency, getActiveConflictsForSave } from '../utils/modUtils';
+import { parseModCategory, getEffectiveModCategory } from '../utils/categoryUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 import MapSelectDropdown from '../components/common/MapSelectDropdown';
 import { COMBINE_HARVESTER_ICON } from '../assets/combineIconData';
@@ -621,34 +622,37 @@ const [activeTab, setActiveTab] = useState('general');
   const [fleetPaintPct, setFleetPaintPct] = useState(100);
   const [usedMods, setUsedMods] = useState(new Set());
   const [showOnlyUsed, setShowOnlyUsed] = useState(false);
+  const editorCategoryCounts = React.useMemo(() => {
+    const counts = {};
+    const cache = useModHubStore.getState().modCache || {};
+    const favs = useModHubStore.getState().favoriteMods || [];
+    (installedMods || []).forEach(m => {
+      if (!m || m.isMap || m.isDLC || m.folder === 'DLC') return;
+      const eff = getEffectiveModCategory(m, cache);
+      if (eff && String(eff).toLowerCase().includes('prefab')) return;
+      const { main } = parseModCategory(eff, m.isMap);
+      const key = main || 'Uncategorised';
+      counts[key] = (counts[key] || 0) + 1;
+      const bn = m.fileName ? m.fileName.split(/[\\/]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : '');
+      if (favs.some(fm => fm && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && fm.fileName.toLowerCase() === bn)))) counts.Favourites = (counts.Favourites || 0) + 1;
+    });
+    return counts;
+  }, [installedMods]);
   const availableCategories = React.useMemo(() => {
+        const arr = Object.keys(editorCategoryCounts).filter(k => k !== 'Favourites').sort();
+        if (editorCategoryCounts.Favourites > 0) arr.unshift('Favourites');
+        return arr;
+    }, [editorCategoryCounts]);
+  const legacyAvailableCategories = React.useMemo(() => {
         const cats = new Set();
         const modCache = useModHubStore.getState().modCache || {};
         const { favoriteMods } = useModHubStore.getState();
-        
-        const parseModCategory = (cat, isMap) => {
-            if (isMap) return 'Maps';
-            if (!cat) return null;
-            let s = String(cat).toLowerCase();
-            if (s.includes('map')) return 'Maps';
-            if (s.includes('tractor') || s.includes('truck') || s.includes('car') || s.includes('bike') || s.includes('harvester') || s.includes('loader') || s.includes('telehandler') || s.includes('forklift') || s.includes('excavator') || s.includes('forwarder') || s.includes('drivable') || s.includes('vehicle')) return 'Vehicles';
-            if (s.includes('trailer') || s.includes('cultivat') || s.includes('plow') || s.includes('seeder') || s.includes('planter') || s.includes('roller') || s.includes('spreader') || s.includes('sprayer') || s.includes('mower') || s.includes('tedder') || s.includes('windrower') || s.includes('header') || s.includes('tool') || s.includes('spader') || s.includes('subsoiler') || s.includes('harrow') || s.includes('weeder') || s.includes('mulcher') || s.includes('belt') || s.includes('leveler') || s.includes('compaction') || s.includes('winch') || s.includes('cutter') || s.includes('chainsaw') || s.includes('shovel') || s.includes('implement') || s.includes('yield') || s.includes('slurry') || s.includes('manure') || s.includes('forage')) return 'Implements';
-            if (s.includes('placeable') || s.includes('shed') || s.includes('silo') || s.includes('production') || s.includes('farmhouse') || s.includes('animal') || s.includes('decoration')) return 'Placeables';
-            if (s.includes('object') || s.includes('bale') || s.includes('pallet') || s.includes('bigbag') || s.includes('weight')) return 'Objects';
-            if (s.includes('pack') || s.includes('package')) return 'Packs';
-            if (s.includes('gameplay') || s.includes('script') || s.includes('prefab')) return 'Gameplay and Scripts';
-            return 'Other';
-        };
-
         let hasFavs = false;
 
         (installedMods || []).forEach(m => {
-            let catStr = m.category;
-            if (m.modId && modCache[m.modId]?.category) {
-                catStr = modCache[m.modId].category;
-            }
-            const mainCat = parseModCategory(catStr, m.isMap);
-            if (mainCat) cats.add(mainCat);
+            const effCat = getEffectiveModCategory(m, modCache);
+            const { main } = parseModCategory(effCat, m.isMap);
+            if (main && main !== 'Maps') cats.add(main);
 
             const fnStr = typeof m.fileName === 'string' ? m.fileName : '';
             const mnStr = typeof m.modName === 'string' ? m.modName : '';
@@ -2334,7 +2338,7 @@ const [activeTab, setActiveTab] = useState('general');
                                           const modCache = useModHubStore.getState().modCache || {};
                                           if (m.modId && modCache[m.modId]?.category) catStr = modCache[m.modId].category;
                                           
-                                          const parseModCategory = (cat, isMap) => {
+                                          const legacyParseModCategory = (cat, isMap) => {
             if (isMap) return 'Maps';
             if (!cat) return null;
             let s = String(cat).toLowerCase();
@@ -2348,7 +2352,7 @@ const [activeTab, setActiveTab] = useState('general');
             return 'Other';
         };
                                           
-                                          const mainCat = parseModCategory(catStr, m.isMap);
+                                          const mainCat = parseModCategory(getEffectiveModCategory(m, modCache), m.isMap).main;
                                           if (mainCat !== selectedCategory) return false;
                                       }
                                   }
@@ -3080,6 +3084,23 @@ export default function SavegamesPage() {
   const [autoResolveMode, setAutoResolveMode] = useState(false);
   const [createActiveTab, setCreateActiveTab] = useState('basic');
     const [createBrandFilter, setCreateBrandFilter] = useState('');
+  const [createCategoryFilter, setCreateCategoryFilter] = useState('');
+  const createAvailableCategories = React.useMemo(() => {
+    const cats = new Set();
+    const cache = useModHubStore.getState().modCache || {};
+    const favs = useModHubStore.getState().favoriteMods || [];
+    let hasFavs = false;
+    (mods || []).forEach(m => {
+      if (m.isMap) return;
+      const { main } = parseModCategory(getEffectiveModCategory(m, cache), m.isMap);
+      if (main && main !== 'Maps') cats.add(main);
+      const bn = m.fileName ? m.fileName.split(/[\\/]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : '');
+      if (favs.some(fm => fm && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && fm.fileName.toLowerCase() === bn)))) hasFavs = true;
+    });
+    const arr = Array.from(cats).sort();
+    if (hasFavs) arr.unshift('Favourites');
+    return arr;
+  }, [mods]);
   const [editingName, setEditingName] = useState(null);
   const [newName, setNewName] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -4566,6 +4587,12 @@ export default function SavegamesPage() {
                                     </label>
                                 </div>
                                 <div style={{ display: 'flex', gap: 8 }}>
+                                    {createAvailableCategories.length > 0 && (
+                                        <select value={createCategoryFilter} onChange={e => setCreateCategoryFilter(e.target.value)} title="Filter mods by category." style={{ fontSize: 13, padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                                            <option value="">All Categories</option>
+                                            {createAvailableCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    )}
                                     {profiles.length > 0 && (
                                         <select onChange={e => applyProfileToModal(e.target.value)} defaultValue="" style={{ fontSize: 13, padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
                                             <option value="" disabled>Apply Profile...</option>
@@ -4628,7 +4655,20 @@ export default function SavegamesPage() {
                                       ))
                                   ));
                                   
-                                  const otherMods = deduplicate(allValidMods.filter(m => 
+                                  const otherMods = deduplicate(allValidMods.filter(m => {
+                                      if (createCategoryFilter) {
+                                          if (createCategoryFilter === 'Favourites') {
+                                              const bn = m.fileName ? m.fileName.split(/[\\/]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : '');
+                                              const isFav = favoriteMods.some(fm => fm && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && fm.fileName.toLowerCase() === bn)));
+                                              if (!isFav) return false;
+                                          } else {
+                                              const cache = useModHubStore.getState().modCache || {};
+                                              const { main } = parseModCategory(getEffectiveModCategory(m, cache), m.isMap);
+                                              if (main !== createCategoryFilter) return false;
+                                          }
+                                      }
+                                      return true;
+                                  }).filter(m =>
                                       !mustHaveMods.some(mh => mh.title === m.title && mh.author === m.author)
                                   ));
 

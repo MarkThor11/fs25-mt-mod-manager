@@ -12,6 +12,7 @@ import DependencyDownloadModal from '../components/common/DependencyDownloadModa
 
 import { useLocalModsStore } from '../store/useLocalModsStore';
 import { resolveRecursiveDependencies } from '../utils/modUtils';
+import { parseModCategory, getEffectiveModCategory, MAIN_CATEGORY_NAMES } from '../utils/categoryUtils';
 
 const MAPS = [
   { id: 'MapUS', title: 'Riverbend Springs' },
@@ -232,62 +233,52 @@ export default function ProfilesPage() {
   const [probeResult, setProbeResult] = useState(null);
   const [collapsedSettings, setCollapsedSettings] = useState(new Set());
 
-  // Helper to group mods by folder
-  const parseModCategory = (cat, isMap) => {
-      if (isMap) return 'Maps';
-      if (!cat) return 'Other';
-      let s = String(cat).toLowerCase();
-      if (s.includes('map')) return 'Maps';
-      if (s.includes('tractor') || s.includes('truck') || s.includes('car') || s.includes('bike') || s.includes('harvester') || s.includes('loader') || s.includes('telehandler') || s.includes('forklift') || s.includes('excavator') || s.includes('forwarder') || s.includes('drivable') || s.includes('vehicle')) return 'Vehicles';
-      if (s.includes('trailer') || s.includes('cultivat') || s.includes('plow') || s.includes('seeder') || s.includes('planter') || s.includes('roller') || s.includes('spreader') || s.includes('sprayer') || s.includes('mower') || s.includes('tedder') || s.includes('windrower') || s.includes('header') || s.includes('tool') || s.includes('spader') || s.includes('subsoiler') || s.includes('harrow') || s.includes('weeder') || s.includes('mulcher') || s.includes('belt') || s.includes('leveler') || s.includes('compaction') || s.includes('winch') || s.includes('cutter') || s.includes('chainsaw') || s.includes('shovel') || s.includes('implement') || s.includes('yield') || s.includes('slurry') || s.includes('manure') || s.includes('forage')) return 'Implements';
-      if (s.includes('placeable') || s.includes('shed') || s.includes('silo') || s.includes('production') || s.includes('farmhouse') || s.includes('animal') || s.includes('decoration')) return 'Placeables';
-      if (s.includes('object') || s.includes('bale') || s.includes('pallet') || s.includes('bigbag') || s.includes('weight')) return 'Objects';
-      if (s.includes('pack') || s.includes('package')) return 'Packs';
-      if (s.includes('gameplay') || s.includes('script') || s.includes('prefab')) return 'Gameplay and Scripts';
-      return 'Other';
+  // Same eligibility as the Installed Mods tag counts: no DLC, no maps, no prefabs
+  const isSelectableMod = (m, effCat) => {
+    if (!m || m.isMap || m.isDLC || m.folder === 'DLC') return false;
+    if ((effCat && String(effCat).toLowerCase().includes('prefab')) || (m.title && m.title.toLowerCase().includes('prefab')) || (m.modName && m.modName.toLowerCase().includes('prefab'))) return false;
+    return true;
   };
 
+  const isFavouriteMod = (m) => {
+    const fnStr = typeof m.fileName === 'string' ? m.fileName : '';
+    const mnStr = typeof m.modName === 'string' ? m.modName : '';
+    const modBasename = fnStr ? fnStr.split(/[\\/]/).pop().toLowerCase() : (mnStr ? `${mnStr.toLowerCase()}.zip` : '');
+    return (useModHubStore.getState().favoriteMods || []).some(fm => {
+      if (!fm) return false;
+      const idMatch = fm.modId && m.modId && String(fm.modId) === String(m.modId);
+      const fmStr = typeof fm.fileName === 'string' ? fm.fileName : '';
+      return idMatch || (fmStr && fmStr.toLowerCase() === modBasename);
+    });
+  };
+
+  const groupedMods = useMemo(() => {
+    const groups = {};
+    const modCache = useModHubStore.getState().modCache || {};
+    installedMods.forEach(mod => {
+      const effCat = getEffectiveModCategory(mod, modCache);
+      if (!isSelectableMod(mod, effCat)) return;
+      const { main } = parseModCategory(effCat, mod.isMap);
+      const categoryName = main || 'Uncategorised';
+      if (!groups[categoryName]) groups[categoryName] = [];
+      groups[categoryName].push(mod);
+    });
+    return groups;
+  }, [installedMods]);
+
+  // Live per-category totals (ignores search / crossplay filters so they match the Installed Mods tags)
+  const categoryCounts = useMemo(() => {
+    const counts = {};
+    Object.entries(groupedMods).forEach(([name, list]) => { counts[name] = list.length; });
+    counts.Favourites = Object.values(groupedMods).reduce((n, list) => n + list.filter(isFavouriteMod).length, 0);
+    return counts;
+  }, [groupedMods, favoriteMods]);
 
   const availableCategories = useMemo(() => {
-    const cats = new Set();
-    const modCache = useModHubStore.getState().modCache || {};
-    let hasFavs = false;
-    
-    const parseModCategory = (cat, isMap) => {
-      if (isMap) return 'Maps';
-      if (!cat) return null;
-      let s = String(cat).toLowerCase();
-      if (s.includes('map')) return 'Maps';
-      if (s.includes('tractor') || s.includes('truck') || s.includes('car') || s.includes('bike') || s.includes('harvester') || s.includes('loader') || s.includes('telehandler') || s.includes('forklift') || s.includes('excavator') || s.includes('forwarder') || s.includes('drivable') || s.includes('vehicle')) return 'Vehicles';
-      if (s.includes('trailer') || s.includes('cultivat') || s.includes('plow') || s.includes('seeder') || s.includes('planter') || s.includes('roller') || s.includes('spreader') || s.includes('sprayer') || s.includes('mower') || s.includes('tedder') || s.includes('windrower') || s.includes('header') || s.includes('tool') || s.includes('spader') || s.includes('subsoiler') || s.includes('harrow') || s.includes('weeder') || s.includes('mulcher') || s.includes('belt') || s.includes('leveler') || s.includes('compaction') || s.includes('winch') || s.includes('cutter') || s.includes('chainsaw') || s.includes('shovel') || s.includes('implement') || s.includes('yield') || s.includes('slurry') || s.includes('manure') || s.includes('forage')) return 'Implements';
-      if (s.includes('placeable') || s.includes('shed') || s.includes('silo') || s.includes('production') || s.includes('farmhouse') || s.includes('animal') || s.includes('decoration')) return 'Placeables';
-      if (s.includes('object') || s.includes('bale') || s.includes('pallet') || s.includes('bigbag') || s.includes('weight')) return 'Objects';
-      if (s.includes('pack') || s.includes('package')) return 'Packs';
-      if (s.includes('gameplay') || s.includes('script') || s.includes('prefab')) return 'Gameplay and Scripts';
-      return 'Other';
-    };
-
-    (installedMods || []).forEach(m => {
-      let catStr = m.category;
-      if (m.modId && modCache[m.modId]?.category) catStr = modCache[m.modId].category;
-      const mainCat = parseModCategory(catStr, m.isMap);
-      if (mainCat) cats.add(mainCat);
-      
-      const fnStr = typeof m.fileName === 'string' ? m.fileName : '';
-      const mnStr = typeof m.modName === 'string' ? m.modName : '';
-      const modBasename = fnStr ? fnStr.split(/[\\/\\]/).pop().toLowerCase() : (mnStr ? `${mnStr.toLowerCase()}.zip` : '');
-      const isFav = (useModHubStore.getState().favoriteMods||[]).some(fm => {
-        if (!fm) return false;
-        const idMatch = fm.modId && m.modId && String(fm.modId) === String(m.modId);
-        const fmStr = typeof fm.fileName === 'string' ? fm.fileName : '';
-        return idMatch || (fmStr && fmStr.toLowerCase() === modBasename);
-      });
-      if (isFav) hasFavs = true;
-    });
-    const arr = Array.from(cats).sort();
-    if (hasFavs) arr.unshift('Favourites');
+    const arr = Object.keys(groupedMods).sort();
+    if (categoryCounts.Favourites > 0) arr.unshift('Favourites');
     return arr;
-  }, [installedMods]);
+  }, [groupedMods, categoryCounts]);
 
   const availableBrands = useMemo(() => {
     const brands = new Set();
@@ -305,39 +296,6 @@ export default function ProfilesPage() {
     });
     return Array.from(brands).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
   }, [installedMods]);
-  
-  const parseModCategoryExport = (cat, isMap) => {
-      if (isMap) return 'Maps';
-      if (!cat) return null;
-      let s = String(cat).toLowerCase();
-      if (s.includes('map')) return 'Maps';
-      if (s.includes('tractor') || s.includes('truck') || s.includes('car') || s.includes('bike') || s.includes('harvester') || s.includes('loader') || s.includes('telehandler') || s.includes('forklift') || s.includes('excavator') || s.includes('forwarder') || s.includes('drivable') || s.includes('vehicle')) return 'Vehicles';
-      if (s.includes('trailer') || s.includes('cultivat') || s.includes('plow') || s.includes('seeder') || s.includes('planter') || s.includes('roller') || s.includes('spreader') || s.includes('sprayer') || s.includes('mower') || s.includes('tedder') || s.includes('windrower') || s.includes('header') || s.includes('tool') || s.includes('spader') || s.includes('subsoiler') || s.includes('harrow') || s.includes('weeder') || s.includes('mulcher') || s.includes('belt') || s.includes('leveler') || s.includes('compaction') || s.includes('winch') || s.includes('cutter') || s.includes('chainsaw') || s.includes('shovel') || s.includes('implement') || s.includes('yield') || s.includes('slurry') || s.includes('manure') || s.includes('forage')) return 'Implements';
-      if (s.includes('placeable') || s.includes('shed') || s.includes('silo') || s.includes('production') || s.includes('farmhouse') || s.includes('animal') || s.includes('decoration')) return 'Placeables';
-      if (s.includes('object') || s.includes('bale') || s.includes('pallet') || s.includes('bigbag') || s.includes('weight')) return 'Objects';
-      if (s.includes('pack') || s.includes('package')) return 'Packs';
-      if (s.includes('gameplay') || s.includes('script') || s.includes('prefab')) return 'Gameplay and Scripts';
-      return 'Other';
-  };
-
-  const groupedMods = useMemo(() => {
-    const groups = {};
-    const modCache = useModHubStore.getState().modCache || {};
-    installedMods.forEach(mod => {
-      if (mod.isMap) return;
-      let catStr = mod.category;
-      if (mod.modId && modCache[mod.modId]?.category) catStr = modCache[mod.modId].category;
-      
-      // Filter out prefabs
-      if ((catStr && catStr.toLowerCase().includes('prefab')) || (mod.title && mod.title.toLowerCase().includes('prefab')) || (mod.modName && mod.modName.toLowerCase().includes('prefab'))) return;
-      
-      const categoryName = parseModCategory(catStr, mod.isMap);
-      if (!groups[categoryName]) groups[categoryName] = [];
-      groups[categoryName].push(mod);
-    });
-    return groups;
-  }, [installedMods]);
-
   // Handle Select All in folder
   const handleSelectFolderMods = (folderName, mods, deselect = false) => {
     setSelectedMods(prev => {
@@ -1020,7 +978,7 @@ export default function ProfilesPage() {
                     >
                       <option value="">All Categories</option>
                       {availableCategories.map(c => (
-                        <option key={c} value={c}>{c}</option>
+                        <option key={c} value={c}>{c} ({categoryCounts[c] ?? 0})</option>
                       ))}
                     </select>
                   )}
@@ -1232,7 +1190,34 @@ export default function ProfilesPage() {
                           
                           const renderedGroups = allFolderNames.map(folderName => {
                             const folderMods = groupedMods[folderName];
+                            if (selectedCategory && selectedCategory !== 'Favourites' && folderName !== selectedCategory) {
+                              return null;
+                            }
                             const filteredFolderMods = folderMods.filter(m => {
+                              if (selectedCategory === 'Favourites') {
+                                const fnStr = typeof m.fileName === 'string' ? m.fileName : '';
+                                const mnStr = typeof m.modName === 'string' ? m.modName : '';
+                                const modBasename = fnStr ? fnStr.split(/[\\/\\]/).pop().toLowerCase() : (mnStr ? `${mnStr.toLowerCase()}.zip` : '');
+                                const isFav = (useModHubStore.getState().favoriteMods||[]).some(fm => {
+                                  if (!fm) return false;
+                                  const idMatch = fm.modId && m.modId && String(fm.modId) === String(m.modId);
+                                  const fmStr = typeof fm.fileName === 'string' ? fm.fileName : '';
+                                  return idMatch || (fmStr && fmStr.toLowerCase() === modBasename);
+                                });
+                                if (!isFav) return false;
+                              }
+                              if (selectedBrand) {
+                                const modCache = useModHubStore.getState().modCache || {};
+                                let b = null;
+                                if (m.modId && modCache[m.modId]?.brand) b = modCache[m.modId].brand;
+                                if (!b) {
+                                  const hardcoded = useModHubStore.getState().hardcodedBrands || [];
+                                  for (const hb of hardcoded) {
+                                    if (m.title && m.title.toLowerCase().includes(hb.toLowerCase())) { b = hb; break; }
+                                  }
+                                }
+                                if (b !== selectedBrand) return false;
+                              }
                               if (modSearchQuery) {
                                 const q = modSearchQuery.toLowerCase();
                                 if (!(m.title?.toLowerCase().includes(q) || m.modName.toLowerCase().includes(q))) return false;
