@@ -225,7 +225,7 @@ const MODHUB_CATEGORY_MAP = {
   prefab: { main: 'Prefab', sub: 'Prefab' }
 };
 
-// Populate reverse lookup keys for Main category labels and Subcategory labels
+// Populate reverse lookup keys: Main category labels first so they have absolute priority
 Object.values(MODHUB_CATEGORY_MAP).forEach(entry => {
   if (entry.main) {
     const mainKey = entry.main.toLowerCase().replace(/[\s_\-]+/g, '');
@@ -233,6 +233,9 @@ Object.values(MODHUB_CATEGORY_MAP).forEach(entry => {
       MODHUB_CATEGORY_MAP[mainKey] = { main: entry.main, sub: null };
     }
   }
+});
+// Then populate Subcategory labels without overwriting existing Main category keys
+Object.values(MODHUB_CATEGORY_MAP).forEach(entry => {
   if (entry.sub) {
     const subKey = entry.sub.toLowerCase().replace(/[\s_\-]+/g, '');
     if (!MODHUB_CATEGORY_MAP[subKey]) {
@@ -1346,8 +1349,12 @@ export default function InstalledModsPage() {
       return { main: mainName, sub: mainName !== subName ? subName : null };
     }
 
+    if (['other', 'others', 'script', 'scripts'].includes(lower)) {
+      return { main: 'Gameplay', sub: null };
+    }
+
     const titleCase = s.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
-    return { main: 'Objects & Misc', sub: titleCase };
+    return { main: 'Objects', sub: titleCase };
   };
 
   // Helper to resolve effective ModHub category for a mod directly from mod properties
