@@ -2357,7 +2357,11 @@ const [activeTab, setActiveTab] = useState('general');
                                       if (b !== selectedBrand) return false;
                                   }
                                   if (!modSearchQuery) return true;
-                                  return m.title?.toLowerCase().includes(modSearchQuery.toLowerCase()) || m.modName.toLowerCase().includes(modSearchQuery.toLowerCase());
+                                  const q = modSearchQuery.toLowerCase();
+                                   const titleMatch = m.title?.toLowerCase().includes(q);
+                                   const nameMatch = m.modName?.toLowerCase().includes(q);
+                                   const authorMatch = m.author?.toLowerCase().includes(q);
+                                   return titleMatch || nameMatch || authorMatch;
                               }).sort((a, b) => (a.title || a.modName).localeCompare(b.title || b.modName));
                               
                               if (displayedMods.length === 0) {

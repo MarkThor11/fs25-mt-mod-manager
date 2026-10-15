@@ -1225,7 +1225,10 @@ export default function ProfilesPage() {
                               }
                               if (modSearchQuery) {
                                 const q = modSearchQuery.toLowerCase();
-                                if (!(m.title?.toLowerCase().includes(q) || m.modName.toLowerCase().includes(q))) return false;
+                                const titleMatch = m.title?.toLowerCase().includes(q);
+                                const nameMatch = m.modName?.toLowerCase().includes(q);
+                                const authorMatch = m.author?.toLowerCase().includes(q);
+                                if (!titleMatch && !nameMatch && !authorMatch) return false;
                               }
                               if (options.isCrossPlatform) {
                                 const isPCOnly = (m.scripts && m.scripts.length > 0) || (m.specializations && m.specializations.length > 0);
