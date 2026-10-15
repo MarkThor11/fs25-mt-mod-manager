@@ -8,7 +8,7 @@ export default function TitleBar() {
 
   return (
     <div className="titlebar">
-      <span className="titlebar__title">v1.1.5</span>
+      <span className="titlebar__title">v1.1.6</span>
       <div className="titlebar__controls">
         <button className="titlebar__btn" onClick={handleMinimize} title="Minimize">
           <Minus size={14} />
