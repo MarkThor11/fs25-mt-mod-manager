@@ -16,7 +16,7 @@ import { useModHubStore } from '../store/useModHubStore';
 import { useProfileStore } from '../store/useProfileStore';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 import { resolveRecursiveDependencies, matchModWithDependency, normalizeForMatching, isModMatch } from '../utils/modUtils';
-import { MODHUB_CATEGORY_MAP, MAIN_CATEGORY_NAMES, parseModCategory as parseModCategoryUtil, getEffectiveModCategory as getEffectiveModCategoryUtil } from '../utils/categoryUtils';
+import { MODHUB_CATEGORY_MAP, MAIN_CATEGORY_NAMES, parseModCategory, getEffectiveModCategory, isMapCategory } from '../utils/categoryUtils';
 
 const getDriveLetter = (filePath) => {
   if (!filePath) return '';
@@ -1103,59 +1103,6 @@ export default function InstalledModsPage() {
   
   const [tagSearch, setTagSearch] = useState('');
   const [tagSortBy, setTagSortBy] = useState('count'); // 'count', 'alpha', 'date', or 'author'
-
-  // Helper to extract ModHub main category and sub-category from category strings
-  const parseModCategory = (cat, isMap) => {
-    if (isMap) return { main: 'Maps', sub: null };
-    if (!cat) return { main: null, sub: null };
-    let s = String(cat).trim();
-    if (s.startsWith('CATEGORY:')) s = s.substring(9).trim();
-    if (!s || s.length > 50 || s.includes('<') || s.includes('\n') || s.includes('\r')) return { main: null, sub: null };
-    
-    const lower = s.toLowerCase().replace(/[\s_\-]+/g, '');
-    if (['generic', 'skipped', 'dlc', 'unknown', 'latest'].includes(lower)) return { main: null, sub: null };
-    if (lower.includes('map')) return { main: 'Maps', sub: null };
-
-    if (MODHUB_CATEGORY_MAP[lower]) {
-      return MODHUB_CATEGORY_MAP[lower];
-    }
-
-    if (['other', 'others', 'script', 'scripts'].includes(lower)) {
-      return { main: 'Gameplay', sub: null };
-    }
-
-    if (s.includes(' - ')) {
-      const parts = s.split(' - ').map(p => p.trim());
-      let mParsed = parseModCategory(parts[0], false);
-      let sParsed = parseModCategory(parts[1], false);
-      let mainName = mParsed.main || parts[0];
-      let subName = sParsed.sub || parts[1];
-      return { main: mainName, sub: mainName !== subName ? subName : null };
-    }
-
-    const titleCase = s.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
-    return { main: 'Objects', sub: titleCase };
-  };
-
-  // Helper to resolve effective ModHub category for a mod directly from mod properties
-  const getEffectiveModCategory = useCallback((m) => {
-    if (!m) return null;
-    if (m.isMap) return 'Maps';
-    if (m.category) return m.category;
-    if (m.extraContent) return m.extraContent;
-
-    if (m.modId) {
-      const cleanId = String(m.modId).replace(/^0+/, '');
-      if (modCache[cleanId]?.category) return modCache[cleanId].category;
-      if (modCache[m.modId]?.category) return modCache[m.modId].category;
-    }
-
-    if (m.fileName && modCache[m.fileName]?.category) {
-      return modCache[m.fileName].category;
-    }
-
-    return null;
-  }, [modCache]);
 
   // Helper for backward compatibility and filtering
   const normalizeCategory = (cat, isMap) => {

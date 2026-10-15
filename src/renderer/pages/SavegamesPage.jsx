@@ -17,7 +17,7 @@ import { useModHubStore } from '../store/useModHubStore';
 import { useDownloadStore } from '../store/useDownloadStore';
 import MapImage, { MAP_PREVIEWS } from '../components/common/MapImage';
 import { resolveRecursiveDependencies, matchModWithDependency, getActiveConflictsForSave } from '../utils/modUtils';
-import { parseModCategory, getEffectiveModCategory } from '../utils/categoryUtils';
+import { parseModCategory, getEffectiveModCategory, isMapMod, isMapCategory } from '../utils/categoryUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 import MapSelectDropdown from '../components/common/MapSelectDropdown';
 import { COMBINE_HARVESTER_ICON } from '../assets/combineIconData';
@@ -629,17 +629,18 @@ const [activeTab, setActiveTab] = useState('general');
     (installedMods || []).forEach(m => {
       if (!m || m.isMap || m.isDLC || m.folder === 'DLC') return;
       const eff = getEffectiveModCategory(m, cache);
-      if (eff && String(eff).toLowerCase().includes('prefab')) return;
+      if (isMapMod(m, eff)) return;
+      if ((eff && String(eff).toLowerCase().includes('prefab')) || (m.title && m.title.toLowerCase().includes('prefab')) || (m.modName && m.modName.toLowerCase().includes('prefab'))) return;
       const { main } = parseModCategory(eff, m.isMap);
-      const key = main || 'Uncategorised';
-      counts[key] = (counts[key] || 0) + 1;
+      if (!main || main === 'Maps' || main.toLowerCase() === 'maps') return;
+      counts[main] = (counts[main] || 0) + 1;
       const bn = m.fileName ? m.fileName.split(/[\\/]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : '');
       if (favs.some(fm => fm && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && fm.fileName.toLowerCase() === bn)))) counts.Favourites = (counts.Favourites || 0) + 1;
     });
     return counts;
   }, [installedMods]);
   const availableCategories = React.useMemo(() => {
-        const arr = Object.keys(editorCategoryCounts).filter(k => k !== 'Favourites').sort();
+        const arr = Object.keys(editorCategoryCounts).filter(k => k !== 'Favourites' && k !== 'Maps').sort();
         if (editorCategoryCounts.Favourites > 0) arr.unshift('Favourites');
         return arr;
     }, [editorCategoryCounts]);
@@ -907,12 +908,11 @@ const [activeTab, setActiveTab] = useState('general');
     const modCache = useModHubStore.getState().modCache || {};
     installedMods.forEach(mod => {
       if (mod.isMap) return;
-      
-      let catStr = mod.category;
-      if (mod.modId && modCache[mod.modId]?.category) catStr = modCache[mod.modId].category;
+      const effCat = getEffectiveModCategory(mod, modCache);
+      if (isMapMod(mod, effCat)) return;
       
       // Filter out prefabs
-      if ((catStr && catStr.toLowerCase().includes('prefab')) || (mod.title && mod.title.toLowerCase().includes('prefab')) || (mod.modName && mod.modName.toLowerCase().includes('prefab'))) return;
+      if ((effCat && String(effCat).toLowerCase().includes('prefab')) || (mod.title && mod.title.toLowerCase().includes('prefab')) || (mod.modName && mod.modName.toLowerCase().includes('prefab'))) return;
 
       const folderName = mod.folder || 'MAIN';
       if (!groups[folderName]) groups[folderName] = [];
@@ -2334,24 +2334,7 @@ const [activeTab, setActiveTab] = useState('general');
                                           });
                                           if (!isFav) return false;
                                       } else {
-                                          let catStr = m.category;
                                           const modCache = useModHubStore.getState().modCache || {};
-                                          if (m.modId && modCache[m.modId]?.category) catStr = modCache[m.modId].category;
-                                          
-                                          const legacyParseModCategory = (cat, isMap) => {
-            if (isMap) return 'Maps';
-            if (!cat) return null;
-            let s = String(cat).toLowerCase();
-            if (s.includes('map')) return 'Maps';
-            if (s.includes('tractor') || s.includes('truck') || s.includes('car') || s.includes('bike') || s.includes('harvester') || s.includes('loader') || s.includes('telehandler') || s.includes('forklift') || s.includes('excavator') || s.includes('forwarder') || s.includes('drivable') || s.includes('vehicle')) return 'Vehicles';
-            if (s.includes('trailer') || s.includes('cultivat') || s.includes('plow') || s.includes('seeder') || s.includes('planter') || s.includes('roller') || s.includes('spreader') || s.includes('sprayer') || s.includes('mower') || s.includes('tedder') || s.includes('windrower') || s.includes('header') || s.includes('tool') || s.includes('spader') || s.includes('subsoiler') || s.includes('harrow') || s.includes('weeder') || s.includes('mulcher') || s.includes('belt') || s.includes('leveler') || s.includes('compaction') || s.includes('winch') || s.includes('cutter') || s.includes('chainsaw') || s.includes('shovel') || s.includes('implement') || s.includes('yield') || s.includes('slurry') || s.includes('manure') || s.includes('forage')) return 'Implements';
-            if (s.includes('placeable') || s.includes('shed') || s.includes('silo') || s.includes('production') || s.includes('farmhouse') || s.includes('animal') || s.includes('decoration')) return 'Placeables';
-            if (s.includes('object') || s.includes('bale') || s.includes('pallet') || s.includes('bigbag') || s.includes('weight')) return 'Objects';
-            if (s.includes('pack') || s.includes('package')) return 'Packs';
-            if (s.includes('gameplay') || s.includes('script') || s.includes('prefab')) return 'Gameplay and Scripts';
-            return 'Other';
-        };
-                                          
                                           const mainCat = parseModCategory(getEffectiveModCategory(m, modCache), m.isMap).main;
                                           if (mainCat !== selectedCategory) return false;
                                       }
@@ -3091,9 +3074,12 @@ export default function SavegamesPage() {
     const favs = useModHubStore.getState().favoriteMods || [];
     let hasFavs = false;
     (mods || []).forEach(m => {
-      if (m.isMap) return;
-      const { main } = parseModCategory(getEffectiveModCategory(m, cache), m.isMap);
-      if (main && main !== 'Maps') cats.add(main);
+      if (!m || m.isMap || m.isDLC || m.folder === 'DLC') return;
+      const eff = getEffectiveModCategory(m, cache);
+      if (isMapMod(m, eff)) return;
+      if ((eff && String(eff).toLowerCase().includes('prefab')) || (m.title && m.title.toLowerCase().includes('prefab')) || (m.modName && m.modName.toLowerCase().includes('prefab'))) return;
+      const { main } = parseModCategory(eff, m.isMap);
+      if (main && main !== 'Maps' && main.toLowerCase() !== 'maps') cats.add(main);
       const bn = m.fileName ? m.fileName.split(/[\\/]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : '');
       if (favs.some(fm => fm && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && fm.fileName.toLowerCase() === bn)))) hasFavs = true;
     });
@@ -4646,8 +4632,14 @@ export default function SavegamesPage() {
                                       });
                                       return Array.from(map.values()).sort((a, b) => a.title.localeCompare(b.title));
                                   };
-
-                                  const allValidMods = mods.filter(m => !m.isMap);
+                                  const cache = useModHubStore.getState().modCache || {};
+                                  const allValidMods = (mods || []).filter(m => {
+                                      if (!m || m.isMap || m.isDLC || m.folder === 'DLC') return false;
+                                      const eff = getEffectiveModCategory(m, cache);
+                                      if (isMapMod(m, eff)) return false;
+                                      if ((eff && String(eff).toLowerCase().includes('prefab')) || (m.title && m.title.toLowerCase().includes('prefab')) || (m.modName && m.modName.toLowerCase().includes('prefab'))) return false;
+                                      return true;
+                                  });
                                   const mustHaveMods = deduplicate(allValidMods.filter(m => 
                                       favoriteMods.some(fm => fm.isMustHave && (
                                           (fm.modId && m.modId && String(fm.modId) === String(m.modId)) || 

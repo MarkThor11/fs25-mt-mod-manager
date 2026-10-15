@@ -12,7 +12,7 @@ import DependencyDownloadModal from '../components/common/DependencyDownloadModa
 
 import { useLocalModsStore } from '../store/useLocalModsStore';
 import { resolveRecursiveDependencies } from '../utils/modUtils';
-import { parseModCategory, getEffectiveModCategory, MAIN_CATEGORY_NAMES } from '../utils/categoryUtils';
+import { parseModCategory, getEffectiveModCategory, MAIN_CATEGORY_NAMES, isMapCategory, isMapMod } from '../utils/categoryUtils';
 
 const MAPS = [
   { id: 'MapUS', title: 'Riverbend Springs' },
@@ -236,6 +236,7 @@ export default function ProfilesPage() {
   // Same eligibility as the Installed Mods tag counts: no DLC, no maps, no prefabs
   const isSelectableMod = (m, effCat) => {
     if (!m || m.isMap || m.isDLC || m.folder === 'DLC') return false;
+    if (isMapMod(m, effCat)) return false;
     if ((effCat && String(effCat).toLowerCase().includes('prefab')) || (m.title && m.title.toLowerCase().includes('prefab')) || (m.modName && m.modName.toLowerCase().includes('prefab'))) return false;
     return true;
   };
@@ -259,7 +260,8 @@ export default function ProfilesPage() {
       const effCat = getEffectiveModCategory(mod, modCache);
       if (!isSelectableMod(mod, effCat)) return;
       const { main } = parseModCategory(effCat, mod.isMap);
-      const categoryName = main || 'Uncategorised';
+      if (!main || main === 'Maps' || main.toLowerCase() === 'maps') return;
+      const categoryName = main;
       if (!groups[categoryName]) groups[categoryName] = [];
       groups[categoryName].push(mod);
     });
@@ -674,9 +676,9 @@ export default function ProfilesPage() {
                               <optgroup label="Official Maps">
                                 {MAPS.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
                               </optgroup>
-                              {installedMods.some(m => m.isMap) && (
+                              {installedMods.some(m => isMapMod(m, getEffectiveModCategory(m, useModHubStore.getState().modCache || {}))) && (
                                 <optgroup label="Modded Maps">
-                                  {installedMods.filter(m => m.isMap).map(m => {
+                                  {installedMods.filter(m => isMapMod(m, getEffectiveModCategory(m, useModHubStore.getState().modCache || {}))).map(m => {
                                     const isCP = (
                                       m.isCrossplay || 
                                       /crossplay|\(cp\)|\[cp\]/i.test(m.title || '') ||
@@ -690,7 +692,7 @@ export default function ProfilesPage() {
                                                                     .replace(/\s+cp\s*$/i, '')
                                                                     .trim();
                                      const displayTitle = isCP ? `${baseTitle} (CP)` : baseTitle;
-                                    const compoundValue = `${m.mapId}|${m.title}|${m.modName}`;
+                                    const compoundValue = `${m.mapId || m.modName}|${m.title || m.modName}|${m.modName}`;
                                     return (<option key={compoundValue} value={compoundValue}>{displayTitle}</option>);
                                   })}
                                 </optgroup>
@@ -1050,8 +1052,9 @@ export default function ProfilesPage() {
                         </label>
                         <div style={{ width: 1, height: 16, background: 'var(--border)' }}></div>
                         <button className="btn btn--ghost btn--sm" onClick={() => {
+                          const cache = useModHubStore.getState().modCache || {};
                           const nonPCOnlyModNames = installedMods
-                            .filter(m => !m.isMap)
+                            .filter(m => isSelectableMod(m, getEffectiveModCategory(m, cache)))
                             .filter(m => !options.isCrossPlatform || !((m.scripts && m.scripts.length > 0) || (m.specializations && m.specializations.length > 0)))
                             .map(m => m.modName);
                           setSelectedMods(new Set(nonPCOnlyModNames));

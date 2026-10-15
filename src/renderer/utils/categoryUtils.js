@@ -227,10 +227,58 @@ Object.values(MODHUB_CATEGORY_MAP).forEach(entry => {
 });
 
 /**
+ * Accurately determines if a category string belongs to a map category.
+ * Non-map categories like Gameplay, Prefab, Package, Objects, etc. are strictly false.
+ */
+export const isMapCategory = (category) => {
+  if (!category || typeof category !== 'string') return false;
+  const c = category.trim().toLowerCase();
+  if (
+    c.includes('gameplay') ||
+    c.includes('prefab') ||
+    c.includes('package') ||
+    c.includes('object') ||
+    c.includes('placeable') ||
+    c.includes('drivable') ||
+    c.includes('trailer') ||
+    c.includes('tool') ||
+    c.includes('animal') ||
+    c.includes('baling') ||
+    c.includes('harvest') ||
+    c.includes('forestry') ||
+    c.includes('grassland') ||
+    c.includes('grape') ||
+    c.includes('loader') ||
+    c.includes('rootcrop') ||
+    c.includes('seeding') ||
+    c.includes('cultivation') ||
+    c.includes('crop') ||
+    c.includes('vegetable') ||
+    c.includes('yield') ||
+    c.includes('misc')
+  ) {
+    return false;
+  }
+  return /\bmaps?\b/i.test(c);
+};
+
+/**
+ * Checks if a mod is considered a map.
+ */
+export const isMapMod = (mod, effCat = null) => {
+  if (!mod) return false;
+  if (mod.isMap) return true;
+  if (effCat && isMapCategory(effCat)) return true;
+  if (mod.category && isMapCategory(mod.category)) return true;
+  if (mod.extraContent && isMapCategory(mod.extraContent)) return true;
+  return false;
+};
+
+/**
  * Parses raw category strings into { main, sub } matching official ModHub hierarchy.
  */
 export const parseModCategory = (cat, isMap) => {
-  if (isMap) return { main: 'Maps', sub: null };
+  if (isMap || (cat && isMapCategory(cat))) return { main: 'Maps', sub: null };
   if (!cat) return { main: null, sub: null };
   let s = String(cat).trim();
   if (s.startsWith('CATEGORY:')) s = s.substring(9).trim();
@@ -238,7 +286,7 @@ export const parseModCategory = (cat, isMap) => {
   
   const lower = s.toLowerCase().replace(/[\s_\-]+/g, '');
   if (['generic', 'skipped', 'dlc', 'unknown', 'latest'].includes(lower)) return { main: null, sub: null };
-  if (lower.includes('map')) return { main: 'Maps', sub: null };
+  if (isMapCategory(s) || lower.includes('map')) return { main: 'Maps', sub: null };
 
   if (MODHUB_CATEGORY_MAP[lower]) {
     return MODHUB_CATEGORY_MAP[lower];
