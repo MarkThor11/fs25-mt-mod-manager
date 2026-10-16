@@ -69,7 +69,7 @@ class ErrorBoundary extends React.Component {
                 const report = {
                   error: this.state.error?.toString(),
                   stack: this.state.error?.stack,
-                  version: '1.1.6',
+                  version: '1.1.7',
                   platform: window.navigator.platform,
                   userAgent: window.navigator.userAgent,
                   timestamp: new Date().toISOString()
