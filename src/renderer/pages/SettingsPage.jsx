@@ -1101,6 +1101,7 @@ export default function SettingsPage() {
               <option value="default">Launch normally</option>
               <option value="lastSave">Launch last savegame</option>
               <option value="askSave">Ask which savegame</option>
+              <option value="selectProfile">Select profile</option>
             </select>
           </div>
         </div>

@@ -1405,14 +1405,16 @@ export default function ModDetailPage() {
               {useModHubStore.getState().favoriteAuthors.some(f => f.name.toLowerCase() === (mod.author || '').toLowerCase()) ? 'Favourite Author' : 'Follow Author'}
             </button>
 
-            <button 
-              className={`btn btn--full ${isMustHave ? 'btn--accent' : 'btn--secondary'}`}
-              onClick={() => toggleMustHaveMod(mod)}
-              style={isMustHave ? { background: 'rgba(var(--accent-rgb), 0.1)', borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 800 } : { fontWeight: 800 }}
-            >
-              <Pin size={16} fill={isMustHave ? "currentColor" : "none"} />
-              {isMustHave ? 'Must-Have Mod' : 'Designate as Must-Have'}
-            </button>
+            {!(mod?.isMap || isMapCategory(mod?.category) || isMapCategory(mod?.metadata?.Category) || (localMod && localMod.isMap)) && (
+              <button 
+                className={`btn btn--full ${isMustHave ? 'btn--accent' : 'btn--secondary'}`}
+                onClick={() => toggleMustHaveMod(mod)}
+                style={isMustHave ? { background: 'rgba(var(--accent-rgb), 0.1)', borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 800 } : { fontWeight: 800 }}
+              >
+                <Pin size={16} fill={isMustHave ? "currentColor" : "none"} />
+                {isMustHave ? 'Must-Have Mod' : 'Designate as Must-Have'}
+              </button>
+            )}
 
             {localMod && (
               <button 

@@ -10,6 +10,7 @@ import { useModHubStore } from '../../store/useModHubStore';
 import { useDownloadStore } from '../../store/useDownloadStore';
 
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { useSavegameStore } from '../../store/useSavegameStore';
 import { useToastStore } from '../../store/useToastStore';
 import { useScrollPersistence } from '../../hooks/useScrollPersistence';
 
@@ -56,11 +57,48 @@ export default function Sidebar() {
 
   const handleLaunch = async () => {
     try {
-      const { savegameSlot, enableCheats, skipModDialog, skipIntro, autoStart } = useSettingsStore.getState();
+      const { launchPreference, savegameSlot, enableCheats, skipModDialog, skipIntro, autoStart } = useSettingsStore.getState();
+
+      if (launchPreference === 'selectProfile') {
+        navigate('/profiles');
+        useToastStore.getState().info('Select or create a profile to initialize and launch.');
+        return;
+      }
+
+      if (launchPreference === 'askSave') {
+        navigate('/savegames');
+        useToastStore.getState().info('Select a savegame slot to launch.');
+        return;
+      }
+
+      let targetSlot = savegameSlot;
+      if (launchPreference === 'lastSave') {
+        let saves = useSavegameStore.getState().savegames || [];
+        if (!saves || saves.length === 0) {
+          try {
+            const res = await window.api?.savegames?.getAll();
+            if (res && res.savegames) {
+              saves = res.savegames;
+              useSavegameStore.setState({ savegames: saves });
+            }
+          } catch (e) {
+            console.warn('[LAUNCH] Failed to fetch savegames for lastSave check:', e);
+          }
+        }
+
+        const validSaves = [...saves].filter(s => !s.isGhost && (s.lastSaved || s.lastSaveDate));
+        if (validSaves.length > 0) {
+          const sorted = validSaves.sort((a, b) => new Date(b.lastSaved || b.lastSaveDate || 0) - new Date(a.lastSaved || a.lastSaveDate || 0));
+          targetSlot = sorted[0].index;
+        } else if (saves.length > 0) {
+          targetSlot = saves[0].index;
+        }
+      }
+
       const options = {};
-      if (savegameSlot) {
-        options.savegameIndex = savegameSlot;
-        useSavegameStore.setState({ isGameRunning: true, playingSlot: parseInt(savegameSlot, 10), launchGraceUntil: Date.now() + 25000 });
+      if (targetSlot) {
+        options.savegameIndex = targetSlot;
+        useSavegameStore.setState({ isGameRunning: true, playingSlot: parseInt(targetSlot, 10), launchGraceUntil: Date.now() + 25000 });
       }
       if (enableCheats) options.cheats = true;
       options.skipModUpdateDialog = skipModDialog !== false;
@@ -70,12 +108,14 @@ export default function Sidebar() {
       const result = await window.api.game.launch(options);
       if (result.success) {
         if (result.needsManualInit) {
-          useToastStore.getState().info(`GHOST SLOT: Slot ${savegameSlot} is preparing for first-time load. Once the map loads, SAVE ONCE in-game to initialize.`, { duration: 10000 });
+          useToastStore.getState().info(`GHOST SLOT: Slot ${targetSlot} is preparing for first-time load. Once the map loads, SAVE ONCE in-game to initialize.`, { duration: 10000 });
+        } else if (targetSlot) {
+          useToastStore.getState().success(`Launching Slot ${targetSlot}...`);
         } else {
-          useToastStore.getState().success(`Launching Slot ${savegameSlot}...`);
+          useToastStore.getState().success('Launching game...');
         }
       } else {
-        if (savegameSlot) useSavegameStore.setState({ isGameRunning: false, playingSlot: null, launchGraceUntil: 0 });
+        if (targetSlot) useSavegameStore.setState({ isGameRunning: false, playingSlot: null, launchGraceUntil: 0 });
         useToastStore.getState().error(result.error || 'Failed to launch game');
       }
     } catch (err) {
