@@ -11,6 +11,7 @@ import { useDownloadStore } from '../../store/useDownloadStore';
 
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useSavegameStore } from '../../store/useSavegameStore';
+import { useProfileStore } from '../../store/useProfileStore';
 import { useToastStore } from '../../store/useToastStore';
 import { useScrollPersistence } from '../../hooks/useScrollPersistence';
 
@@ -58,11 +59,33 @@ export default function Sidebar() {
   const handleLaunch = async () => {
     try {
       const { launchPreference, savegameSlot, enableCheats, skipModDialog, skipIntro, autoStart } = useSettingsStore.getState();
+      let targetSlot = savegameSlot;
 
       if (launchPreference === 'selectProfile') {
-        navigate('/profiles');
-        useToastStore.getState().info('Select or create a profile to initialize and launch.');
-        return;
+        let profiles = useProfileStore.getState().profiles || [];
+        if (!profiles || profiles.length === 0) {
+          try {
+            const res = await window.api?.profiles?.get();
+            if (res && res.profiles) {
+              profiles = res.profiles;
+              useProfileStore.setState({ profiles });
+            }
+          } catch (e) {
+            console.warn('[LAUNCH] Failed to fetch profiles:', e);
+          }
+        }
+
+        const activeId = localStorage.getItem('active_profile_id');
+        const activeProfile = profiles.find(p => p.id === activeId) || profiles[0];
+
+        if (activeProfile && activeProfile.linkedSlot) {
+          targetSlot = activeProfile.linkedSlot;
+          useToastStore.getState().info(`Launching "${activeProfile.name}" (Slot ${targetSlot})...`);
+        } else {
+          navigate('/profiles');
+          useToastStore.getState().info(activeProfile ? `Link Slot to "${activeProfile.name}" by clicking "Create Save"` : 'Select a profile to initialize and launch.');
+          return;
+        }
       }
 
       if (launchPreference === 'askSave') {
@@ -71,7 +94,6 @@ export default function Sidebar() {
         return;
       }
 
-      let targetSlot = savegameSlot;
       if (launchPreference === 'lastSave') {
         let saves = useSavegameStore.getState().savegames || [];
         if (!saves || saves.length === 0) {

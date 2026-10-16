@@ -43,6 +43,7 @@ async function createProfile(name, mods, options = {}) {
       id: Date.now().toString(),
       name: safeName,
       mods: safeMods,
+      linkedSlot: safeOptions.linkedSlot !== undefined ? safeOptions.linkedSlot : (typeof name === 'object' && name?.linkedSlot !== undefined ? name.linkedSlot : null),
       options: {
         money: safeOptions.money || 1000000,
         initialLoan: safeOptions.initialLoan || 0,
@@ -75,11 +76,15 @@ async function updateProfile(id, name, mods, options = {}) {
     const safeName = (typeof name === 'object' && name !== null) ? (name.name || 'Untitled Template') : (name || profiles[index].name || 'Untitled Template');
     const safeMods = Array.isArray(mods) ? mods : (typeof name === 'object' && Array.isArray(name?.mods) ? name.mods : (profiles[index].mods || []));
     const safeOptions = (typeof options === 'object' && options !== null) ? options : (typeof name === 'object' && name?.options ? name.options : {});
+    const safeLinkedSlot = safeOptions.linkedSlot !== undefined 
+      ? safeOptions.linkedSlot 
+      : (typeof name === 'object' && name?.linkedSlot !== undefined ? name.linkedSlot : profiles[index].linkedSlot);
 
     profiles[index] = { 
       ...profiles[index], 
       name: safeName, 
       mods: safeMods,
+      linkedSlot: safeLinkedSlot !== undefined ? safeLinkedSlot : null,
       options: {
         ...(profiles[index].options || {}),
         ...safeOptions

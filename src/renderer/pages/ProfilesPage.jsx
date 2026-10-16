@@ -148,6 +148,10 @@ export default function ProfilesPage() {
     if (installedMods.length === 0) {
       scanMods();
     }
+    const savedActiveId = localStorage.getItem('active_profile_id');
+    if (savedActiveId && !selectedProfileId) {
+      setSelectedProfileId(savedActiveId);
+    }
   }, [fetchProfiles, scanMods]);
 
   const selectedProfile = profiles.find(p => p.id === selectedProfileId);
@@ -420,9 +424,13 @@ export default function ProfilesPage() {
       });
 
       if (result.success) {
-        useToastStore.getState().success(`Savegame successfully created in Slot ${slotIndex}!`);
+        // Lock the savegame slot to this profile and remember it as the active profile
+        await updateProfile(selectedProfile.id, profileName, modsToSave, { ...options, linkedSlot: slotIndex });
+        localStorage.setItem('active_profile_id', selectedProfile.id);
+        useToastStore.getState().success(`Savegame created in Slot ${slotIndex} and linked to profile!`);
         setShowSlotModal(false);
         useSavegameStore.getState().fetchSavegames();
+        fetchProfiles();
       } else {
         useToastStore.getState().error(result.error);
       }
@@ -529,7 +537,10 @@ export default function ProfilesPage() {
           <button
             key={p.id}
             className={`tab-item ${selectedProfile?.id === p.id ? 'tab-item--active' : ''}`}
-            onClick={() => setSelectedProfileId(p.id)}
+            onClick={() => {
+              setSelectedProfileId(p.id);
+              localStorage.setItem('active_profile_id', p.id);
+            }}
             style={{
               padding: '10px 20px',
               borderRadius: 'var(--radius-md) var(--radius-md) 0 0',
@@ -547,6 +558,18 @@ export default function ProfilesPage() {
             }}
           >
             {selectedProfile?.id === p.id ? (profileName || p.name) : p.name}
+            {p.linkedSlot && (
+              <span style={{
+                background: 'rgba(var(--accent-rgb), 0.2)',
+                color: 'var(--accent)',
+                padding: '1px 5px',
+                borderRadius: 4,
+                fontSize: '9px',
+                fontWeight: 800
+              }}>
+                Slot {p.linkedSlot}
+              </span>
+            )}
             <span style={{ 
               background: 'rgba(255,255,255,0.1)', 
               padding: '2px 6px', 

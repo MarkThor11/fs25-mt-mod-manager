@@ -60,13 +60,23 @@ export default function SaveSlotModal({ onClose, onCreate, profile }) {
                 const save = savegames.find(s => s.index === index);
                 const isOccupied = !!save;
 
+                const isLinked = Number(profile?.linkedSlot) === index;
+
                 return (
                   <div 
                     key={index} 
-                    className={`save-slot-item ${isOccupied ? 'save-slot-item--occupied' : 'save-slot-item--empty'}`}
+                    className={`save-slot-item ${isOccupied ? 'save-slot-item--occupied' : 'save-slot-item--empty'} ${isLinked ? 'save-slot-item--linked' : ''}`}
                     onClick={() => handleSelect(index, isOccupied)}
+                    style={isLinked ? { borderColor: 'var(--accent)', background: 'rgba(var(--accent-rgb), 0.08)', boxShadow: '0 0 10px rgba(var(--accent-rgb), 0.25)' } : {}}
                   >
-                    <div className="save-slot-index">Slot {index}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div className="save-slot-index">Slot {index}</div>
+                      {isLinked && (
+                        <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent)', background: 'rgba(var(--accent-rgb), 0.15)', padding: '2px 6px', borderRadius: 4, textTransform: 'uppercase' }}>
+                          Linked
+                        </span>
+                      )}
+                    </div>
                     {isOccupied ? (
                       <>
                         <div className="save-slot-info">
