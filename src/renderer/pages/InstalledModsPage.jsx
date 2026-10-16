@@ -25,8 +25,11 @@ const getDriveLetter = (filePath) => {
 };
 
 const getPathLabel = (rootPath) => {
-  if (!rootPath) return '';
+  if (!rootPath || rootPath === 'ALL') return 'ALL LOCATIONS';
   const drive = getDriveLetter(rootPath);
+  if (/^[a-zA-Z]:[\/\\]?$/.test(String(rootPath).trim())) {
+    return `Drive ${drive}`;
+  }
   const parts = rootPath.replace(/\\/g, '/').split('/').filter(Boolean);
   const folderName = parts.length > 1 ? parts[parts.length - 1] : parts[0] || '';
   return drive ? `${drive} (${folderName})` : folderName;
@@ -1193,10 +1196,16 @@ export default function InstalledModsPage() {
     const eligibleMods = mods.filter(m => {
       if (!m || m.isDLC || m.folder === 'DLC') return false;
       if (selectedDriveFilter !== 'ALL') {
-        const rootNorm = selectedDriveFilter.replace(/\\/g, '/').toLowerCase();
-        const rootWithSlash = rootNorm.endsWith('/') ? rootNorm : rootNorm + '/';
-        const p = (m.filePath || '').replace(/\\/g, '/').toLowerCase();
-        if (!p.startsWith(rootWithSlash)) return false;
+        const filterNorm = selectedDriveFilter.replace(/\\/g, '/').toLowerCase();
+        const filterDrive = (getDriveLetter(selectedDriveFilter) || '').toLowerCase();
+        const modDrive = (getDriveLetter(m.filePath) || '').toLowerCase();
+        if (/^[a-z]:\/?$/i.test(filterNorm)) {
+          if (modDrive !== filterDrive) return false;
+        } else {
+          const rootWithSlash = filterNorm.endsWith('/') ? filterNorm : filterNorm + '/';
+          const p = (m.filePath || '').replace(/\\/g, '/').toLowerCase();
+          if (!p.startsWith(rootWithSlash) && modDrive !== filterDrive) return false;
+        }
       }
       return true;
     });
@@ -1514,10 +1523,16 @@ export default function InstalledModsPage() {
       // Drive filtering
       if (selectedDriveFilter !== 'ALL') {
         if (isDLCItem) return false;
-        const rootNorm = selectedDriveFilter.replace(/\\/g, '/').toLowerCase();
-        const rootWithSlash = rootNorm.endsWith('/') ? rootNorm : rootNorm + '/';
-        const p = (m.filePath || '').replace(/\\/g, '/').toLowerCase();
-        if (!p.startsWith(rootWithSlash)) return false;
+        const filterNorm = selectedDriveFilter.replace(/\\/g, '/').toLowerCase();
+        const filterDrive = (getDriveLetter(selectedDriveFilter) || '').toLowerCase();
+        const modDrive = (getDriveLetter(m.filePath) || '').toLowerCase();
+        if (/^[a-z]:\/?$/i.test(filterNorm)) {
+          if (modDrive !== filterDrive) return false;
+        } else {
+          const rootWithSlash = filterNorm.endsWith('/') ? filterNorm : filterNorm + '/';
+          const p = (m.filePath || '').replace(/\\/g, '/').toLowerCase();
+          if (!p.startsWith(rootWithSlash) && modDrive !== filterDrive) return false;
+        }
       }
 
       if (sLower) {
@@ -1843,6 +1858,66 @@ export default function InstalledModsPage() {
     }
   };
 
+  const folderDrivesMap = useMemo(() => {
+    const map = {};
+    if (!mods) return map;
+    for (let i = 0; i < mods.length; i++) {
+      const m = mods[i];
+      if (!m || m.isDLC || m.folder === 'DLC' || !m.filePath) continue;
+      let f = m.folder || '';
+      if (m.isMap && !f) {
+        let cleanTitle = (m.title || '').trim();
+        const isCP = m.isCrossplay || 
+                     /crossplay|\(cp\)|\[cp\]/i.test(cleanTitle) || 
+                     /crossplay|\(cp\)|\[cp\]/i.test(m.fileName || '') || 
+                     /crossplay|\(cp\)|\[cp\]/i.test(m.modName || '');
+        if (isCP) {
+          cleanTitle = cleanTitle.replace(/\s*[\(\[]\s*(?:crossplay|cp)\s*[\)\]]\s*$/i, '')
+                                 .replace(/\s+crossplay\s*$/i, '')
+                                 .replace(/\s+cp\s*$/i, '')
+                                 .trim();
+          cleanTitle = `${cleanTitle} (CP)`;
+        }
+        f = cleanTitle.replace(/[\\/:*?"<>|]/g, '_').trim() || 'Custom Maps';
+      }
+      let canonical = f;
+      if (allFolders && allFolders.length > 0) {
+        const found = allFolders.find(af => af.toLowerCase() === f.toLowerCase());
+        if (found) canonical = found;
+      }
+      if (!map[canonical]) map[canonical] = {};
+      const dl = getDriveLetter(m.filePath) || 'Local';
+      map[canonical][dl] = (map[canonical][dl] || 0) + 1;
+    }
+    return map;
+  }, [mods, allFolders]);
+
+  const isDriveActive = (dl) => {
+    if (!selectedDriveFilter || selectedDriveFilter === 'ALL') return false;
+    const cleanDl = (dl || '').toUpperCase();
+    const currentDrive = (getDriveLetter(selectedDriveFilter) || '').toUpperCase();
+    return selectedDriveFilter.toUpperCase() === cleanDl || currentDrive === cleanDl;
+  };
+
+  const handleToggleDriveFilter = (dl) => {
+    if (!dl) return;
+    const cleanDl = dl.toUpperCase();
+    if (isDriveActive(cleanDl)) {
+      setSelectedDriveFilter('ALL');
+      useToastStore.getState().info("Showing mods across ALL locations");
+      return;
+    }
+
+    const matching = driveStats.find(ds => (ds.driveLetter && ds.driveLetter.toUpperCase() === cleanDl) || (getDriveLetter(ds.rootPath) || '').toUpperCase() === cleanDl);
+    if (matching) {
+      setSelectedDriveFilter(matching.rootPath);
+      useToastStore.getState().info(`Filtered to Drive ${cleanDl} (${matching.count} mods)`);
+    } else {
+      setSelectedDriveFilter(cleanDl);
+      useToastStore.getState().info(`Filtered to Drive ${cleanDl}`);
+    }
+  };
+
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
     await createFolder(newFolderName.trim());
@@ -1899,14 +1974,88 @@ export default function InstalledModsPage() {
     }
   };
 
-  const handleMoveFolderToDrive = async (folderName, targetRootPath, targetFolderName = null) => {
+  const handleMoveSelectedModsToDrive = async (fileNames, targetRootPath, targetFolderName = null) => {
+    if (!targetRootPath || !fileNames || fileNames.length === 0) return;
+
+    const validFiles = fileNames.filter(f => {
+      const m = mods.find(mod => mod.fileName === f);
+      return m && !m.isDLC && !m.isVirtual;
+    });
+
+    if (validFiles.length === 0) {
+      useToastStore.getState().warning("No movable physical files found in selection.");
+      setDriveMoveModal(null);
+      return;
+    }
+
+    const driveLetter = getDriveLetter(targetRootPath);
+    setMigrationProgress({
+      percent: 0,
+      current: 0,
+      total: validFiles.length,
+      active: true,
+      label: `Migrating ${validFiles.length} selected files to Drive ${driveLetter || targetRootPath}...`
+    });
+    useToastStore.getState().info(`Moving ${validFiles.length} selected mods to target drive...`, { id: 'move-mods-drive' });
+
+    try {
+      let result;
+      if (targetFolderName !== null && targetFolderName !== undefined) {
+        result = await moveModsToFolder(validFiles, targetFolderName, targetRootPath);
+      } else {
+        const modsByFolder = {};
+        for (const fileName of validFiles) {
+          const m = mods.find(mod => mod.fileName === fileName);
+          const f = m?.folder || '';
+          if (!modsByFolder[f]) modsByFolder[f] = [];
+          modsByFolder[f].push(fileName);
+        }
+
+        let totalCompleted = 0;
+        let lastError = null;
+        for (const [fName, files] of Object.entries(modsByFolder)) {
+          const res = await moveModsToFolder(files, fName, targetRootPath);
+          if (res.success) {
+            totalCompleted += (res.completed || files.length);
+          } else {
+            lastError = res.error || res.errors?.[0]?.error;
+          }
+        }
+        result = { success: totalCompleted > 0, completed: totalCompleted, error: lastError };
+      }
+
+      setSelectedMods(prev => prev.filter(f => !validFiles.includes(f)));
+
+      if (result.success && result.completed > 0) {
+        setMigrationProgress(prev => ({ ...(prev || {}), percent: 100, current: validFiles.length, fileIndex: validFiles.length, status: 'complete', label: 'Migration complete!' }));
+        useToastStore.getState().success(`Successfully moved ${result.completed} mods to Drive ${driveLetter || targetRootPath}!`, { id: 'move-mods-drive', duration: 3000 });
+        await new Promise(r => setTimeout(r, 600));
+      } else {
+        const errMsg = result.errors?.[0]?.error || result.error || 'No files were moved.';
+        useToastStore.getState().error(`Failed to move mods: ${errMsg}`, { id: 'move-mods-drive' });
+      }
+    } finally {
+      setMigrationProgress(null);
+      setDriveMoveModal(null);
+    }
+  };
+
+  const handleMoveFolderToDrive = async (folderName, targetRootPath, targetFolderName = null, explicitFiles = null) => {
     if (!targetRootPath) {
       useToastStore.getState().warning("Please select a destination drive.");
       return;
     }
 
-    const folderMods = folders[folderName]?.mods || [];
-    const physicalFiles = folderMods.filter(m => !m.isVirtual).map(m => m.fileName);
+    let physicalFiles = [];
+    if (explicitFiles && explicitFiles.length > 0) {
+      physicalFiles = explicitFiles.filter(f => {
+        const m = mods.find(mod => mod.fileName === f);
+        return m && !m.isDLC && !m.isVirtual;
+      });
+    } else {
+      const folderMods = folders[folderName]?.mods || [];
+      physicalFiles = folderMods.filter(m => !m.isVirtual).map(m => m.fileName);
+    }
 
     if (physicalFiles.length === 0) {
       useToastStore.getState().warning(`No physical mod files found in "${folderName || 'MAIN'}" to move.`);
@@ -2541,6 +2690,11 @@ export default function InstalledModsPage() {
                   {ds.shortLabel} {ds.isPrimary ? '[PRIMARY] ' : ''}({ds.count} MODS)
                 </option>
               ))}
+              {!driveStats.some(ds => ds.rootPath === selectedDriveFilter) && selectedDriveFilter !== 'ALL' && (
+                <option value={selectedDriveFilter}>
+                  Drive {getDriveLetter(selectedDriveFilter)} ({mods.filter(m => !m.isDLC && getDriveLetter(m.filePath) === getDriveLetter(selectedDriveFilter)).length} MODS)
+                </option>
+              )}
             </select>
             <ChevronDown size={14} style={{ position: 'absolute', right: 10, pointerEvents: 'none', opacity: 0.7, color: selectedDriveFilter === 'ALL' ? 'var(--text-secondary)' : 'var(--bg-primary)' }} />
           </div>
@@ -2602,6 +2756,43 @@ export default function InstalledModsPage() {
             <span style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.05em', paddingRight: 10, borderRight: '1px solid rgba(255,255,255,0.2)', color: 'var(--accent)' }}>
               {selectedMods.length} SELECTED
             </span>
+
+            {/* MOVE TO DRIVE */}
+            <button
+              onClick={() => {
+                const physicalSelected = mods.filter(m => selectedMods.includes(m.fileName) && !m.isVirtual && !m.isDLC);
+                if (physicalSelected.length === 0) {
+                  useToastStore.getState().warning("No movable physical mods selected.");
+                  return;
+                }
+                setDriveMoveModal({
+                  type: 'selected_mods',
+                  fileNames: physicalSelected.map(m => m.fileName),
+                  targetRootPath: modsPaths?.[0] || '',
+                  targetFolderName: null
+                });
+              }}
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: 'white',
+                padding: '0 12px',
+                height: 30,
+                fontSize: 11,
+                fontWeight: 800,
+                borderRadius: 8,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}
+              title="Move selected mods to another storage drive"
+            >
+              <HardDrive size={13} style={{ color: 'var(--accent)' }} />
+              <span>MOVE TO DRIVE</span>
+            </button>
+
+            <span style={{ opacity: 0.2 }}>|</span>
 
             {/* ADD TO SAVE */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -3308,34 +3499,72 @@ export default function InstalledModsPage() {
 
                             {/* Drive Location Badges */}
                             {folderName !== 'DLC' && (() => {
-                              const folderDrives = {};
-                              for (let i = 0; i < folderMods.length; i++) {
-                                const m = folderMods[i];
-                                if (m && !m.isDLC && m.filePath) {
-                                  const dl = getDriveLetter(m.filePath) || 'Local';
-                                  folderDrives[dl] = (folderDrives[dl] || 0) + 1;
+                              const drivesForFolder = folderDrivesMap[folderName] || (() => {
+                                const fd = {};
+                                for (let i = 0; i < folderMods.length; i++) {
+                                  const m = folderMods[i];
+                                  if (m && !m.isDLC && m.filePath) {
+                                    const dl = getDriveLetter(m.filePath) || 'Local';
+                                    fd[dl] = (fd[dl] || 0) + 1;
+                                  }
                                 }
-                              }
-                              return Object.entries(folderDrives).map(([dl, count]) => (
-                                <span 
-                                  key={dl} 
-                                  style={{ 
-                                    fontSize: 10, 
-                                    fontWeight: 800, 
-                                    padding: '2px 6px', 
-                                    borderRadius: 4, 
-                                    background: 'rgba(59, 130, 246, 0.12)', 
-                                    color: '#60a5fa', 
-                                    border: '1px solid rgba(59, 130, 246, 0.25)', 
-                                    display: 'inline-flex', 
-                                    alignItems: 'center', 
-                                    gap: 4 
-                                  }}
-                                  title={`${count} mods in this folder are stored on Drive ${dl}`}
-                                >
-                                  <HardDrive size={10} /> {dl} ({count})
-                                </span>
-                              ));
+                                return fd;
+                              })();
+
+                              return Object.entries(drivesForFolder).map(([dl, count]) => {
+                                const active = isDriveActive(dl);
+                                return (
+                                  <span 
+                                    key={dl} 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (e.shiftKey) {
+                                        // Shift-click: Select/deselect all mods on this drive in this folder
+                                        const driveFileNames = mods.filter(m => {
+                                          if (!m || m.isDLC || m.isVirtual || !m.filePath) return false;
+                                          const modFolder = m.folder || '';
+                                          const isThisFolder = (folderName === '' ? !modFolder : (modFolder.toLowerCase() === folderName.toLowerCase() || (m.isMap && folderName.includes(m.title))));
+                                          return isThisFolder && (getDriveLetter(m.filePath) || '').toUpperCase() === dl.toUpperCase();
+                                        }).map(m => m.fileName);
+
+                                        if (driveFileNames.length > 0) {
+                                          const allSelected = driveFileNames.every(f => selectedMods.includes(f));
+                                          if (allSelected) {
+                                            setSelectedMods(prev => prev.filter(f => !driveFileNames.includes(f)));
+                                            useToastStore.getState().info(`Deselected ${driveFileNames.length} mods on Drive ${dl}`);
+                                          } else {
+                                            setSelectedMods(prev => [...new Set([...prev, ...driveFileNames])]);
+                                            useToastStore.getState().success(`Selected ${driveFileNames.length} mods on Drive ${dl}`);
+                                          }
+                                        }
+                                      } else {
+                                        handleToggleDriveFilter(dl);
+                                      }
+                                    }}
+                                    style={{ 
+                                      fontSize: 10, 
+                                      fontWeight: 800, 
+                                      padding: '2px 8px', 
+                                      borderRadius: 4, 
+                                      background: active ? 'var(--accent)' : 'rgba(59, 130, 246, 0.12)', 
+                                      color: active ? 'var(--bg-primary)' : '#60a5fa', 
+                                      border: active ? '1px solid var(--accent)' : '1px solid rgba(59, 130, 246, 0.25)', 
+                                      boxShadow: active ? '0 0 8px rgba(0, 212, 170, 0.35)' : 'none',
+                                      display: 'inline-flex', 
+                                      alignItems: 'center', 
+                                      gap: 4,
+                                      cursor: 'pointer',
+                                      transition: 'all 0.15s ease',
+                                      userSelect: 'none'
+                                    }}
+                                    title={active 
+                                      ? `Filtering by Drive ${dl} (${count} mods) • Click to show ALL drives • Shift-click to select all ${count} mods` 
+                                      : `Drive ${dl} (${count} mods) • Click to filter mods by Drive ${dl} • Shift-click to select all`}
+                                  >
+                                    <HardDrive size={10} /> {dl} ({count})
+                                  </span>
+                                );
+                              });
                             })()}
                             
                             {/* Requirements Badge for Maps — computed lazily to keep initial render fast */}
@@ -3387,22 +3616,44 @@ export default function InstalledModsPage() {
                       </div>
                     )}
 
-                    {!isHidden && folderName !== 'DLC' && folderMods.length > 0 && (
-                      <button 
-                        className="btn btn--secondary btn--sm"
-                        onClick={() => setDriveMoveModal({
-                          type: 'folder',
-                          folderName: folderName,
-                          targetRootPath: modsPaths?.[0] || '',
-                          targetFolderName: folderName
-                        })}
-                        style={{ height: 32, padding: '0 8px', display: 'flex', alignItems: 'center', gap: 5 }}
-                        title={`Move "${folderName || 'MAIN'}" to another drive`}
-                      >
-                        <HardDrive size={13} style={{ color: 'var(--accent)' }} />
-                        <span style={{ fontSize: 10, fontWeight: 800 }}>MOVE TO DRIVE</span>
-                      </button>
-                    )}
+                    {!isHidden && folderName !== 'DLC' && folderMods.length > 0 && (() => {
+                      const folderSelected = folderMods.filter(m => selectedMods.includes(m.fileName) && !m.isVirtual);
+                      const hasSelectedInFolder = folderSelected.length > 0;
+                      return (
+                        <button 
+                          className={`btn ${hasSelectedInFolder ? 'btn--primary' : 'btn--secondary'} btn--sm`}
+                          onClick={() => {
+                            if (hasSelectedInFolder) {
+                              setDriveMoveModal({
+                                type: 'selected_mods',
+                                folderName: folderName,
+                                fileNames: folderSelected.map(m => m.fileName),
+                                targetRootPath: modsPaths?.[0] || '',
+                                targetFolderName: folderName
+                              });
+                            } else {
+                              const physicalFiles = folderMods.filter(m => !m.isVirtual).map(m => m.fileName);
+                              setDriveMoveModal({
+                                type: 'folder',
+                                folderName: folderName,
+                                fileNames: physicalFiles,
+                                targetRootPath: modsPaths?.[0] || '',
+                                targetFolderName: folderName
+                              });
+                            }
+                          }}
+                          style={{ height: 32, padding: '0 8px', display: 'flex', alignItems: 'center', gap: 5 }}
+                          title={hasSelectedInFolder 
+                            ? `Move ${folderSelected.length} selected mods in "${folderName || 'MAIN'}" to another drive` 
+                            : `Move "${folderName || 'MAIN'}" to another drive`}
+                        >
+                          <HardDrive size={13} style={{ color: hasSelectedInFolder ? 'inherit' : 'var(--accent)' }} />
+                          <span style={{ fontSize: 10, fontWeight: 800 }}>
+                            {hasSelectedInFolder ? `MOVE ${folderSelected.length} TO DRIVE` : 'MOVE TO DRIVE'}
+                          </span>
+                        </button>
+                      );
+                    })()}
 
                     {!isHidden && folderName !== 'DLC' && folderMods.length > 1 && (
                       <div 
@@ -3691,6 +3942,8 @@ export default function InstalledModsPage() {
                     <h3 style={{ margin: 0, fontSize: 'var(--fs-lg)', fontWeight: 800 }}>
                       {driveMoveModal.type === 'bulk_folders' 
                         ? `Move ${selectedFolders.length} Folders to Storage Drive`
+                        : driveMoveModal.type === 'selected_mods'
+                        ? `Move ${driveMoveModal.fileNames.length} Selected Mods to Storage Drive`
                         : `Move "${driveMoveModal.folderName === '' ? 'MAIN' : driveMoveModal.folderName}" to Storage Drive`}
                     </h3>
                   </div>
@@ -3702,6 +3955,8 @@ export default function InstalledModsPage() {
                 <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.5 }}>
                   {driveMoveModal.type === 'bulk_folders'
                     ? `Select the target storage location / hard drive. All ${selectedFolders.length} selected folders and their mods will be transferred.`
+                    : driveMoveModal.type === 'selected_mods'
+                    ? `Select the destination hard drive / root folder to migrate the ${driveMoveModal.fileNames.length} selected mods.`
                     : `Select the destination hard drive / root folder to migrate all mods belonging to "${driveMoveModal.folderName === '' ? 'MAIN' : driveMoveModal.folderName}".`}
                 </p>
 
@@ -3718,11 +3973,19 @@ export default function InstalledModsPage() {
                       totalVirtual += fMods.filter(m => m.isVirtual).length;
                       totalSize += fMods.filter(m => !m.isVirtual).reduce((sum, m) => sum + (m.size || 0), 0);
                     });
+                  } else if (driveMoveModal.type === 'selected_mods') {
+                    const selSet = new Set(driveMoveModal.fileNames);
+                    const sMods = mods.filter(m => selSet.has(m.fileName));
+                    totalPhysical = sMods.filter(m => !m.isVirtual).length;
+                    totalVirtual = sMods.filter(m => m.isVirtual).length;
+                    totalSize = sMods.filter(m => !m.isVirtual).reduce((sum, m) => sum + (m.size || 0), 0);
                   } else {
-                    const fMods = folders[driveMoveModal.folderName]?.mods || [];
+                    const fMods = (driveMoveModal.fileNames && driveMoveModal.fileNames.length > 0)
+                      ? mods.filter(m => driveMoveModal.fileNames.includes(m.fileName))
+                      : (folders[driveMoveModal.folderName]?.mods || []);
                     totalPhysical = fMods.filter(m => !m.isVirtual).length;
                     totalVirtual = fMods.filter(m => m.isVirtual).length;
-                    totalSize += fMods.filter(m => !m.isVirtual).reduce((sum, m) => sum + (m.size || 0), 0);
+                    totalSize = fMods.filter(m => !m.isVirtual).reduce((sum, m) => sum + (m.size || 0), 0);
                   }
 
                   return (
@@ -3814,7 +4077,7 @@ export default function InstalledModsPage() {
                   </div>
                 </div>
 
-                {driveMoveModal.type !== 'bulk_folders' && driveMoveModal.folderName !== '' && (
+                {driveMoveModal.type !== 'bulk_folders' && driveMoveModal.folderName !== undefined && driveMoveModal.folderName !== '' && (
                   <div style={{ marginBottom: 20 }}>
                     <label style={{ display: 'block', fontSize: 'var(--fs-xs)', fontWeight: 800, textTransform: 'uppercase', marginBottom: 8, color: 'var(--text-tertiary)' }}>
                       Subfolder Name on Destination Drive
@@ -3837,11 +4100,18 @@ export default function InstalledModsPage() {
                     onClick={() => {
                       if (driveMoveModal.type === 'bulk_folders') {
                         handleBulkMoveFoldersToDrive(selectedFolders, driveMoveModal.targetRootPath);
+                      } else if (driveMoveModal.type === 'selected_mods') {
+                        handleMoveSelectedModsToDrive(
+                          driveMoveModal.fileNames,
+                          driveMoveModal.targetRootPath,
+                          driveMoveModal.targetFolderName !== undefined ? driveMoveModal.targetFolderName : driveMoveModal.folderName
+                        );
                       } else {
                         handleMoveFolderToDrive(
                           driveMoveModal.folderName,
                           driveMoveModal.targetRootPath,
-                          driveMoveModal.targetFolderName
+                          driveMoveModal.targetFolderName,
+                          driveMoveModal.fileNames
                         );
                       }
                     }}
