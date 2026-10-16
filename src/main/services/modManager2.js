@@ -178,13 +178,41 @@ async function safeRemove(targetPath, retries = 10, delay = 1000) {
  * Intelligent file move with retry logic for Windows EPERM/EBUSY.
  */
 async function safeMove(src, dest, options = {}, retries = 10, delay = 1000) {
+	const srcStat = await fs.lstat(src).catch(() => null);
+	if (!srcStat) {
+		throw new Error(`Source path does not exist: ${src}`);
+	}
+	const isFile = srcStat.isFile();
+	const tempDest = isFile ? `${dest}.tmp` : dest;
+
 	for (let i = 0; i < retries; i++) {
 		try {
-			await fs.move(src, dest, options);
+			if (options.overwrite) {
+				const existingDest = await fs.lstat(dest).catch(() => null);
+				if (existingDest) {
+					await safeRemove(dest);
+				}
+				if (isFile) {
+					const existingTemp = await fs.lstat(tempDest).catch(() => null);
+					if (existingTemp) {
+						await safeRemove(tempDest);
+					}
+				}
+			}
+
+			await fs.move(src, tempDest, options);
+			if (isFile) {
+				const destCheck = await fs.lstat(dest).catch(() => null);
+				if (destCheck) await safeRemove(dest);
+				await fs.rename(tempDest, dest);
+			}
 			return { success: true };
 		} catch (err) {
+			if (isFile && await fs.lstat(tempDest).catch(() => null)) {
+				await safeRemove(tempDest).catch(() => {});
+			}
 			if (i === retries - 1) throw err;
-			if (err.code === 'EPERM' || err.code === 'EBUSY') {
+			if (err.code === 'EPERM' || err.code === 'EBUSY' || err.code === 'ENOTEMPTY') {
 				console.warn(`[SAFE-MOVE] ${src} is locked or busy (Error: ${err.code}). Retrying (${i + 1}/${retries})...`);
 				await new Promise(r => setTimeout(r, delay));
 			} else {

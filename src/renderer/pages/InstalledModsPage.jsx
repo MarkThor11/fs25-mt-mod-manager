@@ -724,6 +724,8 @@ const LazyModList = ({
     return folderMods.slice(0, visibleCount);
   }, [folderMods, visibleCount]);
 
+  const selectedSet = useMemo(() => new Set(selectedMods), [selectedMods]);
+
   return (
     <>
       {installedModsViewMode === 'grid' || installedModsViewMode === 'icons' ? (
@@ -738,7 +740,7 @@ const LazyModList = ({
             >
               <VirtualModCard 
                   mod={mod}
-                  isSelected={selectedMods.includes(mod.fileName)}
+                  isSelected={selectedSet.has(mod.fileName)}
                   onToggleSelect={toggleSelect}
                   onNavigate={handleNavigate}
                   onUpdate={handleUpdateCallback}
@@ -758,7 +760,7 @@ const LazyModList = ({
           const status = getModStatus(mod);
           const updateInfo = getUpdateInfo(mod);
           const isUpdating = updatingMod === mod.fileName || (mod.modId && activeDownloadsKeys.includes(String(mod.modId)));
-          const isSelected = selectedMods.includes(mod.fileName);
+          const isSelected = selectedSet.has(mod.fileName);
           const cleanModId = mod.modId ? String(mod.modId).replace(/^0+/, '') : null;
           const cleanFile = mod.fileName ? normalizeForMatching(mod.fileName) : null;
           const cleanTitleKey = mod.title ? `title_${String(mod.title).toLowerCase().replace(/[^a-z0-9]/g, '').trim()}` : null;
@@ -1193,18 +1195,25 @@ export default function InstalledModsPage() {
 
   // Compute clean structured tags: Key Filters (Rounded up concepts), Categories (Main ModHub categories), Subcategories, and Custom User Tags
   const { keyFilters, functionalTags, categoryTags, customTags, allUniqueTags } = useMemo(() => {
+    let isDriveOnly = false;
+    let filterDrive = '';
+    let rootWithSlash = '';
+    if (selectedDriveFilter !== 'ALL') {
+      const filterNorm = selectedDriveFilter.replace(/\\/g, '/').toLowerCase();
+      filterDrive = (getDriveLetter(selectedDriveFilter) || '').toLowerCase();
+      isDriveOnly = /^[a-z]:\/?$/i.test(filterNorm);
+      rootWithSlash = filterNorm.endsWith('/') ? filterNorm : filterNorm + '/';
+    }
+
     const eligibleMods = mods.filter(m => {
       if (!m || m.isDLC || m.folder === 'DLC') return false;
       if (selectedDriveFilter !== 'ALL') {
-        const filterNorm = selectedDriveFilter.replace(/\\/g, '/').toLowerCase();
-        const filterDrive = (getDriveLetter(selectedDriveFilter) || '').toLowerCase();
-        const modDrive = (getDriveLetter(m.filePath) || '').toLowerCase();
-        if (/^[a-z]:\/?$/i.test(filterNorm)) {
+        if (isDriveOnly) {
+          const modDrive = (getDriveLetter(m.filePath) || '').toLowerCase();
           if (modDrive !== filterDrive) return false;
         } else {
-          const rootWithSlash = filterNorm.endsWith('/') ? filterNorm : filterNorm + '/';
           const p = (m.filePath || '').replace(/\\/g, '/').toLowerCase();
-          if (!p.startsWith(rootWithSlash) && modDrive !== filterDrive) return false;
+          if (!p.startsWith(rootWithSlash)) return false;
         }
       }
       return true;
@@ -1392,6 +1401,7 @@ export default function InstalledModsPage() {
   }, [mods, selectedDriveFilter, tagSortBy, doesModMatchTag]);
 
   const [selectedMods, setSelectedMods] = useState([]);
+  const selectedModsSet = useMemo(() => new Set(selectedMods), [selectedMods]);
   const savegames = useSavegameStore(s => s.savegames);
   const fetchSavegames = useSavegameStore(s => s.fetchSavegames);
   const profiles = useProfileStore(s => s.profiles);
@@ -1516,6 +1526,16 @@ export default function InstalledModsPage() {
   const filteredMods = useMemo(() => {
     const sLower = searchQuery.toLowerCase().trim();
 
+    let isDriveOnly = false;
+    let filterDrive = '';
+    let rootWithSlash = '';
+    if (selectedDriveFilter !== 'ALL') {
+      const filterNorm = selectedDriveFilter.replace(/\\/g, '/').toLowerCase();
+      filterDrive = (getDriveLetter(selectedDriveFilter) || '').toLowerCase();
+      isDriveOnly = /^[a-z]:\/?$/i.test(filterNorm);
+      rootWithSlash = filterNorm.endsWith('/') ? filterNorm : filterNorm + '/';
+    }
+
     return mods.filter((m) => {
       if (!m) return false;
       const isDLCItem = m.isDLC || m.folder === 'DLC';
@@ -1523,15 +1543,12 @@ export default function InstalledModsPage() {
       // Drive filtering
       if (selectedDriveFilter !== 'ALL') {
         if (isDLCItem) return false;
-        const filterNorm = selectedDriveFilter.replace(/\\/g, '/').toLowerCase();
-        const filterDrive = (getDriveLetter(selectedDriveFilter) || '').toLowerCase();
-        const modDrive = (getDriveLetter(m.filePath) || '').toLowerCase();
-        if (/^[a-z]:\/?$/i.test(filterNorm)) {
+        if (isDriveOnly) {
+          const modDrive = (getDriveLetter(m.filePath) || '').toLowerCase();
           if (modDrive !== filterDrive) return false;
         } else {
-          const rootWithSlash = filterNorm.endsWith('/') ? filterNorm : filterNorm + '/';
           const p = (m.filePath || '').replace(/\\/g, '/').toLowerCase();
-          if (!p.startsWith(rootWithSlash) && modDrive !== filterDrive) return false;
+          if (!p.startsWith(rootWithSlash)) return false;
         }
       }
 
@@ -1860,9 +1877,19 @@ export default function InstalledModsPage() {
 
   const folderDrivesMap = useMemo(() => {
     const map = {};
-    if (!mods) return map;
-    for (let i = 0; i < mods.length; i++) {
-      const m = mods[i];
+    if (!rawMods || rawMods.length === 0) return map;
+
+    // Fast O(1) folder lookup map (avoids calling allFolders.find millions of times)
+    const folderLookup = new Map();
+    if (allFolders && allFolders.length > 0) {
+      for (let i = 0; i < allFolders.length; i++) {
+        const af = allFolders[i];
+        if (af) folderLookup.set(af.toLowerCase(), af);
+      }
+    }
+
+    for (let i = 0; i < rawMods.length; i++) {
+      const m = rawMods[i];
       if (!m || m.isDLC || m.folder === 'DLC' || !m.filePath) continue;
       let f = m.folder || '';
       if (m.isMap && !f) {
@@ -1875,29 +1902,28 @@ export default function InstalledModsPage() {
           cleanTitle = cleanTitle.replace(/\s*[\(\[]\s*(?:crossplay|cp)\s*[\)\]]\s*$/i, '')
                                  .replace(/\s+crossplay\s*$/i, '')
                                  .replace(/\s+cp\s*$/i, '')
-                                 .trim();
-          cleanTitle = `${cleanTitle} (CP)`;
+                                 .trim() + ' (CP)';
         }
         f = cleanTitle.replace(/[\\/:*?"<>|]/g, '_').trim() || 'Custom Maps';
       }
-      let canonical = f;
-      if (allFolders && allFolders.length > 0) {
-        const found = allFolders.find(af => af.toLowerCase() === f.toLowerCase());
-        if (found) canonical = found;
-      }
+      const canonical = folderLookup.get(f.toLowerCase()) || f;
       if (!map[canonical]) map[canonical] = {};
       const dl = getDriveLetter(m.filePath) || 'Local';
       map[canonical][dl] = (map[canonical][dl] || 0) + 1;
     }
     return map;
-  }, [mods, allFolders]);
+  }, [rawMods, allFolders]);
 
-  const isDriveActive = (dl) => {
-    if (!selectedDriveFilter || selectedDriveFilter === 'ALL') return false;
-    const cleanDl = (dl || '').toUpperCase();
-    const currentDrive = (getDriveLetter(selectedDriveFilter) || '').toUpperCase();
-    return selectedDriveFilter.toUpperCase() === cleanDl || currentDrive === cleanDl;
-  };
+  const activeDriveLetter = useMemo(() => {
+    if (!selectedDriveFilter || selectedDriveFilter === 'ALL') return null;
+    return (getDriveLetter(selectedDriveFilter) || '').toUpperCase();
+  }, [selectedDriveFilter]);
+
+  const isDriveActive = useCallback((dl) => {
+    if (!activeDriveLetter || !dl) return false;
+    const cleanDl = dl.toUpperCase();
+    return selectedDriveFilter.toUpperCase() === cleanDl || activeDriveLetter === cleanDl;
+  }, [selectedDriveFilter, activeDriveLetter]);
 
   const handleToggleDriveFilter = (dl) => {
     if (!dl) return;
@@ -3499,17 +3525,8 @@ export default function InstalledModsPage() {
 
                             {/* Drive Location Badges */}
                             {folderName !== 'DLC' && (() => {
-                              const drivesForFolder = folderDrivesMap[folderName] || (() => {
-                                const fd = {};
-                                for (let i = 0; i < folderMods.length; i++) {
-                                  const m = folderMods[i];
-                                  if (m && !m.isDLC && m.filePath) {
-                                    const dl = getDriveLetter(m.filePath) || 'Local';
-                                    fd[dl] = (fd[dl] || 0) + 1;
-                                  }
-                                }
-                                return fd;
-                              })();
+                              const drivesForFolder = folderDrivesMap[folderName];
+                              if (!drivesForFolder) return null;
 
                               return Object.entries(drivesForFolder).map(([dl, count]) => {
                                 const active = isDriveActive(dl);
@@ -3520,15 +3537,10 @@ export default function InstalledModsPage() {
                                       e.stopPropagation();
                                       if (e.shiftKey) {
                                         // Shift-click: Select/deselect all mods on this drive in this folder
-                                        const driveFileNames = mods.filter(m => {
-                                          if (!m || m.isDLC || m.isVirtual || !m.filePath) return false;
-                                          const modFolder = m.folder || '';
-                                          const isThisFolder = (folderName === '' ? !modFolder : (modFolder.toLowerCase() === folderName.toLowerCase() || (m.isMap && folderName.includes(m.title))));
-                                          return isThisFolder && (getDriveLetter(m.filePath) || '').toUpperCase() === dl.toUpperCase();
-                                        }).map(m => m.fileName);
+                                        const driveFileNames = folderMods.filter(m => !m.isVirtual && m.filePath && (getDriveLetter(m.filePath) || '').toUpperCase() === dl.toUpperCase()).map(m => m.fileName);
 
                                         if (driveFileNames.length > 0) {
-                                          const allSelected = driveFileNames.every(f => selectedMods.includes(f));
+                                          const allSelected = driveFileNames.every(f => selectedModsSet.has(f));
                                           if (allSelected) {
                                             setSelectedMods(prev => prev.filter(f => !driveFileNames.includes(f)));
                                             useToastStore.getState().info(`Deselected ${driveFileNames.length} mods on Drive ${dl}`);
@@ -3617,7 +3629,7 @@ export default function InstalledModsPage() {
                     )}
 
                     {!isHidden && folderName !== 'DLC' && folderMods.length > 0 && (() => {
-                      const folderSelected = folderMods.filter(m => selectedMods.includes(m.fileName) && !m.isVirtual);
+                      const folderSelected = selectedMods.length === 0 ? [] : folderMods.filter(m => !m.isVirtual && selectedModsSet.has(m.fileName));
                       const hasSelectedInFolder = folderSelected.length > 0;
                       return (
                         <button 
@@ -3665,7 +3677,7 @@ export default function InstalledModsPage() {
                           <input 
                             type="checkbox" 
                             readOnly 
-                            checked={folderMods.length > 0 && folderMods.every(m => selectedMods.includes(m.fileName))}
+                            checked={selectedMods.length > 0 && selectedMods.length >= folderMods.length && folderMods.every(m => selectedModsSet.has(m.fileName))}
                             style={{ width: 14, height: 14, accentColor: 'var(--accent)' }}
                           />
                           <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}>Select All</span>
@@ -3675,9 +3687,9 @@ export default function InstalledModsPage() {
                     {!isHidden && folderName !== 'DLC' && folderMods.length > 0 && (
                         <button 
                             className="btn btn--danger btn--sm"
-                            disabled={!folderMods.some(m => selectedMods.includes(m.fileName))}
+                            disabled={selectedMods.length === 0 || !folderMods.some(m => selectedModsSet.has(m.fileName))}
                             onClick={async () => {
-                                const folderSelected = folderMods.filter(m => selectedMods.includes(m.fileName));
+                                const folderSelected = folderMods.filter(m => selectedModsSet.has(m.fileName));
                                 if (folderSelected.length === 0) return;
                                 const skipConfirm = useSettingsStore.getState().skipDeleteConfirm;
                                 if (skipConfirm || confirm(`Delete ${folderSelected.length} selected mods in ${folderName || 'MAIN'}?`)) {
