@@ -634,8 +634,8 @@ export default function ModDetailPage() {
                       const match = searchRes.mods.find(m => {
                           const mTitle = (m.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
                           const mFile = (m.fileName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-                          return mTitle === cleanTarget || mFile === cleanTarget || mTitle.includes(cleanTarget) || cleanTarget.includes(mTitle);
-                      }) || searchRes.mods[0];
+                          return (cleanTarget && mTitle === cleanTarget) || (cleanTarget && mFile === cleanTarget);
+                      });
                       if (match && match.modId) {
                           effectiveModId = match.modId;
                       }

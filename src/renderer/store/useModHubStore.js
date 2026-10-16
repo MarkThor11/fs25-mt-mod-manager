@@ -37,10 +37,27 @@ const loadFavMods = () => {
       }
       return mod;
     });
-    if (migrated) {
-      localStorage.setItem('fav_mods', JSON.stringify(fixed));
+
+    // Deduplicate on load by modId or fileName
+    const deduped = [];
+    const seen = new Set();
+    for (const m of fixed) {
+      if (!m) continue;
+      const cleanId = m.modId != null && m.modId !== '' ? String(m.modId).replace(/^0+/, '').trim() : null;
+      const cleanFile = m.fileName ? m.fileName.replace(/\.zip$/i, '').toLowerCase().trim() : null;
+      const key = cleanId ? `id_${cleanId}` : (cleanFile ? `file_${cleanFile}` : (m.title ? `title_${m.title.toLowerCase().trim()}` : null));
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        deduped.push(m);
+      } else if (key && seen.has(key)) {
+        migrated = true;
+      }
     }
-    return fixed;
+
+    if (migrated) {
+      localStorage.setItem('fav_mods', JSON.stringify(deduped));
+    }
+    return deduped;
   } catch (e) {
     return [];
   }
@@ -624,7 +641,7 @@ export const useModHubStore = create((set, get) => ({
                         if (targetId && String(m.modId) === targetId) return true;
                         if (targetTitle && m.title) {
                             const mTitle = m.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-                            return mTitle === targetTitle || mTitle.includes(targetTitle) || targetTitle.includes(mTitle);
+                            return mTitle === targetTitle;
                         }
                         return false;
                     });
@@ -633,7 +650,7 @@ export const useModHubStore = create((set, get) => ({
                     enrichedMod = { ...enrichedMod, ...val }; break;
                 } else if (targetTitle && val.title) {
                     const vTitle = val.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-                    if (vTitle === targetTitle || vTitle.includes(targetTitle) || targetTitle.includes(vTitle)) {
+                    if (vTitle === targetTitle) {
                         enrichedMod = { ...enrichedMod, ...val }; break;
                     }
                 }
@@ -742,7 +759,7 @@ export const useModHubStore = create((set, get) => ({
                         if (targetId && String(m.modId) === targetId) return true;
                         if (targetTitle && m.title) {
                             const mTitle = m.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-                            return mTitle === targetTitle || mTitle.includes(targetTitle) || targetTitle.includes(mTitle);
+                            return mTitle === targetTitle;
                         }
                         return false;
                     });
@@ -751,7 +768,7 @@ export const useModHubStore = create((set, get) => ({
                     enrichedMod = { ...enrichedMod, ...val }; break;
                 } else if (targetTitle && val.title) {
                     const vTitle = val.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-                    if (vTitle === targetTitle || vTitle.includes(targetTitle) || targetTitle.includes(vTitle)) {
+                    if (vTitle === targetTitle) {
                         enrichedMod = { ...enrichedMod, ...val }; break;
                     }
                 }

@@ -306,7 +306,7 @@ export default function FavouritesPage() {
                               for (const val of Object.values(modCache)) {
                                   if (val && typeof val === 'object' && val.title) {
                                       const vTitle = normalize(val.title);
-                                      if (vTitle && targetTitle && (vTitle === targetTitle || vTitle.includes(targetTitle) || targetTitle.includes(vTitle))) {
+                                      if (vTitle && targetTitle && vTitle === targetTitle) {
                                           match = val;
                                           break;
                                       }

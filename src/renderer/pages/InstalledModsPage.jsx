@@ -52,9 +52,8 @@ const getGlobalObserver = () => {
 };
 
 const VirtualModCard = React.memo((props) => {
-  const height = props.isIconOnly ? (props.zoom || 180) : 320;
   return (
-    <div style={{ minHeight: height, width: '100%', contentVisibility: 'auto', containIntrinsicSize: `auto ${height}px` }}>
+    <div style={{ width: '100%' }}>
       <ModCard {...props} />
     </div>
   );
@@ -678,13 +677,20 @@ const LazyModList = ({
 }) => {
   const [visibleCount, setVisibleCount] = useState(20);
   const sentinelRef = React.useRef(null);
+  const prevModsLengthRef = React.useRef(folderMods.length);
+  const prevFolderNameRef = React.useRef(folderName);
   const { toggleFavoriteMod, toggleFavoriteAuthor, toggleMustHaveMod } = useModHubStore();
   const { installedTagFilter: rawSelectedTags, setInstalledTagFilter: setSelectedTags } = useSettingsStore();
   const selectedTags = Array.isArray(rawSelectedTags) ? rawSelectedTags : [];
 
   useEffect(() => {
-    setVisibleCount(20);
-  }, [folderMods]);
+    // Only reset visibleCount if the folder itself changed or the mod list shrank significantly (e.g. filter applied)
+    if (prevFolderNameRef.current !== folderName || folderMods.length < prevModsLengthRef.current - 5) {
+      setVisibleCount(20);
+    }
+    prevFolderNameRef.current = folderName;
+    prevModsLengthRef.current = folderMods.length;
+  }, [folderMods, folderName]);
 
   useEffect(() => {
     if (visibleCount >= folderMods.length) return;
@@ -726,10 +732,6 @@ const LazyModList = ({
           {visibleMods.map((mod, modIdx) => (
             <div 
               key={`${mod.fileName}-${modIdx}`}
-              style={{ 
-                  contentVisibility: 'auto', 
-                  containIntrinsicSize: `auto 250px` 
-              }}
             >
               <VirtualModCard 
                   mod={mod}
@@ -780,9 +782,7 @@ const LazyModList = ({
                     borderBottom: '1px solid var(--border-light)',
                     transition: 'all 0.15s',
                     background: isSelected ? 'var(--accent-dim)' : 'transparent',
-                    cursor: 'grab',
-                    contentVisibility: 'auto',
-                    containIntrinsicSize: 'auto 110px'
+                    cursor: 'grab'
                 }}
             >
               {!mod.isDLC && mod.folder !== 'DLC' ? (
