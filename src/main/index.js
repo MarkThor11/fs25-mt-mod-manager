@@ -208,6 +208,8 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 let mainWindow = null;
+let isQuittingCleanly = false;
+let isUpdating = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -303,7 +305,7 @@ function createWindow() {
   let isForceClosing = false;
 
   mainWindow.on('close', (event) => {
-    if (isForceClosing) {
+    if (isForceClosing || isQuittingCleanly) {
       return;
     }
 
@@ -367,7 +369,15 @@ function createWindow() {
 
   // Initialize App Auto-Updater (Production only)
   if (!isDev) {
-    initAppUpdater(mainWindow);
+    initAppUpdater(mainWindow, async () => {
+      isUpdating = true;
+      try {
+        await gameLauncher.restoreGlobalGameSettings();
+      } catch (_) {}
+      try {
+        cache.close();
+      } catch (_) {}
+    });
 
     // Check for updates after 5 seconds
     setTimeout(() => {
@@ -2174,10 +2184,13 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-let isQuittingCleanly = false;
-
 app.on('before-quit', async (event) => {
-  if (isQuittingCleanly) return;
+  if (isUpdating || isQuittingCleanly) {
+    try {
+      cache.close();
+    } catch (_) {}
+    return;
+  }
 
   try {
     event.preventDefault();

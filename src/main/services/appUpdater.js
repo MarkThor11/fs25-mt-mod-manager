@@ -1,7 +1,7 @@
 const { autoUpdater } = require('electron-updater');
 const { ipcMain } = require('electron');
 
-function initAppUpdater(mainWindow) {
+function initAppUpdater(mainWindow, onBeforeQuit) {
   // On macOS, updates are hosted in the dedicated Mac releases repo
   if (process.platform === 'darwin') {
     try {
@@ -65,8 +65,30 @@ function initAppUpdater(mainWindow) {
     }
   });
 
-  ipcMain.handle('app:install-update', () => {
-    autoUpdater.quitAndInstall();
+  ipcMain.handle('app:install-update', async () => {
+    console.log('[UPDATER] Preparing to install update and restart...');
+    try {
+      if (typeof onBeforeQuit === 'function') {
+        await onBeforeQuit();
+      }
+    } catch (err) {
+      console.error('[UPDATER] Cleanup before update failed:', err);
+    }
+
+    const { BrowserWindow } = require('electron');
+    const windows = BrowserWindow.getAllWindows();
+    for (const win of windows) {
+      try {
+        if (!win.isDestroyed()) {
+          win.destroy();
+        }
+      } catch (_) {}
+    }
+
+    // Call quitAndInstall with isSilent = false, isForceRunAfter = true
+    setTimeout(() => {
+      autoUpdater.quitAndInstall(false, true);
+    }, 200);
   });
 }
 
