@@ -1387,16 +1387,14 @@ export default function ModDetailPage() {
               <ExternalLink size={16} /> View on Website
             </button>
 
-            {!(mod?.isMap || isMapCategory(mod?.category) || (localMod && localMod.isMap)) && (
-              <button 
-                className={`btn btn--full ${isModFav ? 'btn--accent' : 'btn--secondary'}`}
-                onClick={() => toggleFavoriteMod(mod)}
-                style={isModFav ? { background: 'rgba(251, 191, 36, 0.1)', borderColor: '#fbbf24', color: '#fbbf24', fontWeight: 800 } : { fontWeight: 800 }}
-              >
-                <Star size={16} fill={isModFav ? "currentColor" : "none"} />
-                {isModFav ? 'Favourited' : 'Add to Favourites'}
-              </button>
-            )}
+            <button 
+              className={`btn btn--full ${isModFav ? 'btn--accent' : 'btn--secondary'}`}
+              onClick={() => toggleFavoriteMod(mod)}
+              style={isModFav ? { background: 'rgba(251, 191, 36, 0.1)', borderColor: '#fbbf24', color: '#fbbf24', fontWeight: 800 } : { fontWeight: 800 }}
+            >
+              <Star size={16} fill={isModFav ? "currentColor" : "none"} />
+              {isModFav ? 'Favourited' : 'Add to Favourites'}
+            </button>
 
             <button 
               className={`btn btn--full ${useModHubStore.getState().favoriteAuthors.some(f => f.name.toLowerCase() === (mod.author || '').toLowerCase()) ? 'btn--accent' : 'btn--secondary'}`}
@@ -1407,16 +1405,14 @@ export default function ModDetailPage() {
               {useModHubStore.getState().favoriteAuthors.some(f => f.name.toLowerCase() === (mod.author || '').toLowerCase()) ? 'Favourite Author' : 'Follow Author'}
             </button>
 
-            {!(mod?.isMap || isMapCategory(mod?.category) || (localMod && localMod.isMap)) && (
-              <button 
-                className={`btn btn--full ${isMustHave ? 'btn--accent' : 'btn--secondary'}`}
-                onClick={() => toggleMustHaveMod(mod)}
-                style={isMustHave ? { background: 'rgba(var(--accent-rgb), 0.1)', borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 800 } : { fontWeight: 800 }}
-              >
-                <Pin size={16} fill={isMustHave ? "currentColor" : "none"} />
-                {isMustHave ? 'Must-Have Mod' : 'Designate as Must-Have'}
-              </button>
-            )}
+            <button 
+              className={`btn btn--full ${isMustHave ? 'btn--accent' : 'btn--secondary'}`}
+              onClick={() => toggleMustHaveMod(mod)}
+              style={isMustHave ? { background: 'rgba(var(--accent-rgb), 0.1)', borderColor: 'var(--accent)', color: 'var(--accent)', fontWeight: 800 } : { fontWeight: 800 }}
+            >
+              <Pin size={16} fill={isMustHave ? "currentColor" : "none"} />
+              {isMustHave ? 'Must-Have Mod' : 'Designate as Must-Have'}
+            </button>
 
             {localMod && (
               <button 

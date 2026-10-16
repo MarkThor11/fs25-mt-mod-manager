@@ -758,10 +758,11 @@ const LazyModList = ({
           const isSelected = selectedMods.includes(mod.fileName);
           const cleanModId = mod.modId ? String(mod.modId).replace(/^0+/, '') : null;
           const cleanFile = mod.fileName ? normalizeForMatching(mod.fileName) : null;
-          const isFavMod = (cleanModId && favModIds.has(cleanModId)) || (cleanFile && favModIds.has(cleanFile));
+          const cleanTitleKey = mod.title ? `title_${String(mod.title).toLowerCase().replace(/[^a-z0-9]/g, '').trim()}` : null;
+          const isFavMod = (cleanModId && favModIds.has(cleanModId)) || (cleanFile && favModIds.has(cleanFile)) || (cleanTitleKey && favModIds.has(cleanTitleKey));
           const authorName = mod.author || 'Unknown';
           const isFavAuthor = favAuthorNames.has(authorName.toLowerCase());
-          const isMustHave = (cleanModId && mustHaveIds.has(cleanModId)) || (cleanFile && mustHaveIds.has(cleanFile));
+          const isMustHave = (cleanModId && mustHaveIds.has(cleanModId)) || (cleanFile && mustHaveIds.has(cleanFile)) || (cleanTitleKey && mustHaveIds.has(cleanTitleKey));
 
           return (
             <div 
@@ -1047,6 +1048,7 @@ export default function InstalledModsPage() {
     (favoriteMods || []).filter(fv => fv.isFavorite !== false).forEach(fv => {
       if (fv.modId) set.add(String(fv.modId).replace(/^0+/, ''));
       if (fv.fileName) set.add(normalizeForMatching(fv.fileName));
+      if (fv.title) set.add(`title_${String(fv.title).toLowerCase().replace(/[^a-z0-9]/g, '').trim()}`);
     });
     return set;
   }, [favoriteMods]);
@@ -1056,6 +1058,7 @@ export default function InstalledModsPage() {
     (favoriteMods || []).filter(fv => fv.isMustHave).forEach(fv => {
       if (fv.modId) set.add(String(fv.modId).replace(/^0+/, ''));
       if (fv.fileName) set.add(normalizeForMatching(fv.fileName));
+      if (fv.title) set.add(`title_${String(fv.title).toLowerCase().replace(/[^a-z0-9]/g, '').trim()}`);
     });
     return set;
   }, [favoriteMods]);
@@ -1130,12 +1133,14 @@ export default function InstalledModsPage() {
     if (tLower === 'pinned' || tLower === 'pinned mods' || tLower === 'must-have' || tLower === 'must-haves') {
       const cleanModId = m.modId ? String(m.modId).replace(/^0+/, '') : null;
       const cleanFile = m.fileName ? normalizeForMatching(m.fileName) : null;
-      return Boolean(m.isMustHave || (cleanModId && mustHaveIdsSet.has(cleanModId)) || (cleanFile && mustHaveIdsSet.has(cleanFile)));
+      const cleanTitleKey = m.title ? `title_${String(m.title).toLowerCase().replace(/[^a-z0-9]/g, '').trim()}` : null;
+      return Boolean(m.isMustHave || (cleanModId && mustHaveIdsSet.has(cleanModId)) || (cleanFile && mustHaveIdsSet.has(cleanFile)) || (cleanTitleKey && mustHaveIdsSet.has(cleanTitleKey)));
     }
     if (tLower === 'favorites' || tLower === 'favourites' || tLower === 'favorite mods' || tLower === 'favourite mods') {
       const cleanModId = m.modId ? String(m.modId).replace(/^0+/, '') : null;
       const cleanFile = m.fileName ? normalizeForMatching(m.fileName) : null;
-      const isFavMod = (cleanModId && favModIdsSet.has(cleanModId)) || (cleanFile && favModIdsSet.has(cleanFile));
+      const cleanTitleKey = m.title ? `title_${String(m.title).toLowerCase().replace(/[^a-z0-9]/g, '').trim()}` : null;
+      const isFavMod = (cleanModId && favModIdsSet.has(cleanModId)) || (cleanFile && favModIdsSet.has(cleanFile)) || (cleanTitleKey && favModIdsSet.has(cleanTitleKey));
       const isFavAuth = m.author && favAuthorsSet.has(m.author.toLowerCase());
       return Boolean(isFavMod || isFavAuth);
     }
@@ -1526,7 +1531,8 @@ export default function InstalledModsPage() {
         if (showOnlyFavorites) {
           const cleanModId = m.modId ? String(m.modId).replace(/^0+/, '') : null;
           const cleanFile = m.fileName ? normalizeForMatching(m.fileName) : null;
-          const isModFav = (cleanModId && favModIdsSet.has(cleanModId)) || (cleanFile && favModIdsSet.has(cleanFile));
+          const cleanTitleKey = m.title ? `title_${String(m.title).toLowerCase().replace(/[^a-z0-9]/g, '').trim()}` : null;
+          const isModFav = (cleanModId && favModIdsSet.has(cleanModId)) || (cleanFile && favModIdsSet.has(cleanFile)) || (cleanTitleKey && favModIdsSet.has(cleanTitleKey));
           const isAuthorFav = m.author && favAuthorsSet.has(m.author.toLowerCase());
           if (!isModFav && !isAuthorFav) return false;
         }
