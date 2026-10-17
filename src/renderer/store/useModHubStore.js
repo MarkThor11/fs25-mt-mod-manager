@@ -882,6 +882,9 @@ export const useModHubStore = create((set, get) => ({
   setPage: (page) => {
     localStorage.setItem('modhub_page', page.toString());
     set({ currentPage: page });
+    if (get().currentFilter?.toLowerCase() === 'all') {
+      get().fetchMods('all', page);
+    }
   },
 
   setSearchQuery: (query) => set({ searchQuery: query }),
@@ -962,8 +965,10 @@ export const useModHubStore = create((set, get) => ({
       f = get().previousFilter || localStorage.getItem('modhub_filter') || 'latest';
       set({ currentFilter: f, previousFilter: null, searchQuery: '' });
     }
+    const targetPage = typeof page === 'number' ? page : (get().currentPage || 0);
     const searchPart = f === 'search' ? `_${get().searchQuery}` : '';
-    const cacheKey = `${f}_${authorFilter?.name || 'none'}${searchPart}`;
+    const pagePart = f.toLowerCase() === 'all' ? `_p${targetPage}` : '';
+    const cacheKey = `${f}_${authorFilter?.name || 'none'}${searchPart}${pagePart}`;
     const now = Date.now();
     const cached = modCache[cacheKey];
 
@@ -1213,7 +1218,8 @@ export const useModHubStore = create((set, get) => ({
             }
           }
 
-          if (categories && categories.length > 0 && f !== 'all' && f !== 'latest' && f !== 'officialMods') {
+          const isGlobalFeed = ['all', 'latest', 'officialmods', 'downloads', 'mostdownloaded', 'best', 'rating'].includes(f.toLowerCase());
+          if (categories && categories.length > 0 && !isGlobalFeed) {
             let activeParent = null;
             if (f.startsWith('aggregate:')) {
               const pName = f.split(':')[1];

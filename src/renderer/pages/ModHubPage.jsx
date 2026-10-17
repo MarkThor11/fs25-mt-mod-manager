@@ -227,8 +227,9 @@ export default function ModHubPage() {
         }
 
         // Generic category family guard: when viewing a known category parent/sub, verify mod metadata category matches if available
-        // Do NOT apply this cross-contamination check to global feeds like 'all', 'latest', 'downloads', 'best'
-        if (categories && categories.length > 0 && modCat && currentFilter !== 'all' && currentFilter !== 'latest' && currentFilter !== 'officialMods') {
+        // Do NOT apply this cross-contamination check to global feeds like 'all', 'latest', 'downloads', 'best', etc.
+        const isGlobalFeed = ['all', 'latest', 'officialmods', 'downloads', 'mostdownloaded', 'best', 'rating'].includes(currentFilter.toLowerCase());
+        if (categories && categories.length > 0 && modCat && !isGlobalFeed) {
           let activeParent = null;
           let activeChild = null;
 
@@ -470,13 +471,19 @@ export default function ModHubPage() {
     return result.filter(m => m && (m.modId || m.title));
   }, [filteredMods, sortOrder]);
 
-  const totalFilteredCount = filteredAndSortedMods.length;
-  const computedTotalPages = Math.max(1, Math.ceil(totalFilteredCount / pageSize));
+  const isServerPaginated = currentFilter?.toLowerCase() === 'all';
+  const totalFilteredCount = (isServerPaginated && categoryTotalMods > 0) ? categoryTotalMods : filteredAndSortedMods.length;
+  const computedTotalPages = isServerPaginated 
+    ? Math.max(1, totalPages || 1)
+    : Math.max(1, Math.ceil(filteredAndSortedMods.length / pageSize));
   const safeCurrentPage = currentPage >= computedTotalPages ? 0 : currentPage;
   const pagedMods = useMemo(() => {
+    if (isServerPaginated) {
+      return filteredAndSortedMods;
+    }
     const start = safeCurrentPage * pageSize;
     return filteredAndSortedMods.slice(start, start + pageSize);
-  }, [filteredAndSortedMods, safeCurrentPage, pageSize]);
+  }, [filteredAndSortedMods, safeCurrentPage, pageSize, isServerPaginated]);
 
   const handleCategorySelect = (filter) => {
     setSearchInput('');
@@ -639,7 +646,7 @@ export default function ModHubPage() {
                     transition: 'opacity 0.3s ease',
                     marginTop: 2
                   }}>
-                    <span style={{ color: 'var(--text-primary)', fontSize: '18px', opacity: 1 }}>{totalFilteredCount}</span> MODS FOUND
+                    <span style={{ color: 'var(--text-primary)', fontSize: '18px', opacity: 1 }}>{totalFilteredCount.toLocaleString()}</span> MODS FOUND
                   </div>
                 </div>
               )}
