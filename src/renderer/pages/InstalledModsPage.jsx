@@ -378,29 +378,6 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
             )}
         </div>
         
-        {mod.isVirtual && (
-            <div 
-                style={{ 
-                    position: 'absolute', 
-                    bottom: 8, 
-                    left: 8, 
-                    background: 'var(--accent)', 
-                    color: 'white', 
-                    width: 28, 
-                    height: 28, 
-                    borderRadius: '50%', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                    zIndex: 5
-                }}
-                title="Shared Dependency (Virtual Copy)"
-            >
-                <Layers size={14} />
-            </div>
-        )}
-        
         {!isIconOnly && (
             <div style={{ padding: 14, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 110 }}>
                 <div style={{ 
@@ -675,7 +652,7 @@ const LazyModList = ({
   handleUpdate,
   handleUninstall
 }) => {
-  const [visibleCount, setVisibleCount] = useState(80);
+  const [visibleCount, setVisibleCount] = useState(120);
   const sentinelRef = React.useRef(null);
   const prevModsLengthRef = React.useRef(folderMods.length);
   const prevFolderNameRef = React.useRef(folderName);
@@ -686,7 +663,7 @@ const LazyModList = ({
   useEffect(() => {
     // Only reset visibleCount if the folder itself changed or the mod list shrank significantly (e.g. filter applied)
     if (prevFolderNameRef.current !== folderName || folderMods.length < prevModsLengthRef.current - 5) {
-      setVisibleCount(80);
+      setVisibleCount(120);
     }
     prevFolderNameRef.current = folderName;
     prevModsLengthRef.current = folderMods.length;
@@ -697,11 +674,11 @@ const LazyModList = ({
 
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {
-        setVisibleCount((prev) => Math.min(prev + 60, folderMods.length));
+        setVisibleCount((prev) => Math.min(prev + 100, folderMods.length));
       }
     }, {
       root: null,
-      rootMargin: '1000px',
+      rootMargin: '2000px',
       threshold: 0.01
     });
 
@@ -2572,7 +2549,7 @@ export default function InstalledModsPage() {
         <div style={{ borderLeft: '1px solid var(--border)', height: 24 }} />
 
         <div className="sort-bar__search" style={{ flex: 1 }}>
-          <div className="search-wrap" style={{ height: 36, background: 'var(--bg-tertiary)', position: 'relative' }}>
+          <div className="search-wrap" style={{ height: 36, borderRadius: 'var(--radius-full)', position: 'relative' }}>
             <Search className="search-wrap__icon" size={16} />
             <input
               className="search-input"
@@ -2580,7 +2557,7 @@ export default function InstalledModsPage() {
               placeholder="Quick search title or author..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ fontSize: 'var(--fs-sm)', paddingRight: 32 }}
+              style={{ fontSize: 'var(--fs-sm)', paddingRight: 32, height: '100%' }}
             />
             {searchQuery && (
               <X 

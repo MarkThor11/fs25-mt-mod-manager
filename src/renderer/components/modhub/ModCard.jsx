@@ -194,7 +194,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           observer.disconnect();
         }
       },
-      { rootMargin: '1600px' }
+      { rootMargin: '2500px' }
     );
 
     if (cardRef.current) {
