@@ -400,8 +400,8 @@ export default function ModHubPage() {
           modTime = mod.badgeFirstSeen;
         }
 
-        const now = Date.now();
-        const startOfToday = new Date().setHours(0, 0, 0, 0);
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
         if (latestTimeframe === 'today') {
           if (modTime) {
@@ -410,18 +410,21 @@ export default function ModHubPage() {
             if (!mod.isNew && !mod.isUpdate) return false;
           }
         } else if (latestTimeframe === '3days') {
-          const threeDaysAgo = startOfToday - (2 * 24 * 60 * 60 * 1000);
+          // Calendar window covering today + past 3 full days (3 days ago at 00:00:00)
+          const threeDaysAgo = startOfToday - (3 * 24 * 60 * 60 * 1000);
           if (modTime) {
             if (modTime < threeDaysAgo) return false;
           } else {
             if (!mod.isNew && !mod.isUpdate) return false;
           }
         } else if (latestTimeframe === 'week') {
-          const weekAgo = startOfToday - (6 * 24 * 60 * 60 * 1000);
+          // Calendar window covering today + past 7 full days (7 days ago at 00:00:00)
+          const weekAgo = startOfToday - (7 * 24 * 60 * 60 * 1000);
           if (modTime) {
             if (modTime < weekAgo) return false;
           }
         } else if (latestTimeframe === 'month') {
+          // Calendar window covering today + past 30 full days
           const monthAgo = startOfToday - (30 * 24 * 60 * 60 * 1000);
           if (modTime) {
             if (modTime < monthAgo) return false;

@@ -1052,6 +1052,14 @@ export const useModHubStore = create((set, get) => ({
             extra.forEach(r => { if (r.mods) resMods.push(...r.mods); });
           }
           return resMods;
+        } else if (filterName.toLowerCase() === 'all') {
+          // ModHub has 280+ pages for 'all' filter. Fetch the requested page (or page 0).
+          const targetPage = typeof page === 'number' ? page : (get().currentPage || 0);
+          const result = await window.api.modhub.fetchMods({ filter: 'all', page: targetPage, bustCache });
+          const total = result.pagination?.total || result.totalPages || 1;
+          const totalModsCount = result.pagination?.totalMods || total * 24;
+          set({ totalPages: total, categoryTotalMods: totalModsCount });
+          return result.mods || [];
         } else {
           const first = await window.api.modhub.fetchMods({ filter: filterName, page: 0, bustCache });
           let total = first.pagination?.total || first.totalPages || 1;
@@ -1069,35 +1077,32 @@ export const useModHubStore = create((set, get) => ({
             ));
             extra.forEach(r => { if (r.mods) resMods.push(...r.mods); });
           }
+
+          // If latest feed, enrich with cached detail dates
+          if (filterName.toLowerCase() === 'latest') {
+            const modIds = resMods.map(m => m.modId).filter(Boolean);
+            if (modIds.length > 0 && window.api?.modhub?.getBatchDetails) {
+              try {
+                const batchDetails = await window.api.modhub.getBatchDetails(modIds);
+                if (batchDetails) {
+                  for (let i = 0; i < resMods.length; i++) {
+                    const d = batchDetails[resMods[i].modId];
+                    if (d) {
+                      resMods[i] = { ...resMods[i], ...d };
+                    }
+                  }
+                }
+              } catch (_) {}
+            }
+          }
+
           return resMods;
         }
       };
 
       let allRawMods = [];
 
-      if (f === 'all') {
-        // Collect all mods from store's known pool & cached categories
-        const pool = new Map();
-        Object.values(get().modCache || {}).forEach(item => {
-          if (item?.allMods && Array.isArray(item.allMods)) {
-            item.allMods.forEach(m => { if (m?.modId) pool.set(String(m.modId), m); });
-          } else if (item?.modId) {
-            pool.set(String(item.modId), item);
-          }
-        });
-        (get().mods || []).forEach(m => { if (m?.modId) pool.set(String(m.modId), m); });
-        (get().categoryAllMods || []).forEach(m => { if (m?.modId) pool.set(String(m.modId), m); });
-
-        // If pool is empty or limited, fetch top feeds to populate
-        if (pool.size === 0) {
-          const [latestMods, dlMods] = await Promise.all([
-            fetchAllPagesForFilter('latest'),
-            fetchAllPagesForFilter('downloads')
-          ]);
-          [...latestMods, ...dlMods].forEach(m => { if (m?.modId) pool.set(String(m.modId), m); });
-        }
-        allRawMods = Array.from(pool.values());
-      } else if (f.startsWith('aggregate:')) {
+      if (f.startsWith('aggregate:')) {
         const catLabel = f.split(':')[1];
         const parentCat = (categories || []).find(c => c.label.toLowerCase() === catLabel.toLowerCase());
         const childFilters = parentCat?.children?.map(c => c.filter).filter(Boolean) || [];

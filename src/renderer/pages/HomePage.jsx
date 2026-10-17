@@ -150,21 +150,15 @@ export default function HomePage() {
       const allMods = [];
       let page = 0;
       let totalPages = 1;
-      let shouldContinue = true;
 
-      while (shouldContinue && page < totalPages && page < 10) {
+      // Fetch enough pages (up to 4 pages = 96 mods) to cover recent release days
+      while (page < totalPages && page < 4) {
         const result = await window.api.modhub.fetchMods({ filter: 'latest', page, bustCache: page === 0 });
         const list = result?.mods || [];
         if (result?.pagination?.total) totalPages = result.pagination.total;
         if (list.length === 0) break;
 
         allMods.push(...list);
-
-        // Check if we hit mods from before today
-        const hasOlderMods = list.some(m => !m.isNew && !m.isUpdate);
-        if (hasOlderMods && page > 0) {
-          shouldContinue = false;
-        }
         page++;
       }
 
@@ -176,11 +170,77 @@ export default function HomePage() {
         return true;
       });
 
-      // Filter for today's new mods
-      const newModsOnly = uniqueMods.filter(m => m.isNew);
-      const featured = newModsOnly.length > 0 ? newModsOnly : uniqueMods;
-      if (featured.length > 0) {
-        setHomeFeatured(featured);
+      // Enrich mods with details (releasedDate)
+      const modIds = uniqueMods.map(m => m.modId).filter(Boolean);
+      let batchDetails = {};
+      if (modIds.length > 0 && window.api?.modhub?.getBatchDetails) {
+        try {
+          batchDetails = await window.api.modhub.getBatchDetails(modIds) || {};
+        } catch (_) {}
+      }
+
+      const enrichedMods = uniqueMods.map(m => {
+        const d = batchDetails[m.modId];
+        return d ? { ...m, ...d } : m;
+      });
+
+      // Group mods by release date ("DD.MM.YYYY")
+      // Mods on ModHub latest are ordered chronologically descending
+      const parseDateKey = (dateStr) => {
+        if (!dateStr || typeof dateStr !== 'string') return null;
+        const parts = dateStr.trim().split('.');
+        if (parts.length === 3) {
+          const d = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10);
+          const y = parseInt(parts[2], 10);
+          if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+            return {
+              key: `${String(d).padStart(2, '0')}.${String(m).padStart(2, '0')}.${y}`,
+              timestamp: new Date(y, m - 1, d).getTime()
+            };
+          }
+        }
+        return null;
+      };
+
+      const now = new Date();
+      const todayKey = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
+      
+      // Check if there are mods released today
+      const todayMods = enrichedMods.filter(m => {
+        const rel = parseDateKey(m.releasedDate || m.metadata?.['Release date'] || m.metadata?.['Release Date'] || m.metadata?.['Date']);
+        return rel && rel.key === todayKey;
+      });
+
+      if (todayMods.length > 0) {
+        setHomeFeatured(todayMods);
+      } else {
+        // If none were released today, look backwards day by day to find the most recent release day with mods
+        const datesMap = new Map(); // timestamp -> array of mods
+        for (const m of enrichedMods) {
+          const rel = parseDateKey(m.releasedDate || m.metadata?.['Release date'] || m.metadata?.['Release Date'] || m.metadata?.['Date']);
+          if (rel) {
+            if (!datesMap.has(rel.timestamp)) {
+              datesMap.set(rel.timestamp, []);
+            }
+            datesMap.get(rel.timestamp).push(m);
+          }
+        }
+
+        if (datesMap.size > 0) {
+          const sortedTimestamps = Array.from(datesMap.keys()).sort((a, b) => b - a);
+          const mostRecentTimestamp = sortedTimestamps[0];
+          const mostRecentDayMods = datesMap.get(mostRecentTimestamp) || [];
+          if (mostRecentDayMods.length > 0) {
+            setHomeFeatured(mostRecentDayMods);
+          } else {
+            setHomeFeatured(enrichedMods);
+          }
+        } else {
+          // Fallback if release dates are not yet indexed
+          const newMods = enrichedMods.filter(m => m.isNew);
+          setHomeFeatured(newMods.length > 0 ? newMods : enrichedMods);
+        }
       }
     } catch (err) {
       console.error('Failed to load featured mods:', err);
