@@ -227,7 +227,8 @@ export default function ModHubPage() {
         }
 
         // Generic category family guard: when viewing a known category parent/sub, verify mod metadata category matches if available
-        if (categories && categories.length > 0 && modCat && currentFilter !== 'all') {
+        // Do NOT apply this cross-contamination check to global feeds like 'all', 'latest', 'downloads', 'best'
+        if (categories && categories.length > 0 && modCat && currentFilter !== 'all' && currentFilter !== 'latest' && currentFilter !== 'officialMods') {
           let activeParent = null;
           let activeChild = null;
 

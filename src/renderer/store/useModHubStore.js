@@ -1213,7 +1213,7 @@ export const useModHubStore = create((set, get) => ({
             }
           }
 
-          if (categories && categories.length > 0) {
+          if (categories && categories.length > 0 && f !== 'all' && f !== 'latest' && f !== 'officialMods') {
             let activeParent = null;
             if (f.startsWith('aggregate:')) {
               const pName = f.split(':')[1];
