@@ -900,6 +900,71 @@ const [activeTab, setActiveTab] = useState('general');
       : await window.api.savegames.setMods({ savegamePath: save.path, mods: modsToApply });
     if (!result?.success) {
       useToastStore.getState().error(`Failed to update mod list: ${result?.error || 'Unknown error'}`);
+    } else {
+      onRefresh();
+    }
+  };
+
+  const applyProfileToEditor = async (profileId) => {
+    const { profiles } = useProfileStore.getState();
+    const p = profiles.find(x => x.id === profileId);
+    if (!p) return;
+
+    // Start with the mods from the profile
+    const nextSelected = new Set((p.mods || []).map(m => typeof m === 'string' ? m : m?.modName).filter(Boolean));
+
+    // Ensure map mod is preserved
+    if (save.mapId) {
+      const mapPrefix = save.mapId.includes('.') ? save.mapId.split('.')[0] : save.mapId;
+      const mapModObj = installedMods.find(m => m.isMap && (
+        (m.modName && m.modName.toLowerCase() === mapPrefix.toLowerCase()) ||
+        (m.mapId && m.mapId.toLowerCase() === save.mapId.toLowerCase())
+      ));
+      if (mapModObj && mapModObj.modName) {
+        nextSelected.add(mapModObj.modName);
+      }
+    }
+
+    // Preserve any mods currently active in the save that are required by existing save state
+    (save.mods || []).forEach(m => {
+      const mName = typeof m === 'string' ? m : m?.modName;
+      if (m?.required === 'true' || m?.['@_required'] === 'true') {
+        if (mName) nextSelected.add(mName);
+      }
+    });
+
+    // Check for script conflicts
+    const { conflictSensitivity } = useSettingsStore.getState();
+    if (conflictSensitivity !== 'off') {
+      const allConflicts = useLocalModsStore.getState().conflicts;
+      const activeMap = getActiveConflictsForSave(nextSelected, allConflicts);
+      if (activeMap.size > 0) {
+        if (conflictSensitivity === 'auto-disable_REMOVED') {
+          activeMap.forEach((_, modName) => {
+            const match = Array.from(nextSelected).find(m => m.toLowerCase() === modName);
+            if (match) nextSelected.delete(match);
+          });
+          useToastStore.getState().info('Auto-disabled conflicting mods from profile.');
+        } else if (conflictSensitivity === 'warn' || conflictSensitivity === 'resolve') {
+          useToastStore.getState().warning(`Warning: Profile '${p.name}' introduced script conflicts.`);
+        }
+      }
+    }
+
+    setSelectedMods(nextSelected);
+
+    if (window.api?.savegames) {
+      const modsToApply = installedMods.filter(m => nextSelected.has(m.modName));
+      const res = window.api.savegames.setSavegameMods
+        ? await window.api.savegames.setSavegameMods(save.path, modsToApply)
+        : await window.api.savegames.setMods({ savegamePath: save.path, mods: modsToApply });
+
+      if (res?.success) {
+        useToastStore.getState().success(`Applied profile '${p.name}' to savegame!`);
+        onRefresh();
+      } else {
+        useToastStore.getState().error(res?.error || 'Failed to apply profile to savegame');
+      }
     }
   };
 
@@ -2004,6 +2069,26 @@ const [activeTab, setActiveTab] = useState('general');
                                 <option key={folderName} value={folderName}>{folderName}</option>
                             ))}
                         </select>
+                        {(() => {
+                          const { profiles } = useProfileStore.getState();
+                          if (!profiles || profiles.length === 0) return null;
+                          return (
+                            <select 
+                              onChange={e => {
+                                if (e.target.value) {
+                                  applyProfileToEditor(e.target.value);
+                                  e.target.value = '';
+                                }
+                              }} 
+                              defaultValue="" 
+                              title="Apply an existing profile's mods to this savegame"
+                              style={{ width: 150, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+                            >
+                              <option value="" disabled>Apply Profile...</option>
+                              {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                          );
+                        })()}
                         <div style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', background: 'var(--bg-tertiary)', borderRadius: 100, border: '1px solid var(--border)' }}>
                           {selectedMods.size} Selected
                         </div>

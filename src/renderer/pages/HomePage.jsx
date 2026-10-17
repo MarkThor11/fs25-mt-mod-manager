@@ -147,11 +147,38 @@ export default function HomePage() {
   const loadFeaturedMods = async () => {
     if (!window.api?.modhub) return;
     try {
-      const result = await window.api.modhub.fetchMods({ filter: 'latest', page: 0, bustCache: true });
-      const modsList = result.mods || [];
-      // Prefer mods marked as isNew, but fill up to 18 with the latest mods from page 0
-      const newModsOnly = modsList.filter(m => m.isNew);
-      const featured = (newModsOnly.length >= 6 ? newModsOnly : modsList).slice(0, 18);
+      const allMods = [];
+      let page = 0;
+      let totalPages = 1;
+      let shouldContinue = true;
+
+      while (shouldContinue && page < totalPages && page < 10) {
+        const result = await window.api.modhub.fetchMods({ filter: 'latest', page, bustCache: page === 0 });
+        const list = result?.mods || [];
+        if (result?.pagination?.total) totalPages = result.pagination.total;
+        if (list.length === 0) break;
+
+        allMods.push(...list);
+
+        // Check if we hit mods from before today
+        const hasOlderMods = list.some(m => !m.isNew && !m.isUpdate);
+        if (hasOlderMods && page > 0) {
+          shouldContinue = false;
+        }
+        page++;
+      }
+
+      // De-duplicate by modId
+      const seen = new Set();
+      const uniqueMods = allMods.filter(m => {
+        if (!m || !m.modId || seen.has(m.modId)) return false;
+        seen.add(m.modId);
+        return true;
+      });
+
+      // Filter for today's new mods
+      const newModsOnly = uniqueMods.filter(m => m.isNew);
+      const featured = newModsOnly.length > 0 ? newModsOnly : uniqueMods;
       if (featured.length > 0) {
         setHomeFeatured(featured);
       }

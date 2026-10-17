@@ -76,6 +76,7 @@ export default function ModHubPage() {
   const [searchInput, setSearchInput] = useState('');
   const [searchTimeout, setSearchTimeout] = useState(null);
   const [sortOrder, setSortOrder] = useState('latest');
+  const [latestTimeframe, setLatestTimeframe] = useState(() => localStorage.getItem('modhub_latest_timeframe') || 'week');
   const [showFilters, setShowFilters] = useState(false);
   const [showUnits, setShowUnits] = useState(false);
 
@@ -380,9 +381,57 @@ export default function ModHubPage() {
         return false;
       }
 
+      // Latest Timeframe Selector Filter
+      if (currentFilter === 'latest' && latestTimeframe !== 'all') {
+        const releasedStr = mod.releasedDate || mod.metadata?.['Release date'] || mod.metadata?.['Release Date'] || mod.metadata?.['Date'];
+        let modTime = null;
+        if (releasedStr && typeof releasedStr === 'string') {
+          const parts = releasedStr.trim().split('.');
+          if (parts.length === 3) {
+            const d = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10);
+            const y = parseInt(parts[2], 10);
+            if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+              modTime = new Date(y, m - 1, d).getTime();
+            }
+          }
+        }
+        if (!modTime && mod.badgeFirstSeen) {
+          modTime = mod.badgeFirstSeen;
+        }
+
+        const now = Date.now();
+        const startOfToday = new Date().setHours(0, 0, 0, 0);
+
+        if (latestTimeframe === 'today') {
+          if (modTime) {
+            if (modTime < startOfToday) return false;
+          } else {
+            if (!mod.isNew && !mod.isUpdate) return false;
+          }
+        } else if (latestTimeframe === '3days') {
+          const threeDaysAgo = startOfToday - (2 * 24 * 60 * 60 * 1000);
+          if (modTime) {
+            if (modTime < threeDaysAgo) return false;
+          } else {
+            if (!mod.isNew && !mod.isUpdate) return false;
+          }
+        } else if (latestTimeframe === 'week') {
+          const weekAgo = startOfToday - (6 * 24 * 60 * 60 * 1000);
+          if (modTime) {
+            if (modTime < weekAgo) return false;
+          }
+        } else if (latestTimeframe === 'month') {
+          const monthAgo = startOfToday - (30 * 24 * 60 * 60 * 1000);
+          if (modTime) {
+            if (modTime < monthAgo) return false;
+          }
+        }
+      }
+
       return true;
     }).filter(Boolean);
-  }, [sourceMods, hiddenMods, activeFilters, authorFilter, isSmartMatchEnabled, powerReference, selectedHP, getInstalledVersion, globalMax]);
+  }, [sourceMods, hiddenMods, activeFilters, authorFilter, isSmartMatchEnabled, powerReference, selectedHP, getInstalledVersion, globalMax, currentFilter, latestTimeframe]);
 
   const handleBrandToggle = (brand) => {
     const newBrands = activeFilters.brands.includes(brand)
@@ -769,7 +818,27 @@ export default function ModHubPage() {
               </button>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginLeft: 'auto' }}>
+            {currentFilter === 'latest' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>Timeframe:</span>
+                <CustomSelect
+                  value={latestTimeframe}
+                  onChange={(val) => {
+                    setLatestTimeframe(val);
+                    localStorage.setItem('modhub_latest_timeframe', val);
+                  }}
+                  options={[
+                    { value: 'today', label: 'Today' },
+                    { value: '3days', label: 'Past 3 Days' },
+                    { value: 'week', label: 'Past Week' },
+                    { value: 'month', label: 'Past Month' },
+                    { value: 'all', label: 'All Time' }
+                  ]}
+                />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginLeft: currentFilter === 'latest' ? 0 : 'auto' }}>
               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>Show:</span>
               <CustomSelect
                 value={pageSize}

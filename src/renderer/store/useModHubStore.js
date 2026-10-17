@@ -1056,7 +1056,9 @@ export const useModHubStore = create((set, get) => ({
           const first = await window.api.modhub.fetchMods({ filter: filterName, page: 0, bustCache });
           let total = first.pagination?.total || first.totalPages || 1;
           
-          if (['latest', 'downloads', 'mostdownloaded', 'best', 'rating'].includes(filterName.toLowerCase())) {
+          if (filterName.toLowerCase() === 'latest') {
+            total = Math.min(total, 6); // Allow up to 6 pages (144 mods) for latest feed timeframe filtering
+          } else if (['downloads', 'mostdownloaded', 'best', 'rating'].includes(filterName.toLowerCase())) {
             total = Math.min(total, 2); // Cap global feeds to 2 pages (48 mods)
           }
 
@@ -1183,8 +1185,7 @@ export const useModHubStore = create((set, get) => ({
 
       let displayMods = enrichedMods;
       if (f === 'latest') {
-        const recentMods = enrichedMods.filter(m => m.isNew || m.isUpdate);
-        displayMods = recentMods.length > 0 ? recentMods : enrichedMods.slice(0, 24);
+        displayMods = enrichedMods;
       } else if (f && f !== 'search' && f !== 'all' && !authorFilter) {
         // Category cross-contamination guard at store level
         const fLower = f.toLowerCase();

@@ -923,6 +923,50 @@ async function setSavegameMods(savegamePath, mods) {
         });
     });
 
+    // Guard: Ensure the custom map mod itself is ALWAYS preserved in careerSavegame.xml
+    try {
+        const modManager = require('./modManager');
+        const { mods: allInstalledMods } = await modManager.scanLocalMods();
+        const detectedMap = findMapModInSavegame(xml, allInstalledMods);
+        if (detectedMap && detectedMap.modName && !newModsMap.has(detectedMap.modName)) {
+            newModsMap.set(detectedMap.modName, {
+                '@_modName': detectedMap.modName,
+                '@_title': String(detectedMap.title || detectedMap.modName).replace(/"/g, "'"),
+                '@_version': detectedMap.version || '1.0.0.0',
+                '@_required': 'true',
+                '@_fileHash': detectedMap.fileHash || ''
+            });
+        }
+
+        // Also check if any existing vehicles or placeables in the save reference missing asset mods
+        const xmlFiles = ['placeables.xml', 'vehicles.xml', 'items.xml'];
+        for (const xf of xmlFiles) {
+            const xp = path.join(savegamePath, xf);
+            if (fs.existsSync(xp)) {
+                const content = await fs.readFile(xp, 'utf8').catch(() => '');
+                const re = /\$moddir\$([^\/\\<">]+)/gi;
+                let match;
+                while ((match = re.exec(content)) !== null) {
+                    const requiredModName = match[1];
+                    if (requiredModName && !newModsMap.has(requiredModName)) {
+                        const matchingInstalled = allInstalledMods.find(m => m.modName && m.modName.toLowerCase() === requiredModName.toLowerCase());
+                        if (matchingInstalled) {
+                            newModsMap.set(matchingInstalled.modName, {
+                                '@_modName': matchingInstalled.modName,
+                                '@_title': String(matchingInstalled.title || matchingInstalled.modName).replace(/"/g, "'"),
+                                '@_version': matchingInstalled.version || '1.0.0.0',
+                                '@_required': 'true',
+                                '@_fileHash': matchingInstalled.fileHash || ''
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('[SAVEGAME-MODS] Error inspecting savegame dependencies:', e.message);
+    }
+
     // Ensure internal app companion mods are declared in careerSavegame.xml so the engine loads their lua subsystems
     const appHelpers = [
         { modName: 'FS25_MTRadioManager', title: 'MT Radio Manager Subsystem' },
