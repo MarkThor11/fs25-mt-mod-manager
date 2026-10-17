@@ -194,7 +194,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           observer.disconnect();
         }
       },
-      { rootMargin: '1200px' }
+      { rootMargin: '1600px' }
     );
 
     if (cardRef.current) {
@@ -754,7 +754,6 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
                 className="mod-card__image"
                 onLoad={() => setImgError(false)}
                 onError={handleImageError}
-                loading="lazy"
                 style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
               />
             ) : (

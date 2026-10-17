@@ -149,7 +149,6 @@ const LocalModIcon = React.memo(({ mod }) => {
             src={activeSrc} 
             style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid var(--border)' }} 
             alt={mod.title || ""} 
-            loading="lazy" 
             onError={() => setError(true)}
           />
         </div>
@@ -172,7 +171,6 @@ const LocalModIcon = React.memo(({ mod }) => {
           src={imageUrl} 
           style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid var(--border)' }} 
           alt={mod.title || ""} 
-          loading="lazy" 
           onError={() => setError(true)}
         />
       </div>
@@ -204,7 +202,6 @@ const LocalModIcon = React.memo(({ mod }) => {
         src={`mod-icon://icon?path=${encodeURIComponent(mod.filePath)}`} 
         style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid var(--border)' }} 
         alt="" 
-        loading="lazy" 
         onError={() => setError(true)}
       />
     </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import TitleBar from './components/layout/TitleBar';
 import Sidebar from './components/layout/Sidebar';
 import HomePage from './pages/HomePage';
@@ -34,6 +34,74 @@ import { useMapStore } from './store/useMapStore';
 import { useDownloadStore } from './store/useDownloadStore';
 import { useToastStore } from './store/useToastStore';
 import { useSavegameStore } from './store/useSavegameStore';
+
+const MAIN_ROUTES = [
+  { path: '/', Component: HomePage },
+  { path: '/modhub', Component: ModHubPage },
+  { path: '/installed', Component: InstalledModsPage },
+  { path: '/favourites', Component: FavouritesPage },
+  { path: '/hidden', Component: HiddenModsPage },
+  { path: '/savegames', Component: SavegamesPage },
+  { path: '/profiles', Component: ProfilesPage },
+  { path: '/keybinds', Component: KeybindsPage },
+  { path: '/maps', Component: MapsPage },
+  { path: '/downloads', Component: DownloadsPage },
+  { path: '/radio', Component: RadioPage },
+  { path: '/save-transfer', Component: SaveTransferPage },
+  { path: '/diagnostics', Component: DiagnosticsPage },
+  { path: '/settings', Component: SettingsPage },
+  { path: '/support', Component: SupportPage },
+  { path: '/third-party', Component: ThirdPartyPage }
+];
+
+function AppRoutes() {
+  const location = useLocation();
+  const currentPath = location.pathname;
+
+  // Track which main tab pages have been visited so we mount them on-demand and keep them alive
+  const [visitedPaths, setVisitedPaths] = useState(() => new Set([currentPath]));
+
+  useEffect(() => {
+    if (MAIN_ROUTES.some(r => r.path === currentPath)) {
+      setVisitedPaths(prev => {
+        if (prev.has(currentPath)) return prev;
+        const next = new Set(prev);
+        next.add(currentPath);
+        return next;
+      });
+    }
+  }, [currentPath]);
+
+  const isMainTab = MAIN_ROUTES.some(r => r.path === currentPath);
+
+  return (
+    <>
+      {/* Keep-alive container for main tab views */}
+      {MAIN_ROUTES.map(({ path, Component }) => {
+        if (!visitedPaths.has(path)) return null;
+        const isActive = isMainTab && currentPath === path;
+        return (
+          <div
+            key={path}
+            style={{
+              display: isActive ? 'contents' : 'none'
+            }}
+          >
+            <Component />
+          </div>
+        );
+      })}
+
+      {/* Detail / transient sub-routes that unmount when navigating back */}
+      {!isMainTab && (
+        <Routes>
+          <Route path="/modhub/mod/:modId" element={<ModDetailPage />} />
+          <Route path="/installed/mod/:fileName" element={<ModDetailPage />} />
+        </Routes>
+      )}
+    </>
+  );
+}
 
 export default function App() {
   const { theme, loadSettings, isLoaded } = useSettingsStore();
@@ -379,26 +447,7 @@ export default function App() {
           <Sidebar />
           <main className="main-content">
             <ScrollRestorer>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/modhub" element={<ModHubPage />} />
-                <Route path="/modhub/mod/:modId" element={<ModDetailPage />} />
-                <Route path="/installed" element={<InstalledModsPage />} />
-                <Route path="/installed/mod/:fileName" element={<ModDetailPage />} />
-                <Route path="/favourites" element={<FavouritesPage />} />
-                <Route path="/hidden" element={<HiddenModsPage />} />
-                <Route path="/savegames" element={<SavegamesPage />} />
-                <Route path="/profiles" element={<ProfilesPage />} />
-                <Route path="/keybinds" element={<KeybindsPage />} />
-                <Route path="/maps" element={<MapsPage />} />
-                <Route path="/downloads" element={<DownloadsPage />} />
-                <Route path="/radio" element={<RadioPage />} />
-                <Route path="/save-transfer" element={<SaveTransferPage />} />
-                <Route path="/diagnostics" element={<DiagnosticsPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/support" element={<SupportPage />} />
-                <Route path="/third-party" element={<ThirdPartyPage />} />
-              </Routes>
+              <AppRoutes />
             </ScrollRestorer>
           </main>
         </div>
