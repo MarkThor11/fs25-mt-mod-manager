@@ -678,7 +678,7 @@ const LazyModList = ({
   handleUpdate,
   handleUninstall
 }) => {
-  const [visibleCount, setVisibleCount] = useState(20);
+  const [visibleCount, setVisibleCount] = useState(80);
   const sentinelRef = React.useRef(null);
   const prevModsLengthRef = React.useRef(folderMods.length);
   const prevFolderNameRef = React.useRef(folderName);
@@ -689,7 +689,7 @@ const LazyModList = ({
   useEffect(() => {
     // Only reset visibleCount if the folder itself changed or the mod list shrank significantly (e.g. filter applied)
     if (prevFolderNameRef.current !== folderName || folderMods.length < prevModsLengthRef.current - 5) {
-      setVisibleCount(20);
+      setVisibleCount(80);
     }
     prevFolderNameRef.current = folderName;
     prevModsLengthRef.current = folderMods.length;
@@ -700,12 +700,12 @@ const LazyModList = ({
 
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {
-        setVisibleCount((prev) => Math.min(prev + 30, folderMods.length));
+        setVisibleCount((prev) => Math.min(prev + 60, folderMods.length));
       }
     }, {
       root: null,
-      rootMargin: '300px',
-      threshold: 0.1
+      rootMargin: '1000px',
+      threshold: 0.01
     });
 
     const currentSentinel = sentinelRef.current;
@@ -1195,6 +1195,16 @@ export default function InstalledModsPage() {
 
   // Compute clean structured tags: Key Filters (Rounded up concepts), Categories (Main ModHub categories), Subcategories, and Custom User Tags
   const { keyFilters, functionalTags, categoryTags, customTags, allUniqueTags } = useMemo(() => {
+    if (!showTagBar) {
+      return {
+        keyFilters: [],
+        functionalTags: [],
+        categoryTags: [],
+        customTags: [],
+        allUniqueTags: []
+      };
+    }
+
     let isDriveOnly = false;
     let filterDrive = '';
     let rootWithSlash = '';
@@ -1398,7 +1408,7 @@ export default function InstalledModsPage() {
       customTags: custom,
       allUniqueTags: all
     };
-  }, [mods, selectedDriveFilter, tagSortBy, doesModMatchTag]);
+  }, [showTagBar, mods, selectedDriveFilter, tagSortBy, doesModMatchTag]);
 
   const [selectedMods, setSelectedMods] = useState([]);
   const selectedModsSet = useMemo(() => new Set(selectedMods), [selectedMods]);
