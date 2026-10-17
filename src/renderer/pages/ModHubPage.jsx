@@ -76,7 +76,10 @@ export default function ModHubPage() {
   const [searchInput, setSearchInput] = useState('');
   const [searchTimeout, setSearchTimeout] = useState(null);
   const [sortOrder, setSortOrder] = useState('latest');
-  const [latestTimeframe, setLatestTimeframe] = useState(() => localStorage.getItem('modhub_latest_timeframe') || 'week');
+  const [latestTimeframe, setLatestTimeframe] = useState(() => {
+    const saved = localStorage.getItem('modhub_latest_timeframe');
+    return (saved && ['today', '3days', 'week', 'month'].includes(saved)) ? saved : 'week';
+  });
   const [showFilters, setShowFilters] = useState(false);
   const [showUnits, setShowUnits] = useState(false);
 
@@ -842,8 +845,7 @@ export default function ModHubPage() {
                     { value: 'today', label: 'Today' },
                     { value: '3days', label: 'Past 3 Days' },
                     { value: 'week', label: 'Past Week' },
-                    { value: 'month', label: 'Past Month' },
-                    { value: 'all', label: 'All Time' }
+                    { value: 'month', label: 'Past Month' }
                   ]}
                 />
               </div>
