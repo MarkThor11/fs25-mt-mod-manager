@@ -415,7 +415,7 @@ async function getInputBindings() {
                 const axisComponent = b['@_axisComponent'] || '+';
 
                 if (input && input.trim()) {
-                    const conflictKey = `${actionContext}::${device}::${input.trim()}`;
+                    const conflictKey = `${device}::${input.trim()}`;
                     if (!bindingsMap[conflictKey]) bindingsMap[conflictKey] = [];
                     bindingsMap[conflictKey].push({ action: actionName, input, device, context: actionContext });
                 }
@@ -440,7 +440,7 @@ async function getInputBindings() {
         const conflicts = [];
         for (const [key, list] of Object.entries(bindingsMap)) {
             if (list.length > 1) {
-                const [context, device, input] = key.split('::');
+                const [device, input] = key.split('::');
                 // Only consider it a genuine clash if not all participating actions are known safe design shares
                 const allSafe = list.every(item => safeSharedActions.has(item.action));
                 if (allSafe) continue;
@@ -465,7 +465,7 @@ async function getInputBindings() {
                 if (distinctContexts.size <= 1) continue;
 
                 conflicts.push({
-                    context,
+                    context: Array.from(distinctContexts).join(', '),
                     device,
                     input,
                     formattedInput: formatKeyName(input),
