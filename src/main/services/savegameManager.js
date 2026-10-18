@@ -989,6 +989,18 @@ async function setSavegameMods(savegamePath, mods) {
     await syncSubfolderMapDependencies(savegamePath);
     await autoInjectDependencies(savegamePath);
     
+    // Automatically synchronize savegame mod links so external launches find all mods
+    try {
+        const modManager = require('./modManager');
+        if (typeof modManager.syncSavegameModBridges === 'function') {
+            await modManager.syncSavegameModBridges();
+        } else if (typeof modManager.syncSavegameMapBridges === 'function') {
+            await modManager.syncSavegameMapBridges();
+        }
+    } catch (bridgeErr) {
+        console.warn('[SAVEGAME-MODS] Bridge sync warning after updating mods:', bridgeErr.message);
+    }
+
     return { success: true };
 }
 
@@ -2103,6 +2115,18 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         console.log(`[CREATE] Slot ${savegameIndex} cleared for clean FS25 native map initialization. Wrote .mm_pending_settings.json.`);
     } else {
         await ensureSavegameImage(slotPath, mapModName, mapTitle, mapId, modZipPath);
+    }
+
+    // Automatically synchronize savegame mod links so external launches find all mods
+    try {
+        const modManager = require('./modManager');
+        if (typeof modManager.syncSavegameModBridges === 'function') {
+            await modManager.syncSavegameModBridges();
+        } else if (typeof modManager.syncSavegameMapBridges === 'function') {
+            await modManager.syncSavegameMapBridges();
+        }
+    } catch (bridgeErr) {
+        console.warn('[CREATE] Bridge sync warning after creating savegame:', bridgeErr.message);
     }
 
     return { success: true, path: slotPath, requiresEngineInit, mapId };
@@ -3534,6 +3558,15 @@ async function deleteSavegame(target) {
                 await new Promise(resolve => setTimeout(resolve, 300));
             }
         }
+    if (deleted) {
+        try {
+            const modManager = require('./modManager');
+            if (typeof modManager.syncSavegameModBridges === 'function') {
+                await modManager.syncSavegameModBridges();
+            } else if (typeof modManager.syncSavegameMapBridges === 'function') {
+                await modManager.syncSavegameMapBridges();
+            }
+        } catch (_) {}
     }
 
     return { success: deleted };

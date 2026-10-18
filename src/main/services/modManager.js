@@ -4075,14 +4075,14 @@ async function updateModInternal(modFileName, modId, onProgress) {
 
 
 /**
- * Synchronize hardlinks or symlinks of map mods referenced by any existing savegame slots (1-20)
- * directly into the default FS25 mods directory AND any user-configured custom/primary mods directories.
- * This guarantees that regardless of whether the player uses the default Documents folder or a custom
- * drive folder (e.g. F:\mods4, D:\mods) as their primary mods folder, and regardless of whether they launch
- * through the app, Steam, Epic, or Desktop, GIANTS Engine can locate the map zip and display the savegame
- * thumbnail and map title in the in-game save menu.
+ * Synchronize hardlinks or symlinks of ALL mods (maps, vehicles, implements, placeables, scripts, dependencies)
+ * referenced by any existing savegame slots (1-20) directly into the default FS25 mods directory
+ * AND any user-configured custom/primary mods directories.
+ * This guarantees that regardless of whether the player launches through the app, Steam, Epic, or Desktop shortcut,
+ * GIANTS Engine can locate every mod required by each savegame in the mods directory, preventing missing-mod
+ * prompt warnings and enabling saves to load seamlessly without the app running.
  */
-async function syncSavegameMapBridges(targetRootPath = null) {
+async function syncSavegameModBridges(targetRootPath = null) {
 	try {
 		const targetRoots = new Set();
 		if (targetRootPath) {
@@ -4098,8 +4098,37 @@ async function syncSavegameMapBridges(targetRootPath = null) {
 		const fs25DataRoot = getFS25DataRoot();
 		if (!fs25DataRoot || !fs.existsSync(fs25DataRoot)) return { success: false, error: 'FS25 data root not found' };
 
-		// 1. Gather all map mod paths required by existing savegame slots (careerSavegame.xml or .mm_pending_settings.json)
-		const activeSaveMapPaths = new Map(); // mapModNameLower -> realFilePath
+		// Fetch all authoritative installed mods
+		const { mods: allInstalledMods } = await scanLocalMods();
+		const modsByName = new Map();
+		const subfolderInodes = new Set();
+
+		for (const m of allInstalledMods) {
+			if (m && m.modName && m.filePath) {
+				const nameLower = m.modName.toLowerCase();
+				if (!modsByName.has(nameLower)) {
+					modsByName.set(nameLower, m);
+				}
+				// Also index by fileName without .zip
+				if (m.fileName) {
+					const fnClean = path.basename(m.fileName).replace(/\.zip$/i, '').toLowerCase();
+					if (!modsByName.has(fnClean)) {
+						modsByName.set(fnClean, m);
+					}
+				}
+				// Track inodes of mods residing in subfolders or non-root paths
+				if (m.folder && m.folder !== 'mods' && m.folder !== '') {
+					try {
+						const st = await fs.stat(m.filePath);
+						if (st.ino) subfolderInodes.add(st.ino);
+					} catch (_) {}
+				}
+			}
+		}
+
+		// 1. Gather all mod paths required across all active savegame slots (1-20)
+		const activeSaveModPaths = new Map(); // modNameLower -> realFilePath
+
 		for (let i = 1; i <= 20; i++) {
 			const slotPath = path.join(fs25DataRoot, `savegame${i}`);
 			if (!fs.existsSync(slotPath)) continue;
@@ -4107,12 +4136,140 @@ async function syncSavegameMapBridges(targetRootPath = null) {
 			// Also ensure savegame.png exists inside slot directory
 			savegameManager.ensureSavegameImage(slotPath).catch(() => {});
 
+			let mapModObj = null;
+
+			// A. Map Mod
 			const mapModPath = await savegameManager.resolveMapModPath(slotPath);
 			if (mapModPath && fs.existsSync(mapModPath)) {
 				const baseName = path.basename(mapModPath);
 				const modNameLower = baseName.replace(/\.zip$/i, '').toLowerCase();
-				if (!activeSaveMapPaths.has(modNameLower)) {
-					activeSaveMapPaths.set(modNameLower, mapModPath);
+				activeSaveModPaths.set(modNameLower, mapModPath);
+				mapModObj = modsByName.get(modNameLower);
+			}
+
+			// Slot required mod names
+			const slotModNames = new Set();
+
+			// B. careerSavegame.xml mods
+			const careerPath = path.join(slotPath, 'careerSavegame.xml');
+			if (fs.existsSync(careerPath)) {
+				try {
+					const { mods: modsList } = await savegameManager.getSavegameMods(slotPath);
+					if (modsList) {
+						for (const m of modsList) {
+							if (m && m.modName) slotModNames.add(m.modName.toLowerCase());
+						}
+					}
+
+					if (!mapModObj) {
+						const xml = await fs.readFile(careerPath, 'utf8');
+						mapModObj = savegameManager.findMapModInSavegame(xml, allInstalledMods);
+						if (mapModObj && mapModObj.modName) {
+							const mNameLow = mapModObj.modName.toLowerCase();
+							activeSaveModPaths.set(mNameLow, mapModObj.filePath);
+						}
+					}
+				} catch (_) {}
+			}
+
+			// C. Pending settings for uninitialized slots
+			const pendingPath = path.join(slotPath, '.mm_pending_settings.json');
+			if (fs.existsSync(pendingPath)) {
+				try {
+					const pending = await fs.readJson(pendingPath);
+					if (Array.isArray(pending.mods)) {
+						pending.mods.forEach(n => { if (n) slotModNames.add(String(n).toLowerCase()); });
+					}
+					const mapCand = pending.resolvedMapModName || pending.mapModName;
+					if (mapCand) {
+						const cLower = String(mapCand).replace(/\.zip$/i, '').toLowerCase();
+						const mObj = modsByName.get(cLower);
+						if (mObj && mObj.filePath) {
+							activeSaveModPaths.set(cLower, mObj.filePath);
+							if (!mapModObj) mapModObj = mObj;
+						}
+					}
+				} catch (_) {}
+			}
+
+			// D. Placeables, vehicles, items $moddir$ references
+			const xmlFiles = ['placeables.xml', 'vehicles.xml', 'items.xml'];
+			for (const xf of xmlFiles) {
+				const xp = path.join(slotPath, xf);
+				if (fs.existsSync(xp)) {
+					try {
+						const content = await fs.readFile(xp, 'utf8');
+						const re = /\$moddir\$([^\/\\<">]+)/gi;
+						let match;
+						while ((match = re.exec(content)) !== null) {
+							if (match[1]) slotModNames.add(match[1].toLowerCase());
+						}
+					} catch (_) {}
+				}
+			}
+
+			// E. Map dedicated subfolder sibling mods
+			if (mapModObj && mapModObj.filePath) {
+				try {
+					const mapDir = path.dirname(mapModObj.filePath);
+					const mapDirResolved = path.resolve(mapDir).toLowerCase();
+					const parentOfMapDir = path.resolve(path.dirname(mapDir)).toLowerCase();
+					const configuredRoots = getModsPaths().map(p => path.resolve(p).toLowerCase());
+
+					if (configuredRoots.includes(parentOfMapDir) && !configuredRoots.includes(mapDirResolved)) {
+						allInstalledMods.forEach(m => {
+							if (!m.filePath || !m.modName || m.isMap) return;
+							const mDir = path.resolve(path.dirname(m.filePath)).toLowerCase();
+							if (mDir === mapDirResolved) {
+								slotModNames.add(m.modName.toLowerCase());
+							}
+						});
+					} else if (mapModObj.folder && mapModObj.folder.toLowerCase() !== 'mods' && mapModObj.folder.toLowerCase() !== '') {
+						const folderLower = mapModObj.folder.toLowerCase();
+						allInstalledMods.forEach(m => {
+							if (!m.isMap && m.folder && m.folder.toLowerCase() === folderLower && m.modName) {
+								slotModNames.add(m.modName.toLowerCase());
+							}
+						});
+					}
+				} catch (_) {}
+			}
+
+			// F. Recursively resolve mod dependencies
+			const queue = Array.from(slotModNames);
+			const resolvedSlotMods = new Set(queue);
+			while (queue.length > 0) {
+				const currentName = queue.shift();
+				const mObj = modsByName.get(currentName);
+				if (mObj && mObj.dependencies && mObj.dependencies.length > 0) {
+					for (const dep of mObj.dependencies) {
+						const foundMod = allInstalledMods.find(m => dependencyResolver.matchModWithDependency(m, dep));
+						if (foundMod && foundMod.modName) {
+							const resolvedName = foundMod.modName.toLowerCase();
+							if (!resolvedSlotMods.has(resolvedName)) {
+								resolvedSlotMods.add(resolvedName);
+								slotModNames.add(resolvedName);
+								queue.push(resolvedName);
+							}
+						}
+					}
+				}
+			}
+
+			// Add all resolved slot mods to activeSaveModPaths
+			for (const modNameLower of slotModNames) {
+				if (INCOMPATIBLE_ENGINE_MODS.has(modNameLower)) continue;
+				const m = modsByName.get(modNameLower);
+				if (m && m.filePath && !m.isDLC) {
+					let realSource = m.filePath;
+					try {
+						if (fs.existsSync(realSource)) {
+							realSource = await fs.realpath(realSource);
+						}
+					} catch (_) {}
+					if (fs.existsSync(realSource)) {
+						activeSaveModPaths.set(modNameLower, realSource);
+					}
 				}
 			}
 		}
@@ -4121,36 +4278,46 @@ async function syncSavegameMapBridges(targetRootPath = null) {
 		for (const rootPath of targetRoots) {
 			if (!rootPath || !fs.existsSync(rootPath)) continue;
 
-			// 2. Scan root folder for existing bridge links/files that start with map mod names
-			// To prevent leaving stale links if a user deletes a save slot, clean up dead or unreferenced bridge links
+			// 2. Scan root folder for existing bridge links/files that point elsewhere
+			// Clean up dead, obsolete, or unreferenced bridge links
 			const entries = await fs.readdir(rootPath, { withFileTypes: true }).catch(() => []);
 			for (const entry of entries) {
-				if (!entry.isFile()) continue;
 				const entryNameLower = entry.name.replace(/\.zip$/i, '').toLowerCase();
 				const fullEntryPath = path.join(rootPath, entry.name);
 
 				try {
 					const lstat = await fs.lstat(fullEntryPath);
-					// If it is a symlink or known map bridge pointing elsewhere in library
 					if (lstat.isSymbolicLink()) {
-						if (!activeSaveMapPaths.has(entryNameLower)) {
+						if (!activeSaveModPaths.has(entryNameLower)) {
 							await fs.remove(fullEntryPath);
-							console.log(`[MAP-BRIDGE] Removed obsolete savegame map link: ${entry.name}`);
+							console.log(`[SAVE-BRIDGE] Removed obsolete savegame mod link: ${entry.name}`);
+						}
+					} else if (entry.isFile() && !activeSaveModPaths.has(entryNameLower)) {
+						// Check if this file is a hardlink to a subfolder/library file
+						const stat = await fs.stat(fullEntryPath);
+						if (stat.nlink > 1 && stat.ino && subfolderInodes.has(stat.ino)) {
+							await fs.remove(fullEntryPath);
+							console.log(`[SAVE-BRIDGE] Removed obsolete savegame hardlink: ${entry.name}`);
 						}
 					}
 				} catch (_) {}
 			}
 
-			// 3. Ensure a link/hardlink exists in this root directory for each active savegame map
-			for (const [modNameLower, sourcePath] of activeSaveMapPaths.entries()) {
+			// 3. Ensure a link/hardlink exists in this root directory for each active savegame mod
+			for (const [modNameLower, sourcePath] of activeSaveModPaths.entries()) {
 				// Don't link a file to itself if sourcePath is already directly in rootPath
 				if (path.resolve(path.dirname(sourcePath)).toLowerCase() === rootPath.toLowerCase()) {
 					continue;
 				}
 
 				const isZip = sourcePath.toLowerCase().endsWith('.zip');
-				const targetFileName = path.basename(sourcePath);
+				const modObj = modsByName.get(modNameLower);
+				const targetFileName = (modObj && modObj.modName) ? (modObj.modName + (isZip ? '.zip' : '')) : path.basename(sourcePath);
 				const destPath = path.join(rootPath, targetFileName);
+
+				if (path.resolve(destPath).toLowerCase() === path.resolve(sourcePath).toLowerCase()) {
+					continue;
+				}
 
 				if (fs.existsSync(destPath)) {
 					try {
@@ -4174,7 +4341,7 @@ async function syncSavegameMapBridges(targetRootPath = null) {
 						try {
 							await fs.link(sourcePath, destPath);
 							totalCreated++;
-							console.log(`[MAP-BRIDGE] Created hardlink for savegame map in ${path.basename(rootPath)}: ${targetFileName}`);
+							console.log(`[SAVE-BRIDGE] Created hardlink for savegame mod in ${path.basename(rootPath)}: ${targetFileName}`);
 							continue;
 						} catch (_) {}
 
@@ -4182,7 +4349,7 @@ async function syncSavegameMapBridges(targetRootPath = null) {
 						try {
 							await fs.symlink(sourcePath, destPath, 'file');
 							totalCreated++;
-							console.log(`[MAP-BRIDGE] Created symlink for savegame map in ${path.basename(rootPath)}: ${targetFileName}`);
+							console.log(`[SAVE-BRIDGE] Created symlink for savegame mod in ${path.basename(rootPath)}: ${targetFileName}`);
 							continue;
 						} catch (_) {}
 
@@ -4190,30 +4357,53 @@ async function syncSavegameMapBridges(targetRootPath = null) {
 						try {
 							await fs.copy(sourcePath, destPath);
 							totalCreated++;
-							console.log(`[MAP-BRIDGE] Copied savegame map across drives to ${path.basename(rootPath)}: ${targetFileName}`);
+							console.log(`[SAVE-BRIDGE] Copied savegame mod across drives to ${path.basename(rootPath)}: ${targetFileName}`);
 						} catch (cpErr) {
-							console.warn(`[MAP-BRIDGE] Failed to bridge map ${targetFileName}:`, cpErr.message);
+							console.warn(`[SAVE-BRIDGE] Failed to bridge mod ${targetFileName}:`, cpErr.message);
+						}
+					} else {
+						// Directory mod (unpacked)
+						try {
+							await fs.symlink(sourcePath, destPath, 'junction');
+							totalCreated++;
+							continue;
+						} catch (_) {
+							try {
+								await fs.symlink(sourcePath, destPath, 'dir');
+								totalCreated++;
+								continue;
+							} catch (_) {
+								try {
+									await fs.copy(sourcePath, destPath);
+									totalCreated++;
+									continue;
+								} catch (_) {}
+							}
 						}
 					}
 				} catch (bErr) {
-					console.warn(`[MAP-BRIDGE] Bridge error for ${targetFileName}:`, bErr.message);
+					console.warn(`[SAVE-BRIDGE] Bridge error for ${targetFileName}:`, bErr.message);
 				}
 			}
 		}
 
-		return { success: true, bridgedCount: activeSaveMapPaths.size, createdCount: totalCreated };
+		console.log(`[SAVE-BRIDGE] Synchronized ${activeSaveModPaths.size} mods across all active savegames into root mods folder.`);
+		return { success: true, bridgedCount: activeSaveModPaths.size, createdCount: totalCreated };
 	} catch (err) {
-		console.warn('[MAP-BRIDGE] syncSavegameMapBridges error:', err.message);
+		console.warn('[SAVE-BRIDGE] syncSavegameModBridges error:', err.message);
 		return { success: false, error: err.message };
 	}
 }
 
+// Keep syncSavegameMapBridges as an alias for backwards compatibility
+const syncSavegameMapBridges = syncSavegameModBridges;
+
 /**
  * Mirror mods from subfolders to the root folder using symbolic links.
- * Automatically delegates to syncSavegameMapBridges so only necessary savegame map links exist in root.
+ * Automatically delegates to syncSavegameModBridges so only necessary savegame mod links exist in root.
  */
 async function syncMirrorLinks(primaryPath) {
-	return await syncSavegameMapBridges(primaryPath);
+	return await syncSavegameModBridges(primaryPath);
 }
 
 /**
@@ -7333,6 +7523,7 @@ module.exports = {
 	cleanupLegacyDuplicates,
 	syncMirrorLinks,
 	syncSavegameMapBridges,
+	syncSavegameModBridges,
 	ultraNormalize,
 	getMapSubfolderName,
 	isCrossplayMod,
