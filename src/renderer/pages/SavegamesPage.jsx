@@ -2065,7 +2065,13 @@ const [activeTab, setActiveTab] = useState('general');
                             style={{ width: 160, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
                         >
                             <option value="ALL">All Folders</option>
-                            {Object.keys(groupedMods).sort().map(folderName => (
+                            {Object.keys(groupedMods).sort((a,b) => {
+                                if (a === 'MAIN') return -1;
+                                if (b === 'MAIN') return 1;
+                                if (a.toLowerCase() === 'map dependencies') return -1;
+                                if (b.toLowerCase() === 'map dependencies') return 1;
+                                return a.localeCompare(b);
+                            }).map(folderName => (
                                 <option key={folderName} value={folderName}>{folderName}</option>
                             ))}
                         </select>

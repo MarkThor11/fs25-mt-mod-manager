@@ -1214,7 +1214,13 @@ export default function ProfilesPage() {
                         })()}
 
                         {(() => {
-                          const allFolderNames = Object.keys(groupedMods).sort((a,b) => a === 'MAIN' ? -1 : b === 'MAIN' ? 1 : a.localeCompare(b));
+                          const allFolderNames = Object.keys(groupedMods).sort((a,b) => {
+                            if (a === 'MAIN') return -1;
+                            if (b === 'MAIN') return 1;
+                            if (a.toLowerCase() === 'map dependencies') return -1;
+                            if (b.toLowerCase() === 'map dependencies') return 1;
+                            return a.localeCompare(b);
+                          });
                           
                           const renderedGroups = allFolderNames.map(folderName => {
                             const folderMods = groupedMods[folderName];

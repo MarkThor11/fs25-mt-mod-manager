@@ -1753,8 +1753,12 @@ export default function InstalledModsPage() {
         if (indexA !== -1 && indexB !== -1) return indexA - indexB;
         if (indexA !== -1) return -1;
         if (indexB !== -1) return 1;
+        // Default order when not custom-ordered:
+        // MAIN ('') is always first, followed immediately by 'Map Dependencies'
         if (a === '') return -1;
         if (b === '') return 1;
+        if (a.toLowerCase() === 'map dependencies') return -1;
+        if (b.toLowerCase() === 'map dependencies') return 1;
         return a.localeCompare(b);
     });
 
