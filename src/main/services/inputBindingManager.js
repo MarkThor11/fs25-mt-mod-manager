@@ -6,8 +6,12 @@ const cache = require('./cache');
 const { app } = require('electron');
 
 let modActionTitleMap = {};
+let modActionCategoryMap = {};
 try {
     modActionTitleMap = require('./modActionMap.json');
+} catch (_) {}
+try {
+    modActionCategoryMap = require('./modActionCategories.json');
 } catch (_) {}
 
 const parser = new XMLParser({
@@ -236,7 +240,8 @@ function getModActionContext(name) {
 }
 
 function getActionOperationalDomain(name) {
-    const a = (name || '').toUpperCase();
+    const raw = (name || '').trim();
+    const a = raw.toUpperCase();
 
     // 1. GUI / Menus / Dialogs / Tablet / Shop / Overlays / HUD setup / Screens
     if (
@@ -256,19 +261,9 @@ function getActionOperationalDomain(name) {
         return 'GUI_MENU';
     }
 
-    // 2. On-Foot / Character / Hand tools / Animal interaction / Physical Objects
-    if (
-        a.includes('HANDTOOL') || a.includes('ON_FOOT') || a.includes('PLAYER') || a.includes('CHAINSAW') ||
-        a.includes('DRINK') || a.includes('EAT') || a.includes('CUT_BALE') || a.includes('JUMP') ||
-        a.includes('CROUCH') || a.includes('RUN') || a.includes('WALK') || a.includes('FLASHLIGHT') ||
-        a.includes('THROW') || a.includes('PICKUP') || a.includes('PET_') || a.includes('TAKE_OBJECT') ||
-        a.includes('DROP_OBJECT') || a.includes('INTERACT') || a.startsWith('HPS_') || a.includes('STRENGTH') ||
-        a.includes('PING_SYSTEM')
-    ) {
-        return 'ON_FOOT';
-    }
-
-    // 3. Specific Vehicle Implement / Sub-system Domains (mutually exclusive equipment)
+    // 2. Specific Vehicle Implement / Sub-system Domains (mutually exclusive equipment)
+    // Mower / Tedder / Windrower / Grass collector
+    if (a.includes('WINDROWER') || a.includes('TEDDER') || a.includes('MOWER') || a.includes('REALMOWER') || a.includes('GRASS') || a.startsWith('BHH_') || a.includes('CHOP_MODE')) return 'VEHICLE_MOWER';
     // AUTOLOAD trailer / wagon
     if (a.includes('AUTOLOAD')) return 'VEHICLE_AUTOLOAD';
     // AutoLeveler Implement (AL_ prefix)
@@ -279,8 +274,6 @@ function getActionOperationalDomain(name) {
     if (a.includes('LOGSWINCH') || a.includes('WINCH') || a.includes('TOWINGCHAIN')) return 'VEHICLE_WINCH';
     // Firewood Processor
     if (a.includes('FIREWOODPROCESSOR')) return 'VEHICLE_FIREWOOD';
-    // Mower / Tedder / Windrower / Grass collector
-    if (a.includes('WINDROWER') || a.includes('TEDDER') || a.includes('MOWER') || a.includes('REALMOWER') || a.includes('GRASS') || a.startsWith('BHH_') || a.includes('CHOP_MODE')) return 'VEHICLE_MOWER';
     // Baler / Bale Wrapper
     if (a.includes('BALE') || a.includes('BALER')) return 'VEHICLE_BALER';
     // Pipe / Tip / Trailer Discharge / Bunker
@@ -292,6 +285,26 @@ function getActionOperationalDomain(name) {
     // Field Guidance / GPS / Headland / Tramline
     if (a.includes('GPS') || a.includes('HLM_') || a.includes('TRAMLINE') || a.includes('ASC_') || a.includes('COURSEPLAY') || a.startsWith('CP_') || a.includes('SECTIONCONTROL')) {
         return 'VEHICLE_GUIDANCE';
+    }
+
+    // 3. Official category declared in modDesc.xml takes precedence for ONFOOT vs VEHICLE vs PLAYER
+    const declaredCat = modActionCategoryMap[raw] || modActionCategoryMap[a];
+    if (declaredCat) {
+        if (declaredCat === 'ONFOOT' || declaredCat === 'PLAYER') {
+            return 'ON_FOOT';
+        }
+    }
+
+    // 4. On-Foot / Character / Hand tools / Animal interaction / Physical Objects
+    if (
+        a.includes('HANDTOOL') || a.includes('ON_FOOT') || a.includes('PLAYER') || a.includes('CHAINSAW') ||
+        a.includes('DRINK') || a.includes('EAT') || a.includes('CUT_BALE') || a.includes('JUMP') ||
+        a.includes('CROUCH') || a.includes('RUN') || a.includes('WALK') || a.includes('FLASHLIGHT') ||
+        a.includes('THROW') || a.includes('TAKE_OBJECT') || a.includes('ADD_OBJECT') ||
+        a.includes('DROP_OBJECT') || a.includes('INTERACT') || a.startsWith('HPS_') || a.includes('STRENGTH') ||
+        a.includes('PING_SYSTEM') || a.includes('MANUAL_ATTACH') || a.includes('SUPER_STRENGTH')
+    ) {
+        return 'ON_FOOT';
     }
 
     // 4. Vehicle General Driving / Universal In-Cab
