@@ -32,6 +32,7 @@ export default function KeybindsPage() {
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [newBackupName, setNewBackupName] = useState('');
   const [showConflictsOnly, setShowConflictsOnly] = useState(false);
+  const [groupByConflictKey, setGroupByConflictKey] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [captureModal, setCaptureModal] = useState(null); // { action, device, oldInput }
   const [detectedInput, setDetectedInput] = useState(null);
@@ -350,8 +351,37 @@ export default function KeybindsPage() {
     });
   }, [actions, searchQuery, showConflictsOnly, showUnassignedOnly, conflicts]);
 
-  // Group filtered actions by their context/category label
+  // Group filtered actions by their context/category label, OR by conflicting key
   const groupedActions = useMemo(() => {
+    if (groupByConflictKey) {
+      // Group specifically by each conflicting/warning key
+      const keyGroups = [];
+      const actMap = new Map(filteredActions.map(a => [a.action, a]));
+
+      conflicts.forEach(c => {
+        const matchingActs = c.actions
+          .map(actName => actMap.get(actName))
+          .filter(Boolean);
+
+        if (matchingActs.length > 0) {
+          const title = `Key: ${c.formattedInput || c.input} — ${c.context}`;
+          keyGroups.push([
+            title,
+            matchingActs,
+            {
+              isConflictKeyGroup: true,
+              keyName: c.formattedInput || c.input,
+              device: c.device,
+              severity: c.severity,
+              advice: c.advice,
+              context: c.context
+            }
+          ]);
+        }
+      });
+      return keyGroups;
+    }
+
     const groups = new Map();
     filteredActions.forEach(act => {
       const key = act.context || act.category || 'General';
@@ -359,7 +389,7 @@ export default function KeybindsPage() {
       groups.get(key).push(act);
     });
     return Array.from(groups.entries()); // [ [sectionName, actionsArray], ... ]
-  }, [filteredActions]);
+  }, [filteredActions, groupByConflictKey, conflicts]);
 
   // Devices columns: Ensure Keyboard/Mouse is first, followed by detected gamepads/controllers
   const deviceColumns = useMemo(() => {
@@ -480,13 +510,31 @@ export default function KeybindsPage() {
                 </div>
               </div>
             </div>
-            <button 
-              className={`btn btn--sm ${showConflictsOnly ? (hasHard ? 'btn--danger' : 'btn--secondary') : 'btn--secondary'}`}
-              onClick={() => setShowConflictsOnly(!showConflictsOnly)}
-              style={{ fontSize: '11px', fontWeight: 700 }}
-            >
-              {showConflictsOnly ? 'Show All Keybinds' : 'Filter Conflicts & Warnings'}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button 
+                className={`btn btn--sm ${groupByConflictKey ? 'btn--primary' : 'btn--secondary'}`}
+                onClick={() => {
+                  setGroupByConflictKey(!groupByConflictKey);
+                  if (!groupByConflictKey) setShowConflictsOnly(true);
+                }}
+                style={{ fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}
+                title="Group clashing actions side-by-side under their shared key"
+              >
+                <Layers size={13} />
+                {groupByConflictKey ? 'Grouped by Key' : 'Group by Key'}
+              </button>
+              <button 
+                className={`btn btn--sm ${showConflictsOnly ? (hasHard ? 'btn--danger' : 'btn--secondary') : 'btn--secondary'}`}
+                onClick={() => {
+                  const next = !showConflictsOnly;
+                  setShowConflictsOnly(next);
+                  if (!next) setGroupByConflictKey(false);
+                }}
+                style={{ fontSize: '11px', fontWeight: 700 }}
+              >
+                {showConflictsOnly ? 'Show All Keybinds' : 'Filter Conflicts & Warnings'}
+              </button>
+            </div>
           </div>
         );
       })()}
@@ -530,6 +578,36 @@ export default function KeybindsPage() {
             />
           )}
         </div>
+
+        {/* Group by Conflicting Key Button */}
+        {conflicts.length > 0 && (
+          <button
+            onClick={() => {
+              const next = !groupByConflictKey;
+              setGroupByConflictKey(next);
+              if (next) setShowConflictsOnly(true);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '7px 14px',
+              borderRadius: 'var(--radius-sm)',
+              border: groupByConflictKey ? '1px solid var(--accent)' : '1px solid var(--border)',
+              background: groupByConflictKey ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+              color: groupByConflictKey ? 'var(--accent)' : 'var(--text-secondary)',
+              fontSize: '13px',
+              fontWeight: groupByConflictKey ? 700 : 500,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s ease'
+            }}
+            title="Group actions sharing the same key together so you can see which mods collide on the same button"
+          >
+            <Layers size={14} />
+            Group by Key
+          </button>
+        )}
 
         <button
           onClick={() => setShowUnassignedOnly(!showUnassignedOnly)}
@@ -620,11 +698,12 @@ export default function KeybindsPage() {
           ))}
         </div>
 
-          {groupedActions.map(([sectionName, sectionActions]) => {
+          {groupedActions.map(([sectionName, sectionActions, meta]) => {
             const hasQuery = searchQuery.trim().length > 0;
             const isCollapsed = collapsedSections[sectionName] !== undefined 
               ? !!collapsedSections[sectionName] 
               : !hasQuery;
+            const isKeyGroup = meta?.isConflictKeyGroup;
             const sectionConflictedActs = sectionActions.filter(act =>
               conflicts.some(c => c.actions.includes(act.action))
             );
@@ -640,7 +719,9 @@ export default function KeybindsPage() {
                 key={sectionName}
                 style={{
                   background: 'var(--bg-card)',
-                  border: '1px solid var(--border)',
+                  border: isKeyGroup 
+                    ? (meta.severity === 'conflict' ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)')
+                    : '1px solid var(--border)',
                   borderRadius: 'var(--radius-md)',
                   overflow: 'hidden',
                   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
@@ -670,33 +751,83 @@ export default function KeybindsPage() {
                     ? <ChevronRight size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                     : <ChevronDown size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                   }
-                  <span style={{ fontWeight: 800, fontSize: 'var(--fs-sm)', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', flex: 1 }}>
-                    {sectionName}
+                  
+                  {isKeyGroup && (
+                    <span style={{
+                      padding: '3px 8px',
+                      borderRadius: 'var(--radius-sm)',
+                      fontWeight: 800,
+                      fontSize: '12px',
+                      fontFamily: 'var(--font-mono, monospace)',
+                      background: meta.severity === 'conflict' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                      color: meta.severity === 'conflict' ? 'var(--danger)' : 'var(--warning, #f59e0b)',
+                      border: meta.severity === 'conflict' ? '1px solid var(--danger)' : '1px solid var(--warning, #f59e0b)'
+                    }}>
+                      {meta.keyName}
+                    </span>
+                  )}
+
+                  <span style={{ fontWeight: 800, fontSize: 'var(--fs-sm)', textTransform: isKeyGroup ? 'none' : 'uppercase', letterSpacing: isKeyGroup ? '0.01em' : '0.05em', color: 'var(--text-primary)', flex: 1 }}>
+                    {isKeyGroup ? meta.context : sectionName}
                   </span>
+
                   <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)' }}>
                     {sectionActions.length} action{sectionActions.length !== 1 ? 's' : ''}
                   </span>
-                  {sectionHardCount > 0 && (
+
+                  {isKeyGroup ? (
                     <span style={{
                       display: 'flex', alignItems: 'center', gap: 4,
-                      fontSize: '11px', fontWeight: 700, color: 'var(--danger)',
-                      background: 'rgba(239,68,68,0.12)', borderRadius: 100,
+                      fontSize: '11px', fontWeight: 700,
+                      color: meta.severity === 'conflict' ? 'var(--danger)' : 'var(--warning, #f59e0b)',
+                      background: meta.severity === 'conflict' ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)',
+                      borderRadius: 100,
                       padding: '2px 10px'
                     }}>
-                      <AlertTriangle size={11} /> {sectionHardCount} conflict{sectionHardCount !== 1 ? 's' : ''}
+                      <AlertTriangle size={11} /> {meta.severity === 'conflict' ? 'Conflict' : 'Situational Warning'}
                     </span>
-                  )}
-                  {sectionWarnCount > 0 && (
-                    <span style={{
-                      display: 'flex', alignItems: 'center', gap: 4,
-                      fontSize: '11px', fontWeight: 700, color: 'var(--warning, #f59e0b)',
-                      background: 'rgba(245,158,11,0.12)', borderRadius: 100,
-                      padding: '2px 10px'
-                    }}>
-                      <AlertTriangle size={11} /> {sectionWarnCount} warning{sectionWarnCount !== 1 ? 's' : ''}
-                    </span>
+                  ) : (
+                    <>
+                      {sectionHardCount > 0 && (
+                        <span style={{
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          fontSize: '11px', fontWeight: 700, color: 'var(--danger)',
+                          background: 'rgba(239,68,68,0.12)', borderRadius: 100,
+                          padding: '2px 10px'
+                        }}>
+                          <AlertTriangle size={11} /> {sectionHardCount} conflict{sectionHardCount !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {sectionWarnCount > 0 && (
+                        <span style={{
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          fontSize: '11px', fontWeight: 700, color: 'var(--warning, #f59e0b)',
+                          background: 'rgba(245,158,11,0.12)', borderRadius: 100,
+                          padding: '2px 10px'
+                        }}>
+                          <AlertTriangle size={11} /> {sectionWarnCount} warning{sectionWarnCount !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </>
                   )}
                 </button>
+
+                {/* Optional Key Advice Banner in Key Group view */}
+                {!isCollapsed && isKeyGroup && meta.advice && (
+                  <div style={{
+                    padding: '8px 18px',
+                    background: 'rgba(245, 158, 11, 0.08)',
+                    borderBottom: '1px solid rgba(245, 158, 11, 0.2)',
+                    fontSize: '12px',
+                    color: 'var(--warning, #f59e0b)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8
+                  }}>
+                    <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+                    <span>{meta.advice}</span>
+                  </div>
+                )}
 
                 {/* Section Table (hidden when collapsed) */}
                 {!isCollapsed && (
@@ -763,19 +894,26 @@ export default function KeybindsPage() {
                             >
                               {/* Left Column: Action Name */}
                               <td style={{ padding: '14px 18px', verticalAlign: 'middle' }}>
-                                <span style={{ 
-                                  fontWeight: 700, 
-                                  fontSize: 'var(--fs-base, 15px)', 
-                                  color: hasHardConflict ? 'var(--danger)' : hasWarning ? 'var(--warning, #f59e0b)' : 'var(--text-primary)',
-                                  letterSpacing: '0.01em'
-                                }}>
-                                  {act.action
-                                    .toLowerCase()
-                                    .split('_')
-                                    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-                                    .join(' ')
-                                  }
-                                </span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                  <span style={{ 
+                                    fontWeight: 700, 
+                                    fontSize: 'var(--fs-base, 15px)', 
+                                    color: hasHardConflict ? 'var(--danger)' : hasWarning ? 'var(--warning, #f59e0b)' : 'var(--text-primary)',
+                                    letterSpacing: '0.01em'
+                                  }}>
+                                    {act.action
+                                      .toLowerCase()
+                                      .split('_')
+                                      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                                      .join(' ')
+                                    }
+                                  </span>
+                                  {isKeyGroup && (
+                                    <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                                      {act.context || act.category}
+                                    </span>
+                                  )}
+                                </div>
                               </td>
 
                               {/* Columns for Each Device */}
