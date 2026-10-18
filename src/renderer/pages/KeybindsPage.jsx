@@ -683,7 +683,7 @@ export default function KeybindsPage() {
                       background: 'rgba(239,68,68,0.12)', borderRadius: 100,
                       padding: '2px 10px'
                     }}>
-                      <AlertTriangle size={11} /> {sectionHardCount} conflicting action{sectionHardCount !== 1 ? 's' : ''}
+                      <AlertTriangle size={11} /> {sectionHardCount} conflict{sectionHardCount !== 1 ? 's' : ''}
                     </span>
                   )}
                   {sectionWarnCount > 0 && (
@@ -693,7 +693,7 @@ export default function KeybindsPage() {
                       background: 'rgba(245,158,11,0.12)', borderRadius: 100,
                       padding: '2px 10px'
                     }}>
-                      <AlertTriangle size={11} /> {sectionWarnCount} warning action{sectionWarnCount !== 1 ? 's' : ''}
+                      <AlertTriangle size={11} /> {sectionWarnCount} warning{sectionWarnCount !== 1 ? 's' : ''}
                     </span>
                   )}
                 </button>
