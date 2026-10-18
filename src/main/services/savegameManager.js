@@ -3558,6 +3558,8 @@ async function deleteSavegame(target) {
                 await new Promise(resolve => setTimeout(resolve, 300));
             }
         }
+    }
+
     if (deleted) {
         try {
             const modManager = require('./modManager');
