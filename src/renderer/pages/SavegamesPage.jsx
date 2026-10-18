@@ -2030,7 +2030,16 @@ const [activeTab, setActiveTab] = useState('general');
                       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-secondary)', paddingBottom: 6, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                         <div className="search-input-wrapper" style={{ flex: '0 0 250px', position: 'relative' }}>
                           <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
-                          <input type="text" placeholder="Search installed mods..." value={modSearchQuery} onChange={e => setModSearchQuery(e.target.value)} style={{ width: '100%', paddingLeft: 32 }} />
+                          <input type="text" placeholder="Search installed mods..." value={modSearchQuery} onChange={e => setModSearchQuery(e.target.value)} style={{ width: '100%', paddingLeft: 32, paddingRight: 30 }} />
+                          {modSearchQuery && (
+                            <X 
+                              size={14} 
+                              style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.6 }} 
+                              onClick={() => setModSearchQuery('')} 
+                              className="hover-opacity-1"
+                              title="Clear search"
+                            />
+                          )}
                         </div>
                         {availableBrands && availableBrands.length > 0 && (
                           <select 
@@ -4678,8 +4687,17 @@ export default function SavegamesPage() {
                                             placeholder="Search mods..." 
                                             value={createModSearchQuery} 
                                             onChange={e => setCreateModSearchQuery(e.target.value)} 
-                                            style={{ width: '100%', padding: '8px 12px 8px 32px', fontSize: 13, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)' }} 
+                                            style={{ width: '100%', padding: '8px 30px 8px 32px', fontSize: 13, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)' }} 
                                         />
+                                        {createModSearchQuery && (
+                                            <X 
+                                                size={14} 
+                                                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', opacity: 0.6 }} 
+                                                onClick={() => setCreateModSearchQuery('')} 
+                                                className="hover-opacity-1"
+                                                title="Clear search"
+                                            />
+                                        )}
                                     </div>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none', background: 'var(--bg-tertiary)', padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)' }}>
                                         <input 
