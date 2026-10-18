@@ -97,9 +97,43 @@ function getDefaultModsPath() {
     return path.join(getFS25DataRoot(), 'mods');
 }
 
+/**
+ * Get the path to gameSettings.xml in the active FS25 data root.
+ */
+function getGameSettingsPath() {
+    return path.join(getFS25DataRoot(), 'gameSettings.xml');
+}
+
+/**
+ * Reads gameSettings.xml to check if the user has an active <modsDirectoryOverride>.
+ * If active="true" and directory is a non-virtual user path, returns that directory path.
+ */
+function getGameSettingsModsOverride() {
+    try {
+        const settingsPath = getGameSettingsPath();
+        if (fs.existsSync(settingsPath)) {
+            const xml = fs.readFileSync(settingsPath, 'utf8');
+            const activeMatch = xml.match(/<modsDirectoryOverride[^>]+active=["']true["']/i);
+            const dirMatch = xml.match(/<modsDirectoryOverride[^>]+directory=["']([^"']+)["']/i);
+            if (activeMatch && dirMatch && dirMatch[1]) {
+                const dir = dirMatch[1].replace(/\//g, path.sep).trim();
+                // Filter out app's temporary virtual folders
+                if (dir && !dir.includes('.fs25_virtual_mods') && !dir.includes('VirtualActiveMods')) {
+                    if (fs.existsSync(dir)) {
+                        return dir;
+                    }
+                }
+            }
+        }
+    } catch (_) {}
+    return null;
+}
+
 module.exports = {
     getPersonalFolderPath,
     getAllFS25DataRoots,
     getFS25DataRoot,
-    getDefaultModsPath
+    getDefaultModsPath,
+    getGameSettingsPath,
+    getGameSettingsModsOverride
 };

@@ -272,6 +272,8 @@ async function launch(options = {}) {
     }
     // Ensure savegame.png preview image is verified for ALL active save slots before game launches
     await savegameManager.getAllSavegames().catch(() => {});
+    // Ensure all savegame map bridges are up-to-date in the primary mods directory
+    await modManager.syncSavegameMapBridges().catch(e => console.warn('[LAUNCH] Map bridge sync warning:', e.message));
   } catch (e) {
     console.error('[LAUNCH] Failed to pre-process savegame files:', e.message);
   }
@@ -495,10 +497,18 @@ function disableModsDirectoryOverride() {
 
     if (fs.existsSync(gameSettingsPath)) {
       let settingsXml = fs.readFileSync(gameSettingsPath, 'utf8');
-      if (/<modsDirectoryOverride\s+active=["']true["']/i.test(settingsXml) || /<modsDirectoryOverride[^>]*directory=["'][^"']+["']/i.test(settingsXml)) {
+      const dirMatch = settingsXml.match(/<modsDirectoryOverride[^>]+directory=["']([^"']+)["']/i);
+      const currentDir = dirMatch && dirMatch[1] ? dirMatch[1] : '';
+
+      // Only disable if the override points to the app's internal virtual mods directory.
+      // If the user configured their own custom mods folder in gameSettings.xml, preserve it!
+      const isVirtualFolder = currentDir.includes('.fs25_virtual_mods') || currentDir.includes('VirtualActiveMods');
+      if (isVirtualFolder) {
         settingsXml = settingsXml.replace(/<modsDirectoryOverride[^>]*\/>/ig, '<modsDirectoryOverride active="false" directory=""/>');
         fs.writeFileSync(gameSettingsPath, settingsXml, 'utf8');
-        console.log('[LAUNCH] Disabled modsDirectoryOverride in gameSettings.xml (standalone launch ready)');
+        console.log('[LAUNCH] Disabled virtual modsDirectoryOverride in gameSettings.xml (standalone launch ready)');
+      } else if (currentDir) {
+        console.log('[LAUNCH] Preserving user-configured custom modsDirectoryOverride in gameSettings.xml:', currentDir);
       }
     }
   } catch (err) {

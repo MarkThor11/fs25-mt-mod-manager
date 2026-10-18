@@ -2112,6 +2112,13 @@ app.whenReady().then(() => {
       }
     } catch (e) {}
 
+    // Ensure persistent savegame map bridges exist in the default mods folder for external/Steam launches
+    try {
+      if (modManager.syncSavegameMapBridges) {
+        modManager.syncSavegameMapBridges().catch(err => console.warn('[STARTUP] Savegame map bridge sync warning:', err.message));
+      }
+    } catch (e) {}
+
     // One-time migration for existing mods: compile keybindings from all installed mods into inputBinding.xml
     try {
       if (!cache.getSetting('existingModKeybindsCompiledV1')) {
