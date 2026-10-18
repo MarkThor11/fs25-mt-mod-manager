@@ -3173,6 +3173,7 @@ export default function SavegamesPage() {
   const [createActiveTab, setCreateActiveTab] = useState('basic');
     const [createBrandFilter, setCreateBrandFilter] = useState('');
   const [createCategoryFilter, setCreateCategoryFilter] = useState('');
+  const [createModSearchQuery, setCreateModSearchQuery] = useState('');
   const createAvailableCategories = React.useMemo(() => {
     const cats = new Set();
     const cache = useModHubStore.getState().modCache || {};
@@ -3682,6 +3683,8 @@ export default function SavegamesPage() {
     // Reset map to default so the useEffect always re-fires when user picks a map
     setCreateMap('MapUS|Riverbend Springs|||');
     setModalSelectedMods(new Set());
+    setCreateModSearchQuery('');
+    setCreateCategoryFilter('');
     if (window.api?.maps) {
       window.api.maps.checkTemplate('MapUS', 'Riverbend Springs', '').then(exists => {
         setMapHasTemplate(exists);
@@ -4337,7 +4340,8 @@ export default function SavegamesPage() {
                 className="modal animate-zoom-in" 
                 style={{ 
                   width: 1300, 
-                  maxWidth: 'none',
+                  maxWidth: '95vw',
+                  height: '90vh',
                   maxHeight: '90vh',
                   display: 'flex',
                   flexDirection: 'column',
@@ -4381,7 +4385,7 @@ export default function SavegamesPage() {
                     </button>
                 </div>
 
-                <div style={{ flex: 1, overflow: 'visible', padding: 32 }}>
+                <div style={{ flex: 1, minHeight: 0, overflowY: createActiveTab === 'mods' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', padding: 32 }}>
                     {createActiveTab === 'basic' && (
                         <div className="animate-fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -4664,9 +4668,19 @@ export default function SavegamesPage() {
                     )}
 
                     {createActiveTab === 'mods' && (
-                        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
-                            <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-secondary)', paddingBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%', flex: 1, minHeight: 0 }}>
+                            <div style={{ flexShrink: 0, background: 'var(--bg-secondary)', paddingBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <div className="search-input-wrapper" style={{ position: 'relative', width: 240 }}>
+                                        <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Search mods..." 
+                                            value={createModSearchQuery} 
+                                            onChange={e => setCreateModSearchQuery(e.target.value)} 
+                                            style={{ width: '100%', padding: '8px 12px 8px 32px', fontSize: 13, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)' }} 
+                                        />
+                                    </div>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none', background: 'var(--bg-tertiary)', padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)' }}>
                                         <input 
                                             type="checkbox" 
@@ -4711,7 +4725,7 @@ export default function SavegamesPage() {
                                 </div>
                             </div>
 
-                            <div style={{ flex: 1, minHeight: 400, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 12, padding: 12, background: 'var(--bg-tertiary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 12, padding: 12, background: 'var(--bg-tertiary)', display: 'flex', flexDirection: 'column', gap: 4 }}>
                                 {(() => {
                                   const favoriteMods = useModHubStore.getState().favoriteMods || [];
                                   
@@ -4750,7 +4764,11 @@ export default function SavegamesPage() {
                                           (fm.modId && m.modId && String(fm.modId) === String(m.modId)) || 
                                           (fm.fileName && fm.fileName.toLowerCase() === (m.fileName ? m.fileName.split(/[\\/\\]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : "")))
                                       ))
-                                  ));
+                                  )).filter(m => {
+                                      if (!createModSearchQuery) return true;
+                                      const q = createModSearchQuery.toLowerCase();
+                                      return (m.title && m.title.toLowerCase().includes(q)) || (m.modName && m.modName.toLowerCase().includes(q)) || (m.author && m.author.toLowerCase().includes(q));
+                                  });
                                   
                                   const otherMods = deduplicate(allValidMods.filter(m => {
                                       if (createCategoryFilter) {
@@ -4763,6 +4781,11 @@ export default function SavegamesPage() {
                                               const { main } = parseModCategory(getEffectiveModCategory(m, cache), m.isMap);
                                               if (main !== createCategoryFilter) return false;
                                           }
+                                      }
+                                      if (createModSearchQuery) {
+                                          const q = createModSearchQuery.toLowerCase();
+                                          const match = (m.title && m.title.toLowerCase().includes(q)) || (m.modName && m.modName.toLowerCase().includes(q)) || (m.author && m.author.toLowerCase().includes(q));
+                                          if (!match) return false;
                                       }
                                       return true;
                                   }).filter(m =>
@@ -4986,6 +5009,11 @@ export default function SavegamesPage() {
                                               ))}
                                           </div>
                                         </div>
+                                        {mustHaveMods.length === 0 && explicitlySelectedMods.length === 0 && availableMods.length === 0 && (
+                                          <div style={{ padding: 48, textAlign: 'center', opacity: 0.6, fontSize: 14 }}>
+                                            {createModSearchQuery ? `No mods found matching "${createModSearchQuery}".` : 'No mods available.'}
+                                          </div>
+                                        )}
                                       </div>
                                   );
                                 })()}
