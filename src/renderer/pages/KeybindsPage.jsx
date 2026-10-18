@@ -32,7 +32,6 @@ export default function KeybindsPage() {
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [newBackupName, setNewBackupName] = useState('');
   const [showConflictsOnly, setShowConflictsOnly] = useState(false);
-  const [groupConflictingMods, setGroupConflictingMods] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [captureModal, setCaptureModal] = useState(null); // { action, device, oldInput }
   const [detectedInput, setDetectedInput] = useState(null);
@@ -462,7 +461,7 @@ export default function KeybindsPage() {
   }, [actions, searchQuery, showConflictsOnly, showUnassignedOnly, conflicts]);
 
   // Group filtered actions by their context/category label
-  // When groupConflictingMods is active, conflicting mods are sequenced adjacently so colliding partners appear right next to each other
+  // When showConflictsOnly is active, conflicting mods are automatically sequenced adjacently so colliding partners appear side-by-side
   const groupedActions = useMemo(() => {
     const groups = new Map();
     filteredActions.forEach(act => {
@@ -473,7 +472,7 @@ export default function KeybindsPage() {
 
     const entries = Array.from(groups.entries()); // [ [sectionName, actionsArray], ... ]
 
-    if (groupConflictingMods) {
+    if (showConflictsOnly) {
       // Build adjacency graph between mods that share keys
       const adj = new Map();
       const conflictKeysByMod = new Map(); // mod -> Map(otherMod -> Array of keys)
@@ -587,22 +586,8 @@ export default function KeybindsPage() {
       return sortedEntries;
     }
 
-    // When showConflictsOnly is active without groupConflictingMods,
-    // sort sections so hard conflicts appear above situational warnings
-    if (showConflictsOnly) {
-      return [...entries].sort((a, b) => {
-        const aActs = a[1];
-        const bActs = b[1];
-        const aHard = aActs.some(act => conflicts.some(c => c.actions.includes(act.action) && c.severity === 'conflict'));
-        const bHard = bActs.some(act => conflicts.some(c => c.actions.includes(act.action) && c.severity === 'conflict'));
-        if (aHard && !bHard) return -1;
-        if (!aHard && bHard) return 1;
-        return 0;
-      });
-    }
-
     return entries; // Default view
-  }, [filteredActions, groupConflictingMods, showConflictsOnly, conflicts]);
+  }, [filteredActions, showConflictsOnly, conflicts]);
 
   // Devices columns: Ensure Keyboard/Mouse is first, followed by detected gamepads/controllers
   const deviceColumns = useMemo(() => {
@@ -724,17 +709,6 @@ export default function KeybindsPage() {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button 
-                className={`btn btn--sm ${groupConflictingMods ? 'btn--primary' : 'btn--secondary'}`}
-                onClick={() => {
-                  setGroupConflictingMods(!groupConflictingMods);
-                }}
-                style={{ fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}
-                title="Arrange conflicting mod sections directly next to each other so colliding partners appear side-by-side"
-              >
-                <Layers size={13} />
-                {groupConflictingMods ? 'Grouped by Conflict' : 'Group Conflicting Mods'}
-              </button>
               <button 
                 className={`btn btn--sm ${showConflictsOnly ? (hasHard ? 'btn--danger' : 'btn--secondary') : 'btn--secondary'}`}
                 onClick={() => setShowConflictsOnly(!showConflictsOnly)}
@@ -894,8 +868,8 @@ export default function KeybindsPage() {
 
             return (
               <React.Fragment key={sectionName}>
-                {/* Cluster Header / Group Separator when Group Conflicting Mods is active */}
-                {groupConflictingMods && meta?.isClusterGroup && meta?.isFirstInCluster && (
+                {/* Cluster Header / Group Separator when conflict filter is active */}
+                {meta?.isClusterGroup && meta?.isFirstInCluster && (
                   <div style={{
                     marginTop: idx === 0 ? 0 : 20,
                     marginBottom: 4,
@@ -918,8 +892,8 @@ export default function KeybindsPage() {
                   </div>
                 )}
 
-                {/* Separator before non-conflicting mods if we are in Group Conflicting Mods mode */}
-                {groupConflictingMods && meta?.isFirstNonCluster && (
+                {/* Separator before non-conflicting mods if present */}
+                {meta?.isFirstNonCluster && (
                   <div style={{
                     marginTop: 28,
                     marginBottom: 8,
@@ -944,13 +918,13 @@ export default function KeybindsPage() {
                 <div
                   style={{
                     background: 'var(--bg-card)',
-                    border: groupConflictingMods && meta?.isClusterGroup
+                    border: meta?.isClusterGroup
                       ? (sectionHardCount > 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)')
                       : '1px solid var(--border)',
                     borderRadius: 'var(--radius-md)',
                     overflow: 'hidden',
                     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-                    marginBottom: groupConflictingMods && meta?.isClusterGroup && meta?.isLastInCluster ? 24 : 0
+                    marginBottom: meta?.isClusterGroup && meta?.isLastInCluster ? 24 : 0
                   }}
                 >
                   {/* Section Header (Collapsible) */}
@@ -982,7 +956,7 @@ export default function KeybindsPage() {
                     {sectionName}
                   </span>
 
-                  {groupConflictingMods && meta?.isClusterGroup && meta?.partners?.length > 0 && (
+                  {meta?.isClusterGroup && meta?.partners?.length > 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       {meta.partners.map((p, pIdx) => (
                         <span
