@@ -271,7 +271,9 @@ function getActionOperationalDomain(name) {
     // 2. Specific Vehicle Implement / Sub-system Domains (mutually exclusive equipment)
     // Mower / Tedder / Windrower / Grass collector
     if (a.includes('WINDROWER') || a.includes('TEDDER') || a.includes('MOWER') || a.includes('REALMOWER') || a.includes('GRASS') || a.startsWith('BHH_') || a.includes('CHOP_MODE')) return 'VEHICLE_MOWER';
-    // AUTOLOAD trailer / wagon
+    // Dedicated Wood Autoload trailer (Fliegl Timber Runner)
+    if (a.startsWith('AUTOLOADWOODEW_')) return 'VEHICLE_AUTOLOAD_WOOD';
+    // Pallet / Bale AUTOLOAD trailer / wagon
     if (a.includes('AUTOLOAD')) return 'VEHICLE_AUTOLOAD';
     // AutoLeveler Implement (AL_ prefix)
     if (a.startsWith('AL_')) return 'VEHICLE_LEVELER';
@@ -300,25 +302,39 @@ function getActionOperationalDomain(name) {
     // Harvester Combine Header / Cutter control
     if (a.includes('CUTTER') || a.includes('HEADER')) return 'VEHICLE_CUTTER';
 
-    // 3. Official category declared in modDesc.xml for ONFOOT / PLAYER
+    // 3. Mutually Exclusive On-Foot Tool & Interaction Domains
+    // A player can only hold ONE active tool at a time, or interact with ONE target object at a time.
+    // Chainsaw forestry helper tool guide
+    if (a.includes('INDICATOR') || a.startsWith('FH_') || a.includes('CUTPOSITION')) return 'ON_FOOT_CHAINSAW';
+    // Sapling planting spade tool
+    if (a.startsWith('HPS_') || a.includes('SAPLING')) return 'ON_FOOT_SAPLING_SPADE';
+    // Fueling nozzle / pump lance
+    if (a.includes('FUELING') || a.includes('LANZE')) return 'ON_FOOT_FUEL_NOZZLE';
+    // Pallet single item pickup raycast
+    if (a.includes('TAKE_OBJECT') || a.includes('ADD_OBJECT') || a.startsWith('TSO_')) return 'ON_FOOT_PALLET_PICKUP';
+    // Physical scoop / shovel / pitchfork from Hand Tools mod
+    if (a.startsWith('HANDTOOL_')) return 'ON_FOOT_HAND_SCOOP';
+    // Trailer / container manual cover tarp
+    if (a.includes('COVER_ON_FOOT') || a.startsWith('MANUAL_COVER')) return 'ON_FOOT_TRAILER_COVER';
+
+    // 4. Official category declared in modDesc.xml for ONFOOT / PLAYER
     if (declaredCat === 'ONFOOT' || declaredCat === 'PLAYER') {
         return 'ON_FOOT';
     }
 
-    // 3. On-Foot / Character / Hand tools / Animal interaction / Physical Objects
+    // 5. On-Foot / Character General (Flashlights, Super Strength, Player Position, QuickCam)
     if (
         a.includes('HANDTOOL') || a.includes('ON_FOOT') || a.includes('PLAYER') || a.includes('CHAINSAW') ||
         a.includes('DRINK') || a.includes('EAT') || a.includes('CUT_BALE') || a.includes('JUMP') ||
         a.includes('CROUCH') || a.includes('RUN') || a.includes('WALK') || a.includes('FLASHLIGHT') ||
-        a.includes('THROW') || a.includes('TAKE_OBJECT') || a.includes('ADD_OBJECT') ||
-        a.includes('DROP_OBJECT') || a.includes('INTERACT') || a.startsWith('HPS_') || a.includes('STRENGTH') ||
-        a.includes('PING_SYSTEM') || a.includes('MANUAL_ATTACH') || a.includes('SUPER_STRENGTH') ||
-        a.startsWith('FORESTER_')
+        a.includes('THROW') || a.includes('DROP_OBJECT') || a.includes('INTERACT') ||
+        a.includes('STRENGTH') || a.includes('PING_SYSTEM') || a.includes('MANUAL_ATTACH') ||
+        a.includes('SUPER_STRENGTH') || a.startsWith('FORESTER_')
     ) {
         return 'ON_FOOT';
     }
 
-    // 4. Vehicle General Driving / Universal In-Cab
+    // 6. Vehicle General Driving / Universal In-Cab
     if (
         a.includes('STEER') || a.includes('GEAR') || a.includes('MOTOR') || a.includes('BRAKE') ||
         a.includes('ACCELERATE') || a.includes('CRUISE') || a.includes('LIGHT') || a.includes('HONK') ||
