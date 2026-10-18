@@ -304,31 +304,96 @@ export default function KeybindsPage() {
     'BF_TOGGLE': { input: 'KEY_apostrophe', display: "'" },
   };
 
+  // Curated list of safe, accessible candidate keys for automatic resolution of any current or future mod
+  const CANDIDATE_RESOLVE_KEYS = [
+    { input: 'KEY_semicolon', display: ';' },
+    { input: 'KEY_apostrophe', display: "'" },
+    { input: 'KEY_lbracket', display: '[' },
+    { input: 'KEY_rbracket', display: ']' },
+    { input: 'KEY_grave', display: '`' },
+    { input: 'KEY_numpad0', display: 'Num 0' },
+    { input: 'KEY_numpad1', display: 'Num 1' },
+    { input: 'KEY_numpad2', display: 'Num 2' },
+    { input: 'KEY_numpad3', display: 'Num 3' },
+    { input: 'KEY_numpad4', display: 'Num 4' },
+    { input: 'KEY_numpad5', display: 'Num 5' },
+    { input: 'KEY_numpad6', display: 'Num 6' },
+    { input: 'KEY_numpad7', display: 'Num 7' },
+    { input: 'KEY_numpad8', display: 'Num 8' },
+    { input: 'KEY_numpad9', display: 'Num 9' },
+    { input: 'KEY_numpadplus', display: 'Num +' },
+    { input: 'KEY_numpadminus', display: 'Num −' },
+    { input: 'KEY_numpadenter', display: 'Num ↵' },
+    { input: 'KEY_numpadperiod', display: 'Num .' },
+    { input: 'MOUSE_BUTTON_4', display: 'Mouse 4' },
+    { input: 'MOUSE_BUTTON_5', display: 'Mouse 5' },
+  ];
+
   const [resolvingMod, setResolvingMod] = useState(null);
 
   const handleAutoResolveMod = async (modName, sectionActions) => {
-    // Find actions in this section that have known conflict resolutions and are currently conflicted
+    // 1. Build an active set of all keys currently in use on the KB_MOUSE device
+    const occupiedKeys = new Set();
+    actions.forEach(a => {
+      a.bindings.forEach(b => {
+        if (b.device === 'KB_MOUSE_DEFAULT' && b.input && b.input.trim()) {
+          occupiedKeys.add(b.input.trim());
+        }
+      });
+    });
+
+    // 2. Identify all actions in this section that have active conflicts
     const actionsToResolve = [];
+    const reservedInThisBatch = new Set();
+
     sectionActions.forEach(act => {
       const actConflicts = conflicts.filter(c => c.actions.includes(act.action));
       if (actConflicts.length === 0) return;
 
-      const resolution = AUTO_RESOLVE_MAP[act.action];
-      if (resolution) {
-        // Find existing binding on KB/Mouse device to replace
-        const kbBinding = act.bindings.find(b => b.device === 'KB_MOUSE_DEFAULT');
+      const kbBinding = act.bindings.find(b => b.device === 'KB_MOUSE_DEFAULT');
+      const currentInput = kbBinding?.input || '';
+
+      // Check if we have a curated collision-tested mapping first
+      let chosenKey = null;
+      const curated = AUTO_RESOLVE_MAP[act.action];
+      if (curated && !occupiedKeys.has(curated.input) && !reservedInThisBatch.has(curated.input)) {
+        chosenKey = curated;
+      } else {
+        // Universal Dynamic Allocator:
+        // First try Right Alt + current key (if single letter, e.g. RAlt + E)
+        if (currentInput.startsWith('KEY_') && currentInput.length === 5) {
+          const letter = currentInput.slice(4).toLowerCase();
+          const raltCombo = `KEY_ralt KEY_${letter}`;
+          if (!occupiedKeys.has(raltCombo) && !reservedInThisBatch.has(raltCombo)) {
+            chosenKey = { input: raltCombo, display: `Right Alt + ${letter.toUpperCase()}` };
+          }
+        }
+
+        // If not, find the first candidate unassigned key from our safe pool
+        if (!chosenKey) {
+          for (const cand of CANDIDATE_RESOLVE_KEYS) {
+            if (!occupiedKeys.has(cand.input) && !reservedInThisBatch.has(cand.input)) {
+              chosenKey = cand;
+              break;
+            }
+          }
+        }
+      }
+
+      if (chosenKey) {
+        reservedInThisBatch.add(chosenKey.input);
         actionsToResolve.push({
           action: act.action,
           device: 'KB_MOUSE_DEFAULT',
-          oldInput: kbBinding?.input || '',
-          newInput: resolution.input,
-          display: resolution.display
+          oldInput: currentInput,
+          newInput: chosenKey.input,
+          display: chosenKey.display
         });
       }
     });
 
     if (actionsToResolve.length === 0) {
-      useToastStore.getState().info(`No automatic resolution mapping found for ${modName}. You can click any red/amber key badge to reassign it manually.`);
+      useToastStore.getState().warning(`No free keys found to automatically resolve ${modName}. Please click the key badge to reassign manually.`);
       return;
     }
 
@@ -1022,12 +1087,9 @@ export default function KeybindsPage() {
                     </span>
                   )}
 
-                  {/* Auto-Resolve button if this mod has any resolvable conflicting actions */}
+                  {/* Auto-Resolve button if this mod has any conflicting or warning actions */}
                   {(() => {
-                    const hasResolvableAction = sectionActions.some(act => 
-                      AUTO_RESOLVE_MAP[act.action] && conflicts.some(c => c.actions.includes(act.action))
-                    );
-                    if (!hasResolvableAction) return null;
+                    if (sectionConflictedActs.length === 0) return null;
                     const isResolving = resolvingMod === sectionName;
 
                     return (
