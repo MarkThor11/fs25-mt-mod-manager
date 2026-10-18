@@ -6726,8 +6726,14 @@ async function cleanupLegacyDuplicates() {
 				}
 			}
 
-			// Step 2: Scan subfolders for map archives & check for exact root duplicates
-			const subDirs = entries.filter(e => e.isDirectory() && e.name.toLowerCase() !== 'backups' && !e.name.startsWith('.'));
+			// Step 2: Ensure proper map architecture:
+			// - Map's own archive (isMap = true) stays in the map's dedicated subfolder.
+			// - Dependency mods (isMap = false) belong in 'Map Dependencies' with a symlink in the map's subfolder.
+			// - If exact matching duplicates exist between root and subfolder, keep master in 'Map Dependencies'
+			//   and place a clean symlink in the map's subfolder, removing root duplicate.
+			const depsDir = path.join(rootPath, MAP_DEPENDENCIES_FOLDER);
+			const subDirs = entries.filter(e => e.isDirectory() && e.name.toLowerCase() !== 'backups' && !e.name.startsWith('.') && e.name.toLowerCase() !== MAP_DEPENDENCIES_FOLDER.toLowerCase());
+			
 			for (const dir of subDirs) {
 				const subDirPath = path.join(rootPath, dir.name);
 				const subEntries = await fs.readdir(subDirPath, { withFileTypes: true }).catch(() => []);
@@ -6735,53 +6741,103 @@ async function cleanupLegacyDuplicates() {
 					if (!sub.isFile() || !sub.name.toLowerCase().endsWith('.zip')) continue;
 					const subFilePath = path.join(subDirPath, sub.name);
 
-					// Root duplicate check
+					// Determine if this file is the map itself
+					const subMeta = parseModDesc(subFilePath);
+					const isMapMod = subMeta && (subMeta.isMap || looksLikeMap(sub.name, subMeta));
+
 					const rootFilePath = path.join(rootPath, sub.name);
-					if (await fs.pathExists(rootFilePath)) {
+					const rootExists = await fs.pathExists(rootFilePath);
+
+					if (isMapMod) {
+						// Case A: This is the Map itself.
+						// The real archive belongs in its map subfolder (subDirPath).
+						// If an exact duplicate exists in the root folder, remove the root copy.
+						if (rootExists) {
+							try {
+								const rootLstat = await fs.lstat(rootFilePath);
+								if (rootLstat.isSymbolicLink()) {
+									await fs.remove(rootFilePath);
+									symlinksRemoved++;
+								} else {
+									const rootStat = await fs.stat(rootFilePath);
+									const subStat = await fs.stat(subFilePath);
+									const isHardlink = rootStat.ino && subStat.ino && rootStat.ino === subStat.ino;
+									const sameSize = rootStat.size === subStat.size;
+									const rootMeta = parseModDesc(rootFilePath);
+									const sameVersion = rootMeta && subMeta && rootMeta.version === subMeta.version;
+
+									if (isHardlink || (sameSize && sameVersion)) {
+										await fs.remove(rootFilePath);
+										duplicatesRemoved++;
+										bytesReclaimed += rootStat.size;
+										cache.removeLocalModCache(rootFilePath);
+										console.log(`[MIGRATION] Removed duplicate root map file: ${sub.name} (kept in ${dir.name})`);
+									}
+								}
+							} catch (e) {
+								console.warn(`[MIGRATION] Map dedupe error for ${sub.name}:`, e.message);
+							}
+						}
+					} else {
+						// Case B: This is a Dependency mod (building, vehicle, script, etc.).
+						// The master copy belongs in 'Map Dependencies' folder.
+						// The map's subfolder (subDirPath) should contain a symlink leading back to it.
 						try {
-							const rootLstat = await fs.lstat(rootFilePath);
-							const subLstat = await fs.lstat(subFilePath);
+							await fs.ensureDir(depsDir);
+							const masterDepPath = path.join(depsDir, sub.name);
 
-							// If root is a link, it was already handled or should be removed
-							if (rootLstat.isSymbolicLink()) {
-								await fs.remove(rootFilePath);
-								symlinksRemoved++;
-								continue;
-							}
-							if (subLstat.isSymbolicLink()) continue;
-
-							// If they are hardlinks to each other (same inode), remove root link
-							const rootStat = await fs.stat(rootFilePath);
-							const subStat = await fs.stat(subFilePath);
-							if (rootStat.ino && subStat.ino && rootStat.ino === subStat.ino) {
-								await fs.remove(rootFilePath);
-								duplicatesRemoved++;
-								continue;
-							}
-
-							// Check EXACT file size
-							if (rootStat.size !== subStat.size) {
-								console.log(`[MIGRATION] Skipping ${sub.name}: file sizes differ (Root: ${rootStat.size}, Subfolder: ${subStat.size})`);
-								continue;
-							}
-
-							// Check EXACT version from modDesc.xml
-							const rootMeta = parseModDesc(rootFilePath);
-							const subMeta = parseModDesc(subFilePath);
-							const rootVer = (rootMeta && rootMeta.version ? rootMeta.version.trim() : null);
-							const subVer = (subMeta && subMeta.version ? subMeta.version.trim() : null);
-
-							if (rootVer && subVer && rootVer === subVer) {
-								await fs.remove(rootFilePath);
-								duplicatesRemoved++;
-								bytesReclaimed += rootStat.size;
-								cache.removeLocalModCache(rootFilePath);
-								console.log(`[MIGRATION] Removed exact duplicate root file: ${sub.name} (version: ${rootVer}, size: ${rootStat.size})`);
+							// 1. Ensure master copy is placed in Map Dependencies
+							if (!await fs.pathExists(masterDepPath)) {
+								// Move the subfolder file to Map Dependencies as the master
+								await fs.move(subFilePath, masterDepPath, { overwrite: false });
+								cache.removeLocalModCache(subFilePath);
+								console.log(`[MIGRATION] Moved dependency master to Map Dependencies: ${sub.name}`);
 							} else {
-								console.log(`[MIGRATION] Skipping ${sub.name}: version mismatch (Root: ${rootVer}, Subfolder: ${subVer})`);
+								// Master already exists in Map Dependencies, remove the physical duplicate in subfolder
+								const masterStat = await fs.stat(masterDepPath);
+								const subStat = await fs.stat(subFilePath);
+								const masterMeta = parseModDesc(masterDepPath);
+								if (masterStat.size === subStat.size && masterMeta && subMeta && masterMeta.version === subMeta.version) {
+									await fs.remove(subFilePath);
+									duplicatesRemoved++;
+									bytesReclaimed += subStat.size;
+									cache.removeLocalModCache(subFilePath);
+								}
 							}
-						} catch (dedupeErr) {
-							console.warn(`[MIGRATION] Failed comparing ${sub.name}:`, dedupeErr.message);
+
+							// 2. Create the symlink inside the map subfolder pointing to master in Map Dependencies
+							if (!await fs.pathExists(subFilePath)) {
+								try {
+									await fs.symlink(masterDepPath, subFilePath, 'file');
+									console.log(`[MIGRATION] Created dependency link in ${dir.name}: ${sub.name} -> Map Dependencies`);
+								} catch (linkErr) {
+									await fs.link(masterDepPath, subFilePath).catch(() => {});
+								}
+							}
+
+							// 3. Remove root duplicate if one exists
+							if (rootExists) {
+								const rootLstat = await fs.lstat(rootFilePath);
+								if (rootLstat.isSymbolicLink()) {
+									await fs.remove(rootFilePath);
+									symlinksRemoved++;
+								} else {
+									const rootStat = await fs.stat(rootFilePath);
+									const masterStat = await fs.stat(masterDepPath);
+									const rootMeta = parseModDesc(rootFilePath);
+									const masterMeta = parseModDesc(masterDepPath);
+									if ((rootStat.ino && masterStat.ino && rootStat.ino === masterStat.ino) ||
+										(rootStat.size === masterStat.size && rootMeta && masterMeta && rootMeta.version === masterMeta.version)) {
+										await fs.remove(rootFilePath);
+										duplicatesRemoved++;
+										bytesReclaimed += rootStat.size;
+										cache.removeLocalModCache(rootFilePath);
+										console.log(`[MIGRATION] Removed root duplicate of dependency: ${sub.name}`);
+									}
+								}
+							}
+						} catch (depErr) {
+							console.warn(`[MIGRATION] Dependency consolidation error for ${sub.name}:`, depErr.message);
 						}
 					}
 				}
@@ -6790,7 +6846,7 @@ async function cleanupLegacyDuplicates() {
 
 		// Mark migration as completed so it never runs again
 		cache.setSetting('legacyDuplicatesCleanedV1', 'true');
-		console.log(`[MIGRATION] One-time cleanup complete. Removed ${symlinksRemoved} symlinks, ${duplicatesRemoved} exact duplicates (${(bytesReclaimed / (1024 * 1024)).toFixed(1)} MB reclaimed).`);
+		console.log(`[MIGRATION] One-time cleanup complete. Removed ${symlinksRemoved} symlinks, consolidated ${duplicatesRemoved} duplicates (${(bytesReclaimed / (1024 * 1024)).toFixed(1)} MB reclaimed).`);
 		return { success: true, symlinksRemoved, duplicatesRemoved, bytesReclaimed };
 	} catch (err) {
 		console.error('[MIGRATION] Cleanup failed:', err.message);
