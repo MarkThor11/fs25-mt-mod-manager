@@ -262,7 +262,8 @@ function getActionOperationalDomain(name) {
         a.includes('PRICETICKER') || a.includes('PRODUCTIONWATCHER') || a.startsWith('VMC_') ||
         a.includes('POPUP') || a.includes('ALERT') || a.startsWith('FORESTER_OPEN') ||
         a.includes('PIE') || a.includes('FAVORITE') || a.includes('LEDGER') || a.includes('STATUS') ||
-        a.includes('RENAME') || a.startsWith('CAM_TOOL_')
+        a.includes('RENAME') || a.startsWith('CAM_TOOL_') || a.startsWith('CU_') ||
+        a === 'TRAMLINE_FILTER' || a === 'WATERPLANE_DIFFICULTY'
     ) {
         return 'GUI_MENU';
     }
@@ -284,6 +285,10 @@ function getActionOperationalDomain(name) {
     if (a.includes('BALE') || a.includes('BALER')) return 'VEHICLE_BALER';
     // Pipe / Tip / Trailer Discharge / Bunker
     if (a.includes('PIPE') || a.includes('MANUAL_TIPPING') || a.includes('LEVELER') || a.includes('SILO')) return 'VEHICLE_DISCHARGE';
+    // Front Weight / Ballast Lowerlink (e.g. Traktorsafe, PTH ABR 600)
+    if (a.includes('TS_LOWERLINK') || a.includes('FRONTWEIGHT') || a.startsWith('PTH_')) return 'VEHICLE_FRONTWEIGHT';
+    // Loader Arm / Work Tool Positioner
+    if (a.startsWith('WORK_TOOL_POSITION')) return 'VEHICLE_LOADER_TOOL';
     // Slurry / Hose / Pump / Reel system
     if (a.startsWith('PM_') || a.includes('PUMP') || a.includes('REEL') || a.startsWith('AIM_')) return 'VEHICLE_SLURRY_HOSE';
     // Root Crop Harvester (e.g. Ropa Keiler MTS_)
@@ -294,8 +299,6 @@ function getActionOperationalDomain(name) {
     }
     // Harvester Combine Header / Cutter control
     if (a.includes('CUTTER') || a.includes('HEADER')) return 'VEHICLE_CUTTER';
-    // Front Weight / Ballast Lowerlink (e.g. Traktorsafe)
-    if (a.includes('TS_LOWERLINK') || a.includes('FRONTWEIGHT')) return 'VEHICLE_FRONTWEIGHT';
 
     // 3. Official category declared in modDesc.xml for ONFOOT / PLAYER
     if (declaredCat === 'ONFOOT' || declaredCat === 'PLAYER') {
