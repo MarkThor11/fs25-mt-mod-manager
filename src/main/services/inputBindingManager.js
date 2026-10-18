@@ -243,6 +243,12 @@ function getActionOperationalDomain(name) {
     const raw = (name || '').trim();
     const a = raw.toUpperCase();
 
+    // 0. Official category declared in modDesc.xml for MENU
+    const declaredCat = modActionCategoryMap[raw] || modActionCategoryMap[a];
+    if (declaredCat === 'MENU') {
+        return 'GUI_MENU';
+    }
+
     // 1. GUI / Menus / Dialogs / Tablet / Shop / Overlays / HUD setup / Screens
     if (
         a.includes('SHOP') || a.includes('MENU') || a.includes('GUI') || a.includes('DIALOG') ||
@@ -268,8 +274,8 @@ function getActionOperationalDomain(name) {
     if (a.includes('AUTOLOAD')) return 'VEHICLE_AUTOLOAD';
     // AutoLeveler Implement (AL_ prefix)
     if (a.startsWith('AL_')) return 'VEHICLE_LEVELER';
-    // FORESTRY Crane / Yarder / Wood processor
-    if (a.includes('CRANE') || a.startsWith('SH_') || a.includes('YARDER') || a.includes('FORESTER') || a.startsWith('WFP_')) return 'VEHICLE_CRANE';
+    // FORESTRY Crane / Yarder / Wood processor (excluding on-foot forester editor)
+    if (a.includes('CRANE') || a.startsWith('SH_') || a.includes('YARDER') || a.startsWith('WFP_')) return 'VEHICLE_CRANE';
     // Winch / Towing Chains / Towing Cables
     if (a.includes('LOGSWINCH') || a.includes('WINCH') || a.includes('TOWINGCHAIN')) return 'VEHICLE_WINCH';
     // Firewood Processor
@@ -286,23 +292,25 @@ function getActionOperationalDomain(name) {
     if (a.includes('GPS') || a.includes('HLM_') || a.includes('TRAMLINE') || a.includes('ASC_') || a.includes('COURSEPLAY') || a.startsWith('CP_') || a.includes('SECTIONCONTROL')) {
         return 'VEHICLE_GUIDANCE';
     }
+    // Harvester Combine Header / Cutter control
+    if (a.includes('CUTTER') || a.includes('HEADER')) return 'VEHICLE_CUTTER';
+    // Front Weight / Ballast Lowerlink (e.g. Traktorsafe)
+    if (a.includes('TS_LOWERLINK') || a.includes('FRONTWEIGHT')) return 'VEHICLE_FRONTWEIGHT';
 
-    // 3. Official category declared in modDesc.xml takes precedence for ONFOOT vs VEHICLE vs PLAYER
-    const declaredCat = modActionCategoryMap[raw] || modActionCategoryMap[a];
-    if (declaredCat) {
-        if (declaredCat === 'ONFOOT' || declaredCat === 'PLAYER') {
-            return 'ON_FOOT';
-        }
+    // 3. Official category declared in modDesc.xml for ONFOOT / PLAYER
+    if (declaredCat === 'ONFOOT' || declaredCat === 'PLAYER') {
+        return 'ON_FOOT';
     }
 
-    // 4. On-Foot / Character / Hand tools / Animal interaction / Physical Objects
+    // 3. On-Foot / Character / Hand tools / Animal interaction / Physical Objects
     if (
         a.includes('HANDTOOL') || a.includes('ON_FOOT') || a.includes('PLAYER') || a.includes('CHAINSAW') ||
         a.includes('DRINK') || a.includes('EAT') || a.includes('CUT_BALE') || a.includes('JUMP') ||
         a.includes('CROUCH') || a.includes('RUN') || a.includes('WALK') || a.includes('FLASHLIGHT') ||
         a.includes('THROW') || a.includes('TAKE_OBJECT') || a.includes('ADD_OBJECT') ||
         a.includes('DROP_OBJECT') || a.includes('INTERACT') || a.startsWith('HPS_') || a.includes('STRENGTH') ||
-        a.includes('PING_SYSTEM') || a.includes('MANUAL_ATTACH') || a.includes('SUPER_STRENGTH')
+        a.includes('PING_SYSTEM') || a.includes('MANUAL_ATTACH') || a.includes('SUPER_STRENGTH') ||
+        a.startsWith('FORESTER_')
     ) {
         return 'ON_FOOT';
     }
@@ -318,7 +326,7 @@ function getActionOperationalDomain(name) {
         a.includes('ATTACH') || a.includes('LOWER') || a.includes('LIFT') || a.includes('TOOL') ||
         a.includes('SEED') || a.includes('SPRAY') || a.includes('WORKMODE') ||
         a.includes('CAM_') || a.includes('CAMERA') || a.includes('ZOOM') || a.includes('PARK') ||
-        a.includes('THROTTLE') || a.includes('RPM') || a.includes('SUSPENSION') || a.startsWith('SSP_') ||
+        a.includes('THROTTLE') || a.includes('RPM') || a.includes('SUSPENSION') ||
         a.includes('RETARDER') || a.includes('ADBLUE') || a.includes('MILEAGE')
     ) {
         return 'VEHICLE_DRIVING';
