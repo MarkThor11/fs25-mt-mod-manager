@@ -2186,6 +2186,7 @@ async function performScan(manualPaths = null) {
 				fileName: subFolder ? `${subFolder}/${entryName}` : entryName,
 				filePath: targetPath,
 				folder: subFolder, 
+				isFolder: isModDir || false,
 				isDLC: isDlc || subFolder === 'DLC' || entryName.toLowerCase().startsWith('pdlc_'),
 				isMap: modDesc?.isMap || false,
 				isCrossplay: !!isCrossplay,
@@ -2373,20 +2374,22 @@ async function performScan(manualPaths = null) {
 		// Regular mods that exist in multiple folders should be deduplicated so the user does not see duplicates across folders.
 		const isMapMod = !!m.isMap;
 		const folderPrefix = (isMapMod && m.folder && m.folder !== '') ? `[DIR:${m.folder.toLowerCase()}]_` : '';
-		const idKey = m.modId ? `${folderPrefix}ID_${m.modId}` : null;
-		const fileKey = `${folderPrefix}FILE_${path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '')}`;
+		const baseName = path.basename(m.fileName).toLowerCase();
+		const typeTag = m.isFolder ? '[UNZIPPED]' : '[ZIP]';
+		const idKey = m.modId ? `${folderPrefix}${typeTag}_ID_${m.modId}` : null;
+		const fileKey = `${folderPrefix}${typeTag}_FILE_${baseName}`;
 
 		// Global collision keys: used to deduplicate across folders for regular mods,
 		// and to drop root mods if a subfolder version already exists.
-		const globalFileKey = `GLOBAL_FILE_${path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '')}`;
-		const globalIdKey = m.modId ? `GLOBAL_ID_${m.modId}` : null;
+		const globalFileKey = `GLOBAL_${typeTag}_FILE_${baseName}`;
+		const globalIdKey = m.modId ? `GLOBAL_${typeTag}_ID_${m.modId}` : null;
 
 		const isRoot = !m.folder || m.folder === '';
 		let alreadySeen = false;
 
 		if (isMapMod) {
 			if (isRoot) {
-				// Map in root: drop if a subfolder version of this map exists
+				// Map in root: drop if a subfolder version of this exact map variant exists
 				if (uniqueModsMap.has(globalFileKey) || (globalIdKey && uniqueModsMap.has(globalIdKey))) {
 					alreadySeen = true;
 				}

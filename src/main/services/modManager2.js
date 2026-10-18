@@ -1151,6 +1151,7 @@ async function performScan(manualPaths = null) {
 				fileName: subFolder ? `${subFolder}/${entryName}` : entryName,
 				filePath: fullPath,
 				folder: subFolder, 
+				isFolder: isModDir || false,
 				isMap: modDesc?.isMap || false,
 				mapId: modDesc?.mapId || null,
 				mapTitle: modDesc?.mapTitle || null,
@@ -1322,8 +1323,10 @@ async function performScan(manualPaths = null) {
 	});
 
 	for (const m of sortedForDedupe) {
-		const idKey = m.modId ? `ID_${m.modId}` : null;
-		const fileKey = `FILE_${path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '')}`;
+		const baseName = path.basename(m.fileName).toLowerCase();
+		const typeTag = m.isFolder ? '[UNZIPPED]' : '[ZIP]';
+		const idKey = m.modId ? `${typeTag}_ID_${m.modId}` : null;
+		const fileKey = `${typeTag}_FILE_${baseName}`;
 
 		const keys = [idKey, fileKey].filter(Boolean);
 		let alreadySeen = false;
