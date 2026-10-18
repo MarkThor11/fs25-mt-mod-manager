@@ -2112,10 +2112,10 @@ app.whenReady().then(() => {
       }
     } catch (e) {}
 
-    // Ensure persistent savegame map bridges exist in the default mods folder for external/Steam launches
+    // Ensure persistent savegame mod bridges exist in the default mods folder for external/Steam launches
     try {
-      if (modManager.syncSavegameMapBridges) {
-        modManager.syncSavegameMapBridges().catch(err => console.warn('[STARTUP] Savegame map bridge sync warning:', err.message));
+      if (modManager.syncSavegameModBridges) {
+        modManager.syncSavegameModBridges().catch(err => console.warn('[STARTUP] Savegame mod bridge sync warning:', err.message));
       }
     } catch (e) {}
 

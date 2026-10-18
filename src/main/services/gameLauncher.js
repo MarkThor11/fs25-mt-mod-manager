@@ -272,8 +272,8 @@ async function launch(options = {}) {
     }
     // Ensure savegame.png preview image is verified for ALL active save slots before game launches
     await savegameManager.getAllSavegames().catch(() => {});
-    // Ensure all savegame map bridges are up-to-date in the primary mods directory
-    await modManager.syncSavegameMapBridges().catch(e => console.warn('[LAUNCH] Map bridge sync warning:', e.message));
+    // Ensure all savegame mod bridges are up-to-date in the primary mods directory
+    await modManager.syncSavegameModBridges().catch(e => console.warn('[LAUNCH] Mod bridge sync warning:', e.message));
   } catch (e) {
     console.error('[LAUNCH] Failed to pre-process savegame files:', e.message);
   }
@@ -564,8 +564,9 @@ async function restoreGlobalGameSettings() {
     if (defaultMods) {
       await modManager.syncMirrorLinks(defaultMods);
     }
+    await modManager.syncSavegameModBridges().catch(() => {});
   } catch (e) {
-    console.error('[LAUNCH] Failed to sync mirror links on game exit:', e.message);
+    console.error('[LAUNCH] Failed to sync mirror/mod links on game exit:', e.message);
   }
 }
 
