@@ -522,8 +522,23 @@ export default function KeybindsPage() {
       const sortedEntries = [];
       const entryMap = new Map(entries);
 
+      // Sort clusters: Put clusters containing hard conflicts first, then warnings
+      const sortedClusters = [...clusters].sort((cA, cB) => {
+        const cAHard = cA.some(m => {
+          const acts = entryMap.get(m) || [];
+          return acts.some(act => conflicts.some(c => c.actions.includes(act.action) && c.severity === 'conflict'));
+        });
+        const cBHard = cB.some(m => {
+          const acts = entryMap.get(m) || [];
+          return acts.some(act => conflicts.some(c => c.actions.includes(act.action) && c.severity === 'conflict'));
+        });
+        if (cAHard && !cBHard) return -1;
+        if (!cAHard && cBHard) return 1;
+        return 0;
+      });
+
       // 1. First add the clusters of conflicting mods
-      clusters.forEach((clusterMods, clusterIdx) => {
+      sortedClusters.forEach((clusterMods, clusterIdx) => {
         clusterMods.forEach((modName, modInClusterIdx) => {
           if (entryMap.has(modName)) {
             // Find who this mod clashes with in this cluster to provide partner info
@@ -572,8 +587,22 @@ export default function KeybindsPage() {
       return sortedEntries;
     }
 
+    // When showConflictsOnly is active without groupConflictingMods,
+    // sort sections so hard conflicts appear above situational warnings
+    if (showConflictsOnly) {
+      return [...entries].sort((a, b) => {
+        const aActs = a[1];
+        const bActs = b[1];
+        const aHard = aActs.some(act => conflicts.some(c => c.actions.includes(act.action) && c.severity === 'conflict'));
+        const bHard = bActs.some(act => conflicts.some(c => c.actions.includes(act.action) && c.severity === 'conflict'));
+        if (aHard && !bHard) return -1;
+        if (!aHard && bHard) return 1;
+        return 0;
+      });
+    }
+
     return entries; // Default view
-  }, [filteredActions, groupConflictingMods, conflicts]);
+  }, [filteredActions, groupConflictingMods, showConflictsOnly, conflicts]);
 
   // Devices columns: Ensure Keyboard/Mouse is first, followed by detected gamepads/controllers
   const deviceColumns = useMemo(() => {
@@ -1105,7 +1134,22 @@ export default function KeybindsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {sectionActions.map((act, rIdx) => {
+                        {(showConflictsOnly
+                          ? [...sectionActions].sort((actA, actB) => {
+                              const aConflicts = conflicts.filter(c => c.actions.includes(actA.action));
+                              const bConflicts = conflicts.filter(c => c.actions.includes(actB.action));
+                              const aHard = aConflicts.some(c => c.severity === 'conflict');
+                              const bHard = bConflicts.some(c => c.severity === 'conflict');
+                              if (aHard && !bHard) return -1;
+                              if (!aHard && bHard) return 1;
+                              const aWarn = aConflicts.some(c => c.severity === 'warning');
+                              const bWarn = bConflicts.some(c => c.severity === 'warning');
+                              if (aWarn && !bWarn) return -1;
+                              if (!aWarn && bWarn) return 1;
+                              return 0;
+                            })
+                          : sectionActions
+                        ).map((act, rIdx) => {
                           const actConflicts = conflicts.filter(c => c.actions.includes(act.action));
                           const hasHardConflict = actConflicts.some(c => c.severity === 'conflict');
                           const hasWarning = actConflicts.some(c => c.severity === 'warning');
