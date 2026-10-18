@@ -53,7 +53,7 @@ const KNOWN_MOD_PREFIXES = {
     'HLM': 'Mod: Headland Management',
     'LOGSWINCH': 'Mod: Forestry Logs Winch',
     'ModMixer': 'Mod: ModMixer',
-    'PM': 'Mod: Production Manager',
+    'PM': 'Mod: Pumps & Hoses',
     'PSM': 'Mod: Production Supply Manager',
     'PTC23': 'Mod: PTC Controls',
     'QUICKSELECTOR': 'Mod: Quick Selector',
