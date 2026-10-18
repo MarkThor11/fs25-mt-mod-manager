@@ -3,7 +3,7 @@ import {
   SlidersHorizontal, Search, AlertTriangle, ShieldCheck, Download,
   Upload, Trash2, Check, X, RotateCcw, Monitor, Gamepad2,
   FolderOpen, Plus, Sliders, ChevronDown, ChevronRight, Layers, Tag,
-  ChevronsDownUp, ChevronsUpDown
+  ChevronsDownUp, ChevronsUpDown, Wand2
 } from 'lucide-react';
 import { useKeybindStore } from '../store/useKeybindStore';
 import { useToastStore } from '../store/useToastStore';
@@ -245,6 +245,87 @@ export default function KeybindsPage() {
     }
   };
 
+
+  // Curated, collision-tested conflict resolution recommendations
+  // Re-binds clashing mod hotkeys to verified completely unassigned keys
+  const AUTO_RESOLVE_MAP = {
+    // 1. Automatic Door Opener: clashing with Flashlight on 'L' -> rebind to ';'
+    'AUTOOPENSTATE': { input: 'KEY_semicolon', display: ';' },
+    // 2. Player Position: clashing with Super Strength on 'Left Alt + S' -> rebind to 'Num 5'
+    'SAVE_PLAYER_POSITION': { input: 'KEY_numpad5', display: 'Num 5' },
+    // 3. 24 Hour Crop Growth: clashing with Sell To The Best Bidder on 'Left Alt + G' -> rebind to 'Right Alt + G'
+    'TOGGLE_24H_GROWTH': { input: 'KEY_ralt KEY_g', display: 'Right Alt + G' },
+    // 4. Albach Diamant 2000: clashing with Reset Camera on 'Left Shift + S' -> rebind to 'Right Alt + S'
+    'CRABSTEERING_STREETMODE': { input: 'KEY_ralt KEY_s', display: 'Right Alt + S' },
+    // 5. Moveable Mirrors: clashing with Adjustable Mirrors on 'Right Ctrl + KP_5' -> rebind to 'Num 8'
+    'MIRROR_ROTATION_X': { input: 'KEY_numpad8', display: 'Num 8' },
+    // 6. Flashlights Hands-Free: clashing with Quick Camera on 'End' -> rebind to '['
+    'TRANSLATEDOWN_MountFLASHLIGHT': { input: 'KEY_lbracket', display: '[' },
+    // 7. Easy Logging: clashing with Mounted Flashlight on 'Left Alt + L' -> rebind to "'"
+    'EASYLOGGING_CYCLE_LENGTH': { input: 'KEY_apostrophe', display: "'" },
+    // 8. Enter Closest Vehicle: clashing with Multiplayer Vehicle Keys on 'Left Alt + E' -> rebind to 'Right Alt + E'
+    'ENTER_CLOSEST_VEHICLE': { input: 'KEY_ralt KEY_e', display: 'Right Alt + E' },
+    // 9. Towing Chain: clashing with Tajfun Winch on 'X', 'B', 'Z' -> rebind to Num 1, 2, 3
+    'TOWINGCHAIN_ATTACH_VEHICLE': { input: 'KEY_numpad1', display: 'Num 1' },
+    'TOWINGCHAIN_MANUAL_ATTACH': { input: 'KEY_numpad1', display: 'Num 1' },
+    'TOWINGCHAIN_VEHICLE_THROTTLE': { input: 'KEY_numpad2', display: 'Num 2' },
+    'TOWINGCHAIN_ATTACH_HOOK': { input: 'KEY_numpad3', display: 'Num 3' },
+    // 10. Pumps & Hoses: clashing with Attach Implements Manually on 'Y', 'Z' -> rebind to '[', ']'
+    'PM_TOGGLE_REEL_STATE': { input: 'KEY_lbracket', display: '[' },
+    'PM_TOGGLE_TOOLCARRIER_STATE': { input: 'KEY_lbracket', display: '[' },
+    'PM_TOGGLE_REEL_DIRECTION': { input: 'KEY_rbracket', display: ']' },
+  };
+
+  const [resolvingMod, setResolvingMod] = useState(null);
+
+  const handleAutoResolveMod = async (modName, sectionActions) => {
+    // Find actions in this section that have known conflict resolutions and are currently conflicted
+    const actionsToResolve = [];
+    sectionActions.forEach(act => {
+      const actConflicts = conflicts.filter(c => c.actions.includes(act.action));
+      if (actConflicts.length === 0) return;
+
+      const resolution = AUTO_RESOLVE_MAP[act.action];
+      if (resolution) {
+        // Find existing binding on KB/Mouse device to replace
+        const kbBinding = act.bindings.find(b => b.device === 'KB_MOUSE_DEFAULT');
+        actionsToResolve.push({
+          action: act.action,
+          device: 'KB_MOUSE_DEFAULT',
+          oldInput: kbBinding?.input || '',
+          newInput: resolution.input,
+          display: resolution.display
+        });
+      }
+    });
+
+    if (actionsToResolve.length === 0) {
+      useToastStore.getState().info(`No automatic resolution mapping found for ${modName}. You can click any red/amber key badge to reassign it manually.`);
+      return;
+    }
+
+    setResolvingMod(modName);
+    let resolvedCount = 0;
+    try {
+      for (const item of actionsToResolve) {
+        const res = await updateBinding(item.action, item.device, item.oldInput, item.newInput);
+        if (res.success) {
+          resolvedCount++;
+        }
+      }
+
+      if (resolvedCount > 0) {
+        const keySummary = actionsToResolve.map(a => `${a.action.toLowerCase().replace(/_/g, ' ')} → ${a.display}`).join(', ');
+        useToastStore.getState().success(`Resolved ${resolvedCount} conflicting keybind${resolvedCount > 1 ? 's' : ''} for ${modName.replace(/^Mod:\s*/i, '')} (${keySummary})!`);
+      } else {
+        useToastStore.getState().error(`Failed to update keybindings for ${modName}.`);
+      }
+    } catch (err) {
+      useToastStore.getState().error(`Error resolving conflict: ${err.message}`);
+    } finally {
+      setResolvingMod(null);
+    }
+  };
 
   const handleClearBinding = async (action, device, oldInput) => {
     if (!confirm(`Clear this binding for ${action}?`)) return;
@@ -915,6 +996,46 @@ export default function KeybindsPage() {
                       <AlertTriangle size={11} /> {sectionWarnCount} warning{sectionWarnCount !== 1 ? 's' : ''}
                     </span>
                   )}
+
+                  {/* Auto-Resolve button if this mod has any resolvable conflicting actions */}
+                  {(() => {
+                    const hasResolvableAction = sectionActions.some(act => 
+                      AUTO_RESOLVE_MAP[act.action] && conflicts.some(c => c.actions.includes(act.action))
+                    );
+                    if (!hasResolvableAction) return null;
+                    const isResolving = resolvingMod === sectionName;
+
+                    return (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAutoResolveMod(sectionName, sectionActions);
+                        }}
+                        disabled={isResolving}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: '#fff',
+                          background: 'linear-gradient(135deg, var(--accent) 0%, rgba(var(--accent-rgb), 0.8) 100%)',
+                          border: 'none',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '4px 10px',
+                          cursor: isResolving ? 'not-allowed' : 'pointer',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                          opacity: isResolving ? 0.7 : 1,
+                          transition: 'all 0.15s ease'
+                        }}
+                        title={`Automatically reassign conflicting actions in ${sectionName} to recommended unassigned keys`}
+                      >
+                        <Wand2 size={12} />
+                        <span>{isResolving ? 'Resolving...' : 'Auto-Resolve'}</span>
+                      </button>
+                    );
+                  })()}
                 </button>
 
                 {/* Section Table (hidden when collapsed) */}
@@ -1275,6 +1396,16 @@ export default function KeybindsPage() {
           'KEY_f7', 'KEY_f8', 'KEY_f9', 'KEY_f10', 'KEY_f11',
         ]);
 
+        // Recommended "Quick-Pick" keys for unassigned conflict resolution:
+        // Punctuation keys and Numpad keys that are completely free from basegame overlaps
+        const RECOMMENDED_QUICK_PICKS = new Set([
+          'KEY_semicolon', 'KEY_apostrophe', 'KEY_lbracket', 'KEY_rbracket', 'KEY_grave',
+          'KEY_numpad0', 'KEY_numpad1', 'KEY_numpad2', 'KEY_numpad3', 'KEY_numpad4',
+          'KEY_numpad5', 'KEY_numpad6', 'KEY_numpad7', 'KEY_numpad8', 'KEY_numpad9',
+          'KEY_numpadplus', 'KEY_numpadminus', 'KEY_numpadenter', 'KEY_numpadperiod',
+          'MOUSE_BUTTON_4', 'MOUSE_BUTTON_5'
+        ]);
+
         // Modifier rows for the combo builder (FS25 distinguishes L/R)
         const MODIFIERS = isKB ? [
           { raw: 'KEY_lctrl',  label: 'L Ctrl'  },
@@ -1390,7 +1521,11 @@ export default function KeybindsPage() {
                     Suggested Keys — click to select
                   </div>
                   {/* Legend */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '10px', color: 'var(--accent)' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }} />
+                      Recommended Quick-Pick
+                    </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '10px', color: 'var(--text-muted)' }}>
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--danger, #ef4444)', display: 'inline-block' }} />
                       Already in use
@@ -1450,18 +1585,24 @@ export default function KeybindsPage() {
                           // If it's a combo, system reserved usually doesn't apply the same way (like Ctrl+C vs just C), 
                           // but we'll still flag the base key if they didn't pick any modifiers.
                           const isReserved = isKB && comboModifiers.size === 0 && SYSTEM_RESERVED.has(raw);
+                          const isRecommended = isKB && !isUsed && !isReserved && RECOMMENDED_QUICK_PICKS.has(raw);
 
-                          // Priority: selected > in-use > system-reserved > default
-                          let bg, border, color, opacity;
+                          // Priority: selected > in-use > system-reserved > recommended > default
+                          let bg, border, color, opacity, boxShadow;
                           if (isSelected) {
                             bg = 'var(--accent)'; border = '1px solid var(--accent)';
                             color = 'var(--bg-primary)'; opacity = 1;
+                            boxShadow = '0 0 8px rgba(var(--accent-rgb), 0.4)';
                           } else if (isUsed) {
                             bg = 'rgba(239, 68, 68, 0.1)'; border = '1px solid rgba(239, 68, 68, 0.5)';
                             color = 'var(--danger, #ef4444)'; opacity = 1;
                           } else if (isReserved) {
                             bg = 'rgba(245, 158, 11, 0.1)'; border = '1px solid rgba(245, 158, 11, 0.4)';
                             color = 'var(--warning, #f59e0b)'; opacity = 1;
+                          } else if (isRecommended) {
+                            bg = 'rgba(var(--accent-rgb), 0.1)'; border = '1px solid rgba(var(--accent-rgb), 0.55)';
+                            color = 'var(--accent)'; opacity = 1;
+                            boxShadow = '0 1px 4px rgba(var(--accent-rgb), 0.15)';
                           } else {
                             bg = 'var(--bg-tertiary)'; border = '1px solid var(--border)';
                             color = 'var(--text-secondary)'; opacity = 1;
@@ -1473,7 +1614,9 @@ export default function KeybindsPage() {
                               ? `In use by: ${usedBy.join(', ')}`
                               : isReserved
                                 ? `May conflict with system or game defaults`
-                                : fullRaw;
+                                : isRecommended
+                                  ? `${fullRaw} (Recommended Quick-Pick: 100% Unassigned)`
+                                  : fullRaw;
 
                           return (
                             <button
@@ -1487,29 +1630,54 @@ export default function KeybindsPage() {
                                 background: bg,
                                 color,
                                 fontSize: '12px',
-                                fontWeight: isSelected ? 700 : 500,
+                                fontWeight: isSelected || isRecommended ? 700 : 500,
                                 fontFamily: 'var(--font-mono, monospace)',
                                 cursor: 'pointer',
                                 transition: 'all 0.12s ease',
                                 minWidth: 36,
                                 textAlign: 'center',
-                                opacity
+                                opacity,
+                                boxShadow
                               }}
                               title={tooltip}
                             >
                               {label}
-                              {/* Small status dot for used/reserved (not when selected) */}
-                              {!isSelected && (isUsed || isReserved) && (
-                                <span style={{
-                                  position: 'absolute',
-                                  top: -3,
-                                  right: -3,
-                                  width: 7,
-                                  height: 7,
-                                  borderRadius: '50%',
-                                  background: isUsed ? 'var(--danger, #ef4444)' : 'var(--warning, #f59e0b)',
-                                  border: '1px solid var(--bg-card)'
-                                }} />
+                              {/* Small status dot for used/reserved/recommended (not when selected) */}
+                              {!isSelected && (
+                                isUsed ? (
+                                  <span style={{
+                                    position: 'absolute',
+                                    top: -3,
+                                    right: -3,
+                                    width: 7,
+                                    height: 7,
+                                    borderRadius: '50%',
+                                    background: 'var(--danger, #ef4444)',
+                                    border: '1px solid var(--bg-card)'
+                                  }} />
+                                ) : isReserved ? (
+                                  <span style={{
+                                    position: 'absolute',
+                                    top: -3,
+                                    right: -3,
+                                    width: 7,
+                                    height: 7,
+                                    borderRadius: '50%',
+                                    background: 'var(--warning, #f59e0b)',
+                                    border: '1px solid var(--bg-card)'
+                                  }} />
+                                ) : isRecommended ? (
+                                  <span style={{
+                                    position: 'absolute',
+                                    top: -3,
+                                    right: -3,
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: '50%',
+                                    background: 'var(--accent)',
+                                    border: '1px solid var(--bg-card)'
+                                  }} />
+                                ) : null
                               )}
                             </button>
                           );
