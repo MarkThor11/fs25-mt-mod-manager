@@ -787,32 +787,6 @@ export default function KeybindsPage() {
           )}
         </div>
 
-        {/* Group Conflicting Mods Button */}
-        {conflicts.length > 0 && (
-          <button
-            onClick={() => setGroupConflictingMods(!groupConflictingMods)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '7px 14px',
-              borderRadius: 'var(--radius-sm)',
-              border: groupConflictingMods ? '1px solid var(--accent)' : '1px solid var(--border)',
-              background: groupConflictingMods ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-              color: groupConflictingMods ? 'var(--accent)' : 'var(--text-secondary)',
-              fontSize: '13px',
-              fontWeight: groupConflictingMods ? 700 : 500,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.15s ease'
-            }}
-            title="Arrange conflicting mod sections side-by-side so you can easily see which mods share keys"
-          >
-            <Layers size={14} />
-            Group Conflicting Mods
-          </button>
-        )}
-
         <button
           onClick={() => setShowUnassignedOnly(!showUnassignedOnly)}
           style={{
