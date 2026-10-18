@@ -31,6 +31,107 @@ function getKeybindBackupsPath() {
     return backupsDir;
 }
 
+const KNOWN_MOD_PREFIXES = {
+    'UNIVERSALAUTOLOAD': 'Mod: Universal Autoload',
+    'CP': 'Mod: Courseplay',
+    'ASC': 'Mod: Advanced Section Control',
+    'afm': 'Mod: Advanced Farm Manager',
+    'AL': 'Mod: AutoLoad',
+    'AP': 'Mod: Autoload Pallet / Logistics',
+    'AUTOLOADWOODEW': 'Mod: Autoload Wood EW',
+    'CALC': 'Mod: Ingame Calculator',
+    'DVC': 'Mod: Drive Control',
+    'ECC': 'Mod: Enhanced Crop Care',
+    'EVM': 'Mod: Enhanced Vehicle Management',
+    'FA': 'Mod: Field Assistant / Auto Farm',
+    'FOLLOW': 'Mod: Follow Me',
+    'FPC': 'Mod: First Person Controls',
+    'GPS': 'Mod: Guidance Steering (GPS)',
+    'RGPS': 'Mod: Real GPS',
+    'WPGPS': 'Mod: Waypoint GPS',
+    'HK4T': 'Mod: Hakki Pilke Wood Processor',
+    'HLM': 'Mod: Headland Management',
+    'LOGSWINCH': 'Mod: Forestry Logs Winch',
+    'ModMixer': 'Mod: ModMixer',
+    'PM': 'Mod: Production Manager',
+    'PSM': 'Mod: Production Supply Manager',
+    'PTC23': 'Mod: PTC Controls',
+    'QUICKSELECTOR': 'Mod: Quick Selector',
+    'QuickCam': 'Mod: Quick Camera',
+    'RL': 'Mod: Realistic Livestock',
+    'RV': 'Mod: Rescue Vehicle',
+    'SL': 'Mod: Steering Lock / Speed Limiter',
+    'SSP': 'Mod: Simple Seat Suspension',
+    'TI': 'Mod: Track Inspector',
+    'TOWINGCHAIN': 'Mod: Towing Chain',
+    'USEDPLUS': 'Mod: Used Plus Vehicles',
+    'VAS': 'Mod: Vehicle Automation System',
+    'VD': 'Mod: Vehicle Dashboard',
+    'VI': 'Mod: Vehicle Inspector',
+    'VTP': 'Mod: Variable Tire Pressure',
+    'WAWI': 'Mod: Water & Fill Indicator',
+    'WCAM': 'Mod: Work Camera',
+    'WFP': 'Mod: Wood Firewood Processor',
+    'POWERTOOLS': 'Mod: Power Tools',
+    'POWERTOOLSMENU': 'Mod: Power Tools',
+    'PARKVEHICLE': 'Mod: Park Vehicle',
+    'PRODUCTION_ADVISOR': 'Mod: Production Advisor',
+    'PRODUCTIONWATCHER': 'Mod: Production Watcher',
+    'PRICETICKER': 'Mod: Price Ticker',
+    'MAP_OBJECT_HIDER': 'Mod: Map Object Hider',
+    'EXTENDED_WINDROWER': 'Mod: Extended Windrower',
+    'EDC': 'Mod: Easy Dev Controls',
+    'RP': 'Mod: Emergency / Rescue Pack',
+    'MMAPPLUS': 'Mod: MiniMap Plus',
+    'LMBF': 'Mod: Lombardini / Frontloader',
+    'BSU': 'Mod: Bale Storage Utility',
+    'HUDPLUS': 'Mod: HUD Plus',
+    'UCR': 'Mod: Universal Cruise / Cultivator',
+    'TPAB': 'Mod: Pasture Animal Belt',
+    'TPS': 'Mod: Tool Position Saver'
+};
+
+function getModActionContext(name) {
+    if (!name) return 'Mod Controls: Other';
+    const trimmed = name.trim();
+
+    // 1. Direct match in known mod prefixes
+    for (const [prefix, label] of Object.entries(KNOWN_MOD_PREFIXES)) {
+        if (
+            trimmed.toUpperCase().startsWith(prefix.toUpperCase() + '_') ||
+            trimmed.toUpperCase() === prefix.toUpperCase()
+        ) {
+            return label;
+        }
+    }
+
+    // 2. Custom mod prefix before the first underscore (e.g. FS25_..., AM_..., CY_...)
+    const firstUnderscore = trimmed.indexOf('_');
+    if (firstUnderscore > 1) {
+        const token = trimmed.slice(0, firstUnderscore);
+        const genericWords = new Set(['TOGGLE', 'SWITCH', 'AXIS', 'CHANGE', 'RESET', 'SHOW', 'SAVE', 'SET', 'MENU', 'ROTATE']);
+        if (!genericWords.has(token.toUpperCase()) && firstUnderscore < 18) {
+            return `Mod: ${token}`;
+        } else if (genericWords.has(token.toUpperCase())) {
+            // For actions like TOGGLE_MOUSE_STEERING_..., extract the subject after the generic word
+            const rest = trimmed.slice(firstUnderscore + 1);
+            const secondUnderscore = rest.indexOf('_');
+            const subToken = secondUnderscore > 1 ? rest.slice(0, secondUnderscore) : rest;
+            if (subToken && subToken.length > 2) {
+                return `Mod Controls: ${subToken}`;
+            }
+        }
+    }
+
+    // 3. PascalCase or CamelCase prefix before camel transition (e.g. CutBaleAction, SortInput, ShowAnimalFoodDlg)
+    const camelMatch = trimmed.match(/^([A-Z][a-z0-9]+)/);
+    if (camelMatch && camelMatch[1] && camelMatch[1].length >= 3) {
+        return `Mod: ${camelMatch[1]}`;
+    }
+
+    return 'Mod Controls: Other';
+}
+
 function categorizeAction(actionName) {
     const a = (actionName || '').toUpperCase();
     if (a.includes('CAMERA') || a.includes('LOOK') || a.includes('ROTATE_OBJECT') || a.includes('ZOOM')) return 'Camera & View';
@@ -97,7 +198,10 @@ async function getInputBindings() {
         ];
 
         // Context mapping for action states
-        function getActionContext(name) {
+        function getActionContext(name, isMod = false) {
+            if (isMod) {
+                return getModActionContext(name);
+            }
             const a = (name || '').toUpperCase();
             if (a.startsWith('MENU') || a.includes('MAP_') || a.includes('INGAMEMAP') || a.includes('HELP') || a.includes('STORE') || a.includes('CONSTRUCTION') || a.includes('CHARACTER_CREATION') || a.includes('MESSAGE_BOX') || a.includes('CONVERSATION') || a.includes('SCREENSHOT') || a.includes('CHAT') || a.includes('PAUSE') || a.includes('TIMESCALE') || a.includes('PICK_COLOR') || a.includes('NOTE')) {
                 return 'Menu & Interface';
@@ -215,7 +319,8 @@ async function getInputBindings() {
 
         for (const act of rawActions) {
             const actionName = act['@_action'] || '';
-            const actionContext = getActionContext(actionName);
+            const isModAction = officialDefaultActions.size > 0 && !officialDefaultActions.has(actionName);
+            const actionContext = getActionContext(actionName, isModAction);
             const rawBindings = act.binding 
                 ? (Array.isArray(act.binding) ? act.binding : [act.binding])
                 : [];
