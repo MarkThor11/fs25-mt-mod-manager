@@ -6676,6 +6676,128 @@ async function deduplicateSubfolderMods(modsPath) {
 	}
 }
 
+/**
+ * One-time cleanup of legacy root mirror symlinks and exact duplicate .zip files.
+ * Rules:
+ * 1. Checks setting 'legacyDuplicatesCleanedV1' to run strictly ONCE per user.
+ * 2. Prunes all root-level symbolic links that point into subfolders or other mod paths.
+ * 3. Never touches links inside map subfolders (which point back to dependencies).
+ * 4. Checks physical duplicate .zip files across root folders and map subfolders:
+ *    - MUST have identical filename.
+ *    - MUST have exact matching version number extracted from modDesc.xml.
+ *    - MUST have exact matching file size.
+ *    - If versions or sizes do not match, they are strictly ignored.
+ *    - Keeps the copy in the map subfolder and removes the root copy.
+ */
+async function cleanupLegacyDuplicates() {
+	if (cache.getSetting('legacyDuplicatesCleanedV1')) {
+		return { alreadyRun: true };
+	}
+
+	console.log('[MIGRATION] Running one-time legacy mirror links and exact duplicates cleanup...');
+	const allPaths = getModsPaths();
+	let symlinksRemoved = 0;
+	let duplicatesRemoved = 0;
+	let bytesReclaimed = 0;
+
+	try {
+		for (const rootPath of allPaths) {
+			if (!await fs.pathExists(rootPath)) continue;
+
+			// Step 1: Remove unintended root-level symlinks
+			const entries = await fs.readdir(rootPath, { withFileTypes: true });
+			for (const entry of entries) {
+				const fullPath = path.join(rootPath, entry.name);
+				try {
+					const lstat = await fs.lstat(fullPath);
+					if (lstat.isSymbolicLink()) {
+						const target = await fs.readlink(fullPath);
+						const absTarget = path.isAbsolute(target) ? target : path.resolve(rootPath, target);
+						const isModMirror = allPaths.some(p => absTarget.toLowerCase().startsWith(p.toLowerCase())) ||
+							absTarget.toLowerCase().endsWith('.zip');
+						if (isModMirror) {
+							await fs.remove(fullPath);
+							symlinksRemoved++;
+							console.log(`[MIGRATION] Removed root symlink mirror: ${entry.name}`);
+						}
+					}
+				} catch (e) {
+					console.warn(`[MIGRATION] Could not evaluate link ${entry.name}:`, e.message);
+				}
+			}
+
+			// Step 2: Scan subfolders for map archives & check for exact root duplicates
+			const subDirs = entries.filter(e => e.isDirectory() && e.name.toLowerCase() !== 'backups' && !e.name.startsWith('.'));
+			for (const dir of subDirs) {
+				const subDirPath = path.join(rootPath, dir.name);
+				const subEntries = await fs.readdir(subDirPath, { withFileTypes: true }).catch(() => []);
+				for (const sub of subEntries) {
+					if (!sub.isFile() || !sub.name.toLowerCase().endsWith('.zip')) continue;
+					const subFilePath = path.join(subDirPath, sub.name);
+
+					// Root duplicate check
+					const rootFilePath = path.join(rootPath, sub.name);
+					if (await fs.pathExists(rootFilePath)) {
+						try {
+							const rootLstat = await fs.lstat(rootFilePath);
+							const subLstat = await fs.lstat(subFilePath);
+
+							// If root is a link, it was already handled or should be removed
+							if (rootLstat.isSymbolicLink()) {
+								await fs.remove(rootFilePath);
+								symlinksRemoved++;
+								continue;
+							}
+							if (subLstat.isSymbolicLink()) continue;
+
+							// If they are hardlinks to each other (same inode), remove root link
+							const rootStat = await fs.stat(rootFilePath);
+							const subStat = await fs.stat(subFilePath);
+							if (rootStat.ino && subStat.ino && rootStat.ino === subStat.ino) {
+								await fs.remove(rootFilePath);
+								duplicatesRemoved++;
+								continue;
+							}
+
+							// Check EXACT file size
+							if (rootStat.size !== subStat.size) {
+								console.log(`[MIGRATION] Skipping ${sub.name}: file sizes differ (Root: ${rootStat.size}, Subfolder: ${subStat.size})`);
+								continue;
+							}
+
+							// Check EXACT version from modDesc.xml
+							const rootMeta = parseModDesc(rootFilePath);
+							const subMeta = parseModDesc(subFilePath);
+							const rootVer = (rootMeta && rootMeta.version ? rootMeta.version.trim() : null);
+							const subVer = (subMeta && subMeta.version ? subMeta.version.trim() : null);
+
+							if (rootVer && subVer && rootVer === subVer) {
+								await fs.remove(rootFilePath);
+								duplicatesRemoved++;
+								bytesReclaimed += rootStat.size;
+								cache.removeLocalModCache(rootFilePath);
+								console.log(`[MIGRATION] Removed exact duplicate root file: ${sub.name} (version: ${rootVer}, size: ${rootStat.size})`);
+							} else {
+								console.log(`[MIGRATION] Skipping ${sub.name}: version mismatch (Root: ${rootVer}, Subfolder: ${subVer})`);
+							}
+						} catch (dedupeErr) {
+							console.warn(`[MIGRATION] Failed comparing ${sub.name}:`, dedupeErr.message);
+						}
+					}
+				}
+			}
+		}
+
+		// Mark migration as completed so it never runs again
+		cache.setSetting('legacyDuplicatesCleanedV1', 'true');
+		console.log(`[MIGRATION] One-time cleanup complete. Removed ${symlinksRemoved} symlinks, ${duplicatesRemoved} exact duplicates (${(bytesReclaimed / (1024 * 1024)).toFixed(1)} MB reclaimed).`);
+		return { success: true, symlinksRemoved, duplicatesRemoved, bytesReclaimed };
+	} catch (err) {
+		console.error('[MIGRATION] Cleanup failed:', err.message);
+		return { success: false, error: err.message };
+	}
+}
+
 async function flattenSubfolders() {
 	if (await gameLauncher.isGameRunning()) {
 		return { success: false, error: 'Cannot move mods: Farming Simulator 25 is currently running. Please close the game first.' };
@@ -7004,6 +7126,7 @@ module.exports = {
 	resumePendingDownloads,
 	prepareVirtualModsFolder,
 	deduplicateSubfolderMods,
+	cleanupLegacyDuplicates,
 	syncMirrorLinks,
 	ultraNormalize,
 	getMapSubfolderName,

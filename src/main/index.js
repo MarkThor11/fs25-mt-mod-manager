@@ -2103,6 +2103,13 @@ app.whenReady().then(() => {
     try {
       savegameManager.restoreStashedSinglePlayerSaves().catch(() => {});
     } catch (e) {}
+
+    // One-time cleanup for existing users: remove root-level symlinks and exact duplicates
+    try {
+      if (modManager.cleanupLegacyDuplicates) {
+        modManager.cleanupLegacyDuplicates().catch(err => console.warn('[STARTUP] Legacy cleanup error:', err.message));
+      }
+    } catch (e) {}
   }, 100);
 
   // 2. Deny all permission requests (Camera, Mic, Location, etc.)
