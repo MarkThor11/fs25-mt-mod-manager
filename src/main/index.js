@@ -2112,6 +2112,18 @@ app.whenReady().then(() => {
       }
     } catch (e) {}
 
+    // One-time cleanup for existing users: clean obsolete internal helper mods from all existing saves
+    try {
+      if (!cache.getSetting('helperModsCleanedFromSavesV1')) {
+        if (savegameManager.cleanInternalHelperModsFromAllSavegames) {
+          savegameManager.cleanInternalHelperModsFromAllSavegames().then(() => {
+            cache.setSetting('helperModsCleanedFromSavesV1', 'true');
+            console.log('[STARTUP] Cleaned obsolete internal helper mods from all existing savegames.');
+          }).catch(err => console.warn('[STARTUP] Helper mods cleanup warning:', err.message));
+        }
+      }
+    } catch (e) {}
+
     // Ensure persistent savegame mod bridges exist in the default mods folder for external/Steam launches
     try {
       if (modManager.syncSavegameModBridges) {

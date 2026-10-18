@@ -4168,6 +4168,26 @@ async function cleanInternalHelperModsFromSavegame(savePath) {
     }
 }
 
+/**
+ * Scan all savegame directories (1-20) across all detected FS25 roots and clean internal helper mods.
+ */
+async function cleanInternalHelperModsFromAllSavegames() {
+    try {
+        const fs25Roots = pathProvider.getAllFS25DataRoots ? pathProvider.getAllFS25DataRoots() : [getFs25Path()];
+        for (const dataRoot of fs25Roots) {
+            if (!dataRoot || !fs.existsSync(dataRoot)) continue;
+            for (let i = 1; i <= 20; i++) {
+                const saveDir = path.join(dataRoot, `savegame${i}`);
+                if (fs.existsSync(saveDir)) {
+                    await cleanInternalHelperModsFromSavegame(saveDir);
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[CLEANUP] Failed to clean internal helper mods from all savegames:', e.message);
+    }
+}
+
 async function cleanupBridgeModFromSavegame(savePath) {
     return cleanInternalHelperModsFromSavegame(savePath);
 }
@@ -7248,5 +7268,6 @@ module.exports = {
     ensureSavegameImage,
     resolveMapModPath,
     extractMapDensityFiles,
-    cleanInternalHelperModsFromSavegame
+    cleanInternalHelperModsFromSavegame,
+    cleanInternalHelperModsFromAllSavegames
 };
