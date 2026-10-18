@@ -162,6 +162,7 @@ async function getInputBindings() {
 
         // Build default/factory bindings map to prevent false conflict alerts for intentional default key sharing
         const defaultSharedBindingsMap = {};
+        const officialDefaultActions = new Set();
         try {
             const dataRoot = pathProvider.getFS25DataRoot();
             const nativeBackupPath = path.join(dataRoot, 'InputBackUp', 'inputBinding.xml');
@@ -191,6 +192,7 @@ async function getInputBindings() {
 
                     for (const dAct of dActions) {
                         const dActName = dAct['@_action'] || '';
+                        if (dActName) officialDefaultActions.add(dActName);
                         const dBindings = dAct.binding
                             ? (Array.isArray(dAct.binding) ? dAct.binding : [dAct.binding])
                             : [];
@@ -261,12 +263,18 @@ async function getInputBindings() {
                 const isAllDefaultIntended = defaultSet && list.every(item => defaultSet.has(item.action));
                 if (isAllDefaultIntended) continue;
 
+                // Rule: Default basegame actions are standard game controls.
+                // Mods can coexist alongside basegame defaults on the same key without conflict.
+                // Only flag a conflict if 2 or more different MOD actions are contending for the same key.
+                const modActionsOnly = list.map(item => item.action).filter(a => !officialDefaultActions.has(a));
+                if (modActionsOnly.length <= 1) continue;
+
                 conflicts.push({
                     context,
                     device,
                     input,
                     formattedInput: formatKeyName(input),
-                    actions: list.map(item => item.action)
+                    actions: modActionsOnly
                 });
             }
         }
