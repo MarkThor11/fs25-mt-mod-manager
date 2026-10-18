@@ -160,6 +160,57 @@ async function getInputBindings() {
         const actions = [];
         const bindingsMap = {};
 
+        // Build default/factory bindings map to prevent false conflict alerts for intentional default key sharing
+        const defaultSharedBindingsMap = {};
+        try {
+            const dataRoot = pathProvider.getFS25DataRoot();
+            const nativeBackupPath = path.join(dataRoot, 'InputBackUp', 'inputBinding.xml');
+            const defaultPaths = [nativeBackupPath];
+
+            // Also check Steam / default install profileTemplate if available
+            const possibleTemplateDirs = [
+                'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Farming Simulator 25\\profileTemplate',
+                'C:\\Program Files\\Steam\\steamapps\\common\\Farming Simulator 25\\profileTemplate',
+                'D:\\SteamLibrary\\steamapps\\common\\Farming Simulator 25\\profileTemplate'
+            ];
+            for (const tDir of possibleTemplateDirs) {
+                if (fs.existsSync(tDir)) {
+                    defaultPaths.push(path.join(tDir, 'inputBindingDefault_KeyboardMouse.xml'));
+                    defaultPaths.push(path.join(tDir, 'inputBindingDefault_Gamepad.xml'));
+                }
+            }
+
+            for (const dPath of defaultPaths) {
+                if (fs.existsSync(dPath)) {
+                    const dXml = fs.readFileSync(dPath, 'utf8');
+                    const dParsed = parser.parse(dXml);
+                    const dRoot = dParsed?.inputBinding || {};
+                    const dActions = dRoot.actionBinding
+                        ? (Array.isArray(dRoot.actionBinding) ? dRoot.actionBinding : [dRoot.actionBinding])
+                        : [];
+
+                    for (const dAct of dActions) {
+                        const dActName = dAct['@_action'] || '';
+                        const dBindings = dAct.binding
+                            ? (Array.isArray(dAct.binding) ? dAct.binding : [dAct.binding])
+                            : [];
+
+                        for (const dB of dBindings) {
+                            const dDev = dB['@_device'] || 'KB_MOUSE_DEFAULT';
+                            const dInp = (dB['@_input'] || '').trim();
+                            if (dInp) {
+                                const dKey = `${dDev}::${dInp}`;
+                                if (!defaultSharedBindingsMap[dKey]) defaultSharedBindingsMap[dKey] = new Set();
+                                defaultSharedBindingsMap[dKey].add(dActName);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (dErr) {
+            console.warn('[INPUT-BINDINGS] Could not load default bindings for conflict filtering:', dErr.message);
+        }
+
         for (const act of rawActions) {
             const actionName = act['@_action'] || '';
             const actionContext = getActionContext(actionName);
@@ -202,15 +253,21 @@ async function getInputBindings() {
                 const [context, device, input] = key.split('::');
                 // Only consider it a genuine clash if not all participating actions are known safe design shares
                 const allSafe = list.every(item => safeSharedActions.has(item.action));
-                if (!allSafe) {
-                    conflicts.push({
-                        context,
-                        device,
-                        input,
-                        formattedInput: formatKeyName(input),
-                        actions: list.map(item => item.action)
-                    });
-                }
+                if (allSafe) continue;
+
+                // Check if this exact combination of actions is an intended default in GIANTS factory profiles
+                const defaultKey = `${device}::${input.trim()}`;
+                const defaultSet = defaultSharedBindingsMap[defaultKey];
+                const isAllDefaultIntended = defaultSet && list.every(item => defaultSet.has(item.action));
+                if (isAllDefaultIntended) continue;
+
+                conflicts.push({
+                    context,
+                    device,
+                    input,
+                    formattedInput: formatKeyName(input),
+                    actions: list.map(item => item.action)
+                });
             }
         }
 
