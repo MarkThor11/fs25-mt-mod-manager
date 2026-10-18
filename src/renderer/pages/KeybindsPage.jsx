@@ -446,6 +446,9 @@ export default function KeybindsPage() {
         const hardConflicts = conflicts.filter(c => c.severity === 'conflict');
         const amberWarnings = conflicts.filter(c => c.severity === 'warning');
         const hasHard = hardConflicts.length > 0;
+        const affectedModsCount = new Set(
+          conflicts.flatMap(c => c.context.split(', ').map(s => s.trim()))
+        ).size;
 
         return (
           <div style={{ 
@@ -465,8 +468,8 @@ export default function KeybindsPage() {
               <div>
                 <div style={{ fontWeight: 700, fontSize: 'var(--fs-sm)', color: hasHard ? 'var(--danger)' : 'var(--warning, #f59e0b)' }}>
                   {hasHard 
-                    ? `${hardConflicts.length} Keybinding Conflict${hardConflicts.length > 1 ? 's' : ''}${amberWarnings.length > 0 ? ` & ${amberWarnings.length} Warning${amberWarnings.length > 1 ? 's' : ''}` : ''} Detected`
-                    : `${amberWarnings.length} Situational Key Warning${amberWarnings.length > 1 ? 's' : ''} Detected`
+                    ? `${hardConflicts.length} Keybinding Conflict${hardConflicts.length > 1 ? 's' : ''}${amberWarnings.length > 0 ? ` & ${amberWarnings.length} Warning${amberWarnings.length > 1 ? 's' : ''}` : ''} Detected (Affecting ${affectedModsCount} Mod${affectedModsCount !== 1 ? 's' : ''})`
+                    : `${amberWarnings.length} Situational Key Warning${amberWarnings.length > 1 ? 's' : ''} Detected (Affecting ${affectedModsCount} Mod${affectedModsCount !== 1 ? 's' : ''})`
                   }
                 </div>
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-secondary)' }}>
@@ -680,7 +683,7 @@ export default function KeybindsPage() {
                       background: 'rgba(239,68,68,0.12)', borderRadius: 100,
                       padding: '2px 10px'
                     }}>
-                      <AlertTriangle size={11} /> {sectionHardCount} conflict{sectionHardCount !== 1 ? 's' : ''}
+                      <AlertTriangle size={11} /> {sectionHardCount} conflicting action{sectionHardCount !== 1 ? 's' : ''}
                     </span>
                   )}
                   {sectionWarnCount > 0 && (
@@ -690,7 +693,7 @@ export default function KeybindsPage() {
                       background: 'rgba(245,158,11,0.12)', borderRadius: 100,
                       padding: '2px 10px'
                     }}>
-                      <AlertTriangle size={11} /> {sectionWarnCount} warning{sectionWarnCount !== 1 ? 's' : ''}
+                      <AlertTriangle size={11} /> {sectionWarnCount} warning action{sectionWarnCount !== 1 ? 's' : ''}
                     </span>
                   )}
                 </button>
