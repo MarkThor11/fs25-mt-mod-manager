@@ -632,12 +632,57 @@ async function getInputBindings() {
                         const domB = getActionOperationalDomain(itemB.action);
 
                         if (areDomainsConflicting(domA, domB)) {
+                            // Determine severity and situational advice
+                            let severity = 'conflict';
+                            let advice = '';
+
+                            const actPair = [itemA.action, itemB.action].sort().join('::');
+
+                            // 1. Automatic Door Opener vs Flashlight (Door Trigger situational overlap)
+                            if (actPair.includes('AUTOOPENSTATE') && actPair.includes('TOGGLE_HeadFLASHLIGHT')) {
+                                severity = 'warning';
+                                advice = 'Automatic Door Opener only activates when standing in a gate/door trigger. Away from triggers, L only toggles your flashlight. Inside triggers, both fire together. Consider changing one key to prevent unexpected flashlight toggles.';
+                            }
+                            // 2. Easy Logging (Chainsaw measurement) vs Flashlights Hands-Free (Mounted flashlight)
+                            else if (actPair.includes('EASYLOGGING_CYCLE_LENGTH') && actPair.includes('TOGGLE_MountFLASHLIGHT')) {
+                                severity = 'warning';
+                                advice = 'Easy Logging is only active while holding and aiming a chainsaw. Re-bind one to avoid turning on the mounted flashlight while cycling cut lengths.';
+                            }
+                            // 3. BaleFinder vs Farmland Auctions (Bale HUD vs On-site Auction bid)
+                            else if (actPair.includes('BF_TOGGLE') && actPair.includes('FARMLAND_AUCTION_BID')) {
+                                severity = 'warning';
+                                advice = 'Farmland Auction key is only active when standing on farm land during a live auction. Re-bind one if you bid on land while toggling the bale HUD.';
+                            }
+                            // 4. Tajfun Winch vs Towing Chain (Specialized forestry / towing equipment)
+                            else if (
+                                (actPair.includes('LOGSWINCH_RELEASE') || actPair.includes('LOGSWINCH_ATTACH') || actPair.includes('LOGSWINCH_WINCH')) &&
+                                actPair.includes('TOWINGCHAIN')
+                            ) {
+                                severity = 'warning';
+                                advice = 'Tajfun Winch and Towing Chain only overlap if both are mounted to your tractor at the same time. Consider changing keys if you operate both implements simultaneously.';
+                            }
+                            // 5. Pumps & Hoses vs Attach Implements Manually
+                            else if (
+                                (actPair.includes('PM_TOGGLE_REEL') || actPair.includes('PM_TOGGLE_TOOLCARRIER')) &&
+                                (actPair.includes('AIM_ATTACH_PTO') || actPair.includes('AIM_ATTACH_HOSES'))
+                            ) {
+                                severity = 'warning';
+                                advice = 'Manual Attach and Pumps & Hoses only overlap when manually connecting slurry hoses or PTO on foot next to a Pumps & Hoses reel.';
+                            }
+                            // 6. Enter Closest Vehicle vs Multiplayer Vehicle Keys
+                            else if (actPair.includes('ENTER_CLOSEST_VEHICLE') && actPair.includes('VEHICLE_KEY_INTERACT')) {
+                                severity = 'warning';
+                                advice = 'Multiplayer Vehicle Keys operates from inside the cab, while Enter Closest Vehicle operates on foot outside. Re-bind if keys clash near driver cabin doors.';
+                            }
+
                             clashPairs.push({
                                 a: itemA.action,
                                 b: itemB.action,
                                 ctxA,
                                 ctxB,
-                                domain: domA
+                                domain: domA,
+                                severity,
+                                advice
                             });
                         }
                     }
@@ -654,7 +699,9 @@ async function getInputBindings() {
                             matchingCluster = {
                                 domain: pair.domain,
                                 actions: new Set(),
-                                contexts: new Set()
+                                contexts: new Set(),
+                                severity: 'warning', // escalated if any pair is hard conflict
+                                adviceList: []
                             };
                             clusters.push(matchingCluster);
                         }
@@ -662,6 +709,12 @@ async function getInputBindings() {
                         matchingCluster.actions.add(pair.b);
                         matchingCluster.contexts.add(pair.ctxA);
                         matchingCluster.contexts.add(pair.ctxB);
+                        if (pair.severity === 'conflict') {
+                            matchingCluster.severity = 'conflict';
+                        }
+                        if (pair.advice && !matchingCluster.adviceList.includes(pair.advice)) {
+                            matchingCluster.adviceList.push(pair.advice);
+                        }
                     }
 
                     for (const cluster of clusters) {
@@ -671,7 +724,9 @@ async function getInputBindings() {
                                 device,
                                 input,
                                 formattedInput: formatKeyName(input),
-                                actions: Array.from(cluster.actions)
+                                actions: Array.from(cluster.actions),
+                                severity: cluster.severity,
+                                advice: cluster.adviceList.join(' ')
                             });
                         }
                     }

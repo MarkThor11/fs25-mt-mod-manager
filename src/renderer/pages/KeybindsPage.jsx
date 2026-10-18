@@ -441,40 +441,52 @@ export default function KeybindsPage() {
         </div>
       )}
 
-      {/* Conflict Warning Banner */}
-      {conflicts.length > 0 && (
-        <div style={{ 
-          background: 'rgba(239, 68, 68, 0.1)', 
-          border: '1px solid var(--danger)', 
-          borderRadius: 'var(--radius-md)', 
-          padding: '12px 16px', 
-          marginBottom: 'var(--sp-4)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 12
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <AlertTriangle size={20} style={{ color: 'var(--danger)', flexShrink: 0 }} />
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 'var(--fs-sm)', color: 'var(--danger)' }}>
-                {conflicts.length} Keybinding Conflict{conflicts.length > 1 ? 's' : ''} Detected
-              </div>
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-secondary)' }}>
-                Multiple actions in the same player state share the exact same key without a modifier.
+      {/* Conflict & Situational Warning Banner */}
+      {conflicts.length > 0 && (() => {
+        const hardConflicts = conflicts.filter(c => c.severity === 'conflict');
+        const amberWarnings = conflicts.filter(c => c.severity === 'warning');
+        const hasHard = hardConflicts.length > 0;
+
+        return (
+          <div style={{ 
+            background: hasHard ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)', 
+            border: hasHard ? '1px solid var(--danger)' : '1px solid var(--warning, #f59e0b)', 
+            borderRadius: 'var(--radius-md)', 
+            padding: '12px 16px', 
+            marginBottom: 'var(--sp-4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <AlertTriangle size={20} style={{ color: hasHard ? 'var(--danger)' : 'var(--warning, #f59e0b)', flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 'var(--fs-sm)', color: hasHard ? 'var(--danger)' : 'var(--warning, #f59e0b)' }}>
+                  {hasHard 
+                    ? `${hardConflicts.length} Keybinding Conflict${hardConflicts.length > 1 ? 's' : ''}${amberWarnings.length > 0 ? ` & ${amberWarnings.length} Warning${amberWarnings.length > 1 ? 's' : ''}` : ''} Detected`
+                    : `${amberWarnings.length} Situational Key Warning${amberWarnings.length > 1 ? 's' : ''} Detected`
+                  }
+                </div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-secondary)' }}>
+                  {hasHard
+                    ? 'Direct simultaneous key clashes detected. Amber warnings indicate situational overlaps (such as door triggers or chainsaw modes).'
+                    : 'Keys overlap only in specific situational contexts (such as door triggers or specific handheld tools). Consider re-binding to prevent unexpected actions.'
+                  }
+                </div>
               </div>
             </div>
+            <button 
+              className={`btn btn--sm ${showConflictsOnly ? (hasHard ? 'btn--danger' : 'btn--secondary') : 'btn--secondary'}`}
+              onClick={() => setShowConflictsOnly(!showConflictsOnly)}
+              style={{ fontSize: '11px', fontWeight: 700 }}
+            >
+              {showConflictsOnly ? 'Show All Keybinds' : 'Filter Conflicts & Warnings'}
+            </button>
           </div>
-          <button 
-            className={`btn btn--sm ${showConflictsOnly ? 'btn--danger' : 'btn--secondary'}`}
-            onClick={() => setShowConflictsOnly(!showConflictsOnly)}
-            style={{ fontSize: '11px', fontWeight: 700 }}
-          >
-            {showConflictsOnly ? 'Show All Keybinds' : 'Filter Conflicts Only'}
-          </button>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Filter and Search Bar */}
       <div style={{ 
@@ -610,8 +622,14 @@ export default function KeybindsPage() {
             const isCollapsed = collapsedSections[sectionName] !== undefined 
               ? !!collapsedSections[sectionName] 
               : !hasQuery;
-            const sectionConflicts = sectionActions.filter(act =>
+            const sectionConflictedActs = sectionActions.filter(act =>
               conflicts.some(c => c.actions.includes(act.action))
+            );
+            const sectionHardCount = sectionConflictedActs.filter(act =>
+              conflicts.some(c => c.actions.includes(act.action) && c.severity === 'conflict')
+            ).length;
+            const sectionWarnCount = sectionConflictedActs.filter(act =>
+              !conflicts.some(c => c.actions.includes(act.action) && c.severity === 'conflict')
             ).length;
 
             return (
@@ -655,14 +673,24 @@ export default function KeybindsPage() {
                   <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)' }}>
                     {sectionActions.length} action{sectionActions.length !== 1 ? 's' : ''}
                   </span>
-                  {sectionConflicts > 0 && (
+                  {sectionHardCount > 0 && (
                     <span style={{
                       display: 'flex', alignItems: 'center', gap: 4,
                       fontSize: '11px', fontWeight: 700, color: 'var(--danger)',
                       background: 'rgba(239,68,68,0.12)', borderRadius: 100,
                       padding: '2px 10px'
                     }}>
-                      <AlertTriangle size={11} /> {sectionConflicts} conflict{sectionConflicts !== 1 ? 's' : ''}
+                      <AlertTriangle size={11} /> {sectionHardCount} conflict{sectionHardCount !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {sectionWarnCount > 0 && (
+                    <span style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      fontSize: '11px', fontWeight: 700, color: 'var(--warning, #f59e0b)',
+                      background: 'rgba(245,158,11,0.12)', borderRadius: 100,
+                      padding: '2px 10px'
+                    }}>
+                      <AlertTriangle size={11} /> {sectionWarnCount} warning{sectionWarnCount !== 1 ? 's' : ''}
                     </span>
                   )}
                 </button>
@@ -706,15 +734,20 @@ export default function KeybindsPage() {
                       </thead>
                       <tbody>
                         {sectionActions.map((act, rIdx) => {
-                          const isConflicted = conflicts.some(c => c.actions.includes(act.action));
+                          const actConflicts = conflicts.filter(c => c.actions.includes(act.action));
+                          const hasHardConflict = actConflicts.some(c => c.severity === 'conflict');
+                          const hasWarning = actConflicts.some(c => c.severity === 'warning');
+                          const isConflicted = hasHardConflict || hasWarning;
 
                           return (
                             <tr 
                               key={act.action}
                               style={{
                                 borderBottom: '1px solid var(--border-subtle)',
-                                background: isConflicted 
+                                background: hasHardConflict 
                                   ? 'rgba(239, 68, 68, 0.05)' 
+                                  : hasWarning 
+                                  ? 'rgba(245, 158, 11, 0.04)' 
                                   : (rIdx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.015)'),
                                 transition: 'background 0.15s ease'
                               }}
@@ -730,7 +763,7 @@ export default function KeybindsPage() {
                                 <span style={{ 
                                   fontWeight: 700, 
                                   fontSize: 'var(--fs-base, 15px)', 
-                                  color: isConflicted ? 'var(--danger)' : 'var(--text-primary)',
+                                  color: hasHardConflict ? 'var(--danger)' : hasWarning ? 'var(--warning, #f59e0b)' : 'var(--text-primary)',
                                   letterSpacing: '0.01em'
                                 }}>
                                   {act.action
@@ -774,7 +807,15 @@ export default function KeybindsPage() {
                                         </button>
                                       ) : (
                                         devBindings.map((b, bIdx) => {
-                                          const isKeyConflict = conflicts.some(c => c.device === b.device && c.input === b.input);
+                                          const matchedConflict = conflicts.find(c => c.device === b.device && c.input === b.input);
+                                          const isHard = matchedConflict?.severity === 'conflict';
+                                          const isWarn = matchedConflict?.severity === 'warning';
+                                          const isKeyConflict = isHard || isWarn;
+                                          const conflictTitle = isHard 
+                                            ? `Key conflict: Clashes with ${matchedConflict.actions.filter(a => a !== act.action).join(', ')}` 
+                                            : isWarn 
+                                            ? `Situational overlap (${matchedConflict.actions.filter(a => a !== act.action).join(', ')}): ${matchedConflict.advice || 'Consider changing key to avoid in-game annoyance'}`
+                                            : 'Click to re-bind by pressing any key or controller button';
 
                                           return (
                                             <div
@@ -783,8 +824,16 @@ export default function KeybindsPage() {
                                                 display: 'inline-flex',
                                                 alignItems: 'center',
                                                 gap: 8,
-                                                background: isKeyConflict ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-tertiary)',
-                                                border: isKeyConflict ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--border)',
+                                                background: isHard 
+                                                  ? 'rgba(239, 68, 68, 0.15)' 
+                                                  : isWarn 
+                                                  ? 'rgba(245, 158, 11, 0.15)' 
+                                                  : 'var(--bg-tertiary)',
+                                                border: isHard 
+                                                  ? '1px solid rgba(239, 68, 68, 0.4)' 
+                                                  : isWarn 
+                                                  ? '1px solid rgba(245, 158, 11, 0.4)' 
+                                                  : '1px solid var(--border)',
                                                 borderRadius: 'var(--radius-sm)',
                                                 padding: '5px 12px',
                                                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
@@ -802,12 +851,16 @@ export default function KeybindsPage() {
                                                   cursor: 'pointer',
                                                   fontSize: '13px',
                                                   fontWeight: 700,
-                                                  color: isKeyConflict ? 'var(--danger)' : 'var(--accent)',
+                                                  color: isHard 
+                                                    ? 'var(--danger)' 
+                                                    : isWarn 
+                                                    ? 'var(--warning, #f59e0b)' 
+                                                    : 'var(--accent)',
                                                   fontFamily: 'var(--font-mono, monospace)',
                                                   letterSpacing: '0.02em',
                                                   outline: 'none'
                                                 }}
-                                                title="Click to re-bind by pressing any key or controller button"
+                                                title={conflictTitle}
                                               >
                                                 {b.formattedInput || b.input}
                                               </button>
@@ -816,7 +869,7 @@ export default function KeybindsPage() {
                                                 className="btn btn--ghost btn--xs btn--icon"
                                                 onClick={() => handleClearBinding(act.action, b.device, b.input)}
                                                 title="Unassign key"
-                                                style={{ padding: '2px', height: 'auto', width: 'auto', opacity: 0.5, color: 'var(--danger)' }}
+                                                style={{ padding: '2px', height: 'auto', width: 'auto', opacity: 0.5, color: isHard ? 'var(--danger)' : isWarn ? 'var(--warning, #f59e0b)' : 'var(--danger)' }}
                                               >
                                                 <X size={12} />
                                               </button>
