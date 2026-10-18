@@ -58,6 +58,7 @@ const KNOWN_MOD_PREFIXES = {
     'PTC23': 'Mod: PTC Controls',
     'QUICKSELECTOR': 'Mod: Quick Selector',
     'QuickCam': 'Mod: Quick Camera',
+    'QUICKCAM': 'Mod: Quick Camera',
     'RL': 'Mod: Realistic Livestock',
     'RV': 'Mod: Rescue Vehicle',
     'SL': 'Mod: Steering Lock / Speed Limiter',
@@ -370,9 +371,16 @@ async function getInputBindings() {
 
                 // Rule: Default basegame actions are standard game controls.
                 // Mods can coexist alongside basegame defaults on the same key without conflict.
-                // Only flag a conflict if 2 or more different MOD actions are contending for the same key.
-                const modActionsOnly = list.map(item => item.action).filter(a => !officialDefaultActions.has(a));
+                // Only flag a conflict if 2 or more DIFFERENT mod actions are contending for the same key.
+                const modActionsOnly = [...new Set(list.map(item => item.action).filter(a => !officialDefaultActions.has(a)))];
                 if (modActionsOnly.length <= 1) continue;
+
+                // Rule: If a single mod has the same keybind used for multiple functions by default,
+                // this is by design for functions that cannot be operated simultaneously (e.g. on-foot vs in-vehicle,
+                // toggle modes, or sub-states within that same mod).
+                // Only flag a genuine conflict if actions from 2 or more DIFFERENT mods/contexts collide on the same key.
+                const distinctContexts = new Set(modActionsOnly.map(actName => getActionContext(actName, true)));
+                if (distinctContexts.size <= 1) continue;
 
                 conflicts.push({
                     context,
