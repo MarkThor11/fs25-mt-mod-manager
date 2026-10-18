@@ -10,6 +10,7 @@ const modFolders = [
 ];
 
 const actionMap = {};
+const actionCategoryMap = {};
 
 for (const folder of modFolders) {
     if (!fs.existsSync(folder)) continue;
@@ -38,15 +39,25 @@ for (const folder of modFolders) {
                 if (cleaned) title = cleaned;
             }
 
-            const regexAction = /<action\s+[^>]*name=["']([^"']+)["']/g;
-            let match;
-            while ((match = regexAction.exec(text)) !== null) {
-                if (match[1]) actionMap[match[1]] = title;
+            // Extract actions with optional category
+            const regexAction = /<action\s+([^>]*?)>/gi;
+            let m;
+            while ((m = regexAction.exec(text)) !== null) {
+                const attrStr = m[1];
+                const nameMatch = attrStr.match(/name=["']([^"']+)["']/i);
+                if (nameMatch && nameMatch[1]) {
+                    const actName = nameMatch[1].trim();
+                    actionMap[actName] = title;
+                    const catMatch = attrStr.match(/category=["']([^"']+)["']/i);
+                    if (catMatch && catMatch[1]) {
+                        actionCategoryMap[actName] = catMatch[1].trim().toUpperCase();
+                    }
+                }
             }
 
-            const regexBinding = /<actionBinding\s+[^>]*action=["']([^"']+)["']/g;
-            while ((match = regexBinding.exec(text)) !== null) {
-                if (match[1]) actionMap[match[1]] = title;
+            const regexBinding = /<actionBinding\s+[^>]*action=["']([^"']+)["']/gi;
+            while ((m = regexBinding.exec(text)) !== null) {
+                if (m[1]) actionMap[m[1].trim()] = title;
             }
         } catch (_) {}
     }
@@ -54,4 +65,8 @@ for (const folder of modFolders) {
 
 const outputPath = path.join(__dirname, 'modActionMap.json');
 fs.writeFileSync(outputPath, JSON.stringify(actionMap, null, 2), 'utf8');
-console.log('Successfully saved', Object.keys(actionMap).length, 'action mappings to modActionMap.json');
+
+const outputCatPath = path.join(__dirname, 'modActionCategories.json');
+fs.writeFileSync(outputCatPath, JSON.stringify(actionCategoryMap, null, 2), 'utf8');
+
+console.log('Saved', Object.keys(actionMap).length, 'action titles and', Object.keys(actionCategoryMap).length, 'action categories.');
