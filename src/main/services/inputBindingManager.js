@@ -600,9 +600,8 @@ async function getInputBindings() {
                 // (e.g. Menu/Shop GUI vs In-Vehicle driving, or On-Foot player tools vs In-Vehicle implement,
                 // or mutually exclusive vehicle implement types like Autoload trailer vs Forestry crane),
                 // they can never execute simultaneously in-game and are NOT genuine conflicts.
-                const clashingActions = new Set();
-                const clashingContexts = new Set();
-
+                // Build genuine clashing pairs based on domain & mod separation
+                const clashPairs = [];
                 for (let i = 0; i < modItemsOnly.length; i++) {
                     for (let j = i + 1; j < modItemsOnly.length; j++) {
                         const itemA = modItemsOnly[i];
@@ -617,22 +616,49 @@ async function getInputBindings() {
                         const domB = getActionOperationalDomain(itemB.action);
 
                         if (areDomainsConflicting(domA, domB)) {
-                            clashingActions.add(itemA.action);
-                            clashingActions.add(itemB.action);
-                            clashingContexts.add(ctxA);
-                            clashingContexts.add(ctxB);
+                            clashPairs.push({
+                                a: itemA.action,
+                                b: itemB.action,
+                                ctxA,
+                                ctxB,
+                                domain: domA
+                            });
                         }
                     }
                 }
 
-                if (clashingActions.size > 1) {
-                    conflicts.push({
-                        context: Array.from(clashingContexts).join(', '),
-                        device,
-                        input,
-                        formattedInput: formatKeyName(input),
-                        actions: Array.from(clashingActions)
-                    });
+                if (clashPairs.length > 0) {
+                    // Group pairs into connected conflict clusters
+                    const clusters = [];
+                    for (const pair of clashPairs) {
+                        let matchingCluster = clusters.find(c =>
+                            c.domain === pair.domain && (c.actions.has(pair.a) || c.actions.has(pair.b))
+                        );
+                        if (!matchingCluster) {
+                            matchingCluster = {
+                                domain: pair.domain,
+                                actions: new Set(),
+                                contexts: new Set()
+                            };
+                            clusters.push(matchingCluster);
+                        }
+                        matchingCluster.actions.add(pair.a);
+                        matchingCluster.actions.add(pair.b);
+                        matchingCluster.contexts.add(pair.ctxA);
+                        matchingCluster.contexts.add(pair.ctxB);
+                    }
+
+                    for (const cluster of clusters) {
+                        if (cluster.actions.size > 1) {
+                            conflicts.push({
+                                context: Array.from(cluster.contexts).join(', '),
+                                device,
+                                input,
+                                formattedInput: formatKeyName(input),
+                                actions: Array.from(cluster.actions)
+                            });
+                        }
+                    }
                 }
             }
         }
