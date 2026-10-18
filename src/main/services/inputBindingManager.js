@@ -597,12 +597,41 @@ async function compileModKeybinds(specificModPaths = null) {
                 try {
                     const entries = fs.readdirSync(cDir);
                     for (const entry of entries) {
+                        if (entry.startsWith('.') || entry.toLowerCase() === 'backups') continue;
                         const fullPath = path.join(cDir, entry);
                         const lower = entry.toLowerCase();
-                        if (lower.endsWith('.zip') || fs.statSync(fullPath).isDirectory()) {
+
+                        let isDir = false;
+                        try {
+                            isDir = fs.statSync(fullPath).isDirectory();
+                        } catch (_) {}
+
+                        if (lower.endsWith('.zip')) {
                             if (!seenFiles.has(lower)) {
                                 seenFiles.add(lower);
                                 targetModPaths.push(fullPath);
+                            }
+                        } else if (isDir) {
+                            // Check if this folder is an unpacked mod itself
+                            if (fs.existsSync(path.join(fullPath, 'modDesc.xml'))) {
+                                if (!seenFiles.has(lower)) {
+                                    seenFiles.add(lower);
+                                    targetModPaths.push(fullPath);
+                                }
+                            } else {
+                                // It's a subfolder containing mods (e.g. Map subfolders, Map Dependencies, etc.)
+                                try {
+                                    const subEntries = fs.readdirSync(fullPath);
+                                    for (const sub of subEntries) {
+                                        const subLower = sub.toLowerCase();
+                                        if (subLower.endsWith('.zip')) {
+                                            if (!seenFiles.has(subLower)) {
+                                                seenFiles.add(subLower);
+                                                targetModPaths.push(path.join(fullPath, sub));
+                                            }
+                                        }
+                                    }
+                                } catch (_) {}
                             }
                         }
                     }

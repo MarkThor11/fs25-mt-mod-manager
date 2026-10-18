@@ -6876,6 +6876,17 @@ async function cleanupLegacyDuplicates() {
 			}
 		}
 
+		// Run one-time compilation of keybindings from all existing installed mods into inputBinding.xml
+		try {
+			const inputBindingManager = require('./inputBindingManager');
+			const compileRes = await inputBindingManager.compileModKeybinds();
+			if (compileRes && compileRes.success) {
+				console.log(`[MIGRATION] One-time mod keybind compilation complete: ${compileRes.addedCount} new action(s) compiled, ${compileRes.modifiedActionsCount || 0} bound.`);
+			}
+		} catch (compileErr) {
+			console.warn('[MIGRATION] Mod keybind compilation warning during migration:', compileErr.message);
+		}
+
 		// Mark migration as completed so it never runs again
 		cache.setSetting('legacyDuplicatesCleanedV1', 'true');
 		console.log(`[MIGRATION] One-time cleanup complete. Removed ${symlinksRemoved} symlinks, consolidated ${duplicatesRemoved} duplicates (${(bytesReclaimed / (1024 * 1024)).toFixed(1)} MB reclaimed).`);

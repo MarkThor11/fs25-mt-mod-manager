@@ -2111,6 +2111,18 @@ app.whenReady().then(() => {
         modManager.cleanupLegacyDuplicates().catch(err => console.warn('[STARTUP] Legacy cleanup error:', err.message));
       }
     } catch (e) {}
+
+    // One-time migration for existing mods: compile keybindings from all installed mods into inputBinding.xml
+    try {
+      if (!cache.getSetting('existingModKeybindsCompiledV1')) {
+        inputBindingManager.compileModKeybinds().then(res => {
+          if (res && res.success) {
+            cache.setSetting('existingModKeybindsCompiledV1', 'true');
+            console.log(`[STARTUP] One-time existing mod keybind compilation complete: ${res.addedCount} new action(s) compiled.`);
+          }
+        }).catch(err => console.warn('[STARTUP] Existing mod keybind migration warning:', err.message));
+      }
+    } catch (e) {}
   }, 100);
 
   // 2. Deny all permission requests (Camera, Mic, Location, etc.)
