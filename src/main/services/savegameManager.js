@@ -967,25 +967,6 @@ async function setSavegameMods(savegamePath, mods) {
         console.warn('[SAVEGAME-MODS] Error inspecting savegame dependencies:', e.message);
     }
 
-    // Ensure internal app companion mods are declared in careerSavegame.xml so the engine loads their lua subsystems
-    const appHelpers = [
-        { modName: 'FS25_MTRadioManager', title: 'MT Radio Manager Subsystem' },
-        { modName: 'FS25_storeDeliveries', title: 'Store Delivery Subsystem' },
-        { modName: 'FS25_rememberPositions', title: 'Vehicle Position Persistence' },
-        { modName: 'FS25_QuietLoadingScreen', title: 'Quiet Loading Screen' }
-    ];
-    for (const h of appHelpers) {
-        if (!newModsMap.has(h.modName)) {
-            newModsMap.set(h.modName, {
-                '@_modName': h.modName,
-                '@_title': h.title,
-                '@_version': '1.0.0.0',
-                '@_required': 'false',
-                '@_fileHash': ''
-            });
-        }
-    }
-
     data.careerSavegame.mod = Array.from(newModsMap.values());
     
     // Remove the old wrapper if it exists
@@ -1713,28 +1694,6 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         console.log(`[CREATE] Preserved template mod: ${tName}`);
                     }
                 }
-            }
-
-            // Ensure QuietLoadingScreen is included to mute loading screens
-            if (!modData.some(m => (m['@_modName'] || '').toLowerCase() === 'fs25_quietloadingscreen')) {
-                modData.push({
-                    '@_modName': 'FS25_QuietLoadingScreen',
-                    '@_title': 'Quiet Loading Screen',
-                    '@_version': '1.0.0.0',
-                    '@_required': 'false',
-                    '@_fileHash': ''
-                });
-            }
-
-            // Ensure MTRadioManager is included for in-game radio station overrides
-            if (!modData.some(m => (m['@_modName'] || '').toLowerCase() === 'fs25_mtradiomanager')) {
-                modData.push({
-                    '@_modName': 'FS25_MTRadioManager',
-                    '@_title': 'In-Game Audio Subsystem',
-                    '@_version': '1.0.0.0',
-                    '@_required': 'false',
-                    '@_fileHash': ''
-                });
             }
 
             // Update careerSavegame mods list
@@ -5915,10 +5874,6 @@ async function getUsedModsInSavegame(savePath) {
             }
         } catch (e) {}
 
-        // Always preserve core helper mods if present
-        usedModsMap.set('fs25_quietloadingscreen', 'FS25_QuietLoadingScreen');
-        usedModsMap.set('fs25_mtradiomanager', 'FS25_MTRadioManager');
-
         // 4. Resolve dependencies of used mods so required vehicle/script packs aren't broken
         try {
             let addedNew = true;
@@ -6295,7 +6250,7 @@ async function prepareServerModsFolder(slotIndex, savePath) {
         }
 
         // Copy internal companion helper mods into server isolated mods folder
-        const companionMods = ['FS25_MTRadioManager.zip', 'FS25_storeDeliveries.zip', 'FS25_rememberPositions.zip', 'FS25_QuietLoadingScreen.zip'];
+        const companionMods = ['FS25_storeDeliveries.zip', 'FS25_rememberPositions.zip'];
         for (const compMod of companionMods) {
             const internalModPath = path.join(__dirname, '..', 'resources', 'internalMods', compMod);
             if (fs.existsSync(internalModPath)) {
@@ -7257,5 +7212,6 @@ module.exports = {
     ensureSavegameDensityMaps,
     ensureSavegameImage,
     resolveMapModPath,
-    extractMapDensityFiles
+    extractMapDensityFiles,
+    cleanInternalHelperModsFromSavegame
 };

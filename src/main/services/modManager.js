@@ -806,10 +806,6 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 
 		// Initialize as an empty set if we are in selective mode
 		let activeModNames = savegameIndex !== null ? new Set() : null;
-		if (activeModNames) {
-			activeModNames.add('fs25_mtradiomanager');
-			activeModNames.add('fs25_quietloadingscreen');
-		}
 		let mapModName = null;
 		let mapModObj = null;
 		let isNewSlot = false;
@@ -1103,32 +1099,6 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                 debugLog(`[VIRTUAL] Link failed for ${m.modName}: ${e.message}`);
             }
         }
-
-		// Inject internal QuietLoadingScreen helper mod to guarantee silent loading screens
-		try {
-			const internalQuietMod = path.join(__dirname, '..', 'resources', 'internalMods', 'FS25_QuietLoadingScreen.zip');
-			if (fs.existsSync(internalQuietMod)) {
-				const destQuietPath = path.join(virtualPath, 'FS25_QuietLoadingScreen.zip');
-				if (fs.existsSync(destQuietPath)) await fs.remove(destQuietPath);
-				await fs.copyFile(internalQuietMod, destQuietPath);
-				debugLog('[VIRTUAL] Injected internal helper mod: FS25_QuietLoadingScreen.zip');
-			}
-		} catch (qErr) {
-			console.warn('[VIRTUAL] Could not inject FS25_QuietLoadingScreen:', qErr.message);
-		}
-
-		// Inject internal MTRadioManager helper mod to guarantee in-game radio station overrides
-		try {
-			const internalRadioMod = path.join(__dirname, '..', 'resources', 'internalMods', 'FS25_MTRadioManager.zip');
-			if (fs.existsSync(internalRadioMod)) {
-				const destRadioPath = path.join(virtualPath, 'FS25_MTRadioManager.zip');
-				if (fs.existsSync(destRadioPath)) await fs.remove(destRadioPath);
-				await fs.copyFile(internalRadioMod, destRadioPath);
-				debugLog('[VIRTUAL] Injected internal helper mod: FS25_MTRadioManager.zip');
-			}
-		} catch (rErr) {
-			console.warn('[VIRTUAL] Could not inject FS25_MTRadioManager:', rErr.message);
-		}
 
 		debugLog(`[VIRTUAL] Successfully synthesized ${linkedCount} mods for launch.`);
 		return virtualPath;
