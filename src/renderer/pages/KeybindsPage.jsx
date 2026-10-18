@@ -414,7 +414,7 @@ export default function KeybindsPage() {
 
       // 1. First add the clusters of conflicting mods
       clusters.forEach((clusterMods, clusterIdx) => {
-        clusterMods.forEach(modName => {
+        clusterMods.forEach((modName, modInClusterIdx) => {
           if (entryMap.has(modName)) {
             // Find who this mod clashes with in this cluster to provide partner info
             const partnerInfo = [];
@@ -434,6 +434,9 @@ export default function KeybindsPage() {
               {
                 isClusterGroup: true,
                 clusterId: clusterIdx + 1,
+                isFirstInCluster: modInClusterIdx === 0,
+                isLastInCluster: modInClusterIdx === clusterMods.length - 1,
+                clusterMods,
                 partners: partnerInfo
               }
             ]);
@@ -443,8 +446,17 @@ export default function KeybindsPage() {
       });
 
       // 2. Add remaining sections that don't have conflicts
+      let firstNonCluster = true;
       for (const [secName, secActs] of entryMap.entries()) {
-        sortedEntries.push([secName, secActs, { isClusterGroup: false }]);
+        sortedEntries.push([
+          secName, 
+          secActs, 
+          { 
+            isClusterGroup: false,
+            isFirstNonCluster: firstNonCluster
+          }
+        ]);
+        firstNonCluster = false;
       }
 
       return sortedEntries;
@@ -751,7 +763,7 @@ export default function KeybindsPage() {
           ))}
         </div>
 
-          {groupedActions.map(([sectionName, sectionActions, meta]) => {
+          {groupedActions.map(([sectionName, sectionActions, meta], idx) => {
             const hasQuery = searchQuery.trim().length > 0;
             const isCollapsed = collapsedSections[sectionName] !== undefined 
               ? !!collapsedSections[sectionName] 
@@ -768,38 +780,86 @@ export default function KeybindsPage() {
             ).length;
 
             return (
-              <div
-                key={sectionName}
-                style={{
-                  background: 'var(--bg-card)',
-                  border: groupConflictingMods && meta?.isClusterGroup
-                    ? (sectionHardCount > 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)')
-                    : '1px solid var(--border)',
-                  borderRadius: 'var(--radius-md)',
-                  overflow: 'hidden',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
-                }}
-              >
-                {/* Section Header (Collapsible) */}
-                <button
-                  onClick={() => toggleSection(sectionName)}
-                  style={{
-                    width: '100%',
+              <React.Fragment key={sectionName}>
+                {/* Cluster Header / Group Separator when Group Conflicting Mods is active */}
+                {groupConflictingMods && meta?.isClusterGroup && meta?.isFirstInCluster && (
+                  <div style={{
+                    marginTop: idx === 0 ? 0 : 20,
+                    marginBottom: 4,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 10,
-                    padding: '12px 18px',
-                    background: 'var(--bg-secondary)',
-                    border: 'none',
-                    borderBottom: isCollapsed ? 'none' : '2px solid var(--border)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    color: 'var(--text-primary)',
-                    transition: 'background 0.15s ease'
+                    padding: '8px 4px'
+                  }}>
+                    <Layers size={14} style={{ color: 'var(--accent)' }} />
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                      color: 'var(--text-secondary)'
+                    }}>
+                      Conflicting Mod Group #{meta.clusterId}: {meta.clusterMods.map(m => m.replace(/^Mod:\s*/i, '')).join('  ⇄  ')}
+                    </span>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+                  </div>
+                )}
+
+                {/* Separator before non-conflicting mods if we are in Group Conflicting Mods mode */}
+                {groupConflictingMods && meta?.isFirstNonCluster && (
+                  <div style={{
+                    marginTop: 28,
+                    marginBottom: 8,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '8px 4px'
+                  }}>
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                      color: 'var(--text-tertiary)'
+                    }}>
+                      Other Controls & Non-Conflicting Mods
+                    </span>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    background: 'var(--bg-card)',
+                    border: groupConflictingMods && meta?.isClusterGroup
+                      ? (sectionHardCount > 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)')
+                      : '1px solid var(--border)',
+                    borderRadius: 'var(--radius-md)',
+                    overflow: 'hidden',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+                    marginBottom: groupConflictingMods && meta?.isClusterGroup && meta?.isLastInCluster ? 24 : 0
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
                 >
+                  {/* Section Header (Collapsible) */}
+                  <button
+                    onClick={() => toggleSection(sectionName)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '12px 18px',
+                      background: 'var(--bg-secondary)',
+                      border: 'none',
+                      borderBottom: isCollapsed ? 'none' : '2px solid var(--border)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      color: 'var(--text-primary)',
+                      transition: 'background 0.15s ease'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                  >
                   {isCollapsed
                     ? <ChevronRight size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                     : <ChevronDown size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
@@ -1051,10 +1111,11 @@ export default function KeybindsPage() {
                   </div>
                 )}
               </div>
-            );
-          })}
-        </div>
-      )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    )}
 
       {/* Live Key & Gamepad Capture Modal (Press any key or button) */}
       {captureModal && (() => {
