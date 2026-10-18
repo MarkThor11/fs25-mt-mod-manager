@@ -538,18 +538,37 @@ export default function KeybindsPage() {
 
       // 1. First add the clusters of conflicting mods
       sortedClusters.forEach((clusterMods, clusterIdx) => {
-        clusterMods.forEach((modName, modInClusterIdx) => {
+        // Within each cluster, order mods with hard conflicts (red) above mods with warnings only (amber)
+        const sortedClusterMods = [...clusterMods].sort((mA, mB) => {
+          const actsA = entryMap.get(mA) || [];
+          const actsB = entryMap.get(mB) || [];
+          const aHard = actsA.some(act => conflicts.some(c => c.actions.includes(act.action) && c.severity === 'conflict'));
+          const bHard = actsB.some(act => conflicts.some(c => c.actions.includes(act.action) && c.severity === 'conflict'));
+          if (aHard && !bHard) return -1;
+          if (!aHard && bHard) return 1;
+          return 0;
+        });
+
+        sortedClusterMods.forEach((modName, modInClusterIdx) => {
           if (entryMap.has(modName)) {
             // Find who this mod clashes with in this cluster to provide partner info
+            // Order partner clash badges so red hard clashes appear before amber warnings
             const partnerInfo = [];
             const otherMods = conflictKeysByMod.get(modName);
             if (otherMods) {
               for (const [otherMod, keys] of otherMods.entries()) {
+                const isHardClash = conflicts.some(c => 
+                  c.severity === 'conflict' && 
+                  c.context.includes(modName) && 
+                  c.context.includes(otherMod)
+                );
                 partnerInfo.push({
                   otherMod,
-                  keys: Array.from(keys)
+                  keys: Array.from(keys),
+                  isHardClash
                 });
               }
+              partnerInfo.sort((pA, pB) => (pA.isHardClash && !pB.isHardClash ? -1 : !pA.isHardClash && pB.isHardClash ? 1 : 0));
             }
 
             sortedEntries.push([
@@ -559,8 +578,8 @@ export default function KeybindsPage() {
                 isClusterGroup: true,
                 clusterId: clusterIdx + 1,
                 isFirstInCluster: modInClusterIdx === 0,
-                isLastInCluster: modInClusterIdx === clusterMods.length - 1,
-                clusterMods,
+                isLastInCluster: modInClusterIdx === sortedClusterMods.length - 1,
+                clusterMods: sortedClusterMods,
                 partners: partnerInfo
               }
             ]);
