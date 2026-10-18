@@ -215,6 +215,96 @@ function getModActionContext(name) {
     return 'Mod Controls: Other';
 }
 
+function getActionOperationalDomain(name) {
+    const a = (name || '').toUpperCase();
+
+    // 1. GUI / Menus / Dialogs / Tablet / Shop / Overlays / HUD setup
+    if (
+        a.includes('SHOP') || a.includes('MENU') || a.includes('GUI') || a.includes('DIALOG') ||
+        a.includes('DLG') || a.includes('CONFIG') || a.includes('CALC') || a.includes('SETTINGS') ||
+        a.includes('SEARCH') || a.includes('PAGE') || a.includes('TABLET') || a.includes('BROWSE') ||
+        a.includes('LIST') || a.includes('SCREEN') || a.includes('OVERLAY') || a.includes('EDITOR') ||
+        a.includes('STORE') || a.includes('CONSTRUCTION') || a.includes('HELP') || a.includes('PAUSE') ||
+        a.includes('INGAMEMAP') || a.includes('FINANCE') || a.includes('OBD') || a.includes('HUD') ||
+        a.includes('CONVERSATION') || a.includes('CHAT') || a.startsWith('FR_') || a.startsWith('BANK_') ||
+        a.startsWith('TL_') || a.includes('TASKS') || a.startsWith('RS_') || a.includes('SORT') ||
+        a.includes('PRICETICKER') || a.includes('PRODUCTIONWATCHER') || a.includes('VMC_') ||
+        a.includes('POPUP') || a.includes('ALERT')
+    ) {
+        return 'GUI_MENU';
+    }
+
+    // 2. On-Foot / Character / Hand tools / Animal interaction / Physical Objects
+    if (
+        a.includes('HANDTOOL') || a.includes('ON_FOOT') || a.includes('PLAYER') || a.includes('CHAINSAW') ||
+        a.includes('DRINK') || a.includes('EAT') || a.includes('CUT_BALE') || a.includes('JUMP') ||
+        a.includes('CROUCH') || a.includes('RUN') || a.includes('WALK') || a.includes('FLASHLIGHT') ||
+        a.includes('THROW') || a.includes('PICKUP') || a.includes('PET_') || a.includes('TAKE_OBJECT') ||
+        a.includes('DROP_OBJECT') || a.includes('INTERACT') || a.includes('HPS_')
+    ) {
+        return 'ON_FOOT';
+    }
+
+    // 3. Specific Vehicle Implement / Sub-system Domains (mutually exclusive equipment)
+    if (a.includes('AUTOLOAD') || a.startsWith('AL_')) return 'VEHICLE_AUTOLOAD';
+    if (a.includes('CRANE') || a.startsWith('SH_') || a.includes('YARDER')) return 'VEHICLE_CRANE';
+    if (a.includes('LOGSWINCH') || a.includes('WINCH') || a.includes('TOWINGCHAIN')) return 'VEHICLE_WINCH';
+    if (a.includes('FIREWOODPROCESSOR')) return 'VEHICLE_FIREWOOD';
+    if (a.includes('WINDROWER') || a.includes('TEDDER') || a.includes('MOWER') || a.includes('REALMOWER') || a.includes('GRASS') || a.startsWith('BHH_')) return 'VEHICLE_MOWER';
+    if (a.includes('BALE') || a.includes('BALER')) return 'VEHICLE_BALER';
+    if (a.includes('PIPE') || a.includes('UNLOAD_BALE') || a.includes('MANUAL_TIPPING')) return 'VEHICLE_DISCHARGE';
+
+    // 4. Vehicle Navigation / Field Work Guidance
+    if (a.includes('GPS') || a.includes('HLM_') || a.includes('TRAMLINE') || a.includes('ASC_') || a.includes('COURSEPLAY') || a.startsWith('CP_')) {
+        return 'VEHICLE_GUIDANCE';
+    }
+
+    // 5. Vehicle General Driving / Universal In-Cab
+    if (
+        a.includes('STEER') || a.includes('GEAR') || a.includes('MOTOR') || a.includes('BRAKE') ||
+        a.includes('ACCELERATE') || a.includes('CRUISE') || a.includes('LIGHT') || a.includes('HONK') ||
+        a.includes('BEACON') || a.includes('TURNLIGHT') || a.includes('WIPER') || a.includes('CRAB') ||
+        a.includes('SEAT') || a.includes('ENTER') || a.includes('SWITCH_VEHICLE') || a.includes('MIRROR') ||
+        a.includes('CABIN') || a.includes('TYRE') || a.includes('TIRE') || a.includes('DIFF') ||
+        a.includes('CVT') || a.includes('DBL') || a.includes('SPEED') || a.includes('PTO') ||
+        a.includes('ATTACH') || a.includes('LOWER') || a.includes('LIFT') || a.includes('TOOL') ||
+        a.includes('LEVELER') || a.includes('SEED') || a.includes('SPRAY') || a.includes('WORKMODE') ||
+        a.includes('CAM_') || a.includes('CAMERA') || a.includes('ZOOM') || a.includes('PARK')
+    ) {
+        return 'VEHICLE_DRIVING';
+    }
+
+    return 'GENERAL';
+}
+
+function areDomainsConflicting(domA, domB) {
+    if (domA === domB) return true;
+    
+    // GUI/Menu inputs freeze/intercept player controls; they never conflict with active world gameplay
+    if (domA === 'GUI_MENU' || domB === 'GUI_MENU') return false;
+    
+    // On-foot character actions never conflict with in-vehicle actions
+    if (domA === 'ON_FOOT' && (domB.startsWith('VEHICLE_') || domB === 'GENERAL')) return false;
+    if (domB === 'ON_FOOT' && (domA.startsWith('VEHICLE_') || domA === 'GENERAL')) return false;
+
+    // Mutually exclusive vehicle implement specializations do not conflict with each other
+    // (e.g. Operating an Autoload trailer vs a Forestry crane vs a Mower vs a Winch vs Baler)
+    const exclusiveImplementDomains = new Set([
+        'VEHICLE_AUTOLOAD',
+        'VEHICLE_CRANE',
+        'VEHICLE_WINCH',
+        'VEHICLE_FIREWOOD',
+        'VEHICLE_MOWER',
+        'VEHICLE_BALER',
+        'VEHICLE_DISCHARGE'
+    ]);
+    if (exclusiveImplementDomains.has(domA) && exclusiveImplementDomains.has(domB)) {
+        return false;
+    }
+
+    return true;
+}
+
 function categorizeAction(actionName) {
     const a = (actionName || '').toUpperCase();
     if (a.includes('CAMERA') || a.includes('LOOK') || a.includes('ROTATE_OBJECT') || a.includes('ZOOM')) return 'Camera & View';
@@ -451,26 +541,55 @@ async function getInputBindings() {
                 const isAllDefaultIntended = defaultSet && list.every(item => defaultSet.has(item.action));
                 if (isAllDefaultIntended) continue;
 
-                // Rule: Default basegame actions are standard game controls.
+                // Rule 1: Basegame default actions are standard game controls.
                 // Mods can coexist alongside basegame defaults on the same key without conflict.
-                // Only flag a conflict if 2 or more DIFFERENT mod actions are contending for the same key.
-                const modActionsOnly = [...new Set(list.map(item => item.action).filter(a => !officialDefaultActions.has(a)))];
-                if (modActionsOnly.length <= 1) continue;
+                const modItemsOnly = list.filter(item => !officialDefaultActions.has(item.action));
+                const distinctModActions = [...new Set(modItemsOnly.map(item => item.action))];
+                if (distinctModActions.length <= 1) continue;
 
-                // Rule: If a single mod has the same keybind used for multiple functions by default,
-                // this is by design for functions that cannot be operated simultaneously (e.g. on-foot vs in-vehicle,
-                // toggle modes, or sub-states within that same mod).
-                // Only flag a genuine conflict if actions from 2 or more DIFFERENT mods/contexts collide on the same key.
-                const distinctContexts = new Set(modActionsOnly.map(actName => getActionContext(actName, true)));
+                // Rule 2: If actions belong to the same mod/context, they are intended sub-states / mutually exclusive
+                const distinctContexts = new Set(distinctModActions.map(actName => getActionContext(actName, true)));
                 if (distinctContexts.size <= 1) continue;
 
-                conflicts.push({
-                    context: Array.from(distinctContexts).join(', '),
-                    device,
-                    input,
-                    formattedInput: formatKeyName(input),
-                    actions: modActionsOnly
-                });
+                // Rule 3: Gameplay Situation / Operational Domain Cross-check.
+                // If two mod actions share a key but operate in mutually exclusive gameplay situations
+                // (e.g. Menu/Shop GUI vs In-Vehicle driving, or On-Foot player tools vs In-Vehicle implement,
+                // or mutually exclusive vehicle implement types like Autoload trailer vs Forestry crane),
+                // they can never execute simultaneously in-game and are NOT genuine conflicts.
+                const clashingActions = new Set();
+                const clashingContexts = new Set();
+
+                for (let i = 0; i < modItemsOnly.length; i++) {
+                    for (let j = i + 1; j < modItemsOnly.length; j++) {
+                        const itemA = modItemsOnly[i];
+                        const itemB = modItemsOnly[j];
+                        if (itemA.action === itemB.action) continue;
+
+                        const ctxA = getActionContext(itemA.action, true);
+                        const ctxB = getActionContext(itemB.action, true);
+                        if (ctxA === ctxB) continue; // Same mod is safe
+
+                        const domA = getActionOperationalDomain(itemA.action);
+                        const domB = getActionOperationalDomain(itemB.action);
+
+                        if (areDomainsConflicting(domA, domB)) {
+                            clashingActions.add(itemA.action);
+                            clashingActions.add(itemB.action);
+                            clashingContexts.add(ctxA);
+                            clashingContexts.add(ctxB);
+                        }
+                    }
+                }
+
+                if (clashingActions.size > 1) {
+                    conflicts.push({
+                        context: Array.from(clashingContexts).join(', '),
+                        device,
+                        input,
+                        formattedInput: formatKeyName(input),
+                        actions: Array.from(clashingActions)
+                    });
+                }
             }
         }
 
