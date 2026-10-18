@@ -248,32 +248,61 @@ export default function KeybindsPage() {
 
   // Curated, collision-tested conflict resolution recommendations
   // Re-binds clashing mod hotkeys to verified completely unassigned keys
+  // Supports BIDIRECTIONAL resolution: both partner mods in every conflict have auto-resolve options
   const AUTO_RESOLVE_MAP = {
-    // 1. Automatic Door Opener: clashing with Flashlight on 'L' -> rebind to ';'
+    // 1. Automatic Door Opener ⇄ Flashlights Hands-Free on 'L'
     'AUTOOPENSTATE': { input: 'KEY_semicolon', display: ';' },
-    // 2. Player Position: clashing with Super Strength on 'Left Alt + S' -> rebind to 'Num 5'
+    'TOGGLE_HeadFLASHLIGHT': { input: 'KEY_semicolon', display: ';' },
+
+    // 2. Player Position ⇄ Super Strength on 'Left Alt + S'
     'SAVE_PLAYER_POSITION': { input: 'KEY_numpad5', display: 'Num 5' },
-    // 3. 24 Hour Crop Growth: clashing with Sell To The Best Bidder on 'Left Alt + G' -> rebind to 'Right Alt + G'
+    'TOGGLE_SUPER_STRENGTH': { input: 'KEY_ralt KEY_s', display: 'Right Alt + S' },
+
+    // 3. 24 Hour Crop Growth ⇄ Sell To The Best Bidder on 'Left Alt + G'
     'TOGGLE_24H_GROWTH': { input: 'KEY_ralt KEY_g', display: 'Right Alt + G' },
-    // 4. Albach Diamant 2000: clashing with Reset Camera on 'Left Shift + S' -> rebind to 'Right Alt + S'
+    'STBB_OVERVIEW': { input: 'KEY_ralt KEY_g', display: 'Right Alt + G' },
+
+    // 4. Albach Diamant 2000 ⇄ Reset + Look Back Cam on 'Left Shift + S'
     'CRABSTEERING_STREETMODE': { input: 'KEY_ralt KEY_s', display: 'Right Alt + S' },
-    // 5. Moveable Mirrors: clashing with Adjustable Mirrors on 'Right Ctrl + KP_5' -> rebind to 'Num 8'
+    'RESET_CAM_POSITION_BACK': { input: 'KEY_ralt KEY_s', display: 'Right Alt + S' },
+
+    // 5. Moveable Mirrors ⇄ Adjustable Mirrors on 'Right Ctrl + KP_5'
     'MIRROR_ROTATION_X': { input: 'KEY_numpad8', display: 'Num 8' },
-    // 6. Flashlights Hands-Free: clashing with Quick Camera on 'End' -> rebind to '['
+    'AM_SwitchMirror': { input: 'KEY_numpad8', display: 'Num 8' },
+
+    // 6. Flashlights Hands-Free ⇄ Quick Camera on 'End'
     'TRANSLATEDOWN_MountFLASHLIGHT': { input: 'KEY_lbracket', display: '[' },
-    // 7. Easy Logging: clashing with Mounted Flashlight on 'Left Alt + L' -> rebind to "'"
+    'QuickCamOnFootForeBack': { input: 'KEY_lbracket', display: '[' },
+
+    // 7. Easy Logging ⇄ Flashlights Hands-Free (Mounted) on 'Left Alt + L'
     'EASYLOGGING_CYCLE_LENGTH': { input: 'KEY_apostrophe', display: "'" },
-    // 8. Enter Closest Vehicle: clashing with Multiplayer Vehicle Keys on 'Left Alt + E' -> rebind to 'Right Alt + E'
+    'TOGGLE_MountFLASHLIGHT': { input: 'KEY_apostrophe', display: "'" },
+
+    // 8. Enter Closest Vehicle ⇄ Multiplayer Vehicle Keys on 'Left Alt + E'
     'ENTER_CLOSEST_VEHICLE': { input: 'KEY_ralt KEY_e', display: 'Right Alt + E' },
-    // 9. Towing Chain: clashing with Tajfun Winch on 'X', 'B', 'Z' -> rebind to Num 1, 2, 3
+    'VEHICLE_KEY_INTERACT': { input: 'KEY_ralt KEY_e', display: 'Right Alt + E' },
+
+    // 9. Towing Chain ⇄ Tajfun Winch on 'X', 'B', 'Z'
     'TOWINGCHAIN_ATTACH_VEHICLE': { input: 'KEY_numpad1', display: 'Num 1' },
     'TOWINGCHAIN_MANUAL_ATTACH': { input: 'KEY_numpad1', display: 'Num 1' },
     'TOWINGCHAIN_VEHICLE_THROTTLE': { input: 'KEY_numpad2', display: 'Num 2' },
     'TOWINGCHAIN_ATTACH_HOOK': { input: 'KEY_numpad3', display: 'Num 3' },
-    // 10. Pumps & Hoses: clashing with Attach Implements Manually on 'Y', 'Z' -> rebind to '[', ']'
+    'LOGSWINCH_RELEASE_PLAYER': { input: 'KEY_numpad1', display: 'Num 1' },
+    'LOGSWINCH_RELEASE_VEHICLE': { input: 'KEY_numpad1', display: 'Num 1' },
+    'LOGSWINCH_ATTACH_DETACH': { input: 'KEY_numpad2', display: 'Num 2' },
+    'LOGSWINCH_WINCH_PLAYER': { input: 'KEY_numpad3', display: 'Num 3' },
+    'LOGSWINCH_WINCH_VEHICLE': { input: 'KEY_numpad3', display: 'Num 3' },
+
+    // 10. Pumps & Hoses ⇄ Attach Implements Manually on 'Y', 'Z'
     'PM_TOGGLE_REEL_STATE': { input: 'KEY_lbracket', display: '[' },
     'PM_TOGGLE_TOOLCARRIER_STATE': { input: 'KEY_lbracket', display: '[' },
     'PM_TOGGLE_REEL_DIRECTION': { input: 'KEY_rbracket', display: ']' },
+    'AIM_ATTACH_PTO': { input: 'KEY_lbracket', display: '[' },
+    'AIM_ATTACH_HOSES': { input: 'KEY_rbracket', display: ']' },
+
+    // 11. BaleFinder ⇄ Farmland Auctions on 'B'
+    'FARMLAND_AUCTION_BID': { input: 'KEY_apostrophe', display: "'" },
+    'BF_TOGGLE': { input: 'KEY_apostrophe', display: "'" },
   };
 
   const [resolvingMod, setResolvingMod] = useState(null);
