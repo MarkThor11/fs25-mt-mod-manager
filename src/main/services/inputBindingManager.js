@@ -467,6 +467,245 @@ async function resetToDefaults() {
     }
 }
 
+/**
+ * Extract actionBindings and actions from a mod's modDesc.xml content
+ */
+function extractModKeybindsFromXml(xmlContent) {
+    if (!xmlContent) return { actions: [], actionBindings: [] };
+
+    const actions = [];
+    const actionBindings = [];
+
+    // 1. Parse <actions>...</actions>
+    const actionsMatch = xmlContent.match(/<actions>([\s\S]*?)<\/actions>/i);
+    if (actionsMatch && actionsMatch[1]) {
+        try {
+            const parsedActions = parser.parse('<actions>' + actionsMatch[1] + '</actions>');
+            const rawAct = parsedActions?.actions?.action;
+            const actList = Array.isArray(rawAct) ? rawAct : (rawAct ? [rawAct] : []);
+            for (const a of actList) {
+                const name = a['@_name'];
+                if (name && typeof name === 'string' && name.trim()) {
+                    actions.push({
+                        name: name.trim(),
+                        category: a['@_category'] || 'General & Other',
+                        axisType: a['@_axisType']
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('[KEYBIND-COMPILER] Error parsing mod actions block:', e.message);
+        }
+    }
+
+    // 2. Parse <inputBinding>...</inputBinding>
+    const inputMatch = xmlContent.match(/<inputBinding>([\s\S]*?)<\/inputBinding>/i);
+    if (inputMatch && inputMatch[1]) {
+        try {
+            const parsedInp = parser.parse('<inputBinding>' + inputMatch[1] + '</inputBinding>');
+            const rawBindings = parsedInp?.inputBinding?.actionBinding;
+            const bindList = Array.isArray(rawBindings) ? rawBindings : (rawBindings ? [rawBindings] : []);
+            for (const ab of bindList) {
+                const action = ab['@_action'];
+                if (!action || typeof action !== 'string' || !action.trim()) continue;
+
+                const rawB = ab.binding;
+                const bList = Array.isArray(rawB) ? rawB : (rawB ? [rawB] : []);
+                const normalizedBindings = [];
+
+                for (const b of bList) {
+                    if (b && b['@_input']) {
+                        normalizedBindings.push({
+                            '@_device': b['@_device'] || 'KB_MOUSE_DEFAULT',
+                            '@_input': b['@_input'].trim(),
+                            '@_axisComponent': b['@_axisComponent'] || '+',
+                            '@_neutralInput': b['@_neutralInput'] || '0',
+                            '@_index': String(b['@_index'] || '1')
+                        });
+                    }
+                }
+
+                actionBindings.push({
+                    action: action.trim(),
+                    bindings: normalizedBindings
+                });
+            }
+        } catch (e) {
+            console.warn('[KEYBIND-COMPILER] Error parsing mod inputBinding block:', e.message);
+        }
+    }
+
+    return { actions, actionBindings };
+}
+
+/**
+ * Extract keybind definitions from a specific mod (ZIP file or unpacked directory)
+ */
+function extractKeybindsFromMod(modPath) {
+    if (!fs.existsSync(modPath)) return null;
+
+    let modDescText = null;
+    try {
+        const stats = fs.statSync(modPath);
+        if (stats.isDirectory()) {
+            const descPath = path.join(modPath, 'modDesc.xml');
+            if (fs.existsSync(descPath)) {
+                modDescText = fs.readFileSync(descPath, 'utf8');
+            }
+        } else if (modPath.toLowerCase().endsWith('.zip')) {
+            const AdmZip = require('adm-zip');
+            const zip = new AdmZip(modPath);
+            const entry = zip.getEntry('modDesc.xml');
+            if (entry) {
+                modDescText = entry.getData().toString('utf8');
+            }
+        }
+    } catch (err) {
+        return null;
+    }
+
+    if (!modDescText) return null;
+    if (!modDescText.includes('<actions') && !modDescText.includes('<inputBinding')) return null;
+
+    return extractModKeybindsFromXml(modDescText);
+}
+
+/**
+ * Compiles keybindings from mods and adds any missing actions and default bindings into inputBinding.xml.
+ * If specificModPaths is provided, it only processes those specific mods; otherwise it scans all active mod paths.
+ * Existing player bindings are preserved and never overwritten.
+ */
+async function compileModKeybinds(specificModPaths = null) {
+    const inputBindingPath = getInputBindingPath();
+    if (!fs.existsSync(inputBindingPath)) {
+        return { success: false, error: 'inputBinding.xml not found. Please launch FS25 at least once.' };
+    }
+
+    try {
+        // Collect target files
+        let targetModPaths = [];
+        if (Array.isArray(specificModPaths) && specificModPaths.length > 0) {
+            targetModPaths = specificModPaths;
+        } else {
+            // Find all mods across configured paths
+            const modManager = require('./modManager');
+            const candidateDirs = modManager.getModsPaths ? modManager.getModsPaths() : [];
+            const seenFiles = new Set();
+
+            for (const cDir of candidateDirs) {
+                if (!fs.existsSync(cDir)) continue;
+                try {
+                    const entries = fs.readdirSync(cDir);
+                    for (const entry of entries) {
+                        const fullPath = path.join(cDir, entry);
+                        const lower = entry.toLowerCase();
+                        if (lower.endsWith('.zip') || fs.statSync(fullPath).isDirectory()) {
+                            if (!seenFiles.has(lower)) {
+                                seenFiles.add(lower);
+                                targetModPaths.push(fullPath);
+                            }
+                        }
+                    }
+                } catch (dirErr) {
+                    console.warn(`[KEYBIND-COMPILER] Error reading directory ${cDir}:`, dirErr.message);
+                }
+            }
+        }
+
+        if (targetModPaths.length === 0) {
+            return { success: true, addedCount: 0, message: 'No mods found to compile keybindings from.' };
+        }
+
+        // Parse current inputBinding.xml
+        const xml = await fs.readFile(inputBindingPath, 'utf8');
+        const data = parser.parse(xml);
+        const root = data.inputBinding || {};
+
+        const rawActions = root.actionBinding
+            ? (Array.isArray(root.actionBinding) ? root.actionBinding : [root.actionBinding])
+            : [];
+
+        // Build a map of existing action bindings in inputBinding.xml
+        const existingActionsMap = new Map();
+        for (const act of rawActions) {
+            const name = act['@_action'];
+            if (name) existingActionsMap.set(name, act);
+        }
+
+        let addedCount = 0;
+        let modifiedActionsCount = 0;
+
+        for (const modPath of targetModPaths) {
+            const extracted = extractKeybindsFromMod(modPath);
+            if (!extracted) continue;
+
+            const { actions, actionBindings } = extracted;
+            const allActionNames = new Set([
+                ...actions.map(a => a.name),
+                ...actionBindings.map(b => b.action)
+            ]);
+
+            for (const actionName of allActionNames) {
+                const modBindingDef = actionBindings.find(b => b.action === actionName);
+
+                if (!existingActionsMap.has(actionName)) {
+                    // Action is completely new to inputBinding.xml - compile it in!
+                    const newActionEntry = {
+                        '@_action': actionName
+                    };
+
+                    if (modBindingDef && modBindingDef.bindings.length > 0) {
+                        newActionEntry.binding = modBindingDef.bindings.length === 1 
+                            ? modBindingDef.bindings[0] 
+                            : modBindingDef.bindings;
+                    }
+
+                    rawActions.push(newActionEntry);
+                    existingActionsMap.set(actionName, newActionEntry);
+                    addedCount++;
+                } else {
+                    // Action already exists. If it has no bindings at all, but the mod provides default bindings, add them!
+                    const existingEntry = existingActionsMap.get(actionName);
+                    const currentBindings = existingEntry.binding
+                        ? (Array.isArray(existingEntry.binding) ? existingEntry.binding : [existingEntry.binding])
+                        : [];
+
+                    if (currentBindings.length === 0 && modBindingDef && modBindingDef.bindings.length > 0) {
+                        existingEntry.binding = modBindingDef.bindings.length === 1
+                            ? modBindingDef.bindings[0]
+                            : modBindingDef.bindings;
+                        modifiedActionsCount++;
+                    }
+                }
+            }
+        }
+
+        if (addedCount > 0 || modifiedActionsCount > 0) {
+            root.actionBinding = rawActions;
+            data.inputBinding = root;
+
+            // Save backup before writing compiled bindings
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const autoBakPath = path.join(getKeybindBackupsPath(), `auto_backup_before_compile_${timestamp}.xml`);
+            await fs.copy(inputBindingPath, autoBakPath);
+
+            const newXml = builder.build(data);
+            await fs.writeFile(inputBindingPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
+            console.log(`[KEYBIND-COMPILER] Compiled mod keybinds into inputBinding.xml: ${addedCount} new action(s) added, ${modifiedActionsCount} bound.`);
+        }
+
+        return {
+            success: true,
+            addedCount,
+            modifiedActionsCount,
+            message: `Compiled mod keybinds: ${addedCount} new action(s) added, ${modifiedActionsCount} default binding(s) populated.`
+        };
+    } catch (err) {
+        console.error('[KEYBIND-COMPILER] Compilation error:', err);
+        return { success: false, error: err.message };
+    }
+}
+
 module.exports = {
     getInputBindings,
     updateBinding,
@@ -475,5 +714,8 @@ module.exports = {
     restoreBackup,
     updateBackup,
     deleteBackup,
-    resetToDefaults
+    resetToDefaults,
+    compileModKeybinds,
+    extractKeybindsFromMod
 };
+

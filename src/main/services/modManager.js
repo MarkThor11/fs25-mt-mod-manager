@@ -3469,6 +3469,15 @@ async function registerDownloadedFile(savePath, modId, modTitle, category, techD
 				lastScanResult.mods.push(modObj);
 			}
 			console.log(`[INCREMENTAL] Registered "${modObj.title}" in memory without full scan.`);
+			
+			// Auto-compile keybinds from the newly added mod into inputBinding.xml
+			try {
+				const inputBindingManager = require('./inputBindingManager');
+				inputBindingManager.compileModKeybinds([savePath]).catch(err => {
+					console.warn(`[KEYBIND-COMPILER] Auto-compilation warning for ${savePath}:`, err.message);
+				});
+			} catch (_) {}
+
 			return modObj;
 		}
 	} catch (e) {
@@ -5400,6 +5409,18 @@ async function installLocalMods(filePaths) {
 	}
 	
 	syncMirrorLinks(modsPath).catch(err => console.error('[MIRROR] Auto-sync failed after local install:', err));
+	
+	// Auto-compile keybinds from newly added local mods into inputBinding.xml
+	if (results.success.length > 0) {
+		try {
+			const inputBindingManager = require('./inputBindingManager');
+			const installedPaths = results.success.map(s => path.join(modsPath, path.basename(s.path)));
+			inputBindingManager.compileModKeybinds(installedPaths).catch(err => {
+				console.warn('[KEYBIND-COMPILER] Auto-compilation warning after local install:', err.message);
+			});
+		} catch (_) {}
+	}
+
 	return results;
 }
 

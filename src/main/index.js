@@ -1568,6 +1568,7 @@ ipcMain.handle('keybinds:getBackups', async () => inputBindingManager.getBackups
 ipcMain.handle('keybinds:createBackup', async (_, { name }) => inputBindingManager.createBackup(name));
 ipcMain.handle('keybinds:restoreBackup', async (_, { fileName }) => inputBindingManager.restoreBackup(fileName));
 ipcMain.handle('keybinds:deleteBackup', async (_, { fileName }) => inputBindingManager.deleteBackup(fileName));
+ipcMain.handle('keybinds:compile', async (_, specificModPaths) => inputBindingManager.compileModKeybinds(specificModPaths));
 ipcMain.handle('keybinds:resetToDefaults', async () => inputBindingManager.resetToDefaults());
 
 // ── Mod management ──

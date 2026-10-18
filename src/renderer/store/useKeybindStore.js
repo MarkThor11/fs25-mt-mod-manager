@@ -94,6 +94,22 @@ export const useKeybindStore = create((set, get) => ({
     return res;
   },
 
+  compileKeybinds: async (specificModPaths) => {
+    if (!window.api?.keybinds?.compile) return { success: false, error: 'API unavailable' };
+    set({ isLoading: true });
+    try {
+      const res = await window.api.keybinds.compile(specificModPaths);
+      if (res.success) {
+        await get().fetchKeybinds();
+      }
+      set({ isLoading: false });
+      return res;
+    } catch (err) {
+      set({ isLoading: false });
+      return { success: false, error: err.message };
+    }
+  },
+
   setSelectedDevice: (device) => set({ selectedDevice: device }),
   setSelectedCategory: (category) => set({ selectedCategory: category }),
   setSearchQuery: (query) => set({ searchQuery: query })

@@ -311,6 +311,20 @@ async function launch(options = {}) {
     }
   }
 
+  // ── AUTO-COMPILE MOD KEYBINDS INTO INPUTBINDING.XML ──
+  try {
+    const inputBindingManager = require('./inputBindingManager');
+    if (targetModsPath && fs.existsSync(targetModsPath)) {
+      const entries = fs.readdirSync(targetModsPath);
+      const activeModPaths = entries
+        .filter(e => e.toLowerCase().endsWith('.zip') || fs.statSync(path.join(targetModsPath, e)).isDirectory())
+        .map(e => path.join(targetModsPath, e));
+      await inputBindingManager.compileModKeybinds(activeModPaths);
+    }
+  } catch (kbErr) {
+    console.warn('[LAUNCH] Keybinding compilation warning:', kbErr.message);
+  }
+
   // ── ENFORCE MENU MUSIC OVERRIDE IN GAMESETTINGS.XML ──
   const fs25DataRoot = pathProvider.getFS25DataRoot();
   const gameSettingsPath = path.join(fs25DataRoot, 'gameSettings.xml');

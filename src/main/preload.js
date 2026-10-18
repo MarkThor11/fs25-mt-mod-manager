@@ -182,6 +182,7 @@ contextBridge.exposeInMainWorld('api', {
     restoreBackup: (params) => ipcRenderer.invoke('keybinds:restoreBackup', params),
     deleteBackup: (params) => ipcRenderer.invoke('keybinds:deleteBackup', params),
     resetToDefaults: () => ipcRenderer.invoke('keybinds:resetToDefaults'),
+    compile: (specificModPaths) => ipcRenderer.invoke('keybinds:compile', specificModPaths),
   },
 
   // Settings
