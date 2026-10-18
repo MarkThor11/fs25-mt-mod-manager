@@ -177,22 +177,31 @@ const KNOWN_MOD_PREFIXES = {
 function getModActionContext(name) {
     if (!name) return 'Mod Controls: Other';
     const trimmed = name.trim();
+    const upper = trimmed.toUpperCase();
 
-    // 1. Direct match in known mod prefixes
+    // 1. Direct pattern recognition for known compound mod actions
+    if (upper.includes('INDOOR_CAM')) {
+        return 'Mod: Indoor Camera';
+    }
+
+    // 2. Direct match in known mod prefixes
     for (const [prefix, label] of Object.entries(KNOWN_MOD_PREFIXES)) {
         if (
-            trimmed.toUpperCase().startsWith(prefix.toUpperCase() + '_') ||
-            trimmed.toUpperCase() === prefix.toUpperCase()
+            upper.startsWith(prefix.toUpperCase() + '_') ||
+            upper === prefix.toUpperCase()
         ) {
             return label;
         }
     }
 
-    // 2. Custom mod prefix before the first underscore (e.g. FS25_..., AM_..., CY_...)
+    // 3. Custom mod prefix before the first underscore (e.g. FS25_..., AM_..., CY_...)
     const firstUnderscore = trimmed.indexOf('_');
     if (firstUnderscore > 1) {
         const token = trimmed.slice(0, firstUnderscore);
-        const genericWords = new Set(['TOGGLE', 'SWITCH', 'AXIS', 'CHANGE', 'RESET', 'SHOW', 'SAVE', 'SET', 'MENU', 'ROTATE']);
+        const genericWords = new Set([
+            'TOGGLE', 'SWITCH', 'AXIS', 'CHANGE', 'RESET', 'SHOW', 'SAVE', 'SET',
+            'MENU', 'ROTATE', 'ZOOM', 'INCREASE', 'DECREASE', 'OPEN', 'CLOSE', 'CYCLE'
+        ]);
         if (!genericWords.has(token.toUpperCase()) && firstUnderscore < 18) {
             return `Mod: ${token}`;
         } else if (genericWords.has(token.toUpperCase())) {
@@ -206,7 +215,7 @@ function getModActionContext(name) {
         }
     }
 
-    // 3. PascalCase or CamelCase prefix before camel transition (e.g. CutBaleAction, SortInput, ShowAnimalFoodDlg)
+    // 4. PascalCase or CamelCase prefix before camel transition (e.g. CutBaleAction, SortInput, ShowAnimalFoodDlg)
     const camelMatch = trimmed.match(/^([A-Z][a-z0-9]+)/);
     if (camelMatch && camelMatch[1] && camelMatch[1].length >= 3) {
         return `Mod: ${camelMatch[1]}`;
