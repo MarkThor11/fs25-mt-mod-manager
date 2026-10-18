@@ -389,7 +389,11 @@ export default function KeybindsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button 
             className="btn btn--secondary btn--sm" 
-            onClick={() => fetchKeybinds()} 
+            onClick={async () => {
+              await fetchKeybinds();
+              await fetchBackups();
+              useToastStore.getState().success('Keybindings reloaded from inputBinding.xml');
+            }} 
             disabled={isLoading}
             title="Reload from inputBinding.xml"
           >
