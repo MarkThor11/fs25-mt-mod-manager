@@ -249,7 +249,7 @@ function getActionOperationalDomain(name) {
         return 'GUI_MENU';
     }
 
-    // 1. GUI / Menus / Dialogs / Tablet / Shop / Overlays / HUD setup / Screens
+    // 1. GUI / Menus / Dialogs / Tablet / Shop / Overlays / HUD setup / Screens / Photo mode
     if (
         a.includes('SHOP') || a.includes('MENU') || a.includes('GUI') || a.includes('DIALOG') ||
         a.includes('DLG') || a.includes('CONFIG') || a.includes('CALC') || a.includes('SETTINGS') ||
@@ -262,7 +262,7 @@ function getActionOperationalDomain(name) {
         a.includes('PRICETICKER') || a.includes('PRODUCTIONWATCHER') || a.startsWith('VMC_') ||
         a.includes('POPUP') || a.includes('ALERT') || a.startsWith('FORESTER_OPEN') ||
         a.includes('PIE') || a.includes('FAVORITE') || a.includes('LEDGER') || a.includes('STATUS') ||
-        a.includes('RENAME')
+        a.includes('RENAME') || a.startsWith('CAM_TOOL_')
     ) {
         return 'GUI_MENU';
     }
