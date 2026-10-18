@@ -2,7 +2,8 @@ import React, { useEffect, useState, useMemo } from 'react';
 import {
   SlidersHorizontal, Search, RefreshCw, AlertTriangle, ShieldCheck, Download,
   Upload, Trash2, Check, X, RotateCcw, Monitor, Gamepad2,
-  FolderOpen, Plus, Sliders, ChevronDown, ChevronRight, Layers, Tag
+  FolderOpen, Plus, Sliders, ChevronDown, ChevronRight, Layers, Tag,
+  ChevronsDownUp, ChevronsUpDown
 } from 'lucide-react';
 import { useKeybindStore } from '../store/useKeybindStore';
 import { useToastStore } from '../store/useToastStore';
@@ -301,9 +302,16 @@ export default function KeybindsPage() {
     }
   };
 
-  // State: which sections are collapsed
+  // State: which sections are expanded/collapsed. Defaults to all collapsed.
+  // We track explicit overrides: true means collapsed, false means expanded.
+  // If not explicitly set in collapsedSections:
+  // - If searchQuery is active, default to expanded (false) so matching items are visible.
+  // - Otherwise, default to collapsed (true).
   const [collapsedSections, setCollapsedSections] = useState({});
-  const toggleSection = (key) => setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleSection = (key) => setCollapsedSections(prev => {
+    const isCurrentlyCollapsed = prev[key] !== undefined ? prev[key] : (searchQuery.trim().length === 0);
+    return { ...prev, [key]: !isCurrentlyCollapsed };
+  });
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
   // Combo modifier toggle state for the suggestion panel
   const [comboModifiers, setComboModifiers] = useState(new Set());
@@ -539,6 +547,44 @@ export default function KeybindsPage() {
           Show Unassigned
         </button>
 
+        {groupedActions.length > 0 && (() => {
+          const hasQuery = searchQuery.trim().length > 0;
+          const allCollapsed = groupedActions.every(([name]) => 
+            collapsedSections[name] !== undefined ? collapsedSections[name] : !hasQuery
+          );
+          return (
+            <button
+              onClick={() => {
+                const nextState = {};
+                const shouldCollapse = !allCollapsed;
+                groupedActions.forEach(([name]) => {
+                  nextState[name] = shouldCollapse;
+                });
+                setCollapsedSections(nextState);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '7px 14px',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border)',
+                background: 'transparent',
+                color: 'var(--text-secondary)',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s ease'
+              }}
+              title={allCollapsed ? "Expand all sections" : "Collapse all sections"}
+            >
+              {allCollapsed ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />}
+              {allCollapsed ? 'Expand All' : 'Collapse All'}
+            </button>
+          );
+        })()}
+
         <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
           Showing <strong>{filteredActions.length}</strong> actions across <strong>{deviceColumns.length}</strong> input device{deviceColumns.length !== 1 ? 's' : ''}
         </div>
@@ -568,7 +614,10 @@ export default function KeybindsPage() {
         </div>
 
           {groupedActions.map(([sectionName, sectionActions]) => {
-            const isCollapsed = !!collapsedSections[sectionName];
+            const hasQuery = searchQuery.trim().length > 0;
+            const isCollapsed = collapsedSections[sectionName] !== undefined 
+              ? !!collapsedSections[sectionName] 
+              : !hasQuery;
             const sectionConflicts = sectionActions.filter(act =>
               conflicts.some(c => c.actions.includes(act.action))
             ).length;

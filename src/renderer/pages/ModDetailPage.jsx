@@ -1358,7 +1358,7 @@ export default function ModDetailPage() {
                   id="install-mod-btn"
                   title={!isOnline ? "Internet connection required" : ""}
                 >
-                  <Download size={18} style={{ marginRight: 8 }} /> {!isOnline ? 'Internet Required' : (uniqueDependencies.length > 0 ? 'Download Map Only' : 'Download & Install')}
+                  <Download size={18} style={{ marginRight: 8 }} /> {!isOnline ? 'Internet Required' : (uniqueDependencies.length > 0 ? ((mod?.isMap || isMapCategory(mod?.category) || isMapCategory(mod?.metadata?.Category) || (localMod && localMod.isMap)) ? 'Download Map Only' : 'Download Mod Only') : 'Download & Install')}
                 </button>
               </>
             )}
