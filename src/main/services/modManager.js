@@ -2353,6 +2353,17 @@ async function performScan(manualPaths = null) {
 		if (!aIsRoot && bIsRoot) return -1;
 		if (aIsRoot && !bIsRoot) return 1;
 
+		// Prioritize primary mod folder / drive (modsPaths[0]) over secondary drives
+		if (Array.isArray(modsPaths) && modsPaths.length > 1) {
+			const aPath = (a.filePath || a.fileName || '').toLowerCase();
+			const bPath = (b.filePath || b.fileName || '').toLowerCase();
+			const rootA = modsPaths.findIndex(p => aPath.startsWith(p.toLowerCase()));
+			const rootB = modsPaths.findIndex(p => bPath.startsWith(p.toLowerCase()));
+			if (rootA !== -1 && rootB !== -1 && rootA !== rootB) return rootA - rootB;
+			if (rootA !== -1 && rootB === -1) return -1;
+			if (rootA === -1 && rootB !== -1) return 1;
+		}
+
 		// Prioritize mods with genuine file size over 0-byte or broken links
 		return (b.size || 0) - (a.size || 0);
 	});
