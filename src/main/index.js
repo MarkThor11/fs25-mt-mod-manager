@@ -2103,14 +2103,6 @@ app.whenReady().then(() => {
     try {
       savegameManager.restoreStashedSinglePlayerSaves().catch(() => {});
     } catch (e) {}
-
-    // Ensure all mods stored in dedicated map/category subfolders are mirrored to the primary mods directory
-    try {
-      const defaultMods = modManager.getDefaultModsPath();
-      if (defaultMods) {
-        modManager.syncMirrorLinks(defaultMods).catch(err => console.warn('[STARTUP] Subfolder mirror sync warning:', err.message));
-      }
-    } catch (e) {}
   }, 100);
 
   // 2. Deny all permission requests (Camera, Mic, Location, etc.)
