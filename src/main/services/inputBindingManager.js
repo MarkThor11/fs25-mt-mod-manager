@@ -36,7 +36,7 @@ const KNOWN_MOD_PREFIXES = {
     'CP': 'Mod: Courseplay',
     'ASC': 'Mod: Advanced Section Control',
     'afm': 'Mod: Advanced Farm Manager',
-    'AL': 'Mod: AutoLoad',
+    'AL': 'Mod: AutoLeveler',
     'AP': 'Mod: Autoload Pallet / Logistics',
     'AUTOLOADWOODEW': 'Mod: Autoload Wood EW',
     'CALC': 'Mod: Ingame Calculator',
@@ -218,7 +218,7 @@ function getModActionContext(name) {
 function getActionOperationalDomain(name) {
     const a = (name || '').toUpperCase();
 
-    // 1. GUI / Menus / Dialogs / Tablet / Shop / Overlays / HUD setup
+    // 1. GUI / Menus / Dialogs / Tablet / Shop / Overlays / HUD setup / Screens
     if (
         a.includes('SHOP') || a.includes('MENU') || a.includes('GUI') || a.includes('DIALOG') ||
         a.includes('DLG') || a.includes('CONFIG') || a.includes('CALC') || a.includes('SETTINGS') ||
@@ -228,8 +228,10 @@ function getActionOperationalDomain(name) {
         a.includes('INGAMEMAP') || a.includes('FINANCE') || a.includes('OBD') || a.includes('HUD') ||
         a.includes('CONVERSATION') || a.includes('CHAT') || a.startsWith('FR_') || a.startsWith('BANK_') ||
         a.startsWith('TL_') || a.includes('TASKS') || a.startsWith('RS_') || a.includes('SORT') ||
-        a.includes('PRICETICKER') || a.includes('PRODUCTIONWATCHER') || a.includes('VMC_') ||
-        a.includes('POPUP') || a.includes('ALERT')
+        a.includes('PRICETICKER') || a.includes('PRODUCTIONWATCHER') || a.startsWith('VMC_') ||
+        a.includes('POPUP') || a.includes('ALERT') || a.startsWith('FORESTER_OPEN') ||
+        a.includes('PIE') || a.includes('FAVORITE') || a.includes('LEDGER') || a.includes('STATUS') ||
+        a.includes('RENAME')
     ) {
         return 'GUI_MENU';
     }
@@ -240,26 +242,39 @@ function getActionOperationalDomain(name) {
         a.includes('DRINK') || a.includes('EAT') || a.includes('CUT_BALE') || a.includes('JUMP') ||
         a.includes('CROUCH') || a.includes('RUN') || a.includes('WALK') || a.includes('FLASHLIGHT') ||
         a.includes('THROW') || a.includes('PICKUP') || a.includes('PET_') || a.includes('TAKE_OBJECT') ||
-        a.includes('DROP_OBJECT') || a.includes('INTERACT') || a.includes('HPS_')
+        a.includes('DROP_OBJECT') || a.includes('INTERACT') || a.startsWith('HPS_') || a.includes('STRENGTH') ||
+        a.includes('PING_SYSTEM')
     ) {
         return 'ON_FOOT';
     }
 
     // 3. Specific Vehicle Implement / Sub-system Domains (mutually exclusive equipment)
-    if (a.includes('AUTOLOAD') || a.startsWith('AL_')) return 'VEHICLE_AUTOLOAD';
-    if (a.includes('CRANE') || a.startsWith('SH_') || a.includes('YARDER')) return 'VEHICLE_CRANE';
+    // AUTOLOAD trailer / wagon
+    if (a.includes('AUTOLOAD')) return 'VEHICLE_AUTOLOAD';
+    // AutoLeveler Implement (AL_ prefix)
+    if (a.startsWith('AL_')) return 'VEHICLE_LEVELER';
+    // FORESTRY Crane / Yarder / Wood processor
+    if (a.includes('CRANE') || a.startsWith('SH_') || a.includes('YARDER') || a.includes('FORESTER') || a.startsWith('WFP_')) return 'VEHICLE_CRANE';
+    // Winch / Towing Chains / Towing Cables
     if (a.includes('LOGSWINCH') || a.includes('WINCH') || a.includes('TOWINGCHAIN')) return 'VEHICLE_WINCH';
+    // Firewood Processor
     if (a.includes('FIREWOODPROCESSOR')) return 'VEHICLE_FIREWOOD';
-    if (a.includes('WINDROWER') || a.includes('TEDDER') || a.includes('MOWER') || a.includes('REALMOWER') || a.includes('GRASS') || a.startsWith('BHH_')) return 'VEHICLE_MOWER';
+    // Mower / Tedder / Windrower / Grass collector
+    if (a.includes('WINDROWER') || a.includes('TEDDER') || a.includes('MOWER') || a.includes('REALMOWER') || a.includes('GRASS') || a.startsWith('BHH_') || a.includes('CHOP_MODE')) return 'VEHICLE_MOWER';
+    // Baler / Bale Wrapper
     if (a.includes('BALE') || a.includes('BALER')) return 'VEHICLE_BALER';
-    if (a.includes('PIPE') || a.includes('UNLOAD_BALE') || a.includes('MANUAL_TIPPING')) return 'VEHICLE_DISCHARGE';
-
-    // 4. Vehicle Navigation / Field Work Guidance
-    if (a.includes('GPS') || a.includes('HLM_') || a.includes('TRAMLINE') || a.includes('ASC_') || a.includes('COURSEPLAY') || a.startsWith('CP_')) {
+    // Pipe / Tip / Trailer Discharge / Bunker
+    if (a.includes('PIPE') || a.includes('MANUAL_TIPPING') || a.includes('LEVELER') || a.includes('SILO')) return 'VEHICLE_DISCHARGE';
+    // Slurry / Hose / Pump / Reel system
+    if (a.startsWith('PM_') || a.includes('PUMP') || a.includes('REEL') || a.startsWith('AIM_')) return 'VEHICLE_SLURRY_HOSE';
+    // Root Crop Harvester (e.g. Ropa Keiler MTS_)
+    if (a.startsWith('MTS_')) return 'VEHICLE_ROOT_HARVESTER';
+    // Field Guidance / GPS / Headland / Tramline
+    if (a.includes('GPS') || a.includes('HLM_') || a.includes('TRAMLINE') || a.includes('ASC_') || a.includes('COURSEPLAY') || a.startsWith('CP_') || a.includes('SECTIONCONTROL')) {
         return 'VEHICLE_GUIDANCE';
     }
 
-    // 5. Vehicle General Driving / Universal In-Cab
+    // 4. Vehicle General Driving / Universal In-Cab
     if (
         a.includes('STEER') || a.includes('GEAR') || a.includes('MOTOR') || a.includes('BRAKE') ||
         a.includes('ACCELERATE') || a.includes('CRUISE') || a.includes('LIGHT') || a.includes('HONK') ||
@@ -268,8 +283,10 @@ function getActionOperationalDomain(name) {
         a.includes('CABIN') || a.includes('TYRE') || a.includes('TIRE') || a.includes('DIFF') ||
         a.includes('CVT') || a.includes('DBL') || a.includes('SPEED') || a.includes('PTO') ||
         a.includes('ATTACH') || a.includes('LOWER') || a.includes('LIFT') || a.includes('TOOL') ||
-        a.includes('LEVELER') || a.includes('SEED') || a.includes('SPRAY') || a.includes('WORKMODE') ||
-        a.includes('CAM_') || a.includes('CAMERA') || a.includes('ZOOM') || a.includes('PARK')
+        a.includes('SEED') || a.includes('SPRAY') || a.includes('WORKMODE') ||
+        a.includes('CAM_') || a.includes('CAMERA') || a.includes('ZOOM') || a.includes('PARK') ||
+        a.includes('THROTTLE') || a.includes('RPM') || a.includes('SUSPENSION') || a.startsWith('SSP_') ||
+        a.includes('RETARDER') || a.includes('ADBLUE') || a.includes('MILEAGE')
     ) {
         return 'VEHICLE_DRIVING';
     }
@@ -278,30 +295,13 @@ function getActionOperationalDomain(name) {
 }
 
 function areDomainsConflicting(domA, domB) {
-    if (domA === domB) return true;
-    
-    // GUI/Menu inputs freeze/intercept player controls; they never conflict with active world gameplay
-    if (domA === 'GUI_MENU' || domB === 'GUI_MENU') return false;
-    
-    // On-foot character actions never conflict with in-vehicle actions
-    if (domA === 'ON_FOOT' && (domB.startsWith('VEHICLE_') || domB === 'GENERAL')) return false;
-    if (domB === 'ON_FOOT' && (domA.startsWith('VEHICLE_') || domA === 'GENERAL')) return false;
-
-    // Mutually exclusive vehicle implement specializations do not conflict with each other
-    // (e.g. Operating an Autoload trailer vs a Forestry crane vs a Mower vs a Winch vs Baler)
-    const exclusiveImplementDomains = new Set([
-        'VEHICLE_AUTOLOAD',
-        'VEHICLE_CRANE',
-        'VEHICLE_WINCH',
-        'VEHICLE_FIREWOOD',
-        'VEHICLE_MOWER',
-        'VEHICLE_BALER',
-        'VEHICLE_DISCHARGE'
-    ]);
-    if (exclusiveImplementDomains.has(domA) && exclusiveImplementDomains.has(domB)) {
-        return false;
-    }
-
+    // Under Option A (Strict Simultaneous Only):
+    // Only flag a genuine conflict if both actions share the exact same gameplay operational situation.
+    // Different situations (Menu vs In-Vehicle, On-Foot vs Driving, Autoload vs Baler vs Mower, etc.)
+    // never execute at the same moment in-game and are completely safe.
+    if (domA !== domB) return false;
+    // Separate menus/dialogs or general non-interactive hotkeys don't conflict
+    if (domA === 'GUI_MENU' || domA === 'GENERAL') return false;
     return true;
 }
 
