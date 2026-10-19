@@ -3469,31 +3469,16 @@ export default function SavegamesPage() {
     }
 
     const { conflictSensitivity } = useSettingsStore.getState();
-    if (conflictSensitivity !== 'off') {
+    if (conflictSensitivity === 'warn') {
       if (saveToLaunch && saveToLaunch.mods) {
         const allConflicts = useLocalModsStore.getState().conflicts;
         const activeConflictsMap = getActiveConflictsForSave(saveToLaunch.mods, allConflicts);
-        
         if (activeConflictsMap.size > 0) {
-          if (conflictSensitivity === 'resolve') {
-            useSavegameStore.setState({ isGameRunning: false, playingSlot: null, launchGraceUntil: 0 });
-            setPendingLaunchSlot(slotIndex);
-            setLaunchExtraOptions(extraOptions);
-            setConflictResolutionData({
-                savePath: saveToLaunch.path,
-                mods: saveToLaunch.mods,
-                activeConflictsMap,
-                action: 'launch'
-            });
-            return;
-          } else if (conflictSensitivity === 'warn' || conflictSensitivity === 'resolve') {
-            useSavegameStore.setState({ isGameRunning: false, playingSlot: null, launchGraceUntil: 0 });
-            import('../store/useToastStore').then(module => module.useToastStore.getState().error(`Launch prevented: Found ${activeConflictsMap.size} active script conflicts.`));
-            return; // ABORT LAUNCH
-          }
+          import('../store/useToastStore').then(module => module.useToastStore.getState().warning(`Note: Savegame has ${activeConflictsMap.size} potential script conflict(s). Launching anyway...`));
         }
       }
     }
+
 
     const result = await window.api.game.launch({ 
         savegameIndex: slotIndex,
