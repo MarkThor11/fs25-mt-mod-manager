@@ -185,6 +185,17 @@ contextBridge.exposeInMainWorld('api', {
     compile: (specificModPaths) => ipcRenderer.invoke('keybinds:compile', specificModPaths),
   },
 
+  // Loading Screen Customization
+  loadingScreen: {
+    getStatus: () => ipcRenderer.invoke('loadingScreen:getStatus'),
+    applyPreset: (presetId) => ipcRenderer.invoke('loadingScreen:applyPreset', { presetId }),
+    applyCustomImage: (filePath, customName) => ipcRenderer.invoke('loadingScreen:applyCustomImage', { filePath, customName }),
+    restoreDefault: () => ipcRenderer.invoke('loadingScreen:restoreDefault'),
+    deleteCustom: (id) => ipcRenderer.invoke('loadingScreen:deleteCustom', { id }),
+    openSharedFolder: () => ipcRenderer.invoke('loadingScreen:openSharedFolder'),
+    openCustomFolder: () => ipcRenderer.invoke('loadingScreen:openCustomFolder'),
+  },
+
   // Settings
   settings: {
     get: (key) => ipcRenderer.invoke('settings:get', key),

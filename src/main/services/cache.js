@@ -131,6 +131,7 @@ function init() {
     backupRetention: '1w',
     autoResolveDependencies: 'false',
     autoOptimize: 'true',
+    ignoredAppVersions: '[]',
   };
 
   const insertDefault = db.prepare(

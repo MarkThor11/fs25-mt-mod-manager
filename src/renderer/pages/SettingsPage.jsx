@@ -1,7 +1,8 @@
+import LoadingScreenCustomizer from '../components/settings/LoadingScreenCustomizer';
 import React, { useEffect, useState } from 'react';
 import {
   Trash2, RefreshCw, Info, Sliders, Eye, HelpCircle, Plus, Folder, ShieldAlert,
-  ChevronDown, ChevronRight, Zap, Settings, FolderOpen, Palette, Monitor, Gamepad2, X
+  ChevronDown, ChevronRight, Zap, Settings, FolderOpen, Palette, Monitor, Gamepad2, X, Wallpaper
 } from 'lucide-react';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useToastStore } from '../store/useToastStore';
@@ -1242,6 +1243,11 @@ export default function SettingsPage() {
             {skipIntro !== false ? ' -skipStartVideos' : ''}
           </code>
         </div>
+      </CollapsibleSection>
+
+      {/* Game Loading Screen */}
+      <CollapsibleSection title="Game Loading Screen" icon={Wallpaper} defaultOpen={false}>
+        <LoadingScreenCustomizer />
       </CollapsibleSection>
 
       {/* Updates */}
