@@ -6262,7 +6262,8 @@ async function prepareServerModsFolder(slotIndex, savePath) {
         for (const req of requiredMods) {
             const reqNameLower = (req.modName || '').toLowerCase();
             const installed = allInstalledMods.find(m => (m.modName || '').toLowerCase() === reqNameLower);
-            const targetFilePath = path.join(targetFolder, `${req.modName}.zip`);
+            const isFolderMod = installed && (installed.isFolder || (installed.filePath && fs.existsSync(installed.filePath) && fs.statSync(installed.filePath).isDirectory()));
+            const targetFilePath = path.join(targetFolder, isFolderMod ? req.modName : `${req.modName}.zip`);
 
             // If a server-specific file already exists in target folder, leave it intact
             if (fs.existsSync(targetFilePath) && !fs.lstatSync(targetFilePath).isSymbolicLink()) {
@@ -6275,13 +6276,25 @@ async function prepareServerModsFolder(slotIndex, savePath) {
                 if (versionMatches) {
                     // Safe symlink to original mod in main library (or hardlink/copy fallback)
                     if (!fs.existsSync(targetFilePath)) {
-                        try {
-                            await fs.symlink(installed.filePath, targetFilePath, 'file');
-                        } catch (symErr) {
+                        if (isFolderMod) {
                             try {
-                                await fs.link(installed.filePath, targetFilePath);
-                            } catch (linkErr) {
-                                await fs.copy(installed.filePath, targetFilePath);
+                                await fs.symlink(installed.filePath, targetFilePath, 'junction');
+                            } catch (jErr) {
+                                try {
+                                    await fs.symlink(installed.filePath, targetFilePath, 'dir');
+                                } catch (dErr) {
+                                    await fs.copy(installed.filePath, targetFilePath);
+                                }
+                            }
+                        } else {
+                            try {
+                                await fs.symlink(installed.filePath, targetFilePath, 'file');
+                            } catch (symErr) {
+                                try {
+                                    await fs.link(installed.filePath, targetFilePath);
+                                } catch (linkErr) {
+                                    await fs.copy(installed.filePath, targetFilePath);
+                                }
                             }
                         }
                     }

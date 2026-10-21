@@ -105,6 +105,7 @@ export const useSettingsStore = create((set) => ({
           for (const p of raw) {
             if (!p || typeof p !== 'string') continue;
             const norm = p.replace(/\\/g, '/').toLowerCase();
+            if (norm.includes('.fs25_virtual_mods') || norm.includes('virtualactivemods')) continue;
             if (!seen.has(norm)) {
               seen.add(norm);
               deduplicated.push(p);

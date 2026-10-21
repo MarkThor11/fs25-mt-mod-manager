@@ -556,15 +556,25 @@ function listZipEntries(zipPath) {
 	* Get all configured mods directory paths from settings.
 	* Returns an array of paths. The first one is considered the Primary path.
 */
+function isVirtualModsPath(p) {
+	if (!p || typeof p !== 'string') return false;
+	const lower = p.toLowerCase();
+	return lower.includes('.fs25_virtual_mods') || lower.includes('virtualactivemods');
+}
+
 function getModsPaths() {
 	const pathsJson = cache.getSetting('modsPaths');
 	if (pathsJson) {
 		try {
-			const paths = JSON.parse(pathsJson);
-			if (Array.isArray(paths) && paths.length > 1) return paths;
-			if (Array.isArray(paths) && paths.length === 1) {
+			const rawPaths = JSON.parse(pathsJson);
+			const paths = Array.isArray(rawPaths) ? rawPaths.filter(p => !isVirtualModsPath(p)) : [];
+			if (Array.isArray(rawPaths) && paths.length !== rawPaths.length) {
+				try { cache.setSetting('modsPaths', JSON.stringify(paths)); } catch (_) {}
+			}
+			if (paths.length > 1) return paths;
+			if (paths.length === 1) {
 				// If only 1 path was configured, auto-merge any other detected storage directories (e.g. F:\mods4, D:\mods)
-				const detected = detectAllModsPaths().map(d => d.path);
+				const detected = detectAllModsPaths().map(d => d.path).filter(p => !isVirtualModsPath(p));
 				const merged = [...paths];
 				for (const dp of detected) {
 					if (!merged.some(p => p.toLowerCase() === dp.toLowerCase())) {
@@ -583,8 +593,9 @@ function getModsPaths() {
 		} catch (e) {}
 	}
 	// Fallback when modsPaths is not set: automatically gather all detected paths
-	const detected = detectAllModsPaths().map(d => d.path);
-	const singlePath = cache.getSetting('modsPath') || getDefaultModsPath();
+	const detected = detectAllModsPaths().map(d => d.path).filter(p => !isVirtualModsPath(p));
+	const rawSingle = cache.getSetting('modsPath');
+	const singlePath = (rawSingle && !isVirtualModsPath(rawSingle)) ? rawSingle : getDefaultModsPath();
 	const initial = [singlePath];
 	for (const dp of detected) {
 		if (!initial.some(p => p.toLowerCase() === dp.toLowerCase())) {
@@ -1025,7 +1036,9 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
             let validSource = false;
             try {
                 const s = await fs.stat(realSource);
-                if (s && s.size > 100) validSource = true;
+                if (s && (s.isDirectory() ? fs.existsSync(path.join(realSource, 'modDesc.xml')) : s.size > 100)) {
+                    validSource = true;
+                }
             } catch (_) {}
 
             if (!validSource) {
@@ -1039,7 +1052,7 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                         try {
                             if (fs.existsSync(c)) {
                                 const cs = await fs.stat(c);
-                                if (cs.size > 100) {
+                                if (cs.isDirectory() ? fs.existsSync(path.join(c, 'modDesc.xml')) : cs.size > 100) {
                                     realSource = c;
                                     validSource = true;
                                     break;
@@ -1217,7 +1230,7 @@ function detectAllModsPaths() {
 				
 				if (activeMatch && dirMatch && dirMatch[1]) {
 					const overridePath = dirMatch[1].replace(/\//g, path.sep);
-					if (fs.existsSync(overridePath)) {
+					if (!isVirtualModsPath(overridePath) && fs.existsSync(overridePath)) {
 						potentialPaths.push({ path: overridePath, type: 'Override (gameSettings.xml)' });
 					}
 				}
@@ -1861,6 +1874,17 @@ async function performScan(manualPaths = null) {
 
 			// Handle symbolic links
 			if (stats.isSymbolicLink()) {
+				const isValidResolvedTarget = async (p) => {
+					try {
+						const st = await fs.stat(p).catch(() => null);
+						if (!st) return false;
+						if (st.isDirectory()) return await fs.pathExists(path.join(p, 'modDesc.xml'));
+						return st.size >= 100;
+					} catch (_) {
+						return false;
+					}
+				};
+
 				if (!subFolder) {
 					// Skip symbolic links in root ONLY if they point to an internal subfolder (an internal mirror)
 					// If they point to an external drive (e.g. F:\mods4, D:\mods), WE MUST SCAN THEM!
@@ -1868,8 +1892,7 @@ async function performScan(manualPaths = null) {
 						let real = null;
 						try {
 							real = await fs.realpath(fullPath);
-							const rStats = await fs.stat(real).catch(() => null);
-							if (!rStats || rStats.size < 100) real = null;
+							if (!await isValidResolvedTarget(real)) real = null;
 						} catch (e) {
 							real = null;
 						}
@@ -1887,7 +1910,7 @@ async function performScan(manualPaths = null) {
 								try {
 									if (await fs.pathExists(cp)) {
 										const cpStats = await fs.lstat(cp);
-										if (!cpStats.isSymbolicLink() && cpStats.size > 100) {
+										if (!cpStats.isSymbolicLink() && await isValidResolvedTarget(cp)) {
 											real = cp;
 											break;
 										}
@@ -1904,7 +1927,7 @@ async function performScan(manualPaths = null) {
 						}
 						targetPath = real;
 						const realStats = await fs.stat(real).catch(() => null);
-						if (!realStats || realStats.size < 100) return;
+						if (!realStats || (!realStats.isDirectory() && realStats.size < 100)) return;
 						stats = realStats;
 					} catch (e) {
 						return;
@@ -1913,7 +1936,7 @@ async function performScan(manualPaths = null) {
 					try {
 						targetPath = await fs.realpath(fullPath);
 						const realStats = await fs.stat(targetPath).catch(() => null);
-						if (realStats && realStats.size > 100) {
+						if (realStats && (realStats.isDirectory() ? await fs.pathExists(path.join(targetPath, 'modDesc.xml')) : realStats.size > 100)) {
 							stats = realStats;
 						} else {
 							// Link target might be broken or 0 bytes, check if root zip exists
@@ -2277,6 +2300,13 @@ async function performScan(manualPaths = null) {
 					}
 				} else if ((entry.isFile() || entry.isSymbolicLink()) && entryName.toLowerCase().endsWith('.zip')) {
 					potentialRootEntries.push({ root: modsPath, name: entryName, sub: '' });
+				} else if (entry.isSymbolicLink()) {
+					try {
+						const targetStat = await fs.stat(path.join(modsPath, entryName)).catch(() => null);
+						if (targetStat && targetStat.isDirectory() && await fs.pathExists(path.join(modsPath, entryName, 'modDesc.xml'))) {
+							potentialRootEntries.push({ root: modsPath, name: entryName, sub: '' });
+						}
+					} catch (_) {}
 				}
 			}
 		} catch (err) {
