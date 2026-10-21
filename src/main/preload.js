@@ -194,6 +194,10 @@ contextBridge.exposeInMainWorld('api', {
     deleteCustom: (id) => ipcRenderer.invoke('loadingScreen:deleteCustom', { id }),
     openSharedFolder: () => ipcRenderer.invoke('loadingScreen:openSharedFolder'),
     openCustomFolder: () => ipcRenderer.invoke('loadingScreen:openCustomFolder'),
+    getMapStatus: () => ipcRenderer.invoke('loadingScreen:getMapStatus'),
+    applyMapScreen: (params) => ipcRenderer.invoke('loadingScreen:applyMapScreen', params),
+    restoreMapScreen: (params) => ipcRenderer.invoke('loadingScreen:restoreMapScreen', params),
+    openMapFolder: (mapId) => ipcRenderer.invoke('loadingScreen:openMapFolder', mapId),
   },
 
   // Settings

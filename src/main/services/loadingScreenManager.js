@@ -50,6 +50,20 @@ async function getGameSharedDir() {
 }
 
 /**
+ * Locate the FS25 'data' directory (contains maps/).
+ */
+async function getGameDataDir() {
+  const shared = await getGameSharedDir();
+  if (shared) {
+    const dataCandidate = path.join(shared, '..', 'data');
+    if (fs.existsSync(dataCandidate) && fs.existsSync(path.join(dataCandidate, 'maps'))) {
+      return dataCandidate;
+    }
+  }
+  return null;
+}
+
+/**
  * Get user custom loading screens storage directory.
  */
 function getCustomScreensDir() {
@@ -84,6 +98,31 @@ async function ensureOriginalBackup(sharedDir) {
   if (!fs.existsSync(origBlurBackup) && fs.existsSync(gameBlurDds)) {
     await fs.copyFile(gameBlurDds, origBlurBackup);
     console.log('[LOADING-SCREEN] Created backup from shared/splashBlur.dds');
+  }
+}
+
+/**
+ * Ensure clean backups of original map loading screens exist.
+ */
+async function ensureMapBackups(dataDir) {
+  if (!dataDir) return;
+  const maps = [
+    { id: 'mapUS', rel: path.join('maps', 'mapUS', 'textures', 'ui', 'preview.dds') },
+    { id: 'mapEU', rel: path.join('maps', 'mapEU', 'textures', 'ui', 'preview.dds') },
+    { id: 'mapAS', rel: path.join('maps', 'mapAS', 'textures', 'ui', 'preview.dds') },
+  ];
+
+  for (const m of maps) {
+    const fullPath = path.join(dataDir, m.rel);
+    const backupPath = fullPath + '.backup_original';
+    if (fs.existsSync(fullPath) && !fs.existsSync(backupPath)) {
+      try {
+        await fs.copyFile(fullPath, backupPath);
+        console.log(`[LOADING-SCREEN] Created original backup for ${m.id}`);
+      } catch (e) {
+        console.warn(`[LOADING-SCREEN] Failed to backup map ${m.id}:`, e.message);
+      }
+    }
   }
 }
 
@@ -144,7 +183,6 @@ function decodeDXT1(buffer, width, height, dataOffset = 128) {
             const idx = (lookup >> (2 * (j * 4 + i))) & 0x03;
             const pixel = colors[idx];
             const outIdx = (py * width + px) * 4;
-            // NativeImage bitmap format on Windows is BGRA:
             bgra[outIdx]     = pixel[2]; // Blue
             bgra[outIdx + 1] = pixel[1]; // Green
             bgra[outIdx + 2] = pixel[0]; // Red
@@ -159,27 +197,9 @@ function decodeDXT1(buffer, width, height, dataOffset = 128) {
 }
 
 /**
- * Encode a BGRA buffer into DXT1 DDS format.
+ * Encode 4x4 DXT1 blocks directly into a destination buffer.
  */
-function encodeDXT1(bgraBuffer, width, height) {
-  const ddsSize = 128 + (width * height / 2);
-  const out = Buffer.alloc(ddsSize);
-
-  // DDS Header (128 bytes)
-  out.write('DDS ', 0, 'ascii');
-  out.writeUInt32LE(124, 4); // dwSize
-  out.writeUInt32LE(0x81007, 8); // dwFlags (DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_LINEARSIZE)
-  out.writeUInt32LE(height, 12);
-  out.writeUInt32LE(width, 16);
-  out.writeUInt32LE(width * height / 2, 20); // dwPitchOrLinearSize
-  out.writeUInt32LE(0, 24); // dwDepth
-  out.writeUInt32LE(1, 28); // dwMipMapCount (1 mipmap)
-  out.writeUInt32LE(32, 76); // ddspf.dwSize
-  out.writeUInt32LE(4, 80); // ddspf.dwFlags (DDPF_FOURCC)
-  out.write('DXT1', 84, 'ascii');
-  out.writeUInt32LE(0, 88); // ddspf.dwRGBBitCount
-  out.writeUInt32LE(0x1000, 108); // dwCaps (DDSCAPS_TEXTURE)
-
+function encodeDXT1BlocksInto(bgra, width, height, out, initialOffset) {
   const rgbTo565 = (r, g, b) => ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
   const decode565 = (c) => {
     const r = (c >> 11) & 0x1f;
@@ -188,8 +208,8 @@ function encodeDXT1(bgraBuffer, width, height) {
     return [(r << 3) | (r >> 2), (g << 2) | (g >> 4), (b << 3) | (b >> 2)];
   };
 
-  let outOffset = 128;
-  const blockPixels = new Uint8Array(48); // 16 pixels * 3 (r, g, b)
+  let outOffset = initialOffset;
+  const blockPixels = new Uint8Array(48);
 
   for (let by = 0; by < height; by += 4) {
     for (let bx = 0; bx < width; bx += 4) {
@@ -203,10 +223,9 @@ function encodeDXT1(bgraBuffer, width, height) {
         for (let px = 0; px < 4; px++) {
           const x = bx + px;
           const idx = rowOffset + x * 4;
-          // In BGRA: [0]=B, [1]=G, [2]=R
-          const b = bgraBuffer[idx];
-          const g = bgraBuffer[idx + 1];
-          const r = bgraBuffer[idx + 2];
+          const b = bgra[idx];
+          const g = bgra[idx + 1];
+          const r = bgra[idx + 2];
           blockPixels[pIdx++] = r;
           blockPixels[pIdx++] = g;
           blockPixels[pIdx++] = b;
@@ -271,6 +290,91 @@ function encodeDXT1(bgraBuffer, width, height) {
       outOffset += 8;
     }
   }
+}
+
+/**
+ * 2x downsampling helper for mipmaps.
+ */
+function downsample2x(bgra, width, height) {
+  const newW = width >> 1;
+  const newH = height >> 1;
+  const out = Buffer.alloc(newW * newH * 4);
+  for (let y = 0; y < newH; y++) {
+    const srcY = y * 2;
+    for (let x = 0; x < newW; x++) {
+      const srcX = x * 2;
+      const i00 = (srcY * width + srcX) * 4;
+      const i01 = (srcY * width + (srcX + 1)) * 4;
+      const i10 = ((srcY + 1) * width + srcX) * 4;
+      const i11 = ((srcY + 1) * width + (srcX + 1)) * 4;
+
+      const outIdx = (y * newW + x) * 4;
+      out[outIdx]     = (bgra[i00] + bgra[i01] + bgra[i10] + bgra[i11]) >> 2;
+      out[outIdx + 1] = (bgra[i00 + 1] + bgra[i01 + 1] + bgra[i10 + 1] + bgra[i11 + 1]) >> 2;
+      out[outIdx + 2] = (bgra[i00 + 2] + bgra[i01 + 2] + bgra[i10 + 2] + bgra[i11 + 2]) >> 2;
+      out[outIdx + 3] = 255;
+    }
+  }
+  return out;
+}
+
+/**
+ * Encode a 4096x4096 BGRA buffer into single-mipmap DXT1 DDS format for splash.dds.
+ */
+function encodeDXT1Single(bgraBuffer, width, height) {
+  const ddsSize = 128 + (width * height / 2);
+  const out = Buffer.alloc(ddsSize);
+
+  out.write('DDS ', 0, 'ascii');
+  out.writeUInt32LE(124, 4);
+  out.writeUInt32LE(0x81007, 8);
+  out.writeUInt32LE(height, 12);
+  out.writeUInt32LE(width, 16);
+  out.writeUInt32LE(width * height / 2, 20);
+  out.writeUInt32LE(0, 24);
+  out.writeUInt32LE(1, 28);
+  out.writeUInt32LE(32, 76);
+  out.writeUInt32LE(4, 80);
+  out.write('DXT1', 84, 'ascii');
+  out.writeUInt32LE(0, 88);
+  out.writeUInt32LE(0x1000, 108);
+
+  encodeDXT1BlocksInto(bgraBuffer, width, height, out, 128);
+  return out;
+}
+
+/**
+ * Encode a 2048x2048 BGRA buffer into 3-mipmap DXT1 DDS format matching FS25 preview.dds (2,752,640 bytes).
+ */
+function encodeMapPreviewDDS(bgra2048) {
+  const ddsSize = 128 + 2097152 + 524288 + 131072; // exactly 2752640 bytes
+  const out = Buffer.alloc(ddsSize);
+
+  // Header (128 bytes)
+  out.write('DDS ', 0, 'ascii');
+  out.writeUInt32LE(124, 4); // dwSize
+  out.writeUInt32LE(0xa1007, 8); // dwFlags (DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_LINEARSIZE | DDSD_MIPMAPCOUNT)
+  out.writeUInt32LE(2048, 12); // dwHeight
+  out.writeUInt32LE(2048, 16); // dwWidth
+  out.writeUInt32LE(2097152, 20); // dwPitchOrLinearSize (level 0 linear size)
+  out.writeUInt32LE(0, 24); // dwDepth
+  out.writeUInt32LE(3, 28); // dwMipMapCount (3 levels)
+  out.writeUInt32LE(32, 76); // ddspf.dwSize
+  out.writeUInt32LE(4, 80); // ddspf.dwFlags (DDPF_FOURCC)
+  out.write('DXT1', 84, 'ascii');
+  out.writeUInt32LE(0, 88); // ddspf.dwRGBBitCount
+  out.writeUInt32LE(0x401000, 108); // dwCaps
+
+  // Level 0: 2048x2048
+  encodeDXT1BlocksInto(bgra2048, 2048, 2048, out, 128);
+
+  // Level 1: 1024x1024
+  const bgra1024 = downsample2x(bgra2048, 2048, 2048);
+  encodeDXT1BlocksInto(bgra1024, 1024, 1024, out, 128 + 2097152);
+
+  // Level 2: 512x512
+  const bgra512 = downsample2x(bgra1024, 1024, 1024);
+  encodeDXT1BlocksInto(bgra512, 512, 512, out, 128 + 2097152 + 524288);
 
   return out;
 }
@@ -283,7 +387,6 @@ function fastBoxBlur(bgra, width, height, radius = 16) {
   const out = Buffer.alloc(bgra.length);
   const windowSize = 2 * radius + 1;
 
-  // Horizontal pass
   for (let y = 0; y < height; y++) {
     const rowOffset = y * width * 4;
     let bSum = 0, gSum = 0, rSum = 0;
@@ -309,7 +412,6 @@ function fastBoxBlur(bgra, width, height, radius = 16) {
     }
   }
 
-  // Vertical pass
   for (let x = 0; x < width; x++) {
     let bSum = 0, gSum = 0, rSum = 0;
     for (let i = -radius; i <= radius; i++) {
@@ -380,10 +482,302 @@ function getFilePreviewDataUrl(filePath, maxDimension = 640) {
 }
 
 /**
- * Get comprehensive status: active loading screen, official presets, and custom gallery.
+ * Get map loading screens for basegame maps and any installed mod maps.
+ */
+async function getMapLoadingScreensStatus() {
+  const dataDir = await getGameDataDir();
+  if (!dataDir) {
+    return { available: false, error: 'Game data directory not found.' };
+  }
+
+  await ensureMapBackups(dataDir);
+
+  const baseMaps = [
+    {
+      id: 'mapUS',
+      title: 'Riverbend Springs',
+      region: 'North America (US Pacific Northwest)',
+      relPath: path.join('maps', 'mapUS', 'textures', 'ui', 'preview.dds'),
+    },
+    {
+      id: 'mapEU',
+      title: 'Zielonka',
+      region: 'Central Europe',
+      relPath: path.join('maps', 'mapEU', 'textures', 'ui', 'preview.dds'),
+    },
+    {
+      id: 'mapAS',
+      title: 'Hutan Pantai',
+      region: 'East Asia',
+      relPath: path.join('maps', 'mapAS', 'textures', 'ui', 'preview.dds'),
+    },
+  ];
+
+  const mapsList = [];
+
+  for (const b of baseMaps) {
+    const fullPath = path.join(dataDir, b.relPath);
+    const backupPath = fullPath + '.backup_original';
+    const exists = fs.existsSync(fullPath);
+    const hasBackup = fs.existsSync(backupPath);
+
+    let isOriginal = true;
+    if (exists && hasBackup) {
+      const h1 = getFileHash(fullPath);
+      const h2 = getFileHash(backupPath);
+      isOriginal = h1 === h2;
+    }
+
+    mapsList.push({
+      id: b.id,
+      title: b.title,
+      region: b.region,
+      filePath: fullPath,
+      exists,
+      isOriginal,
+      preview: exists ? getFilePreviewDataUrl(fullPath, 640) : null,
+      isMod: false,
+    });
+  }
+
+  // Scan installed mod maps from mods folder
+  try {
+    const modsPath = pathProvider.getDefaultModsPath();
+    if (fs.existsSync(modsPath)) {
+      const AdmZip = require('adm-zip');
+      const files = await fs.readdir(modsPath);
+      for (const f of files) {
+        if (f.toLowerCase().endsWith('.zip')) {
+          const zipPath = path.join(modsPath, f);
+          try {
+            const zip = new AdmZip(zipPath);
+            const modDescEntry = zip.getEntry('modDesc.xml');
+            if (modDescEntry) {
+              const xmlContent = modDescEntry.getData().toString('utf8');
+              if (xmlContent.includes('<map ') || xmlContent.includes('<maps>')) {
+                const titleMatch = xmlContent.match(/<title>[\s\S]*?<en>([^<]+)<\/en>/i) || xmlContent.match(/<title>([^<]+)<\/title>/i);
+                const mapTitle = titleMatch ? titleMatch[1].trim() : f.replace(/\.zip$/i, '');
+                
+                // Find preview image inside zip
+                const previewEntry = zip.getEntries().find(e => 
+                  e.entryName.toLowerCase().endsWith('preview.png') || 
+                  e.entryName.toLowerCase().endsWith('preview.dds')
+                );
+
+                let previewDataUrl = null;
+                if (previewEntry) {
+                  const imgBuf = previewEntry.getData();
+                  if (previewEntry.entryName.toLowerCase().endsWith('.dds')) {
+                    const h = imgBuf.readUInt32LE(12);
+                    const w = imgBuf.readUInt32LE(16);
+                    const bgra = decodeDXT1(imgBuf, w, h, 128);
+                    const img = nativeImage.createFromBitmap(bgra, { width: w, height: h });
+                    previewDataUrl = img.resize({ width: 640, height: 360, quality: 'good' }).toDataURL();
+                  } else {
+                    const img = nativeImage.createFromBuffer(imgBuf);
+                    previewDataUrl = img.resize({ width: 640, height: 360, quality: 'good' }).toDataURL();
+                  }
+                }
+
+                mapsList.push({
+                  id: `mod:${f}`,
+                  title: mapTitle,
+                  region: 'Custom Mod Map',
+                  filePath: zipPath,
+                  exists: true,
+                  isOriginal: !fs.existsSync(zipPath + '.orig_loadscreen_backup'),
+                  preview: previewDataUrl,
+                  isMod: true,
+                  fileName: f,
+                });
+              }
+            }
+          } catch (_) {}
+        }
+      }
+    }
+  } catch (mErr) {
+    console.warn('[LOADING-SCREEN] Error scanning mod maps:', mErr.message);
+  }
+
+  return {
+    available: true,
+    maps: mapsList,
+  };
+}
+
+/**
+ * Apply a custom loading screen to one or all maps.
+ */
+async function applyMapLoadingScreen(options = {}) {
+  const { mapId, filePath, customName, applyToAll = false } = options;
+  if (!filePath || !fs.existsSync(filePath)) {
+    throw new Error('Image file not found.');
+  }
+
+  const dataDir = await getGameDataDir();
+  if (!dataDir) throw new Error('Game data directory not found.');
+
+  await ensureMapBackups(dataDir);
+
+  // Convert source image to 2048x2048 DXT1 with 3 mip levels
+  const ext = path.extname(filePath).toLowerCase();
+  let bgra2048 = null;
+
+  if (ext === '.dds') {
+    const ddsBuf = await fs.readFile(filePath);
+    if (ddsBuf.length < 128 || ddsBuf.toString('ascii', 0, 4) !== 'DDS ') {
+      throw new Error('Invalid DDS file.');
+    }
+    const origH = ddsBuf.readUInt32LE(12);
+    const origW = ddsBuf.readUInt32LE(16);
+    const decodedBgra = decodeDXT1(ddsBuf, origW, origH, 128);
+    const img = nativeImage.createFromBitmap(decodedBgra, { width: origW, height: origH });
+    const resized = img.resize({ width: 2048, height: 2048, quality: 'best' });
+    bgra2048 = resized.toBitmap();
+  } else {
+    const srcImg = nativeImage.createFromPath(filePath);
+    if (!srcImg || srcImg.isEmpty()) {
+      throw new Error('Unable to decode image. Please choose a valid JPG, PNG, or DDS.');
+    }
+    const { width: origW, height: origH } = srcImg.getSize();
+    const targetAspect = 16 / 9;
+    const currentAspect = origW / origH;
+
+    let croppedImg = srcImg;
+    if (Math.abs(currentAspect - targetAspect) > 0.02) {
+      if (currentAspect > targetAspect) {
+        const cropW = Math.round(origH * targetAspect);
+        const cropX = Math.round((origW - cropW) / 2);
+        croppedImg = srcImg.crop({ x: cropX, y: 0, width: cropW, height: origH });
+      } else {
+        const cropH = Math.round(origW / targetAspect);
+        const cropY = Math.round((origH - cropH) / 2);
+        croppedImg = srcImg.crop({ x: 0, y: cropY, width: origW, height: cropH });
+      }
+    }
+    const resized = croppedImg.resize({ width: 2048, height: 2048, quality: 'best' });
+    bgra2048 = resized.toBitmap();
+  }
+
+  // Generate 3-mipmap 2048x2048 DDS buffer
+  const finalMapDdsBuffer = encodeMapPreviewDDS(bgra2048);
+
+  // Save copy into custom screens gallery
+  const baseName = customName || path.basename(filePath, ext);
+  const cleanId = `mapload_${Date.now()}_${baseName.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+  const customDir = getCustomScreensDir();
+  const savedDdsPath = path.join(customDir, `${cleanId}.dds`);
+  const savedMetaPath = path.join(customDir, `${cleanId}.json`);
+
+  await fs.writeFile(savedDdsPath, finalMapDdsBuffer);
+  await fs.writeJson(savedMetaPath, {
+    id: cleanId,
+    name: baseName,
+    createdAt: Date.now(),
+    type: 'map_loading_screen',
+  });
+
+  const baseMaps = [
+    { id: 'mapUS', rel: path.join('maps', 'mapUS', 'textures', 'ui', 'preview.dds') },
+    { id: 'mapEU', rel: path.join('maps', 'mapEU', 'textures', 'ui', 'preview.dds') },
+    { id: 'mapAS', rel: path.join('maps', 'mapAS', 'textures', 'ui', 'preview.dds') },
+  ];
+
+  if (applyToAll) {
+    // Apply to all 3 basegame maps
+    for (const b of baseMaps) {
+      const target = path.join(dataDir, b.rel);
+      await fs.writeFile(target, finalMapDdsBuffer);
+    }
+  } else {
+    // Apply to specific map
+    if (mapId && mapId.startsWith('mod:')) {
+      // Mod Map handling
+      const zipName = mapId.replace(/^mod:/, '');
+      const modsPath = pathProvider.getDefaultModsPath();
+      const zipPath = path.join(modsPath, zipName);
+      if (fs.existsSync(zipPath)) {
+        const AdmZip = require('adm-zip');
+        const zip = new AdmZip(zipPath);
+        // Backup zip if not backed up
+        const zipBackup = zipPath + '.orig_loadscreen_backup';
+        if (!fs.existsSync(zipBackup)) {
+          await fs.copyFile(zipPath, zipBackup);
+        }
+        // Check for preview entry in zip
+        const existingEntry = zip.getEntries().find(e => 
+          e.entryName.toLowerCase().endsWith('preview.dds') || 
+          e.entryName.toLowerCase().endsWith('preview.png')
+        );
+        const targetEntryName = existingEntry ? existingEntry.entryName : 'preview.dds';
+        zip.addFile(targetEntryName, finalMapDdsBuffer);
+        zip.writeZip(zipPath);
+      }
+    } else {
+      const matched = baseMaps.find(b => b.id === mapId) || baseMaps[0];
+      const target = path.join(dataDir, matched.rel);
+      await fs.writeFile(target, finalMapDdsBuffer);
+    }
+  }
+
+  previewCache.clear();
+  return await getStatus();
+}
+
+/**
+ * Restore original map loading screen.
+ */
+async function restoreMapLoadingScreen(options = {}) {
+  const { mapId, restoreAll = false } = options;
+  const dataDir = await getGameDataDir();
+  if (!dataDir) throw new Error('Game data directory not found.');
+
+  const baseMaps = [
+    { id: 'mapUS', rel: path.join('maps', 'mapUS', 'textures', 'ui', 'preview.dds') },
+    { id: 'mapEU', rel: path.join('maps', 'mapEU', 'textures', 'ui', 'preview.dds') },
+    { id: 'mapAS', rel: path.join('maps', 'mapAS', 'textures', 'ui', 'preview.dds') },
+  ];
+
+  if (restoreAll) {
+    for (const b of baseMaps) {
+      const full = path.join(dataDir, b.rel);
+      const backup = full + '.backup_original';
+      if (fs.existsSync(backup)) {
+        await fs.copyFile(backup, full);
+      }
+    }
+  } else if (mapId && mapId.startsWith('mod:')) {
+    const zipName = mapId.replace(/^mod:/, '');
+    const modsPath = pathProvider.getDefaultModsPath();
+    const zipPath = path.join(modsPath, zipName);
+    const zipBackup = zipPath + '.orig_loadscreen_backup';
+    if (fs.existsSync(zipBackup)) {
+      await fs.copyFile(zipBackup, zipPath);
+      await fs.remove(zipBackup);
+    }
+  } else {
+    const matched = baseMaps.find(b => b.id === mapId);
+    if (matched) {
+      const full = path.join(dataDir, matched.rel);
+      const backup = full + '.backup_original';
+      if (fs.existsSync(backup)) {
+        await fs.copyFile(backup, full);
+      }
+    }
+  }
+
+  previewCache.clear();
+  return await getStatus();
+}
+
+/**
+ * Get comprehensive status: active loading screen, official presets, custom gallery, and map loading screens.
  */
 async function getStatus() {
   const sharedDir = await getGameSharedDir();
+  const dataDir = await getGameDataDir();
+
   if (!sharedDir) {
     return {
       available: false,
@@ -392,6 +786,7 @@ async function getStatus() {
   }
 
   await ensureOriginalBackup(sharedDir);
+  await ensureMapBackups(dataDir);
 
   const activeSplashPath = path.join(sharedDir, 'splash.dds');
   const activeHash = getFileHash(activeSplashPath);
@@ -400,10 +795,8 @@ async function getStatus() {
   const originalBackupPath = path.join(sharedDir, 'splash.dds.backup_original');
   const originalHash = getFileHash(originalBackupPath);
 
-  // 1. Gather Presets
+  // 1. Presets for Main Menu
   const presets = [];
-
-  // Default FS25 preset
   const defaultPath = fs.existsSync(originalBackupPath) ? originalBackupPath : path.join(sharedDir, 'splash', 'splash.dds');
   if (fs.existsSync(defaultPath)) {
     const dHash = getFileHash(defaultPath);
@@ -419,7 +812,6 @@ async function getStatus() {
     });
   }
 
-  // Official variants in shared/
   const officialVariants = [
     {
       fileName: 'splash_highlandsFishing.dds',
@@ -452,33 +844,7 @@ async function getStatus() {
     }
   }
 
-  // Any other splash_*.dds present in shared/
-  try {
-    const files = await fs.readdir(sharedDir);
-    for (const file of files) {
-      if (file.toLowerCase().startsWith('splash_') && file.toLowerCase().endsWith('.dds')) {
-        const alreadyHandled = presets.some(p => path.basename(p.filePath).toLowerCase() === file.toLowerCase());
-        if (!alreadyHandled) {
-          const filePath = path.join(sharedDir, file);
-          const fHash = getFileHash(filePath);
-          const cleanName = file.replace(/^splash_/i, '').replace(/\.dds$/i, '');
-          const formattedTitle = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
-          presets.push({
-            id: file,
-            title: formattedTitle,
-            description: `Game shared preset: ${file}`,
-            filePath,
-            hash: fHash,
-            preview: getFilePreviewDataUrl(filePath, 480),
-            isDefault: false,
-            isActive: activeHash === fHash,
-          });
-        }
-      }
-    }
-  } catch (e) {}
-
-  // 2. Gather User Custom Loading Screens
+  // 2. Custom Gallery
   const customScreensDir = getCustomScreensDir();
   const custom = [];
   try {
@@ -508,11 +874,11 @@ async function getStatus() {
         isActive: activeHash === cHash,
       });
     }
-  } catch (e) {
-    console.error('[LOADING-SCREEN] Error reading custom screens:', e.message);
-  }
+  } catch (e) {}
 
-  // Active preset or custom matching
+  // 3. Map Loading Screens Status
+  const mapScreensStatus = await getMapLoadingScreensStatus();
+
   let activeName = 'Custom Loading Screen';
   const matchedPreset = presets.find(p => p.isActive);
   const matchedCustom = custom.find(c => c.isActive);
@@ -528,6 +894,7 @@ async function getStatus() {
   return {
     available: true,
     sharedDir,
+    dataDir,
     active: {
       name: activeName,
       hash: activeHash,
@@ -538,11 +905,12 @@ async function getStatus() {
     },
     presets,
     custom,
+    mapScreens: mapScreensStatus?.maps || [],
   };
 }
 
 /**
- * Apply a selected preset.
+ * Apply a selected preset to Main Menu splash screen.
  */
 async function applyPreset(presetId) {
   const sharedDir = await getGameSharedDir();
@@ -559,40 +927,34 @@ async function applyPreset(presetId) {
   const targetSplash = path.join(sharedDir, 'splash.dds');
   const targetBlur = path.join(sharedDir, 'splashBlur.dds');
 
-  // Copy preset to splash.dds
   await fs.copyFile(preset.filePath, targetSplash);
 
-  // If restoring default, also restore original blur
   if (preset.isDefault) {
     const origBlur = path.join(sharedDir, 'splashBlur.dds.backup_original');
     if (fs.existsSync(origBlur)) {
       await fs.copyFile(origBlur, targetBlur);
     }
   } else {
-    // Generate matching blurred version for non-default presets
     try {
       const splashBuf = await fs.readFile(targetSplash);
       const bgra = decodeDXT1(splashBuf, 4096, 4096, 128);
-      // Downscale to 2048x2048 for splashBlur
       const img = nativeImage.createFromBitmap(bgra, { width: 4096, height: 4096 });
       const smallImg = img.resize({ width: 2048, height: 2048, quality: 'best' });
       const smallBgra = smallImg.toBitmap();
       const blurredBgra = fastBoxBlur(smallBgra, 2048, 2048, 16);
-      const blurDds = encodeDXT1(blurredBgra, 2048, 2048);
+      const blurDds = encodeDXT1Single(blurredBgra, 2048, 2048);
       await fs.writeFile(targetBlur, blurDds);
     } catch (bErr) {
       console.warn('[LOADING-SCREEN] Failed to generate blurred splash for preset:', bErr.message);
     }
   }
 
-  // Clear preview cache for splash.dds
   previewCache.clear();
-
   return await getStatus();
 }
 
 /**
- * Apply a custom user image (PNG, JPG, WebP, BMP, or DDS).
+ * Apply a custom user image to the Main Menu splash screen.
  */
 async function applyCustomImage(filePath, customName = null) {
   if (!filePath || !fs.existsSync(filePath)) {
@@ -616,7 +978,6 @@ async function applyCustomImage(filePath, customName = null) {
   const targetBlur = path.join(sharedDir, 'splashBlur.dds');
 
   if (ext === '.dds') {
-    // Direct DDS copy
     const buf = await fs.readFile(filePath);
     if (buf.length < 128 || buf.toString('ascii', 0, 4) !== 'DDS ') {
       throw new Error('Invalid DDS file format.');
@@ -624,7 +985,6 @@ async function applyCustomImage(filePath, customName = null) {
     await fs.writeFile(savedDdsPath, buf);
     await fs.copyFile(savedDdsPath, targetSplash);
 
-    // Generate blurred version
     try {
       const height = buf.readUInt32LE(12) || 4096;
       const width = buf.readUInt32LE(16) || 4096;
@@ -633,13 +993,12 @@ async function applyCustomImage(filePath, customName = null) {
       const smallImg = img.resize({ width: 2048, height: 2048, quality: 'best' });
       const smallBgra = smallImg.toBitmap();
       const blurredBgra = fastBoxBlur(smallBgra, 2048, 2048, 16);
-      const blurDds = encodeDXT1(blurredBgra, 2048, 2048);
+      const blurDds = encodeDXT1Single(blurredBgra, 2048, 2048);
       await fs.writeFile(targetBlur, blurDds);
     } catch (e) {
       console.warn('[LOADING-SCREEN] Blur generation skipped for raw DDS:', e.message);
     }
   } else {
-    // Standard image: load with nativeImage
     const srcImg = nativeImage.createFromPath(filePath);
     if (!srcImg || srcImg.isEmpty()) {
       throw new Error('Unable to decode image file. Please choose a valid JPG, PNG, or DDS.');
@@ -649,40 +1008,33 @@ async function applyCustomImage(filePath, customName = null) {
     const targetAspect = 16 / 9;
     const currentAspect = origW / origH;
 
-    // Smart 16:9 center crop to prevent visual distortion
     let croppedImg = srcImg;
     if (Math.abs(currentAspect - targetAspect) > 0.02) {
       if (currentAspect > targetAspect) {
-        // Image is wider than 16:9 -> crop width
         const cropW = Math.round(origH * targetAspect);
         const cropX = Math.round((origW - cropW) / 2);
         croppedImg = srcImg.crop({ x: cropX, y: 0, width: cropW, height: origH });
       } else {
-        // Image is taller than 16:9 -> crop height
         const cropH = Math.round(origW / targetAspect);
         const cropY = Math.round((origH - cropH) / 2);
         croppedImg = srcImg.crop({ x: 0, y: cropY, width: origW, height: cropH });
       }
     }
 
-    // 1. Splash DDS: 4096x4096 texture (game engine native resolution)
     const splashImg = croppedImg.resize({ width: 4096, height: 4096, quality: 'best' });
     const splashBgra = splashImg.toBitmap();
-    const splashDds = encodeDXT1(splashBgra, 4096, 4096);
+    const splashDds = encodeDXT1Single(splashBgra, 4096, 4096);
 
-    // Save to custom gallery and apply to game
     await fs.writeFile(savedDdsPath, splashDds);
     await fs.writeFile(targetSplash, splashDds);
 
-    // 2. SplashBlur DDS: 2048x2048 texture with box blur
     const blurImg = croppedImg.resize({ width: 2048, height: 2048, quality: 'best' });
     const blurBgra = blurImg.toBitmap();
     const blurredBgra = fastBoxBlur(blurBgra, 2048, 2048, 16);
-    const blurDds = encodeDXT1(blurredBgra, 2048, 2048);
+    const blurDds = encodeDXT1Single(blurredBgra, 2048, 2048);
     await fs.writeFile(targetBlur, blurDds);
   }
 
-  // Save metadata
   await fs.writeJson(savedMetaPath, {
     id: cleanId,
     name: baseName,
@@ -739,10 +1091,14 @@ async function deleteCustomScreen(id) {
 
 module.exports = {
   getGameSharedDir,
+  getGameDataDir,
   getCustomScreensDir,
   getStatus,
   applyPreset,
   applyCustomImage,
   restoreDefault,
   deleteCustomScreen,
+  getMapLoadingScreensStatus,
+  applyMapLoadingScreen,
+  restoreMapLoadingScreen,
 };
