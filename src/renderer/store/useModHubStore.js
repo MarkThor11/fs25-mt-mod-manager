@@ -990,12 +990,14 @@ export const useModHubStore = create((set, get) => ({
       
       const mappedMods = (cached.allMods || []).map(m => {
         if (!m?.modId) return m;
-        const individual = modCache[String(m.modId)];
-        if (individual?.techData) {
+        const rawId = String(m.modId);
+        const cleanId = rawId.replace(/^0+/, "");
+        const individual = modCache[rawId] || (cleanId ? modCache[cleanId] : null);
+        if (individual) {
           return {
             ...m,
             ...individual,
-            techData: { ...(m.techData || {}), ...individual.techData }
+            techData: { ...(m.techData || {}), ...(individual.techData || {}) }
           };
         }
         return m;

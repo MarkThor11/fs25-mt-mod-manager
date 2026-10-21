@@ -126,6 +126,42 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
 
   const isSessionInstalled = useDownloadStore(s => modIdStr ? !!s.sessionInstalled[modIdStr] : false);
 
+  const cachedMod = useModHubStore((s) => {
+    if (!rawModId) return null;
+    const strId = String(rawModId);
+    const cleanId = strId.replace(/^0+/, "");
+    return s.modCache[strId] || (cleanId ? s.modCache[cleanId] : null);
+  });
+
+  const releaseDate = useMemo(() => {
+    return mod?.releasedDate || cachedMod?.releasedDate || mod?.metadata?.Released || cachedMod?.metadata?.Released || null;
+  }, [mod?.releasedDate, mod?.metadata?.Released, cachedMod?.releasedDate, cachedMod?.metadata?.Released]);
+
+  const releaseDateObj = useMemo(() => {
+    if (!releaseDate) return null;
+    const clean = String(releaseDate).replace(/^released:?\s*/i, "").trim();
+    const parts = clean.split(".");
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+        const d = new Date(year, month, day);
+        if (!isNaN(d.getTime())) return d;
+      }
+    }
+    const d = new Date(clean);
+    return !isNaN(d.getTime()) ? d : null;
+  }, [releaseDate]);
+
+  const displayDate = useMemo(() => {
+    if (releaseDateObj) {
+      return releaseDateObj.toLocaleDateString();
+    }
+    if (!releaseDate) return null;
+    return String(releaseDate).replace(/^released:?\s*/i, "").trim();
+  }, [releaseDate, releaseDateObj]);
+
   const installedVersion = useMemo(() => {
     if (!mod) return null;
     if (isSessionInstalled) return 'Installed';
@@ -714,24 +750,18 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
   const isMini = zoom < 185;
   
   const shouldHideBadge = () => {
-    const cached = useModHubStore.getState().modCache[mod.modId];
-    if (!cached || !cached.releasedDate) {
+    if (!releaseDateObj) {
         // If we don't have a date, we only show the badge if the scraper explicitly found it
         return !mod.isNew && !mod.isUpdate;
     }
     
     try {
-        const parts = cached.releasedDate.split('.');
-        if (parts.length === 3) {
-            const release = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-            const now = new Date();
-            const diffHours = (now - release) / (1000 * 60 * 60);
-            return diffHours > 168; // Hide after 7 days
-        }
+        const now = new Date();
+        const diffHours = (now - releaseDateObj) / (1000 * 60 * 60);
+        return diffHours > 168; // Hide after 7 days
     } catch (e) {
         return true;
     }
-    return true;
   };
 
   const hideFreshBadges = shouldHideBadge();
@@ -1069,6 +1099,17 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
             {mod.author}
           </span>
         </div>
+
+        {displayDate && (
+          <div className="mod-card-date-row">
+            <span 
+              className="mod-card-date"
+              title={`Released: ${displayDate}`}
+            >
+              Released: {displayDate}
+            </span>
+          </div>
+        )}
 
         {/* Flexible spacer to push metadata to the bottom */}
         <div style={{ flex: 1, minHeight: 8 }} />
