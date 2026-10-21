@@ -14,6 +14,7 @@ const { getSystemSpecs, optimize, optimizeRevert, setHighPerformancePlan } = req
 const radioManager = require('./services/radioManager');
 const inputBindingManager = require('./services/inputBindingManager');
 const pathProvider = require('./services/pathProvider');
+const loadingScreenManager = require('./services/loadingScreenManager');
 const { initAppUpdater } = require('./services/appUpdater');
 const CATEGORIES = require('./resources/data/categories');
 const isDev = !app.isPackaged;
@@ -1935,6 +1936,73 @@ ipcMain.handle('game:detectPath', async () => {
     return await gameLauncher.detectGamePath();
   } catch (err) {
     return { path: null, error: err.message };
+  }
+});
+
+// ── Game Loading Screen Customization ──
+ipcMain.handle('loadingScreen:getStatus', async () => {
+  try {
+    return await loadingScreenManager.getStatus();
+  } catch (err) {
+    return { available: false, error: err.message };
+  }
+});
+
+ipcMain.handle('loadingScreen:applyPreset', async (_, { presetId }) => {
+  try {
+    return await loadingScreenManager.applyPreset(presetId);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('loadingScreen:applyCustomImage', async (_, { filePath, customName }) => {
+  try {
+    return await loadingScreenManager.applyCustomImage(filePath, customName);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('loadingScreen:restoreDefault', async () => {
+  try {
+    return await loadingScreenManager.restoreDefault();
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('loadingScreen:deleteCustom', async (_, { id }) => {
+  try {
+    return await loadingScreenManager.deleteCustomScreen(id);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('loadingScreen:openSharedFolder', async () => {
+  try {
+    const sharedDir = await loadingScreenManager.getGameSharedDir();
+    if (sharedDir && fs.existsSync(sharedDir)) {
+      await shell.openPath(sharedDir);
+      return { success: true };
+    }
+    return { success: false, error: 'Shared directory not found' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('loadingScreen:openCustomFolder', async () => {
+  try {
+    const customDir = loadingScreenManager.getCustomScreensDir();
+    if (customDir && fs.existsSync(customDir)) {
+      await shell.openPath(customDir);
+      return { success: true };
+    }
+    return { success: false, error: 'Custom directory not found' };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });
 
