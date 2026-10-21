@@ -6,6 +6,7 @@ export const useSettingsStore = create((set) => ({
   modsPaths: [],
   gamePath: '',
   autoCheckUpdates: true,
+  ignoredAppVersions: [],
   launchPreference: 'default',
   savegameSlot: null,
   enableCheats: true,
@@ -112,7 +113,15 @@ export const useSettingsStore = create((set) => ({
           return deduplicated;
         })(),
         gamePath: settings.gamePath || '',
-        autoCheckUpdates: settings.autoCheckUpdates === 'true',
+        autoCheckUpdates: settings.autoCheckUpdates !== 'false',
+        ignoredAppVersions: (() => {
+          try {
+            const p = settings.ignoredAppVersions ? JSON.parse(settings.ignoredAppVersions) : [];
+            return Array.isArray(p) ? p : [];
+          } catch {
+            return [];
+          }
+        })(),
         launchPreference: settings.launchPreference || 'default',
         savegameSlot: settings.savegameSlot ? parseInt(settings.savegameSlot) : null,
         enableCheats: settings.enableCheats !== 'false', // Default true
@@ -297,6 +306,37 @@ export const useSettingsStore = create((set) => ({
   setAutoCheckUpdates: async (val) => {
     set({ autoCheckUpdates: val });
     if (window.api?.settings) await window.api.settings.set('autoCheckUpdates', String(val));
+  },
+
+  ignoreAppVersion: async (version) => {
+    if (!version) return;
+    const clean = String(version).trim().replace(/^v/i, '');
+    const current = useSettingsStore.getState().ignoredAppVersions || [];
+    if (!current.includes(clean)) {
+      const updated = [...current, clean];
+      set({ ignoredAppVersions: updated });
+      if (window.api?.settings) {
+        await window.api.settings.set('ignoredAppVersions', JSON.stringify(updated));
+      }
+    }
+  },
+
+  unignoreAppVersion: async (version) => {
+    if (!version) return;
+    const clean = String(version).trim().replace(/^v/i, '');
+    const current = useSettingsStore.getState().ignoredAppVersions || [];
+    const updated = current.filter(v => String(v).trim().replace(/^v/i, '') !== clean);
+    set({ ignoredAppVersions: updated });
+    if (window.api?.settings) {
+      await window.api.settings.set('ignoredAppVersions', JSON.stringify(updated));
+    }
+  },
+
+  clearIgnoredAppVersions: async () => {
+    set({ ignoredAppVersions: [] });
+    if (window.api?.settings) {
+      await window.api.settings.set('ignoredAppVersions', JSON.stringify([]));
+    }
   },
 
   setLaunchPreference: async (pref) => {

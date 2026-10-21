@@ -2,7 +2,8 @@ import LoadingScreenCustomizer from '../components/settings/LoadingScreenCustomi
 import React, { useEffect, useState } from 'react';
 import {
   Trash2, RefreshCw, Info, Sliders, Eye, HelpCircle, Plus, Folder, ShieldAlert,
-  ChevronDown, ChevronRight, Zap, Settings, FolderOpen, Palette, Monitor, Gamepad2, X, Wallpaper
+  ChevronDown, ChevronRight, Zap, Settings, FolderOpen, Palette, Monitor, Gamepad2, X, Wallpaper,
+  Download, ExternalLink, AlertTriangle
 } from 'lucide-react';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useToastStore } from '../store/useToastStore';
@@ -61,6 +62,8 @@ export default function SettingsPage() {
     homeShowHero, homeShowStats, homeShowLatest, homeShowDownloaded, homeShowUpdates,
     appFullscreen, rememberModHubPage, modUpdateMode, skipDeleteConfirm, backupRetention,
     badgeDuration, autoDownloadMapDeps,
+    autoCheckUpdates, setAutoCheckUpdates, ignoredAppVersions,
+    ignoreAppVersion, unignoreAppVersion, clearIgnoredAppVersions,
     setTheme, setModsPath, addModsPath, removeModsPath, setGamePath, setLaunchPreference,
     setSavegameSlot, setEnableCheats, setSkipModDialog, setSkipIntro, toggleHiddenFolder,
     setHasSeenGuide, setAutoStart, setConflictSensitivity, setCloudBackupPath, setBackupRetention,
@@ -78,12 +81,40 @@ export default function SettingsPage() {
   const [isCheckingAppUpdate, setIsCheckingAppUpdate] = useState(false);
   const [devModeStatus, setDevModeStatus] = useState(null);
   const [isSettingDevMode, setIsSettingDevMode] = useState(false);
+  const [releases, setReleases] = useState([]);
+  const [isLoadingReleases, setIsLoadingReleases] = useState(false);
+  const [releasesError, setReleasesError] = useState(null);
+  const [expandedNotes, setExpandedNotes] = useState({});
+  const [currentAppVersion, setCurrentAppVersion] = useState('');
+
+  const loadReleases = async () => {
+    if (!window.api?.appUpdate?.getReleases) return;
+    setIsLoadingReleases(true);
+    setReleasesError(null);
+    try {
+      const res = await window.api.appUpdate.getReleases();
+      if (res?.error) {
+        setReleasesError(res.error);
+      } else {
+        setReleases(res?.releases || []);
+        if (res?.currentVersion) {
+          setCurrentAppVersion(res.currentVersion);
+        }
+      }
+    } catch (err) {
+      setReleasesError(err.message || 'Failed to load releases');
+    } finally {
+      setIsLoadingReleases(false);
+    }
+  };
 
   useEffect(() => {
     if (window.api?.system?.checkDevMode) {
       window.api.system.checkDevMode().then(setDevModeStatus);
     }
+    loadReleases();
   }, []);
+
   const handleCheckAppUpdate = async () => {
     if (!window.api?.appUpdate?.check) {
       useToastStore.getState().warning('App updater is available in desktop builds.');
@@ -98,6 +129,8 @@ export default function SettingsPage() {
         useToastStore.getState().error(`Update check failed: ${res.error}`);
       } else if (!res || !res.updateInfo) {
         useToastStore.getState().success('You are using the latest version!');
+      } else if (res?.isIgnored) {
+        useToastStore.getState().info(`Update v${res.updateInfo.version} is available, but currently on your ignored list.`);
       }
     } catch (err) {
       setIsCheckingAppUpdate(false);
@@ -1253,10 +1286,35 @@ export default function SettingsPage() {
       {/* Updates */}
       <CollapsibleSection title="Updates" icon={RefreshCw} defaultOpen={false}>
 
+        {/* Automatic App Updates Toggle */}
+        <div className="settings-row">
+          <div>
+            <div className="settings-row__label">Automatic App Updates</div>
+            <div className="settings-row__desc">
+              Automatically check and notify for application updates when starting the manager
+            </div>
+          </div>
+          <div className="settings-row__control">
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={autoCheckUpdates !== false}
+                onChange={(e) => setAutoCheckUpdates(e.target.checked)}
+              />
+              <div className="toggle__track" />
+              <div className="toggle__thumb" />
+            </label>
+          </div>
+        </div>
+
+        {/* Check App Updates Button */}
         <div className="settings-row">
           <div>
             <div className="settings-row__label">Check for App Updates</div>
-            <div className="settings-row__desc">Check for application software updates in the background</div>
+            <div className="settings-row__desc">
+              Check for application software updates right now
+              {currentAppVersion ? ` (Installed: v${currentAppVersion})` : ''}
+            </div>
           </div>
           <div className="settings-row__control">
             <button 
@@ -1268,6 +1326,306 @@ export default function SettingsPage() {
               {isCheckingAppUpdate ? 'Checking...' : 'Check App Updates'}
             </button>
           </div>
+        </div>
+
+        {/* Ignored App Versions Management */}
+        {ignoredAppVersions && ignoredAppVersions.length > 0 && (
+          <div className="animate-fade-in" style={{
+            marginTop: '8px',
+            marginBottom: '16px',
+            padding: '14px',
+            background: 'rgba(234, 179, 8, 0.06)',
+            borderRadius: 'var(--radius-md)',
+            borderLeft: '3px solid #eab308',
+            fontSize: 'var(--fs-xs)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: 'var(--text-primary)' }}>
+                <AlertTriangle size={14} style={{ color: '#eab308' }} />
+                <span>IGNORED APP UPDATES ({ignoredAppVersions.length})</span>
+              </div>
+              <button 
+                className="btn btn--ghost btn--xs" 
+                onClick={() => {
+                  clearIgnoredAppVersions();
+                  useToastStore.getState().success('Cleared all ignored app versions.');
+                }}
+                style={{ fontSize: 11, color: 'var(--text-tertiary)', padding: '2px 8px' }}
+              >
+                Clear All
+              </button>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: 10 }}>
+              These versions are bypassed during automatic update notifications to prevent unwanted upgrades:
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {ignoredAppVersions.map((ver) => (
+                <span 
+                  key={ver} 
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '4px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border)',
+                    fontWeight: 600,
+                    color: 'var(--text-primary)'
+                  }}
+                >
+                  v{ver}
+                  <button 
+                    onClick={() => {
+                      unignoreAppVersion(ver);
+                      useToastStore.getState().info(`Removed v${ver} from ignored updates.`);
+                    }}
+                    title="Unignore this version"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: 'var(--text-tertiary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: 0
+                    }}
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Available Updates & Release History */}
+        <div style={{
+          marginTop: 16,
+          marginBottom: 16,
+          padding: '16px',
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-lg)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--text-primary)' }}>
+                Available Updates & Release History
+              </div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-secondary)', marginTop: 2 }}>
+                Browse official releases to view changelogs or select a specific version to avoid teething issues
+              </div>
+            </div>
+            <button 
+              className="btn btn--secondary btn--xs" 
+              onClick={loadReleases} 
+              disabled={isLoadingReleases}
+              style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              <RefreshCw size={12} className={isLoadingReleases ? 'animate-spin' : ''} />
+              {isLoadingReleases ? 'Fetching...' : 'Refresh List'}
+            </button>
+          </div>
+
+          {isLoadingReleases && releases.length === 0 && (
+            <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 'var(--fs-xs)' }}>
+              <RefreshCw size={20} className="animate-spin" style={{ margin: '0 auto 8px', display: 'block' }} />
+              Fetching releases from GitHub...
+            </div>
+          )}
+
+          {releasesError && (
+            <div style={{
+              padding: 12,
+              borderRadius: 'var(--radius-md)',
+              background: 'rgba(239, 68, 68, 0.08)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              fontSize: 'var(--fs-xs)',
+              color: 'var(--danger)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <span>{releasesError}</span>
+              <button className="btn btn--secondary btn--xs" onClick={loadReleases}>Retry</button>
+            </div>
+          )}
+
+          {!isLoadingReleases && !releasesError && releases.length === 0 && (
+            <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 'var(--fs-xs)' }}>
+              No releases found or click Refresh to fetch releases.
+            </div>
+          )}
+
+          {releases.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
+              {releases.map((rel, index) => {
+                const cleanVer = String(rel.version || '').replace(/^v/i, '');
+                const isIgnored = (ignoredAppVersions || []).some(v => String(v).replace(/^v/i, '') === cleanVer);
+                const isNotesOpen = expandedNotes[rel.id];
+                const isLatest = index === 0;
+
+                return (
+                  <div 
+                    key={rel.id || rel.tagName} 
+                    style={{
+                      background: 'var(--bg-card)',
+                      border: rel.isCurrent ? '1px solid var(--accent)' : '1px solid var(--border)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '12px 14px',
+                      transition: 'border-color 0.2s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 800, fontSize: 'var(--fs-sm)', color: 'var(--text-primary)' }}>
+                          {rel.tagName || `v${rel.version}`}
+                        </span>
+
+                        {rel.isCurrent && (
+                          <span style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-full)',
+                            background: 'rgba(74, 222, 128, 0.15)',
+                            color: 'var(--success)'
+                          }}>
+                            Current
+                          </span>
+                        )}
+
+                        {isLatest && !rel.isCurrent && (
+                          <span style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-full)',
+                            background: 'rgba(var(--accent-rgb), 0.15)',
+                            color: 'var(--accent)'
+                          }}>
+                            Latest
+                          </span>
+                        )}
+
+                        {rel.prerelease && (
+                          <span style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-full)',
+                            background: 'rgba(234, 179, 8, 0.15)',
+                            color: '#eab308'
+                          }}>
+                            Pre-release
+                          </span>
+                        )}
+
+                        {isIgnored && (
+                          <span style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-full)',
+                            background: 'rgba(239, 68, 68, 0.12)',
+                            color: 'var(--danger)'
+                          }}>
+                            Ignored
+                          </span>
+                        )}
+
+                        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)' }}>
+                          {rel.publishedAt ? new Date(rel.publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : ''}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {rel.body && (
+                          <button 
+                            className="btn btn--ghost btn--xs"
+                            onClick={() => setExpandedNotes(prev => ({ ...prev, [rel.id]: !prev[rel.id] }))}
+                            style={{ fontSize: 11, padding: '3px 8px', height: 26 }}
+                          >
+                            {isNotesOpen ? 'Hide Notes' : 'Changelog'}
+                          </button>
+                        )}
+
+                        {!rel.isCurrent && (
+                          <button
+                            className="btn btn--ghost btn--xs"
+                            onClick={async () => {
+                              if (isIgnored) {
+                                await unignoreAppVersion(cleanVer);
+                                useToastStore.getState().info(`Unignored v${cleanVer}`);
+                              } else {
+                                await ignoreAppVersion(cleanVer);
+                                useToastStore.getState().info(`Ignored v${cleanVer} from auto-updates.`);
+                              }
+                            }}
+                            title={isIgnored ? "Remove from ignored updates" : "Ignore automatic updates for this version"}
+                            style={{ fontSize: 11, padding: '3px 8px', height: 26, color: isIgnored ? 'var(--text-tertiary)' : 'var(--text-secondary)' }}
+                          >
+                            {isIgnored ? 'Unignore' : 'Ignore'}
+                          </button>
+                        )}
+
+                        {rel.downloadUrl && (
+                          <button 
+                            className="btn btn--secondary btn--xs"
+                            onClick={() => {
+                              if (window.api?.shell?.openExternal) {
+                                window.api.shell.openExternal(rel.downloadUrl);
+                              }
+                            }}
+                            title={`Download installer (${rel.assetName || 'package'})`}
+                            style={{ fontSize: 11, padding: '3px 10px', height: 26, display: 'flex', alignItems: 'center', gap: 4 }}
+                          >
+                            <Download size={12} />
+                            Download
+                          </button>
+                        )}
+
+                        {rel.htmlUrl && (
+                          <button 
+                            className="btn btn--ghost btn--xs"
+                            onClick={() => {
+                              if (window.api?.shell?.openExternal) {
+                                window.api.shell.openExternal(rel.htmlUrl);
+                              }
+                            }}
+                            title="View Release on GitHub"
+                            style={{ padding: '4px', height: 26, width: 26 }}
+                          >
+                            <ExternalLink size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Collapsible Release Notes / Changelog */}
+                    {isNotesOpen && rel.body && (
+                      <div className="animate-fade-in" style={{
+                        marginTop: 10,
+                        padding: '10px 12px',
+                        background: 'var(--bg-tertiary)',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: 'var(--fs-xs)',
+                        color: 'var(--text-secondary)',
+                        whiteSpace: 'pre-wrap',
+                        maxHeight: 200,
+                        overflowY: 'auto',
+                        lineHeight: 1.5,
+                        fontFamily: 'monospace'
+                      }}>
+                        {rel.body}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="settings-row">

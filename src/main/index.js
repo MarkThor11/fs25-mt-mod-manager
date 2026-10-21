@@ -368,22 +368,31 @@ function createWindow() {
     } catch (_) {}
   });
 
-  // Initialize App Auto-Updater (Production only)
-  if (!isDev) {
-    initAppUpdater(mainWindow, async () => {
-      isUpdating = true;
-      try {
-        await gameLauncher.restoreGlobalGameSettings();
-      } catch (_) {}
-      try {
-        cache.close();
-      } catch (_) {}
-    });
+  // Initialize App Auto-Updater
+  initAppUpdater(mainWindow, async () => {
+    isUpdating = true;
+    try {
+      await gameLauncher.restoreGlobalGameSettings();
+    } catch (_) {}
+    try {
+      cache.close();
+    } catch (_) {}
+  });
 
-    // Check for updates after 5 seconds
+  if (!isDev) {
+    // Check for updates after 5 seconds if automatic update check is enabled
     setTimeout(() => {
-      const { autoUpdater } = require('electron-updater');
-      autoUpdater.checkForUpdatesAndNotify().catch(err => console.error('[UPDATER] Init check failed:', err));
+      try {
+        const autoCheck = cache.getSetting('autoCheckUpdates');
+        if (autoCheck !== 'false') {
+          const { autoUpdater } = require('electron-updater');
+          autoUpdater.checkForUpdates().catch(err => console.error('[UPDATER] Init check failed:', err));
+        } else {
+          console.log('[UPDATER] Startup update check skipped (disabled by user preference).');
+        }
+      } catch (err) {
+        console.error('[UPDATER] Startup update check failed:', err);
+      }
     }, 5000);
   }
 }

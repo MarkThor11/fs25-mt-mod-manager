@@ -305,5 +305,6 @@ contextBridge.exposeInMainWorld('api', {
     check: () => ipcRenderer.invoke('app:check-for-update'),
     download: () => ipcRenderer.invoke('app:download-update'),
     install: () => ipcRenderer.invoke('app:install-update'),
+    getReleases: () => ipcRenderer.invoke('app:get-releases'),
   },
 });

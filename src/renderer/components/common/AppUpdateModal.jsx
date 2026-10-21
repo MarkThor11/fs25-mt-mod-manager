@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Download, RefreshCw, AlertCircle, CheckCircle2, ArrowRight, X, Minimize2, Maximize2 } from 'lucide-react';
 import { useToastStore } from '../../store/useToastStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 export default function AppUpdateModal() {
   const [updateInfo, setUpdateInfo] = useState(null);
@@ -15,6 +16,14 @@ export default function AppUpdateModal() {
 
     const unsubs = [
       window.api.on.appUpdateAvailable((info) => {
+        const cleanVer = String(info?.version || '').replace(/^v/i, '');
+        const isIgnored = (useSettingsStore.getState().ignoredAppVersions || []).some(
+          v => String(v).replace(/^v/i, '') === cleanVer
+        );
+        if (isIgnored) {
+          console.log(`[UPDATER] App update v${info?.version} is ignored by user preference.`);
+          return;
+        }
         setUpdateInfo(info);
         setStatus('available');
         setIsDismissed(false);
@@ -236,6 +245,19 @@ export default function AppUpdateModal() {
                 <button className="btn btn--secondary btn--lg btn--full" onClick={() => setIsMinimized(true)}>Run in Background</button>
                 <button className="btn btn--primary btn--lg btn--full" onClick={handleDownload}>Update Now</button>
               </div>
+              <button 
+                className="btn btn--ghost btn--xs"
+                style={{ color: 'var(--text-tertiary)', fontSize: 'var(--fs-xs)', marginTop: 4 }}
+                onClick={async () => {
+                  if (updateInfo?.version) {
+                    await useSettingsStore.getState().ignoreAppVersion(updateInfo.version);
+                    useToastStore.getState().info(`Update v${updateInfo.version} ignored. Manage ignored updates in Settings.`);
+                    setIsDismissed(true);
+                  }
+                }}
+              >
+                Ignore this version (Skip update)
+              </button>
             </>
           )}
 
