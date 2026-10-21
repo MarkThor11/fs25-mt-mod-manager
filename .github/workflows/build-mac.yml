@@ -36,8 +36,29 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: false
         run: |
           npm run build
-          # We build WITHOUT publishing here to prevent collisions
-          ./node_modules/.bin/electron-builder --mac -c.mac.identity=null -c.dmg.sign=false
+          # Build with ad-hoc signature (-) so Apple Silicon bundle integrity is valid
+          ./node_modules/.bin/electron-builder --mac -c.mac.identity="-" -c.dmg.sign=false
+
+      - name: Verify Mac DMG Auto-Update Script on macOS
+        run: |
+          DMG_FILE=$(ls release/*.dmg | head -n 1)
+          echo "Testing auto-update extraction on $DMG_FILE"
+          MOUNT_DIR=$(mktemp -d /tmp/fs25_verify_mount.XXXXXX)
+          hdiutil attach "$DMG_FILE" -mountpoint "$MOUNT_DIR" -nobrowse -quiet -noautoopen
+          SOURCE_APP=$(find "$MOUNT_DIR" -maxdepth 2 -name "*.app" -type d | head -n 1)
+          if [ -z "$SOURCE_APP" ]; then
+            echo "ERROR: .app not found inside DMG"
+            exit 1
+          fi
+          TEST_DEST="/tmp/FS25 MT Mod Manager.app"
+          rm -rf "$TEST_DEST"
+          ditto "$SOURCE_APP" "$TEST_DEST"
+          xattr -cr "$TEST_DEST"
+          codesign --force --deep --sign - "$TEST_DEST"
+          codesign --verify --deep --strict "$TEST_DEST"
+          hdiutil detach "$MOUNT_DIR" -force -quiet
+          rm -rf "$MOUNT_DIR" "$TEST_DEST"
+          echo "Mac DMG auto-update verification passed!"
 
       - name: Upload to SEPARATE Mac Release
         uses: softprops/action-gh-release@v2
