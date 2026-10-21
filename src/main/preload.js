@@ -188,16 +188,12 @@ contextBridge.exposeInMainWorld('api', {
   // Loading Screen Customization
   loadingScreen: {
     getStatus: () => ipcRenderer.invoke('loadingScreen:getStatus'),
-    applyPreset: (presetId) => ipcRenderer.invoke('loadingScreen:applyPreset', { presetId }),
-    applyCustomImage: (filePath, customName) => ipcRenderer.invoke('loadingScreen:applyCustomImage', { filePath, customName }),
-    restoreDefault: () => ipcRenderer.invoke('loadingScreen:restoreDefault'),
+    applyPreset: (presetId, target = 'both') => ipcRenderer.invoke('loadingScreen:applyPreset', { presetId, target }),
+    applyCustomImage: (filePath, customName, target = 'both') => ipcRenderer.invoke('loadingScreen:applyCustomImage', { filePath, customName, target }),
+    restoreDefault: (target = 'both') => ipcRenderer.invoke('loadingScreen:restoreDefault', { target }),
     deleteCustom: (id) => ipcRenderer.invoke('loadingScreen:deleteCustom', { id }),
     openSharedFolder: () => ipcRenderer.invoke('loadingScreen:openSharedFolder'),
     openCustomFolder: () => ipcRenderer.invoke('loadingScreen:openCustomFolder'),
-    getMapStatus: () => ipcRenderer.invoke('loadingScreen:getMapStatus'),
-    applyMapScreen: (params) => ipcRenderer.invoke('loadingScreen:applyMapScreen', params),
-    restoreMapScreen: (params) => ipcRenderer.invoke('loadingScreen:restoreMapScreen', params),
-    openMapFolder: (mapId) => ipcRenderer.invoke('loadingScreen:openMapFolder', mapId),
   },
 
   // Settings

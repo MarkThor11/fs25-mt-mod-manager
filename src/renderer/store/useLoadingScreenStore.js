@@ -1,17 +1,20 @@
 import { create } from 'zustand';
 import { useToastStore } from './useToastStore';
 
+const TARGET_LABELS = {
+  both: 'launch & main menu screens',
+  launch: 'game launch screen',
+  menu: 'main menu screen',
+};
+
 export const useLoadingScreenStore = create((set, get) => ({
-  activeTab: 'map', // 'map' (In-game Map Loading Screen) | 'menu' (Main Menu Background)
-  selectedMapId: 'all', // 'all' (Universal) | 'mapUS' | 'mapEU' | 'mapAS' | modId
+  targetMode: 'both', // 'both' | 'launch' | 'menu'
   status: null,
-  mapScreens: [],
   isLoading: false,
   isApplying: false,
   error: null,
 
-  setActiveTab: (tab) => set({ activeTab: tab }),
-  setSelectedMapId: (id) => set({ selectedMapId: id }),
+  setTargetMode: (targetMode) => set({ targetMode }),
 
   fetchStatus: async () => {
     if (!window.api?.loadingScreen?.getStatus) return;
@@ -21,14 +24,12 @@ export const useLoadingScreenStore = create((set, get) => ({
       if (res?.available) {
         set({
           status: res,
-          mapScreens: res.mapScreens || [],
           isLoading: false,
           error: null,
         });
       } else {
         set({
           status: res,
-          mapScreens: [],
           isLoading: false,
           error: res?.error || 'Game installation not detected',
         });
@@ -38,81 +39,20 @@ export const useLoadingScreenStore = create((set, get) => ({
     }
   },
 
-  // Map Loading Screen Actions
-  applyMapLoadingScreen: async (filePath, customName) => {
-    if (!window.api?.loadingScreen?.applyMapScreen) return;
-    const { selectedMapId } = get();
-    const applyToAll = selectedMapId === 'all';
-    set({ isApplying: true });
-    try {
-      const res = await window.api.loadingScreen.applyMapScreen({
-        mapId: selectedMapId,
-        filePath,
-        customName,
-        applyToAll,
-      });
-      if (res?.error) {
-        useToastStore.getState().error(`Failed to apply map screen: ${res.error}`);
-        set({ isApplying: false });
-      } else {
-        set({
-          status: res,
-          mapScreens: res.mapScreens || [],
-          isApplying: false,
-        });
-        const targetLabel = applyToAll ? 'All Maps' : selectedMapId;
-        useToastStore.getState().success(`Applied custom loading screen to ${targetLabel}!`);
-      }
-    } catch (err) {
-      useToastStore.getState().error(`Error applying map loading screen: ${err.message}`);
-      set({ isApplying: false });
-    }
-  },
-
-  restoreMapLoadingScreen: async () => {
-    if (!window.api?.loadingScreen?.restoreMapScreen) return;
-    const { selectedMapId } = get();
-    const restoreAll = selectedMapId === 'all';
-    set({ isApplying: true });
-    try {
-      const res = await window.api.loadingScreen.restoreMapScreen({
-        mapId: selectedMapId,
-        restoreAll,
-      });
-      if (res?.error) {
-        useToastStore.getState().error(`Restore failed: ${res.error}`);
-        set({ isApplying: false });
-      } else {
-        set({
-          status: res,
-          mapScreens: res.mapScreens || [],
-          isApplying: false,
-        });
-        const targetLabel = restoreAll ? 'all basegame maps' : selectedMapId;
-        useToastStore.getState().success(`Restored original loading screen for ${targetLabel}.`);
-      }
-    } catch (err) {
-      useToastStore.getState().error(`Restore error: ${err.message}`);
-      set({ isApplying: false });
-    }
-  },
-
-  openMapFolder: (mapId) => {
-    window.api?.loadingScreen?.openMapFolder?.(mapId);
-  },
-
-  // Menu Splash Actions
   applyPreset: async (presetId, title) => {
     if (!window.api?.loadingScreen?.applyPreset) return;
+    const { targetMode } = get();
     set({ isApplying: true });
     try {
-      const res = await window.api.loadingScreen.applyPreset(presetId);
+      const res = await window.api.loadingScreen.applyPreset(presetId, targetMode);
       if (res?.error) {
         useToastStore.getState().error(`Failed to apply preset: ${res.error}`);
         set({ isApplying: false });
       } else {
         set({ status: res, isApplying: false });
-        useToastStore.getState().success(`Applied "${title || presetId}" as main menu background!`);
+        useToastStore.getState().success(
+          `Applied "${title || presetId}" to ${TARGET_LABELS[targetMode] || 'game'}!`
+        );
       }
     } catch (err) {
       useToastStore.getState().error(`Failed to apply preset: ${err.message}`);
@@ -122,15 +62,18 @@ export const useLoadingScreenStore = create((set, get) => ({
 
   applyCustomImage: async (filePath, customName) => {
     if (!window.api?.loadingScreen?.applyCustomImage) return;
+    const { targetMode } = get();
     set({ isApplying: true });
     try {
-      const res = await window.api.loadingScreen.applyCustomImage(filePath, customName);
+      const res = await window.api.loadingScreen.applyCustomImage(filePath, customName, targetMode);
       if (res?.error) {
         useToastStore.getState().error(`Failed to apply image: ${res.error}`);
         set({ isApplying: false });
       } else {
         set({ status: res, isApplying: false });
-        useToastStore.getState().success('Custom main menu screen applied!');
+        useToastStore.getState().success(
+          `Custom image applied to ${TARGET_LABELS[targetMode] || 'game'}!`
+        );
       }
     } catch (err) {
       useToastStore.getState().error(`Failed to apply image: ${err.message}`);
@@ -140,15 +83,18 @@ export const useLoadingScreenStore = create((set, get) => ({
 
   restoreDefault: async () => {
     if (!window.api?.loadingScreen?.restoreDefault) return;
+    const { targetMode } = get();
     set({ isApplying: true });
     try {
-      const res = await window.api.loadingScreen.restoreDefault();
+      const res = await window.api.loadingScreen.restoreDefault(targetMode);
       if (res?.error) {
         useToastStore.getState().error(`Restore failed: ${res.error}`);
         set({ isApplying: false });
       } else {
         set({ status: res, isApplying: false });
-        useToastStore.getState().success('Restored default FS25 title screen.');
+        useToastStore.getState().success(
+          `Restored default FS25 ${TARGET_LABELS[targetMode] || 'screens'}.`
+        );
       }
     } catch (err) {
       useToastStore.getState().error(`Restore error: ${err.message}`);

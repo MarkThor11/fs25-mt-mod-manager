@@ -1957,25 +1957,25 @@ ipcMain.handle('loadingScreen:getStatus', async () => {
   }
 });
 
-ipcMain.handle('loadingScreen:applyPreset', async (_, { presetId }) => {
+ipcMain.handle('loadingScreen:applyPreset', async (_, { presetId, target = 'both' } = {}) => {
   try {
-    return await loadingScreenManager.applyPreset(presetId);
+    return await loadingScreenManager.applyPreset(presetId, target);
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle('loadingScreen:applyCustomImage', async (_, { filePath, customName }) => {
+ipcMain.handle('loadingScreen:applyCustomImage', async (_, { filePath, customName, target = 'both' } = {}) => {
   try {
-    return await loadingScreenManager.applyCustomImage(filePath, customName);
+    return await loadingScreenManager.applyCustomImage(filePath, customName, target);
   } catch (err) {
     return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle('loadingScreen:restoreDefault', async () => {
+ipcMain.handle('loadingScreen:restoreDefault', async (_, { target = 'both' } = {}) => {
   try {
-    return await loadingScreenManager.restoreDefault();
+    return await loadingScreenManager.restoreDefault(target);
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -2010,49 +2010,6 @@ ipcMain.handle('loadingScreen:openCustomFolder', async () => {
       return { success: true };
     }
     return { success: false, error: 'Custom directory not found' };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-});
-
-ipcMain.handle('loadingScreen:getMapStatus', async () => {
-  try {
-    return await loadingScreenManager.getMapLoadingScreensStatus();
-  } catch (err) {
-    return { available: false, error: err.message };
-  }
-});
-
-ipcMain.handle('loadingScreen:applyMapScreen', async (_, params) => {
-  try {
-    return await loadingScreenManager.applyMapLoadingScreen(params);
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-});
-
-ipcMain.handle('loadingScreen:restoreMapScreen', async (_, params) => {
-  try {
-    return await loadingScreenManager.restoreMapLoadingScreen(params);
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-});
-
-ipcMain.handle('loadingScreen:openMapFolder', async (_, mapId) => {
-  try {
-    const dataDir = await loadingScreenManager.getGameDataDir();
-    if (dataDir) {
-      let targetDir = path.join(dataDir, 'maps');
-      if (mapId === 'mapUS') targetDir = path.join(dataDir, 'maps', 'mapUS', 'textures', 'ui');
-      else if (mapId === 'mapEU') targetDir = path.join(dataDir, 'maps', 'mapEU', 'textures', 'ui');
-      else if (mapId === 'mapAS') targetDir = path.join(dataDir, 'maps', 'mapAS', 'textures', 'ui');
-      if (fs.existsSync(targetDir)) {
-        await shell.openPath(targetDir);
-        return { success: true };
-      }
-    }
-    return { success: false, error: 'Map directory not found' };
   } catch (err) {
     return { success: false, error: err.message };
   }
