@@ -1,6 +1,6 @@
 {
   "name": "fs25-mt-mod-manager",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Farming Simulator 25 ModHub Desktop Manager",
   "main": "src/main/index.js",
   "scripts": {
