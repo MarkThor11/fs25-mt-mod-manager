@@ -3,27 +3,28 @@ import {
   X, ChevronRight, ChevronLeft, Rocket, Database, Settings, 
   ShieldCheck, Heart, Layout, LayoutGrid, Zap, Home, Globe, HardDrive, 
   Save, EyeOff, Map, MousePointer2, MessageCircle, Share2, Folders, Sliders, Layers,
-  AlertTriangle, Pin, Palette, MousePointer, List, ShieldAlert, ArrowRightLeft, Download, Radio
+  AlertTriangle, Pin, Palette, MousePointer, List, ShieldAlert, ArrowRightLeft, Download, Radio,
+  SlidersHorizontal, Lock, Scale, Image, History, Users, Key
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
 const SLIDES = [
   {
-    title: "MT Mod Manager v1.1.0",
-    description: "Welcome to v1.1.0! This release introduces massive Keybinds improvements including Profile Syncing and Device Tabs, lightning fast background mod scanning with SQLite, enhanced ModHub filters with Crossplay toggle, and an 'Add to Save' feature for bulk installing mods into your savegames!",
+    title: "MT Mod Manager v1.2.2",
+    description: "Welcome to v1.2.2! This update brings Multiplayer Server Save Management & Protected Exports, 1-Click Keybind Conflict Auto-Resolution, Fleet Maintenance & Teleportation tools, a Loading Screen Customizer, Multi-Drive Mod Migration, and Side-by-Side Mod Comparison!",
     icon: <Rocket className="w-12 h-12 text-accent" />,
     color: "var(--accent)"
   },
   {
     title: "Drag & Drop Anywhere",
-    description: "Install mods in seconds! Just drag single mods or entire collections and drop them anywhere into the app window (zipped or unzipped). We'll handle the extraction and organization automatically.",
+    description: "Install mods or import savegames in seconds! Drag single mods, entire collections, or Savegame .zip archives and drop them anywhere into the app window. We'll extract, detect, and organize them automatically.",
     icon: <MousePointer2 className="w-12 h-12 text-yellow-400" />,
     color: "#fbbf24",
     targetId: "tour-sidebar-brand"
   },
   {
     title: "Intelligent Dashboard",
-    description: "The Home page now features real-time Diagnostics. It verifies your mod metadata and savegame integrity as you browse.",
+    description: "The Home page features real-time Diagnostics that verify your mod metadata and savegame integrity as you browse.",
     icon: <Home className="w-12 h-12 text-blue-400" />,
     color: "#3b82f6",
     targetId: "tour-nav-home"
@@ -36,29 +37,43 @@ const SLIDES = [
     targetId: "tour-nav-home"
   },
   {
+    title: "Multiplayer Mod Key Sync",
+    description: "Sync with friends or servers in one click! Generate a compact Mod Key on the Home page to share your collection, or paste a friend's key to batch-download every required mod automatically.",
+    icon: <Key className="w-12 h-12 text-emerald-400" />,
+    color: "#10b981",
+    targetId: "tour-nav-home"
+  },
+  {
     title: "ModHub Browser",
-    description: "Access thousands of mods directly from the GIANTS ModHub. Browse categories, check for updates, and install content with a single click.",
+    description: "Access thousands of mods directly from the GIANTS ModHub. Filter by Latest release timeframes (Today, Past 3 Days, Week, or Month), Crossplay compatibility, or unit capacities, and install with a single click.",
     icon: <LayoutGrid className="w-12 h-12 text-accent" />,
     color: "var(--accent)",
     targetId: "tour-nav-modhub-browser"
   },
   {
+    title: "Side-by-Side Mod Comparison",
+    description: "Can't decide between two tractors or implements? Select up to 4 mods in the ModHub Browser to compare their horsepower, price, working width, and technical specs side-by-side.",
+    icon: <Scale className="w-12 h-12 text-indigo-400" />,
+    color: "#818cf8",
+    targetId: "tour-nav-modhub-browser"
+  },
+  {
     title: "ModHub Smart Match",
-    description: "Automatically filter equipment to match tractors power and vice- versa",
+    description: "Automatically filter equipment to match your tractor's horsepower requirements—and vice-versa—so you never buy an implement your fleet can't pull.",
     icon: <Globe className="w-12 h-12 text-green-400" />,
     color: "#22c55e",
     targetId: "tour-nav-modhub-browser"
   },
   {
     title: "Requirements Badge",
-    description: "Never miss a dependency. ModHub listings now feature clear badges for required mods, ensuring your game stays stable and complete.",
+    description: "Never miss a dependency. ModHub listings feature clear badges for required mods, ensuring your game stays stable and complete.",
     icon: <AlertTriangle className="w-12 h-12 text-red-400" />,
     color: "#f87171",
     targetId: "tour-nav-modhub-browser"
   },
   {
-    title: "Automated Map Handling",
-    description: "Install maps with zero effort. The manager automatically creates a dedicated folder for every map, and any required dependencies join them there to keep your root directory clean.",
+    title: "Automated Map & Dependency Handling",
+    description: "The manager creates a dedicated folder for every map you install. Shared required mods can be consolidated into a single 'Map Dependencies' folder and linked virtually with a SHARED badge to save disk space.",
     icon: <Folders className="w-12 h-12 text-yellow-500" />,
     color: "#eab308",
     targetId: "tour-nav-modhub-browser"
@@ -71,22 +86,22 @@ const SLIDES = [
     targetId: "tour-nav-third-party-mods"
   },
   {
-    title: "The Library & Folders",
-    description: "Manage your collection with ease. Categorize mods into custom folders, rename them, and use bulk actions to keep your gear organized.",
+    title: "The Library & Tag Filter Bar",
+    description: "Manage your collection with ease. Categorize mods into custom folders, use the expandable Tag & Category filter bar to drill down by subcategory or user tags, and run bulk actions.",
     icon: <HardDrive className="w-12 h-12 text-purple-400" />,
     color: "#a855f7",
     targetId: "tour-nav-installed-mods"
   },
   {
     title: "Personalize Your Folders",
-    description: "Make your library yours! Right-click any folder to change its name, or select a unique icon to make your categories stand out.",
+    description: "Make your library yours! Click the edit pencil on any folder header to rename it, or click its folder badge to pick a custom icon so your categories stand out.",
     icon: <Palette className="w-12 h-12 text-pink-400" />,
     color: "#ec4899",
     targetId: "tour-nav-installed-mods"
   },
   {
-    title: "Library Layout & Flow",
-    description: "Complete control. Drag and drop mods between folders, reorder folders to your liking, and collapse them to save space. Toggle between Grid and List views, or switch between detailed info and clean icons.",
+    title: "Library Layout & Cross-Drive Moves",
+    description: "Drag and drop mods between folders, reorder or collapse folders, and toggle between Grid and List views. Managing multiple drives? Migrate individual mods or whole folders across drives in one click.",
     icon: <List className="w-12 h-12 text-emerald-400" />,
     color: "#10b981",
     targetId: "tour-nav-installed-mods"
@@ -99,8 +114,15 @@ const SLIDES = [
     targetId: "tour-nav-installed-mods"
   },
   {
+    title: "Lock Mod Updates & Version Rollback",
+    description: "Prefer a specific version of a mod? Click the Lock icon on any mod card to freeze it during batch updates, or roll back to a previous version backup from the Mod Details view.",
+    icon: <Lock className="w-12 h-12 text-amber-400" />,
+    color: "#f59e0b",
+    targetId: "tour-nav-installed-mods"
+  },
+  {
     title: "Favorites & Personalization",
-    description: "Star your favorite mods and heart authors to keep track of their mods.",
+    description: "Star your favorite mods and heart authors to keep track of their latest releases in one dedicated place.",
     icon: <Heart className="w-12 h-12 text-red-500" />,
     color: "#ef4444",
     targetId: "tour-nav-my-favourites"
@@ -113,10 +135,24 @@ const SLIDES = [
     targetId: "tour-nav-hidden-mods"
   },
   {
-    title: "Save Editor",
-    description: "New: Modify money, loan, difficulty, and even the mod list of any savegame instantly without opening the game engine.",
+    title: "Save Editor & Fleet Maintenance",
+    description: "Modify money, loans, difficulty, and active mod lists instantly. Plus, clean, repair, and repaint your entire vehicle fleet with sliders, or teleport your player to Home, the Shop, or inside any owned vehicle!",
     icon: <Sliders className="w-12 h-12 text-pink-400" />,
     color: "#ec4899",
+    targetId: "tour-nav-savegames"
+  },
+  {
+    title: "Multiplayer Server Saves & Exports",
+    description: "Switch any save into Server Mode! Edit in-game farm permissions offline, run Mod Integrity Audits, and export saves as a Locked Player Version (view-only) or Admin Version with a Server Mod Host link.",
+    icon: <Users className="w-12 h-12 text-cyan-400" />,
+    color: "#22d3ee",
+    targetId: "tour-nav-savegames"
+  },
+  {
+    title: "Save Vault, Rollback & Cloud Sync",
+    description: "Never lose a farm. Swap saves in and out of the Archive Vault, roll back to automatic engine backups, or configure automatic backup syncing to a local or cloud folder every time you exit the game.",
+    icon: <Save className="w-12 h-12 text-emerald-400" />,
+    color: "#10b981",
     targetId: "tour-nav-savegames"
   },
   {
@@ -127,8 +163,8 @@ const SLIDES = [
     targetId: "tour-nav-savegames"
   },
   {
-    title: "Save Transfer (WIP)",
-    description: "Move your progress! Transfer money, products, vehicles, and livestock between career slots with built-in capacity validation. Move your entire fleet in seconds!",
+    title: "Save Transfer (Upcoming)",
+    description: "Currently under construction: soon you'll be able to transfer money, stored products, vehicles, and livestock between career slots with built-in capacity validation!",
     icon: <ArrowRightLeft className="w-12 h-12 text-blue-400" />,
     color: "#3b82f6",
     targetId: "tour-nav-save-transfer"
@@ -139,6 +175,13 @@ const SLIDES = [
     icon: <Database className="w-12 h-12 text-indigo-400" />,
     color: "#818cf8",
     targetId: "tour-nav-profiles"
+  },
+  {
+    title: "Keybindings & Conflict Auto-Resolver",
+    description: "Rebind Keyboard, Mouse, Steering Wheel, and Gamepad controls live! Automatically detect key clashes across all your mods and click 'Auto-Resolve' to reassign conflicting actions to safe, unused keys.",
+    icon: <SlidersHorizontal className="w-12 h-12 text-purple-400" />,
+    color: "#a855f7",
+    targetId: "tour-nav-keybindings"
   },
   {
     title: "Map Library",
@@ -170,9 +213,16 @@ const SLIDES = [
   },
   {
     title: "Make it Your Own",
-    description: "Head over to Settings to customize the interface, toggle developer options, or tweak your mod mirroring preferences to perfectly match your workflow.",
+    description: "Head over to Settings to customize the interface, manage multiple mod storage drives, or tweak your mod mirroring and developer symlink preferences to match your workflow.",
     icon: <Settings className="w-12 h-12 text-slate-400" />,
     color: "#94a3b8",
+    targetId: "tour-nav-settings"
+  },
+  {
+    title: "Loading Screen & Menu Customizer",
+    description: "Replace the default FS25 launch splash screen and main menu background! Pick from built-in presets or drag-and-drop your own custom images with a live 16:9 preview and 1-click default restore.",
+    icon: <Image className="w-12 h-12 text-pink-400" />,
+    color: "#ec4899",
     targetId: "tour-nav-settings"
   },
   {
@@ -183,10 +233,17 @@ const SLIDES = [
     targetId: "tour-nav-settings"
   },
   {
-    title: "Universal Mod Mirroring",
-    description: "Organization without limits. Your mods can be in subfolders or different drives; the Manager mirrors them to the root so the game sees everything.",
+    title: "Multi-Drive Mod Mirroring",
+    description: "Organization without limits. Store mods across multiple drives and subfolders with real-time free space indicators—the Manager mirrors or symlinks them to the root so the game sees everything.",
     icon: <Layers className="w-12 h-12 text-cyan-400" />,
     color: "#22d3ee",
+    targetId: "tour-nav-settings"
+  },
+  {
+    title: "Release History & Version Control",
+    description: "Browse full changelogs for every release right inside Settings, roll back or switch to any historical app version on demand, and minimize active updates into a background widget.",
+    icon: <History className="w-12 h-12 text-indigo-400" />,
+    color: "#818cf8",
     targetId: "tour-nav-settings"
   },
   {
@@ -209,7 +266,7 @@ const SLIDES = [
   },
   {
     title: "You're All Set!",
-    description: "Go forth and build the ultimate farm. If you need this tour again, you can re-launch it from the Settings page.",
+    description: "Go forth and build the ultimate farm. If you need this tour again, you can re-launch it anytime from the Settings page.",
     icon: <Rocket className="w-12 h-12 text-accent" />,
     color: "var(--accent)"
   }
@@ -217,7 +274,7 @@ const SLIDES = [
 
 export default function WelcomeTour({ forceShow = false, onClose }) {
   const { hasSeenGuide, setHasSeenGuide, tourVersion, setTourVersion } = useSettingsStore();
-  const CURRENT_TOUR_VERSION = '1.1.0';
+  const CURRENT_TOUR_VERSION = '1.2.2';
   const [currentSlide, setCurrentSlide] = useState(0);
   const [visible, setVisible] = useState(false);
   const [highlightStyle, setHighlightStyle] = useState(null);
@@ -408,7 +465,7 @@ export default function WelcomeTour({ forceShow = false, onClose }) {
           </button>
         )}
 
-        <div className="tour-dots" style={{ display: 'flex', justifyContent: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-8)' }}>
+        <div className="tour-dots" style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 'var(--sp-2)', marginBottom: 'var(--sp-8)' }}>
           {SLIDES.map((_, i) => (
             <div key={i} style={{ 
               width: i === currentSlide ? '20px' : '8px', 
