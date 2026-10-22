@@ -1612,29 +1612,45 @@ function parseModDesc(modPath, zipInstance = null) {
 			if (inputBindingBlock) result.inputBindingXml = inputBindingBlock;
 		} catch (e) {}
 
-		// ── TECHNICAL SPECS EXTRACTION (Tractors/Vehicles) ──
+		// ── TECHNICAL SPECS & STORE CATEGORY EXTRACTION (Vehicles/Tools/Placeables/Objects) ──
 		try {
 			const storeItemsRegex = /<storeItem\s+[^>]*xmlFilename=["']([^"']+)["'][^>]*>/gi;
 			let m;
-			let vehicleXmlPath = null;
+			const storeXmlPaths = [];
 			while ((m = storeItemsRegex.exec(xmlContent)) !== null) {
-				const path = m[1];
-				// Skip placeables, maps, and non-vehicle XMLs
-				if (!path.toLowerCase().includes('placeable') && !path.toLowerCase().includes('map') && path.toLowerCase().endsWith('.xml')) {
-					vehicleXmlPath = m[1];
-					break; // Just take the first one for now
+				const xmlRel = m[1];
+				if (xmlRel && !xmlRel.toLowerCase().includes('map') && xmlRel.toLowerCase().endsWith('.xml')) {
+					storeXmlPaths.push(xmlRel);
 				}
 			}
 
-			if (vehicleXmlPath) {
-				const techData = extractVehicleSpecs(modPath, vehicleXmlPath);
-				if (techData) {
-					result.techData = techData;
+			// Prefer vehicle/tool XML first for HP/Price, fallback to first storeItem (e.g. placeables/objects)
+			const primaryXml = storeXmlPaths.find(p => !p.toLowerCase().includes('placeable')) || storeXmlPaths[0] || null;
+			if (primaryXml) {
+				const storeSpecs = extractVehicleSpecs(modPath, primaryXml);
+				if (storeSpecs) {
+					if (storeSpecs.hp > 0 || storeSpecs.price > 0) {
+						result.techData = { hp: storeSpecs.hp, price: storeSpecs.price };
+					}
+					if (!result.category && storeSpecs.category) {
+						result.category = storeSpecs.category;
+					}
+					if (!result.brand && storeSpecs.brand) {
+						result.brand = storeSpecs.brand;
+					}
 				}
 			}
 		} catch (e) {
 			debugLog(`[TECH-DATA] Failed to extract for ${path.basename(modPath)}: ${e.message}`);
 		}
+
+		// Fallback category for pure script mods or uncategorized non-map mods
+		if (!result.category && !isMap) {
+			if ((scripts && scripts.length > 0) || (specializations && specializations.length > 0)) {
+				result.category = 'gameplay';
+			}
+		}
+		result._categoryChecked = true;
 		
 		if (isMap) {
 			debugLog(`[MAP FOUND] ${path.basename(modPath)} -> mapId: ${mapId}, title: ${title} (Original: ${result.title})`);
@@ -1679,7 +1695,27 @@ function extractVehicleSpecs(modPath, xmlPath) {
 
 		if (!xmlContent) return null;
 
-		const techData = { hp: 0, price: 0 };
+		const techData = { hp: 0, price: 0, category: null, brand: null };
+
+		// 0. Extract storeData Category & Brand (for 3rd-party vehicles, tools, trailers, placeables, objects)
+		const storeDataBlockMatch = xmlContent.match(/<storeData>([\s\S]*?)<\/storeData>/i);
+		const storeBlock = storeDataBlockMatch ? storeDataBlockMatch[1] : xmlContent;
+
+		const catMatch = storeBlock.match(/<category>([^<]+)<\/category>/i);
+		if (catMatch && catMatch[1]) {
+			const rawCat = catMatch[1].trim();
+			if (rawCat.length <= 40 && !rawCat.includes('<')) {
+				techData.category = rawCat;
+			}
+		}
+
+		const brandMatch = storeBlock.match(/<brand>([^<]+)<\/brand>/i);
+		if (brandMatch && brandMatch[1]) {
+			const rawBrand = brandMatch[1].trim();
+			if (rawBrand.length <= 40 && !rawBrand.includes('<') && rawBrand.toUpperCase() !== 'NONE') {
+				techData.brand = rawBrand;
+			}
+		}
 
 		// 1. Extract Price
 		const priceMatch = xmlContent.match(/<price>(\d+)<\/price>/i);
@@ -1705,7 +1741,7 @@ function extractVehicleSpecs(modPath, xmlPath) {
 			if (configMatch) techData.hp = parseInt(configMatch[1], 10);
 		}
 
-		return techData.hp > 0 || techData.price > 0 ? techData : null;
+		return (techData.hp > 0 || techData.price > 0 || techData.category || techData.brand) ? techData : null;
 	} catch (err) {
 		return null;
 	}
@@ -1994,6 +2030,11 @@ async function performScan(manualPaths = null) {
 			const isDlc = entryName.toLowerCase().startsWith('pdlc_') || fullPath.toLowerCase().includes('pdlc');
 			const isModHub = !!(pool[fileId] || (modDesc?.modId && pool[String(modDesc.modId)]) || (modDesc?.mapId && pool[String(modDesc.mapId)]));
 			let isThirdParty = !isDlc && !isModHub;
+
+			// Re-parse cached 3rd-party non-map mods once if they lack a resolved category
+			if (isThirdParty && modDesc && !modDesc.category && !modDesc.isMap && !modDesc._categoryChecked) {
+				modDesc = null;
+			}
 			
 			// Skip zip parsing for files currently being downloaded by activeInstalls to prevent AdmZip crash
 			const isDownloadingFile = Array.from(activeInstalls.values()).some(inst => {

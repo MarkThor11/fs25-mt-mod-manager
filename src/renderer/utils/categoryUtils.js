@@ -198,7 +198,26 @@ export const MODHUB_CATEGORY_MAP = {
 
   // Package & Prefab
   package: { main: 'Package', sub: 'Package' },
-  prefab: { main: 'Prefab', sub: 'Prefab' }
+  prefab: { main: 'Prefab', sub: 'Prefab' },
+
+  // Common GIANTS XML <storeData><category> internal names for 3rd-party mods
+  miscvehicles: { main: 'Drivables', sub: 'Miscellaneous' },
+  balers: { main: 'Baling', sub: 'Round Balers' },
+  dollys: { main: 'Trailers', sub: 'Semi Trailers' },
+  dollies: { main: 'Trailers', sub: 'Semi Trailers' },
+  semitrailers: { main: 'Trailers', sub: 'Semi Trailers' },
+  flatbedtrailers: { main: 'Trailers', sub: 'Flatbed Trailers' },
+  changingsystems: { main: 'Trailers', sub: 'Changing Systems' },
+  conveyorbelts: { main: 'Miscellaneous', sub: 'Belt Systems' },
+  frontweights: { main: 'Miscellaneous', sub: 'Weights' },
+  woodharvesters: { main: 'Forestry', sub: 'Harvesters' },
+  forwarders: { main: 'Forestry', sub: 'Forwarders' },
+  placeables: { main: 'Placeable', sub: 'Miscellaneous' },
+  greenhouses: { main: 'Placeable', sub: 'Production Sites' },
+  factories: { main: 'Placeable', sub: 'Production Sites' },
+  solarpanels: { main: 'Placeable', sub: 'Power Generators' },
+  windturbines: { main: 'Placeable', sub: 'Power Generators' },
+  handtools: { main: 'Hand Tools', sub: 'Miscellaneous' }
 };
 
 // Set of all canonical ModHub Main Category names (lowercased)
@@ -326,6 +345,10 @@ export const getEffectiveModCategory = (m, modCache = {}) => {
 
   if (m.fileName && modCache[m.fileName]?.category) {
     return modCache[m.fileName].category;
+  }
+
+  if ((m.scripts && m.scripts.length > 0) || (m.specializations && m.specializations.length > 0)) {
+    return 'Gameplay';
   }
 
   return null;

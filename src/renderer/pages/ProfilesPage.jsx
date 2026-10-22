@@ -264,8 +264,8 @@ export default function ProfilesPage() {
       const effCat = getEffectiveModCategory(mod, modCache);
       if (!isSelectableMod(mod, effCat)) return;
       const { main } = parseModCategory(effCat, mod.isMap);
-      if (!main || main === 'Maps' || main.toLowerCase() === 'maps') return;
-      const categoryName = main;
+      if (main === 'Maps' || (main && main.toLowerCase() === 'maps')) return;
+      const categoryName = main || ((mod.scripts?.length > 0 || mod.specializations?.length > 0) ? 'Gameplay' : 'Miscellaneous');
       if (!groups[categoryName]) groups[categoryName] = [];
       groups[categoryName].push(mod);
     });
