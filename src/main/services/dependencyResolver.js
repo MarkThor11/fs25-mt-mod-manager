@@ -23,13 +23,10 @@ function normalizeForMatching(str) {
 function matchModWithDependency(m, dep, resolvedMetadata = {}) {
   if (!dep || !m) return false;
 
-  let depId = null;
   let depFileName = null;
 
   if (typeof dep === 'string') {
     if (dep.includes('http') || dep.toLowerCase().includes('.zip')) {
-      const idMatch = dep.match(/mod_id=(\d+)/i) || dep.match(/storage\/(\d+)\//i);
-      if (idMatch) depId = parseInt(idMatch[1], 10).toString();
       const fileMatch = dep.match(/\/([^\/?#]+\.zip)/i) || dep.match(/([a-z0-9_]+\.zip)/i);
       if (fileMatch) depFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
     }
@@ -37,35 +34,23 @@ function matchModWithDependency(m, dep, resolvedMetadata = {}) {
       depFileName = dep.replace(/\.zip$/i, '').trim().toLowerCase();
     }
   } else if (typeof dep === 'object') {
-    if (dep.modId) depId = String(dep.modId).replace(/^0+/, '');
     if (dep.url) {
-      const idMatch = dep.url.match(/mod_id=(\d+)/i) || dep.url.match(/storage\/(\d+)\//i);
-      if (idMatch && !depId) depId = parseInt(idMatch[1], 10).toString();
-      const fileMatch = dep.url.match(/\/([^\/?#]+\.zip)/i) || dep.url.match(/([a-z0-9_]+\.zip)/i);
+      const fileMatch = dep.url.match(/\/([^\/]+\.zip)$/i) || dep.url.match(/([a-z0-9_]+\.zip)/i);
       if (fileMatch) depFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
     }
     if (!depFileName) {
-      const fn = dep.fileName || dep.modName || dep.technicalName;
+      const fn = dep.fileName || dep.modName || dep.technicalName || (dep.title && /^[A-Za-z0-9_.\-]+$/.test(dep.title) ? dep.title : null);
       if (fn) depFileName = fn.replace(/\.zip$/i, '').toLowerCase();
     }
   }
 
   // Look up resolved metadata pool for exact ZIP filename if available
-  const metaKey = depId || depFileName;
-  if (metaKey && resolvedMetadata && resolvedMetadata[metaKey]) {
-    const meta = resolvedMetadata[metaKey];
-    if (meta.modId && !depId) depId = String(meta.modId).replace(/^0+/, '');
-    if (meta.fileName && !depFileName) depFileName = meta.fileName.replace(/\.zip$/i, '').toLowerCase();
+  if (depFileName && resolvedMetadata && resolvedMetadata[depFileName]) {
+    const meta = resolvedMetadata[depFileName];
+    if (meta.fileName) depFileName = meta.fileName.replace(/\.zip$/i, '').toLowerCase();
   }
 
-  // 1. ModHub ID Match (exact)
-  if (depId && m.modId) {
-    const safeModId = String(m.modId).replace(/^0+/, '');
-    if (safeModId === depId) return true;
-    return false;
-  }
-
-  // 2. ZIP Filename / Technical Mod Name Match (exact, unique)
+  // Match strictly by filename/technical name
   if (depFileName) {
     const normDepFile = normalizeForMatching(depFileName);
     const mFileNorm = m.fileName ? normalizeForMatching(m.fileName) : '';

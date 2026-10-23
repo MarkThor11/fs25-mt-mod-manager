@@ -909,13 +909,15 @@ async function setSavegameMods(savegamePath, mods) {
 
     // Add/update user-selected mods (excluding internal app helper mods)
     mods.forEach(m => {
-        if (m && m.modName && INTERNAL_HELPER_MODS.includes(m.modName.toLowerCase())) return;
-        const isMap = m.required || (mapId && m.modName === mapId.split('.')[0]) || (mapTitle && m.title === mapTitle);
-        const existing = existingLookup.get(m.modName.toLowerCase());
-        const rawTitle = m.title || (existing && existing['@_title']) || m.modName || '';
+        const name = m?.modName || m?.fileName?.replace(/\.zip$/i, '');
+        if (!name || INTERNAL_HELPER_MODS.includes(name.toLowerCase())) return;
+        
+        const isMap = m.required || (mapId && name === mapId.split('.')[0]) || (mapTitle && m.title === mapTitle);
+        const existing = existingLookup.get(name.toLowerCase());
+        const rawTitle = m.title || (existing && existing['@_title']) || name || '';
         const cleanTitle = String(rawTitle).replace(/"/g, "'");
-        newModsMap.set(m.modName, {
-            '@_modName': m.modName,
+        newModsMap.set(name, {
+            '@_modName': name,
             '@_title': cleanTitle,
             '@_version': m.version || (existing && existing['@_version']) || '1.0.0.0',
             '@_required': isMap ? 'true' : (existing && existing['@_required'] ? existing['@_required'] : 'false'),
@@ -2749,17 +2751,14 @@ async function getSavegameTransferData({ savePath }) {
 
             const filename = (v['@_filename'] || '').toLowerCase();
             const modName = v['@_modName'];
-            const isMotorized = v['@_isMotorized'] === 'true' || 
-                               v.motorized !== undefined || 
-                               v.fuelConsumer !== undefined || 
-                               v.drivable !== undefined || 
+            const isMotorized = v['@_isMotorized'] === 'true' ||
+                               v.motorized !== undefined ||
+                               v.fuelConsumer !== undefined ||
+                               v.drivable !== undefined ||
                                v.enterable !== undefined ||
-                               v.wheels !== undefined; // Wheels are a strong indicator of a vehicle/implement
+                               v.wheels !== undefined;
 
             let category = isMotorized ? "vehicle" : "tool";
-            if (isPallet) category = "pallet";
-            else if (isBale) category = "bale";
-            else if (isHandtool) category = "tool";
             
             assets.push({
                 category: category,
@@ -2780,18 +2779,34 @@ async function getSavegameTransferData({ savePath }) {
         const parsed = parser.parse(xml);
         const itemsRoot = parsed.items || parsed;
         const items = Array.isArray(itemsRoot.item) ? itemsRoot.item : [itemsRoot.item].filter(Boolean);
-        
+
         items.forEach(item => {
             const filename = (item['@_filename'] || '').toLowerCase();
             const isBale = filename.includes('bale');
             const isPallet = filename.includes('pallet') || filename.includes('bigbag');
             const isHandtool = filename.includes('handtool') || filename.includes('chainsaw');
 
-            let category = "pallet"; // Default for items.xml
+            let category = "tool"; 
             if (isBale) category = "bale";
-            else if (isHandtool) category = "tool";
             else if (isPallet) category = "pallet";
-            else category = "tool"; // Fallback for other items in items.xml to tools section
+            else if (isHandtool) category = "tool";
+            else category = "tool";
+
+            const fillType = item.fillUnit?.['@_fillType'] || item['@_fillType'] || "UNKNOWN";
+            const fillLevel = parseFloat(item.fillUnit?.['@_fillLevel'] || item['@_fillLevel'] || 0);
+
+            assets.push({
+                category: category,
+                displayName: path.basename(item['@_filename'], '.xml').replace(/_/g, ' ').toUpperCase(),
+                filename: item['@_filename'],
+                fillType: fillType,
+                fillLevel: fillLevel,
+                farmId: parseInt(item['@_farmId'] || 1),
+                data: item,
+                quantity: 1
+            });
+        });
+    }
 
             const fillType = item.fillUnit?.['@_fillType'] || item['@_fillType'] || "UNKNOWN";
             const fillLevel = parseFloat(item.fillUnit?.['@_fillLevel'] || item['@_fillLevel'] || 0);

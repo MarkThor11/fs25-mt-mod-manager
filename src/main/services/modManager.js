@@ -957,6 +957,9 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                     for (const dep of mObj.dependencies) {
                         const foundMod = mods.find(m => dependencyResolver.matchModWithDependency(m, dep));
 
+                        if (!foundMod) {
+                            debugLog(`[VIRTUAL] Unresolved dependency of ${currentName}: ${JSON.stringify(dep)} (no installed mod matched)`);
+                        }
                         if (foundMod && foundMod.modName) {
                             const resolvedName = foundMod.modName.toLowerCase();
                             if (!resolved.has(resolvedName)) {
@@ -1281,10 +1284,16 @@ function detectAllModsPaths() {
 							const parts = linkTarget.slice(drive.length).split(/[\\/]/).filter(Boolean);
 							if (parts.length > 0) {
 								const rootFolder = path.join(drive, parts[0]);
-								// Ignore system root folders like C:\Users, C:\Windows, C:\Program Files
-								const isSystemDir = /^[a-zA-Z]:\\(Users|Windows|Program Files|Program Files \(x86\)|ProgramData)$/i.test(rootFolder);
-								if (!isSystemDir && fs.existsSync(rootFolder) && fs.statSync(rootFolder).isDirectory()) {
-									potentialPaths.push({ path: rootFolder, type: `Linked Storage (${drive[0].toUpperCase()}:)` });
+								// Ignore system root folders (Windows and macOS)
+								const isSystemDir = /^[a-zA-Z]:\\(Users|Windows|Program Files|Program Files \(x86\)|ProgramData)$/i.test(rootFolder) || 
+														 /^\/(Users|System|Library|Applications|private)$/i.test(rootFolder);
+								
+								// On macOS, root is '/', and /Users is a system dir. Only accept if it's in /Volumes or a non-system root.
+								const isRoot = rootFolder === '/';
+								const containsHome = rootFolder.includes(process.env.HOME || '');
+
+								if (!isSystemDir && !isRoot && !containsHome && fs.existsSync(rootFolder) && fs.statSync(rootFolder).isDirectory()) {
+									potentialPaths.push({ path: rootFolder, type: `Linked Storage (${drive})` });
 								}
 							}
 						}
@@ -2160,8 +2169,20 @@ async function performScan(manualPaths = null) {
 					calculatedModId = String(remoteMod.modId || remoteMod.id || remoteMod.rawModId).replace(/^0+/, '');
 				}
 				// Use ModHub dependencies as primary authority
-				if (remoteMod.dependencies && Array.isArray(remoteMod.dependencies)) {
-					dependencies = remoteMod.dependencies;
+				if (remoteMod.dependencies && Array.isArray(remoteMod.dependencies) && remoteMod.dependencies.length > 0) {
+					// Merge: keep ModHub entries, but never drop dependencies declared in the mod's own modDesc.xml
+					const depKey = (d) => {
+						if (!d) return '';
+						let raw = typeof d === 'string' ? d : ((d.url && (d.url.match(/([^\/?#]+)\.zip/i) || [])[1]) || d.fileName || d.modName || d.technicalName || d.title || '');
+						return String(raw).toLowerCase().replace(/\.zip$/i, '').replace(/^(?:fs25|fs22|pdlc)_/, '').replace(/[^a-z0-9]/g, '');
+					};
+					const merged = [...remoteMod.dependencies];
+					const seenDepKeys = new Set(merged.map(depKey));
+					for (const localDep of dependencies) {
+						const k = depKey(localDep);
+						if (k && !seenDepKeys.has(k)) { merged.push(localDep); seenDepKeys.add(k); }
+					}
+					dependencies = merged;
 				}
 
 				// Enrich missing metadata
@@ -7111,8 +7132,14 @@ async function cleanupLegacyDuplicates() {
 					if (lstat.isSymbolicLink()) {
 						const target = await fs.readlink(fullPath);
 						const absTarget = path.isAbsolute(target) ? target : path.resolve(rootPath, target);
-						const isModMirror = allPaths.some(p => absTarget.toLowerCase().startsWith(p.toLowerCase())) ||
+						
+						// Only consider it a mirror if the target is actually within one of the detected mods paths
+						// AND it's not pointing to a directory (mod developers often link unpacked folders)
+						const targetStat = await fs.lstat(absTarget).catch(() => null);
+						const isModMirror = (targetStat && !targetStat.isDirectory()) && 
+							allPaths.some(p => absTarget.toLowerCase().startsWith(p.toLowerCase())) ||
 							absTarget.toLowerCase().endsWith('.zip');
+						
 						if (isModMirror) {
 							await fs.remove(fullPath);
 							symlinksRemoved++;
