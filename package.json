@@ -8,7 +8,8 @@
     "build": "vite build",
     "dist:win": "vite build && electron-builder --win",
     "dist:mac": "vite build && electron-builder --mac",
-    "dist": "vite build && electron-builder --win --mac"
+    "dist:linux": "vite build && electron-builder --linux",
+    "dist": "vite build && electron-builder --win --mac --linux"
   },
   "author": "GoogleModManager",
   "license": "MIT",
@@ -76,6 +77,17 @@
       "category": "public.app-category.utilities",
       "hardenedRuntime": false,
       "gatekeeperAssess": false
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage"
+        },
+        {
+          "target": "deb"
+        }
+      ],
+      "category": "Utility"
     },
     "nsis": {
       "oneClick": true,
