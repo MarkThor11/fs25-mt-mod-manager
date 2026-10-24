@@ -64552,38 +64552,6 @@
     "isMap": false,
     "category": "Prefab"
   },
-  "310838": {
-    "modId": "310838",
-    "title": "Error: Mod not found",
-    "author": "Unknown",
-    "authorId": null,
-    "description": "The mod you are looking for could not be found.",
-    "images": [
-      "https://cdn19.giants-software.com/modHub/storage/00310838/iconBig.jpg"
-    ],
-    "downloadUrl": "",
-    "fileName": null,
-    "rating": 0,
-    "metadata": {},
-    "version": "—",
-    "fileSize": "",
-    "changelog": [],
-    "techData": {
-      "price": 0,
-      "hp": 0,
-      "hpIsRequirement": false,
-      "capacity": 0,
-      "unitCapacity": 0,
-      "unitCapacityType": "",
-      "speed": 0,
-      "weight": 0,
-      "scraped": true
-    },
-    "releasedDate": "",
-    "dependencies": [],
-    "isMap": false,
-    "category": ""
-  },
   "310839": {
     "modId": "310839",
     "title": "MAN TGS 18 Series",
@@ -273350,38 +273318,6 @@
     "dependencies": [],
     "isMap": false,
     "category": "Drivables - Trucks"
-  },
-  "356224": {
-    "modId": "356224",
-    "title": "Error: Mod not found",
-    "author": "Unknown",
-    "authorId": null,
-    "description": "The mod you are looking for could not be found.",
-    "images": [
-      "https://cdn19.giants-software.com/modHub/storage/00356224/iconBig.jpg"
-    ],
-    "downloadUrl": "",
-    "fileName": null,
-    "rating": 0,
-    "metadata": {},
-    "version": "—",
-    "fileSize": "",
-    "changelog": [],
-    "techData": {
-      "price": 0,
-      "hp": 0,
-      "hpIsRequirement": false,
-      "capacity": 0,
-      "unitCapacity": 0,
-      "unitCapacityType": "",
-      "speed": 0,
-      "weight": 0,
-      "scraped": true
-    },
-    "releasedDate": "",
-    "dependencies": [],
-    "isMap": false,
-    "category": ""
   },
   "356248": {
     "modId": "356248",

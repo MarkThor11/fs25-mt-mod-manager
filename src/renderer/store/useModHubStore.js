@@ -882,9 +882,6 @@ export const useModHubStore = create((set, get) => ({
   setPage: (page) => {
     localStorage.setItem('modhub_page', page.toString());
     set({ currentPage: page });
-    if (get().currentFilter?.toLowerCase() === 'all') {
-      get().fetchMods('all', page);
-    }
   },
 
   setSearchQuery: (query) => set({ searchQuery: query }),
@@ -1060,13 +1057,68 @@ export const useModHubStore = create((set, get) => ({
           }
           return resMods;
         } else if (filterName.toLowerCase() === 'all') {
-          // ModHub has 280+ pages for 'all' filter. Fetch the requested page (or page 0).
-          const targetPage = typeof page === 'number' ? page : (get().currentPage || 0);
-          const result = await window.api.modhub.fetchMods({ filter: 'all', page: targetPage, bustCache });
-          const total = result.pagination?.total || result.totalPages || 1;
-          const totalModsCount = result.pagination?.totalMods || total * 24;
-          set({ totalPages: total, categoryTotalMods: totalModsCount });
-          return result.mods || [];
+          // 'All' category uses the full persistent database pool (6,800+ mods)
+          // supplemented with the latest live mods from ModHub page 0
+          const pool = new Map();
+          try {
+            const persistentCache = await window.api.modhub.getPersistentCache();
+            Object.values(persistentCache || {}).forEach(m => {
+              if (m?.modId && m?.title && m.title !== 'Error: Mod not found' && !m.title.toLowerCase().includes('not found') && (m.downloadUrl || m.fileName)) {
+                const paddedId = String(m.modId).padStart(8, '0');
+                const image = (m.images && m.images[0]) || m.image || ('https://cdn18.giants-software.com/modHub/storage/' + paddedId + '/iconBig.jpg');
+                const candidates = (m.candidates && m.candidates.length > 0) ? m.candidates : [
+                  'https://cdn16.giants-software.com/modHub/storage/' + paddedId + '/iconBig.jpg',
+                  'https://cdn17.giants-software.com/modHub/storage/' + paddedId + '/iconBig.jpg',
+                  'https://cdn18.giants-software.com/modHub/storage/' + paddedId + '/iconBig.jpg',
+                  'https://cdn19.giants-software.com/modHub/storage/' + paddedId + '/iconBig.jpg',
+                  'https://cdn20.giants-software.com/modHub/storage/' + paddedId + '/iconBig.jpg',
+                  ...(m.images || [])
+                ];
+                pool.set(String(m.modId), { ...m, image, candidates });
+              }
+            });
+          } catch (_) {}
+
+          // Also merge existing known modCache items
+          Object.values(get().modCache || {}).forEach(item => {
+            if (item?.allMods && Array.isArray(item.allMods)) {
+              item.allMods.forEach(m => { if (m?.modId && !pool.has(String(m.modId))) pool.set(String(m.modId), m); });
+            } else if (item?.modId && !pool.has(String(item.modId))) {
+              pool.set(String(item.modId), item);
+            }
+          });
+
+          // Fetch the live first page of latest to ensure new releases today are included
+          try {
+            const liveResult = await window.api.modhub.fetchMods({ filter: 'latest', page: 0, bustCache });
+            (liveResult?.mods || []).forEach(m => {
+              if (m?.modId && m?.title && m.title !== 'Error: Mod not found' && !m.title.toLowerCase().includes('not found')) {
+                const existing = pool.get(String(m.modId));
+                pool.set(String(m.modId), existing ? { ...existing, ...m } : m);
+              }
+            });
+          } catch (_) {}
+
+          const allPoolMods = Array.from(pool.values());
+          const parseDate = (m) => {
+            const rel = m.releasedDate || m.metadata?.Released || m.metadata?.['Release date'] || m.metadata?.['Release Date'] || m.metadata?.Date;
+            if (rel && typeof rel === 'string') {
+              const parts = rel.trim().split('.');
+              if (parts.length === 3) {
+                const d = parseInt(parts[0], 10);
+                const mMonth = parseInt(parts[1], 10);
+                const y = parseInt(parts[2], 10);
+                if (!isNaN(d) && !isNaN(mMonth) && !isNaN(y)) {
+                  return new Date(y, mMonth - 1, d).getTime();
+                }
+              }
+            }
+            return m.badgeFirstSeen || 0;
+          };
+          allPoolMods.sort((a, b) => parseDate(b) - parseDate(a));
+
+          set({ totalPages: Math.max(1, Math.ceil(allPoolMods.length / get().pageSize)), categoryTotalMods: allPoolMods.length });
+          return allPoolMods;
         } else {
           const first = await window.api.modhub.fetchMods({ filter: filterName, page: 0, bustCache });
           let total = first.pagination?.total || first.totalPages || 1;

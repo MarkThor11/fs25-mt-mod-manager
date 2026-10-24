@@ -202,7 +202,7 @@ export default function ModHubPage() {
   // Filter mods based on active filters
   const filteredMods = useMemo(() => {
     return sourceMods.filter(mod => {
-      if (!mod) return false;
+      if (!mod || !mod.title || mod.title === 'Error: Mod not found' || mod.title.toLowerCase().includes('not found')) return false;
 
       // Hidden mod filter — always exclude hidden mods from browsing
       const hiddenModIds = hiddenMods.map(m => m.modId);
@@ -474,19 +474,13 @@ export default function ModHubPage() {
     return result.filter(m => m && (m.modId || m.title));
   }, [filteredMods, sortOrder]);
 
-  const isServerPaginated = currentFilter?.toLowerCase() === 'all';
-  const totalFilteredCount = (isServerPaginated && categoryTotalMods > 0) ? categoryTotalMods : filteredAndSortedMods.length;
-  const computedTotalPages = isServerPaginated 
-    ? Math.max(1, totalPages || 1)
-    : Math.max(1, Math.ceil(filteredAndSortedMods.length / pageSize));
+  const totalFilteredCount = filteredAndSortedMods.length;
+  const computedTotalPages = Math.max(1, Math.ceil(totalFilteredCount / pageSize));
   const safeCurrentPage = currentPage >= computedTotalPages ? 0 : currentPage;
   const pagedMods = useMemo(() => {
-    if (isServerPaginated) {
-      return filteredAndSortedMods;
-    }
     const start = safeCurrentPage * pageSize;
     return filteredAndSortedMods.slice(start, start + pageSize);
-  }, [filteredAndSortedMods, safeCurrentPage, pageSize, isServerPaginated]);
+  }, [filteredAndSortedMods, safeCurrentPage, pageSize]);
 
   const handleCategorySelect = (filter) => {
     setSearchInput('');
