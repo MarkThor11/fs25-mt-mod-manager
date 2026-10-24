@@ -352,13 +352,19 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
             )}
 
 
-            {mod.isDLC && (
+            {mod.isDLC ? (
                 <div style={{ position: 'absolute', bottom: 8, left: 8, display: 'flex', alignItems: 'center', gap: 4, zIndex: 10 }}>
                     <div style={{ background: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 900, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
                         DLC
                     </div>
                 </div>
-            )}
+            ) : (!mod.modId && !mod.isModHub && !mod.isVirtual && (
+                <div style={{ position: 'absolute', bottom: 8, left: 8, display: 'flex', alignItems: 'center', gap: 4, zIndex: 10 }}>
+                    <div style={{ background: 'rgba(30, 41, 59, 0.9)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.3)', padding: '2px 7px', borderRadius: 4, fontSize: 9, fontWeight: 800, letterSpacing: '0.04em', boxShadow: '0 2px 4px rgba(0,0,0,0.3)', textTransform: 'uppercase' }} title="Non-ModHub Mod">
+                        NON-MODHUB
+                    </div>
+                </div>
+            ))}
 
             {/* Trash Bin Overlay for Icon/Grid View - Move to Top-Left */}
             {isIconOnly && !mod.isDLC && !mod.isVirtual && (
@@ -1126,6 +1132,12 @@ export default function InstalledModsPage() {
     if (tLower === 'updates' || tLower === 'updates available' || tLower === 'has-updates') {
       return Boolean(m.fileName && updateFileNamesSet.has(m.fileName));
     }
+    if (tLower === 'modhub' || tLower === 'modhub mods') {
+      return Boolean(!m.isDLC && (m.modId || m.isModHub));
+    }
+    if (tLower === 'non-modhub' || tLower === 'non-modhub mods' || tLower === '3rd party' || tLower === 'third party') {
+      return Boolean(!m.isDLC && !m.modId && !m.isModHub);
+    }
 
     // 2. Category matching (from mod's resolved ModHub category field)
     const { main, sub } = parseModCategory(effCat, m.isMap);
@@ -1335,6 +1347,24 @@ export default function InstalledModsPage() {
     const crossplayStats = getTagStats('Crossplay');
     kfList.push({ name: 'Crossplay', label: 'Crossplay', count: crossplayStats.count, maxDate: crossplayStats.maxDate, primaryAuthor: crossplayStats.primaryAuthor, isFunctional: true });
     assignedTagNamesLower.add('crossplay');
+
+    // ModHub Mods
+    const modHubStats = getTagStats('ModHub');
+    if (modHubStats.count > 0) {
+      kfList.push({ name: 'ModHub', label: 'ModHub', count: modHubStats.count, maxDate: modHubStats.maxDate, primaryAuthor: modHubStats.primaryAuthor, isFunctional: true });
+      assignedTagNamesLower.add('modhub');
+      assignedTagNamesLower.add('modhub mods');
+    }
+
+    // Non-ModHub Mods
+    const nonModHubStats = getTagStats('Non-ModHub');
+    if (nonModHubStats.count > 0) {
+      kfList.push({ name: 'Non-ModHub', label: 'Non-ModHub', count: nonModHubStats.count, maxDate: nonModHubStats.maxDate, primaryAuthor: nonModHubStats.primaryAuthor, isFunctional: true });
+      assignedTagNamesLower.add('non-modhub');
+      assignedTagNamesLower.add('non-modhub mods');
+      assignedTagNamesLower.add('3rd party');
+      assignedTagNamesLower.add('third party');
+    }
 
     kfList.sort(sortFn);
 

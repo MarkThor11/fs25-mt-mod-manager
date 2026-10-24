@@ -76,6 +76,7 @@ export default function ProfilesPage() {
   const [modSearchQuery, setModSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('ALL'); // ALL, MODHUB, NON_MODHUB
   const [includeMustHaves, setIncludeMustHaves] = useState(true);
   const [activeTab, setActiveTab] = useState('general');
   const [isSelectedSectionOpen, setIsSelectedSectionOpen] = useState(true);
@@ -1007,6 +1008,16 @@ export default function ProfilesPage() {
                       ))}
                     </select>
                   )}
+                  <select
+                    value={sourceFilter}
+                    onChange={e => setSourceFilter(e.target.value)}
+                    title="Filter by ModHub or Non-ModHub mods."
+                    style={{ width: 130, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="ALL">All Sources</option>
+                    <option value="MODHUB">ModHub Only</option>
+                    <option value="NON_MODHUB">Non-ModHub Only</option>
+                  </select>
                   <div className="search-input-wrapper" style={{ position: 'relative', minWidth: '240px' }}>
                         <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                         <input
@@ -1193,6 +1204,9 @@ export default function ProfilesPage() {
                                           </div>
                                           {isPCOnly && (
                                             <span className="pc-only-badge" style={{ marginTop: 2 }}>PC ONLY</span>
+                                           )}
+                                           {!mod.modId && !mod.isModHub && (
+                                             <span className="non-modhub-badge" style={{ marginTop: 2 }}>NON-MODHUB</span>
                                           )}
                                           <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 'auto', paddingTop: 2 }}>
                                             <span>v{mod.version || '1.0.0.0'}</span>
@@ -1252,6 +1266,8 @@ export default function ProfilesPage() {
                                 }
                                 if (b !== selectedBrand) return false;
                               }
+                              if (sourceFilter === 'MODHUB' && (!m.modId && !m.isModHub)) return false;
+                              if (sourceFilter === 'NON_MODHUB' && (m.modId || m.isModHub)) return false;
                               if (modSearchQuery) {
                                 const q = modSearchQuery.toLowerCase();
                                 const titleMatch = m.title?.toLowerCase().includes(q);
@@ -1461,6 +1477,7 @@ export default function ProfilesPage() {
                                                   </div>
                                                 )}
                                               {isPCOnly && <div className="pc-only-badge">PC ONLY</div>}
+                                              {!mod.modId && !mod.isModHub && <div className="non-modhub-badge">NON-MODHUB</div>}
                                               <div style={{ marginTop: 'auto', paddingTop: 4, fontSize: 10, color: 'var(--text-tertiary)', opacity: 0.7 }}>
                                                 <span>v{mod.version || '1.0.0.0'}</span>
                                               </div>
@@ -1529,6 +1546,9 @@ export default function ProfilesPage() {
                                               </div>
                                             {isPCOnly && (
                                               <span className="pc-only-badge">PC ONLY</span>
+                                            )}
+                                            {!mod.modId && !mod.isModHub && (
+                                              <span className="non-modhub-badge">NON-MODHUB</span>
                                             )}
                                             <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 'auto', paddingTop: 2 }}>
                                               <span>v{mod.version || '1.0.0.0'}</span>
@@ -1796,6 +1816,19 @@ export default function ProfilesPage() {
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+        }
+
+        .non-modhub-badge {
+          font-size: 8px;
+          padding: 1px 4px;
+          border-radius: 3px;
+          background: rgba(30, 41, 59, 0.9);
+          color: #94a3b8;
+          border: 1px solid rgba(148, 163, 184, 0.3);
+          display: inline-block;
+          font-weight: 800;
+          letter-spacing: 0.04em;
+          margin-top: 4px;
         }
 
         .pc-only-badge {

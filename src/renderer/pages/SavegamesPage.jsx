@@ -612,6 +612,7 @@ const [activeTab, setActiveTab] = useState('general');
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedFolder, setSelectedFolder] = useState('ALL');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [editorSourceFilter, setEditorSourceFilter] = useState('ALL');
   const [selectedMods, setSelectedMods] = useState(new Set((save.mods || []).map(m => typeof m === 'string' ? m : m?.modName)));
   const activeModalConflicts = getActiveConflictsForSave(selectedMods, useLocalModsStore.getState().conflicts);
   const { mods: installedMods } = useLocalModsStore();
@@ -2068,6 +2069,16 @@ const [activeTab, setActiveTab] = useState('general');
                           </select>
                         )}
                         <select 
+                            value={editorSourceFilter} 
+                            onChange={e => setEditorSourceFilter(e.target.value)}
+                            title="Filter by ModHub or Non-ModHub mods."
+                            style={{ width: 130, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer' }}
+                        >
+                            <option value="ALL">All Sources</option>
+                            <option value="MODHUB">ModHub Only</option>
+                            <option value="NON_MODHUB">Non-ModHub Only</option>
+                        </select>
+                        <select 
                             value={selectedFolder} 
                             onChange={e => setSelectedFolder(e.target.value)}
                             title="Filter by mod folder."
@@ -2500,7 +2511,12 @@ const [activeTab, setActiveTab] = useState('general');
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12, overflow: 'hidden' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, minHeight: 48, justifyContent: 'space-between' }}>
                                           <div>
-                                            <div style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title || m.modName}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+                                              <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title || m.modName}</span>
+                                              {!m.modId && !m.isModHub && (
+                                                <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 3, background: 'rgba(30, 41, 59, 0.9)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.3)', fontWeight: 800, letterSpacing: '0.04em', flexShrink: 0 }}>NON-MODHUB</span>
+                                              )}
+                                            </div>
                                             <div style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'}</div>
                                           </div>
                                           {m.version && (
@@ -3182,6 +3198,7 @@ export default function SavegamesPage() {
   const [createActiveTab, setCreateActiveTab] = useState('basic');
     const [createBrandFilter, setCreateBrandFilter] = useState('');
   const [createCategoryFilter, setCreateCategoryFilter] = useState('');
+  const [createSourceFilter, setCreateSourceFilter] = useState('ALL');
   const [createModSearchQuery, setCreateModSearchQuery] = useState('');
   const createAvailableCategories = React.useMemo(() => {
     const cats = new Set();
@@ -4701,6 +4718,11 @@ export default function SavegamesPage() {
                                             {createAvailableCategories.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
                                     )}
+                                    <select value={createSourceFilter} onChange={e => setCreateSourceFilter(e.target.value)} title="Filter by ModHub or Non-ModHub mods." style={{ fontSize: 13, padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                                        <option value="ALL">All Sources</option>
+                                        <option value="MODHUB">ModHub Only</option>
+                                        <option value="NON_MODHUB">Non-ModHub Only</option>
+                                    </select>
                                     {profiles.length > 0 && (
                                         <select onChange={e => applyProfileToModal(e.target.value)} defaultValue="" style={{ fontSize: 13, padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
                                             <option value="" disabled>Apply Profile...</option>
@@ -4935,7 +4957,12 @@ export default function SavegamesPage() {
                                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
                                                            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, minHeight: 48, justifyContent: 'space-between' }}>
                                                              <div>
-                                                               <div style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</div>
+                                                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+                                                                 <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</span>
+                                                                 {!m.modId && !m.isModHub && (
+                                                                   <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 3, background: 'rgba(30, 41, 59, 0.9)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.3)', fontWeight: 800, letterSpacing: '0.04em', flexShrink: 0 }}>NON-MODHUB</span>
+                                                                 )}
+                                                               </div>
                                                                <div style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'}</div>
                                                              </div>
                                                              {m.version && (
