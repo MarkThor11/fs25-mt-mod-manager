@@ -1119,7 +1119,7 @@ export const useModHubStore = create((set, get) => ({
           };
           allPoolMods.sort((a, b) => parseDate(b) - parseDate(a));
 
-          set({ totalPages: Math.max(1, Math.ceil(allPoolMods.length / get().pageSize)), categoryTotalMods: allPoolMods.length });
+          set({ totalPages: Math.max(1, Math.ceil(allPoolMods.length / get().pageSize)), categoryTotalMods: allPoolMods.length, totalMods: Math.max(get().totalMods || 0, allPoolMods.length) });
           return allPoolMods;
         } else {
           const first = await window.api.modhub.fetchMods({ filter: filterName, page: 0, bustCache });
