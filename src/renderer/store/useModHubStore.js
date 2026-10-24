@@ -1088,14 +1088,16 @@ export const useModHubStore = create((set, get) => ({
             }
           });
 
-          // Fetch the live first page of latest to ensure new releases today are included
+          // Fetch the live latest pages (0 to 4) to ensure recent releases are included
           try {
-            const liveResult = await window.api.modhub.fetchMods({ filter: 'latest', page: 0, bustCache });
-            (liveResult?.mods || []).forEach(m => {
-              if (m?.modId && m?.title && m.title !== 'Error: Mod not found' && !m.title.toLowerCase().includes('not found')) {
-                const existing = pool.get(String(m.modId));
-                pool.set(String(m.modId), existing ? { ...existing, ...m } : m);
-              }
+            const livePages = await Promise.all([0, 1, 2, 3, 4].map(p => window.api.modhub.fetchMods({ filter: 'latest', page: p, bustCache }).catch(() => null)));
+            livePages.forEach(liveResult => {
+              (liveResult?.mods || []).forEach(m => {
+                if (m?.modId && m?.title && m.title !== 'Error: Mod not found' && !m.title.toLowerCase().includes('not found')) {
+                  const existing = pool.get(String(m.modId));
+                  pool.set(String(m.modId), existing ? { ...existing, ...m } : m);
+                }
+              });
             });
           } catch (_) {}
 

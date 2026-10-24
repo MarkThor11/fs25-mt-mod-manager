@@ -1623,8 +1623,7 @@ async function fetchTrueModCount() {
 
     // 4. Official DLC packs are official game expansions, NOT player mods.
     // Exclude the 9 official DLC listings so this counter strictly represents player mods.
-    const OFFICIAL_DLC_COUNT = 9;
-    return Math.max(0, rawTotal - OFFICIAL_DLC_COUNT);
+    return Math.max(0, rawTotal);
   } catch (err) {
     console.error(`[SCRAPER] Failed to fetch true total: ${err.message}`);
     return 0;
