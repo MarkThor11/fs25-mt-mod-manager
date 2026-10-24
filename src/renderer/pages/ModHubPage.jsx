@@ -643,7 +643,7 @@ export default function ModHubPage() {
                     transition: 'opacity 0.3s ease',
                     marginTop: 2
                   }}>
-                    <span style={{ color: 'var(--text-primary)', fontSize: '18px', opacity: 1 }}>{totalFilteredCount.toLocaleString()}</span> MODS FOUND
+                    <span style={{ color: 'var(--text-primary)', fontSize: '18px', opacity: 1 }}>{(currentFilter === 'all' && !searchInput && !authorFilter && (activeFilters.brands?.length || 0) === 0 && !activeFilters.hideInstalled && !activeFilters.hideRequired && (activeFilters.platforms?.length || 0) === 0 && activeFilters.priceRange[0] === 0 && activeFilters.priceRange[1] >= globalMax.price && activeFilters.hpRange[0] === 0 && activeFilters.hpRange[1] >= globalMax.hp && activeFilters.capRange[0] === 0 && activeFilters.capRange[1] >= globalMax.cap && activeFilters.unitRange[0] === 0 && activeFilters.unitRange[1] >= globalMax.unit) ? (categoryTotalMods || totalFilteredCount).toLocaleString() : totalFilteredCount.toLocaleString()}</span> MODS FOUND
                   </div>
                 </div>
               )}

@@ -1603,8 +1603,17 @@ async function fetchTrueModCount() {
   try {
     const cache = require('./cache');
     const pool = cache.getModHubMetadataPool();
-    const count = Object.keys(pool || {}).filter(k => /^\d+$/.test(k)).length;
-    if (count > 6000) return count;
+    // pool has both raw modIds and padded/variant keys. Count unique numeric items:
+    const uniqueIds = new Set();
+    Object.values(pool || {}).forEach(m => {
+      if (m && m.modId && m.title && m.title !== 'Error: Mod not found' && !m.title.toLowerCase().includes('not found')) {
+        uniqueIds.add(String(m.modId).replace(/^0+/, ''));
+      }
+    });
+
+    if (uniqueIds.size > 6000) {
+      return uniqueIds.size;
+    }
 
     const bundledPath = require('path').join(__dirname, '../resources/bundled_cache.json');
     if (fs.existsSync(bundledPath)) {
