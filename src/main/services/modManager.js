@@ -2243,6 +2243,7 @@ async function performScan(manualPaths = null) {
 				folder: subFolder, 
 				isFolder: isModDir || false,
 				isDLC: isDlc || subFolder === 'DLC' || entryName.toLowerCase().startsWith('pdlc_'),
+				isThirdParty: !isDlc && !entryName.toLowerCase().startsWith('pdlc_') && !calculatedModId,
 				isMap: modDesc?.isMap || false,
 				isCrossplay: !!isCrossplay,
 				mapId: modDesc?.mapId || null,
