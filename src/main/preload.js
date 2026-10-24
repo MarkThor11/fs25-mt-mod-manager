@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
+  isDev: process.env.NODE_ENV === 'development' || !process.env.ELECTRON_IS_PACKAGED,
   // Window controls
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),

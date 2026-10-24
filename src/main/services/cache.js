@@ -145,6 +145,17 @@ function init() {
   // Enforce autoResolveDependencies to false
   db.prepare('UPDATE settings SET value = ? WHERE key = ?').run('false', 'autoResolveDependencies');
 
+  // ── DEV MODE AUTO-INVALIDATION ──
+  const isDevMode = (app && !app.isPackaged);
+  if (isDevMode) {
+    try {
+      db.prepare("DELETE FROM cache WHERE key = 'modhub_discovery_stats' OR key LIKE 'mods_%'").run();
+      console.log('[CACHE] [DEV MODE] Flushed volatile ModHub stats & listings cache on startup.');
+    } catch (e) {
+      console.warn('[CACHE] [DEV MODE] Volatile cache flush error:', e.message);
+    }
+  }
+
   // ── STARTUP OPTIMIZATION ──
   // We used to purge 'Latest' here, but we'll now rely on TTL to keep things fresh 
   // without forcing a slow reload on every single startup.
