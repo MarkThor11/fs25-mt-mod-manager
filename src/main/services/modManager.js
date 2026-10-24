@@ -2434,50 +2434,21 @@ async function performScan(manualPaths = null) {
 	});
 
 	for (const m of sortedForDedupe) {
-		// Only MAP mods (e.g. PC vs CP versions in separate folders) are preserved across different folders.
-		// Regular mods that exist in multiple folders should be deduplicated so the user does not see duplicates across folders.
-		const isMapMod = !!m.isMap;
-		const folderPrefix = (isMapMod && m.folder && m.folder !== '') ? `[DIR:${m.folder.toLowerCase()}]_` : '';
+		// Strict global deduplication:
+		// Every mod (including maps) must only appear ONCE in the installed mods list.
+		// If the user has both PC and Crossplay versions of a map in separate folders,
+		// or copies in both root and a folder, only the single best instance is registered.
 		const baseName = path.basename(m.fileName).toLowerCase();
 		const typeTag = m.isFolder ? '[UNZIPPED]' : '[ZIP]';
-		const idKey = m.modId ? `${folderPrefix}${typeTag}_ID_${m.modId}` : null;
-		const fileKey = `${folderPrefix}${typeTag}_FILE_${baseName}`;
-
-		// Global collision keys: used to deduplicate across folders for regular mods,
-		// and to drop root mods if a subfolder version already exists.
 		const globalFileKey = `GLOBAL_${typeTag}_FILE_${baseName}`;
-		const globalIdKey = m.modId ? `GLOBAL_${typeTag}_ID_${m.modId}` : null;
+		const globalIdKey = m.modId ? `GLOBAL_${typeTag}_ID_${String(m.modId).replace(/^0+/, '')}` : null;
 
-		const isRoot = !m.folder || m.folder === '';
 		let alreadySeen = false;
-
-		if (isMapMod) {
-			if (isRoot) {
-				// Map in root: drop if a subfolder version of this exact map variant exists
-				if (uniqueModsMap.has(globalFileKey) || (globalIdKey && uniqueModsMap.has(globalIdKey))) {
-					alreadySeen = true;
-				}
-			} else {
-				// Map in dedicated folder: only deduplicate within the same folder
-				const keys = [idKey, fileKey].filter(Boolean);
-				for (const k of keys) {
-					if (uniqueModsMap.has(k)) {
-						alreadySeen = true;
-						break;
-					}
-				}
-			}
-		} else {
-			// Non-map mods: deduplicate globally so identical mods in multiple folders do not duplicate
-			if (uniqueModsMap.has(globalFileKey) || (globalIdKey && uniqueModsMap.has(globalIdKey))) {
-				alreadySeen = true;
-			}
+		if (uniqueModsMap.has(globalFileKey) || (globalIdKey && uniqueModsMap.has(globalIdKey))) {
+			alreadySeen = true;
 		}
 
 		if (!alreadySeen) {
-			if (isMapMod && !isRoot) {
-				[idKey, fileKey].filter(Boolean).forEach(k => uniqueModsMap.set(k, m));
-			}
 			uniqueModsMap.set(globalFileKey, m);
 			if (globalIdKey) uniqueModsMap.set(globalIdKey, m);
 			uniqueModsMap.set(`FP_${m.filePath || m.fileName}`, m);
