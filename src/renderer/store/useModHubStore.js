@@ -1090,7 +1090,7 @@ export const useModHubStore = create((set, get) => ({
 
           // Fetch the live latest pages (0 to 4) to ensure recent releases are included
           try {
-            const livePages = await Promise.all([0, 1, 2, 3, 4].map(p => window.api.modhub.fetchMods({ filter: 'latest', page: p, bustCache }).catch(() => null)));
+            const livePages = await Promise.all([0, 1, 2, 3, 4, 5, 6, 7].map(p => window.api.modhub.fetchMods({ filter: 'latest', page: p, bustCache }).catch(() => null)));
             livePages.forEach(liveResult => {
               (liveResult?.mods || []).forEach(m => {
                 if (m?.modId && m?.title && m.title !== 'Error: Mod not found' && !m.title.toLowerCase().includes('not found')) {
