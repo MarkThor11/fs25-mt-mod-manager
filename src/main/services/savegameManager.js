@@ -2808,22 +2808,6 @@ async function getSavegameTransferData({ savePath }) {
         });
     }
 
-            const fillType = item.fillUnit?.['@_fillType'] || item['@_fillType'] || "UNKNOWN";
-            const fillLevel = parseFloat(item.fillUnit?.['@_fillLevel'] || item['@_fillLevel'] || 0);
-
-            assets.push({
-                category: category,
-                displayName: path.basename(item['@_filename'], '.xml').replace(/_/g, ' ').toUpperCase(),
-                filename: item['@_filename'],
-                fillType: fillType,
-                fillLevel: fillLevel,
-                farmId: parseInt(item['@_farmId'] || 1),
-                data: item,
-                quantity: 1
-            });
-        });
-    }
-
     // --- C. Bulk Storage (placeables.xml) ---
     const placeablesPath = path.join(savePath, 'placeables.xml');
     if (fs.existsSync(placeablesPath)) {
