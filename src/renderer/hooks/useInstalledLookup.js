@@ -42,7 +42,7 @@ export function useInstalledLookup() {
         const fn = cleanStr(lm.fileName.split(/[/\\]/).pop());
         if (fn) byExactFileName.set(fn, ver);
         const base = getBaseName(lm.fileName);
-        if (base) byBaseName.set(base, ver);
+        if (base) byBaseName.set(base, { version: ver, modId: cleanModId });
       }
       if (lm.title) {
         const norm = cleanStr(lm.title);
@@ -53,7 +53,7 @@ export function useInstalledLookup() {
         if (norm) {
           byExactName.set(norm, ver);
           const base = getBaseName(lm.modName);
-          if (base) byBaseName.set(base, ver);
+          if (base) byBaseName.set(base, { version: ver, modId: cleanModId });
         }
       }
     }
@@ -85,7 +85,11 @@ export function useInstalledLookup() {
         }
         const base = getBaseName(remoteFileStr);
         if (base && lookupIndex.byBaseName.has(base)) {
-          return lookupIndex.byBaseName.get(base);
+          const entry = lookupIndex.byBaseName.get(base);
+          const modCleanId = mod.modId ? String(mod.modId).replace(/^0+/, '') : null;
+          if (!entry.modId || !modCleanId || entry.modId === modCleanId) {
+            return entry.version;
+          }
         }
       }
 
@@ -95,7 +99,13 @@ export function useInstalledLookup() {
         if (normName) {
           if (lookupIndex.byExactName.has(normName)) return lookupIndex.byExactName.get(normName);
           const base = getBaseName(normName);
-          if (base && lookupIndex.byBaseName.has(base)) return lookupIndex.byBaseName.get(base);
+          if (base && lookupIndex.byBaseName.has(base)) {
+            const entry = lookupIndex.byBaseName.get(base);
+            const modCleanId = mod.modId ? String(mod.modId).replace(/^0+/, '') : null;
+            if (!entry.modId || !modCleanId || entry.modId === modCleanId) {
+              return entry.version;
+            }
+          }
         }
       }
 
