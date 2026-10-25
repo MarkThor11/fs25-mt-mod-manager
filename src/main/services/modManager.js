@@ -2434,23 +2434,48 @@ async function performScan(manualPaths = null) {
 	});
 
 	for (const m of sortedForDedupe) {
-		// Strict global deduplication:
-		// Every mod (including maps) must only appear ONCE in the installed mods list.
-		// If the user has both PC and Crossplay versions of a map in separate folders,
-		// or copies in both root and a folder, only the single best instance is registered.
+		// DEDUPLICATION RULES:
+		// 1. Separate folders (such as dedicated map folders like 'Pallegney' vs 'Pallegney (CP)')
+		//    are distinct mod locations and must NEVER overwrite or collapse each other.
+		// 2. Exact duplicate files: A file in the root directory that is already present in a dedicated
+		//    subfolder (e.g. root copy of a map or dependency) is dropped in favor of the subfolder copy.
+		// 3. Across different folders, mods only deduplicate if they share the exact same folder location,
+		//    ensuring PC and Crossplay editions in their own folders are preserved as distinct items.
+		const folderKey = (m.folder && m.folder !== '') ? m.folder.toLowerCase() : '';
 		const baseName = path.basename(m.fileName).toLowerCase();
 		const typeTag = m.isFolder ? '[UNZIPPED]' : '[ZIP]';
-		const globalFileKey = `GLOBAL_${typeTag}_FILE_${baseName}`;
-		const globalIdKey = m.modId ? `GLOBAL_${typeTag}_ID_${String(m.modId).replace(/^0+/, '')}` : null;
+		const cleanId = m.modId ? String(m.modId).replace(/^0+/, '') : null;
 
+		// Key scoped to folder for items in folders
+		const scopedFileKey = `FOLDER_${folderKey}_${typeTag}_${baseName}`;
+		const scopedIdKey = cleanId ? `FOLDER_${folderKey}_${typeTag}_ID_${cleanId}` : null;
+
+		// Global key to track if a subfolder version already claimed this file
+		const globalSubfolderKey = `SUBFOLDER_${typeTag}_${baseName}`;
+
+		const isRoot = !m.folder || m.folder === '';
 		let alreadySeen = false;
-		if (uniqueModsMap.has(globalFileKey) || (globalIdKey && uniqueModsMap.has(globalIdKey))) {
-			alreadySeen = true;
+
+		if (isRoot) {
+			// If an instance of this file already exists in a subfolder, drop the root duplicate
+			if (uniqueModsMap.has(globalSubfolderKey)) {
+				alreadySeen = true;
+			} else if (uniqueModsMap.has(scopedFileKey)) {
+				alreadySeen = true;
+			}
+		} else {
+			// In a subfolder: check if already seen within this exact same folder
+			if (uniqueModsMap.has(scopedFileKey) || (scopedIdKey && uniqueModsMap.has(scopedIdKey))) {
+				alreadySeen = true;
+			}
 		}
 
 		if (!alreadySeen) {
-			uniqueModsMap.set(globalFileKey, m);
-			if (globalIdKey) uniqueModsMap.set(globalIdKey, m);
+			if (!isRoot) {
+				uniqueModsMap.set(globalSubfolderKey, m);
+			}
+			uniqueModsMap.set(scopedFileKey, m);
+			if (scopedIdKey) uniqueModsMap.set(scopedIdKey, m);
 			uniqueModsMap.set(`FP_${m.filePath || m.fileName}`, m);
 		}
 	}
