@@ -1133,7 +1133,7 @@ export default function InstalledModsPage() {
       return Boolean(m.fileName && updateFileNamesSet.has(m.fileName));
     }
     if (tLower === 'modhub' || tLower === 'modhub mods') {
-      return Boolean(!m.isDLC && !m.isFolder && !m.isDelisted && !m.isRemoved && (m.modId || m.isModHub));
+      return Boolean(!m.isDLC && !m.isFolder && (m.modId || m.isModHub));
     }
     if (tLower === 'delisted' || tLower === 'removed' || tLower === 'delisted mods') {
       return Boolean(!m.isDLC && (m.isDelisted || m.isRemoved));
