@@ -26,10 +26,14 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      - name: Install Flatpak prerequisites
+      - name: Configure Linux sandbox permissions for Flatpak
         run: |
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder elfutils
+          sudo apt-get install -y flatpak flatpak-builder elfutils apparmor-utils bubblewrap
+          # Enable unprivileged user namespaces on modern Ubuntu runners
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+
+          # Configure Flathub and standard base runtimes
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           flatpak install --user -y flathub org.freedesktop.Platform//23.08
           flatpak install --user -y flathub org.freedesktop.Sdk//23.08
@@ -42,6 +46,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
+          DEBUG: electron-builder
         run: |
           npm run build
           npx electron-builder --linux AppImage deb flatpak --publish never
