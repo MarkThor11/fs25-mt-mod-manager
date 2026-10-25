@@ -5529,7 +5529,7 @@ async function autoInjectDependencies(savegamePath) {
             addedNewDep = false;
             const currentMods = [...mods];
             for (const selMod of currentMods) {
-                const fullMod = allMods.find(m => m.modName === selMod['@_modName']);
+                const fullMod = allMods.find(m => (m.modName || '').toLowerCase() === (selMod['@_modName'] || '').toLowerCase());
                 if (fullMod && fullMod.dependencies && fullMod.dependencies.length > 0) {
                     for (const dep of fullMod.dependencies) {
                         const installedDep = allMods.find(m => dependencyResolver.matchModWithDependency(m, dep));
@@ -5538,7 +5538,7 @@ async function autoInjectDependencies(savegamePath) {
                             // REMOVED DESTRUCTIVE FILE RENAMING BLOCK HERE. The Virtual Folder 
                             // transparently symlinks `m.modName.zip` so renaming the physical file is unnecessary.
                             
-                            const alreadySelected = mods.find(m => m['@_modName'] === installedDep.modName);
+                            const alreadySelected = mods.find(m => (m['@_modName'] || '').toLowerCase() === (installedDep.modName || '').toLowerCase());
                             if (!alreadySelected) {
                                 console.log(`[AUTO-INJECT] Injecting dependency: ${installedDep.title} (required by ${selMod['@_title'] || selMod['@_modName']})`);
                                 mods.push({

@@ -3808,6 +3808,37 @@ export default function SavegamesPage() {
         }
       }
 
+      // Safety net: resolve dependencies for ALL selected mods (vehicles, implements, scripts, gameplay packs)
+      try {
+        const queue = Array.from(finalModNames);
+        const seenToResolve = new Set();
+        while (queue.length > 0) {
+          const modNameCandidate = queue.shift();
+          const low = String(modNameCandidate).toLowerCase();
+          if (seenToResolve.has(low)) continue;
+          seenToResolve.add(low);
+
+          const modObj = (mods || []).find(m => 
+            (m.modName && m.modName.toLowerCase() === low) ||
+            (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === low)
+          );
+          if (modObj) {
+            const { installed: deps } = resolveRecursiveDependencies(modObj, mods, {}, {});
+            const depList = Array.isArray(deps) ? deps : Array.from(deps || []);
+            depList.forEach(d => {
+              const matched = (mods || []).find(m => matchModWithDependency(m, d, {}));
+              const resolvedName = matched?.modName || (typeof d === 'string' ? d : (d.modName || d.fileName || ''));
+              if (resolvedName && !finalModNames.has(resolvedName)) {
+                finalModNames.add(resolvedName);
+                queue.push(resolvedName);
+              }
+            });
+          }
+        }
+      } catch (depErr) {
+        console.error('[CREATE] Mod dependency resolution error:', depErr);
+      }
+
       // Case-insensitive lookup set for modsToAdd filtering
             const selectedLower = new Set(Array.from(finalModNames).map(s => String(s).toLowerCase()));
       const modsToAdd = (mods || []).filter(m => {
@@ -3976,8 +4007,23 @@ export default function SavegamesPage() {
   const toggleModalModSelection = (modName) => {
     setModalSelectedMods(prev => {
       const next = new Set(prev);
-      if (next.has(modName)) next.delete(modName);
-      else next.add(modName);
+      if (next.has(modName)) {
+        next.delete(modName);
+      } else {
+        next.add(modName);
+        try {
+          const modObj = (mods || []).find(m => m.modName === modName || (m.fileName && m.fileName.replace(/\.zip$/i, '') === modName));
+          if (modObj) {
+            const { installed } = resolveRecursiveDependencies(modObj, mods, {}, {});
+            (installed || []).forEach(depName => {
+              const depObj = (mods || []).find(m => matchModWithDependency(m, depName, {}));
+              if (depObj && depObj.modName && !depObj.isMap) {
+                next.add(depObj.modName);
+              }
+            });
+          }
+        } catch (_) {}
+      }
       return next;
     });
   };

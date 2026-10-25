@@ -217,7 +217,6 @@ function clearAll() {
 let cachedBundledData = null;
 
 function getModHubMetadataPool() {
-  if (!db) return {};
   const pool = {};
   const poolByCleanTitle = {};
 
@@ -272,9 +271,10 @@ function getModHubMetadataPool() {
     }
   };
 
-  try {
-    // 1. Scan scraper cache for all ever-browsed mods
-    const rows = db.prepare("SELECT key, value FROM cache WHERE key LIKE 'mods_%' OR key LIKE 'modDetail_%'").all();
+  if (db) {
+    try {
+      // 1. Scan scraper cache for all ever-browsed mods
+      const rows = db.prepare("SELECT key, value FROM cache WHERE key LIKE 'mods_%' OR key LIKE 'modDetail_%'").all();
     const now = Date.now();
     for (const row of rows) {
       try {
@@ -323,15 +323,21 @@ function getModHubMetadataPool() {
       addToTitleIndex(item);
     }
 
-  } catch (err) {
-    console.error('[CACHE] Metadata pool scan failed:', err.message);
+    } catch (err) {
+      console.error('[CACHE] Metadata pool scan failed:', err.message);
+    }
   }
 
   // 3. Fallback: merge bundled_cache.json (memoized in memory)
   try {
     if (!cachedBundledData) {
       const fs = require('fs-extra');
-      const bundledPath = path.join(app.getAppPath(), 'src/main/resources/bundled_cache.json');
+      let bundledPath = (typeof app !== 'undefined' && app && typeof app.getAppPath === 'function')
+        ? path.join(app.getAppPath(), 'src/main/resources/bundled_cache.json')
+        : null;
+      if (!bundledPath || !fs.existsSync(bundledPath)) {
+        bundledPath = path.join(__dirname, '../resources/bundled_cache.json');
+      }
       if (fs.existsSync(bundledPath)) {
         cachedBundledData = fs.readJsonSync(bundledPath);
       } else {

@@ -64,24 +64,48 @@ export const isMapCategory = (category) => {
  * @param {string|Object} dep - The dependency requirement.
  * @param {Object} [resolvedMetadata] - Optional ModHub resolved metadata pool/lookup.
  */
+export const cleanAlphanum = (str) => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .replace(/^(?:fs25|fs22|pdlc)_/i, '')
+    .replace(/\.zip$/i, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+};
+
+/**
+ * Checks if an installed mod matches a dependency requirement.
+ * @param {Object} m - The installed mod object.
+ * @param {string|Object} dep - The dependency requirement.
+ * @param {Object} [resolvedMetadata] - Optional ModHub resolved metadata pool/lookup.
+ */
 export const matchModWithDependency = (m, dep, resolvedMetadata = {}) => {
   if (!dep || !m) return false;
 
   let depId = null;
   let depFileName = null;
+  let depTitle = null;
 
   if (typeof dep === 'string') {
-    if (dep.includes('http') || dep.toLowerCase().includes('.zip')) {
-      const idMatch = dep.match(/mod_id=(\d+)/i) || dep.match(/storage\/(\d+)\//i);
+    const raw = dep.trim();
+    if (raw.includes('http') || raw.toLowerCase().includes('.zip') || raw.includes('/')) {
+      const idMatch = raw.match(/mod_id=(\d+)/i) || raw.match(/storage\/(\d+)\//i);
       if (idMatch) depId = parseInt(idMatch[1], 10).toString();
-      const fileMatch = dep.match(/\/([^\/?#]+\.zip)/i) || dep.match(/([a-z0-9_]+\.zip)/i);
+      const fileMatch = raw.match(/\/([^\/?#]+\.zip)/i) || raw.match(/([a-z0-9_]+\.zip)/i);
       if (fileMatch) depFileName = fileMatch[1].replace(/\.zip$/i, '').toLowerCase();
     }
     if (!depFileName) {
-      depFileName = dep.replace(/\.zip$/i, '').trim().toLowerCase();
+      if (raw.toLowerCase().endsWith('.zip') || /^(?:fs25|fs22|pdlc)_/i.test(raw)) {
+        depFileName = raw.replace(/\.zip$/i, '').trim().toLowerCase();
+      } else {
+        depTitle = cleanModName(raw);
+        depFileName = raw.replace(/\.zip$/i, '').trim().toLowerCase();
+      }
     }
-  } else if (typeof dep === 'object') {
+  } else if (typeof dep === 'object' && dep !== null) {
     if (dep.modId) depId = String(dep.modId).replace(/^0+/, '');
+    if (dep.title) depTitle = cleanModName(dep.title);
     if (dep.url) {
       const idMatch = dep.url.match(/mod_id=(\d+)/i) || dep.url.match(/storage\/(\d+)\//i);
       if (idMatch && !depId) depId = parseInt(idMatch[1], 10).toString();
@@ -94,28 +118,51 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}) => {
     }
   }
 
-  // Look up resolved metadata pool for exact ZIP filename if available
+  // Look up resolved metadata pool for exact ZIP filename and title if available
   const metaKey = depId || depFileName;
   if (metaKey && resolvedMetadata && resolvedMetadata[metaKey]) {
     const meta = resolvedMetadata[metaKey];
     if (meta.modId && !depId) depId = String(meta.modId).replace(/^0+/, '');
     if (meta.fileName && !depFileName) depFileName = meta.fileName.replace(/\.zip$/i, '').toLowerCase();
+    if (meta.title && !depTitle) depTitle = cleanModName(meta.title);
   }
 
   // 1. ModHub ID Match (exact)
   if (depId && m.modId) {
     const safeModId = String(m.modId).replace(/^0+/, '');
     if (safeModId === depId) return true;
-    return false;
   }
 
-  // 2. ZIP Filename / Technical Mod Name Match (exact, unique)
+  // 2. Exact Technical Name / Filename Match
   if (depFileName) {
-    const normDepFile = normalizeForMatching(depFileName);
+    const normDep = normalizeForMatching(depFileName);
     const mFileNorm = m.fileName ? normalizeForMatching(m.fileName) : '';
     const mNameNorm = m.modName ? normalizeForMatching(m.modName) : '';
 
-    if (mFileNorm === normDepFile || mNameNorm === normDepFile) return true;
+    if (mFileNorm === normDep || mNameNorm === normDep) return true;
+
+    // Game prefix stripped match (e.g. FS25_precisionFarming vs precisionFarming)
+    const cleanDep = normDep.replace(/^(?:fs25|fs22|pdlc)_/i, '');
+    const cleanMName = mNameNorm.replace(/^(?:fs25|fs22|pdlc)_/i, '');
+    const cleanMFile = mFileNorm.replace(/^(?:fs25|fs22|pdlc)_/i, '');
+    if (cleanDep && (cleanMName === cleanDep || cleanMFile === cleanDep)) return true;
+  }
+
+  // 3. Exact Title Match
+  if (depTitle && m.title && m.title.trim().toLowerCase() === depTitle.trim().toLowerCase()) {
+    return true;
+  }
+
+  // 4. Normalized Alphanumeric Title / ModName Match (e.g. "Precision Farming" <-> "FS25_precisionFarming")
+  const depAlpha = cleanAlphanum(depTitle || depFileName);
+  if (depAlpha && depAlpha.length >= 4) {
+    const mTitleAlpha = cleanAlphanum(m.title);
+    const mNameAlpha = cleanAlphanum(m.modName);
+    const mFileAlpha = cleanAlphanum(m.fileName);
+
+    if (mTitleAlpha === depAlpha || mNameAlpha === depAlpha || mFileAlpha === depAlpha) {
+      return true;
+    }
   }
 
   return false;
@@ -123,9 +170,9 @@ export const matchModWithDependency = (m, dep, resolvedMetadata = {}) => {
 
 /**
  * Recursively resolves dependencies for a given mod.
- * @param {string} targetModName - The name of the mod to check.
+ * @param {string|Object} targetModOrName - The name or object of the mod to check.
  * @param {Array} allMods - The list of all installed mods.
- * @returns {Object} - { installed: Set(names), missing: Set(names) }
+ * @returns {Object} - { installed: Array(names), missing: Array(names) }
  */
 export const resolveRecursiveDependencies = (targetModOrName, allMods, sessionInstalled = {}, resolvedMetadata = {}) => {
   const installed = new Set();
@@ -139,6 +186,7 @@ export const resolveRecursiveDependencies = (targetModOrName, allMods, sessionIn
   // Pre-build O(1) fast lookup index across all installed mods
   const indexById = new Map();
   const indexByName = new Map();
+  const indexByCleanAlpha = new Map();
   const subfolderModsMap = new Map();
 
   const addToIndex = (indexMap, key, mod) => {
@@ -153,12 +201,27 @@ export const resolveRecursiveDependencies = (targetModOrName, allMods, sessionIn
     const m = allMods[i];
     if (!m) continue;
     if (m.modId) indexById.set(String(m.modId).replace(/^0+/, ''), m);
-    if (m.modName) addToIndex(indexByName, m.modName.toLowerCase(), m);
-    if (m.fileName) {
-      const cleanFile = m.fileName.split(/[/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
-      addToIndex(indexByName, cleanFile, m);
+    if (m.modName) {
+      addToIndex(indexByName, m.modName.toLowerCase(), m);
+      const mNameAlpha = cleanAlphanum(m.modName);
+      if (mNameAlpha && mNameAlpha.length >= 4 && !indexByCleanAlpha.has(mNameAlpha)) {
+        indexByCleanAlpha.set(mNameAlpha, m);
+      }
     }
-    // Do not index arbitrary mod titles into indexByName to prevent generic titles (e.g. "Workshop", "Shed", "Barn") from overriding actual technical mod names/files
+    if (m.fileName) {
+      const cleanFile = m.fileName.split(/[\/\\]/).pop().replace(/\.zip$/i, '').toLowerCase();
+      addToIndex(indexByName, cleanFile, m);
+      const mFileAlpha = cleanAlphanum(cleanFile);
+      if (mFileAlpha && mFileAlpha.length >= 4 && !indexByCleanAlpha.has(mFileAlpha)) {
+        indexByCleanAlpha.set(mFileAlpha, m);
+      }
+    }
+    if (m.title) {
+      const mTitleAlpha = cleanAlphanum(m.title);
+      if (mTitleAlpha && mTitleAlpha.length >= 4 && !indexByCleanAlpha.has(mTitleAlpha)) {
+        indexByCleanAlpha.set(mTitleAlpha, m);
+      }
+    }
 
     if (m.folder && m.folder.toLowerCase() !== 'mods' && m.folder.toLowerCase() !== '') {
       const fLow = m.folder.toLowerCase();
@@ -190,28 +253,43 @@ export const resolveRecursiveDependencies = (targetModOrName, allMods, sessionIn
     let depString = '';
     let depId = null;
     let fallbackFileName = null;
+    let depTitle = null;
     
     if (typeof depObjOrString === 'string') {
-        const fileMatch = depObjOrString.match(/\/([^\/?#]+\.zip)/i) || depObjOrString.match(/([a-z0-9_]+\.zip)/i);
+        const raw = depObjOrString.trim();
+        const fileMatch = raw.match(/\/([^\/?#]+\.zip)/i) || raw.match(/([a-z0-9_]+\.zip)/i);
         if (fileMatch) {
           depString = fileMatch[1].replace(/\.zip$/i, '');
           fallbackFileName = depString;
         } else {
-          depString = depObjOrString;
+          depString = raw.replace(/\.zip$/i, '');
         }
-    } else if (typeof depObjOrString === 'object') {
+        depTitle = cleanModName(raw);
+    } else if (typeof depObjOrString === 'object' && depObjOrString !== null) {
+        if (depObjOrString.modId) depId = String(depObjOrString.modId).replace(/^0+/, '');
+        if (depObjOrString.title) depTitle = cleanModName(depObjOrString.title);
         const url = depObjOrString.url || '';
         if (url) {
             const fileMatch = url.match(/\/([^\/?#]+\.zip)/i) || url.match(/([a-z0-9_]+\.zip)/i);
             if (fileMatch) fallbackFileName = fileMatch[1].replace(/\.zip$/i, '');
+            const idMatch = url.match(/mod_id=(\d+)/i) || url.match(/storage\/(\d+)\//i);
+            if (idMatch && !depId) depId = parseInt(idMatch[1], 10).toString();
         }
-        depString = fallbackFileName || depObjOrString.fileName || depObjOrString.modName || depObjOrString.technicalName || depObjOrString.title || '';
-        
-        const idMatch = url.match(/mod_id=(\d+)/i) || url.match(/storage\/(\d+)\//i);
-        if (idMatch) depId = parseInt(idMatch[1], 10).toString();
+        depString = fallbackFileName || depObjOrString.modName || depObjOrString.technicalName || depObjOrString.fileName || depObjOrString.title || '';
     }
 
-    // Handle combined author description lines (e.g., "Lizard Animal Barns - Wood Chip Production (By: JonnyXPRO)")
+    if (depId && !fallbackFileName && resolvedMetadata && resolvedMetadata[depId]) {
+      const meta = resolvedMetadata[depId];
+      if (meta && meta.fileName) {
+        fallbackFileName = meta.fileName.replace(/\.zip$/i, '');
+        depString = fallbackFileName;
+      }
+      if (meta && meta.title && !depTitle) {
+        depTitle = cleanModName(meta.title);
+      }
+    }
+
+    // Handle combined author description lines
     if (!depId && depString && !fallbackFileName && (depString.includes(' - ') || depString.includes('(By:') || depString.includes('(By ') || depString.includes(' (by '))) {
       const parts = depString.replace(/\s*(?:\(|\[)?by:?.*?(?:\)|\])?$/gi, '').split(/\s+-\s+/);
       if (parts.length > 1) {
@@ -223,12 +301,14 @@ export const resolveRecursiveDependencies = (targetModOrName, allMods, sessionIn
     const cleanedName = cleanModName(depString);
     if (!cleanedName) return;
     const nameLower = cleanedName.toLowerCase();
+    const alphaKey = cleanAlphanum(depTitle || cleanedName);
 
     // Ignore official GIANTS DLCs and blacklisted incompatible mods as missing zip mods
     if (nameLower.startsWith('pdlc_') || nameLower === 'fs25_maxdensityheighttypesbymap') return;
     
-    if (processed.has(nameLower)) return;
+    if (processed.has(nameLower) || (alphaKey && processed.has(alphaKey))) return;
     processed.add(nameLower);
+    if (alphaKey) processed.add(alphaKey);
 
     // 1. Mod ID lookup (O(1) and strictly exact)
     let match = depId ? indexById.get(depId) : null;
@@ -238,12 +318,17 @@ export const resolveRecursiveDependencies = (targetModOrName, allMods, sessionIn
       match = mapSubfolderMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, false));
     }
 
-    // 3. Global Name Lookup (O(1) but prone to generic name collisions)
+    // 3. Global Name Lookup
     if (!match) {
       match = indexByName.get(nameLower);
     }
+
+    // 4. Global Alphanumeric Title / ModName Lookup
+    if (!match && alphaKey) {
+      match = indexByCleanAlpha.get(alphaKey);
+    }
     
-    // 4. Global Loose Search (O(N))
+    // 5. Global Loose Search
     if (!match) {
       match = allMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata, false));
     }
@@ -268,13 +353,6 @@ export const resolveRecursiveDependencies = (targetModOrName, allMods, sessionIn
   return { installed: Array.from(installed), missing: Array.from(missing) };
 };
 
-/**
- * Compares two version strings.
- * Returns:
- *   - 1 if v1 > v2 (update available if v1 is remote)
- *   - -1 if v1 < v2
- *   - 0 if v1 == v2
- */
 export const compareVersions = (v1, v2) => {
     const cleanVersion = (v) => {
         if (!v) return '';
