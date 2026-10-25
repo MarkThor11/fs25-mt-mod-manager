@@ -394,6 +394,7 @@ export const useLocalModsStore = create((set, get) => ({
     }
 
     const modsToUpdate = targetUpdates.filter(update => {
+      if (update.isDelisted || update.isRemoved || !update.hasUpdate) return false;
       const localMod = mods.find(m => m.fileName === update.fileName);
       return !(localMod && (localMod.tags || []).includes('lock-updates'));
     });
