@@ -2437,21 +2437,20 @@ async function performScan(manualPaths = null) {
 		// DEDUPLICATION RULES:
 		// 1. Separate folders (such as dedicated map folders like 'Pallegney' vs 'Pallegney (CP)')
 		//    are distinct mod locations and must NEVER overwrite or collapse each other.
-		// 2. Exact duplicate files: A file in the root directory that is already present in a dedicated
+		// 2. Unzipped vs Zipped: A mod present as an unzipped folder and as a .zip file (e.g. RedTape, Sales_Plus)
+		//    is the same mod entity regardless of archive packaging type.
+		// 3. Exact duplicate files: A file in the root directory that is already present in a dedicated
 		//    subfolder (e.g. root copy of a map or dependency) is dropped in favor of the subfolder copy.
-		// 3. Across different folders, mods only deduplicate if they share the exact same folder location,
-		//    ensuring PC and Crossplay editions in their own folders are preserved as distinct items.
 		const folderKey = (m.folder && m.folder !== '') ? m.folder.toLowerCase() : '';
-		const baseName = path.basename(m.fileName).toLowerCase();
-		const typeTag = m.isFolder ? '[UNZIPPED]' : '[ZIP]';
+		const baseName = path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '');
 		const cleanId = m.modId ? String(m.modId).replace(/^0+/, '') : null;
 
-		// Key scoped to folder for items in folders
-		const scopedFileKey = `FOLDER_${folderKey}_${typeTag}_${baseName}`;
-		const scopedIdKey = cleanId ? `FOLDER_${folderKey}_${typeTag}_ID_${cleanId}` : null;
+		// Key scoped to folder for items in folders (packaging-neutral)
+		const scopedFileKey = `FOLDER_${folderKey}_${baseName}`;
+		const scopedIdKey = cleanId ? `FOLDER_${folderKey}_ID_${cleanId}` : null;
 
 		// Global key to track if a subfolder version already claimed this file
-		const globalSubfolderKey = `SUBFOLDER_${typeTag}_${baseName}`;
+		const globalSubfolderKey = `SUBFOLDER_${baseName}`;
 
 		const isRoot = !m.folder || m.folder === '';
 		let alreadySeen = false;
@@ -2461,6 +2460,8 @@ async function performScan(manualPaths = null) {
 			if (uniqueModsMap.has(globalSubfolderKey)) {
 				alreadySeen = true;
 			} else if (uniqueModsMap.has(scopedFileKey)) {
+				alreadySeen = true;
+			} else if (scopedIdKey && uniqueModsMap.has(scopedIdKey)) {
 				alreadySeen = true;
 			}
 		} else {
