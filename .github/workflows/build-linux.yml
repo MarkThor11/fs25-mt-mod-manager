@@ -26,6 +26,12 @@ jobs:
           node-version: 22
           cache: 'npm'
 
+      - name: Install Flatpak dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder elfutils
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
       - name: Install dependencies
         run: npm install
 
@@ -35,7 +41,7 @@ jobs:
           GH_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           npm run build
-          npx electron-builder --linux AppImage deb --publish never
+          npx electron-builder --linux AppImage deb flatpak --publish never
 
       - name: Upload to Linux / Main GitHub Release
         uses: softprops/action-gh-release@v2
@@ -45,7 +51,7 @@ jobs:
           files: |
             release/*.AppImage
             release/*.deb
+            release/*.flatpak
             release/latest-linux.yml
         env:
           GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
-

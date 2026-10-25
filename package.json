@@ -88,6 +88,9 @@
         },
         {
           "target": "deb"
+        },
+        {
+          "target": "flatpak"
         }
       ],
       "category": "Utility",
@@ -107,6 +110,16 @@
       "installerHeaderIcon": "assets/icon.ico",
       "guid": "FS25-MT-MOD-MANAGER-NSIS-GUID",
       "include": "build/installer.nsh"
+    },
+    "flatpak": {
+      "finishArgs": [
+        "--share=ipc",
+        "--socket=x11",
+        "--socket=wayland",
+        "--share=network",
+        "--filesystem=host",
+        "--filesystem=home"
+      ]
     }
   }
 }
