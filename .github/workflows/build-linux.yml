@@ -15,8 +15,11 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-23.08
+      options: --privileged
 
-    steps:
+  steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
 
@@ -35,7 +38,7 @@ jobs:
           GH_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           npm run build
-          npx electron-builder --linux AppImage deb rpm --publish never
+          npx electron-builder --linux AppImage deb flatpak --publish never
 
       - name: Upload to Linux / Main GitHub Release
         uses: softprops/action-gh-release@v2
@@ -45,7 +48,7 @@ jobs:
           files: |
             release/*.AppImage
             release/*.deb
-            release/*.rpm
+            release/*.flatpak
             release/latest-linux.yml
         env:
           GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
