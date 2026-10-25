@@ -868,8 +868,23 @@ const [activeTab, setActiveTab] = useState('general');
 
   const toggleMod = async (modName) => {
     const nextSelected = new Set(selectedMods);
-    if (nextSelected.has(modName)) nextSelected.delete(modName);
-    else nextSelected.add(modName);
+    if (nextSelected.has(modName)) {
+      nextSelected.delete(modName);
+    } else {
+      nextSelected.add(modName);
+      try {
+        const modObj = (installedMods || []).find(m => m.modName === modName || (m.fileName && m.fileName.replace(/\.zip$/i, '') === modName));
+        if (modObj) {
+          const { installed } = resolveRecursiveDependencies(modObj, installedMods, {}, {});
+          (installed || []).forEach(depName => {
+            const depObj = (installedMods || []).find(m => matchModWithDependency(m, depName, {}));
+            if (depObj && depObj.modName && !depObj.isMap) {
+              nextSelected.add(depObj.modName);
+            }
+          });
+        }
+      } catch (_) {}
+    }
 
     // Apply conflict resolution if toggling ON
     const { conflictSensitivity } = useSettingsStore.getState();

@@ -268,6 +268,8 @@ async function launch(options = {}) {
       const fs25Path = pathProvider.getFS25DataRoot();
       const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
       await savegameManager.cleanupBridgeModFromSavegame(savePath);
+      await savegameManager.syncSubfolderMapDependencies(savePath);
+      await savegameManager.autoInjectDependencies(savePath);
       await savegameManager.ensureSavegameDensityMaps(savePath);
     }
     // Ensure savegame.png preview image is verified for ALL active save slots before game launches
