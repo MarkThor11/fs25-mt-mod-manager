@@ -1347,7 +1347,7 @@ async function performScan(manualPaths = null) {
 	let finalMods = Array.from(new Set(uniqueModsMap.values()));
 
 	// Filter out internal background logic mods so they don't appear in UI
-	const internalMods = ['fs25_rememberpositions', 'fs25_storedeliveries', 'fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
+	const internalMods = ['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
 	finalMods = finalMods.filter(m => {
 		const name = (m.modName || '').toLowerCase();
 		const file = path.basename(m.fileName || m.filePath || '').toLowerCase().replace(/\.zip$/, '');
