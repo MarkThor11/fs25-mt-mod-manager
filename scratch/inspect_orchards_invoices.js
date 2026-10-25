@@ -1,0 +1,10 @@
+const Database = require('better-sqlite3');
+const path = require('path');
+const dbPath = path.join(process.env.APPDATA, 'fs25-mt-mod-manager', 'modhub-cache.db');
+const db = new Database(dbPath);
+const r = db.prepare("SELECT value FROM settings WHERE key = 'modCache'").get();
+const mods = JSON.parse(r.value).mods;
+const m1 = mods.find(m => (m.fileName || '').toLowerCase().includes('orchards'));
+const m2 = mods.find(m => (m.fileName || '').toLowerCase().includes('invoices'));
+console.log('Orchards in modCache:', m1 ? { fileName: m1.fileName, modId: m1.modId } : null);
+console.log('Invoices in modCache:', m2 ? { fileName: m2.fileName, modId: m2.modId } : null);
