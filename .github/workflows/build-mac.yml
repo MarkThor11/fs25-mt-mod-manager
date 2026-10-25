@@ -1,16 +1,12 @@
 name: Build Mac Release
 
 on:
-  push:
-    tags:
-      - 'v*'
-      - '[0-9]*'
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Tag to upload to (e.g. 1.0.10)'
+        description: 'Tag to upload to (e.g. 1.2.4)'
         required: true
-        default: '1.0.10'
+        default: '1.2.4'
 
 jobs:
   build-mac:
