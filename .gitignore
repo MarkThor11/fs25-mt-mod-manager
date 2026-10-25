@@ -102,6 +102,7 @@ extracted/
 node_modules/
 dist/
 release/
-build/
+build/*
+!build/installer.nsh
 detection_log.txt
 download_debug.log
