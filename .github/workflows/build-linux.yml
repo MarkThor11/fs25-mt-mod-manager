@@ -19,7 +19,7 @@ jobs:
       image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-23.08
       options: --privileged
 
-  steps:
+    steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
 
@@ -27,7 +27,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
 
       - name: Install dependencies
         run: npm install
