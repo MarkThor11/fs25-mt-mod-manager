@@ -437,7 +437,8 @@ function initAppUpdater(mainWindow, onBeforeQuit) {
     for (const win of windows) {
       try {
         if (!win.isDestroyed()) {
-          win.destroy();
+          win.removeAllListeners('close');
+          win.close();
         }
       } catch (_) {}
     }
@@ -452,13 +453,13 @@ function initAppUpdater(mainWindow, onBeforeQuit) {
       }
     }
 
-    // Call quitAndInstall with isSilent = false, isForceRunAfter = true
+    // Call quitAndInstall with isSilent = true, isForceRunAfter = true
     setTimeout(() => {
       const updater = getAutoUpdater();
       if (updater) {
-        updater.quitAndInstall(false, true);
+        updater.quitAndInstall(true, true);
       }
-    }, 200);
+    }, 500);
   });
 
   ipcMain.handle('app:get-releases', async () => {
