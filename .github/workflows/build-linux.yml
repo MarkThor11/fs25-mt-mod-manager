@@ -26,19 +26,6 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      - name: Configure Linux sandbox permissions for Flatpak
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder elfutils apparmor-utils bubblewrap fuse3
-          # Enable unprivileged user namespaces on modern Ubuntu runners
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-
-          # Configure Flathub and standard base runtimes
-          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user -y flathub org.freedesktop.Platform//23.08
-          flatpak install --user -y flathub org.freedesktop.Sdk//23.08
-          flatpak install --user -y flathub org.electronjs.Electron2.BaseApp//23.08
-
       - name: Install dependencies
         run: npm install
 
@@ -46,10 +33,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
-          DEBUG: 'electron-builder,electron-installer-flatpak*,flatpak-bundler*'
         run: |
           npm run build
-          npx electron-builder --linux AppImage deb flatpak --publish never
+          npx electron-builder --linux AppImage deb rpm --publish never
 
       - name: Upload to Linux / Main GitHub Release
         uses: softprops/action-gh-release@v2
@@ -59,7 +45,7 @@ jobs:
           files: |
             release/*.AppImage
             release/*.deb
-            release/*.flatpak
+            release/*.rpm
             release/latest-linux.yml
         env:
           GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}

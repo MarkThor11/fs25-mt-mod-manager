@@ -90,7 +90,7 @@
           "target": "deb"
         },
         {
-          "target": "flatpak"
+          "target": "rpm"
         }
       ],
       "category": "Utility",
@@ -110,21 +110,6 @@
       "installerHeaderIcon": "assets/icon.ico",
       "guid": "FS25-MT-MOD-MANAGER-NSIS-GUID",
       "include": "build/installer.nsh"
-    },
-    "flatpak": {
-      "runtime": "org.freedesktop.Platform",
-      "runtimeVersion": "23.08",
-      "sdk": "org.freedesktop.Sdk",
-      "base": "org.electronjs.Electron2.BaseApp",
-      "baseVersion": "23.08",
-      "finishArgs": [
-        "--share=ipc",
-        "--socket=x11",
-        "--socket=wayland",
-        "--share=network",
-        "--filesystem=host",
-        "--filesystem=home"
-      ]
     }
   }
 }
