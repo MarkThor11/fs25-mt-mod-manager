@@ -27,7 +27,7 @@ function reconcileUpdates(currentUpdates, localMods) {
 
     const local = localMods.find(m => m.fileName === u.fileName || (m.modId && String(m.modId) === String(u.modId)));
     if (!local) return false; // If not installed locally, it's not a local update
-    if (u.isRemoved || u.isDelisted) return true;
+    if (u.isRemoved || u.isDelisted) return false;
     if (!u.remoteVersion || !local.version || local.version === 'Unknown' || local.version === 'Invalid') return false;
 
     const cleanVersion = (v) => {

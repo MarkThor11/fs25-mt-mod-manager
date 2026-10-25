@@ -77,14 +77,7 @@ async function checkAllUpdates() {
     const cleanEffectiveId = effectiveModId ? String(effectiveModId).replace(/^0+/, '') : null;
 
     if (cleanEffectiveId && delistedIdsSet.has(cleanEffectiveId)) {
-      results.push({
-        ...localMod,
-        modId: effectiveModId,
-        isRemoved: true,
-        isDelisted: true,
-        hasUpdate: false,
-        modhubTitle: localMod.title
-      });
+      // Delisted mod from ModHub: do not include in pending updates list
       continue;
     }
     
