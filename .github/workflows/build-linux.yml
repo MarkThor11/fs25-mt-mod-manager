@@ -35,7 +35,7 @@ jobs:
           GH_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           npm run build
-          npx electron-builder --linux AppImage deb -c.linux.target=AppImage,deb
+          npx electron-builder --linux AppImage deb --publish never
 
       - name: Upload to Linux / Main GitHub Release
         uses: softprops/action-gh-release@v2

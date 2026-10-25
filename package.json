@@ -11,7 +11,10 @@
     "dist:linux": "vite build && electron-builder --linux",
     "dist": "vite build && electron-builder --win --mac --linux"
   },
-  "author": "GoogleModManager",
+  "author": {
+    "name": "MarkThor11",
+    "email": "markwadlow32@gmail.com"
+  },
   "license": "MIT",
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
