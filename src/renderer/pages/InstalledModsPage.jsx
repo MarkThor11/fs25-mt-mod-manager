@@ -1133,10 +1133,10 @@ export default function InstalledModsPage() {
       return Boolean(m.fileName && updateFileNamesSet.has(m.fileName));
     }
     if (tLower === 'modhub' || tLower === 'modhub mods') {
-      return Boolean(!m.isDLC && (m.modId || m.isModHub));
+      return Boolean(!m.isDLC && !m.isFolder && (m.modId || m.isModHub));
     }
     if (tLower === 'non-modhub' || tLower === 'non-modhub mods' || tLower === '3rd party' || tLower === 'third party') {
-      return Boolean(!m.isDLC && !m.modId && !m.isModHub);
+      return Boolean(!m.isDLC && (m.isFolder || (!m.modId && !m.isModHub)));
     }
 
     // 2. Category matching (from mod's resolved ModHub category field)

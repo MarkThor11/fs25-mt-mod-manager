@@ -2196,6 +2196,11 @@ async function performScan(manualPaths = null) {
 				if (title === entryName.replace('.zip', '') && remoteMod.title) title = remoteMod.title;
 			}
 
+			// Unpacked directory versions are strictly private/non-ModHub
+			if (isModDir) {
+				calculatedModId = null;
+			}
+
 			// Ensure modDesc remembers calculatedModId for persistent local cache
 			if (calculatedModId && modDesc && !modDesc.modId) {
 				modDesc.modId = calculatedModId;
@@ -2243,8 +2248,8 @@ async function performScan(manualPaths = null) {
 				folder: subFolder, 
 				isFolder: isModDir || false,
 				isDLC: isDlc || subFolder === 'DLC' || entryName.toLowerCase().startsWith('pdlc_'),
-				isThirdParty: !isDlc && !entryName.toLowerCase().startsWith('pdlc_') && !calculatedModId,
-				isModHub: Boolean(calculatedModId || isModHub),
+				isThirdParty: isModDir || (!isDlc && !entryName.toLowerCase().startsWith('pdlc_') && !calculatedModId),
+				isModHub: !isModDir && Boolean(calculatedModId || isModHub),
 				isMap: modDesc?.isMap || false,
 				isCrossplay: !!isCrossplay,
 				mapId: modDesc?.mapId || null,
@@ -2445,12 +2450,15 @@ async function performScan(manualPaths = null) {
 		const baseName = path.basename(m.fileName).toLowerCase().replace(/\.zip$/i, '');
 		const cleanId = m.modId ? String(m.modId).replace(/^0+/, '') : null;
 
-		// Key scoped to folder for items in folders (packaging-neutral)
-		const scopedFileKey = `FOLDER_${folderKey}_${baseName}`;
-		const scopedIdKey = cleanId ? `FOLDER_${folderKey}_ID_${cleanId}` : null;
+		// Packaging type tag: zip files and unpacked folders are independent entities
+		const typeTag = m.isFolder ? '[UNZIPPED]' : '[ZIP]';
+
+		// Key scoped to folder for items in folders
+		const scopedFileKey = `FOLDER_${folderKey}_${baseName}_${typeTag}`;
+		const scopedIdKey = cleanId ? `FOLDER_${folderKey}_ID_${cleanId}_${typeTag}` : null;
 
 		// Global key to track if a subfolder version already claimed this file
-		const globalSubfolderKey = `SUBFOLDER_${baseName}`;
+		const globalSubfolderKey = `SUBFOLDER_${baseName}_${typeTag}`;
 
 		const isRoot = !m.folder || m.folder === '';
 		let alreadySeen = false;
