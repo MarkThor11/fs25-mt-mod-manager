@@ -69,13 +69,16 @@ function matchModWithDependency(m, dep, resolvedMetadata = {}) {
   }
 
   // Look up resolved metadata pool or cache for exact ZIP filename and title if available
+  let sharedPool = null;
   const metaLookup = (key) => {
     if (!key) return null;
     if (resolvedMetadata && resolvedMetadata[key]) return resolvedMetadata[key];
     try {
-      const cache = require('./cache');
-      const pool = cache.getModHubMetadataPool();
-      if (pool && pool[key]) return pool[key];
+      if (!sharedPool) {
+        const cache = require('./cache');
+        sharedPool = cache.getModHubMetadataPool();
+      }
+      if (sharedPool && sharedPool[key]) return sharedPool[key];
     } catch (_) {}
     return null;
   };
@@ -226,10 +229,14 @@ function resolveRecursiveDependencies(targetModOrName, allMods, sessionInstalled
     }
 
     if (depId && !fallbackFileName) {
+      let cachedPool = null;
       const meta = (resolvedMetadata && resolvedMetadata[depId]) || (() => {
         try {
-          const cache = require('./cache');
-          return cache.getModHubMetadataPool()[depId];
+          if (!cachedPool) {
+            const cache = require('./cache');
+            cachedPool = cache.getModHubMetadataPool();
+          }
+          return cachedPool[depId];
         } catch (_) { return null; }
       })();
       if (meta && meta.fileName) {

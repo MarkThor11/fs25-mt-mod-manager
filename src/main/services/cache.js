@@ -215,8 +215,16 @@ function clearAll() {
 }
   
 let cachedBundledData = null;
+let cachedMetadataPool = null;
+let lastMetadataPoolTime = 0;
+const METADATA_POOL_CACHE_TTL = 30 * 1000; // 30 seconds memoization to avoid full DB scans in tight loops
 
-function getModHubMetadataPool() {
+function getModHubMetadataPool(forceRefresh = false) {
+  const now = Date.now();
+  if (!forceRefresh && cachedMetadataPool && (now - lastMetadataPoolTime < METADATA_POOL_CACHE_TTL)) {
+    return cachedMetadataPool;
+  }
+
   const pool = {};
   const poolByCleanTitle = {};
 
@@ -357,6 +365,8 @@ function getModHubMetadataPool() {
   }
 
   pool._byCleanTitle = poolByCleanTitle;
+  cachedMetadataPool = pool;
+  lastMetadataPoolTime = now;
   return pool;
 }
 
