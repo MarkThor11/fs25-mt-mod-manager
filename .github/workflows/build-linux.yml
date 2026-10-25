@@ -1,0 +1,55 @@
+name: Build Linux Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - '[0-9]*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag to upload to (e.g. 1.2.4)'
+        required: true
+        default: '1.2.4'
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install system build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Linux App
+        env:
+          GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          npm run build
+          ./node_modules/.bin/electron-builder --linux AppImage deb
+
+      - name: Upload to Linux / Main GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+          files: |
+            release/*.AppImage
+            release/*.deb
+            release/latest-linux.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
