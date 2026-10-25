@@ -433,16 +433,6 @@ function initAppUpdater(mainWindow, onBeforeQuit) {
       console.error('[UPDATER] Cleanup before update failed:', err);
     }
 
-    const windows = BrowserWindow.getAllWindows();
-    for (const win of windows) {
-      try {
-        if (!win.isDestroyed()) {
-          win.removeAllListeners('close');
-          win.close();
-        }
-      } catch (_) {}
-    }
-
     if (process.platform === 'darwin') {
       try {
         installMacUpdateAndRestart();
@@ -453,13 +443,15 @@ function initAppUpdater(mainWindow, onBeforeQuit) {
       }
     }
 
-    // Call quitAndInstall with isSilent = true, isForceRunAfter = true
-    setTimeout(() => {
+    // On Windows/Linux, hand over shutdown and restart directly to electron-updater
+    try {
       const updater = getAutoUpdater();
       if (updater) {
-        updater.quitAndInstall(true, true);
+        updater.quitAndInstall(false, true);
       }
-    }, 500);
+    } catch (err) {
+      console.error('[UPDATER] quitAndInstall failed:', err);
+    }
   });
 
   ipcMain.handle('app:get-releases', async () => {
