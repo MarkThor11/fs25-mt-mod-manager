@@ -647,6 +647,23 @@ function setRemoteImage(url, base64) {
   db.prepare('INSERT OR REPLACE INTO image_cache (url, base64, created_at) VALUES (?, ?, ?)').run(url, base64, Date.now());
 }
 
+function getDelistedModIdsSet() {
+  if (!db) return new Set();
+  try {
+    const rows = db.prepare("SELECT key, value FROM cache WHERE key LIKE 'modDetail_%'").all();
+    const set = new Set();
+    for (const r of rows) {
+      if (r && r.value && (r.value.includes('"Error: Mod not found"') || r.value.includes('"title":"Error: Mod not found"'))) {
+        const id = r.key.replace('modDetail_', '').replace(/^0+/, '');
+        if (id) set.add(id);
+      }
+    }
+    return set;
+  } catch (_) {
+    return new Set();
+  }
+}
+
 function getModHubTotalCount() {
   if (!db) return 0;
   try {
@@ -669,6 +686,7 @@ module.exports = {
   getSetting, setSetting, getAllSettings,
   getModTracking, setModTracking, removeModTracking, removeModTrackingByFile, getAllModTracking, getModTrackingByFile, getModTrackingByBaseName, getAllModTrackingMap,
   getModHubTotalCount,
+  getDelistedModIdsSet,
   setModTags, setModLocation,
   getLocalModCache, getLocalModIconOnly, getAllLocalModCache, setLocalModCache, removeLocalModCache, clearLocalModCache, updateLocalModIcon,
   updateLocalModCachePath, updateModTrackingFileInfo,

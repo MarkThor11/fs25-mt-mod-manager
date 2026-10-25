@@ -2510,6 +2510,7 @@ function getTemplatesPath() {
 
 	// ── ENRICH WITH SQLITE MOD TRACKING & CATEGORIES ──
 	const trackingMap = cache.getAllModTrackingMap();
+	const delistedIdsSet = cache.getDelistedModIdsSet ? cache.getDelistedModIdsSet() : new Set();
 	for (const m of finalMods) {
 		const baseName = path.basename(m.fileName).toLowerCase();
 		const fullName = m.fileName.replace(/\\/g, '/').toLowerCase();
@@ -2531,6 +2532,13 @@ function getTemplatesPath() {
 		// Note: mod.tags is strictly preserved for user-assigned tags (e.g. lock-updates or custom user tags).
 		// System categories and map classifications remain in m.category and m.isMap.
 		m.tags = Array.from(new Set((m.tags || []).filter(Boolean)));
+
+		// Detect delisted / removed from ModHub status
+		const cleanModId = m.modId ? String(m.modId).replace(/^0+/, '') : null;
+		if (cleanModId && delistedIdsSet.has(cleanModId)) {
+			m.isDelisted = true;
+			m.isRemoved = true;
+		}
 	}
 
 	finalMods.sort((a, b) => a.title.localeCompare(b.title));

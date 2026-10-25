@@ -60,6 +60,7 @@ async function checkAllUpdates() {
   // avoids thousands of repeated DB queries and sequential web scraper HTTP requests
   const trackingMap = cache.getAllModTrackingMap();
   const pool = cache.getModHubMetadataPool();
+  const delistedIdsSet = cache.getDelistedModIdsSet ? cache.getDelistedModIdsSet() : new Set();
   const results = [];
 
   for (const localMod of localMods) {
@@ -73,6 +74,19 @@ async function checkAllUpdates() {
                     (cleanFileName ? trackingMap.get(`FILE_${cleanFileName}`) : null);
 
     const effectiveModId = modId || tracked?.mod_id || null;
+    const cleanEffectiveId = effectiveModId ? String(effectiveModId).replace(/^0+/, '') : null;
+
+    if (cleanEffectiveId && delistedIdsSet.has(cleanEffectiveId)) {
+      results.push({
+        ...localMod,
+        modId: effectiveModId,
+        isRemoved: true,
+        isDelisted: true,
+        hasUpdate: false,
+        modhubTitle: localMod.title
+      });
+      continue;
+    }
     
     // Find remote metadata from pool or tracking record
     const poolItem = effectiveModId ? pool[String(effectiveModId)] : null;

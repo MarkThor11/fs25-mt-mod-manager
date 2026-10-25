@@ -1133,7 +1133,10 @@ export default function InstalledModsPage() {
       return Boolean(m.fileName && updateFileNamesSet.has(m.fileName));
     }
     if (tLower === 'modhub' || tLower === 'modhub mods') {
-      return Boolean(!m.isDLC && !m.isFolder && (m.modId || m.isModHub));
+      return Boolean(!m.isDLC && !m.isFolder && !m.isDelisted && !m.isRemoved && (m.modId || m.isModHub));
+    }
+    if (tLower === 'delisted' || tLower === 'removed' || tLower === 'delisted mods') {
+      return Boolean(!m.isDLC && (m.isDelisted || m.isRemoved));
     }
     if (tLower === 'non-modhub' || tLower === 'non-modhub mods' || tLower === '3rd party' || tLower === 'third party') {
       return Boolean(!m.isDLC && (m.isFolder || (!m.modId && !m.isModHub)));
@@ -1354,6 +1357,15 @@ export default function InstalledModsPage() {
       kfList.push({ name: 'ModHub', label: 'ModHub', count: modHubStats.count, maxDate: modHubStats.maxDate, primaryAuthor: modHubStats.primaryAuthor, isFunctional: true });
       assignedTagNamesLower.add('modhub');
       assignedTagNamesLower.add('modhub mods');
+    }
+
+    // Delisted Mods
+    const delistedStats = getTagStats('Delisted');
+    if (delistedStats.count > 0) {
+      kfList.push({ name: 'Delisted', label: 'Delisted', count: delistedStats.count, maxDate: delistedStats.maxDate, primaryAuthor: delistedStats.primaryAuthor, isFunctional: true });
+      assignedTagNamesLower.add('delisted');
+      assignedTagNamesLower.add('removed');
+      assignedTagNamesLower.add('delisted mods');
     }
 
     // Non-ModHub Mods
@@ -2416,8 +2428,9 @@ export default function InstalledModsPage() {
   }, [handleUninstall]);
 
   const getModStatus = (mod) => {
+    if (mod?.isDelisted || mod?.isRemoved) return 'removed';
     const update = updates.find((u) => u.fileName === mod.fileName);
-    if (update?.isRemoved) return 'removed';
+    if (update?.isRemoved || update?.isDelisted) return 'removed';
     return update?.hasUpdate ? 'update' : 'ok';
   };
 
