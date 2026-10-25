@@ -26,11 +26,6 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      - name: Install system build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libarchive-tools
-
       - name: Install dependencies
         run: npm install
 
@@ -40,7 +35,7 @@ jobs:
           GH_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           npm run build
-          ./node_modules/.bin/electron-builder --linux AppImage deb
+          npx electron-builder --linux AppImage deb -c.linux.target=AppImage,deb
 
       - name: Upload to Linux / Main GitHub Release
         uses: softprops/action-gh-release@v2
@@ -53,3 +48,4 @@ jobs:
             release/latest-linux.yml
         env:
           GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
+
