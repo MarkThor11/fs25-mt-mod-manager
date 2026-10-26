@@ -124,16 +124,6 @@ const DLC_MAPPING = {
     ],
     techData: { hp: 600, price: 215000 }
   },
-  'precisionFarmingPack.dlc': { 
-    title: 'Precision Farming 3.0', 
-    author: 'GIANTS Software', 
-    version: '1.0.0.0', 
-    dlcId: 'fs25precisionfarming',
-    description: 'Make your farm smarter and more sustainable with Precision Farming technology. Includes soil sampling, variable rate applications, and economic analysis tools to optimize your yield and environmental impact.',
-    screenshots: [
-      'https://www.farming-simulator.com/img/content/products/fs25/fs25precisionfarming-cover.jpg'
-    ]
-  },
   'nexatPack.dlc': { 
     title: 'NEXAT Pack', 
     author: 'GIANTS Software', 

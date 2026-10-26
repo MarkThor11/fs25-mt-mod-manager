@@ -91,7 +91,6 @@ const LocalModIcon = React.memo(({ mod }) => {
     "straw harvest":        "https://www.farming-simulator.com/img/content/products/fs25/fs25strawharvest-cover.jpg",
     "plains and prairies":  "https://www.farming-simulator.com/img/content/products/fs25/fs25plainsandprairies-cover.jpg",
     "plains & prairies":    "https://www.farming-simulator.com/img/content/products/fs25/fs25plainsandprairies-cover.jpg",
-    "precision farming":    "https://www.farming-simulator.com/img/content/products/fs25/fs25precisionfarming-cover.jpg",
     "nexat":                "https://www.farming-simulator.com/img/content/products/fs25/fs25nexat-cover.jpg",
     "season pass 1":        "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass1-cover.jpg",
     "macdon":               "https://www.farming-simulator.com/img/content/products/fs25/fs25macdon-cover.jpg",

@@ -240,7 +240,7 @@ export default function ProfilesPage() {
 
   // Same eligibility as the Installed Mods tag counts: no DLC, no maps, no prefabs
   const isSelectableMod = (m, effCat) => {
-    if (!m || m.isMap || m.isDLC || m.folder === 'DLC') return false;
+    if (!m || m.isMap) return false;
     if (isMapMod(m, effCat)) return false;
     if ((effCat && String(effCat).toLowerCase().includes('prefab')) || (m.title && m.title.toLowerCase().includes('prefab')) || (m.modName && m.modName.toLowerCase().includes('prefab'))) return false;
     return true;

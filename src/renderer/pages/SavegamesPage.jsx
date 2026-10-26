@@ -628,7 +628,7 @@ const [activeTab, setActiveTab] = useState('general');
     const cache = useModHubStore.getState().modCache || {};
     const favs = useModHubStore.getState().favoriteMods || [];
     (installedMods || []).forEach(m => {
-      if (!m || m.isMap || m.isDLC || m.folder === 'DLC') return;
+      if (!m || m.isMap) return;
       const eff = getEffectiveModCategory(m, cache);
       if (isMapMod(m, eff)) return;
       if ((eff && String(eff).toLowerCase().includes('prefab')) || (m.title && m.title.toLowerCase().includes('prefab')) || (m.modName && m.modName.toLowerCase().includes('prefab'))) return;
@@ -995,7 +995,7 @@ const [activeTab, setActiveTab] = useState('general');
       // Filter out prefabs
       if ((effCat && String(effCat).toLowerCase().includes('prefab')) || (mod.title && mod.title.toLowerCase().includes('prefab')) || (mod.modName && mod.modName.toLowerCase().includes('prefab'))) return;
 
-      const folderName = mod.folder || 'MAIN';
+      const folderName = (mod.isDLC || mod.folder === 'DLC') ? 'DLC' : (mod.folder || 'MAIN');
       if (!groups[folderName]) groups[folderName] = [];
       groups[folderName].push(mod);
     });
@@ -3221,7 +3221,7 @@ export default function SavegamesPage() {
     const favs = useModHubStore.getState().favoriteMods || [];
     let hasFavs = false;
     (mods || []).forEach(m => {
-      if (!m || m.isMap || m.isDLC || m.folder === 'DLC') return;
+      if (!m || m.isMap) return;
       const eff = getEffectiveModCategory(m, cache);
       if (isMapMod(m, eff)) return;
       if ((eff && String(eff).toLowerCase().includes('prefab')) || (m.title && m.title.toLowerCase().includes('prefab')) || (m.modName && m.modName.toLowerCase().includes('prefab'))) return;
@@ -4839,7 +4839,7 @@ export default function SavegamesPage() {
                                   };
                                   const cache = useModHubStore.getState().modCache || {};
                                   const allValidMods = (mods || []).filter(m => {
-                                      if (!m || m.isMap || m.isDLC || m.folder === 'DLC') return false;
+                                      if (!m || m.isMap) return false;
                                       const eff = getEffectiveModCategory(m, cache);
                                       if (isMapMod(m, eff)) return false;
                                       if ((eff && String(eff).toLowerCase().includes('prefab')) || (m.title && m.title.toLowerCase().includes('prefab')) || (m.modName && m.modName.toLowerCase().includes('prefab'))) return false;
