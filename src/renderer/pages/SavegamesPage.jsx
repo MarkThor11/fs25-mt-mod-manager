@@ -3066,6 +3066,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
 
 const MiniModIcon = React.memo(({ mod, size = 64 }) => {
     const [error, setError] = React.useState(false);
+    const [proxiedUrl, setProxiedUrl] = React.useState(null);
     let imageUrl = null;
     
     if (mod?.iconData && !mod.iconData.startsWith('CATEGORY:')) {
@@ -3076,12 +3077,32 @@ const MiniModIcon = React.memo(({ mod, size = 64 }) => {
             imageUrl = `mod-icon://icon?path=${encodeURIComponent(filePath)}`;
         }
     }
+
+    React.useEffect(() => {
+        let isMounted = true;
+        if (imageUrl && imageUrl.startsWith('http')) {
+            if (window.api?.images?.proxy) {
+                window.api.images.proxy(imageUrl).then(res => {
+                    if (isMounted) setProxiedUrl(res || imageUrl);
+                }).catch(() => {
+                    if (isMounted) setProxiedUrl(imageUrl);
+                });
+            } else {
+                setProxiedUrl(imageUrl);
+            }
+        } else {
+            setProxiedUrl(null);
+        }
+        return () => { isMounted = false; };
+    }, [imageUrl]);
+
+    const activeImageUrl = proxiedUrl || imageUrl;
     
     return (
         <div style={{ width: size, height: size, borderRadius: 8, overflow: 'hidden', background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            {imageUrl && !error ? (
+            {activeImageUrl && !error ? (
                 <img 
-                    src={imageUrl} 
+                    src={activeImageUrl} 
                     alt={mod?.title || mod?.modName || ""} 
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                     loading="lazy"
