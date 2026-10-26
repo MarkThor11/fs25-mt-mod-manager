@@ -76,6 +76,14 @@ const COMMON_PATHS = {
     'C:\\Program Files\\Farming Simulator 2025\\FarmingSimulator2025.exe',
     'C:\\Program Files (x86)\\Farming Simulator 2025\\FarmingSimulator2025.exe',
   ],
+  linux: [
+    path.join(process.env.HOME || '', '.local/share/Steam/steamapps/common/Farming Simulator 25/x64/FarmingSimulator2025Game.exe'),
+    path.join(process.env.HOME || '', '.local/share/Steam/steamapps/common/Farming Simulator 25/FarmingSimulator2025.exe'),
+    path.join(process.env.HOME || '', '.steam/steam/steamapps/common/Farming Simulator 25/x64/FarmingSimulator2025Game.exe'),
+    path.join(process.env.HOME || '', '.steam/steam/steamapps/common/Farming Simulator 25/FarmingSimulator2025.exe'),
+    path.join(process.env.HOME || '', '.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/Farming Simulator 25/x64/FarmingSimulator2025Game.exe'),
+    path.join(process.env.HOME || '', '.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/Farming Simulator 25/FarmingSimulator2025.exe'),
+  ],
   darwin: [
     '/Applications/Farming Simulator 2025.app',
     path.join(process.env.HOME || '', 'Applications/Farming Simulator 2025.app'),
@@ -143,6 +151,39 @@ async function getEpicPath() {
  * Try to find the game path from Steam.
  */
 function getSteamPath() {
+  if (process.platform === 'linux') {
+    const home = process.env.HOME || '';
+    const steamBases = [
+      path.join(home, '.local', 'share', 'Steam'),
+      path.join(home, '.steam', 'steam'),
+      path.join(home, '.steam', 'root'),
+      path.join(home, '.var', 'app', 'com.valvesoftware.Steam', '.local', 'share', 'Steam'),
+      path.join(home, '.var', 'app', 'com.valvesoftware.Steam', 'data', 'Steam')
+    ];
+    const libraries = new Set(steamBases.filter(b => fs.existsSync(b)));
+    for (const base of steamBases) {
+      const vdf = path.join(base, 'steamapps', 'libraryfolders.vdf');
+      if (fs.existsSync(vdf)) {
+        try {
+          const content = fs.readFileSync(vdf, 'utf8');
+          const matches = content.matchAll(/"path"\s+"([^"]+)"/g);
+          for (const m of matches) {
+            if (m[1] && fs.existsSync(m[1])) libraries.add(m[1]);
+          }
+        } catch (_) {}
+      }
+    }
+    for (const lib of libraries) {
+      const candidates = [
+        path.join(lib, 'steamapps', 'common', 'Farming Simulator 25', 'x64', 'FarmingSimulator2025Game.exe'),
+        path.join(lib, 'steamapps', 'common', 'Farming Simulator 25', 'FarmingSimulator2025.exe')
+      ];
+      for (const cand of candidates) {
+        if (fs.existsSync(cand)) return cand;
+      }
+    }
+    return null;
+  }
   if (process.platform !== 'win32') return null;
   try {
     const { execSync } = require('child_process');
@@ -348,7 +389,8 @@ async function launch(options = {}) {
     if (fs.existsSync(gameSettingsPath)) {
       let settingsXml = fs.readFileSync(gameSettingsPath, 'utf8');
       const overrideRegex = /<modsDirectoryOverride[^>]*\/>/i;
-      const newTag = `<modsDirectoryOverride active="true" directory="${targetModsPath.replace(/\\/g, '/')}"/>`;
+      const formattedModsPath = (process.platform === 'linux' && targetModsPath.startsWith('/')) ? `Z:${targetModsPath}` : targetModsPath.replace(/\\/g, '/');
+      const newTag = `<modsDirectoryOverride active="true" directory="${formattedModsPath}"/>`;
       
       if (overrideRegex.test(settingsXml)) {
         settingsXml = settingsXml.replace(overrideRegex, newTag);
@@ -452,6 +494,79 @@ async function launch(options = {}) {
     
     if (process.platform === 'darwin') {
       child = spawn('open', ['-a', gamePath, '--args', ...args], { stdio: 'ignore' });
+    } else if (process.platform === 'linux') {
+      // STEAM ON LINUX / PROTON LAUNCH:
+      // Linux cannot execute a Windows .exe directly via execve.
+      // Launching through Steam via `steam -applaunch 2300320 <args>` ensures Steam initializes Proton,
+      // hooks overlay, controller support, cloud saves, and Steam properly recognizes the game running.
+      const isSteamInstall = (gamePath && gamePath.toLowerCase().includes('steam')) ||
+        (options.modsPath && options.modsPath.toLowerCase().includes('steamapps')) ||
+        fs.existsSync(path.join(process.env.HOME || '', '.local/share/Steam')) ||
+        fs.existsSync(path.join(process.env.HOME || '', '.steam/steam'));
+
+      if (isSteamInstall) {
+        console.log(`[LAUNCH] Spawning Linux Steam command for FS25 (AppId 2300320) with args:`, args);
+        const { execSync } = require('child_process');
+        let steamCmd = 'steam';
+        let steamArgs = ['-applaunch', '2300320', ...args];
+
+        const hasNativeSteam = (() => {
+          try {
+            execSync('which steam', { stdio: 'ignore' });
+            return true;
+          } catch (_) {
+            return false;
+          }
+        })();
+
+        if (!hasNativeSteam) {
+          const stdPaths = [
+            '/usr/bin/steam',
+            '/usr/games/steam',
+            path.join(process.env.HOME || '', '.local/share/Steam/steam.sh'),
+            path.join(process.env.HOME || '', '.steam/steam/steam.sh')
+          ];
+          const found = stdPaths.find(p => fs.existsSync(p));
+          if (found) {
+            steamCmd = found;
+          } else {
+            try {
+              execSync('flatpak info com.valvesoftware.Steam', { stdio: 'ignore' });
+              steamCmd = 'flatpak';
+              steamArgs = ['run', 'com.valvesoftware.Steam', '-applaunch', '2300320', ...args];
+            } catch (_) {
+              steamCmd = 'steam';
+            }
+          }
+        }
+
+        try {
+          child = spawn(steamCmd, steamArgs, {
+            stdio: 'ignore',
+            detached: true,
+            env: {
+              ...process.env,
+              SteamAppId: '2300320',
+              SteamAppID: '2300320',
+              SteamGameId: '2300320'
+            }
+          });
+        } catch (spawnErr) {
+          console.warn(`[LAUNCH] Failed to spawn ${steamCmd}, falling back to xdg-open steam://run/2300320:`, spawnErr.message);
+          const argStr = args.length > 0 ? `//${encodeURIComponent(args.join(' '))}` : '';
+          child = spawn('xdg-open', [`steam://run/2300320${argStr}`], {
+            stdio: 'ignore',
+            detached: true
+          });
+        }
+      } else {
+        console.log(`[LAUNCH] Non-Steam Linux launch for ${gamePath} via wine with args:`, args);
+        child = spawn('wine', [gamePath, ...args], {
+          stdio: 'ignore',
+          cwd: path.dirname(gamePath),
+          detached: true
+        });
+      }
     } else {
       // STEAM BYPASS: Use Environment Variables
       // This is the cleanest way to bypass prompts without causing 'No License' errors.
@@ -636,7 +751,7 @@ async function isGameRunning() {
       // Regex matches lines starting with FarmingSimulator2025 to cover both launcher and game exe
       return /^\s*FarmingSimulator2025/im.test(stdout);
     } else {
-      const { stdout } = await execAsync('pgrep -f "FarmingSimulator2025"');
+      const { stdout } = await execAsync('pgrep -i -f "farmingsimulator2025"');
       return stdout.trim().length > 0;
     }
   } catch (e) {

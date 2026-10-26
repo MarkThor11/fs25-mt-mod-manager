@@ -1907,7 +1907,8 @@ ipcMain.handle('game:launch', async (_, options) => {
         // Poll for up to 15 seconds to ensure the main game process has time to initialize
         // before concluding that the game exited.
         let isRunning = false;
-        for (let i = 0; i < 6; i++) {
+        const maxChecks = process.platform === 'linux' ? 12 : 6;
+        for (let i = 0; i < maxChecks; i++) {
           await new Promise(res => setTimeout(res, 2500));
           isRunning = await gameLauncher.isGameRunning();
           if (isRunning) break;

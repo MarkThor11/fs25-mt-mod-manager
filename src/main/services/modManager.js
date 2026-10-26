@@ -1222,7 +1222,10 @@ function detectAllModsPaths() {
 				const dirMatch = xml.match(/<modsDirectoryOverride[^>]+directory=["']([^"']+)["']/i);
 				
 				if (activeMatch && dirMatch && dirMatch[1]) {
-					const overridePath = dirMatch[1].replace(/\//g, path.sep);
+					let overridePath = dirMatch[1].replace(/\//g, path.sep);
+					if (process.platform === 'linux' && /^z:[\\/]/i.test(overridePath)) {
+						overridePath = overridePath.replace(/^z:[\\/]/i, '/');
+					}
 					if (!isVirtualModsPath(overridePath) && fs.existsSync(overridePath)) {
 						potentialPaths.push({ path: overridePath, type: 'Override (gameSettings.xml)' });
 					}
