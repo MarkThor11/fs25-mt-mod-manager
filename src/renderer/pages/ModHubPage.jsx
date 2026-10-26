@@ -208,6 +208,43 @@ export default function ModHubPage() {
       const hiddenModIds = hiddenMods.map(m => m.modId);
       if (hiddenModIds.includes(mod.modId)) return false;
 
+      // Search Query Relevance Filter:
+      // ModHub's server-side search does loose full-text matching against internal mod descriptions
+      // (e.g. searching 'AgroForests' matches vehicle packs that mention 'FS25_AgroForests' in description).
+      // Filter results so visible mods are strictly relevant to the searched query in title, author, brand, or category.
+      if (searchInput && searchInput.trim()) {
+        const qRaw = searchInput.trim().toLowerCase();
+        const titleLower = (mod.title || '').toLowerCase();
+        const authorLower = (mod.author || '').toLowerCase();
+        const brandLower = (mod.brand || '').toLowerCase();
+        const catLower = (mod.category || mod.metadata?.Category || '').toLowerCase();
+        const combined = [titleLower, authorLower, brandLower, catLower].join(' ');
+        const combinedNoSpaces = combined.replace(/\s+/g, '');
+
+        // 1. Direct phrase or space-stripped match
+        let isMatch = combined.includes(qRaw) || combinedNoSpaces.includes(qRaw.replace(/\s+/g, ''));
+
+        // 2. Singular/plural stem check (e.g. 'agroforests' -> 'agroforest')
+        if (!isMatch) {
+          const stems = qRaw.split(/\s+/).map(w => (w.endsWith('s') && w.length > 3 ? w.slice(0, -1) : w));
+          const stemPhrase = stems.join(' ');
+          isMatch = combined.includes(stemPhrase) || combinedNoSpaces.includes(stemPhrase.replace(/\s+/g, ''));
+        }
+
+        // 3. Multi-word search (all words must appear in title/author/brand/category)
+        if (!isMatch) {
+          const words = qRaw.split(/\s+/).filter(w => w.length >= 2);
+          if (words.length > 1) {
+            isMatch = words.every(w => {
+              const stem = (w.endsWith('s') && w.length > 3) ? w.slice(0, -1) : w;
+              return combined.includes(w) || combined.includes(stem);
+            });
+          }
+        }
+
+        if (!isMatch) return false;
+      }
+
       // Category cross-contamination guard
       if (currentFilter && currentFilter !== 'search' && !authorFilter) {
         const modCat = (mod.category || mod.metadata?.Category || '').toLowerCase();
@@ -439,7 +476,7 @@ export default function ModHubPage() {
 
       return true;
     }).filter(Boolean);
-  }, [sourceMods, hiddenMods, activeFilters, authorFilter, isSmartMatchEnabled, powerReference, selectedHP, getInstalledVersion, globalMax, currentFilter, latestTimeframe]);
+  }, [sourceMods, hiddenMods, activeFilters, authorFilter, isSmartMatchEnabled, powerReference, selectedHP, getInstalledVersion, globalMax, currentFilter, latestTimeframe, searchInput]);
 
   const handleBrandToggle = (brand) => {
     const newBrands = activeFilters.brands.includes(brand)

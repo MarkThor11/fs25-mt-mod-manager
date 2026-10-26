@@ -266,7 +266,7 @@ export default function ProfilesPage() {
       if (!isSelectableMod(mod, effCat)) return;
       const { main } = parseModCategory(effCat, mod.isMap);
       if (main === 'Maps' || (main && main.toLowerCase() === 'maps')) return;
-      const categoryName = main || ((mod.scripts?.length > 0 || mod.specializations?.length > 0) ? 'Gameplay' : 'Miscellaneous');
+      const categoryName = (mod.isDLC || mod.folder === 'DLC') ? 'DLC' : (main || ((mod.scripts?.length > 0 || mod.specializations?.length > 0) ? 'Gameplay' : 'Miscellaneous'));
       if (!groups[categoryName]) groups[categoryName] = [];
       groups[categoryName].push(mod);
     });
@@ -282,7 +282,8 @@ export default function ProfilesPage() {
   }, [groupedMods, favoriteMods]);
 
   const availableCategories = useMemo(() => {
-    const arr = Object.keys(groupedMods).sort();
+    const arr = Object.keys(groupedMods).filter(k => k !== 'DLC' && k !== 'Favourites').sort();
+    if (groupedMods['DLC']) arr.unshift('DLC');
     if (categoryCounts.Favourites > 0) arr.unshift('Favourites');
     return arr;
   }, [groupedMods, categoryCounts]);
@@ -1229,6 +1230,8 @@ export default function ProfilesPage() {
 
                         {(() => {
                           const allFolderNames = Object.keys(groupedMods).sort((a,b) => {
+                            if (a === 'DLC') return -1;
+                            if (b === 'DLC') return 1;
                             if (a === 'MAIN') return -1;
                             if (b === 'MAIN') return 1;
                             if (a.toLowerCase() === 'map dependencies') return -1;

@@ -641,7 +641,8 @@ const [activeTab, setActiveTab] = useState('general');
     return counts;
   }, [installedMods]);
   const availableCategories = React.useMemo(() => {
-        const arr = Object.keys(editorCategoryCounts).filter(k => k !== 'Favourites' && k !== 'Maps').sort();
+        const arr = Object.keys(editorCategoryCounts).filter(k => k !== 'Favourites' && k !== 'Maps' && k !== 'DLC').sort();
+        if (editorCategoryCounts.DLC > 0) arr.unshift('DLC');
         if (editorCategoryCounts.Favourites > 0) arr.unshift('Favourites');
         return arr;
     }, [editorCategoryCounts]);
@@ -2101,6 +2102,8 @@ const [activeTab, setActiveTab] = useState('general');
                         >
                             <option value="ALL">All Folders</option>
                             {Object.keys(groupedMods).sort((a,b) => {
+                                if (a === 'DLC') return -1;
+                                if (b === 'DLC') return 1;
                                 if (a === 'MAIN') return -1;
                                 if (b === 'MAIN') return 1;
                                 if (a.toLowerCase() === 'map dependencies') return -1;
@@ -2488,7 +2491,13 @@ const [activeTab, setActiveTab] = useState('general');
                                    const nameMatch = m.modName?.toLowerCase().includes(q);
                                    const authorMatch = m.author?.toLowerCase().includes(q);
                                    return titleMatch || nameMatch || authorMatch;
-                              }).sort((a, b) => (a.title || a.modName).localeCompare(b.title || b.modName));
+                              }).sort((a, b) => {
+                                    const aIsDlc = a.isDLC || a.folder === 'DLC';
+                                    const bIsDlc = b.isDLC || b.folder === 'DLC';
+                                    if (aIsDlc && !bIsDlc) return -1;
+                                    if (!aIsDlc && bIsDlc) return 1;
+                                    return (a.title || a.modName).localeCompare(b.title || b.modName);
+                                });
                               
                               if (displayedMods.length === 0) {
                                   return <div style={{ padding: 20, textAlign: 'center', opacity: 0.5, gridColumn: '1 / -1' }}>No mods found matching your criteria.</div>;
@@ -3230,7 +3239,8 @@ export default function SavegamesPage() {
       const bn = m.fileName ? m.fileName.split(/[\\/]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : '');
       if (favs.some(fm => fm && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && fm.fileName.toLowerCase() === bn)))) hasFavs = true;
     });
-    const arr = Array.from(cats).sort();
+    const arr = Array.from(cats).filter(c => c !== 'DLC').sort();
+    if (cats.has('DLC')) arr.unshift('DLC');
     if (hasFavs) arr.unshift('Favourites');
     return arr;
   }, [mods]);
@@ -4835,7 +4845,13 @@ export default function SavegamesPage() {
                                               if (isNewer) map.set(key, m);
                                           }
                                       });
-                                      return Array.from(map.values()).sort((a, b) => a.title.localeCompare(b.title));
+                                      return Array.from(map.values()).sort((a, b) => {
+                                          const aIsDlc = a.isDLC || a.folder === 'DLC';
+                                          const bIsDlc = b.isDLC || b.folder === 'DLC';
+                                          if (aIsDlc && !bIsDlc) return -1;
+                                          if (!aIsDlc && bIsDlc) return 1;
+                                          return a.title.localeCompare(b.title);
+                                      });
                                   };
                                   const cache = useModHubStore.getState().modCache || {};
                                   const allValidMods = (mods || []).filter(m => {
