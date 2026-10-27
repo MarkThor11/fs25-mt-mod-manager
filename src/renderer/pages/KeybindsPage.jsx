@@ -8,6 +8,99 @@ import {
 import { useKeybindStore } from '../store/useKeybindStore';
 import { useToastStore } from '../store/useToastStore';
 
+
+// Helper to format controller bindings dynamically based on chosen layout (Xbox, PlayStation, or Raw)
+const CONTROLLER_MAPS = {
+  xbox: {
+    'BUTTON_1': 'A',
+    'BUTTON_2': 'B',
+    'BUTTON_3': 'X',
+    'BUTTON_4': 'Y',
+    'BUTTON_5': 'LB',
+    'BUTTON_6': 'RB',
+    'BUTTON_7': 'View',
+    'BUTTON_8': 'Menu',
+    'BUTTON_9': 'LS (Click)',
+    'BUTTON_10': 'RS (Click)',
+    'BUTTON_11': 'Xbox Guide',
+    'BUTTON_17': 'D-Pad Up',
+    'BUTTON_18': 'D-Pad Right',
+    'BUTTON_19': 'D-Pad Down',
+    'BUTTON_20': 'D-Pad Left',
+    'AXIS_1': 'Left Stick X',
+    'AXIS_2': 'Left Stick Y',
+    'AXIS_3': 'Right Stick X',
+    'AXIS_4': 'Right Stick Y',
+    'AXIS_5': 'LT',
+    'AXIS_6': 'RT'
+  },
+  playstation: {
+    'BUTTON_1': '✕ Cross',
+    'BUTTON_2': '○ Circle',
+    'BUTTON_3': '□ Square',
+    'BUTTON_4': '△ Triangle',
+    'BUTTON_5': 'L1',
+    'BUTTON_6': 'R1',
+    'BUTTON_7': 'Share / Create',
+    'BUTTON_8': 'Options',
+    'BUTTON_9': 'L3',
+    'BUTTON_10': 'R3',
+    'BUTTON_11': 'PS Button',
+    'BUTTON_17': 'D-Pad Up',
+    'BUTTON_18': 'D-Pad Right',
+    'BUTTON_19': 'D-Pad Down',
+    'BUTTON_20': 'D-Pad Left',
+    'AXIS_1': 'Left Stick X',
+    'AXIS_2': 'Left Stick Y',
+    'AXIS_3': 'Right Stick X',
+    'AXIS_4': 'Right Stick Y',
+    'AXIS_5': 'L2',
+    'AXIS_6': 'R2'
+  }
+};
+
+function formatBindingDisplay(rawInput, formattedInput, layout = 'auto', deviceName = '') {
+  if (!rawInput) return formattedInput || '';
+  if (layout === 'raw') return rawInput;
+
+  // Determine active layout
+  let activeLayout = layout;
+  if (activeLayout === 'auto') {
+    const devLower = (deviceName || '').toLowerCase();
+    if (devLower.includes('playstation') || devLower.includes('dualsense') || devLower.includes('dualshock') || devLower.includes('ps4') || devLower.includes('ps5') || devLower.includes('sony')) {
+      activeLayout = 'playstation';
+    } else {
+      activeLayout = 'xbox';
+    }
+  }
+
+  const map = CONTROLLER_MAPS[activeLayout];
+  if (!map) return formattedInput || rawInput;
+
+  // Split tokens (e.g. "BUTTON_5 AXIS_3-")
+  const tokens = rawInput.trim().split(/\s+/);
+  const formatted = tokens.map(token => {
+    // Check direct button
+    if (map[token]) return map[token];
+    // Check axis with direction e.g. AXIS_5+ / AXIS_5-
+    const axisMatch = token.match(/^(AXIS_\d+)([+-])?$/i);
+    if (axisMatch) {
+      const base = axisMatch[1].toUpperCase();
+      const sign = axisMatch[2] || '';
+      const mapped = map[base];
+      if (mapped) {
+        if (mapped === 'LT' || mapped === 'RT' || mapped === 'L2' || mapped === 'R2') {
+          return mapped;
+        }
+        return mapped + (sign === '+' ? ' +' : sign === '-' ? ' -' : '');
+      }
+    }
+    return token;
+  });
+
+  return formatted.join(' + ');
+}
+
 export default function KeybindsPage() {
   const {
     actions,
@@ -36,6 +129,7 @@ export default function KeybindsPage() {
   const [captureModal, setCaptureModal] = useState(null); // { action, device, oldInput }
   const [detectedInput, setDetectedInput] = useState(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState(null);
+  const [controllerLayout, setControllerLayout] = useState('auto'); // 'auto' | 'xbox' | 'playstation' | 'raw'
   
   // Set default selected device
   useEffect(() => {
@@ -921,17 +1015,52 @@ export default function KeybindsPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           
         {/* Device Tabs */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', overflowX: 'auto', paddingBottom: '8px' }}>
-          {deviceColumns.map(dev => (
-            <button
-              key={dev.id}
-              className={`btn btn--sm ${selectedDeviceId === dev.id ? 'btn--primary' : 'btn--secondary'}`}
-              onClick={() => setSelectedDeviceId(dev.id)}
-              style={{ whiteSpace: 'nowrap' }}
-            >
-              {dev.name}
-            </button>
-          ))}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+          {/* Device Tabs */}
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+            {deviceColumns.map(dev => (
+              <button
+                key={dev.id}
+                className={`btn btn--sm ${selectedDeviceId === dev.id ? 'btn--primary' : 'btn--secondary'}`}
+                onClick={() => setSelectedDeviceId(dev.id)}
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                {dev.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Controller Layout Switcher (Xbox / PlayStation / Raw) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 4 }}>
+              Gamepad Style:
+            </span>
+            {[
+              { id: 'auto', label: 'Auto' },
+              { id: 'xbox', label: 'Xbox' },
+              { id: 'playstation', label: 'PlayStation' },
+              { id: 'raw', label: 'Raw' }
+            ].map(layout => (
+              <button
+                key={layout.id}
+                type="button"
+                onClick={() => setControllerLayout(layout.id)}
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '3px 8px',
+                  borderRadius: 'var(--radius-xs)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: controllerLayout === layout.id ? 'var(--accent)' : 'transparent',
+                  color: controllerLayout === layout.id ? '#fff' : 'var(--text-secondary)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {layout.label}
+              </button>
+            ))}
+          </div>
         </div>
 
           {groupedActions.map(([sectionName, sectionActions, meta], idx) => {
@@ -1307,7 +1436,7 @@ export default function KeybindsPage() {
                                                 }}
                                                 title={conflictTitle}
                                               >
-                                                {b.formattedInput || b.input}
+                                                {formatBindingDisplay(b.input, b.formattedInput, controllerLayout, dev.name)}
                                               </button>
 
                                               <button

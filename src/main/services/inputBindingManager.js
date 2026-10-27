@@ -377,23 +377,68 @@ function categorizeAction(actionName) {
 
 function formatKeyName(rawInput) {
     if (!rawInput) return '';
-    return rawInput
-        .replace(/KEY_lshift/gi, 'Left Shift')
-        .replace(/KEY_rshift/gi, 'Right Shift')
-        .replace(/KEY_lctrl/gi, 'Left Ctrl')
-        .replace(/KEY_rctrl/gi, 'Right Ctrl')
-        .replace(/KEY_lalt/gi, 'Left Alt')
-        .replace(/KEY_ralt/gi, 'Right Alt')
-        .replace(/KEY_space/gi, 'Space')
-        .replace(/KEY_return/gi, 'Enter')
-        .replace(/KEY_backspace/gi, 'Backspace')
-        .replace(/KEY_tab/gi, 'Tab')
-        .replace(/KEY_escape/gi, 'Esc')
-        .replace(/MOUSE_BUTTON_LEFT/gi, 'Left Click')
-        .replace(/MOUSE_BUTTON_RIGHT/gi, 'Right Click')
-        .replace(/MOUSE_BUTTON_MIDDLE/gi, 'Middle Click')
-        .replace(/KEY_/gi, '')
-        .toUpperCase();
+    const tokens = String(rawInput).trim().split(/\s+/);
+    return tokens.map(token => {
+        // Gamepad Buttons
+        const btnMatch = token.match(/^BUTTON_(\d+)$/i);
+        if (btnMatch) {
+            const num = parseInt(btnMatch[1], 10);
+            switch (num) {
+                case 1: return 'A / ✕';
+                case 2: return 'B / ○';
+                case 3: return 'X / □';
+                case 4: return 'Y / △';
+                case 5: return 'LB / L1';
+                case 6: return 'RB / R1';
+                case 7: return 'View / Share';
+                case 8: return 'Menu / Options';
+                case 9: return 'LS / L3';
+                case 10: return 'RS / R3';
+                case 11: return 'Xbox / PS';
+                case 12: return 'D-Pad Down';
+                case 13: return 'Touchpad';
+                case 14: return 'Mute';
+                case 17: return 'D-Pad Up';
+                case 18: return 'D-Pad Right';
+                case 19: return 'D-Pad Down';
+                case 20: return 'D-Pad Left';
+                default: return `Btn ${num}`;
+            }
+        }
+
+        // Gamepad Axes
+        const axisMatch = token.match(/^AXIS_(\d+)([+-]?)$/i);
+        if (axisMatch) {
+            const axisNum = parseInt(axisMatch[1], 10);
+            const sign = axisMatch[2] || '';
+            if (axisNum === 1) return sign === '+' ? 'LS ►' : sign === '-' ? 'LS ◄' : 'LS X';
+            if (axisNum === 2) return sign === '+' ? 'LS ▼' : sign === '-' ? 'LS ▲' : 'LS Y';
+            if (axisNum === 3) return sign === '+' ? 'RS ►' : sign === '-' ? 'RS ◄' : 'RS X';
+            if (axisNum === 4) return sign === '+' ? 'RS ▼' : sign === '-' ? 'RS ▲' : 'RS Y';
+            if (axisNum === 5) return 'LT / L2';
+            if (axisNum === 6) return 'RT / R2';
+            return `Axis ${axisNum}${sign}`;
+        }
+
+        // Keyboard & Mouse
+        return token
+            .replace(/KEY_lshift/gi, 'Left Shift')
+            .replace(/KEY_rshift/gi, 'Right Shift')
+            .replace(/KEY_lctrl/gi, 'Left Ctrl')
+            .replace(/KEY_rctrl/gi, 'Right Ctrl')
+            .replace(/KEY_lalt/gi, 'Left Alt')
+            .replace(/KEY_ralt/gi, 'Right Alt')
+            .replace(/KEY_space/gi, 'Space')
+            .replace(/KEY_return/gi, 'Enter')
+            .replace(/KEY_backspace/gi, 'Backspace')
+            .replace(/KEY_tab/gi, 'Tab')
+            .replace(/KEY_escape/gi, 'Esc')
+            .replace(/MOUSE_BUTTON_LEFT/gi, 'Left Click')
+            .replace(/MOUSE_BUTTON_RIGHT/gi, 'Right Click')
+            .replace(/MOUSE_BUTTON_MIDDLE/gi, 'Middle Click')
+            .replace(/KEY_/gi, '')
+            .toUpperCase();
+    }).join(' + ');
 }
 
 async function getInputBindings() {
