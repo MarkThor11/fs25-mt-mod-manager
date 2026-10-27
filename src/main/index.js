@@ -321,13 +321,18 @@ function createWindow() {
         const isRunning = await gameLauncher.isGameRunning();
         if (isRunning) {
           isCheckingClose = false;
-          dialog.showMessageBox(mainWindow, {
+          const choice = dialog.showMessageBoxSync(mainWindow, {
             type: 'warning',
-            buttons: ['OK'],
+            buttons: ['Keep Open', 'Close Anyway'],
             defaultId: 0,
+            cancelId: 0,
             title: 'Farming Simulator 25 is Running',
             message: 'Farming Simulator 25 is currently running.\n\nPlease exit the game first before closing the Mod Manager to prevent savegame corruption and sync errors.'
           });
+          if (choice === 1) {
+            isForceClosing = true;
+            mainWindow.close();
+          }
         } else {
           isForceClosing = true;
           isCheckingClose = false;

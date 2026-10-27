@@ -750,8 +750,37 @@ async function isGameRunning() {
       // On Windows, tasklist /NH truncates image names longer than 25 chars (e.g. FarmingSimulator2025Game.)
       // Regex matches lines starting with FarmingSimulator2025 to cover both launcher and game exe
       return /^\s*FarmingSimulator2025/im.test(stdout);
+    } else if (process.platform === 'linux') {
+      // On Linux, inspect /proc directory directly.
+      // This avoids spawning /bin/sh or child processes whose own arguments match (false positive).
+      try {
+        if (fs.existsSync('/proc')) {
+          const pids = fs.readdirSync('/proc');
+          const gameExeRegex = /(?:^|[\\/])FarmingSimulator2025(?:Game)?\.exe(?:\0|$|\s)/i;
+          for (const pid of pids) {
+            if (!/^\d+$/.test(pid)) continue;
+            if (parseInt(pid, 10) === process.pid) continue;
+            try {
+              const cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8');
+              if (gameExeRegex.test(cmdline)) {
+                return true;
+              }
+            } catch (_) {}
+          }
+          return false;
+        }
+      } catch (_) {}
+
+      // Fallback: use pgrep with character class to avoid matching the shell command itself
+      try {
+        const { stdout } = await execAsync('pgrep -i -f "[F]armingSimulator2025.*\\.exe"');
+        return stdout.trim().length > 0;
+      } catch (_) {
+        return false;
+      }
     } else {
-      const { stdout } = await execAsync('pgrep -i -f "farmingsimulator2025"');
+      // macOS
+      const { stdout } = await execAsync('pgrep -x "FarmingSimulator2025"');
       return stdout.trim().length > 0;
     }
   } catch (e) {
