@@ -5,6 +5,7 @@ import { useSettingsStore } from './useSettingsStore';
 
 export const useSavegameStore = create((set, get) => ({
   savegames: [],
+  detectedPlayerName: null,
   isLoading: false,
   error: null,
   selectedSavegame: null,
@@ -59,8 +60,10 @@ export const useSavegameStore = create((set, get) => ({
     try {
       const result = await window.api.savegames.getAll();
       const freshSavegames = result.savegames || [];
+      const detectedName = result.detectedPlayerName || null;
       set({
         savegames: freshSavegames,
+        detectedPlayerName: detectedName,
         isLoading: false,
         error: result.error || null,
       });
@@ -68,12 +71,12 @@ export const useSavegameStore = create((set, get) => ({
       if (window.api?.settings) {
         window.api.settings.set('savegamesCache', JSON.stringify(freshSavegames)).catch(() => {});
         // Auto-persist detected Single Player name to settings so it's remembered immediately on future launches
-        const spName = freshSavegames.find(s => s.singlePlayerName && s.singlePlayerName !== 'Farmer')?.singlePlayerName;
-        if (spName) {
+        const resolvedName = detectedName || freshSavegames.find(s => s.singlePlayerName && s.singlePlayerName !== 'Farmer')?.singlePlayerName;
+        if (resolvedName) {
           window.api.settings.get('nickname').then((currentNick) => {
             if (!currentNick || currentNick === 'Farmer') {
-              window.api.settings.set('nickname', spName);
-              useSettingsStore.getState().setNickname(spName);
+              window.api.settings.set('nickname', resolvedName);
+              useSettingsStore.getState().setNickname(resolvedName);
             }
           }).catch(() => {});
         }

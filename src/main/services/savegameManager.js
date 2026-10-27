@@ -2366,6 +2366,53 @@ async function updateFleetMaintenance(savePath, type, value) {
 /**
  * Get all savegame slots (re-implement for consistency)
  */
+
+/**
+ * Detect player name from global game settings, farms, or OS
+ */
+function getGlobalPlayerName() {
+    try {
+        const fs25Path = getFs25Path();
+        
+        // 1. Check gameSettings.xml -> <onlinePresenceName>
+        const gameSettingsPath = path.join(fs25Path, 'gameSettings.xml');
+        if (fs.existsSync(gameSettingsPath)) {
+            try {
+                const xml = fs.readFileSync(gameSettingsPath, 'utf8');
+                const m = xml.match(/<onlinePresenceName[^>]*>([^<]+)<\/onlinePresenceName>/i) || xml.match(/onlinePresenceName=["']([^"']+)["']/i);
+                if (m && m[1] && m[1].trim() && m[1].trim() !== 'Farmer' && m[1].trim() !== 'Player') {
+                    return m[1].trim();
+                }
+            } catch (_) {}
+        }
+
+        // 2. Scan recent savegames (farms.xml -> lastNickname)
+        for (let i = 1; i <= 20; i++) {
+            const farmsPath = path.join(fs25Path, `savegame${i}`, 'farms.xml');
+            if (fs.existsSync(farmsPath)) {
+                try {
+                    const fXml = fs.readFileSync(farmsPath, 'utf8');
+                    const m = fXml.match(/lastNickname=["']([^"']+)["']/i) || fXml.match(/nickname=["']([^"']+)["']/i);
+                    if (m && m[1] && m[1].trim() && m[1].trim() !== 'Farm Member' && m[1].trim() !== 'Farmer' && m[1].trim() !== 'Player') {
+                        return m[1].trim();
+                    }
+                } catch (_) {}
+            }
+        }
+
+        // 3. Fallback to OS username
+        try {
+            const username = os.userInfo().username;
+            if (username && username.trim() && username.toLowerCase() !== 'user' && username.toLowerCase() !== 'owner') {
+                return username.trim();
+            }
+        } catch (_) {}
+    } catch (e) {
+        console.warn('[SAVEGAMES] Error resolving global player name:', e.message);
+    }
+    return null;
+}
+
 async function getAllSavegames() {
     await restoreStashedSinglePlayerSaves().catch(err => console.error('[SAVEGAMES] Auto-restore stashed saves failed:', err));
     const fs25Path = getFs25Path();
@@ -2653,8 +2700,9 @@ async function getAllSavegames() {
             console.error(`[SAVEGAMES] Error scanning savegame slot ${i}:`, slotErr);
         }
     }
-    // Auto-propagate canonical Single Player name to slots where FS25 omitted the <playerName> XML tag
-    const canonicalSPName = savegames.find(s => s.singlePlayerName && s.singlePlayerName !== 'Farmer')?.singlePlayerName || null;
+    const detectedPlayerName = getGlobalPlayerName();
+    // Auto-propagate canonical Single Player name or detected global player name to slots where FS25 omitted the <playerName> XML tag
+    const canonicalSPName = savegames.find(s => s.singlePlayerName && s.singlePlayerName !== 'Farmer')?.singlePlayerName || detectedPlayerName || null;
     if (canonicalSPName) {
         for (const sg of savegames) {
             if (!sg.isServerSave) {
@@ -2668,8 +2716,8 @@ async function getAllSavegames() {
         }
     }
 
-    debugLog(`[SAVEGAMES] Scan complete. Total slots found: ${savegames.length}`);
-    return { savegames };
+    debugLog(`[SAVEGAMES] Scan complete. Total slots found: ${savegames.length}, detectedPlayerName: ${detectedPlayerName}`);
+    return { savegames, detectedPlayerName };
 }
 
 /**
@@ -7221,6 +7269,7 @@ async function processPostGameExit(saveIndex) {
 }
 
 module.exports = {
+    getGlobalPlayerName,
     processPostGameExit,
     adoptSaveAsTemplate,
     cleanupBridgeModFromSavegame,

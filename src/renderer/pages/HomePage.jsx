@@ -21,7 +21,7 @@ import mapKinlaig from '../assets/maps/map_kinlaig.jpg';
 export default function HomePage() {
   const navigate = useNavigate();
   const { mods: localMods, modCount, scanMods, checkUpdates, updates, isCheckingUpdates, setShowOnlyUpdates } = useLocalModsStore();
-  const { savegames, fetchSavegames } = useSavegameStore();
+  const { savegames, detectedPlayerName, fetchSavegames } = useSavegameStore();
   const { 
     totalMods, latestCount, newCount, updateCount, fetchStats,
     homeFeatured, setHomeFeatured, homeTopDownloaded, setHomeTopDownloaded 
@@ -268,11 +268,15 @@ export default function HomePage() {
     .filter(s => !s.isGhost && (s.singlePlayerName || s.playerName))
     .sort((a, b) => new Date(b.lastSaved || b.lastSaveDate || 0) - new Date(a.lastSaved || a.lastSaveDate || 0))[0];
   const spSave = savegames.find(s => !s.isGhost && s.singlePlayerName && s.singlePlayerName !== 'Farmer');
-  const rawName = nickname 
-    || spSave?.singlePlayerName 
-    || (latestSave?.singlePlayerName && latestSave.singlePlayerName !== 'Farmer' ? latestSave.singlePlayerName : null)
-    || (latestSave?.playerName && latestSave.playerName !== 'Farmer' ? latestSave.playerName : null) 
-    || 'Farmer';
+  const rawName = (nickname && nickname !== 'Farmer')
+    ? nickname
+    : (detectedPlayerName && detectedPlayerName !== 'Farmer'
+      ? detectedPlayerName
+      : (spSave?.singlePlayerName && spSave.singlePlayerName !== 'Farmer'
+        ? spSave.singlePlayerName
+        : ((latestSave?.singlePlayerName && latestSave.singlePlayerName !== 'Farmer' ? latestSave.singlePlayerName : null)
+          || (latestSave?.playerName && latestSave.playerName !== 'Farmer' ? latestSave.playerName : null)
+          || 'Farmer')));
   
   const handleSaveName = () => {
     const trimmed = tempName.trim();
@@ -283,15 +287,15 @@ export default function HomePage() {
     setIsEditingName(false);
   };
 
-  // Auto-persist detected Single Player name to persistent settings so it's remembered immediately on future launches
+  // Auto-persist detected Single Player or online presence name to persistent settings so it's remembered immediately on future launches
   useEffect(() => {
     if (!nickname || nickname === 'Farmer') {
-      const detectedName = spSave?.singlePlayerName || (latestSave?.singlePlayerName && latestSave.singlePlayerName !== 'Farmer' ? latestSave.singlePlayerName : null);
+      const detectedName = detectedPlayerName || spSave?.singlePlayerName || (latestSave?.singlePlayerName && latestSave.singlePlayerName !== 'Farmer' ? latestSave.singlePlayerName : null);
       if (detectedName && detectedName !== 'Farmer') {
         setNickname(detectedName);
       }
     }
-  }, [nickname, spSave, latestSave, setNickname]);
+  }, [nickname, detectedPlayerName, spSave, latestSave, setNickname]);
 
   // Slideshow State & Engine
   const [slideshowList, setSlideshowList] = useState([]);
