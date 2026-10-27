@@ -232,7 +232,7 @@ export default function ImageCropModal({
         // Convert to high-quality JPEG
         const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.90);
         setIsProcessing(false);
-        const finalSize = selectedSize === 'full' ? 'epic' : selectedSize;
+        const finalSize = selectedSize;
         onApply(croppedDataUrl, finalSize);
       };
       img.src = imageSrc;
@@ -244,7 +244,7 @@ export default function ImageCropModal({
 
   // Skip/undo crop and apply full original photo
   const handleUseFull = () => {
-    const finalSize = selectedSize === 'full' ? 'epic' : selectedSize;
+    const finalSize = selectedSize;
     if (onUseFullPhoto) {
       onUseFullPhoto(finalSize);
     }

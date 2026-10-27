@@ -612,7 +612,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
 
   const handleApplyCropped = async (croppedDataUrl, targetSize) => {
     try {
-      if (targetSize && targetSize !== 'full') {
+      if (targetSize) {
         await updateHeroBannerSettings({ heroTextSize: targetSize });
       }
       await setCustomHeroBanner(croppedDataUrl, originalImageSrc);
@@ -626,7 +626,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
 
   const handleUseFullPhoto = async (targetSize) => {
     try {
-      if (targetSize && targetSize !== 'full') {
+      if (targetSize) {
         await updateHeroBannerSettings({ heroTextSize: targetSize });
       }
       const fullSrc = originalImageSrc || heroCustomOriginalBg || cropImageSrc;
@@ -1522,12 +1522,13 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                 <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '6px', display: 'block' }}>
                   Banner Height & Scale
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
                   {[
                     { id: 'compact', label: 'Compact', sub: '200px' },
                     { id: 'standard', label: 'Standard', sub: '280px' },
                     { id: 'large', label: 'Tall', sub: '380px' },
                     { id: 'epic', label: 'Cinematic', sub: '460px' },
+                    { id: 'full', label: 'Full Photo', sub: '640px' },
                   ].map((s) => {
                     const isSelected = (heroTextSize || 'standard') === s.id;
                     return (
