@@ -64,6 +64,7 @@ export default function SettingsPage() {
     badgeDuration, autoDownloadMapDeps,
     autoCheckUpdates, setAutoCheckUpdates, ignoredAppVersions,
     ignoreAppVersion, unignoreAppVersion, clearIgnoredAppVersions,
+    dismissedDetectedPaths, dismissDetectedPath, clearDismissedDetectedPaths,
     setTheme, setModsPath, addModsPath, removeModsPath, setGamePath, setLaunchPreference,
     setSavegameSlot, setEnableCheats, setSkipModDialog, setSkipIntro, toggleHiddenFolder,
     setHasSeenGuide, setAutoStart, setConflictSensitivity, setCloudBackupPath, setBackupRetention,
@@ -504,35 +505,71 @@ export default function SettingsPage() {
           </div>
 
           {(() => {
+            const dismissed = Array.isArray(dismissedDetectedPaths) ? dismissedDetectedPaths : [];
             const visibleAlternatives = detectedModsPaths.filter(item => 
-              !modsPaths.some(p => p.replace(/\\/g, '/').toLowerCase() === item.path.replace(/\\/g, '/').toLowerCase())
+              !modsPaths.some(p => p.replace(/\\/g, '/').toLowerCase() === item.path.replace(/\\/g, '/').toLowerCase()) &&
+              !dismissed.some(dp => dp.replace(/\\/g, '/').toLowerCase() === item.path.replace(/\\/g, '/').toLowerCase())
             );
-            if (visibleAlternatives.length === 0) return null;
+            if (visibleAlternatives.length === 0 && dismissed.length === 0) return null;
 
             return (
               <div className="animate-fade-in" style={{ width: '100%', marginTop: 8, padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase' }}>
-                  Detected Alternatives
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>
+                    Detected Alternatives {visibleAlternatives.length > 0 ? `(${visibleAlternatives.length})` : ''}
+                  </div>
+                  {dismissed.length > 0 && (
+                    <button
+                      className="btn btn--ghost btn--xs"
+                      onClick={() => {
+                        clearDismissedDetectedPaths();
+                        useToastStore.getState().success('Restored dismissed suggestions');
+                      }}
+                      style={{ fontSize: '10px', color: 'var(--text-tertiary)', padding: '2px 8px' }}
+                      title="Restore previously dismissed suggestions"
+                    >
+                      Reset Dismissed ({dismissed.length})
+                    </button>
+                  )}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {visibleAlternatives.map(item => (
-                    <div key={item.path} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                      <div style={{ flex: 1, overflow: 'hidden' }}>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>{item.path}</div>
-                        <div style={{ fontSize: '9px', color: 'var(--accent)', textTransform: 'uppercase', fontWeight: 700, marginTop: 2 }}>{item.type}</div>
+                {visibleAlternatives.length === 0 ? (
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '4px 0' }}>
+                    All detected suggestions have been added or dismissed.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {visibleAlternatives.map(item => (
+                      <div key={item.path} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                        <div style={{ flex: 1, overflow: 'hidden' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', wordBreak: 'break-all' }}>{item.path}</div>
+                          <div style={{ fontSize: '9px', color: 'var(--accent)', textTransform: 'uppercase', fontWeight: 700, marginTop: 2 }}>{item.type}</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <button 
+                            className="btn btn--secondary btn--xs"
+                            onClick={() => {
+                              addModsPath(item.path);
+                              useToastStore.getState().success('Mods folder added');
+                            }}
+                          >
+                            Add Folder
+                          </button>
+                          <button 
+                            className="btn btn--ghost btn--xs"
+                            onClick={() => {
+                              dismissDetectedPath(item.path);
+                              useToastStore.getState().info('Suggestion removed');
+                            }}
+                            title="Remove this suggestion from list"
+                            style={{ padding: '4px 6px', color: 'var(--text-tertiary)' }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
-                      <button 
-                        className="btn btn--secondary btn--xs"
-                        onClick={() => {
-                          addModsPath(item.path);
-                          useToastStore.getState().success('Mods folder added');
-                        }}
-                      >
-                        Add Folder
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })()}

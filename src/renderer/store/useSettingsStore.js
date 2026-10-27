@@ -52,6 +52,7 @@ export const useSettingsStore = create((set) => ({
   lastUpdateCheck: 0,
   lastGlobalWarming: 0,
   conflictSensitivity: 'warn',
+  dismissedDetectedPaths: [],
   backupRetention: '1w',
   isLoaded: false,
   hasSeenGuide: false,
@@ -195,6 +196,13 @@ export const useSettingsStore = create((set) => ({
         lastUpdateCheck: parseInt(settings.lastUpdateCheck || '0'),
         lastGlobalWarming: parseInt(settings.lastGlobalWarming || '0'),
         conflictSensitivity: settings.conflictSensitivity || 'warn',
+        dismissedDetectedPaths: (() => {
+          try {
+            return settings.dismissedDetectedPaths ? JSON.parse(settings.dismissedDetectedPaths) : [];
+          } catch (_) {
+            return [];
+          }
+        })(),
         backupRetention: settings.backupRetention || '1w',
         hasSeenGuide: settings.hasSeenGuide === 'true',
         tourVersion: settings.tourVersion || '0.0.0',
@@ -285,6 +293,26 @@ export const useSettingsStore = create((set) => ({
       if (window.api?.settings) window.api.settings.set('modsPaths', JSON.stringify(newPaths)).catch(console.error);
       return { modsPaths: newPaths };
     });
+  },
+
+  dismissDetectedPath: async (pathToRemove) => {
+    if (!pathToRemove) return;
+    const norm = pathToRemove.replace(/\\/g, '/').toLowerCase();
+    const current = useSettingsStore.getState().dismissedDetectedPaths || [];
+    if (!current.some(p => p.replace(/\\/g, '/').toLowerCase() === norm)) {
+      const updated = [...current, pathToRemove];
+      set({ dismissedDetectedPaths: updated });
+      if (window.api?.settings) {
+        await window.api.settings.set('dismissedDetectedPaths', JSON.stringify(updated));
+      }
+    }
+  },
+
+  clearDismissedDetectedPaths: async () => {
+    set({ dismissedDetectedPaths: [] });
+    if (window.api?.settings) {
+      await window.api.settings.set('dismissedDetectedPaths', JSON.stringify([]));
+    }
   },
 
   removeModsPath: async (path) => {
