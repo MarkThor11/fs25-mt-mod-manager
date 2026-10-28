@@ -891,16 +891,17 @@ async function setSavegameMods(savegamePath, mods) {
         }
     });
 
-    // Preserve required existing mods (excluding internal app helper mods)
+    // Preserve required existing mods and installed DLCs (excluding internal app helper mods)
     existingModsArray.forEach(m => {
         if (m && m['@_modName']) {
             const nameLow = m['@_modName'].toLowerCase();
-            if (m['@_required'] === 'true' && !INTERNAL_HELPER_MODS.includes(nameLow)) {
+            const isDlcEntry = nameLow.startsWith('pdlc_');
+            if ((m['@_required'] === 'true' || isDlcEntry) && !INTERNAL_HELPER_MODS.includes(nameLow)) {
                 newModsMap.set(m['@_modName'], {
                     '@_modName': m['@_modName'],
                     '@_title': String(m['@_title'] || m['@_modName']).replace(/"/g, "'"),
                     '@_version': m['@_version'] || '1.0.0.0',
-                    '@_required': m['@_required'] || 'false',
+                    '@_required': m['@_required'] || (isDlcEntry ? 'false' : 'true'),
                     '@_fileHash': m['@_fileHash'] || ''
                 });
             }
@@ -946,12 +947,18 @@ async function setSavegameMods(savegamePath, mods) {
             const xp = path.join(savegamePath, xf);
             if (fs.existsSync(xp)) {
                 const content = await fs.readFile(xp, 'utf8').catch(() => '');
-                const re = /\$moddir\$([^\/\\<">]+)/gi;
+                const re = /(?:\$moddir\$|\$pdlcdir\$)([^\/\\<">]+)/gi;
                 let match;
                 while ((match = re.exec(content)) !== null) {
                     const requiredModName = match[1];
                     if (requiredModName && !newModsMap.has(requiredModName)) {
-                        const matchingInstalled = allInstalledMods.find(m => m.modName && m.modName.toLowerCase() === requiredModName.toLowerCase());
+                        const reqClean = requiredModName.toLowerCase().replace(/\.zip$/i, '');
+                        const matchingInstalled = allInstalledMods.find(m => {
+                            if (!m) return false;
+                            const mName = (m.modName || '').toLowerCase();
+                            const fName = (m.fileName || '').replace(/\.zip$|\.dlc$/i, '').toLowerCase();
+                            return mName === reqClean || fName === reqClean || mName === `pdlc_${reqClean}` || fName === `pdlc_${reqClean}`;
+                        });
                         if (matchingInstalled) {
                             newModsMap.set(matchingInstalled.modName, {
                                 '@_modName': matchingInstalled.modName,
@@ -1950,10 +1957,10 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             const pFullPath = path.join(slotPath, pf);
             if (fs.existsSync(pFullPath)) {
                 const content = await fs.readFile(pFullPath, 'utf8');
-                const matches = content.match(/\$moddir\$([^\/\\<">]+)/gi);
+                const matches = content.match(/(?:\$moddir\$|\$pdlcdir\$)([^\/\\<">]+)/gi);
                 if (matches) {
                     for (const m of matches) {
-                        const cleanName = m.replace(/^\$moddir\$/i, '').trim();
+                        const cleanName = m.replace(/^(?:\$moddir\$|\$pdlcdir\$)/i, '').trim();
                         if (cleanName && cleanName.toLowerCase() !== (mapModName || '').toLowerCase()) {
                             discoveredMods.add(cleanName);
                         }
@@ -1974,10 +1981,13 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
                 for (const dModName of discoveredMods) {
                     if (!existingNames.has(dModName.toLowerCase())) {
-                        const matchedMod = allMods.find(m => 
-                            (m.modName && m.modName.toLowerCase() === dModName.toLowerCase()) || 
-                            (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === dModName.toLowerCase())
-                        );
+                        const dClean = dModName.toLowerCase().replace(/\.zip$/i, '');
+                        const matchedMod = allMods.find(m => {
+                            if (!m) return false;
+                            const mName = (m.modName || '').toLowerCase();
+                            const fName = (m.fileName || '').replace(/\.zip$|\.dlc$/i, '').toLowerCase();
+                            return mName === dClean || fName === dClean || mName === `pdlc_${dClean}` || fName === `pdlc_${dClean}`;
+                        });
                         currentMods.push({
                             '@_modName': matchedMod ? matchedMod.modName : dModName,
                             '@_title': String(matchedMod?.title || dModName).replace(/"/g, '&quot;'),
@@ -5938,10 +5948,10 @@ async function getUsedModsInSavegame(savePath) {
             try {
                 const content = await fs.readFile(filePath, 'utf8');
                 
-                // Pattern 1: $moddir$MODNAME/
-                const modDirMatches = content.match(/\$moddir\$([^\/\\]+)/gi) || [];
+                // Pattern 1: $moddir$MODNAME/ or $pdlcdir$DLC_NAME/
+                const modDirMatches = content.match(/(?:\$moddir\$|\$pdlcdir\$)([^\/\\]+)/gi) || [];
                 for (const m of modDirMatches) {
-                    const modName = m.replace(/^\$moddir\$/i, '').trim();
+                    const modName = m.replace(/^(?:\$moddir\$|\$pdlcdir\$)/i, '').trim();
                     if (modName) usedModsMap.set(modName.toLowerCase(), modName);
                 }
 
@@ -5966,7 +5976,7 @@ async function getUsedModsInSavegame(savePath) {
             const saveFiles = await fs.readdir(savePath);
             for (const f of saveFiles) {
                 const fLow = f.toLowerCase();
-                if (fLow === 'storedeliveries.xml') usedModsMap.set('fs25_storedeliveries', 'FS25_storeDeliveries');
+// storeDeliveries.xml config alone does not force mod injection if not selected
                 if (fLow === 'courseplay.xml') usedModsMap.set('fs25_courseplay', 'FS25_Courseplay');
                 if (fLow === 'autodrive_config.xml' || fLow === 'autodrive.xml') usedModsMap.set('fs25_autodrive', 'FS25_AutoDrive');
                 if (fLow === 'enhancedvehicle.xml') usedModsMap.set('fs25_enhancedvehicle', 'FS25_EnhancedVehicle');

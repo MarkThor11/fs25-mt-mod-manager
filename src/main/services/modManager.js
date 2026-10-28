@@ -7642,4 +7642,5 @@ module.exports = {
 	MAP_DEPENDENCIES_FOLDER,
 	decodeDDS,
 	getImageDimensions,
+	DLC_MAPPING,
 };

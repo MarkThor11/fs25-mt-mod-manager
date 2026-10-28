@@ -745,16 +745,7 @@ const [activeTab, setActiveTab] = useState('general');
     let hasDeliveries = (save.mods || []).some(m => m === 'FS25_storeDeliveries' || m?.modName === 'FS25_storeDeliveries');
     setIsPersistenceActive(hasDeliveries);
 
-    // Auto-enable persistence if not already active and hasn't been manually disabled by the user
-    const disableKey = `persistence_disabled_${save.path}`;
-    if (!hasDeliveries && localStorage.getItem(disableKey) !== 'true') {
-      window.api.savegames.updateNativeEnhancement({ savePath: save.path, includeBridge: true, includeDeliveries: true }).then(res => {
-        if (res.success) {
-          setIsPersistenceActive(true);
-          if (onRefresh) onRefresh();
-        }
-      });
-    }
+
 
     // Fetch Player Position, Fleet & Mod Status if on spawn tab
     if (activeTab === 'spawn') {

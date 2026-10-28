@@ -304,11 +304,14 @@ async function optimize() {
     if (!jsonObj.game.development) jsonObj.game.development = {};
     jsonObj.game.development.controls = "true";
 
-    // Audio Hardening (Preserve the fix)
-    if (!jsonObj.game.audio) jsonObj.game.audio = {};
-    if (typeof jsonObj.game.audio !== 'object') jsonObj.game.audio = {};
-    jsonObj.game.audio["@_enable"] = "true";
-    if (!jsonObj.game.audio["@_volume"]) jsonObj.game.audio["@_volume"] = "1.000000";
+    // Audio Hardening (Preserve user volume setting if present, don't force to 100%)
+    if (jsonObj.game.audio && typeof jsonObj.game.audio === 'object') {
+        jsonObj.game.audio["@_enable"] = "true";
+        // Preserve existing user-configured volume; only initialize if undefined
+        if (jsonObj.game.audio["@_volume"] === undefined || jsonObj.game.audio["@_volume"] === null) {
+            jsonObj.game.audio["@_volume"] = "1.000000";
+        }
+    }
 
     const builder = new XMLBuilder({
         format: true,
