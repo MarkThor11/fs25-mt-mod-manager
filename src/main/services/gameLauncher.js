@@ -389,7 +389,17 @@ async function launch(options = {}) {
     if (fs.existsSync(gameSettingsPath)) {
       let settingsXml = fs.readFileSync(gameSettingsPath, 'utf8');
       const overrideRegex = /<modsDirectoryOverride[^>]*\/>/i;
-      const formattedModsPath = (process.platform === 'linux' && targetModsPath.startsWith('/')) ? `Z:${targetModsPath}` : targetModsPath.replace(/\\/g, '/');
+      let formattedModsPath = targetModsPath.replace(/\\/g, '/');
+      if (process.platform === 'linux') {
+        const driveCIdx = formattedModsPath.indexOf('/pfx/drive_c');
+        if (driveCIdx !== -1) {
+          // If the path is inside the Proton prefix, map directly to native Wine C: drive
+          const subPath = formattedModsPath.slice(driveCIdx + '/pfx/drive_c'.length);
+          formattedModsPath = ('C:' + (subPath.startsWith('/') ? subPath : '/' + subPath)).replace(/\/+/g, '/');
+        } else if (formattedModsPath.startsWith('/')) {
+          formattedModsPath = 'Z:' + formattedModsPath;
+        }
+      }
       const newTag = `<modsDirectoryOverride active="true" directory="${formattedModsPath}"/>`;
       
       if (overrideRegex.test(settingsXml)) {
