@@ -2351,6 +2351,14 @@ select.btn option {
   font-size: calc(var(--fs-3xl) * 1.5);
   margin-bottom: var(--sp-4);
 }
+.home-hero--size-full {
+  padding: var(--sp-16) var(--sp-10);
+  min-height: 640px;
+}
+.home-hero--size-full .home-hero__title {
+  font-size: calc(var(--fs-3xl) * 1.5);
+  margin-bottom: var(--sp-4);
+}
 
 /* Photo Mode */
 .home-hero--photo-mode {

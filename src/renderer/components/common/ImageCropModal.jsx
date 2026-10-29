@@ -108,7 +108,7 @@ export default function ImageCropModal({
   // Handler for changing size preset
   const handleSelectSize = (sizeId) => {
     setSelectedSize(sizeId);
-    const targetHeroSize = sizeId === 'full' ? 'epic' : sizeId;
+    const targetHeroSize = sizeId;
     if (onSizePreviewChange) {
       onSizePreviewChange(targetHeroSize);
     }
