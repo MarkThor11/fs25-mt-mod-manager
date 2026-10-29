@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, ZoomIn, ZoomOut, Move, Check, RotateCcw, Image as ImageIcon, Eye, EyeOff, Grid } from 'lucide-react';
+import { 
+  X, ZoomIn, ZoomOut, Move, Check, RotateCcw, Image as ImageIcon, 
+  Eye, EyeOff, Grid, Palette, Sparkles, Upload, Sliders
+} from 'lucide-react';
 
 const FONT_FAMILIES = {
   modern: 'inherit',
@@ -11,6 +14,15 @@ const FONT_FAMILIES = {
   elegant: "'Garamond', 'Baskerville', 'Times New Roman', serif",
   tech: "'Consolas', 'Fira Code', monospace"
 };
+
+const BG_COLOR_PRESETS = [
+  { name: 'Pitch Dark', value: '#0a0d14' },
+  { name: 'Charcoal', value: '#1a1f2c' },
+  { name: 'Slate Blue', value: '#1e293b' },
+  { name: 'Forest Green', value: '#14291e' },
+  { name: 'Rustic Earth', value: '#2b1d14' },
+  { name: 'Deep Burgundy', value: '#2a1215' }
+];
 
 const BANNER_SIZES = [
   {
@@ -74,6 +86,13 @@ export default function ImageCropModal({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showTextOverlay, setShowTextOverlay] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
+
+  // Second layer / background settings
+  const [bgLayerMode, setBgLayerMode] = useState('ambient'); // 'ambient' | 'color' | 'image'
+  const [bgColor, setBgColor] = useState('#0a0d14');
+  const [bgImageSrc, setBgImageSrc] = useState(null);
+  const [bgBlur, setBgBlur] = useState(24);
+  const bgFileInputRef = useRef(null);
 
   const containerRef = useRef(null);
   const imgRef = useRef(null);
@@ -192,7 +211,7 @@ export default function ImageCropModal({
   const handleWheel = (e) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    setZoom((prev) => Math.min(Math.max(0.5, prev + delta), 4));
+    setZoom((prev) => Math.min(Math.max(0.2, prev + delta), 4));
   };
 
   const handleResetPosition = () => {
@@ -200,7 +219,22 @@ export default function ImageCropModal({
     setOffset({ x: 0, y: 0 });
   };
 
-  // Render cropped image to canvas at current ratio resolution
+  const handleBgImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result;
+      if (result) {
+        setBgImageSrc(result);
+        setBgLayerMode('image');
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  // Render cropped image with background layer to canvas at current ratio resolution
   const handleSaveCrop = () => {
     if (!imageSrc || isProcessing) return;
     setIsProcessing(true);
@@ -215,25 +249,72 @@ export default function ImageCropModal({
 
       const img = new Image();
       img.onload = () => {
-        ctx.fillStyle = '#111827';
-        ctx.fillRect(0, 0, targetWidth, targetHeight);
-
-        // Calculate scaling ratio between container display and output canvas
         const scaleToCanvas = targetWidth / displayWidth;
 
-        // Apply zoom and offset in canvas space
-        const drawW = baseW * zoom * scaleToCanvas;
-        const drawH = baseH * zoom * scaleToCanvas;
-        const drawX = ((displayWidth - baseW * zoom) / 2 + offset.x) * scaleToCanvas;
-        const drawY = ((displayHeight - baseH * zoom) / 2 + offset.y) * scaleToCanvas;
+        // Function to draw foreground photo and finish save
+        const finishRender = () => {
+          const drawW = baseW * zoom * scaleToCanvas;
+          const drawH = baseH * zoom * scaleToCanvas;
+          const drawX = ((displayWidth - baseW * zoom) / 2 + offset.x) * scaleToCanvas;
+          const drawY = ((displayHeight - baseH * zoom) / 2 + offset.y) * scaleToCanvas;
 
-        ctx.drawImage(img, drawX, drawY, drawW, drawH);
+          // Shadow under foreground photo if zoomed down to expose background
+          if (zoom < 1.05) {
+            ctx.save();
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+            ctx.shadowBlur = 32 * scaleToCanvas;
+            ctx.drawImage(img, drawX, drawY, drawW, drawH);
+            ctx.restore();
+          } else {
+            ctx.drawImage(img, drawX, drawY, drawW, drawH);
+          }
 
-        // Convert to high-quality JPEG
-        const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.90);
-        setIsProcessing(false);
-        const finalSize = selectedSize;
-        onApply(croppedDataUrl, finalSize);
+          const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.90);
+          setIsProcessing(false);
+          const finalSize = selectedSize;
+          onApply(croppedDataUrl, finalSize);
+        };
+
+        // Render Background Underlay Layer
+        if (bgLayerMode === 'ambient') {
+          ctx.save();
+          const bleed = 60;
+          ctx.filter = `blur(${Math.round(bgBlur * 1.5)}px) brightness(0.65) saturate(1.2)`;
+          ctx.drawImage(img, -bleed, -bleed, targetWidth + bleed * 2, targetHeight + bleed * 2);
+          ctx.restore();
+          finishRender();
+        } else if (bgLayerMode === 'image' && bgImageSrc) {
+          const bgImg = new Image();
+          bgImg.onload = () => {
+            ctx.save();
+            const bgAspect = bgImg.naturalWidth / bgImg.naturalHeight;
+            const canvasAspect = targetWidth / targetHeight;
+            let bW = targetWidth, bH = targetHeight, bX = 0, bY = 0;
+            if (bgAspect > canvasAspect) {
+              bH = targetHeight;
+              bW = targetHeight * bgAspect;
+              bX = (targetWidth - bW) / 2;
+            } else {
+              bW = targetWidth;
+              bH = targetWidth / bgAspect;
+              bY = (targetHeight - bH) / 2;
+            }
+            ctx.drawImage(bgImg, bX, bY, bW, bH);
+            ctx.restore();
+            finishRender();
+          };
+          bgImg.onerror = () => {
+            ctx.fillStyle = bgColor || '#0a0d14';
+            ctx.fillRect(0, 0, targetWidth, targetHeight);
+            finishRender();
+          };
+          bgImg.src = bgImageSrc;
+        } else {
+          // Color underlay mode
+          ctx.fillStyle = bgColor || '#0a0d14';
+          ctx.fillRect(0, 0, targetWidth, targetHeight);
+          finishRender();
+        }
       };
       img.src = imageSrc;
     } catch (err) {
@@ -255,10 +336,10 @@ export default function ImageCropModal({
       <div 
         className="modal modal--medium animate-scale-up"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '840px', width: '94%', display: 'flex', flexDirection: 'column' }}
+        style={{ maxWidth: '880px', width: '95%', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}
       >
         {/* Header */}
-        <div className="modal__header" style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="modal__header" style={{ padding: '14px 22px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Move size={18} />
@@ -271,7 +352,7 @@ export default function ImageCropModal({
                 </span>
               </div>
               <p style={{ fontSize: '11px', margin: '2px 0 0 0', color: 'var(--text-tertiary)' }}>
-                Drag your photo to place the focal point • Preview and height are directly linked to your banner
+                Drag your photo to place the focal point • Zoom & pick a background layer for square photos
               </p>
             </div>
           </div>
@@ -281,11 +362,11 @@ export default function ImageCropModal({
         </div>
 
         {/* Body */}
-        <div className="modal__body" style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div className="modal__body" style={{ padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto' }}>
           
           {/* Banner Height & Scale Linked Selector */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>Banner Height & Scale</span>
                 <span style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: '600' }}>• {activePreset.desc}</span>
@@ -390,18 +471,48 @@ export default function ImageCropModal({
               style={{
                 width: '100%',
                 aspectRatio: `${targetBannerWidth} / ${targetBannerHeight}`,
-                maxHeight: '380px',
+                maxHeight: '340px',
                 borderRadius: '12px',
                 overflow: 'hidden',
                 position: 'relative',
-                background: '#0a0d14',
+                background: bgLayerMode === 'color' ? bgColor : '#0a0d14',
                 border: '2px solid var(--accent)',
                 cursor: isDragging ? 'grabbing' : 'grab',
                 userSelect: 'none',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1)'
               }}
             >
-              {/* Draggable & Scalable Image */}
+              {/* Background Layer: Ambient Blurred Photo */}
+              {bgLayerMode === 'ambient' && (
+                <div 
+                  style={{
+                    position: 'absolute',
+                    inset: '-25px',
+                    backgroundImage: `url("${imageSrc}")`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    filter: `blur(${bgBlur}px) brightness(0.65) saturate(1.2)`,
+                    transform: 'scale(1.1)',
+                    pointerEvents: 'none'
+                  }}
+                />
+              )}
+
+              {/* Background Layer: Secondary Image */}
+              {bgLayerMode === 'image' && bgImageSrc && (
+                <div 
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundImage: `url("${bgImageSrc}")`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    pointerEvents: 'none'
+                  }}
+                />
+              )}
+
+              {/* Draggable & Scalable Foreground Image */}
               <img 
                 ref={imgRef}
                 src={imageSrc}
@@ -419,6 +530,7 @@ export default function ImageCropModal({
                   maxHeight: 'none',
                   pointerEvents: 'none',
                   userSelect: 'none',
+                  filter: zoom < 1.05 ? 'drop-shadow(0 6px 24px rgba(0, 0, 0, 0.75))' : 'none',
                   transition: isDragging ? 'none' : 'transform 0.05s ease-out'
                 }}
               />
@@ -435,7 +547,7 @@ export default function ImageCropModal({
                 </div>
               )}
 
-              {/* Live Real-World Banner Text Overlay (matches HomePage positioning and styling) */}
+              {/* Live Real-World Banner Text Overlay */}
               {showTextOverlay && (bannerProps?.heroShowText ?? true) && (
                 <div 
                   style={{ 
@@ -508,21 +620,24 @@ export default function ImageCropModal({
           </div>
 
           {/* Zoom & Positioning Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '10px 16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, marginRight: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-tertiary)', padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, marginRight: '14px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <ZoomIn size={12} /> Scale:
+              </span>
               <button 
                 type="button"
                 className="btn btn--icon btn--ghost" 
-                onClick={() => setZoom((prev) => Math.max(0.5, prev - 0.15))}
+                onClick={() => setZoom((prev) => Math.max(0.2, prev - 0.1))}
                 title="Zoom Out"
-                style={{ width: '28px', height: '28px', padding: 0 }}
+                style={{ width: '26px', height: '26px', padding: 0 }}
               >
-                <ZoomOut size={15} />
+                <ZoomOut size={13} />
               </button>
 
               <input 
                 type="range"
-                min="0.5"
+                min="0.2"
                 max="3"
                 step="0.05"
                 value={zoom}
@@ -533,14 +648,14 @@ export default function ImageCropModal({
               <button 
                 type="button"
                 className="btn btn--icon btn--ghost" 
-                onClick={() => setZoom((prev) => Math.min(3, prev + 0.15))}
+                onClick={() => setZoom((prev) => Math.min(3, prev + 0.1))}
                 title="Zoom In"
-                style={{ width: '28px', height: '28px', padding: 0 }}
+                style={{ width: '26px', height: '26px', padding: 0 }}
               >
-                <ZoomIn size={15} />
+                <ZoomIn size={13} />
               </button>
 
-              <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--accent)', minWidth: '38px', textAlign: 'right' }}>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--accent)', minWidth: '36px', textAlign: 'right' }}>
                 {Math.round(zoom * 100)}%
               </span>
             </div>
@@ -549,16 +664,189 @@ export default function ImageCropModal({
               type="button"
               className="btn btn--ghost"
               onClick={handleResetPosition}
-              style={{ fontSize: '11px', gap: '6px', height: '28px', padding: '0 10px', color: 'var(--text-secondary)' }}
+              style={{ fontSize: '11px', gap: '5px', height: '26px', padding: '0 8px', color: 'var(--text-secondary)' }}
               title="Reset Zoom & Offset back to center"
             >
-              <RotateCcw size={13} /> Center
+              <RotateCcw size={12} /> Center
             </button>
+          </div>
+
+          {/* Second Layer / Background Underlay Controls */}
+          <div style={{ background: 'var(--bg-tertiary)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Palette size={13} style={{ color: 'var(--accent)' }} />
+                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>Background Underlay Layer</span>
+                <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>• Fills empty space when square photo is scaled down</span>
+              </div>
+
+              {/* Mode selector: Ambient Blur | Color | Image */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-secondary)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <button
+                  type="button"
+                  onClick={() => setBgLayerMode('ambient')}
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: bgLayerMode === 'ambient' ? 'var(--accent)' : 'transparent',
+                    color: bgLayerMode === 'ambient' ? '#fff' : 'var(--text-secondary)',
+                    fontSize: '11px',
+                    fontWeight: bgLayerMode === 'ambient' ? '700' : '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <Sparkles size={11} /> Ambient Blur
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBgLayerMode('color')}
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: bgLayerMode === 'color' ? 'var(--accent)' : 'transparent',
+                    color: bgLayerMode === 'color' ? '#fff' : 'var(--text-secondary)',
+                    fontSize: '11px',
+                    fontWeight: bgLayerMode === 'color' ? '700' : '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <Palette size={11} /> Color Wheel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBgLayerMode('image');
+                    if (!bgImageSrc && bgFileInputRef.current) {
+                      bgFileInputRef.current.click();
+                    }
+                  }}
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: bgLayerMode === 'image' ? 'var(--accent)' : 'transparent',
+                    color: bgLayerMode === 'image' ? '#fff' : 'var(--text-secondary)',
+                    fontSize: '11px',
+                    fontWeight: bgLayerMode === 'image' ? '700' : '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <Upload size={11} /> Background Image
+                </button>
+              </div>
+            </div>
+
+            {/* Ambient Blur Controls */}
+            {bgLayerMode === 'ambient' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Sliders size={11} /> Blur Strength:
+                </span>
+                <input 
+                  type="range"
+                  min="5"
+                  max="50"
+                  step="1"
+                  value={bgBlur}
+                  onChange={(e) => setBgBlur(parseInt(e.target.value, 10))}
+                  style={{ flex: 1, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: '700', minWidth: '35px' }}>
+                  {bgBlur}px
+                </span>
+              </div>
+            )}
+
+            {/* Color Wheel & Swatches */}
+            {bgLayerMode === 'color' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', padding: '4px 0' }}>
+                {BG_COLOR_PRESETS.map((p) => {
+                  const isSelected = bgColor.toLowerCase() === p.value.toLowerCase();
+                  return (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => setBgColor(p.value)}
+                      title={p.name}
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        background: p.value,
+                        border: isSelected ? '2px solid var(--accent)' : '1px solid rgba(255,255,255,0.25)',
+                        cursor: 'pointer',
+                        boxShadow: isSelected ? '0 0 8px rgba(var(--accent-rgb, 59, 130, 246), 0.6)' : 'none',
+                        transform: isSelected ? 'scale(1.15)' : 'scale(1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0
+                      }}
+                    >
+                      {isSelected && <Check size={11} color="#fff" strokeWidth={3} />}
+                    </button>
+                  );
+                })}
+
+                {/* Color Wheel Picker Input */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', marginLeft: '6px', background: 'var(--bg-secondary)', padding: '2px 8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                  <input 
+                    type="color" 
+                    value={bgColor}
+                    onChange={(e) => setBgColor(e.target.value)}
+                    style={{ width: '22px', height: '22px', padding: 0, border: 'none', borderRadius: '50%', cursor: 'pointer', background: 'transparent' }}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>Custom Color Wheel ({bgColor})</span>
+                </label>
+              </div>
+            )}
+
+            {/* Background Image Upload Controls */}
+            {bgLayerMode === 'image' && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' }}>
+                <input 
+                  type="file" 
+                  ref={bgFileInputRef}
+                  accept="image/*"
+                  onChange={handleBgImageUpload}
+                  style={{ display: 'none' }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {bgImageSrc ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '42px', height: '24px', borderRadius: '4px', backgroundImage: `url("${bgImageSrc}")`, backgroundSize: 'cover', backgroundPosition: 'center', border: '1px solid var(--border)' }} />
+                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Custom background image loaded</span>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>No secondary image selected</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  onClick={() => bgFileInputRef.current?.click()}
+                  style={{ fontSize: '11px', height: '26px', padding: '0 10px', gap: '5px' }}
+                >
+                  <Upload size={12} /> {bgImageSrc ? 'Change Image...' : 'Choose Image...'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="modal__footer" style={{ padding: '14px 22px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-secondary)' }}>
+        <div className="modal__footer" style={{ padding: '12px 22px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-secondary)' }}>
           <button type="button" className="btn btn--ghost" onClick={handleCancel} style={{ fontSize: '12px' }}>
             Cancel
           </button>
@@ -575,7 +863,7 @@ export default function ImageCropModal({
             </button>
 
             <button 
-              type="button"
+              type="button" 
               className="btn btn--primary"
               onClick={handleSaveCrop}
               disabled={isProcessing}
