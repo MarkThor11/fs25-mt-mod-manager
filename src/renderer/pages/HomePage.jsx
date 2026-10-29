@@ -46,6 +46,8 @@ export default function HomePage() {
     heroTextScale,
     heroTextColor,
     heroTextShadow,
+    heroTextBg,
+    heroTextBgColor,
     heroShowText,
     heroShowSubtitle,
     heroSubtitleMode,
@@ -669,7 +671,16 @@ export default function HomePage() {
                 maxWidth: '850px',
                 width: 'max-content',
                 cursor: showCustomizer ? (isDraggingText ? 'grabbing' : 'grab') : 'default',
-                userSelect: isDraggingText ? 'none' : 'auto'
+                userSelect: isDraggingText ? 'none' : 'auto',
+                ...(heroTextBg ? {
+                  background: heroTextBgColor || 'rgba(0, 0, 0, 0.65)',
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
+                  padding: '16px 24px',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)'
+                } : {})
               }}
             >
               {/* Drag Position Handle (Only visible during Banner Studio customization) */}

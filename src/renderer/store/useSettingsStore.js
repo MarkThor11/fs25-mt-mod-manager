@@ -29,6 +29,8 @@ export const useSettingsStore = create((set) => ({
   heroTextScale: 100, // percentage 75-150%
   heroTextColor: '#ffffff',
   heroTextShadow: true,
+  heroTextBg: false,
+  heroTextBgColor: 'rgba(0, 0, 0, 0.65)',
   heroShowText: true,
   heroShowSubtitle: true,
   heroSubtitleMode: 'quote', // 'quote' | 'helper' | 'off'
@@ -164,6 +166,8 @@ export const useSettingsStore = create((set) => ({
         heroTextScale: settings.heroTextScale ? parseInt(settings.heroTextScale, 10) : 100,
         heroTextColor: settings.heroTextColor || '#ffffff',
         heroTextShadow: settings.heroTextShadow !== 'false',
+        heroTextBg: settings.heroTextBg === 'true',
+        heroTextBgColor: settings.heroTextBgColor || 'rgba(0, 0, 0, 0.65)',
         heroShowText: settings.heroShowText !== 'false',
         heroShowSubtitle: settings.heroShowSubtitle !== 'false',
         heroSubtitleMode: settings.heroSubtitleMode || (settings.heroShowSubtitle === 'false' ? 'off' : 'quote'),
@@ -451,6 +455,8 @@ export const useSettingsStore = create((set) => ({
       heroTextScale: 100,
       heroTextColor: '#ffffff',
       heroTextShadow: true,
+      heroTextBg: false,
+      heroTextBgColor: 'rgba(0, 0, 0, 0.65)',
       heroShowText: true,
       heroShowSubtitle: true,
       heroSubtitleMode: 'quote',

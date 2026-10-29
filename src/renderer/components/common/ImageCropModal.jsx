@@ -562,7 +562,16 @@ export default function ImageCropModal({
                     pointerEvents: 'none', 
                     zIndex: 10,
                     maxWidth: '85%',
-                    userSelect: 'none'
+                    userSelect: 'none',
+                    ...(bannerProps?.heroTextBg ? {
+                      background: bannerProps?.heroTextBgColor || 'rgba(0, 0, 0, 0.65)',
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                      padding: '10px 16px',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.45)'
+                    } : {})
                   }}
                 >
                   <div 

@@ -15,6 +15,16 @@ import mapEu from '../../assets/maps/map_eu.png';
 import mapAs from '../../assets/maps/map_as.png';
 import mapKinlaig from '../../assets/maps/map_kinlaig.jpg';
 
+
+const TEXT_BG_PRESETS = [
+  { name: 'Pitch Dark', value: 'rgba(0, 0, 0, 0.70)' },
+  { name: 'Frosted Glass', value: 'rgba(15, 23, 42, 0.65)' },
+  { name: 'Forest Tint', value: 'rgba(20, 41, 30, 0.75)' },
+  { name: 'Rustic Earth', value: 'rgba(43, 29, 20, 0.75)' },
+  { name: 'Slate Accent', value: 'rgba(30, 41, 59, 0.75)' },
+  { name: 'Translucent White', value: 'rgba(255, 255, 255, 0.20)' },
+];
+
 const COLOR_SWATCHES = [
   { name: 'Pure White', value: '#ffffff' },
   { name: 'Harvest Gold', value: '#f59e0b' },
@@ -355,7 +365,7 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
     homeShowHero, setHomeShowHero,
     heroBgType, heroCustomBg, heroCustomOriginalBg, heroDimmer, heroAlignment,
     heroTextPosX, heroTextPosY,
-    heroFont, heroTextSize, heroTextScale, heroTextColor, heroTextShadow,
+    heroFont, heroTextSize, heroTextScale, heroTextColor, heroTextShadow, heroTextBg, heroTextBgColor,
     heroShowText, heroShowSubtitle, heroSubtitleMode, heroQuoteIndex,
     heroSlideshowSource, heroSlideshowFolder, heroSlideshowImages, heroSlideshowInterval, heroSlideshowShuffle,
     heroSlideshowFit, heroSlideshowFocus,
@@ -1618,6 +1628,70 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
                   style={{ width: '18px', height: '18px', accentColor: 'var(--accent)', cursor: 'pointer' }}
                 />
               </div>
+
+              {/* Text Background Box & Color Picker */}
+              <div style={{ background: 'var(--bg-tertiary)', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>Text Background Badge</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Adds a stylish tinted backdrop card behind the banner title & quote</div>
+                  </div>
+                  <input 
+                    type="checkbox"
+                    checked={heroTextBg}
+                    onChange={(e) => updateHeroBannerSettings({ heroTextBg: e.target.checked })}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--accent)', cursor: 'pointer' }}
+                  />
+                </div>
+
+                {heroTextBg && (
+                  <div style={{ borderTop: '1px solid var(--border)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)' }}>Choose Background Tint:</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      {TEXT_BG_PRESETS.map((p) => {
+                        const isSelected = (heroTextBgColor || '').toLowerCase() === p.value.toLowerCase();
+                        return (
+                          <button
+                            key={p.value}
+                            type="button"
+                            onClick={() => updateHeroBannerSettings({ heroTextBgColor: p.value })}
+                            title={p.name}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
+                              background: p.value,
+                              color: '#fff',
+                              fontSize: '11px',
+                              fontWeight: isSelected ? '700' : '500',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              backdropFilter: 'blur(8px)',
+                              boxShadow: isSelected ? '0 0 8px rgba(var(--accent-rgb, 59, 130, 246), 0.5)' : 'none'
+                            }}
+                          >
+                            {isSelected && <Check size={11} strokeWidth={3} />}
+                            <span>{p.name}</span>
+                          </button>
+                        );
+                      })}
+
+                      {/* Custom Color Wheel Picker */}
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', background: 'var(--bg-secondary)', padding: '3px 8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                        <input 
+                          type="color" 
+                          value={heroTextBgColor && heroTextBgColor.startsWith('#') ? heroTextBgColor : '#000000'}
+                          onChange={(e) => updateHeroBannerSettings({ heroTextBgColor: e.target.value })}
+                          style={{ width: '22px', height: '22px', padding: 0, border: 'none', borderRadius: '50%', cursor: 'pointer', background: 'transparent' }}
+                        />
+                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>Custom Color Wheel</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -2034,6 +2108,8 @@ export default function HeroCustomizerModal({ isOpen, onClose }) {
         heroTextScale: heroTextScale || 100,
         heroTextColor: heroTextColor || '#ffffff',
         heroTextShadow: heroTextShadow !== false,
+        heroTextBg: heroTextBg === true,
+        heroTextBgColor: heroTextBgColor || 'rgba(0, 0, 0, 0.65)',
         heroTextPosX: heroTextPosX ?? 10,
         heroTextPosY: heroTextPosY ?? 50,
         heroSubtitleMode: activeSubtitleMode,
