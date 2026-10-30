@@ -27,13 +27,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y rpm
+          sudo apt-get update && sudo apt-get install -y rpm rpm2cpio
           npm install
 
       - name: Build Linux App
         env:
           GITHUB_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
+          DEBUG: electron-builder
         run: |
           npm run build
           npx electron-builder --linux AppImage deb rpm --publish never
