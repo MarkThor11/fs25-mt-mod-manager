@@ -766,7 +766,8 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
           (cap > 0 && cap < 1000 && unitCap === 0) ||                 // tiny litre = mis-parse
           (capMin > 0 && capMin < 1000 && capMax > 10000) ||          // model-number bleed in min
           (capMin === 1500 && capMax >= 50000) ||                     // corrupt La Campagne cache
-          (isTrailerOrTanker && descHasMultiChamberOrTotal && capMin === capMax) // multi-chamber or total described but flattened
+          (isTrailerOrTanker && descHasMultiChamberOrTotal && capMin === capMax) ||
+          (capMin === capMax && /(?:capact?i(?:ty|ties)|kapazit[aä]t|capacit[eé]|volume|volumen|inhalte?|fassungsverm[oö]gen|inhalt)[:\-\s/]+.*?\d.*?\/.*?\d/i.test(cached.description)) // multi-chamber or total described but flattened
         );
 
         // Re-scrape if priceMin is missing or packs with description have single price
