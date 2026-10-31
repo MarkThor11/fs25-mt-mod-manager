@@ -181,7 +181,6 @@ export const useModHubStore = create((set, get) => ({
   // Actions
   setHpMatchMode: (mode) => set({ hpMatchMode: mode, selectedHP: 0 }),
   setSelectedHP: (hp) => set({ selectedHP: hp }),
-  setPowerReference: (mod) => set({ powerReference: mod, selectedHP: 0 }),
   isPrefetching: false,
   isWarming: false,
   warmingQueue: [],
@@ -289,16 +288,29 @@ export const useModHubStore = create((set, get) => ({
 
   setPowerReference: (mod) => {
     if (!mod) {
-      set({ powerReference: null });
+      set({ powerReference: null, selectedHP: 0 });
       return;
     }
+    const cat = (mod.category || mod.metadata?.Category || '').toLowerCase();
+    const filter = (mod.category || '').split(':')[1] || '';
+    const isVehicle = DRIVABLE_FILTERS.includes(filter) || 
+      /(?:tractor|truck|car|harvester|excavator|loader|forklift)/i.test(cat) || 
+      !!mod.techData?.isDrivable;
+    const hpIsReq = mod.techData?.hpIsRequirement !== undefined ? !!mod.techData.hpIsRequirement : !isVehicle;
+
     set({
       powerReference: {
-        modId: mod.modId,
-        title: mod.title,
-        hp: mod.techData?.hp || 0,
-        hpIsRequirement: !!mod.techData?.hpIsRequirement
-      }
+        ...mod,
+        techData: {
+          ...(mod.techData || {}),
+          hp: mod.techData?.hp || mod.hp || 0,
+          hpMin: mod.techData?.hpMin || mod.hpMin || mod.techData?.hp || mod.hp || 0,
+          hpMax: mod.techData?.hpMax || mod.techData?.hp || mod.hp || 0,
+          hpIsRequirement: hpIsReq,
+          isDrivable: isVehicle
+        }
+      },
+      selectedHP: 0
     });
   },
 

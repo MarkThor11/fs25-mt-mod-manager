@@ -7,7 +7,7 @@ import CategoryTree from '../components/modhub/CategoryTree';
 import ModCard from '../components/modhub/ModCard';
 import CompareOverlay from '../components/modhub/CompareOverlay';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
-import { useModHubStore } from '../store/useModHubStore';
+import { useModHubStore, DRIVABLE_FILTERS } from '../store/useModHubStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useScrollPersistence } from '../hooks/useScrollPersistence';
 import { useInstalledLookup } from '../hooks/useInstalledLookup';
@@ -379,10 +379,15 @@ export default function ModHubPage() {
 
       // Smart Power Matching (Bi-directional Cross-Type only)
       if (isSmartMatching && !sameType && (mod.techData.hpMin > 0 || mod.techData.hpMax > 0)) {
-        const modIsReq = !!mod.techData.hpIsRequirement;
-        const refIsReq = !!powerReference.techData?.hpIsRequirement;
-        const modIsDrivable = !!mod.techData.isDrivable;
-        const refIsDrivable = !!powerReference.techData?.isDrivable;
+        const modCat = (mod.category || mod.metadata?.Category || '').toLowerCase();
+        const modFilter = (mod.category || '').split(':')[1] || '';
+        const modIsDrivable = !!mod.techData.isDrivable || DRIVABLE_FILTERS.includes(modFilter) || /(?:tractor|truck|car|harvester|excavator|loader|forklift)/i.test(modCat);
+        const modIsReq = mod.techData.hpIsRequirement !== undefined ? !!mod.techData.hpIsRequirement : !modIsDrivable;
+
+        const refCat = (powerReference.category || powerReference.metadata?.Category || '').toLowerCase();
+        const refFilter = (powerReference.category || '').split(':')[1] || '';
+        const refIsDrivable = !!powerReference.techData?.isDrivable || DRIVABLE_FILTERS.includes(refFilter) || /(?:tractor|truck|car|harvester|excavator|loader|forklift)/i.test(refCat);
+        const refIsReq = powerReference.techData?.hpIsRequirement !== undefined ? !!powerReference.techData.hpIsRequirement : !refIsDrivable;
 
         const isTargetingDrivable = refIsReq && modIsDrivable;
         const isTargetingTool = refIsDrivable && modIsReq;
