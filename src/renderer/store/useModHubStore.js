@@ -246,6 +246,19 @@ export const useModHubStore = create((set, get) => ({
             v.techData.scraped = false; // forces re-scrape
             hasPruned = true;
           }
+          // Repair implements with missing or zero HP in old cached entries
+          if ((!v.techData.hp || v.techData.hp === 0) && !isNoCap) {
+            const implementKeywords = [
+              'soil cultivation', 'cultivator', 'plow', 'disc harrow', 'power harrow',
+              'subsoiler', 'spader', 'mulcher', 'roller', 'seeder', 'planter',
+              'mower', 'tedder', 'windrower', 'slurry', 'manure', 'sprayer', 'fertilizer', 'weeder', 'hoe', 'yield improvements'
+            ];
+            const isImplement = implementKeywords.some(k => catStr.includes(k) || titleStr.includes(k));
+            if (isImplement) {
+              v.techData.scraped = false; // forces re-scrape to populate HP
+              hasPruned = true;
+            }
+          }
         }
         // If it has a timestamp, prune if older than 30 days. 
         // If it lacks a timestamp (like our new metadata pool), treat it as fresh.
@@ -333,6 +346,16 @@ export const useModHubStore = create((set, get) => ({
         (priceMin > 0 && priceMin < 500 && descHasPrices) ||
         (!isMultiItem && priceMin > 0 && priceMin <= 2500 && priceMax >= 10000 && descHasPrices)
       );
+      const catStr = (m.category || m.metadata?.Category || '').toLowerCase();
+      const titleStr = (m.title || '').toLowerCase();
+      const implementKeywords = [
+        'soil cultivation', 'cultivator', 'plow', 'disc harrow', 'power harrow',
+        'subsoiler', 'spader', 'mulcher', 'roller', 'seeder', 'planter',
+        'mower', 'tedder', 'windrower', 'slurry', 'manure', 'sprayer', 'fertilizer', 'weeder', 'hoe', 'yield improvements'
+      ];
+      const isImplement = implementKeywords.some(k => catStr.includes(k) || titleStr.includes(k));
+      const needsHpRescrape = isImplement && (!m.techData?.hp || m.techData.hp === 0);
+
       const isTrailerOrTanker = /(?:trailer|tipper|kipper|slurry|spreader|tanker|wagon|dumper|chaser|auger|manure)/i.test(m.category || m.title);
       const descHasCap = m.description && /(?:capact?i(?:ty|ties)|kapazit[aä]t|capacit[eé]|volume|volumen|inhalte?|fassungsverm[oö]gen|inhalt)[:\-\s/]+.*?\d/i.test(m.description);
       const descHasMultiChamberOrTotal = m.description && /(?:per\s*(?:side|chamber|compartment|tank|box)|pro\s*(?:seite|kammer)|par\s*c[oô]t[eé]|\b(?:total|in\s*total|gesamt|au\s*total|og[óo]lem)\b)/i.test(m.description);
@@ -343,6 +366,7 @@ export const useModHubStore = create((set, get) => ({
       );
 
       return (
+        needsHpRescrape ||
         needsTrailerCapRescrape ||
         (cap > 0 && cap < 1000 && unitCap === 0) ||
         (capMin > 0 && capMin < 1000 && capMax > 10000) || // model-number bleed (e.g. NX200 → cMin=200)

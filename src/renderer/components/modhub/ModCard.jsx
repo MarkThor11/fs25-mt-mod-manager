@@ -414,13 +414,13 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
   }, [mod.category, mod.techData]);
 
   const hideHP = useMemo(() => {
-    if (isModPack || mod.isMap || isMapCategory(mod.category)) return true;
+    if (mod.isMap || isMapCategory(mod.category)) return true;
     // Show HP if it's a tractor/truck or explicitly marked as a drivable
     if (isTractorOrTruck || mod.techData?.isDrivable) return false;
     // Hide HP for self-propelled tools (like sprayers) if it's the engine specs and not a requirement
     if (isSelfPropelled && !mod.techData?.hpIsRequirement) return true;
     return false;
-  }, [isModPack, mod.isMap, mod.category, isSelfPropelled, isTractorOrTruck, mod.techData]);
+  }, [mod.isMap, mod.category, isSelfPropelled, isTractorOrTruck, mod.techData]);
 
   const hideCapacity = useMemo(() => {
     if (isModPack || mod.isMap || isMapCategory(mod.category)) return true;
