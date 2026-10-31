@@ -12,3 +12,9 @@
 
 ## Thorough & Comprehensive Implementation
 - **FULL APP AUDIT ON REQUESTS**: When the user requests a feature, change, or fix, you MUST search and update ALL invocation sites, services, IPC channels, and pages across the entire codebase. Never leave partial or incomplete implementations.
+
+## Code Protection, IP & Build Hardening
+- **PROTECT INTELLECTUAL PROPERTY & LOGIC**: Never distribute unprotected plain-text JavaScript logic for critical features (savegame parsing, conflict algorithms, scraper logic, server sync mechanics).
+- **OBFUSCATION & MINIFICATION INTEGRITY**: Always ensure production builds have obfuscation and minification active on both renderer and main process scripts before creating release packages.
+- **SOURCE CODE EXPOSURE PREVENTION**: Do not leave unminified debug logs, source maps (.map), or plaintext backend source files exposed in packaged distributions or public release directories.
+- **STRICT LICENSING & ATTRIBUTION**: Preserve copyright notices and proprietary rights for Mark / MarkThor on all custom architectures, custom algorithms, and UI assets across the application.
