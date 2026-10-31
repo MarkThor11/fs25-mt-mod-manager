@@ -1618,6 +1618,15 @@ ipcMain.handle('savegames:setMods', async (_, { savegamePath, mods }) => {
   }
 });
 
+ipcMain.handle('savegames:syncModVersions', async (_, { savePath }) => {
+  try {
+    return await savegameManager.syncSavegameModVersions(savePath);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+
 ipcMain.handle('savegames:getUsedMods', async (_, savePath) => {
   try {
     return await savegameManager.getUsedModsInSavegame(savePath);

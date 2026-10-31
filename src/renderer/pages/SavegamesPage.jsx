@@ -141,6 +141,25 @@ const formatPlayTime = (minutes) => {
 /**
  * Mod Audit Modal - Checks versions and missing mods for a savegame
  */
+/**
+ * Helper to match a savegame requirement with an installed mod (including pdlc_ DLCs and clean titles).
+ */
+function findInstalledModForAudit(reqName, allInstalledMods) {
+  if (!reqName || !allInstalledMods) return null;
+  const reqLower = reqName.toLowerCase().trim();
+  const isDlc = reqLower.startsWith("pdlc_");
+  const cleanDlc = isDlc ? reqLower.replace(/^pdlc_/i, "") : null;
+
+  return allInstalledMods.find(m => {
+    const mName = (m.modName || "").toLowerCase().trim();
+    const fName = (m.fileName || "").replace(/\.(dlc|zip)$/i, "").toLowerCase().trim();
+    if (mName === reqLower || fName === reqLower) return true;
+    if (isDlc) {
+      return mName === cleanDlc || fName === cleanDlc || mName === `pdlc_${cleanDlc}` || fName === `pdlc_${cleanDlc}`;
+    }
+    return false;
+  });
+}
 function ModAuditModal({ save, allInstalledMods, onClose, onRefresh }) {
   const [resolving, setResolving] = useState(false);
   const [syncStatus, setSyncStatus] = useState({}); // modName -> status
@@ -148,24 +167,27 @@ function ModAuditModal({ save, allInstalledMods, onClose, onRefresh }) {
   const auditResults = (save.mods || []).map(reqRaw => {
     const reqModName = typeof reqRaw === 'string' ? reqRaw : reqRaw?.modName || '';
     const reqVersion = typeof reqRaw === 'string' ? null : reqRaw?.version;
-    const installed = allInstalledMods.find(m => m.modName.toLowerCase() === reqModName.toLowerCase());
-    
+    const installed = findInstalledModForAudit(reqModName, allInstalledMods);
+    const isDlc = reqModName.toLowerCase().startsWith('pdlc_') || Boolean(installed?.isDLC || installed?.folder === 'DLC' || installed?.fileName?.toLowerCase().endsWith('.dlc'));
+
     let status = 'MISSING';
     let localVersion = null;
     let needsUpdate = false;
 
     if (installed) {
       status = 'INSTALLED';
-      localVersion = installed.version;
+      localVersion = installed.version || '1.0.0.0';
       
-      if (reqVersion && installed.version) {
-        // Simple version check (we can use semantic compare in backend later, 
-        // but for UI red/green mismatch is the primary concern)
+      if (reqVersion && installed.version && !isDlc) {
         if (installed.version !== reqVersion) {
           status = 'VERSION_MISMATCH';
           needsUpdate = true;
         }
       }
+    } else if (isDlc) {
+      // Official DLC packages packaged with game
+      status = 'INSTALLED';
+      localVersion = reqVersion || '1.0.0.0';
     }
 
     return { 
@@ -177,6 +199,19 @@ function ModAuditModal({ save, allInstalledMods, onClose, onRefresh }) {
         needsUpdate 
     };
   });
+
+  // Auto-resolve version mismatches automatically on modal opening
+  useEffect(() => {
+    const hasMismatches = auditResults.some(r => r.status === 'VERSION_MISMATCH');
+    if (hasMismatches && window.api?.savegames?.syncModVersions && save?.path) {
+      window.api.savegames.syncModVersions(save.path).then(res => {
+        if (res && res.success && res.updatedCount > 0) {
+          useToastStore.getState().success(`Automatically aligned ${res.updatedCount} mod version(s) to installed files.`);
+          if (onRefresh) onRefresh();
+        }
+      }).catch(err => console.warn('[AUTO-SYNC-VERSIONS] Error:', err));
+    }
+  }, [save?.path]);
 
   const missingOrMismatch = auditResults.filter(r => r.status !== 'INSTALLED');
 
@@ -2770,8 +2805,10 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
         let mismatches = 0;
         for (const req of save.mods) {
             if (!req.version) continue;
-            const installed = mods.find(m => (m.modName || '').toLowerCase() === (req.modName || '').toLowerCase());
-            if (installed && installed.version && installed.version !== req.version) {
+            const reqName = req.modName || '';
+            if (reqName.toLowerCase().startsWith('pdlc_')) continue; // Skip DLCs
+            const installed = findInstalledModForAudit(reqName, mods);
+            if (installed && installed.version && installed.version !== req.version && !installed.isDLC && installed.folder !== 'DLC') {
                 mismatches++;
             }
         }
@@ -3615,6 +3652,10 @@ export default function SavegamesPage() {
     // Strict Multiplayer Server Mod Version Audit & Guard
     if (saveToLaunch && saveToLaunch.isServerSave) {
       try {
+        // Automatically align mod versions in careerSavegame.xml with installed mods prior to launch
+        if (window.api?.savegames?.syncModVersions && saveToLaunch.path) {
+          await window.api.savegames.syncModVersions(saveToLaunch.path).catch(e => console.warn('[AUTO-SYNC] Version sync:', e.message));
+        }
         const serverPrep = await window.api.savegames.prepareServerModsFolder({ slotIndex, savePath: saveToLaunch.path });
         if (serverPrep && serverPrep.stats && (serverPrep.stats.mismatchedCount > 0 || serverPrep.stats.missingCount > 0)) {
           useSavegameStore.setState({ isGameRunning: false, playingSlot: null, launchGraceUntil: 0 });

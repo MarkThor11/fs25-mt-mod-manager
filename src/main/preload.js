@@ -107,6 +107,7 @@ contextBridge.exposeInMainWorld('api', {
     getMods: (params) => ipcRenderer.invoke('savegames:getMods', params),
     setMods: (params) => ipcRenderer.invoke('savegames:setMods', params),
     setSavegameMods: (savegamePath, mods) => ipcRenderer.invoke('savegames:setMods', { savegamePath, mods }),
+    syncModVersions: (savePath) => ipcRenderer.invoke('savegames:syncModVersions', { savePath }),
     getUsedMods: (savePath) => ipcRenderer.invoke('savegames:getUsedMods', savePath),
     create: (params) => ipcRenderer.invoke('savegames:create', params),
     delete: (params) => ipcRenderer.invoke('savegames:delete', params),

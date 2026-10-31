@@ -6332,7 +6332,26 @@ async function prepareServerModsFolder(slotIndex, savePath) {
 
         for (const req of requiredMods) {
             const reqNameLower = (req.modName || '').toLowerCase();
-            const installed = allInstalledMods.find(m => (m.modName || '').toLowerCase() === reqNameLower);
+            const isDlcReq = reqNameLower.startsWith('pdlc_');
+            const cleanDlcName = isDlcReq ? reqNameLower.replace(/^pdlc_/i, '') : null;
+
+            const installed = allInstalledMods.find(m => {
+                const mName = (m.modName || '').toLowerCase();
+                const fName = (m.fileName || '').replace(/\.(dlc|zip)$/i, '').toLowerCase();
+                if (mName === reqNameLower || fName === reqNameLower) return true;
+                if (isDlcReq) {
+                    return mName === cleanDlcName || fName === cleanDlcName || mName === `pdlc_${cleanDlcName}` || fName === `pdlc_${cleanDlcName}`;
+                }
+                return false;
+            });
+
+            // If it is an official DLC (either detected in scan or has pdlc_ prefix)
+            if (isDlcReq || (installed && (installed.isDLC || installed.folder === 'DLC' || (installed.fileName && installed.fileName.toLowerCase().endsWith('.dlc'))))) {
+                // Official base-game encrypted DLCs are loaded globally by FS25 engine and don't need to be symlinked into the mods folder
+                linkedCount++;
+                continue;
+            }
+
             const isFolderMod = installed && (installed.isFolder || (installed.filePath && fs.existsSync(installed.filePath) && fs.statSync(installed.filePath).isDirectory()));
             const targetFilePath = path.join(targetFolder, isFolderMod ? req.modName : `${req.modName}.zip`);
 
@@ -6343,36 +6362,31 @@ async function prepareServerModsFolder(slotIndex, savePath) {
             }
 
             if (installed && installed.filePath && fs.existsSync(installed.filePath)) {
-                const versionMatches = !req.version || !installed.version || req.version === installed.version;
-                if (versionMatches) {
-                    // Safe symlink to original mod in main library (or hardlink/copy fallback)
-                    if (!fs.existsSync(targetFilePath)) {
-                        if (isFolderMod) {
+                // Auto-link installed mod (and auto-resolve version alignment)
+                if (!fs.existsSync(targetFilePath)) {
+                    if (isFolderMod) {
+                        try {
+                            await fs.symlink(installed.filePath, targetFilePath, 'junction');
+                        } catch (jErr) {
                             try {
-                                await fs.symlink(installed.filePath, targetFilePath, 'junction');
-                            } catch (jErr) {
-                                try {
-                                    await fs.symlink(installed.filePath, targetFilePath, 'dir');
-                                } catch (dErr) {
-                                    await fs.copy(installed.filePath, targetFilePath);
-                                }
+                                await fs.symlink(installed.filePath, targetFilePath, 'dir');
+                            } catch (dErr) {
+                                await fs.copy(installed.filePath, targetFilePath);
                             }
-                        } else {
+                        }
+                    } else {
+                        try {
+                            await fs.symlink(installed.filePath, targetFilePath, 'file');
+                        } catch (symErr) {
                             try {
-                                await fs.symlink(installed.filePath, targetFilePath, 'file');
-                            } catch (symErr) {
-                                try {
-                                    await fs.link(installed.filePath, targetFilePath);
-                                } catch (linkErr) {
-                                    await fs.copy(installed.filePath, targetFilePath);
-                                }
+                                await fs.link(installed.filePath, targetFilePath);
+                            } catch (linkErr) {
+                                await fs.copy(installed.filePath, targetFilePath);
                             }
                         }
                     }
-                    linkedCount++;
-                } else {
-                    mismatchedCount++;
                 }
+                linkedCount++;
             } else {
                 const internalZipPath = path.join(__dirname, '..', 'resources', 'internalMods', `${req.modName}.zip`);
                 if (fs.existsSync(internalZipPath)) {
@@ -6421,6 +6435,70 @@ async function prepareServerModsFolder(slotIndex, savePath) {
 /**
  * Exports a savegame as a dedicated multiplayer server pack.
  */
+/**
+ * Synchronizes mod version numbers in careerSavegame.xml with currently installed local mods.
+ */
+async function syncSavegameModVersions(savePath) {
+    const careerPath = path.join(savePath, "careerSavegame.xml");
+    if (!fs.existsSync(careerPath)) return { success: false, error: "careerSavegame.xml not found" };
+
+    try {
+        const modManager = require("./modManager");
+        const { mods: allInstalledMods } = await modManager.scanLocalMods();
+        const xml = await fs.readFile(careerPath, "utf8");
+        const data = parser.parse(xml);
+        if (!data || !data.careerSavegame) return { success: false, error: "Invalid savegame data" };
+
+        const modEntries = data.careerSavegame.mod || data.careerSavegame.mods?.mod || [];
+        let mods = Array.isArray(modEntries) ? modEntries : [modEntries];
+        let updatedCount = 0;
+
+        for (const entry of mods) {
+            if (!entry || !entry["@_modName"]) continue;
+            const reqName = entry["@_modName"];
+            const reqLower = reqName.toLowerCase();
+            const isDlc = reqLower.startsWith("pdlc_");
+            const cleanDlc = isDlc ? reqLower.replace(/^pdlc_/i, "") : null;
+
+            const installed = allInstalledMods.find(m => {
+                const mName = (m.modName || "").toLowerCase();
+                const fName = (m.fileName || "").replace(/\.(dlc|zip)$/i, "").toLowerCase();
+                if (mName === reqLower || fName === reqLower) return true;
+                if (isDlc) {
+                    return mName === cleanDlc || fName === cleanDlc || mName === `pdlc_${cleanDlc}` || fName === `pdlc_${cleanDlc}`;
+                }
+                return false;
+            });
+
+            if (installed && installed.version && entry["@_version"] !== installed.version) {
+                console.log(`[SYNC-VERSIONS] Updating ${reqName} from ${entry["@_version"]} to ${installed.version}`);
+                entry["@_version"] = installed.version;
+                if (installed.fileHash) {
+                    entry["@_fileHash"] = installed.fileHash;
+                }
+                updatedCount++;
+            }
+        }
+
+        if (updatedCount > 0) {
+            data.careerSavegame.mod = mods;
+            delete data["?xml"];
+            const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: "@_", format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
+            let newXml = builder.build(data);
+            if (!newXml.startsWith("<?xml")) {
+                newXml = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n' + newXml;
+            }
+            await fs.writeFile(careerPath, newXml, "utf8");
+            console.log(`[SYNC-VERSIONS] Successfully updated ${updatedCount} mod version(s) in ${careerPath}`);
+        }
+
+        return { success: true, updatedCount };
+    } catch (err) {
+        console.error("[SYNC-VERSIONS] Error updating mod versions:", err);
+        return { success: false, error: err.message };
+    }
+}
+
 async function exportServerSavegame({ savePath, accessLevel, serverName, serverModUrl, targetZipPath }) {
     const AdmZip = require('adm-zip');
     try {
@@ -7354,5 +7432,6 @@ module.exports = {
     resolveMapModPath,
     extractMapDensityFiles,
     cleanInternalHelperModsFromSavegame,
+    syncSavegameModVersions,
     cleanInternalHelperModsFromAllSavegames
 };
