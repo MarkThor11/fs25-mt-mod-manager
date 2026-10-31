@@ -2909,8 +2909,8 @@ select.btn option {
 
 .compare-header__image {
   width: 100%;
-  max-width: 350px;
-  height: 220px;
+  max-width: 520px;
+  height: 315px;
   margin-left: auto;
   margin-right: auto;
   background: var(--bg-tertiary);
