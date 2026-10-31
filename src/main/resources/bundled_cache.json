@@ -23204,7 +23204,7 @@
       "price": 5500,
       "hp": 57,
       "hpIsRequirement": false,
-      "capacity": 80000,
+      "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
@@ -23214,8 +23214,8 @@
       "priceMax": 5500,
       "hpMin": 57,
       "hpMax": 57,
-      "capacityMin": 80000,
-      "capacityMax": 80000
+      "capacityMin": 0,
+      "capacityMax": 0
     },
     "releasedDate": "18.12.2024",
     "dependencies": [],
@@ -34524,7 +34524,7 @@
       "price": 37000,
       "hp": 75,
       "hpIsRequirement": false,
-      "capacity": 26000,
+      "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
@@ -34534,8 +34534,8 @@
       "priceMax": 37000,
       "hpMin": 75,
       "hpMax": 75,
-      "capacityMin": 26000,
-      "capacityMax": 26000
+      "capacityMin": 0,
+      "capacityMax": 0
     },
     "releasedDate": "03.07.2026",
     "dependencies": [],
@@ -64436,7 +64436,7 @@
       "price": 54000,
       "hp": 62,
       "hpIsRequirement": false,
-      "capacity": 80000,
+      "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
@@ -64446,8 +64446,8 @@
       "priceMax": 54000,
       "hpMin": 62,
       "hpMax": 62,
-      "capacityMin": 80000,
-      "capacityMax": 80000
+      "capacityMin": 0,
+      "capacityMax": 0
     },
     "releasedDate": "28.11.2025",
     "dependencies": [],
@@ -65179,7 +65179,7 @@
       "price": 659000,
       "hp": 840,
       "hpIsRequirement": true,
-      "capacity": 1100,
+      "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
@@ -65189,8 +65189,8 @@
       "priceMax": 659000,
       "hpMin": 156,
       "hpMax": 840,
-      "capacityMin": 505,
-      "capacityMax": 1100
+      "capacityMin": 0,
+      "capacityMax": 0
     },
     "releasedDate": "11.02.2026",
     "dependencies": [],
@@ -97622,7 +97622,7 @@
       "price": 19000,
       "hp": 120,
       "hpIsRequirement": false,
-      "capacity": 150,
+      "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
@@ -97632,8 +97632,8 @@
       "priceMax": 19000,
       "hpMin": 100,
       "hpMax": 120,
-      "capacityMin": 150,
-      "capacityMax": 150
+      "capacityMin": 0,
+      "capacityMax": 0
     },
     "releasedDate": "15.04.2025",
     "dependencies": [],
@@ -135322,7 +135322,7 @@
       "price": 221000,
       "hp": 500,
       "hpIsRequirement": true,
-      "capacity": 1080,
+      "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
@@ -135332,8 +135332,8 @@
       "priceMax": 221000,
       "hpMin": 440,
       "hpMax": 500,
-      "capacityMin": 1080,
-      "capacityMax": 1080
+      "capacityMin": 0,
+      "capacityMax": 0
     },
     "releasedDate": "13.06.2025",
     "dependencies": [],
@@ -143440,7 +143440,7 @@
       "price": 140000,
       "hp": 604,
       "hpIsRequirement": true,
-      "capacity": 920,
+      "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
@@ -143450,8 +143450,8 @@
       "priceMax": 140000,
       "hpMin": 310,
       "hpMax": 604,
-      "capacityMin": 550,
-      "capacityMax": 920
+      "capacityMin": 0,
+      "capacityMax": 0
     },
     "releasedDate": "09.06.2026",
     "dependencies": [],
@@ -161333,7 +161333,7 @@
       "price": 625500,
       "hp": 925,
       "hpIsRequirement": true,
-      "capacity": 1500,
+      "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
@@ -161343,8 +161343,8 @@
       "priceMax": 625500,
       "hpMin": 840,
       "hpMax": 925,
-      "capacityMin": 1500,
-      "capacityMax": 1500
+      "capacityMin": 0,
+      "capacityMax": 0
     },
     "releasedDate": "22.01.2026",
     "dependencies": [],
@@ -165566,7 +165566,7 @@
       "price": 60000,
       "hp": 340,
       "hpIsRequirement": false,
-      "capacity": 550,
+      "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
@@ -165576,8 +165576,8 @@
       "priceMax": 60000,
       "hpMin": 340,
       "hpMax": 340,
-      "capacityMin": 550,
-      "capacityMax": 550
+      "capacityMin": 0,
+      "capacityMax": 0
     },
     "releasedDate": "05.09.2025",
     "dependencies": [],
@@ -209715,7 +209715,7 @@
       "price": 95000,
       "hp": 45,
       "hpIsRequirement": false,
-      "capacity": 45000,
+      "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
@@ -209725,8 +209725,8 @@
       "priceMax": 95000,
       "hpMin": 45,
       "hpMax": 45,
-      "capacityMin": 45000,
-      "capacityMax": 45000
+      "capacityMin": 0,
+      "capacityMax": 0
     },
     "releasedDate": "27.11.2025",
     "dependencies": [],
@@ -225628,7 +225628,7 @@
       "price": 95000,
       "hp": 45,
       "hpIsRequirement": false,
-      "capacity": 45000,
+      "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
@@ -225638,8 +225638,8 @@
       "priceMax": 95000,
       "hpMin": 45,
       "hpMax": 45,
-      "capacityMin": 45000,
-      "capacityMax": 45000
+      "capacityMin": 0,
+      "capacityMax": 0
     },
     "releasedDate": "27.11.2025",
     "dependencies": [],
@@ -259037,7 +259037,7 @@
       "price": 265000,
       "hp": 626,
       "hpIsRequirement": false,
-      "capacity": 1220,
+      "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
@@ -259047,8 +259047,8 @@
       "priceMax": 265000,
       "hpMin": 490,
       "hpMax": 626,
-      "capacityMin": 1220,
-      "capacityMax": 1220
+      "capacityMin": 0,
+      "capacityMax": 0
     },
     "releasedDate": "25.03.2026",
     "dependencies": [
@@ -311990,7 +311990,7 @@
       "price": 84000,
       "hp": 100,
       "hpIsRequirement": false,
-      "capacity": 3540,
+      "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
@@ -312000,8 +312000,8 @@
       "priceMax": 84000,
       "hpMin": 100,
       "hpMax": 100,
-      "capacityMin": 200,
-      "capacityMax": 3540
+      "capacityMin": 0,
+      "capacityMax": 0
     },
     "releasedDate": "08.07.2026",
     "dependencies": [],
@@ -320862,7 +320862,7 @@
       "price": 95000,
       "hp": 450,
       "hpIsRequirement": true,
-      "capacity": 650,
+      "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
@@ -320872,8 +320872,8 @@
       "priceMax": 95000,
       "hpMin": 235,
       "hpMax": 450,
-      "capacityMin": 160,
-      "capacityMax": 650
+      "capacityMin": 0,
+      "capacityMax": 0
     },
     "releasedDate": "07.09.2026",
     "dependencies": [],

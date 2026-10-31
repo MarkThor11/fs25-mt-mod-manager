@@ -1079,7 +1079,8 @@ function parseModDetailFromHtml(html, modId) {
       'gameplay', 'script', 'prefab', 'map', 'chainsaw', 'flashlight', 'handtool',
       'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
       'plow', 'cultivator', 'subsoiler', 'spader', 'mulcher', 'roller',
-      'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car'
+      'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car',
+      'forklift', 'gabelstapler', 'forage harvesting - harvesters', 'forage harvesters', 'forageharvesters'
     ];
     const isNoCapCat = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k)) ||
                        catStr.includes('gameplay') || catStr.includes('script') ||
@@ -1133,7 +1134,20 @@ function parseModDetailFromHtml(html, modId) {
       let overallMax = null;
       let inCapBlock = false;
 
+      const isFuelOrBatteryLine = (text) => {
+        if (/\b\d[\d\s,.]*\s*(?:kwh|wh|ah)\b/i.test(text)) return true;
+        if (/(?:fuel|kraftstoff|diesel|adblue|def|gasolina|gasoil|carburant|combustible|paliwo|benzin|battery|batterie|electric|elektrisch)/i.test(text)) {
+          if (/(?:fuel\s*(?:tank\s*)?capact?i(?:ty|ties)|kraftstofftank|diesel\s*tank(?:\s*capacity)?|battery\s*capacity|batterie\s*kapazit[aä]t|capacity\s*fuel\s*tank)/i.test(text)) return true;
+          if (/(?:tank\s*capacity|tank\s*inhalt|capacity)[:\s-]*\d+.*(?:diesel|fuel|def|adblue|benzin|gasolina|gasoil|kraftstoff)/i.test(text)) return true;
+          if (/(?:diesel|fuel|def|adblue|benzin|gasolina|gasoil|kraftstoff).*(?:tank\s*capacity|tank\s*inhalt|capacity)/i.test(text)) return true;
+        }
+        return false;
+      };
+
       for (const line of rawLines) {
+        if (isFuelOrBatteryLine(line)) {
+          continue;
+        }
         if (capHeaderOnlyRe.test(line)) {
           inCapBlock = true;
           continue;
@@ -1257,10 +1271,10 @@ function parseModDetailFromHtml(html, modId) {
       }
     }
 
-    // Second fallback on full stripped text
+    // Second fallback on full stripped text (excluding fuel/battery lines)
     if (techData.capacity === 0) {
-      const fullText = description.replace(/<[^>]*>/g, ' ');
-      const litreMatch = fullText.match(/capact?ity[:\s-]*(from\s+)?(\d[\d\s,]*(?:\.\d*)?)(k?)\s*(?:[-–to]+\s*(\d[\d\s,]*(?:\.\d*)?)(k?))?\s*(liters?|litres?|l\b|m³|m3|cubic)/i);
+      const nonFuelText = rawLines.filter(l => !(/\b\d[\d\s,.]*\s*(?:kwh|wh|ah)\b/i.test(l) || /(?:fuel|kraftstoff|diesel|adblue|def|gasolina|gasoil|carburant|combustible|paliwo|benzin|battery|batterie|electric|elektrisch)/i.test(l))).join(' ');
+      const litreMatch = nonFuelText.match(/capact?ity[:\s-]*(from\s+)?(\d[\d\s,]*(?:\.\d*)?)(k?)\s*(?:[-–to]+\s*(\d[\d\s,]*(?:\.\d*)?)(k?))?\s*(liters?|litres?|l\b|m³|m3|cubic)/i);
       if (litreMatch) {
         const parseKNum = (s, k) => { const c = (s||'').replace(/[\s,]/g,'').replace(/\.(\d{3})/g,'$1'); let v = parseFloat(c)||0; if (k && k.toLowerCase()==='k') v*=1000; return v; };
         const isCubic = /(m³|m3|cubic)/i.test(litreMatch[6] || '');

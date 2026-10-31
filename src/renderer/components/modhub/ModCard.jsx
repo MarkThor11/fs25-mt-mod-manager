@@ -427,10 +427,11 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     const cat = (mod.category || '').toLowerCase();
     const title = (mod.title || '').toLowerCase();
     const noCapKeywords = [
-      'gameplay', 'script', 'prefab', 'chainsaw', 'flashlight', 'handtool',
+      'gameplay', 'script', 'prefab', 'map', 'chainsaw', 'flashlight', 'handtool',
       'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
       'plow', 'cultivator', 'subsoiler', 'spader', 'mulcher', 'roller',
-      'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car'
+      'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car',
+      'forklift', 'gabelstapler', 'forage harvesting - harvesters', 'forage harvesters', 'forageharvesters'
     ];
     if (noCapKeywords.some(k => cat.includes(k) || title.includes('script'))) return true;
     return false;
@@ -1189,7 +1190,8 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
             'gameplay', 'script', 'prefab', 'map', 'chainsaw', 'flashlight', 'handtool',
             'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
             'plow', 'cultivator', 'subsoiler', 'spader', 'mulcher', 'roller',
-            'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car'
+            'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car',
+            'forklift', 'gabelstapler', 'forage harvesting - harvesters', 'forage harvesters', 'forageharvesters'
           ];
           const isNoCap = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k)) ||
                           catStr.includes('gameplay') || catStr.includes('script') ||

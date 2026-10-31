@@ -119,10 +119,11 @@ export const DRIVABLE_FILTERS = [
 export const BOGUS_UNIT_TYPES = ['pack', 'packs', 'paket', 'pakete', 'piece', 'pieces', 'unit', 'units', 'item', 'items', 'tonnes'];
 
 export const NO_CAPACITY_KEYWORDS = [
-  'gameplay', 'script', 'prefab', 'chainsaw', 'flashlight', 'handtool',
+  'gameplay', 'script', 'prefab', 'map', 'chainsaw', 'flashlight', 'handtool',
   'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
   'plow', 'cultivator', 'subsoiler', 'spader', 'mulcher', 'roller',
-  'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car'
+  'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car',
+  'forklift', 'gabelstapler', 'forage harvesting - harvesters', 'forage harvesters', 'forageharvesters'
 ];
 
 export const useModHubStore = create((set, get) => ({
