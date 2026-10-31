@@ -756,6 +756,7 @@ function parseModDetailFromHtml(html, modId) {
     unitCapacity: 0,
     unitCapacityType: '',
     speed: 0,
+    width: 0,
     weight: 0,
     scraped: true
   };
@@ -1398,6 +1399,49 @@ function parseModDetailFromHtml(html, modId) {
       techData.speedValues = sorted;
     }
 
+    // Working width scan from description (for implements/tools/headers)
+    const widthPrefixPattern = /^(?:[-* \t]*)(?:working\s*width|work\s*width|operating\s*width|arbeitsbreite|largeur\s*de\s*travail|ancho\s*de\s*trabajo|szeroko[s\u015b][c\u0107]\s*robocza|largura\s*de\s*trabalho|larghezza\s*di\s*lavoro)[:\-\s]*(.*)/i;
+    const widths = [];
+    rawLines.forEach(line => {
+      const match = widthPrefixPattern.exec(line.trim());
+      if (match) {
+        let content = match[1].trim();
+        const hasMeters = /(?:meters?|metres?|m\b)/i.test(content);
+        if (hasMeters) {
+          content = content.replace(/\(?\s*\d+(?:[.,]\d+)?\s*(?:ft|feet|\')\s*\)?/gi, '');
+        }
+        const hasFt = /(?:ft|feet)/i.test(content);
+        const matches = [...content.matchAll(/(\d+(?:[.,]\d+)?)\s*(meters?|metres?|m\b|ft\b|feet|\b)/gi)];
+        matches.forEach(m => {
+          const numStr = m[1].replace(',', '.');
+          const u = (m[2] || '').toLowerCase();
+          const n = parseFloat(numStr);
+          if (isNaN(n)) return;
+
+          if (u.includes('ft') || u.includes('feet')) {
+            const v = Math.round(n * 0.3048 * 10) / 10;
+            if (v >= 0.4 && v <= 60) widths.push(v);
+          } else if (u.includes('m') || u.startsWith('meter') || u.startsWith('metre')) {
+            if (n >= 0.4 && n <= 60) widths.push(Math.round(n * 100) / 100);
+          } else {
+            if (hasFt) {
+              const v = Math.round(n * 0.3048 * 10) / 10;
+              if (v >= 0.4 && v <= 60) widths.push(v);
+            } else {
+              if (n >= 0.4 && n <= 60) widths.push(Math.round(n * 100) / 100);
+            }
+          }
+        });
+      }
+    });
+    if (widths.length > 0) {
+      const sorted = [...new Set(widths)].sort((a, b) => a - b);
+      techData.width = sorted[sorted.length - 1];
+      techData.widthMin = sorted[0];
+      techData.widthMax = sorted[sorted.length - 1];
+      techData.widthValues = sorted;
+    }
+
     // Safety guard: Maps and map packages are locations/environments, not purchasable store items.
     // Reset any prices, horsepowers, or capacities extracted from descriptions of maps.
     const isMap = isMapCategory(category) || isMapCategory(metadata['Category'] || metadata['category']) || catStr.includes('map') || titleStr.includes('map');
@@ -1417,6 +1461,10 @@ function parseModDetailFromHtml(html, modId) {
       techData.speedMin = 0;
       techData.speedMax = 0;
       techData.speedValues = [];
+      techData.width = 0;
+      techData.widthMin = 0;
+      techData.widthMax = 0;
+      techData.widthValues = [];
     }
 
     // Guard: if unit capacity was found but litre capacity is tiny (< 1000 L),

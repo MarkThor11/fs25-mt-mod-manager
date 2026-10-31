@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Star, Download, ExternalLink, Package, Heart, Zap, Layers, Gauge, EyeOff, Eye, Check, RefreshCw, X, Pin, ShieldAlert } from 'lucide-react';
+import { Star, Download, ExternalLink, Package, Heart, Zap, Layers, Gauge, ArrowLeftRight, EyeOff, Eye, Check, RefreshCw, X, Pin, ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDownloadStore } from '../../store/useDownloadStore';
 import { useToastStore } from '../../store/useToastStore';
@@ -1153,7 +1153,12 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           const speedMax = mod.techData?.speedMax ?? rawSpeed;
           const showSpeed = rawSpeed > 0 && !isVehicle && !isMap;
 
-          if (!showPrice && !hasHP && !showCap && !showUnitCap && !showSpeed) return null;
+          const rawWidth = mod.techData?.width ?? 0;
+          const widthMin = mod.techData?.widthMin ?? rawWidth;
+          const widthMax = mod.techData?.widthMax ?? rawWidth;
+          const showWidth = rawWidth > 0 && !isVehicle && !isMap;
+
+          if (!showPrice && !hasHP && !showCap && !showUnitCap && !showSpeed && !showWidth) return null;
 
           return (
             <div className="mod-card__tech-info" style={{ marginBottom: 12 }}>
@@ -1196,6 +1201,14 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
                   {speedMin && speedMax && speedMin !== speedMax
                     ? `${speedMin} - ${speedMax}`
                     : rawSpeed} km/h
+                </div>
+              )}
+              {showWidth && (
+                <div className="mod-card__tech-item" title="Working width">
+                  <ArrowLeftRight size={14} />
+                  {widthMin && widthMax && widthMin !== widthMax
+                    ? `${widthMin} - ${widthMax}`
+                    : rawWidth} m
                 </div>
               )}
             </div>

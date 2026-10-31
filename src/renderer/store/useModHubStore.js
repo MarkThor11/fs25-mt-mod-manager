@@ -1513,6 +1513,60 @@ export const useModHubStore = create((set, get) => ({
         rawTechData.speedValues = sorted;
       }
     }
+    // Parse working width from description if not yet populated in techData
+    if ((!rawTechData.width || rawTechData.width === 0) && detail.description) {
+      const widthPrefixPattern = /^(?:[-* \t]*)(?:working\s*width|work\s*width|operating\s*width|arbeitsbreite|largeur\s*de\s*travail|ancho\s*de\s*trabajo|szeroko[s\u015b][c\u0107]\s*robocza|largura\s*de\s*trabalho|larghezza\s*di\s*lavoro)[:\-\s]*(.*)/i;
+      const widths = [];
+      const lines = (detail.description || '')
+        .replace(/<br[^>]*>/gi, '\n')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<\/li>/gi, '\n')
+        .replace(/<\/div>/gi, '\n')
+        .replace(/<[^>]*>/g, '')
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean);
+
+      lines.forEach(line => {
+        const match = widthPrefixPattern.exec(line);
+        if (match) {
+          let content = match[1].trim();
+          const hasMeters = /(?:meters?|metres?|m\b)/i.test(content);
+          if (hasMeters) {
+            content = content.replace(/\(?\s*\d+(?:[.,]\d+)?\s*(?:ft|feet|\')\s*\)?/gi, '');
+          }
+          const hasFt = /(?:ft|feet)/i.test(content);
+          const matches = [...content.matchAll(/(\d+(?:[.,]\d+)?)\s*(meters?|metres?|m\b|ft\b|feet|\b)/gi)];
+          matches.forEach(m => {
+            const numStr = m[1].replace(',', '.');
+            const u = (m[2] || '').toLowerCase();
+            const n = parseFloat(numStr);
+            if (isNaN(n)) return;
+
+            if (u.includes('ft') || u.includes('feet')) {
+              const v = Math.round(n * 0.3048 * 10) / 10;
+              if (v >= 0.4 && v <= 60) widths.push(v);
+            } else if (u.includes('m') || u.startsWith('meter') || u.startsWith('metre')) {
+              if (n >= 0.4 && n <= 60) widths.push(Math.round(n * 100) / 100);
+            } else {
+              if (hasFt) {
+                const v = Math.round(n * 0.3048 * 10) / 10;
+                if (v >= 0.4 && v <= 60) widths.push(v);
+              } else {
+                if (n >= 0.4 && n <= 60) widths.push(Math.round(n * 100) / 100);
+              }
+            }
+          });
+        }
+      });
+      if (widths.length > 0) {
+        const sorted = [...new Set(widths)].sort((a, b) => a - b);
+        rawTechData.width = sorted[sorted.length - 1];
+        rawTechData.widthMin = sorted[0];
+        rawTechData.widthMax = sorted[sorted.length - 1];
+        rawTechData.widthValues = sorted;
+      }
+    }
     const techData = {
       priceMin: rawTechData.priceMin || rawTechData.price || priceValue,
       priceMax: rawTechData.priceMax || rawTechData.price || priceValue,
