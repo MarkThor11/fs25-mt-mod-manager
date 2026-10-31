@@ -556,8 +556,6 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
         'forestryHarvesters', 'forestryForwarders', 'forestryExcavators'
       ].includes(filter);
       let hpIsReq = !isUtility && !isVehicleCategory;
-      let recommendedHp = 0;
-      let hpIsRecommendation = false;
       
       if (hpValues.length === 0) {
         Object.entries(detail.metadata || {}).forEach(([k, v]) => {
@@ -647,79 +645,24 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
 
       let finalIsRequester = hpIsReq;
 
-      const priceValue = parseInt((detail.metadata['Price'] || '0').replace(/\D/g,'')) || 0;
-
-      if (hpMax === 0) {
-          // Estimate based on width
-          let width = 0;
-          Object.entries(detail.metadata).forEach(([k, v]) => {
-              if (k.toLowerCase().includes('width')) {
-                  const m = (v || '').toString().match(/(\d+(?:\.\d+)?)/);
-                  if (m) width = parseFloat(m[1]);
-              }
-          });
-
-          const f = (filter || '').toLowerCase();
-          if (hpIsReq) {
-              // --- TOOL FALLBACK ---
-              if (width > 0) {
-                  if (f.includes('plow') || f.includes('harrow') || f.includes('subsoiler')) {
-                      recommendedHp = Math.round(width * 55); 
-                  } else if (f.includes('cultivator') || f.includes('disc')) {
-                      recommendedHp = Math.round(width * 45);
-                  } else if (f.includes('seeder') || f.includes('planter')) {
-                      recommendedHp = Math.round(width * 40);
-                  } else if (f.includes('mower') || f.includes('tedder') || f.includes('windrow')) {
-                      recommendedHp = Math.round(width * 20);
-                  } else {
-                      recommendedHp = Math.round(width * 30);
-                  }
-                  hpIsRecommendation = true;
-              } else if (priceValue > 0) {
-                  // All tools without width: Price/600 (Min 10 HP)
-                  recommendedHp = Math.max(10, Math.round(priceValue / 600));
-                  hpIsRecommendation = true;
-              }
-          } else if (isVehicleCategory) {
-              // --- VEHICLE FALLBACK ---
-              if (priceValue > 0) {
-                  // Price/700 is a safe bet for vehicles (Min 15 HP for Gators/UTVs)
-                  recommendedHp = Math.max(15, Math.round(priceValue / 700));
-                  hpIsRecommendation = true;
-              } else {
-                  // Fixed defaults by category size
-                  if (f === 'tractorss') recommendedHp = 100;
-                  else if (f === 'tractorsm') recommendedHp = 250;
-                  else if (f === 'tractorsl') recommendedHp = 450;
-                  else if (f === 'trucks') recommendedHp = 500;
-                  
-                  if (recommendedHp > 0) hpIsRecommendation = true;
-              }
-          } else if (isWeight) {
-              recommendedHp = 1;
-              hpIsRecommendation = true;
-          }
-      }
-      
       const newRef = {
         ...mod,
         ...detail,
         techData: {
           ...(detail.techData || {}),
-          hp: hpIsRecommendation ? recommendedHp : hpMax,
-          hpMin: hpIsRecommendation ? recommendedHp : hpMin,
-          hpMax: hpIsRecommendation ? recommendedHp : hpMax,
+          hp: hpMax,
+          hpMin: hpMin,
+          hpMax: hpMax,
           hpValues: uniqueHpValues,
           hpIsRequirement: finalIsRequester,
-          hpIsRecommendation,
           isDrivable: isVehicleCategory,
           price: detail.techData?.price || parseInt((detail.metadata['Price'] || '0').replace(/\D/g,'')) || 0
         }
       };
       
-      if (hpMax > 0 || hpIsRecommendation) {
+      if (hpMax > 0) {
           // Always show overlay for Tools/Requesters for consistent UX
-          setPackHPs(uniqueHpValues.length > 0 ? uniqueHpValues : [recommendedHp]);
+          setPackHPs(uniqueHpValues);
           setPowerReference(newRef); // Pre-set it, but overlay will allow specific selection
           setShowPackSelector(true);
       } else {
