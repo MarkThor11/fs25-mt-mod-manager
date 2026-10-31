@@ -2909,7 +2909,10 @@ select.btn option {
 
 .compare-header__image {
   width: 100%;
-  aspect-ratio: 16/9;
+  max-width: 350px;
+  height: 220px;
+  margin-left: auto;
+  margin-right: auto;
   background: var(--bg-tertiary);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -2923,7 +2926,8 @@ select.btn option {
 .compare-header__image img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: transparent;
 }
 
 .compare-header__title {
