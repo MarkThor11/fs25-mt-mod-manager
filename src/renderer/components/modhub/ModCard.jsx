@@ -728,7 +728,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
                 className="mod-card__image"
                 onLoad={() => setImgError(false)}
                 onError={handleImageError}
-                style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', background: 'transparent' }}
               />
             ) : (
               <div className="mod-card__image-placeholder" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
