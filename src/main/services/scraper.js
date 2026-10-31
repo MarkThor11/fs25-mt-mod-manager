@@ -1011,7 +1011,7 @@ function parseModDetailFromHtml(html, modId) {
     }
 
     // 2. Horsepower scan across lines
-    const hpLineRe = /^(?:[-*•\s]*)(?:power(?:\s*range)?|leistung|puissance(?:\s*recommand[eé]e)?|horsepower|engine\s*power|motorleistung|required\s*(?:power|horsepower|hp)|recommended\s*(?:power|horsepower|hp)|tractor\s*power|leistung\s*erforderlich|power\s*requirement|puissance\s*requise|potencia\s*(?:requerida|recomendada)|ben[oö]tigte\s*leistung|empfohlene\s*leistung)[:\-\s]+(.*)$/i;
+    const hpLineRe = /^(?:[-*•\s]*)(?:hp|power(?:\s*range)?|performance|leistung|puissance(?:\s*recommand[eé]e)?|horsepower|engine\s*power|motorleistung|required\s*(?:power|horsepower|hp)|recommended\s*(?:power|horsepower|hp)|tractor\s*power|leistung\s*erforderlich|power\s*requirement|puissance\s*requise|potencia\s*(?:requerida|recomendada)|ben[oö]tigte\s*leistung|empfohlene\s*leistung)[:\-\s]+(.*)$/i;
     const descHps = [];
     let hpRequirementDetected = false;
     for (const line of rawLines) {
@@ -1028,7 +1028,7 @@ function parseModDetailFromHtml(html, modId) {
             }
           }
         }
-        if (/required|requirement|ben[oö]tigt|erforderlich|requise|requerida|recommand|empfohlene|tractor/i.test(line)) hpRequirementDetected = true;
+        if (/required|requirement|ben[oö]tigt|erforderlich|requise|requerida|recommand|empfohlene/i.test(line)) hpRequirementDetected = true;
       }
     }
     if (descHps.length > 0) {
@@ -1064,7 +1064,7 @@ function parseModDetailFromHtml(html, modId) {
             techData.hp = hp;
             techData.hpMin = hp;
             techData.hpMax = hp;
-            if (pattern.source.includes('required') || pattern.source.includes('requirement') || /required\s*power|recommended\s*power|puissance\s*recommand/i.test(descText)) {
+            if (/required|requirement|ben[oö]tigt|erforderlich|requise|requerida|recommand|empfohlene/i.test(fullMatch) || /required\s*power|recommended\s*power|puissance\s*recommand/i.test(descText)) {
               techData.hpIsRequirement = true;
             }
             break;
@@ -1430,6 +1430,10 @@ function parseModDetailFromHtml(html, modId) {
       techData.capacityMax = 0;
     }
 
+        // Safety guard: drivable vehicles provide power, they do not require it
+    if (isVehicleCat) {
+      techData.hpIsRequirement = false;
+    }
     // Working speed / max speed scan from description (for implements/tools)
     const speedPrefixPattern = /^(?:[-*•\s]*)(?:working\s*speed|work\s*speed|operating\s*speed|arbeitsgeschwindigkeit|vitesse\s*de\s*travail|velocidad\s*de\s*trabajo|pr\w*\s*robocza|max(?:imum|\.)?\s*working\s*speed|vitesse\s*max\.\s*de\s*travail|(?:max(?:imum|\.)?\s*speed|vitesse\s*max(?:imale|\.)?|h\u00f6chstgeschwindigkeit|velocidad\s*m\u00e1xima|top\s*speed))[:\-\s]*(.*)/i;
     const speeds = [];

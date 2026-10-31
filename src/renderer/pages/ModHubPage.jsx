@@ -337,9 +337,19 @@ export default function ModHubPage() {
         if (authorName.toLowerCase() !== authorFilter.name.toLowerCase()) return false;
       }
 
-      // SMART MATCH SAME-TYPE BYPASS
+      // SMART MATCH SAME-TYPE BYPASS & CLASSIFICATION
+      const modCat = (mod.category || mod.metadata?.Category || '').toLowerCase();
+      const modFilter = (mod.category || '').split(':')[1] || '';
+      const modIsDrivable = !!mod.techData?.isDrivable || DRIVABLE_FILTERS.includes(modFilter) || /(?:tractor|truck|car|harvester|excavator|loader|forklift)/i.test(modCat);
+      const modIsReq = !modIsDrivable && (mod.techData?.hpIsRequirement !== undefined ? !!mod.techData.hpIsRequirement : true);
+
+      const refCat = (powerReference?.category || powerReference?.metadata?.Category || '').toLowerCase();
+      const refFilter = (powerReference?.category || '').split(':')[1] || '';
+      const refIsDrivable = !!powerReference?.techData?.isDrivable || DRIVABLE_FILTERS.includes(refFilter) || /(?:tractor|truck|car|harvester|excavator|loader|forklift)/i.test(refCat);
+      const refIsReq = !refIsDrivable && (powerReference?.techData?.hpIsRequirement !== undefined ? !!powerReference?.techData.hpIsRequirement : true);
+
       const isSmartMatching = isSmartMatchEnabled && powerReference && mod.techData;
-      const sameType = isSmartMatching && (!!mod.techData.hpIsRequirement === !!powerReference.techData?.hpIsRequirement);
+      const sameType = isSmartMatching && (modIsReq === refIsReq);
 
       // Technical data filters
       const hasTechData = !!mod.techData;
@@ -379,16 +389,6 @@ export default function ModHubPage() {
 
       // Smart Power Matching (Bi-directional Cross-Type only)
       if (isSmartMatching && !sameType && (mod.techData.hpMin > 0 || mod.techData.hpMax > 0)) {
-        const modCat = (mod.category || mod.metadata?.Category || '').toLowerCase();
-        const modFilter = (mod.category || '').split(':')[1] || '';
-        const modIsDrivable = !!mod.techData.isDrivable || DRIVABLE_FILTERS.includes(modFilter) || /(?:tractor|truck|car|harvester|excavator|loader|forklift)/i.test(modCat);
-        const modIsReq = mod.techData.hpIsRequirement !== undefined ? !!mod.techData.hpIsRequirement : !modIsDrivable;
-
-        const refCat = (powerReference.category || powerReference.metadata?.Category || '').toLowerCase();
-        const refFilter = (powerReference.category || '').split(':')[1] || '';
-        const refIsDrivable = !!powerReference.techData?.isDrivable || DRIVABLE_FILTERS.includes(refFilter) || /(?:tractor|truck|car|harvester|excavator|loader|forklift)/i.test(refCat);
-        const refIsReq = powerReference.techData?.hpIsRequirement !== undefined ? !!powerReference.techData.hpIsRequirement : !refIsDrivable;
-
         const isTargetingDrivable = refIsReq && modIsDrivable;
         const isTargetingTool = refIsDrivable && modIsReq;
         

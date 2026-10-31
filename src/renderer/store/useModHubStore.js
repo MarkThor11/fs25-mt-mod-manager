@@ -233,6 +233,38 @@ export const useModHubStore = create((set, get) => ({
               hasPruned = true;
             }
           }
+          // Correct false hpIsRequirement on drivables in cache
+          const catLower = (v.category || v.metadata?.Category || '').toLowerCase();
+          const filterLower = (v.category || '').split(':')[1] || '';
+          const isDrivableVehicle = DRIVABLE_FILTERS.includes(filterLower) || /(?:tractor|truck|car|harvester|excavator|loader|forklift)/i.test(catLower);
+          if (isDrivableVehicle) {
+            v.techData.isDrivable = true;
+            v.techData.hpIsRequirement = false;
+          }
+
+          // Fallback HP scan for vehicles missing horsepower (e.g. Massey Ferguson 100 Series)
+          if ((!v.techData.hp || v.techData.hp === 0) && isDrivableVehicle && v.description) {
+            const descClean = (v.description || '').replace(/<[^>]*>/g, ' ');
+            const hpMatches = [...descClean.matchAll(/(?:horsepower|power|performance|leistung|puissance|output|\bhp\b)[:\-\s]*(\d+(?:\s*[-–to]\s*\d+)?)/gi)];
+            const foundHps = [];
+            for (const hm of hpMatches) {
+              const nums = hm[1].match(/\d+/g);
+              if (nums) {
+                nums.forEach(n => {
+                  const val = parseInt(n, 10);
+                  if (val >= 10 && val <= 2500) foundHps.push(val);
+                });
+              }
+            }
+            if (foundHps.length > 0) {
+              foundHps.sort((a, b) => a - b);
+              v.techData.hpMin = foundHps[0];
+              v.techData.hpMax = foundHps[foundHps.length - 1];
+              v.techData.hp = v.techData.hpMax;
+              hasPruned = true;
+            }
+          }
+
           if (v.techData.price > 0) {
             // Repair corrupt price range if priceMin is ridiculously low (e.g. model code 60) or price is 2025
             if (v.techData.priceMin > 0 && v.techData.priceMin < 500 && v.techData.priceMax > 5000) {

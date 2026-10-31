@@ -622,7 +622,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
             });
         }
         const leadPatterns = [
-            /(?:horsepower|power|performance|requirement|required|leistung|puissance|output)[:\-\s]*(\d+(?:(?:\s*,\s*|\s*and\s*|\s*&\s*|\s*\/\s*|\s*-\s*|\s*–\s*|\s*to\s*)\d+)*)/gi,
+            /(?:horsepower|power|performance|requirement|required|leistung|puissance|output|\bhp\b)[:\-\s]*(\d+(?:(?:\s*,\s*|\s*and\s*|\s*&\s*|\s*\/\s*|\s*-\s*|\s*–\s*|\s*to\s*)\d+)*)/gi,
             /(\d+(?:(?:\s*,\s*|\s*and\s*|\s*&\s*|\s*\/\s*|\s*-\s*|\s*–\s*|\s*to\s*)\d+)*)\s*(?:hp|cv|ps|pk|ch|kw|bhp)/gi
         ];
         leadPatterns.forEach(pattern => {
