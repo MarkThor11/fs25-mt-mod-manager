@@ -2,14 +2,16 @@
   "name": "fs25-mt-mod-manager",
   "version": "1.2.8",
   "description": "Farming Simulator 25 ModHub Desktop Manager",
-  "main": "src/main/index.js",
+  "main": "main-entry.js",
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "build": "vite build",
-    "dist:win": "vite build && electron-builder --win",
-    "dist:mac": "vite build && electron-builder --mac",
-    "dist:linux": "vite build && electron-builder --linux",
-    "dist": "vite build && electron-builder --mac --linux --win"
+    "build": "npm run build:renderer && npm run build:main",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "dist": "npm run build && electron-builder --mac --linux --win",
+    "build:main": "node scripts/build-main.js",
+    "build:renderer": "vite build"
   },
   "author": {
     "name": "MarkThor11",
@@ -22,6 +24,7 @@
     "electron": "^30.0.1",
     "electron-builder": "^24.13.3",
     "icon-gen": "^5.0.0",
+    "javascript-obfuscator": "^5.9.0",
     "png-to-ico": "^3.0.1",
     "vite": "^5.2.11",
     "vite-plugin-javascript-obfuscator": "^3.1.0",
@@ -30,6 +33,7 @@
   "dependencies": {
     "adm-zip": "^0.5.12",
     "better-sqlite3": "^11.0.0",
+    "bytenode": "^2.1.0",
     "cheerio": "^1.0.0-rc.12",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.8.3",
@@ -58,10 +62,15 @@
     },
     "files": [
       "dist/**/*",
-      "src/main/**/*",
-      "src/main/resources/**/*",
-      "node_modules/**/*",
-      "package.json"
+      "dist-main/**/*",
+      "main-entry.js",
+      "package.json",
+      "!**/*.map",
+      "!**/*.md",
+      "!**/README*",
+      "!**/CHANGELOG*",
+      "!src/main/**/*",
+      "!src/renderer/**/*"
     ],
     "win": {
       "target": [

@@ -25,6 +25,16 @@ export default defineConfig({
   build: {
     outDir: '../../dist',
     emptyOutDir: true,
+    sourcemap: false,
+    chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom', 'zustand'],
+          icons: ['lucide-react']
+        }
+      }
+    }
   },
   resolve: {
     alias: {
