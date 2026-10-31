@@ -1467,22 +1467,44 @@ export const useModHubStore = create((set, get) => ({
     }
     // Parse working speed from description if not yet populated in techData
     if ((!rawTechData.speed || rawTechData.speed === 0) && detail.description) {
-      const workSpeedPattern = /(?:working\s*speed|work\s*speed|operating\s*speed|arbeitsgeschwindigkeit|vitesse\s*de\s*travail|velocidad\s*de\s*trabajo|pr\w*\s*robocza|max(?:imum|\.)?\s*working\s*speed|vitesse\s*max\.\s*de\s*travail)[:\-\s]*(\d+(?:[.,]\d+)?)\s*(?:[-–—~tobisà]+\s*(\d+(?:[.,]\d+)?)\s*)?(km\/?h|kph|mph|\b)/gi;
+      const speedPrefixPattern = /^(?:[-*•\s]*)(?:working\s*speed|work\s*speed|operating\s*speed|arbeitsgeschwindigkeit|vitesse\s*de\s*travail|velocidad\s*de\s*trabajo|pr\w*\s*robocza|max(?:imum|\.)?\s*working\s*speed|vitesse\s*max\.\s*de\s*travail|(?:max(?:imum|\.)?\s*speed|vitesse\s*max(?:imale|\.)?|h\u00f6chstgeschwindigkeit|velocidad\s*m\u00e1xima|top\s*speed))[:\-\s]*(.*)/i;
       const speeds = [];
-      for (const match of (detail.description || '').matchAll(workSpeedPattern)) {
-        let s1 = parseFloat(match[1].replace(',', '.'));
-        let s2 = match[2] ? parseFloat(match[2].replace(',', '.')) : null;
-        const unit = (match[3] || '').toLowerCase();
-        if (unit.includes('mph')) {
-          s1 = Math.round(s1 * 1.60934);
-          if (s2 !== null) s2 = Math.round(s2 * 1.60934);
-        } else {
-          s1 = Math.round(s1);
-          if (s2 !== null) s2 = Math.round(s2);
+      const lines = (detail.description || '')
+        .replace(/<br[^>]*>/gi, '\n')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<\/li>/gi, '\n')
+        .replace(/<\/div>/gi, '\n')
+        .replace(/<[^>]*>/g, '')
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean);
+
+      lines.forEach(line => {
+        const match = speedPrefixPattern.exec(line);
+        if (match) {
+          const content = match[1];
+          const numMatches = [...content.matchAll(/(\d+(?:[.,]\d+)?)\s*(km\/?h|kph|mph|\b)/gi)];
+          let lastUnit = 'km/h';
+          for (const nm of numMatches) {
+            const u = (nm[2] || '').toLowerCase();
+            if (u.includes('mph') || u.includes('kph') || u.includes('km')) {
+              lastUnit = u;
+            }
+          }
+          for (const nm of numMatches) {
+            let val = parseFloat(nm[1].replace(',', '.'));
+            const unit = nm[2] ? nm[2].toLowerCase() : lastUnit;
+            if (unit.includes('mph')) {
+              val = Math.round(val * 1.60934);
+            } else {
+              val = Math.round(val);
+            }
+            if (val > 0 && val <= 60) {
+              speeds.push(val);
+            }
+          }
         }
-        if (s1 > 0 && s1 <= 60) speeds.push(s1);
-        if (s2 !== null && s2 > 0 && s2 <= 60) speeds.push(s2);
-      }
+      });
       if (speeds.length > 0) {
         const sorted = [...new Set(speeds)].sort((a, b) => a - b);
         rawTechData.speed = sorted[sorted.length - 1];

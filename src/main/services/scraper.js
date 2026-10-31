@@ -1361,23 +1361,35 @@ function parseModDetailFromHtml(html, modId) {
       techData.capacityMax = 0;
     }
 
-    // Working speed / max speed scan from description
-    const workSpeedPattern = /(?:working\s*speed|work\s*speed|operating\s*speed|arbeitsgeschwindigkeit|vitesse\s*de\s*travail|velocidad\s*de\s*trabajo|pr\w*\s*robocza|max(?:imum|\.)?\s*working\s*speed|vitesse\s*max\.\s*de\s*travail)[:\-\s]*(\d+(?:[.,]\d+)?)\s*(?:[-–—~tobisà]+\s*(\d+(?:[.,]\d+)?)\s*)?(km\/?h|kph|mph|\b)/gi;
+    // Working speed / max speed scan from description (for implements/tools)
+    const speedPrefixPattern = /^(?:[-*•\s]*)(?:working\s*speed|work\s*speed|operating\s*speed|arbeitsgeschwindigkeit|vitesse\s*de\s*travail|velocidad\s*de\s*trabajo|pr\w*\s*robocza|max(?:imum|\.)?\s*working\s*speed|vitesse\s*max\.\s*de\s*travail|(?:max(?:imum|\.)?\s*speed|vitesse\s*max(?:imale|\.)?|h\u00f6chstgeschwindigkeit|velocidad\s*m\u00e1xima|top\s*speed))[:\-\s]*(.*)/i;
     const speeds = [];
-    for (const match of description.matchAll(workSpeedPattern)) {
-      let s1 = parseFloat(match[1].replace(',', '.'));
-      let s2 = match[2] ? parseFloat(match[2].replace(',', '.')) : null;
-      const unit = (match[3] || '').toLowerCase();
-      if (unit.includes('mph')) {
-        s1 = Math.round(s1 * 1.60934);
-        if (s2 !== null) s2 = Math.round(s2 * 1.60934);
-      } else {
-        s1 = Math.round(s1);
-        if (s2 !== null) s2 = Math.round(s2);
+    rawLines.forEach(line => {
+      const match = speedPrefixPattern.exec(line);
+      if (match) {
+        const content = match[1];
+        const numMatches = [...content.matchAll(/(\d+(?:[.,]\d+)?)\s*(km\/?h|kph|mph|\b)/gi)];
+        let lastUnit = 'km/h';
+        for (const nm of numMatches) {
+          const u = (nm[2] || '').toLowerCase();
+          if (u.includes('mph') || u.includes('kph') || u.includes('km')) {
+            lastUnit = u;
+          }
+        }
+        for (const nm of numMatches) {
+          let val = parseFloat(nm[1].replace(',', '.'));
+          const unit = nm[2] ? nm[2].toLowerCase() : lastUnit;
+          if (unit.includes('mph')) {
+            val = Math.round(val * 1.60934);
+          } else {
+            val = Math.round(val);
+          }
+          if (val > 0 && val <= 60) {
+            speeds.push(val);
+          }
+        }
       }
-      if (s1 > 0 && s1 <= 60) speeds.push(s1);
-      if (s2 !== null && s2 > 0 && s2 <= 60) speeds.push(s2);
-    }
+    });
     if (speeds.length > 0) {
       const sorted = [...new Set(speeds)].sort((a, b) => a - b);
       techData.speed = sorted[sorted.length - 1];
@@ -1405,15 +1417,6 @@ function parseModDetailFromHtml(html, modId) {
       techData.speedMin = 0;
       techData.speedMax = 0;
       techData.speedValues = [];
-    }
-      techData.hp = 0;
-      techData.hpMin = 0;
-      techData.hpMax = 0;
-      techData.capacity = 0;
-      techData.capacityMin = 0;
-      techData.capacityMax = 0;
-      techData.unitCapacity = 0;
-      techData.unitCapacityType = '';
     }
 
     // Guard: if unit capacity was found but litre capacity is tiny (< 1000 L),
