@@ -214,7 +214,9 @@ export const useModHubStore = create((set, get) => ({
                           descStr.includes('keyboard shortcuts:') || descStr.includes('keyboard shortcuts') ||
                           descStr.includes('specializations/') || descStr.includes('this mod aims to make') ||
                           titleStr === 'realistic seeder';
-          const isNoCap = isScriptOrGameplay || NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes(k));
+          const noCapWordRe = /\b(?:gameplay|script|prefab|map|chainsaw|flashlight|handtool|weight|fence|tree|decoration|generator|floodlight|plow|cultivator|subsoiler|spader|mulcher|roller|weeder|hoe|mower|tedder|windrower|tractor|traktor|car|forklift|gabelstapler)\b/i;
+          const isTrailerOrImplementsWithCap = /(?:trailer|tipper|kipper|slurry|spreader|tanker|wagon|dumper|chaser|auger|manure|seeder|planter|baler|bale)/i.test(catStr);
+          const isNoCap = isScriptOrGameplay || (!isTrailerOrImplementsWithCap && (NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k)) || noCapWordRe.test(titleStr)));
           if (isNoCap) {
             if (v.techData.capacity > 0 || v.techData.unitCapacity > 0) hasPruned = true;
             v.techData.capacity = 0;
@@ -1218,7 +1220,9 @@ export const useModHubStore = create((set, get) => ({
                           descStr.includes('keyboard shortcuts:') || descStr.includes('keyboard shortcuts') ||
                           descStr.includes('specializations/') || descStr.includes('this mod aims to make') ||
                           titleStr === 'realistic seeder';
-          const isNoCap = isScriptOrGameplay || NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes(k));
+          const noCapWordRe = /\b(?:gameplay|script|prefab|map|chainsaw|flashlight|handtool|weight|fence|tree|decoration|generator|floodlight|plow|cultivator|subsoiler|spader|mulcher|roller|weeder|hoe|mower|tedder|windrower|tractor|traktor|car|forklift|gabelstapler)\b/i;
+          const isTrailerOrImplementsWithCap = /(?:trailer|tipper|kipper|slurry|spreader|tanker|wagon|dumper|chaser|auger|manure|seeder|planter|baler|bale)/i.test(catStr);
+          const isNoCap = isScriptOrGameplay || (!isTrailerOrImplementsWithCap && (NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k)) || noCapWordRe.test(titleStr)));
             if (isNoCap) {
               cachedMod.techData.capacity = 0;
               cachedMod.techData.capacityMin = 0;
@@ -1587,7 +1591,9 @@ export const useModHubStore = create((set, get) => ({
                           titleStr.includes('script') || titleStr.includes('addon') ||
                           (detail.description || '').toLowerCase().includes('.lua') ||
                           titleStr === 'realistic seeder';
-    const isNoCap = isScriptOrGameplay || NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes(k));
+    const noCapWordRe = /\b(?:gameplay|script|prefab|map|chainsaw|flashlight|handtool|weight|fence|tree|decoration|generator|floodlight|plow|cultivator|subsoiler|spader|mulcher|roller|weeder|hoe|mower|tedder|windrower|tractor|traktor|car|forklift|gabelstapler)\b/i;
+          const isTrailerOrImplementsWithCap = /(?:trailer|tipper|kipper|slurry|spreader|tanker|wagon|dumper|chaser|auger|manure|seeder|planter|baler|bale)/i.test(catStr);
+          const isNoCap = isScriptOrGameplay || (!isTrailerOrImplementsWithCap && (NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k)) || noCapWordRe.test(titleStr)));
     if (isNoCap) {
       techData.capacity = 0;
       techData.capacityMin = 0;

@@ -1142,7 +1142,9 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
                        descStr.includes('keyboard shortcuts:') || descStr.includes('keyboard shortcuts') ||
                        descStr.includes('specializations/') || descStr.includes('this mod aims to make') ||
                        titleStr === 'realistic seeder';
-          const isNoCap = isScriptOrGameplay || noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k));
+          const noCapWordRe = /\b(?:gameplay|script|prefab|map|chainsaw|flashlight|handtool|weight|fence|tree|decoration|generator|floodlight|plow|cultivator|subsoiler|spader|mulcher|roller|weeder|hoe|mower|tedder|windrower|tractor|traktor|car|forklift|gabelstapler)\b/i;
+          const isTrailerOrImplementsWithCap = /(?:trailer|tipper|kipper|slurry|spreader|tanker|wagon|dumper|chaser|auger|manure|seeder|planter|baler|bale)/i.test(catStr);
+          const isNoCap = isScriptOrGameplay || (!isTrailerOrImplementsWithCap && (noCapKeywords.some(k => catStr.includes(k)) || noCapWordRe.test(titleStr)));
           const rawCap = mod.techData?.capacity ?? (mod.metadata?.Capacity ? parseInt(String(mod.metadata.Capacity).replace(/[^0-9]/g, ''), 10) : 0);
           const capMin = mod.techData?.capacityMin ?? rawCap;
           const capMax = mod.techData?.capacityMax ?? rawCap;
