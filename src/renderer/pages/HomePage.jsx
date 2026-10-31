@@ -270,15 +270,16 @@ export default function HomePage() {
     .filter(s => !s.isGhost && (s.singlePlayerName || s.playerName))
     .sort((a, b) => new Date(b.lastSaved || b.lastSaveDate || 0) - new Date(a.lastSaved || a.lastSaveDate || 0))[0];
   const spSave = savegames.find(s => !s.isGhost && s.singlePlayerName && s.singlePlayerName !== 'Farmer');
+  const spName = spSave?.singlePlayerName || (latestSave?.singlePlayerName && latestSave.singlePlayerName !== 'Farmer' ? latestSave.singlePlayerName : null);
   const rawName = (nickname && nickname !== 'Farmer')
     ? nickname
-    : (detectedPlayerName && detectedPlayerName !== 'Farmer'
+    : (spName || (detectedPlayerName && detectedPlayerName !== 'Farmer'
       ? detectedPlayerName
       : (spSave?.singlePlayerName && spSave.singlePlayerName !== 'Farmer'
         ? spSave.singlePlayerName
         : ((latestSave?.singlePlayerName && latestSave.singlePlayerName !== 'Farmer' ? latestSave.singlePlayerName : null)
           || (latestSave?.playerName && latestSave.playerName !== 'Farmer' ? latestSave.playerName : null)
-          || 'Farmer')));
+          || 'Farmer'))));
   
   const handleSaveName = () => {
     const trimmed = tempName.trim();
@@ -292,7 +293,7 @@ export default function HomePage() {
   // Auto-persist detected Single Player or online presence name to persistent settings so it's remembered immediately on future launches
   useEffect(() => {
     if (!nickname || nickname === 'Farmer') {
-      const detectedName = detectedPlayerName || spSave?.singlePlayerName || (latestSave?.singlePlayerName && latestSave.singlePlayerName !== 'Farmer' ? latestSave.singlePlayerName : null);
+      const detectedName = spSave?.singlePlayerName || (latestSave?.singlePlayerName && latestSave.singlePlayerName !== 'Farmer' ? latestSave.singlePlayerName : null) || detectedPlayerName;
       if (detectedName && detectedName !== 'Farmer') {
         setNickname(detectedName);
       }

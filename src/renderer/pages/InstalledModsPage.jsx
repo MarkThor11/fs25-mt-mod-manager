@@ -78,23 +78,33 @@ const LocalModIcon = React.memo(({ mod }) => {
 
   const DLC_ICONS = {
     "beans and alpacas":    "https://www.farming-simulator.com/img/content/products/fs25/fs25beansandalpacas-cover.jpg",
+    "beansandalpacas":      "https://www.farming-simulator.com/img/content/products/fs25/fs25beansandalpacas-cover.jpg",
     "pumps and hoses":      "https://www.farming-simulator.com/img/content/products/fs25/fs25pumpsnhoses-cover.jpg",
     "pumps & hoses":        "https://www.farming-simulator.com/img/content/products/fs25/fs25pumpsnhoses-cover.jpg",
+    "pumpsandhoses":        "https://www.farming-simulator.com/img/content/products/fs25/fs25pumpsnhoses-cover.jpg",
     "emergency pack":       "https://www.farming-simulator.com/img/content/products/fs25/fs25emergency-cover.jpg",
+    "emergencypack":        "https://www.farming-simulator.com/img/content/products/fs25/fs25emergency-cover.jpg",
     "emergency two":        "https://www.farming-simulator.com/img/content/products/fs25/fs25emergency-cover.jpg",
     "sky agriculture":      "https://www.farming-simulator.com/img/content/products/fs25/fs25skyagriculture-cover.jpg",
+    "skyagriculture":       "https://www.farming-simulator.com/img/content/products/fs25/fs25skyagriculture-cover.jpg",
     "vredo":                "https://www.farming-simulator.com/img/content/products/fs25/fs25vredo-cover.jpg",
     "season pass 2":        "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass2-cover.jpg",
+    "seasonpass2":          "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass2-cover.jpg",
     "jcb":                  "https://www.farming-simulator.com/img/content/products/fs25/fs25jcbwft-cover.jpg",
+    "worldsfastesttractor": "https://www.farming-simulator.com/img/content/products/fs25/fs25jcbwft-cover.jpg",
     "highlands":            "https://www.farming-simulator.com/img/content/products/fs25/fs25highlandsfishing-cover.jpg",
     "mercedes":             "https://www.farming-simulator.com/img/content/products/fs25/fs25mercedesbenztrucks-cover.jpg",
     "straw harvest":        "https://www.farming-simulator.com/img/content/products/fs25/fs25strawharvest-cover.jpg",
+    "strawharvest":         "https://www.farming-simulator.com/img/content/products/fs25/fs25strawharvest-cover.jpg",
     "plains and prairies":  "https://www.farming-simulator.com/img/content/products/fs25/fs25plainsandprairies-cover.jpg",
     "plains & prairies":    "https://www.farming-simulator.com/img/content/products/fs25/fs25plainsandprairies-cover.jpg",
+    "plainsandprairies":    "https://www.farming-simulator.com/img/content/products/fs25/fs25plainsandprairies-cover.jpg",
     "nexat":                "https://www.farming-simulator.com/img/content/products/fs25/fs25nexat-cover.jpg",
     "season pass 1":        "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass1-cover.jpg",
+    "seasonpass1":          "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass1-cover.jpg",
     "macdon":               "https://www.farming-simulator.com/img/content/products/fs25/fs25macdon-cover.jpg",
     "new holland cr11":     "https://www.farming-simulator.com/img/content/products/fs25/fs25nhcr11gold-cover.jpg",
+    "newhollandcr11":       "https://www.farming-simulator.com/img/content/products/fs25/fs25nhcr11gold-cover.jpg",
     "nhcr11":               "https://www.farming-simulator.com/img/content/products/fs25/fs25nhcr11gold-cover.jpg",
     "daimler":              "https://www.farming-simulator.com/img/content/products/fs25/fs25mercedesbenztrucks-cover.jpg",
   };
@@ -139,7 +149,7 @@ const LocalModIcon = React.memo(({ mod }) => {
     return () => { isMounted = false; };
   }, [finalImageUrl]);
 
-  const activeSrc = proxiedUrl || finalImageUrl;
+  const activeSrc = (finalImageUrl && finalImageUrl.startsWith('http') && window.api?.images?.proxy) ? proxiedUrl : (proxiedUrl || finalImageUrl);
 
   if (activeSrc && !activeSrc.startsWith('CATEGORY:') && (!error || isDLCOverride)) {
       return (
@@ -397,6 +407,7 @@ const ModCard = React.memo(({ mod, isSelected, onToggleSelect, onNavigate, onUpd
                     lineHeight: '1.2em',
                     height: '2.4em' // Force 2 lines of height
                 }}>
+                    {mod.isFolder && <FolderOpen size={14} style={{ color: '#fbbf24', marginRight: 5, verticalAlign: 'text-bottom' }} title="Unzipped Mod Folder" />}
                     {mod.title}
                 </div>
                 
@@ -828,7 +839,11 @@ const LazyModList = ({
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 800, fontSize: 'var(--fs-md)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                        {!mod.isDLC && <Package size={16} style={{ color: 'var(--accent)', opacity: 0.8 }} title="ZIP Archive" />}
+                        {!mod.isDLC && (mod.isFolder ? (
+                            <FolderOpen size={16} style={{ color: '#fbbf24', opacity: 0.9 }} title="Unzipped Mod Folder" />
+                        ) : (
+                            <Package size={16} style={{ color: 'var(--accent)', opacity: 0.8 }} title="ZIP Archive" />
+                        ))}
                         <span>{mod.title}</span>
                         {status === 'update' && (
                             <span style={{ fontSize: 10, background: 'var(--warning)', color: 'black', padding: '2px 8px', borderRadius: 4, fontWeight: 900 }}>UPDATE</span>

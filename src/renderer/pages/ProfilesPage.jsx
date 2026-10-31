@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { CustomSlider } from '../components/common/CustomSlider';
 import { useNavigate } from 'react-router-dom';
-import { CheckSquare, Plus, Trash2, Save, Package, PlayCircle, Coins, Map, Settings, Info, DollarSign, Share2, Download, Copy, RefreshCw, AlertCircle, Pin, Search, ChevronLeft, ChevronRight, Folder, ChevronDown, Truck, Users, Globe, Eye, Palette, MapPin, Ruler, Thermometer, Maximize, Radio, Video, Gamepad2, Volume2, LayoutGrid, List, Pencil, Sliders } from 'lucide-react';
+import { CheckSquare, Plus, Trash2, Save, Package, PlayCircle, Coins, Map, Settings, Info, DollarSign, Share2, Download, Copy, RefreshCw, AlertCircle, Pin, Search, ChevronLeft, ChevronRight, Folder, FolderOpen, ChevronDown, Truck, Users, Globe, Eye, Palette, MapPin, Ruler, Thermometer, Maximize, Radio, Video, Gamepad2, Volume2, LayoutGrid, List, Pencil, Sliders } from 'lucide-react';
 import { useProfileStore } from '../store/useProfileStore';
 import { useModHubStore } from '../store/useModHubStore';
 import { useToastStore } from '../store/useToastStore';
@@ -20,32 +20,97 @@ const MAPS = [
   { id: 'MapAS', title: 'Hutan Pantai' },
 ];
 
+const DLC_ICONS = {
+  "beans and alpacas":    "https://www.farming-simulator.com/img/content/products/fs25/fs25beansandalpacas-cover.jpg",
+  "beansandalpacas":      "https://www.farming-simulator.com/img/content/products/fs25/fs25beansandalpacas-cover.jpg",
+  "pumps and hoses":      "https://www.farming-simulator.com/img/content/products/fs25/fs25pumpsnhoses-cover.jpg",
+  "pumps & hoses":        "https://www.farming-simulator.com/img/content/products/fs25/fs25pumpsnhoses-cover.jpg",
+  "pumpsandhoses":        "https://www.farming-simulator.com/img/content/products/fs25/fs25pumpsnhoses-cover.jpg",
+  "emergency pack":       "https://www.farming-simulator.com/img/content/products/fs25/fs25emergency-cover.jpg",
+  "emergencypack":        "https://www.farming-simulator.com/img/content/products/fs25/fs25emergency-cover.jpg",
+  "emergency two":        "https://www.farming-simulator.com/img/content/products/fs25/fs25emergency-cover.jpg",
+  "sky agriculture":      "https://www.farming-simulator.com/img/content/products/fs25/fs25skyagriculture-cover.jpg",
+  "skyagriculture":       "https://www.farming-simulator.com/img/content/products/fs25/fs25skyagriculture-cover.jpg",
+  "vredo":                "https://www.farming-simulator.com/img/content/products/fs25/fs25vredo-cover.jpg",
+  "season pass 2":        "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass2-cover.jpg",
+  "seasonpass2":          "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass2-cover.jpg",
+  "jcb":                  "https://www.farming-simulator.com/img/content/products/fs25/fs25jcbwft-cover.jpg",
+  "worldsfastesttractor": "https://www.farming-simulator.com/img/content/products/fs25/fs25jcbwft-cover.jpg",
+  "highlands":            "https://www.farming-simulator.com/img/content/products/fs25/fs25highlandsfishing-cover.jpg",
+  "mercedes":             "https://www.farming-simulator.com/img/content/products/fs25/fs25mercedesbenztrucks-cover.jpg",
+  "straw harvest":        "https://www.farming-simulator.com/img/content/products/fs25/fs25strawharvest-cover.jpg",
+  "strawharvest":         "https://www.farming-simulator.com/img/content/products/fs25/fs25strawharvest-cover.jpg",
+  "plains and prairies":  "https://www.farming-simulator.com/img/content/products/fs25/fs25plainsandprairies-cover.jpg",
+  "plains & prairies":    "https://www.farming-simulator.com/img/content/products/fs25/fs25plainsandprairies-cover.jpg",
+  "plainsandprairies":    "https://www.farming-simulator.com/img/content/products/fs25/fs25plainsandprairies-cover.jpg",
+  "nexat":                "https://www.farming-simulator.com/img/content/products/fs25/fs25nexat-cover.jpg",
+  "season pass 1":        "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass1-cover.jpg",
+  "seasonpass1":          "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass1-cover.jpg",
+  "macdon":               "https://www.farming-simulator.com/img/content/products/fs25/fs25macdon-cover.jpg",
+  "new holland cr11":     "https://www.farming-simulator.com/img/content/products/fs25/fs25nhcr11gold-cover.jpg",
+  "newhollandcr11":       "https://www.farming-simulator.com/img/content/products/fs25/fs25nhcr11gold-cover.jpg",
+  "nhcr11":               "https://www.farming-simulator.com/img/content/products/fs25/fs25nhcr11gold-cover.jpg",
+  "daimler":              "https://www.farming-simulator.com/img/content/products/fs25/fs25mercedesbenztrucks-cover.jpg",
+};
+
 const ProfileModImage = ({ mod, zoom, isList }) => {
-  
-  
-  const modIdStr = mod.modId ? String(mod.modId).replace(/^0+/, '') : null;
+  const [error, setError] = useState(false);
+  const modIdStr = mod?.modId ? String(mod.modId).replace(/^0+/, '') : null;
   const cachedImg = modIdStr ? useModHubStore.getState().modCache?.[modIdStr]?.image : null;
-  const rawSrc = cachedImg || mod.iconData || null;
-  const [imgSrc, setImgSrc] = useState(rawSrc);
+
+  const titleLower = (mod?.title || "").toLowerCase();
+  const fileLower = (mod?.fileName || "").toLowerCase();
+  const modNameLower = (mod?.modName || "").toLowerCase();
+  const pathLower = (mod?.filePath || "").toLowerCase();
+  const isDlcMod = Boolean(mod?.isDLC || mod?.folder === 'DLC' || fileLower.endsWith('.dlc') || fileLower.startsWith('pdlc_') || modNameLower.startsWith('pdlc_'));
+
+  let resolvedRaw = null;
+  if (isDlcMod) {
+    for (const [key, url] of Object.entries(DLC_ICONS)) {
+      if (titleLower.includes(key) || fileLower.includes(key) || modNameLower.includes(key) || pathLower.includes(key)) {
+        resolvedRaw = url;
+        break;
+      }
+    }
+  }
+  if (!resolvedRaw) {
+    const candidate = cachedImg || mod?.iconData || mod?.storeData || null;
+    if (candidate && typeof candidate === 'string' && !candidate.startsWith('CATEGORY:')) {
+      resolvedRaw = candidate.startsWith('//') ? `https:${candidate}` : (candidate.startsWith('http') || candidate.startsWith('data:') || candidate.startsWith('mod-icon://') ? candidate : `data:image/png;base64,${candidate}`);
+    }
+  }
+
+  const [imgSrc, setImgSrc] = useState(resolvedRaw);
   const [proxiedSrc, setProxiedSrc] = useState(null);
 
   useEffect(() => {
-    let active = true;
-    if (!imgSrc && mod.filePath && window.api?.mods?.getIcon) {
-        window.api.mods.getIcon({ filePath: mod.filePath, iconFile: mod.iconFile }).then(b64 => {
-            if (active && b64) setImgSrc(b64);
-        });
-    }
-    return () => { active = false; };
-  }, [imgSrc, mod.filePath, mod.iconFile]);
+    setImgSrc(resolvedRaw);
+    setError(false);
+  }, [resolvedRaw]);
 
-  const activeRaw = imgSrc || rawSrc;
   useEffect(() => {
     let active = true;
+    if (!imgSrc && !isDlcMod && mod?.filePath && !mod.filePath.toLowerCase().endsWith('.dlc') && window.api?.mods?.getIcon) {
+        window.api.mods.getIcon({ filePath: mod.filePath, iconFile: mod.iconFile }).then(b64 => {
+            if (active && b64 && typeof b64 === 'string' && !b64.startsWith('CATEGORY:')) {
+                setImgSrc(b64.startsWith('data:') || b64.startsWith('http') ? b64 : `data:image/png;base64,${b64}`);
+            }
+        }).catch(() => {});
+    }
+    return () => { active = false; };
+  }, [imgSrc, isDlcMod, mod?.filePath, mod?.iconFile]);
+
+  const activeRaw = imgSrc || resolvedRaw;
+  useEffect(() => {
+    let active = true;
+    setError(false);
     if (activeRaw && activeRaw.startsWith('http')) {
       if (window.api?.images?.proxy) {
         window.api.images.proxy(activeRaw).then(res => {
-          if (active) setProxiedSrc(res || activeRaw);
+          if (active) {
+            setError(false);
+            setProxiedSrc(res || activeRaw);
+          }
         }).catch(() => {
           if (active) setProxiedSrc(activeRaw);
         });
@@ -58,13 +123,13 @@ const ProfileModImage = ({ mod, zoom, isList }) => {
     return () => { active = false; };
   }, [activeRaw]);
 
-  const finalSource = proxiedSrc || activeRaw;
-  if (!finalSource) {
+  const finalSource = (activeRaw && activeRaw.startsWith('http') && window.api?.images?.proxy) ? proxiedSrc : (proxiedSrc || activeRaw);
+  if (!finalSource || error) {
       return <Package size={isList ? Math.floor(zoom / 2) : Math.floor(zoom / 4)} style={{ opacity: 0.2 }} />;
   }
 
   const finalUrl = finalSource.startsWith('//') ? 'https:' + finalSource : finalSource;
-  return <img src={finalUrl} alt='' style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+  return <img src={finalUrl} alt='' style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={() => setError(true)} />;
 };
 
 export default function ProfilesPage() {
@@ -283,9 +348,16 @@ export default function ProfilesPage() {
   const groupedMods = useMemo(() => {
     const groups = {};
     const modCache = useModHubStore.getState().modCache || {};
+    const seenModNames = new Set();
     installedMods.forEach(mod => {
       const effCat = getEffectiveModCategory(mod, modCache);
       if (!isSelectableMod(mod, effCat)) return;
+      const typeTag = mod.isFolder ? '[UNZIPPED]' : '[ZIP]';
+      const modKey = `${(mod.modName || mod.fileName || mod.title || '').toLowerCase()}_${typeTag}`;
+      if (modKey) {
+        if (seenModNames.has(modKey)) return;
+        seenModNames.add(modKey);
+      }
       const { main } = parseModCategory(effCat, mod.isMap);
       if (main === 'Maps' || (main && main.toLowerCase() === 'maps')) return;
       const categoryName = (mod.isDLC || mod.folder === 'DLC') ? 'DLC' : (main || ((mod.scripts?.length > 0 || mod.specializations?.length > 0) ? 'Gameplay' : 'Miscellaneous'));
@@ -1130,7 +1202,15 @@ export default function ProfilesPage() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
                         {/* COLLAPSIBLE SELECTED MODS SECTION */}
                         {(() => {
-                          const explicitlySelected = installedMods.filter(m => selectedMods.has(m.modName));
+                          const seenSel = new Set();
+                          const explicitlySelected = installedMods.filter(m => {
+                            if (!m || !selectedMods.has(m.modName)) return false;
+                            const typeTag = m.isFolder ? '[UNZIPPED]' : '[ZIP]';
+                            const k = `${(m.modName || '').toLowerCase()}_${typeTag}`;
+                            if (seenSel.has(k)) return false;
+                            seenSel.add(k);
+                            return true;
+                          });
                           if (explicitlySelected.length === 0) return null;
                           return (
                             <div style={{ 
@@ -1176,7 +1256,7 @@ export default function ProfilesPage() {
 
                                     return (
                                       <div 
-                                        key={mod.modName} 
+                                        key={`${mod.modName}-${mod.isFolder ? 'folder' : 'zip'}`} 
                                         onClick={() => toggleMod(mod.modName)}
                                         className="mod-template-item mod-template-item--active"
                                         style={{ 
@@ -1217,10 +1297,14 @@ export default function ProfilesPage() {
                                               whiteSpace: 'nowrap',
                                               overflow: 'hidden',
                                               textOverflow: 'ellipsis',
-                                              fontWeight: 800
+                                              fontWeight: 800,
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: 6
                                             }}
                                           >
-                                            {mod.title || mod.modName}
+                                            {mod.isFolder && <FolderOpen size={13} style={{ color: '#fbbf24', flexShrink: 0 }} title="Unzipped Mod Folder" />}
+                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{mod.title || mod.modName}</span>
                                           </div>
                                           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                             {mod.author || 'Unknown'}
@@ -1448,7 +1532,7 @@ export default function ProfilesPage() {
                                       if (viewMode === 'grid') {
                                         return (
                                           <div 
-                                            key={mod.modName} 
+                                            key={`${mod.modName}-${mod.isFolder ? 'folder' : 'zip'}`} 
                                             onClick={() => toggleMod(mod.modName)}
                                             style={{ 
                                               display: 'flex', 
@@ -1490,11 +1574,16 @@ export default function ProfilesPage() {
                                                     color: isConflict ? 'orange' : 'var(--text-primary)',
                                                     whiteSpace: 'normal',
                                                       fontWeight: 800,
-                                                    height: 'auto'
+                                                    height: 'auto',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: 5
                                                   }}
                                                   title={mod.title || mod.modName}
                                                 >
-                                                {mod.title || mod.modName}
+                                                {mod.isFolder && <FolderOpen size={13} style={{ color: '#fbbf24', flexShrink: 0 }} title="Unzipped Mod Folder" />}
+                                                <span>{mod.title || mod.modName}</span>
                                               </div>
                                                 {zoom >= 160 && (
                                                   <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -1519,7 +1608,7 @@ export default function ProfilesPage() {
 
                                       return (
                                         <div 
-                                          key={mod.modName} 
+                                          key={`${mod.modName}-${mod.isFolder ? 'folder' : 'zip'}`} 
                                           onClick={() => toggleMod(mod.modName)}
                                           className={`mod-template-item ${isSelected ? 'mod-template-item--active' : ''} ${isConflict ? 'mod-template-item--conflict' : ''}`}
                                           style={{ 
@@ -1561,10 +1650,14 @@ export default function ProfilesPage() {
                                                   color: isConflict ? 'orange' : 'var(--text-primary)',
                                                   whiteSpace: 'normal',
                                                       fontWeight: 800,
-                                                  height: 'auto'
+                                                  height: 'auto',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  gap: 6
                                                 }}
                                               >
-                                              {mod.title || mod.modName}
+                                              {mod.isFolder && <FolderOpen size={14} style={{ color: '#fbbf24', flexShrink: 0 }} title="Unzipped Mod Folder" />}
+                                              <span>{mod.title || mod.modName}</span>
                                             </div>
                                               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-tertiary)', marginTop: 4 }}>
                                                 <span>{mod.author || 'Unknown'}</span>

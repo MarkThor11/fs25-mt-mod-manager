@@ -2384,7 +2384,21 @@ function getGlobalPlayerName() {
     try {
         const fs25Path = getFs25Path();
         
-        // 1. Check gameSettings.xml -> <onlinePresenceName>
+        // 1. Check Single Player savegames (careerSavegame.xml -> <playerName>) first
+        for (let i = 1; i <= 20; i++) {
+            const careerPath = path.join(fs25Path, `savegame${i}`, 'careerSavegame.xml');
+            if (fs.existsSync(careerPath)) {
+                try {
+                    const cXml = fs.readFileSync(careerPath, 'utf8');
+                    const m = cXml.match(/<playerName[^>]*>([^<]+)<\/playerName>/i) || cXml.match(/playerName=["']([^"']+)["']/i);
+                    if (m && m[1] && m[1].trim() && m[1].trim() !== 'Farmer' && m[1].trim() !== 'Player') {
+                        return m[1].trim();
+                    }
+                } catch (_) {}
+            }
+        }
+
+        // 2. Check gameSettings.xml -> <onlinePresenceName>
         const gameSettingsPath = path.join(fs25Path, 'gameSettings.xml');
         if (fs.existsSync(gameSettingsPath)) {
             try {

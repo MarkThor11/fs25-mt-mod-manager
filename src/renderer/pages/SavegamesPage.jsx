@@ -5,7 +5,7 @@ import {
   Save, Play, RefreshCw, Edit3, MapPin,
   Clock, DollarSign, Package, Check, X, CheckSquare,
   Plus, ChevronDown, ChevronRight, Gamepad2, Trash2, TrendingUp, Shield, Download, AlertTriangle,
-  Archive, RotateCcw, Info, Zap, Folder, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft, Anchor, Truck, Tractor, Car, Wheat, Share2, Lock, Unlock, Crown, Server, User
+  Archive, RotateCcw, Info, Zap, Folder, FolderOpen, Sliders, Cloud, Wrench, ShieldAlert, Pin, Users, Globe, Map as MapIcon, Settings, AlertCircle, Ruler, Volume2, Video, Search, Coins, Thermometer, Calendar, CalendarDays, FastForward, TrainFront, UserCheck, Settings2, Sparkles, Droplets, Paintbrush, ArrowRightLeft, Anchor, Truck, Tractor, Car, Wheat, Share2, Lock, Unlock, Crown, Server, User
 } from 'lucide-react';
 import { useSavegameStore } from '../store/useSavegameStore';
 import { useToastStore } from '../store/useToastStore';
@@ -627,12 +627,21 @@ const [activeTab, setActiveTab] = useState('general');
     const counts = {};
     const cache = useModHubStore.getState().modCache || {};
     const favs = useModHubStore.getState().favoriteMods || [];
+    const seenModNames = new Set();
     (installedMods || []).forEach(m => {
       if (!m || m.isMap) return;
+      const typeTag = m.isFolder ? '[UNZIPPED]' : '[ZIP]';
+      const modKey = `${(m.modName || m.fileName || m.title || '').toLowerCase()}_${typeTag}`;
+      if (modKey) {
+        if (seenModNames.has(modKey)) return;
+        seenModNames.add(modKey);
+      }
       const eff = getEffectiveModCategory(m, cache);
       if (isMapMod(m, eff)) return;
       if ((eff && String(eff).toLowerCase().includes('prefab')) || (m.title && m.title.toLowerCase().includes('prefab')) || (m.modName && m.modName.toLowerCase().includes('prefab'))) return;
-      const { main } = parseModCategory(eff, m.isMap);
+      const isDlc = m.isDLC || m.folder === 'DLC';
+      const { main: parsedMain } = parseModCategory(eff, m.isMap);
+      const main = isDlc ? 'DLC' : parsedMain;
       if (!main || main === 'Maps' || main.toLowerCase() === 'maps') return;
       counts[main] = (counts[main] || 0) + 1;
       const bn = m.fileName ? m.fileName.split(/[\\/]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : '');
@@ -979,8 +988,15 @@ const [activeTab, setActiveTab] = useState('general');
   const groupedMods = React.useMemo(() => {
     const groups = {};
     const modCache = useModHubStore.getState().modCache || {};
+    const seenModNames = new Set();
     installedMods.forEach(mod => {
-      if (mod.isMap) return;
+      if (!mod || mod.isMap) return;
+      const typeTag = mod.isFolder ? '[UNZIPPED]' : '[ZIP]';
+      const modKey = `${(mod.modName || mod.fileName || mod.title || '').toLowerCase()}_${typeTag}`;
+      if (modKey) {
+        if (seenModNames.has(modKey)) return;
+        seenModNames.add(modKey);
+      }
       const effCat = getEffectiveModCategory(mod, modCache);
       if (isMapMod(mod, effCat)) return;
       
@@ -2336,7 +2352,15 @@ const [activeTab, setActiveTab] = useState('general');
                       <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 8, border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 12 }}>
                         {/* SELECTED MODS SECTION */}
                         {(() => {
-                          const explicitlySelected = installedMods.filter(m => selectedMods.has(m.modName));
+                          const seenSel = new Set();
+                          const explicitlySelected = installedMods.filter(m => {
+                            if (!m || !selectedMods.has(m.modName)) return false;
+                            const typeTag = m.isFolder ? '[UNZIPPED]' : '[ZIP]';
+                            const k = `${(m.modName || '').toLowerCase()}_${typeTag}`;
+                            if (seenSel.has(k)) return false;
+                            seenSel.add(k);
+                            return true;
+                          });
                           if (explicitlySelected.length === 0) return null;
                           return (
                             <div style={{ paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
@@ -2376,7 +2400,7 @@ const [activeTab, setActiveTab] = useState('general');
                                     ));
                                     return (
                                       <div
-                                        key={m.modName}
+                                        key={`${m.modName}-${m.isFolder ? 'folder' : 'zip'}`}
                                         onClick={() => toggleMod(m.modName)}
                                         style={{ 
                                           display: 'flex', 
@@ -2399,7 +2423,10 @@ const [activeTab, setActiveTab] = useState('general');
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12, overflow: 'hidden' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, minHeight: 48, justifyContent: 'space-between' }}>
                                               <div>
-                                                <div style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title || m.modName}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+                                                  {m.isFolder && <FolderOpen size={13} style={{ color: '#fbbf24', flexShrink: 0 }} title="Unzipped Mod Folder" />}
+                                                  <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title || m.modName}</span>
+                                                </div>
                                                 <div style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'}</div>
                                               </div>
                                               {m.version && (
@@ -2445,7 +2472,10 @@ const [activeTab, setActiveTab] = useState('general');
                               }
                               
                               const displayedMods = list.filter(m => {
+                                  if (selectedMods.has(m.modName)) return false;
                                   if (showOnlyUsed && !usedMods.has(m.modName.toLowerCase())) return false;
+                                  if (editorSourceFilter === 'MODHUB' && (!m.modId && !m.isModHub)) return false;
+                                  if (editorSourceFilter === 'NON_MODHUB' && (m.modId || m.isModHub)) return false;
                                   if (selectedCategory) {
                                       if (selectedCategory === 'Favourites') {
                                           const fnStr = typeof m.fileName === 'string' ? m.fileName : '';
@@ -2460,7 +2490,8 @@ const [activeTab, setActiveTab] = useState('general');
                                           if (!isFav) return false;
                                       } else {
                                           const modCache = useModHubStore.getState().modCache || {};
-                                          const mainCat = parseModCategory(getEffectiveModCategory(m, modCache), m.isMap).main;
+                                          const isDlc = m.isDLC || m.folder === 'DLC';
+                                          const mainCat = isDlc ? 'DLC' : parseModCategory(getEffectiveModCategory(m, modCache), m.isMap).main;
                                           if (mainCat !== selectedCategory) return false;
                                       }
                                   }
@@ -2504,7 +2535,7 @@ const [activeTab, setActiveTab] = useState('general');
                                 ));
                                 return (
                                   <div
-                                    key={m.modName}
+                                    key={`${m.modName}-${m.isFolder ? 'folder' : 'zip'}`}
                                     onClick={() => toggleMod(m.modName)}
                                     style={{ 
                                       display: 'flex', 
@@ -2527,6 +2558,7 @@ const [activeTab, setActiveTab] = useState('general');
                                         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, minHeight: 48, justifyContent: 'space-between' }}>
                                           <div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+                                              {m.isFolder && <FolderOpen size={13} style={{ color: '#fbbf24', flexShrink: 0 }} title="Unzipped Mod Folder" />}
                                               <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title || m.modName}</span>
                                               {!m.modId && !m.isModHub && (
                                                 <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 3, background: 'rgba(30, 41, 59, 0.9)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.3)', fontWeight: 800, letterSpacing: '0.04em', flexShrink: 0 }}>NON-MODHUB</span>
@@ -3055,26 +3087,92 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
 
 
 
+const DLC_ICONS = {
+    "beans and alpacas":    "https://www.farming-simulator.com/img/content/products/fs25/fs25beansandalpacas-cover.jpg",
+    "beansandalpacas":      "https://www.farming-simulator.com/img/content/products/fs25/fs25beansandalpacas-cover.jpg",
+    "pumps and hoses":      "https://www.farming-simulator.com/img/content/products/fs25/fs25pumpsnhoses-cover.jpg",
+    "pumps & hoses":        "https://www.farming-simulator.com/img/content/products/fs25/fs25pumpsnhoses-cover.jpg",
+    "pumpsandhoses":        "https://www.farming-simulator.com/img/content/products/fs25/fs25pumpsnhoses-cover.jpg",
+    "emergency pack":       "https://www.farming-simulator.com/img/content/products/fs25/fs25emergency-cover.jpg",
+    "emergencypack":        "https://www.farming-simulator.com/img/content/products/fs25/fs25emergency-cover.jpg",
+    "emergency two":        "https://www.farming-simulator.com/img/content/products/fs25/fs25emergency-cover.jpg",
+    "sky agriculture":      "https://www.farming-simulator.com/img/content/products/fs25/fs25skyagriculture-cover.jpg",
+    "skyagriculture":       "https://www.farming-simulator.com/img/content/products/fs25/fs25skyagriculture-cover.jpg",
+    "vredo":                "https://www.farming-simulator.com/img/content/products/fs25/fs25vredo-cover.jpg",
+    "season pass 2":        "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass2-cover.jpg",
+    "seasonpass2":          "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass2-cover.jpg",
+    "jcb":                  "https://www.farming-simulator.com/img/content/products/fs25/fs25jcbwft-cover.jpg",
+    "worldsfastesttractor": "https://www.farming-simulator.com/img/content/products/fs25/fs25jcbwft-cover.jpg",
+    "highlands":            "https://www.farming-simulator.com/img/content/products/fs25/fs25highlandsfishing-cover.jpg",
+    "mercedes":             "https://www.farming-simulator.com/img/content/products/fs25/fs25mercedesbenztrucks-cover.jpg",
+    "straw harvest":        "https://www.farming-simulator.com/img/content/products/fs25/fs25strawharvest-cover.jpg",
+    "strawharvest":         "https://www.farming-simulator.com/img/content/products/fs25/fs25strawharvest-cover.jpg",
+    "plains and prairies":  "https://www.farming-simulator.com/img/content/products/fs25/fs25plainsandprairies-cover.jpg",
+    "plains & prairies":    "https://www.farming-simulator.com/img/content/products/fs25/fs25plainsandprairies-cover.jpg",
+    "plainsandprairies":    "https://www.farming-simulator.com/img/content/products/fs25/fs25plainsandprairies-cover.jpg",
+    "nexat":                "https://www.farming-simulator.com/img/content/products/fs25/fs25nexat-cover.jpg",
+    "season pass 1":        "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass1-cover.jpg",
+    "seasonpass1":          "https://www.farming-simulator.com/img/content/products/fs25/fs25seasonpass1-cover.jpg",
+    "macdon":               "https://www.farming-simulator.com/img/content/products/fs25/fs25macdon-cover.jpg",
+    "new holland cr11":     "https://www.farming-simulator.com/img/content/products/fs25/fs25nhcr11gold-cover.jpg",
+    "newhollandcr11":       "https://www.farming-simulator.com/img/content/products/fs25/fs25nhcr11gold-cover.jpg",
+    "nhcr11":               "https://www.farming-simulator.com/img/content/products/fs25/fs25nhcr11gold-cover.jpg",
+    "daimler":              "https://www.farming-simulator.com/img/content/products/fs25/fs25mercedesbenztrucks-cover.jpg",
+};
+
 const MiniModIcon = React.memo(({ mod, size = 64 }) => {
     const [error, setError] = React.useState(false);
     const [proxiedUrl, setProxiedUrl] = React.useState(null);
     let imageUrl = null;
-    
-    if (mod?.iconData && !mod.iconData.startsWith('CATEGORY:')) {
-        imageUrl = mod.iconData.startsWith('http') || mod.iconData.startsWith('data:') ? mod.iconData : `data:image/png;base64,${mod.iconData}`;
-    } else {
-        const filePath = mod?.filePath || (mod?.fileName ? useLocalModsStore.getState().mods.find(m => m.fileName === mod.fileName || m.modName === mod.modName)?.filePath : null);
-        if (filePath) {
-            imageUrl = `mod-icon://icon?path=${encodeURIComponent(filePath)}`;
+
+    const titleLower = (mod?.title || "").toLowerCase();
+    const fileLower = (mod?.fileName || "").toLowerCase();
+    const modNameLower = (mod?.modName || "").toLowerCase();
+    const pathLower = (mod?.filePath || "").toLowerCase();
+    const isDlcMod = Boolean(mod?.isDLC || mod?.folder === 'DLC' || fileLower.endsWith('.dlc') || fileLower.startsWith('pdlc_') || modNameLower.startsWith('pdlc_'));
+
+    if (isDlcMod) {
+        for (const [key, url] of Object.entries(DLC_ICONS)) {
+            if (titleLower.includes(key) || fileLower.includes(key) || modNameLower.includes(key) || pathLower.includes(key)) {
+                imageUrl = url;
+                break;
+            }
+        }
+    }
+
+    if (!imageUrl) {
+        if (mod?.iconData && typeof mod.iconData === 'string' && !mod.iconData.startsWith('CATEGORY:')) {
+            imageUrl = mod.iconData.startsWith('http') || mod.iconData.startsWith('data:') || mod.iconData.startsWith('mod-icon://')
+                ? mod.iconData
+                : `data:image/png;base64,${mod.iconData}`;
+        } else if (mod?.storeData && typeof mod.storeData === 'string' && !mod.storeData.startsWith('CATEGORY:')) {
+            imageUrl = mod.storeData.startsWith('http') || mod.storeData.startsWith('data:') || mod.storeData.startsWith('mod-icon://')
+                ? mod.storeData
+                : `data:image/png;base64,${mod.storeData}`;
+        } else {
+            const modIdStr = mod?.modId ? String(mod.modId).replace(/^0+/, '') : null;
+            const cachedImg = modIdStr ? useModHubStore.getState().modCache?.[modIdStr]?.image : null;
+            if (cachedImg && typeof cachedImg === 'string' && !cachedImg.startsWith('CATEGORY:')) {
+                imageUrl = cachedImg.startsWith('//') ? `https:${cachedImg}` : cachedImg;
+            } else if (!isDlcMod) {
+                const filePath = mod?.filePath || (mod?.fileName ? useLocalModsStore.getState().mods.find(m => m.fileName === mod.fileName || m.modName === mod.modName)?.filePath : null);
+                if (filePath && !filePath.toLowerCase().endsWith('.dlc')) {
+                    imageUrl = `mod-icon://icon?path=${encodeURIComponent(filePath)}`;
+                }
+            }
         }
     }
 
     React.useEffect(() => {
         let isMounted = true;
+        setError(false);
         if (imageUrl && imageUrl.startsWith('http')) {
             if (window.api?.images?.proxy) {
                 window.api.images.proxy(imageUrl).then(res => {
-                    if (isMounted) setProxiedUrl(res || imageUrl);
+                    if (isMounted) {
+                        setError(false);
+                        setProxiedUrl(res || imageUrl);
+                    }
                 }).catch(() => {
                     if (isMounted) setProxiedUrl(imageUrl);
                 });
@@ -3087,7 +3185,7 @@ const MiniModIcon = React.memo(({ mod, size = 64 }) => {
         return () => { isMounted = false; };
     }, [imageUrl]);
 
-    const activeImageUrl = proxiedUrl || imageUrl;
+    const activeImageUrl = (imageUrl && imageUrl.startsWith('http') && window.api?.images?.proxy) ? proxiedUrl : (proxiedUrl || imageUrl);
     
     return (
         <div style={{ width: size, height: size, borderRadius: 8, overflow: 'hidden', background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -3100,6 +3198,11 @@ const MiniModIcon = React.memo(({ mod, size = 64 }) => {
                     decoding="async"
                     onError={() => setError(true)} 
                 />
+            ) : isDlcMod && error ? (
+                <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', border: '1px solid rgba(251,191,36,0.5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <Crown size={Math.max(16, Math.floor(size * 0.38))} color="#fbbf24" />
+                    <span style={{ color: '#fbbf24', fontWeight: 900, fontSize: Math.max(8, Math.floor(size * 0.14)), letterSpacing: 0.5, marginTop: 2 }}>DLC</span>
+                </div>
             ) : (
                 <div style={{ fontSize: size * 0.4, fontWeight: 900, color: 'var(--text-secondary)' }}>
                     {(mod?.title || mod?.modName || 'M').charAt(0).toUpperCase()}
@@ -3246,7 +3349,9 @@ export default function SavegamesPage() {
       const eff = getEffectiveModCategory(m, cache);
       if (isMapMod(m, eff)) return;
       if ((eff && String(eff).toLowerCase().includes('prefab')) || (m.title && m.title.toLowerCase().includes('prefab')) || (m.modName && m.modName.toLowerCase().includes('prefab'))) return;
-      const { main } = parseModCategory(eff, m.isMap);
+      const isDlc = m.isDLC || m.folder === 'DLC';
+      const { main: parsedMain } = parseModCategory(eff, m.isMap);
+      const main = isDlc ? 'DLC' : parsedMain;
       if (main && main !== 'Maps' && main.toLowerCase() !== 'maps') cats.add(main);
       const bn = m.fileName ? m.fileName.split(/[\\/]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : '');
       if (favs.some(fm => fm && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && fm.fileName.toLowerCase() === bn)))) hasFavs = true;
@@ -4837,11 +4942,14 @@ export default function SavegamesPage() {
                                 {(() => {
                                   const favoriteMods = useModHubStore.getState().favoriteMods || [];
                                   
-                                  // 1. Helper to deduplicate mods by title + author
+                                  // 1. Helper to deduplicate mods by modName + packaging type (zip vs unzipped folder)
                                   const deduplicate = (list) => {
                                       const map = new Map();
                                       list.forEach(m => {
-                                          const key = `${m.title}|${m.author}`.toLowerCase();
+                                          const baseKey = (m.modName || m.fileName || m.title || '').toLowerCase();
+                                          if (!baseKey) return;
+                                          const typeTag = m.isFolder ? '[UNZIPPED]' : '[ZIP]';
+                                          const key = `${baseKey}_${typeTag}`;
                                           const existing = map.get(key);
                                           if (!existing) {
                                               map.set(key, m);
@@ -4862,29 +4970,34 @@ export default function SavegamesPage() {
                                           const bIsDlc = b.isDLC || b.folder === 'DLC';
                                           if (aIsDlc && !bIsDlc) return -1;
                                           if (!aIsDlc && bIsDlc) return 1;
-                                          return a.title.localeCompare(b.title);
+                                          return (a.title || a.modName || '').localeCompare(b.title || b.modName || '');
                                       });
                                   };
                                   const cache = useModHubStore.getState().modCache || {};
-                                  const allValidMods = (mods || []).filter(m => {
+                                  const allValidMods = deduplicate((mods || []).filter(m => {
                                       if (!m || m.isMap) return false;
                                       const eff = getEffectiveModCategory(m, cache);
                                       if (isMapMod(m, eff)) return false;
                                       if ((eff && String(eff).toLowerCase().includes('prefab')) || (m.title && m.title.toLowerCase().includes('prefab')) || (m.modName && m.modName.toLowerCase().includes('prefab'))) return false;
                                       return true;
-                                  });
-                                  const mustHaveMods = deduplicate(allValidMods.filter(m => 
+                                  }));
+                                  const mustHaveMods = allValidMods.filter(m => 
                                       favoriteMods.some(fm => fm.isMustHave && (
                                           (fm.modId && m.modId && String(fm.modId) === String(m.modId)) || 
                                           (fm.fileName && fm.fileName.toLowerCase() === (m.fileName ? m.fileName.split(/[\\/\\]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : "")))
                                       ))
-                                  )).filter(m => {
+                                  ).filter(m => {
+                                      if (createSourceFilter === 'MODHUB' && (!m.modId && !m.isModHub)) return false;
+                                      if (createSourceFilter === 'NON_MODHUB' && (m.modId || m.isModHub)) return false;
                                       if (!createModSearchQuery) return true;
                                       const q = createModSearchQuery.toLowerCase();
                                       return (m.title && m.title.toLowerCase().includes(q)) || (m.modName && m.modName.toLowerCase().includes(q)) || (m.author && m.author.toLowerCase().includes(q));
                                   });
+                                  const mustHaveNameSet = new Set(mustHaveMods.map(mh => (mh.modName || '').toLowerCase()));
                                   
-                                  const otherMods = deduplicate(allValidMods.filter(m => {
+                                  const otherMods = allValidMods.filter(m => {
+                                      if (createSourceFilter === 'MODHUB' && (!m.modId && !m.isModHub)) return false;
+                                      if (createSourceFilter === 'NON_MODHUB' && (m.modId || m.isModHub)) return false;
                                       if (createCategoryFilter) {
                                           if (createCategoryFilter === 'Favourites') {
                                               const bn = m.fileName ? m.fileName.split(/[\\/]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : '');
@@ -4892,7 +5005,8 @@ export default function SavegamesPage() {
                                               if (!isFav) return false;
                                           } else {
                                               const cache = useModHubStore.getState().modCache || {};
-                                              const { main } = parseModCategory(getEffectiveModCategory(m, cache), m.isMap);
+                                              const isDlc = m.isDLC || m.folder === 'DLC';
+                                              const main = isDlc ? 'DLC' : parseModCategory(getEffectiveModCategory(m, cache), m.isMap).main;
                                               if (main !== createCategoryFilter) return false;
                                           }
                                       }
@@ -4903,8 +5017,8 @@ export default function SavegamesPage() {
                                       }
                                       return true;
                                   }).filter(m =>
-                                      !mustHaveMods.some(mh => mh.title === m.title && mh.author === m.author)
-                                  ));
+                                      !(includeMustHaves && mustHaveNameSet.has((m.modName || '').toLowerCase()))
+                                  );
 
                                   const explicitlySelectedMods = otherMods.filter(m => modalSelectedMods.has(m.modName));
                                   const availableMods = otherMods.filter(m => !modalSelectedMods.has(m.modName));
@@ -4945,7 +5059,7 @@ export default function SavegamesPage() {
                                                   const isConflicting = !!conflictData;
                                                   return (
                                                     <div 
-                                                      key={m.modName} 
+                                                      key={`${m.modName}-${m.isFolder ? 'folder' : 'zip'}`} 
                                                       style={{ 
                                                           display: 'flex', 
                                                           alignItems: 'center', 
@@ -4967,7 +5081,10 @@ export default function SavegamesPage() {
                                                       </div>
                                                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 48, justifyContent: 'space-between' }}>
                                                          <div>
-                                                           <div style={{ color: isConflicting ? 'orange' : 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</div>
+                                                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+                                                             {m.isFolder && <FolderOpen size={13} style={{ color: '#fbbf24', flexShrink: 0 }} title="Unzipped Mod Folder" />}
+                                                             <div style={{ color: isConflicting ? 'orange' : 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</div>
+                                                           </div>
                                                            <div style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author}</div>
                                                          </div>
                                                          {m.version && (
@@ -5021,7 +5138,7 @@ export default function SavegamesPage() {
                                                   const isConflicting = !!conflictData;
                                                   return (
                                                     <div 
-                                                      key={m.modName} 
+                                                      key={`${m.modName}-${m.isFolder ? 'folder' : 'zip'}`} 
                                                       onClick={() => toggleModalModSelection(m.modName)}
                                                       style={{ 
                                                           display: 'flex', 
@@ -5047,6 +5164,7 @@ export default function SavegamesPage() {
                                                            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, minHeight: 48, justifyContent: 'space-between' }}>
                                                              <div>
                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+                                                                 {m.isFolder && <FolderOpen size={13} style={{ color: '#fbbf24', flexShrink: 0 }} title="Unzipped Mod Folder" />}
                                                                  <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</span>
                                                                  {!m.modId && !m.isModHub && (
                                                                    <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 3, background: 'rgba(30, 41, 59, 0.9)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.3)', fontWeight: 800, letterSpacing: '0.04em', flexShrink: 0 }}>NON-MODHUB</span>
@@ -5085,7 +5203,7 @@ export default function SavegamesPage() {
                                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                                               {availableMods.map(m => (
                                               <div 
-                                                key={m.modName} 
+                                                key={`${m.modName}-${m.isFolder ? 'folder' : 'zip'}`} 
                                                 onClick={() => toggleModalModSelection(m.modName)}
                                                 style={{ 
                                                     display: 'flex', 
@@ -5109,7 +5227,10 @@ export default function SavegamesPage() {
                                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12 }}>
                                                        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, minHeight: 48, justifyContent: 'space-between' }}>
                                                          <div>
-                                                           <div style={{ fontWeight: 700, fontSize: 13, color: (activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</div>
+                                                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+                                                             {m.isFolder && <FolderOpen size={13} style={{ color: '#fbbf24', flexShrink: 0 }} title="Unzipped Mod Folder" />}
+                                                             <div style={{ fontWeight: 700, fontSize: 13, color: (activeModalConflicts && activeModalConflicts.get(m.modName)) ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</div>
+                                                           </div>
                                                            <div style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'}</div>
                                                          </div>
                                                          {m.version && (
@@ -5146,15 +5267,19 @@ export default function SavegamesPage() {
                         <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
                             <strong style={{ color: 'var(--text-primary)' }}>
                                 {(() => {
-                                    const mustHavesCount = includeMustHaves ? mods.filter(m => 
-                                      !m.isMap && (useModHubStore.getState().favoriteMods || []).some(fm => 
-                                        fm.isMustHave && (
+                                    const combinedNames = new Set(Array.from(modalSelectedMods).map(s => String(s).toLowerCase()));
+                                    if (includeMustHaves) {
+                                      const favs = useModHubStore.getState().favoriteMods || [];
+                                      (mods || []).forEach(m => {
+                                        if (!m || m.isMap || !m.modName) return;
+                                        const isMh = favs.some(fm => fm.isMustHave && (
                                           (fm.modId && m.modId && String(fm.modId) === String(m.modId)) || 
-                                          (fm.fileName && fm.fileName.toLowerCase() === (m.fileName ? m.fileName.split(/[\\/\\]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : "")))
-                                        )
-                                      )
-                                    ).length : 0;
-                                    return modalSelectedMods.size + mustHavesCount;
+                                          (fm.fileName && fm.fileName.toLowerCase() === (m.fileName ? m.fileName.split(/[\\/\\]/).pop().toLowerCase() : `${m.modName.toLowerCase()}.zip`))
+                                        ));
+                                        if (isMh) combinedNames.add(m.modName.toLowerCase());
+                                      });
+                                    }
+                                    return combinedNames.size;
                                 })()}
                             </strong> Mods Selected
                         </div>

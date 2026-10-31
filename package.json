@@ -9,7 +9,7 @@
     "dist:win": "vite build && electron-builder --win",
     "dist:mac": "vite build && electron-builder --mac",
     "dist:linux": "vite build && electron-builder --linux",
-    "dist": "vite build && electron-builder --win --mac --linux"
+    "dist": "vite build && electron-builder --mac --linux --win"
   },
   "author": {
     "name": "MarkThor11",

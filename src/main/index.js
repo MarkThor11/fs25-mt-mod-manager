@@ -348,6 +348,7 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+    if (process.platform !== 'darwin' && !isUpdating) app.quit();
   });
 
   mainWindow.webContents.on('render-process-gone', (event, details) => {

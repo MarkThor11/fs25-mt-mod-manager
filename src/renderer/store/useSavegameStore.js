@@ -71,7 +71,7 @@ export const useSavegameStore = create((set, get) => ({
       if (window.api?.settings) {
         window.api.settings.set('savegamesCache', JSON.stringify(freshSavegames)).catch(() => {});
         // Auto-persist detected Single Player name to settings so it's remembered immediately on future launches
-        const resolvedName = detectedName || freshSavegames.find(s => s.singlePlayerName && s.singlePlayerName !== 'Farmer')?.singlePlayerName;
+        const resolvedName = freshSavegames.find(s => s.singlePlayerName && s.singlePlayerName !== 'Farmer')?.singlePlayerName || detectedName;
         if (resolvedName) {
           window.api.settings.get('nickname').then((currentNick) => {
             if (!currentNick || currentNick === 'Farmer') {

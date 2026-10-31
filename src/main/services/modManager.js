@@ -149,6 +149,54 @@ const DLC_MAPPING = {
     ],
     techData: { hp: 1100, price: 0 }
   },
+  'beansAndAlpacasPack.dlc': {
+    title: 'Beans & Alpacas Pack',
+    author: 'GIANTS Software',
+    version: '1.0.0.0',
+    dlcId: 'fs25beansandalpacas',
+    description: 'Expand your farming experience with the Beans & Alpacas Pack for Farming Simulator 25!',
+    screenshots: []
+  },
+  'emergencyPack.dlc': {
+    title: 'Emergency Pack',
+    author: 'GIANTS Software',
+    version: '1.0.0.0',
+    dlcId: 'fs25emergency',
+    description: 'Respond to emergencies around your farm and town with the Emergency Pack for Farming Simulator 25!',
+    screenshots: []
+  },
+  'pumpsAndHosesPack.dlc': {
+    title: 'Pumps & Hoses Pack',
+    author: 'GIANTS Software',
+    version: '1.0.0.0',
+    dlcId: 'fs25pumpsnhoses',
+    description: 'Upgrade your farm with umbilical systems, manure separation, and configurable biogas plants in the Pumps & Hoses Pack!',
+    screenshots: []
+  },
+  'skyAgriculturePack.dlc': {
+    title: 'Sky Agriculture Pack',
+    author: 'GIANTS Software',
+    version: '1.0.0.0',
+    dlcId: 'fs25skyagriculture',
+    description: 'Precision seeding and soil cultivation equipment from SKY Agriculture for Farming Simulator 25.',
+    screenshots: []
+  },
+  'seasonPass1.dlc': {
+    title: 'Year 1 Season Pass',
+    author: 'GIANTS Software',
+    version: '1.0.0.0',
+    dlcId: 'fs25seasonpass1',
+    description: 'Year 1 Season Pass for Farming Simulator 25.',
+    screenshots: []
+  },
+  'seasonPass2.dlc': {
+    title: 'Year 2 Season Pass',
+    author: 'GIANTS Software',
+    version: '1.0.0.0',
+    dlcId: 'fs25seasonpass2',
+    description: 'Year 2 Season Pass for Farming Simulator 25.',
+    screenshots: []
+  },
 };
 
 // Global broadcast function (will be set by index.js)
@@ -2436,7 +2484,7 @@ async function performScan(manualPaths = null) {
 		// 1. Separate folders (such as dedicated map folders like 'Pallegney' vs 'Pallegney (CP)')
 		//    are distinct mod locations and must NEVER overwrite or collapse each other.
 		// 2. Unzipped vs Zipped: A mod present as an unzipped folder and as a .zip file (e.g. RedTape, Sales_Plus)
-		//    is the same mod entity regardless of archive packaging type.
+		//    is an independent entity so both zipped and unzipped versions remain visible.
 		// 3. Exact duplicate files: A file in the root directory that is already present in a dedicated
 		//    subfolder (e.g. root copy of a map or dependency) is dropped in favor of the subfolder copy.
 		const folderKey = (m.folder && m.folder !== '') ? m.folder.toLowerCase() : '';
