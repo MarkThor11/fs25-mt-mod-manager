@@ -1219,18 +1219,13 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
               )}
               {hasHP && (
                 <div 
-                  className={`mod-card__tech-item ${mod.techData.hpIsRecommendation ? 'mod-card__tech-item--recommendation' : ''}`} 
-                  title={
-                    mod.techData.hpIsRequirement 
-                      ? (mod.techData.hpIsRecommendation ? "Estimated required power" : "Required power")
-                      : "Engine power output"
-                  }
+                  className="mod-card__tech-item" 
+                  title={mod.techData.hpIsRequirement ? "Required power" : "Engine power output"}
                 >
                   <Zap size={14} />
                   {mod.techData.hpMin && mod.techData.hpMax && mod.techData.hpMin !== mod.techData.hpMax
                     ? `${mod.techData.hpMin} - ${mod.techData.hpMax}`
                     : mod.techData.hp} HP
-                  {mod.techData.hpIsRecommendation && <span className="mod-card__rec-badge">REC</span>}
                 </div>
               )}
               {showCap && (
