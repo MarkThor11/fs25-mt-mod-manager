@@ -643,7 +643,9 @@ export default function ModHubPage() {
           position: 'sticky',
           top: 0,
           zIndex: 100,
-          background: 'var(--bg-secondary)',
+          background: 'color-mix(in srgb, var(--bg-secondary) 95%, #050d18)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
           borderBottom: '1px solid var(--border)'
         }}>
           {/* ROW 1: BREADCRUMBS & SEARCH */}
