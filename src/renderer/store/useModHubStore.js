@@ -1465,6 +1465,32 @@ export const useModHubStore = create((set, get) => ({
       rawTechData.hpMax = hpMax;
       rawTechData.hpValues = uniqueHpValues;
     }
+    // Parse working speed from description if not yet populated in techData
+    if ((!rawTechData.speed || rawTechData.speed === 0) && detail.description) {
+      const workSpeedPattern = /(?:working\s*speed|work\s*speed|operating\s*speed|arbeitsgeschwindigkeit|vitesse\s*de\s*travail|velocidad\s*de\s*trabajo|pr\w*\s*robocza|max(?:imum|\.)?\s*working\s*speed|vitesse\s*max\.\s*de\s*travail)[:\-\s]*(\d+(?:[.,]\d+)?)\s*(?:[-–—~tobisà]+\s*(\d+(?:[.,]\d+)?)\s*)?(km\/?h|kph|mph|\b)/gi;
+      const speeds = [];
+      for (const match of (detail.description || '').matchAll(workSpeedPattern)) {
+        let s1 = parseFloat(match[1].replace(',', '.'));
+        let s2 = match[2] ? parseFloat(match[2].replace(',', '.')) : null;
+        const unit = (match[3] || '').toLowerCase();
+        if (unit.includes('mph')) {
+          s1 = Math.round(s1 * 1.60934);
+          if (s2 !== null) s2 = Math.round(s2 * 1.60934);
+        } else {
+          s1 = Math.round(s1);
+          if (s2 !== null) s2 = Math.round(s2);
+        }
+        if (s1 > 0 && s1 <= 60) speeds.push(s1);
+        if (s2 !== null && s2 > 0 && s2 <= 60) speeds.push(s2);
+      }
+      if (speeds.length > 0) {
+        const sorted = [...new Set(speeds)].sort((a, b) => a - b);
+        rawTechData.speed = sorted[sorted.length - 1];
+        rawTechData.speedMin = sorted[0];
+        rawTechData.speedMax = sorted[sorted.length - 1];
+        rawTechData.speedValues = sorted;
+      }
+    }
     const techData = {
       priceMin: rawTechData.priceMin || rawTechData.price || priceValue,
       priceMax: rawTechData.priceMax || rawTechData.price || priceValue,

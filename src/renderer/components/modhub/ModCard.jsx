@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Star, Download, ExternalLink, Package, Heart, Zap, Layers, EyeOff, Eye, Check, RefreshCw, X, Pin, ShieldAlert } from 'lucide-react';
+import { Star, Download, ExternalLink, Package, Heart, Zap, Layers, Gauge, EyeOff, Eye, Check, RefreshCw, X, Pin, ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDownloadStore } from '../../store/useDownloadStore';
 import { useToastStore } from '../../store/useToastStore';
@@ -1148,7 +1148,12 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           const isVehicle = mod.techData?.isDrivable;
           const showUnitCap = mod.techData?.unitCapacity > 0 && !isBogusUnit && !isVehicle && !isNoCap;
 
-          if (!showPrice && !hasHP && !showCap && !showUnitCap) return null;
+          const rawSpeed = mod.techData?.speed ?? 0;
+          const speedMin = mod.techData?.speedMin ?? rawSpeed;
+          const speedMax = mod.techData?.speedMax ?? rawSpeed;
+          const showSpeed = rawSpeed > 0 && !isVehicle && !isMap;
+
+          if (!showPrice && !hasHP && !showCap && !showUnitCap && !showSpeed) return null;
 
           return (
             <div className="mod-card__tech-info" style={{ marginBottom: 12 }}>
@@ -1183,6 +1188,14 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
                 <div className="mod-card__tech-item" title={`Unit Capacity: ${mod.techData.unitCapacity} ${mod.techData.unitCapacityType || 'units'}`}>
                   <Package size={14} />
                   {mod.techData.unitCapacity} {mod.techData.unitCapacityType || 'units'}
+                </div>
+              )}
+              {showSpeed && (
+                <div className="mod-card__tech-item" title="Working speed">
+                  <Gauge size={14} />
+                  {speedMin && speedMax && speedMin !== speedMax
+                    ? `${speedMin} - ${speedMax}`
+                    : rawSpeed} km/h
                 </div>
               )}
             </div>

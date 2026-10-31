@@ -1361,6 +1361,31 @@ function parseModDetailFromHtml(html, modId) {
       techData.capacityMax = 0;
     }
 
+    // Working speed / max speed scan from description
+    const workSpeedPattern = /(?:working\s*speed|work\s*speed|operating\s*speed|arbeitsgeschwindigkeit|vitesse\s*de\s*travail|velocidad\s*de\s*trabajo|pr\w*\s*robocza|max(?:imum|\.)?\s*working\s*speed|vitesse\s*max\.\s*de\s*travail)[:\-\s]*(\d+(?:[.,]\d+)?)\s*(?:[-–—~tobisà]+\s*(\d+(?:[.,]\d+)?)\s*)?(km\/?h|kph|mph|\b)/gi;
+    const speeds = [];
+    for (const match of description.matchAll(workSpeedPattern)) {
+      let s1 = parseFloat(match[1].replace(',', '.'));
+      let s2 = match[2] ? parseFloat(match[2].replace(',', '.')) : null;
+      const unit = (match[3] || '').toLowerCase();
+      if (unit.includes('mph')) {
+        s1 = Math.round(s1 * 1.60934);
+        if (s2 !== null) s2 = Math.round(s2 * 1.60934);
+      } else {
+        s1 = Math.round(s1);
+        if (s2 !== null) s2 = Math.round(s2);
+      }
+      if (s1 > 0 && s1 <= 60) speeds.push(s1);
+      if (s2 !== null && s2 > 0 && s2 <= 60) speeds.push(s2);
+    }
+    if (speeds.length > 0) {
+      const sorted = [...new Set(speeds)].sort((a, b) => a - b);
+      techData.speed = sorted[sorted.length - 1];
+      techData.speedMin = sorted[0];
+      techData.speedMax = sorted[sorted.length - 1];
+      techData.speedValues = sorted;
+    }
+
     // Safety guard: Maps and map packages are locations/environments, not purchasable store items.
     // Reset any prices, horsepowers, or capacities extracted from descriptions of maps.
     const isMap = isMapCategory(category) || isMapCategory(metadata['Category'] || metadata['category']) || catStr.includes('map') || titleStr.includes('map');
@@ -1368,6 +1393,19 @@ function parseModDetailFromHtml(html, modId) {
       techData.price = 0;
       techData.priceMin = 0;
       techData.priceMax = 0;
+      techData.hp = 0;
+      techData.hpMin = 0;
+      techData.hpMax = 0;
+      techData.capacity = 0;
+      techData.capacityMin = 0;
+      techData.capacityMax = 0;
+      techData.unitCapacity = 0;
+      techData.unitCapacityType = '';
+      techData.speed = 0;
+      techData.speedMin = 0;
+      techData.speedMax = 0;
+      techData.speedValues = [];
+    }
       techData.hp = 0;
       techData.hpMin = 0;
       techData.hpMax = 0;
