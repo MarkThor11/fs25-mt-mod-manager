@@ -1478,6 +1478,87 @@ export const useModHubStore = create((set, get) => ({
       techData.unitCapacityType = '';
     }
 
+    // Implement HP requirement estimation fallback (for tools where ModHub page omitted required HP)
+    if (!techData.hp || techData.hp === 0) {
+      const nonToolCats = [
+        'gameplay', 'script', 'prefab', 'map', 'chainsaw', 'flashlight', 'handtool',
+        'fence', 'tree', 'decoration', 'generator', 'floodlight', 'building', 'silo', 'shed',
+        'farmhouse', 'animalpen', 'storage', 'container', 'tank', 'pallet', 'bigbag', 'ibc',
+        'object', 'winter', 'bale', 'weight', 'production', 'selling', 'station'
+      ];
+      const isToolExcluded = nonToolCats.some(k => catStr.includes(k) || titleStr.includes(k)) ||
+                             titleStr.includes('script');
+
+      if (!isToolExcluded && !isVehicleCategory) {
+        const implementKeywords = [
+          'soil cultivation', 'cultivator', 'plow', 'disc harrow', 'power harrow',
+          'subsoiler', 'spader', 'mulcher', 'roller', 'seeder', 'planter',
+          'mower', 'tedder', 'windrower', 'slurry', 'manure', 'sprayer', 'fertilizer', 'weeder', 'hoe', 'yield improvements'
+        ];
+        const isImplement = implementKeywords.some(k => catStr.includes(k) || titleStr.includes(k));
+
+        if (isImplement) {
+          let width = 0;
+          for (const [k, v] of Object.entries(detail.metadata || {})) {
+            if (k.toLowerCase().includes('width') || k.toLowerCase().includes('breite') || k.toLowerCase().includes('largeur')) {
+              const m = (v || '').toString().match(/(\d+(?:[.,]\d+)?)\s*(?:m|meter|metres|ft|feet|\b)/i);
+              if (m) {
+                let val = parseFloat(m[1].replace(',', '.'));
+                if (/ft|feet/i.test(m[0])) val *= 0.3048;
+                if (val > 0 && val < 50) { width = val; break; }
+              }
+            }
+          }
+          if (width === 0 && detail.description) {
+            const descStripped = (detail.description || '').replace(/<[^>]*>/g, ' ');
+            const m = descStripped.match(/(?:working\s*width|workwidth|arbeitsbreite|largeur\s*de\s*travail|ancho\s*de\s*trabajo)[:\s]*(\d+(?:[.,]\d+)?)\s*(m|meter|metres|ft|feet)?/i);
+            if (m) {
+              let val = parseFloat(m[1].replace(',', '.'));
+              if (m[2] && /ft|feet/i.test(m[2])) val *= 0.3048;
+              if (val > 0 && val < 50) width = val;
+            }
+          }
+
+          let estHp = 0;
+          const p = techData.price || priceValue || 0;
+          if (width > 0) {
+            if (catStr.includes('plow') || catStr.includes('subsoil') || catStr.includes('spader')) {
+              estHp = Math.round(width * 55);
+            } else if (catStr.includes('cultivat') || catStr.includes('disc') || catStr.includes('harrow')) {
+              estHp = Math.round(width * 45);
+            } else if (catStr.includes('mulcher')) {
+              estHp = Math.round(width * 35);
+            } else if (catStr.includes('roller')) {
+              estHp = Math.round(width * 20);
+            } else if (catStr.includes('seeder') || catStr.includes('planter')) {
+              estHp = Math.round(width * 40);
+            } else if (catStr.includes('mower') || catStr.includes('tedder') || catStr.includes('windrow')) {
+              estHp = Math.round(width * 20);
+            } else {
+              estHp = Math.round(width * 30);
+            }
+          } else if (p > 0) {
+            if (catStr.includes('roller')) {
+              estHp = Math.max(15, Math.round(p / 300));
+            } else if (catStr.includes('plow') || catStr.includes('subsoil')) {
+              estHp = Math.max(20, Math.round(p / 400));
+            } else {
+              estHp = Math.max(15, Math.round(p / 500));
+            }
+          }
+
+          if (estHp > 0) {
+            estHp = Math.max(10, Math.min(estHp, 600));
+            techData.hp = estHp;
+            techData.hpMin = estHp;
+            techData.hpMax = estHp;
+            techData.hpIsRequirement = true;
+            techData.hpIsRecommendation = true;
+          }
+        }
+      }
+    }
+
     let brand = detail.metadata?.['Manufacturer'] || detail.metadata?.['Brand'] || '';
     return { ...mod, ...detail, techData, brand };
   },

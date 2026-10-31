@@ -1010,7 +1010,7 @@ function parseModDetailFromHtml(html, modId) {
     }
 
     // 2. Horsepower scan across lines
-    const hpLineRe = /^(?:[-*•\s]*)(?:power|leistung|puissance|horsepower|engine power|motorleistung|required power|leistung required|power requirement)[:\-\s]+(.*)$/i;
+    const hpLineRe = /^(?:[-*•\s]*)(?:power(?:\s*range)?|leistung|puissance(?:\s*recommand[eé]e)?|horsepower|engine\s*power|motorleistung|required\s*(?:power|horsepower|hp)|recommended\s*(?:power|horsepower|hp)|tractor\s*power|leistung\s*erforderlich|power\s*requirement|puissance\s*requise|potencia\s*(?:requerida|recomendada)|ben[oö]tigte\s*leistung|empfohlene\s*leistung)[:\-\s]+(.*)$/i;
     const descHps = [];
     let hpRequirementDetected = false;
     for (const line of rawLines) {
@@ -1023,11 +1023,11 @@ function parseModDetailFromHtml(html, modId) {
             if (numMatch) {
               let hp = parseInt(numMatch[1], 10);
               if (/kw/i.test(mat)) hp = Math.round(hp * 1.36);
-              if (hp > 15 && hp < 2000) descHps.push(hp);
+              if (hp >= 7 && hp < 2000) descHps.push(hp);
             }
           }
         }
-        if (/required|requirement|benötigt/i.test(line)) hpRequirementDetected = true;
+        if (/required|requirement|ben[oö]tigt|erforderlich|requise|requerida|recommand|empfohlene|tractor/i.test(line)) hpRequirementDetected = true;
       }
     }
     if (descHps.length > 0) {
@@ -1046,7 +1046,7 @@ function parseModDetailFromHtml(html, modId) {
       // Fallback single regex on stripped text
       const descText = description.replace(/<[^>]*>/g, ' ');
       const leadPatterns = [
-        /(?:horsepower|power|performance|requirement|required|leistung|puissance|output)[:\-\s]*(\d+)/i,
+        /(?:horsepower|power(?:\s*range)?|performance|requirement|required(?:\s*power)?|recommended(?:\s*power)?|leistung|puissance|output|potencia)[:\-\s]*(\d+)/i,
         /(\d+)\s*(?:hp|cv|ps|pk|ch|kw|bhp|horsepower)/i,
         /\+\s*power[:\s]*(\d+)/i
       ];
@@ -1059,11 +1059,11 @@ function parseModDetailFromHtml(html, modId) {
           if (descText.includes(match[1] + ' kw') || descText.includes(match[1] + 'kw')) {
             hp = Math.round(hp * 1.36);
           }
-          if (hp > 15 && hp < 2000) {
+          if (hp >= 7 && hp < 2000) {
             techData.hp = hp;
             techData.hpMin = hp;
             techData.hpMax = hp;
-            if (pattern.source.includes('required') || pattern.source.includes('requirement') || descText.includes('required power')) {
+            if (pattern.source.includes('required') || pattern.source.includes('requirement') || /required\s*power|recommended\s*power|puissance\s*recommand/i.test(descText)) {
               techData.hpIsRequirement = true;
             }
             break;
@@ -1359,6 +1359,88 @@ function parseModDetailFromHtml(html, modId) {
       techData.capacity = 0;
       techData.capacityMin = 0;
       techData.capacityMax = 0;
+    }
+
+    // Implement HP requirement estimation fallback (for tools where ModHub page author omitted required HP)
+    if (!techData.hp || techData.hp === 0) {
+      const nonToolCats = [
+        'gameplay', 'script', 'prefab', 'map', 'chainsaw', 'flashlight', 'handtool',
+        'fence', 'tree', 'decoration', 'generator', 'floodlight', 'building', 'silo', 'shed',
+        'farmhouse', 'animalpen', 'storage', 'container', 'tank', 'pallet', 'bigbag', 'ibc',
+        'object', 'winter', 'bale', 'weight', 'production', 'selling', 'station'
+      ];
+      const isToolExcluded = nonToolCats.some(k => catStr.includes(k) || titleStr.includes(k)) ||
+                             titleStr.includes('script') || descStr.includes('with this script');
+
+      if (!isToolExcluded && !isVehicleCat) {
+        const implementKeywords = [
+          'soil cultivation', 'cultivator', 'plow', 'disc harrow', 'power harrow',
+          'subsoiler', 'spader', 'mulcher', 'roller', 'seeder', 'planter',
+          'mower', 'tedder', 'windrower', 'slurry', 'manure', 'sprayer', 'fertilizer', 'weeder', 'hoe', 'yield improvements'
+        ];
+        const isImplement = implementKeywords.some(k => catStr.includes(k) || titleStr.includes(k));
+
+        if (isImplement) {
+          // Extract working width from metadata or description
+          let width = 0;
+          for (const [k, v] of Object.entries(metadata || {})) {
+            if (k.toLowerCase().includes('width') || k.toLowerCase().includes('breite') || k.toLowerCase().includes('largeur')) {
+              const m = (v || '').toString().match(/(\d+(?:[.,]\d+)?)\s*(?:m|meter|metres|ft|feet|\b)/i);
+              if (m) {
+                let val = parseFloat(m[1].replace(',', '.'));
+                if (/ft|feet/i.test(m[0])) val *= 0.3048;
+                if (val > 0 && val < 50) { width = val; break; }
+              }
+            }
+          }
+          if (width === 0) {
+            const descStripped = (description || '').replace(/<[^>]*>/g, ' ');
+            const m = descStripped.match(/(?:working\s*width|workwidth|arbeitsbreite|largeur\s*de\s*travail|ancho\s*de\s*trabajo)[:\s]*(\d+(?:[.,]\d+)?)\s*(m|meter|metres|ft|feet)?/i);
+            if (m) {
+              let val = parseFloat(m[1].replace(',', '.'));
+              if (m[2] && /ft|feet/i.test(m[2])) val *= 0.3048;
+              if (val > 0 && val < 50) width = val;
+            }
+          }
+
+          let estHp = 0;
+          const p = techData.price || 0;
+          if (width > 0) {
+            if (catStr.includes('plow') || catStr.includes('subsoil') || catStr.includes('spader')) {
+              estHp = Math.round(width * 55);
+            } else if (catStr.includes('cultivat') || catStr.includes('disc') || catStr.includes('harrow')) {
+              estHp = Math.round(width * 45);
+            } else if (catStr.includes('mulcher')) {
+              estHp = Math.round(width * 35);
+            } else if (catStr.includes('roller')) {
+              estHp = Math.round(width * 20);
+            } else if (catStr.includes('seeder') || catStr.includes('planter')) {
+              estHp = Math.round(width * 40);
+            } else if (catStr.includes('mower') || catStr.includes('tedder') || catStr.includes('windrow')) {
+              estHp = Math.round(width * 20);
+            } else {
+              estHp = Math.round(width * 30);
+            }
+          } else if (p > 0) {
+            if (catStr.includes('roller')) {
+              estHp = Math.max(15, Math.round(p / 300));
+            } else if (catStr.includes('plow') || catStr.includes('subsoil')) {
+              estHp = Math.max(20, Math.round(p / 400));
+            } else {
+              estHp = Math.max(15, Math.round(p / 500));
+            }
+          }
+
+          if (estHp > 0) {
+            estHp = Math.max(10, Math.min(estHp, 600));
+            techData.hp = estHp;
+            techData.hpMin = estHp;
+            techData.hpMax = estHp;
+            techData.hpIsRequirement = true;
+            techData.hpIsRecommendation = true;
+          }
+        }
+      }
     }
 
     // Safety guard: Maps and map packages are locations/environments, not purchasable store items.

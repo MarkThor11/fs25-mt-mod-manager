@@ -9947,8 +9947,8 @@
     "changelog": [],
     "techData": {
       "price": 46500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 93,
+      "hpIsRequirement": true,
       "capacity": 155000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -9958,7 +9958,10 @@
       "priceMin": 100,
       "priceMax": 46500,
       "capacityMin": 2000,
-      "capacityMax": 155000
+      "capacityMax": 155000,
+      "hpMin": 93,
+      "hpMax": 93,
+      "hpIsRecommendation": true
     },
     "releasedDate": "16.07.2026",
     "dependencies": [],
@@ -11113,8 +11116,8 @@
     "changelog": [],
     "techData": {
       "price": 7000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 60,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -11124,7 +11127,10 @@
       "priceMin": 7000,
       "priceMax": 7000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 60,
+      "hpMax": 60,
+      "hpIsRecommendation": true
     },
     "releasedDate": "27.11.2024",
     "dependencies": [],
@@ -15041,8 +15047,8 @@
     "changelog": [],
     "techData": {
       "price": 78000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 156,
+      "hpIsRequirement": true,
       "capacity": 18950,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -15052,7 +15058,10 @@
       "priceMin": 78000,
       "priceMax": 78000,
       "capacityMin": 18950,
-      "capacityMax": 18950
+      "capacityMax": 18950,
+      "hpMin": 156,
+      "hpMax": 156,
+      "hpIsRecommendation": true
     },
     "releasedDate": "30.01.2026",
     "dependencies": [],
@@ -15379,8 +15388,8 @@
     "changelog": [],
     "techData": {
       "price": 5000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -15388,7 +15397,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 5000,
-      "priceMax": 5000
+      "priceMax": 5000,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "30.01.2026",
     "dependencies": [],
@@ -17875,8 +17887,8 @@
     "changelog": [],
     "techData": {
       "price": 26000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 3900,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -17886,7 +17898,10 @@
       "priceMin": 26000,
       "priceMax": 26000,
       "capacityMin": 3900,
-      "capacityMax": 3900
+      "capacityMax": 3900,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "17.12.2024",
     "dependencies": [],
@@ -19145,8 +19160,8 @@
     "changelog": [],
     "techData": {
       "price": 3500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 650,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -19156,7 +19171,10 @@
       "priceMin": 3500,
       "priceMax": 3500,
       "capacityMin": 650,
-      "capacityMax": 650
+      "capacityMax": 650,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "21.01.2025",
     "dependencies": [],
@@ -19827,8 +19845,8 @@
     "changelog": [],
     "techData": {
       "price": 31100,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 4200,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -19838,7 +19856,10 @@
       "priceMin": 31100,
       "priceMax": 31100,
       "capacityMin": 4200,
-      "capacityMax": 4200
+      "capacityMax": 4200,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "19.12.2024",
     "dependencies": [],
@@ -20021,8 +20042,8 @@
     "changelog": [],
     "techData": {
       "price": 95,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -20032,7 +20053,10 @@
       "priceMin": 95,
       "priceMax": 95,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "28.02.2025",
     "dependencies": [],
@@ -21461,8 +21485,8 @@
     "changelog": [],
     "techData": {
       "price": 85000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 170,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 35,
       "unitCapacityType": "cows",
@@ -21470,7 +21494,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 200,
-      "priceMax": 85000
+      "priceMax": 85000,
+      "hpMin": 170,
+      "hpMax": 170,
+      "hpIsRecommendation": true
     },
     "releasedDate": "27.03.2025",
     "dependencies": [],
@@ -24769,8 +24796,8 @@
     "changelog": [],
     "techData": {
       "price": 12000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 108,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -24780,7 +24807,10 @@
       "priceMin": 8000,
       "priceMax": 12000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 108,
+      "hpMax": 108,
+      "hpIsRecommendation": true
     },
     "releasedDate": "15.01.2025",
     "dependencies": [],
@@ -26325,8 +26355,8 @@
     "changelog": [],
     "techData": {
       "price": 6000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 144,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -26334,7 +26364,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 6000,
-      "priceMax": 6000
+      "priceMax": 6000,
+      "hpMin": 144,
+      "hpMax": 144,
+      "hpIsRecommendation": true
     },
     "releasedDate": "08.10.2025",
     "dependencies": [],
@@ -26515,8 +26548,8 @@
     "changelog": [],
     "techData": {
       "price": 10000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 20,
+      "hpIsRequirement": true,
       "capacity": 8000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -26526,7 +26559,10 @@
       "priceMin": 10000,
       "priceMax": 10000,
       "capacityMin": 8000,
-      "capacityMax": 8000
+      "capacityMax": 8000,
+      "hpMin": 20,
+      "hpMax": 20,
+      "hpIsRecommendation": true
     },
     "releasedDate": "21.02.2025",
     "dependencies": [],
@@ -28484,8 +28520,8 @@
     "changelog": [],
     "techData": {
       "price": 790,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -28493,7 +28529,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 790,
-      "priceMax": 790
+      "priceMax": 790,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": false
     },
     "releasedDate": "12.03.2025",
     "dependencies": [],
@@ -28876,8 +28915,8 @@
     "changelog": [],
     "techData": {
       "price": 80,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 10,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -28887,7 +28926,10 @@
       "priceMin": 80,
       "priceMax": 80,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 10,
+      "hpMax": 10,
+      "hpIsRecommendation": true
     },
     "releasedDate": "01.12.2025",
     "dependencies": [],
@@ -29505,8 +29547,8 @@
     "changelog": [],
     "techData": {
       "price": 225000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 450,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -29514,7 +29556,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 150000,
-      "priceMax": 225000
+      "priceMax": 225000,
+      "hpMin": 450,
+      "hpMax": 450,
+      "hpIsRecommendation": true
     },
     "releasedDate": "06.05.2025",
     "dependencies": [],
@@ -29706,8 +29751,8 @@
     "changelog": [],
     "techData": {
       "price": 17835,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 124,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -29717,7 +29762,10 @@
       "priceMin": 14725,
       "priceMax": 17835,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 124,
+      "hpMax": 124,
+      "hpIsRecommendation": true
     },
     "releasedDate": "04.02.2025",
     "dependencies": [],
@@ -30913,8 +30961,8 @@
     "changelog": [],
     "techData": {
       "price": 12266,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 25,
+      "hpIsRequirement": true,
       "capacity": 4200,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -30924,7 +30972,10 @@
       "priceMin": 12266,
       "priceMax": 12266,
       "capacityMin": 3800,
-      "capacityMax": 4200
+      "capacityMax": 4200,
+      "hpMin": 25,
+      "hpMax": 25,
+      "hpIsRecommendation": true
     },
     "releasedDate": "07.08.2025",
     "dependencies": [],
@@ -31540,8 +31591,8 @@
     "changelog": [],
     "techData": {
       "price": 16800,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 212,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -31551,7 +31602,10 @@
       "priceMin": 16800,
       "priceMax": 16800,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 212,
+      "hpMax": 212,
+      "hpIsRecommendation": true
     },
     "releasedDate": "24.02.2025",
     "dependencies": [],
@@ -32375,8 +32429,8 @@
     "changelog": [],
     "techData": {
       "price": 9300,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 118,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -32386,7 +32440,10 @@
       "priceMin": 9300,
       "priceMax": 9300,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 118,
+      "hpMax": 118,
+      "hpIsRecommendation": true
     },
     "releasedDate": "01.07.2026",
     "dependencies": [],
@@ -32519,8 +32576,8 @@
     "changelog": [],
     "techData": {
       "price": 20000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 40,
+      "hpIsRequirement": true,
       "capacity": 3000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -32530,7 +32587,10 @@
       "priceMin": 10000,
       "priceMax": 20000,
       "capacityMin": 600,
-      "capacityMax": 3000
+      "capacityMax": 3000,
+      "hpMin": 40,
+      "hpMax": 40,
+      "hpIsRecommendation": true
     },
     "releasedDate": "25.02.2025",
     "dependencies": [],
@@ -34673,8 +34733,8 @@
     "changelog": [],
     "techData": {
       "price": 32665,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 65,
+      "hpIsRequirement": true,
       "capacity": 8500,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -34684,7 +34744,10 @@
       "priceMin": 32665,
       "priceMax": 32665,
       "capacityMin": 8500,
-      "capacityMax": 8500
+      "capacityMax": 8500,
+      "hpMin": 65,
+      "hpMax": 65,
+      "hpIsRecommendation": true
     },
     "releasedDate": "24.12.2024",
     "dependencies": [],
@@ -37556,8 +37619,8 @@
     "changelog": [],
     "techData": {
       "price": 9600,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 19,
+      "hpIsRequirement": true,
       "capacity": 6000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -37567,7 +37630,10 @@
       "priceMin": 1400,
       "priceMax": 9600,
       "capacityMin": 750,
-      "capacityMax": 6000
+      "capacityMax": 6000,
+      "hpMin": 19,
+      "hpMax": 19,
+      "hpIsRecommendation": true
     },
     "releasedDate": "08.10.2025",
     "dependencies": [],
@@ -37803,8 +37869,8 @@
     "changelog": [],
     "techData": {
       "price": 7500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 25,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -37814,7 +37880,10 @@
       "priceMin": 7500,
       "priceMax": 7500,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 25,
+      "hpMax": 25,
+      "hpIsRecommendation": true
     },
     "releasedDate": "13.02.2025",
     "dependencies": [],
@@ -38915,8 +38984,8 @@
     "changelog": [],
     "techData": {
       "price": 21500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 4000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -38926,7 +38995,10 @@
       "priceMin": 21500,
       "priceMax": 21500,
       "capacityMin": 2400,
-      "capacityMax": 4000
+      "capacityMax": 4000,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "21.02.2025",
     "dependencies": [],
@@ -39009,8 +39081,8 @@
     "changelog": [],
     "techData": {
       "price": 21500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 4000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -39020,7 +39092,10 @@
       "priceMin": 21500,
       "priceMax": 21500,
       "capacityMin": 2400,
-      "capacityMax": 4000
+      "capacityMax": 4000,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "24.01.2025",
     "dependencies": [],
@@ -42791,8 +42866,8 @@
     "changelog": [],
     "techData": {
       "price": 1820,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 1000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -42802,7 +42877,10 @@
       "priceMin": 310,
       "priceMax": 1820,
       "capacityMin": 500,
-      "capacityMax": 1000
+      "capacityMax": 1000,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "16.03.2025",
     "dependencies": [],
@@ -42937,8 +43015,8 @@
     "changelog": [],
     "techData": {
       "price": 16500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 540,
+      "hpIsRequirement": true,
       "capacity": 1500,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -42948,7 +43026,10 @@
       "priceMin": 16500,
       "priceMax": 16500,
       "capacityMin": 1500,
-      "capacityMax": 1500
+      "capacityMax": 1500,
+      "hpMin": 540,
+      "hpMax": 540,
+      "hpIsRecommendation": true
     },
     "releasedDate": "25.08.2025",
     "dependencies": [],
@@ -44304,8 +44385,8 @@
     "changelog": [],
     "techData": {
       "price": 200,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -44315,7 +44396,10 @@
       "priceMin": 200,
       "priceMax": 200,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "15.04.2025",
     "dependencies": [],
@@ -46109,8 +46193,8 @@
     "changelog": [],
     "techData": {
       "price": 16500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 450,
+      "hpIsRequirement": true,
       "capacity": 3200,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -46120,7 +46204,10 @@
       "priceMin": 16500,
       "priceMax": 16500,
       "capacityMin": 1400,
-      "capacityMax": 3200
+      "capacityMax": 3200,
+      "hpMin": 450,
+      "hpMax": 450,
+      "hpIsRecommendation": true
     },
     "releasedDate": "14.05.2026",
     "dependencies": [],
@@ -46792,8 +46879,8 @@
     "changelog": [],
     "techData": {
       "price": 102000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 204,
+      "hpIsRequirement": true,
       "capacity": 8000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -46803,7 +46890,10 @@
       "priceMin": 102000,
       "priceMax": 102000,
       "capacityMin": 8000,
-      "capacityMax": 8000
+      "capacityMax": 8000,
+      "hpMin": 204,
+      "hpMax": 204,
+      "hpIsRecommendation": true
     },
     "releasedDate": "02.09.2025",
     "dependencies": [],
@@ -48376,8 +48466,8 @@
     "changelog": [],
     "techData": {
       "price": 14500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 2200,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -48387,7 +48477,10 @@
       "priceMin": 14500,
       "priceMax": 14500,
       "capacityMin": 2200,
-      "capacityMax": 2200
+      "capacityMax": 2200,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "28.02.2026",
     "dependencies": [],
@@ -50983,8 +51076,8 @@
     "changelog": [],
     "techData": {
       "price": 1500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 10,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -50994,7 +51087,10 @@
       "priceMin": 1500,
       "priceMax": 1500,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 10,
+      "hpMax": 10,
+      "hpIsRecommendation": true
     },
     "releasedDate": "28.03.2025",
     "dependencies": [],
@@ -55716,8 +55812,8 @@
     "changelog": [],
     "techData": {
       "price": 3450,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 1650,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -55727,7 +55823,10 @@
       "priceMin": 3450,
       "priceMax": 3450,
       "capacityMin": 1000,
-      "capacityMax": 1650
+      "capacityMax": 1650,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "13.02.2025",
     "dependencies": [],
@@ -56941,8 +57040,8 @@
     "changelog": [],
     "techData": {
       "price": 31000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 62,
+      "hpIsRequirement": true,
       "capacity": 21000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -56952,7 +57051,10 @@
       "priceMin": 31000,
       "priceMax": 31000,
       "capacityMin": 21000,
-      "capacityMax": 21000
+      "capacityMax": 21000,
+      "hpMin": 62,
+      "hpMax": 62,
+      "hpIsRecommendation": true
     },
     "releasedDate": "03.09.2025",
     "dependencies": [],
@@ -56992,8 +57094,8 @@
     "changelog": [],
     "techData": {
       "price": 156000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 34000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -57003,7 +57105,10 @@
       "priceMin": 156000,
       "priceMax": 156000,
       "capacityMin": 34000,
-      "capacityMax": 34000
+      "capacityMax": 34000,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "13.03.2025",
     "dependencies": [],
@@ -57747,8 +57852,8 @@
     "changelog": [],
     "techData": {
       "price": 5500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 28,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -57758,7 +57863,10 @@
       "priceMin": 1250,
       "priceMax": 5500,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 28,
+      "hpMax": 28,
+      "hpIsRecommendation": true
     },
     "releasedDate": "14.03.2025",
     "dependencies": [],
@@ -58377,8 +58485,8 @@
     "changelog": [],
     "techData": {
       "price": 3295,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 40,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -58388,7 +58496,10 @@
       "priceMin": 3295,
       "priceMax": 3295,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 40,
+      "hpMax": 40,
+      "hpIsRecommendation": true
     },
     "releasedDate": "11.02.2026",
     "dependencies": [],
@@ -58714,8 +58825,8 @@
     "changelog": [],
     "techData": {
       "price": 90000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 180,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -58725,7 +58836,10 @@
       "priceMin": 25000,
       "priceMax": 90000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 180,
+      "hpMax": 180,
+      "hpIsRecommendation": true
     },
     "releasedDate": "15.04.2025",
     "dependencies": [],
@@ -59845,8 +59959,8 @@
     "changelog": [],
     "techData": {
       "price": 80000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 455,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -59854,7 +59968,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 80000,
-      "priceMax": 80000
+      "priceMax": 80000,
+      "hpMin": 455,
+      "hpMax": 455,
+      "hpIsRecommendation": true
     },
     "releasedDate": "03.10.2025",
     "dependencies": [],
@@ -62315,8 +62432,8 @@
     "changelog": [],
     "techData": {
       "price": 42000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 144,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -62324,7 +62441,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 42000,
-      "priceMax": 42000
+      "priceMax": 42000,
+      "hpMin": 144,
+      "hpMax": 144,
+      "hpIsRecommendation": true
     },
     "releasedDate": "27.03.2025",
     "dependencies": [],
@@ -64132,8 +64252,8 @@
     "changelog": [],
     "techData": {
       "price": 2845,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 60,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -64143,7 +64263,10 @@
       "priceMin": 2845,
       "priceMax": 2845,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 60,
+      "hpMax": 60,
+      "hpIsRecommendation": true
     },
     "releasedDate": "13.11.2025",
     "dependencies": [],
@@ -65128,8 +65251,8 @@
     "changelog": [],
     "techData": {
       "price": 10500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 540,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -65137,7 +65260,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 7800,
-      "priceMax": 10500
+      "priceMax": 10500,
+      "hpMin": 540,
+      "hpMax": 540,
+      "hpIsRecommendation": true
     },
     "releasedDate": "16.04.2025",
     "dependencies": [],
@@ -67066,8 +67192,8 @@
     "changelog": [],
     "techData": {
       "price": 40000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 80,
+      "hpIsRequirement": true,
       "capacity": 20000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -67077,7 +67203,10 @@
       "priceMin": 40000,
       "priceMax": 40000,
       "capacityMin": 20000,
-      "capacityMax": 20000
+      "capacityMax": 20000,
+      "hpMin": 80,
+      "hpMax": 80,
+      "hpIsRecommendation": true
     },
     "releasedDate": "03.04.2025",
     "dependencies": [],
@@ -67114,8 +67243,8 @@
     "changelog": [],
     "techData": {
       "price": 24550,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 225,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -67125,7 +67254,10 @@
       "priceMin": 22350,
       "priceMax": 24550,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 225,
+      "hpMax": 225,
+      "hpIsRecommendation": true
     },
     "releasedDate": "16.05.2025",
     "dependencies": [],
@@ -69870,8 +70002,8 @@
     "changelog": [],
     "techData": {
       "price": 0,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 10,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -69879,7 +70011,10 @@
       "weight": 0,
       "scraped": true,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 10,
+      "hpMax": 10,
+      "hpIsRecommendation": true
     },
     "releasedDate": "11.06.2025",
     "dependencies": [],
@@ -73175,8 +73310,8 @@
     "changelog": [],
     "techData": {
       "price": 5730,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 122,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -73186,7 +73321,10 @@
       "priceMin": 5730,
       "priceMax": 5730,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 122,
+      "hpMax": 122,
+      "hpIsRecommendation": true
     },
     "releasedDate": "08.04.2025",
     "dependencies": [],
@@ -73663,8 +73801,8 @@
     "changelog": [],
     "techData": {
       "price": 13000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 2000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -73674,7 +73812,10 @@
       "priceMin": 13000,
       "priceMax": 13000,
       "capacityMin": 2000,
-      "capacityMax": 2000
+      "capacityMax": 2000,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "19.06.2026",
     "dependencies": [],
@@ -77236,8 +77377,8 @@
     "changelog": [],
     "techData": {
       "price": 33800,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 3200,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -77247,7 +77388,10 @@
       "priceMin": 33800,
       "priceMax": 33800,
       "capacityMin": 3200,
-      "capacityMax": 3200
+      "capacityMax": 3200,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "22.01.2025",
     "dependencies": [],
@@ -77532,8 +77676,8 @@
     "changelog": [],
     "techData": {
       "price": 2500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 3300,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -77543,7 +77687,10 @@
       "priceMin": 1500,
       "priceMax": 2500,
       "capacityMin": 680,
-      "capacityMax": 3300
+      "capacityMax": 3300,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "17.06.2026",
     "dependencies": [],
@@ -78311,8 +78458,8 @@
     "changelog": [],
     "techData": {
       "price": 127500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 246,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -78322,7 +78469,10 @@
       "priceMin": 35000,
       "priceMax": 127500,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 246,
+      "hpMax": 246,
+      "hpIsRecommendation": true
     },
     "releasedDate": "05.04.2025",
     "dependencies": [],
@@ -80912,8 +81062,8 @@
     "changelog": [],
     "techData": {
       "price": 468000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 200,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -80923,7 +81073,10 @@
       "priceMin": 468000,
       "priceMax": 468000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 200,
+      "hpMax": 200,
+      "hpIsRecommendation": true
     },
     "releasedDate": "14.05.2025",
     "dependencies": [],
@@ -83106,8 +83259,8 @@
     "changelog": [],
     "techData": {
       "price": 3000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 420,
+      "hpIsRequirement": true,
       "capacity": 1500,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -83117,7 +83270,10 @@
       "priceMin": 3000,
       "priceMax": 3000,
       "capacityMin": 600,
-      "capacityMax": 1500
+      "capacityMax": 1500,
+      "hpMin": 420,
+      "hpMax": 420,
+      "hpIsRecommendation": true
     },
     "releasedDate": "31.03.2025",
     "dependencies": [],
@@ -84469,8 +84625,8 @@
     "changelog": [],
     "techData": {
       "price": 82119,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 164,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -84480,7 +84636,10 @@
       "priceMin": 82119,
       "priceMax": 82119,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 164,
+      "hpMax": 164,
+      "hpIsRecommendation": true
     },
     "releasedDate": "03.04.2025",
     "dependencies": [],
@@ -86047,8 +86206,8 @@
     "changelog": [],
     "techData": {
       "price": 66000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -86058,7 +86217,10 @@
       "priceMin": 66000,
       "priceMax": 66000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "26.11.2025",
     "dependencies": [],
@@ -86196,8 +86358,8 @@
     "changelog": [],
     "techData": {
       "price": 1000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 300,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -86205,7 +86367,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 1000,
-      "priceMax": 1000
+      "priceMax": 1000,
+      "hpMin": 300,
+      "hpMax": 300,
+      "hpIsRecommendation": true
     },
     "releasedDate": "28.03.2025",
     "dependencies": [],
@@ -89510,8 +89675,8 @@
     "changelog": [],
     "techData": {
       "price": 8400,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 90,
+      "hpIsRequirement": true,
       "capacity": 2000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -89521,7 +89686,10 @@
       "priceMin": 8400,
       "priceMax": 8400,
       "capacityMin": 1500,
-      "capacityMax": 2000
+      "capacityMax": 2000,
+      "hpMin": 90,
+      "hpMax": 90,
+      "hpIsRecommendation": true
     },
     "releasedDate": "10.04.2025",
     "dependencies": [],
@@ -94554,8 +94722,8 @@
     "changelog": [],
     "techData": {
       "price": 20000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 110,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -94565,7 +94733,10 @@
       "priceMin": 20000,
       "priceMax": 20000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 110,
+      "hpMax": 110,
+      "hpIsRecommendation": true
     },
     "releasedDate": "24.04.2025",
     "dependencies": [],
@@ -96782,8 +96953,8 @@
     "changelog": [],
     "techData": {
       "price": 18000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 4000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -96793,7 +96964,10 @@
       "priceMin": 100,
       "priceMax": 18000,
       "capacityMin": 4000,
-      "capacityMax": 4000
+      "capacityMax": 4000,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "27.03.2025",
     "dependencies": [],
@@ -97670,8 +97844,8 @@
     "changelog": [],
     "techData": {
       "price": 0,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 10,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -97679,7 +97853,10 @@
       "weight": 0,
       "scraped": true,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 10,
+      "hpMax": 10,
+      "hpIsRecommendation": true
     },
     "releasedDate": "13.06.2025",
     "dependencies": [
@@ -102567,8 +102744,8 @@
     "changelog": [],
     "techData": {
       "price": 26500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 540,
+      "hpIsRequirement": true,
       "capacity": 1800,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -102578,7 +102755,10 @@
       "priceMin": 4500,
       "priceMax": 26500,
       "capacityMin": 1100,
-      "capacityMax": 1800
+      "capacityMax": 1800,
+      "hpMin": 540,
+      "hpMax": 540,
+      "hpIsRecommendation": true
     },
     "releasedDate": "02.05.2025",
     "dependencies": [],
@@ -106970,8 +107150,8 @@
     "changelog": [],
     "techData": {
       "price": 3250,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 240,
+      "hpIsRequirement": true,
       "capacity": 6000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -106981,7 +107161,10 @@
       "priceMin": 3250,
       "priceMax": 3250,
       "capacityMin": 6000,
-      "capacityMax": 6000
+      "capacityMax": 6000,
+      "hpMin": 240,
+      "hpMax": 240,
+      "hpIsRecommendation": true
     },
     "releasedDate": "28.11.2025",
     "dependencies": [],
@@ -109484,8 +109667,8 @@
     "changelog": [],
     "techData": {
       "price": 57000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 114,
+      "hpIsRequirement": true,
       "capacity": 4000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -109495,7 +109678,10 @@
       "priceMin": 57000,
       "priceMax": 57000,
       "capacityMin": 4000,
-      "capacityMax": 4000
+      "capacityMax": 4000,
+      "hpMin": 114,
+      "hpMax": 114,
+      "hpIsRecommendation": true
     },
     "releasedDate": "14.05.2026",
     "dependencies": [],
@@ -113025,8 +113211,8 @@
     "changelog": [],
     "techData": {
       "price": 66500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 540,
+      "hpIsRequirement": true,
       "capacity": 4600,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -113036,7 +113222,10 @@
       "priceMin": 66500,
       "priceMax": 66500,
       "capacityMin": 4600,
-      "capacityMax": 4600
+      "capacityMax": 4600,
+      "hpMin": 540,
+      "hpMax": 540,
+      "hpIsRecommendation": true
     },
     "releasedDate": "06.06.2025",
     "dependencies": [],
@@ -113743,8 +113932,8 @@
     "changelog": [],
     "techData": {
       "price": 4000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 60,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -113752,7 +113941,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 4000,
-      "priceMax": 4000
+      "priceMax": 4000,
+      "hpMin": 60,
+      "hpMax": 60,
+      "hpIsRecommendation": true
     },
     "releasedDate": "28.05.2025",
     "dependencies": [],
@@ -114130,8 +114322,8 @@
     "changelog": [],
     "techData": {
       "price": 3200,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 2000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -114141,7 +114333,10 @@
       "priceMin": 800,
       "priceMax": 3200,
       "capacityMin": 500,
-      "capacityMax": 2000
+      "capacityMax": 2000,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "23.05.2025",
     "dependencies": [],
@@ -115207,8 +115402,8 @@
     "changelog": [],
     "techData": {
       "price": 5000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 880,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -115218,7 +115413,10 @@
       "priceMin": 5000,
       "priceMax": 5000,
       "capacityMin": 880,
-      "capacityMax": 880
+      "capacityMax": 880,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "16.05.2025",
     "dependencies": [],
@@ -116815,8 +117013,8 @@
     "changelog": [],
     "techData": {
       "price": 165000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 330,
+      "hpIsRequirement": true,
       "capacity": 13500,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -116826,7 +117024,10 @@
       "priceMin": 165000,
       "priceMax": 165000,
       "capacityMin": 13500,
-      "capacityMax": 13500
+      "capacityMax": 13500,
+      "hpMin": 330,
+      "hpMax": 330,
+      "hpIsRecommendation": true
     },
     "releasedDate": "02.09.2025",
     "dependencies": [],
@@ -117010,8 +117211,8 @@
     "changelog": [],
     "techData": {
       "price": 71500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 143,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -117021,7 +117222,10 @@
       "priceMin": 51500,
       "priceMax": 71500,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 143,
+      "hpMax": 143,
+      "hpIsRecommendation": true
     },
     "releasedDate": "02.09.2025",
     "dependencies": [],
@@ -117749,8 +117953,8 @@
     "changelog": [],
     "techData": {
       "price": 104000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -117758,7 +117962,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 69500,
-      "priceMax": 104000
+      "priceMax": 104000,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "02.04.2026",
     "dependencies": [],
@@ -120747,8 +120954,8 @@
     "changelog": [],
     "techData": {
       "price": 47000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 94,
+      "hpIsRequirement": true,
       "capacity": 21000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -120758,7 +120965,10 @@
       "priceMin": 47000,
       "priceMax": 47000,
       "capacityMin": 21000,
-      "capacityMax": 21000
+      "capacityMax": 21000,
+      "hpMin": 94,
+      "hpMax": 94,
+      "hpIsRecommendation": true
     },
     "releasedDate": "04.06.2025",
     "dependencies": [],
@@ -121631,8 +121841,8 @@
     "changelog": [],
     "techData": {
       "price": 7620,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 500,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -121642,7 +121852,10 @@
       "priceMin": 5295,
       "priceMax": 7620,
       "capacityMin": 120,
-      "capacityMax": 500
+      "capacityMax": 500,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "13.06.2025",
     "dependencies": [],
@@ -121679,14 +121892,17 @@
     "changelog": [],
     "techData": {
       "price": 0,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 10,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
       "weight": 0,
-      "scraped": true
+      "scraped": true,
+      "hpMin": 10,
+      "hpMax": 10,
+      "hpIsRecommendation": true
     },
     "releasedDate": "16.06.2025",
     "dependencies": [
@@ -124222,8 +124438,8 @@
     "changelog": [],
     "techData": {
       "price": 32450,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 65,
+      "hpIsRequirement": true,
       "capacity": 9200,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -124233,7 +124449,10 @@
       "priceMin": 32450,
       "priceMax": 32450,
       "capacityMin": 9200,
-      "capacityMax": 9200
+      "capacityMax": 9200,
+      "hpMin": 65,
+      "hpMax": 65,
+      "hpIsRecommendation": true
     },
     "releasedDate": "12.08.2025",
     "dependencies": [],
@@ -124373,8 +124592,8 @@
     "changelog": [],
     "techData": {
       "price": 5000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 126,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -124384,7 +124603,10 @@
       "priceMin": 5000,
       "priceMax": 5000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 126,
+      "hpMax": 126,
+      "hpIsRecommendation": true
     },
     "releasedDate": "03.07.2025",
     "dependencies": [],
@@ -124469,8 +124691,8 @@
     "changelog": [],
     "techData": {
       "price": 46000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 450,
+      "hpIsRequirement": true,
       "capacity": 16500,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -124480,7 +124702,10 @@
       "priceMin": 46000,
       "priceMax": 46000,
       "capacityMin": 16500,
-      "capacityMax": 16500
+      "capacityMax": 16500,
+      "hpMin": 450,
+      "hpMax": 450,
+      "hpIsRecommendation": true
     },
     "releasedDate": "07.07.2025",
     "dependencies": [],
@@ -130424,8 +130649,8 @@
     "changelog": [],
     "techData": {
       "price": 6000060,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -130435,7 +130660,10 @@
       "priceMin": 50,
       "priceMax": 6000060,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "17.09.2025",
     "dependencies": [],
@@ -132580,8 +132808,8 @@
     "changelog": [],
     "techData": {
       "price": 3200,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 2800,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -132591,7 +132819,10 @@
       "priceMin": 3200,
       "priceMax": 3200,
       "capacityMin": 2800,
-      "capacityMax": 2800
+      "capacityMax": 2800,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "10.07.2025",
     "dependencies": [],
@@ -133840,8 +134071,8 @@
     "changelog": [],
     "techData": {
       "price": 28000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 4000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -133851,7 +134082,10 @@
       "priceMin": 28000,
       "priceMax": 28000,
       "capacityMin": 4000,
-      "capacityMax": 4000
+      "capacityMax": 4000,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "25.06.2025",
     "dependencies": [],
@@ -134732,8 +134966,8 @@
     "changelog": [],
     "techData": {
       "price": 7500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 540,
+      "hpIsRequirement": true,
       "capacity": 5000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -134743,7 +134977,10 @@
       "priceMin": 7500,
       "priceMax": 7500,
       "capacityMin": 5000,
-      "capacityMax": 5000
+      "capacityMax": 5000,
+      "hpMin": 540,
+      "hpMax": 540,
+      "hpIsRecommendation": true
     },
     "releasedDate": "11.06.2025",
     "dependencies": [],
@@ -135867,8 +136104,8 @@
     "changelog": [],
     "techData": {
       "price": 89500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 179,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -135876,7 +136113,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 89500,
-      "priceMax": 89500
+      "priceMax": 89500,
+      "hpMin": 179,
+      "hpMax": 179,
+      "hpIsRecommendation": true
     },
     "releasedDate": "23.06.2025",
     "dependencies": [],
@@ -136846,8 +137086,8 @@
     "changelog": [],
     "techData": {
       "price": 104000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 540,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -136855,7 +137095,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 62000,
-      "priceMax": 104000
+      "priceMax": 104000,
+      "hpMin": 540,
+      "hpMax": 540,
+      "hpIsRecommendation": true
     },
     "releasedDate": "25.08.2026",
     "dependencies": [],
@@ -136987,8 +137230,8 @@
     "changelog": [],
     "techData": {
       "price": 2000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 560,
+      "hpIsRequirement": true,
       "capacity": 850,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -136998,7 +137241,10 @@
       "priceMin": 2000,
       "priceMax": 2000,
       "capacityMin": 850,
-      "capacityMax": 850
+      "capacityMax": 850,
+      "hpMin": 560,
+      "hpMax": 560,
+      "hpIsRecommendation": true
     },
     "releasedDate": "24.06.2025",
     "dependencies": [],
@@ -137233,8 +137479,8 @@
     "changelog": [],
     "techData": {
       "price": 45800,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 92,
+      "hpIsRequirement": true,
       "capacity": 4000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -137244,7 +137490,10 @@
       "priceMin": 45800,
       "priceMax": 45800,
       "capacityMin": 500,
-      "capacityMax": 4000
+      "capacityMax": 4000,
+      "hpMin": 92,
+      "hpMax": 92,
+      "hpIsRecommendation": true
     },
     "releasedDate": "25.06.2025",
     "dependencies": [],
@@ -137768,8 +138017,8 @@
     "changelog": [],
     "techData": {
       "price": 69500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 206,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -137779,7 +138028,10 @@
       "priceMin": 32500,
       "priceMax": 69500,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 206,
+      "hpMax": 206,
+      "hpIsRecommendation": true
     },
     "releasedDate": "11.06.2025",
     "dependencies": [],
@@ -138747,8 +138999,8 @@
     "changelog": [],
     "techData": {
       "price": 25100,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 3200,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -138758,7 +139010,10 @@
       "priceMin": 25100,
       "priceMax": 25100,
       "capacityMin": 3200,
-      "capacityMax": 3200
+      "capacityMax": 3200,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "10.07.2025",
     "dependencies": [],
@@ -138849,8 +139104,8 @@
     "changelog": [],
     "techData": {
       "price": 5000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 450,
+      "hpIsRequirement": true,
       "capacity": 1300,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -138860,7 +139115,10 @@
       "priceMin": 1200,
       "priceMax": 5000,
       "capacityMin": 1300,
-      "capacityMax": 1300
+      "capacityMax": 1300,
+      "hpMin": 450,
+      "hpMax": 450,
+      "hpIsRecommendation": true
     },
     "releasedDate": "22.08.2025",
     "dependencies": [],
@@ -139041,8 +139299,8 @@
     "changelog": [],
     "techData": {
       "price": 5500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 270,
+      "hpIsRequirement": true,
       "capacity": 1400,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -139052,7 +139310,10 @@
       "priceMin": 4000,
       "priceMax": 5500,
       "capacityMin": 700,
-      "capacityMax": 1400
+      "capacityMax": 1400,
+      "hpMin": 270,
+      "hpMax": 270,
+      "hpIsRecommendation": true
     },
     "releasedDate": "30.06.2025",
     "dependencies": [],
@@ -140701,8 +140962,8 @@
     "changelog": [],
     "techData": {
       "price": 2845,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -140712,7 +140973,10 @@
       "priceMin": 2845,
       "priceMax": 2845,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "09.06.2026",
     "dependencies": [],
@@ -143142,8 +143406,8 @@
     "changelog": [],
     "techData": {
       "price": 85000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 170,
+      "hpIsRequirement": true,
       "capacity": 30000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -143153,7 +143417,10 @@
       "priceMin": 85000,
       "priceMax": 85000,
       "capacityMin": 30000,
-      "capacityMax": 30000
+      "capacityMax": 30000,
+      "hpMin": 170,
+      "hpMax": 170,
+      "hpIsRecommendation": true
     },
     "releasedDate": "04.07.2025",
     "dependencies": [],
@@ -150477,8 +150744,8 @@
     "changelog": [],
     "techData": {
       "price": 86500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -150488,7 +150755,10 @@
       "priceMin": 46500,
       "priceMax": 86500,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "25.07.2025",
     "dependencies": [],
@@ -151612,8 +151882,8 @@
     "changelog": [],
     "techData": {
       "price": 0,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 330,
+      "hpIsRequirement": true,
       "capacity": 3200000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -151621,7 +151891,10 @@
       "weight": 0,
       "scraped": true,
       "capacityMin": 1600000,
-      "capacityMax": 3200000
+      "capacityMax": 3200000,
+      "hpMin": 330,
+      "hpMax": 330,
+      "hpIsRecommendation": true
     },
     "releasedDate": "11.09.2025",
     "dependencies": [],
@@ -151806,8 +152079,8 @@
     "changelog": [],
     "techData": {
       "price": 1200,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 240,
+      "hpIsRequirement": true,
       "capacity": 350,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -151817,7 +152090,10 @@
       "priceMin": 1200,
       "priceMax": 1200,
       "capacityMin": 350,
-      "capacityMax": 350
+      "capacityMax": 350,
+      "hpMin": 240,
+      "hpMax": 240,
+      "hpIsRecommendation": true
     },
     "releasedDate": "15.07.2025",
     "dependencies": [],
@@ -156381,8 +156657,8 @@
     "changelog": [],
     "techData": {
       "price": 35000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 2200,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -156392,7 +156668,10 @@
       "priceMin": 35000,
       "priceMax": 35000,
       "capacityMin": 2200,
-      "capacityMax": 2200
+      "capacityMax": 2200,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "19.06.2026",
     "dependencies": [],
@@ -158357,8 +158636,8 @@
     "changelog": [],
     "techData": {
       "price": 0,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 10,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -158366,7 +158645,10 @@
       "weight": 0,
       "scraped": true,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 10,
+      "hpMax": 10,
+      "hpIsRecommendation": false
     },
     "releasedDate": "22.07.2025",
     "dependencies": [],
@@ -162379,8 +162661,8 @@
     "changelog": [],
     "techData": {
       "price": 45550,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 91,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -162390,7 +162672,10 @@
       "priceMin": 45550,
       "priceMax": 45550,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 91,
+      "hpMax": 91,
+      "hpIsRecommendation": true
     },
     "releasedDate": "08.09.2025",
     "dependencies": [],
@@ -166455,8 +166740,8 @@
     "changelog": [],
     "techData": {
       "price": 25000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 50,
+      "hpIsRequirement": true,
       "capacity": 50000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -166466,7 +166751,10 @@
       "priceMin": 25000,
       "priceMax": 25000,
       "capacityMin": 6000,
-      "capacityMax": 50000
+      "capacityMax": 50000,
+      "hpMin": 50,
+      "hpMax": 50,
+      "hpIsRecommendation": true
     },
     "releasedDate": "01.10.2025",
     "dependencies": [],
@@ -166845,8 +167133,8 @@
     "changelog": [],
     "techData": {
       "price": 19850,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 270,
+      "hpIsRequirement": true,
       "capacity": 220,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -166856,7 +167144,10 @@
       "priceMin": 6350,
       "priceMax": 19850,
       "capacityMin": 220,
-      "capacityMax": 220
+      "capacityMax": 220,
+      "hpMin": 270,
+      "hpMax": 270,
+      "hpIsRecommendation": true
     },
     "releasedDate": "20.08.2025",
     "dependencies": [],
@@ -168997,8 +169288,8 @@
     "changelog": [],
     "techData": {
       "price": 57500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 100000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -169008,7 +169299,10 @@
       "priceMin": 57500,
       "priceMax": 57500,
       "capacityMin": 4500,
-      "capacityMax": 100000
+      "capacityMax": 100000,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "13.08.2025",
     "dependencies": [],
@@ -169984,8 +170278,8 @@
     "changelog": [],
     "techData": {
       "price": 13000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 135,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -169993,7 +170287,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 13000,
-      "priceMax": 13000
+      "priceMax": 13000,
+      "hpMin": 135,
+      "hpMax": 135,
+      "hpIsRecommendation": true
     },
     "releasedDate": "09.09.2025",
     "dependencies": [],
@@ -174019,8 +174316,8 @@
     "changelog": [],
     "techData": {
       "price": 2000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -174028,7 +174325,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 2000,
-      "priceMax": 2000
+      "priceMax": 2000,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "15.09.2025",
     "dependencies": [],
@@ -174066,8 +174366,8 @@
     "changelog": [],
     "techData": {
       "price": 58000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 234,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -174077,7 +174377,10 @@
       "priceMin": 58000,
       "priceMax": 58000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 234,
+      "hpMax": 234,
+      "hpIsRecommendation": true
     },
     "releasedDate": "04.09.2025",
     "dependencies": [],
@@ -174516,8 +174819,8 @@
     "changelog": [],
     "techData": {
       "price": 112000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 224,
+      "hpIsRequirement": true,
       "capacity": 17500,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -174527,7 +174830,10 @@
       "priceMin": 112000,
       "priceMax": 112000,
       "capacityMin": 17500,
-      "capacityMax": 17500
+      "capacityMax": 17500,
+      "hpMin": 224,
+      "hpMax": 224,
+      "hpIsRecommendation": true
     },
     "releasedDate": "02.09.2025",
     "dependencies": [],
@@ -174913,8 +175219,8 @@
     "changelog": [],
     "techData": {
       "price": 2500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 90,
+      "hpIsRequirement": true,
       "capacity": 900,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -174924,7 +175230,10 @@
       "priceMin": 2500,
       "priceMax": 2500,
       "capacityMin": 900,
-      "capacityMax": 900
+      "capacityMax": 900,
+      "hpMin": 90,
+      "hpMax": 90,
+      "hpIsRecommendation": true
     },
     "releasedDate": "19.09.2025",
     "dependencies": [],
@@ -174963,8 +175272,8 @@
     "changelog": [],
     "techData": {
       "price": 2500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 90,
+      "hpIsRequirement": true,
       "capacity": 900,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -174974,7 +175283,10 @@
       "priceMin": 2500,
       "priceMax": 2500,
       "capacityMin": 900,
-      "capacityMax": 900
+      "capacityMax": 900,
+      "hpMin": 90,
+      "hpMax": 90,
+      "hpIsRecommendation": true
     },
     "releasedDate": "22.09.2025",
     "dependencies": [],
@@ -177107,8 +177419,8 @@
     "changelog": [],
     "techData": {
       "price": 4530,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -177116,7 +177428,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 4530,
-      "priceMax": 4530
+      "priceMax": 4530,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "19.08.2025",
     "dependencies": [],
@@ -180591,8 +180906,8 @@
     "changelog": [],
     "techData": {
       "price": 8500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 90,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -180602,7 +180917,10 @@
       "priceMin": 8500,
       "priceMax": 8500,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 90,
+      "hpMax": 90,
+      "hpIsRecommendation": true
     },
     "releasedDate": "19.08.2025",
     "dependencies": [],
@@ -184858,8 +185176,8 @@
     "changelog": [],
     "techData": {
       "price": 700,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 240,
+      "hpIsRequirement": true,
       "capacity": 400,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -184869,7 +185187,10 @@
       "priceMin": 700,
       "priceMax": 700,
       "capacityMin": 400,
-      "capacityMax": 400
+      "capacityMax": 400,
+      "hpMin": 240,
+      "hpMax": 240,
+      "hpIsRecommendation": true
     },
     "releasedDate": "21.10.2025",
     "dependencies": [],
@@ -185005,8 +185326,8 @@
     "changelog": [],
     "techData": {
       "price": 5800,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 7,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -185016,7 +185337,10 @@
       "priceMin": 5800,
       "priceMax": 5800,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 7,
+      "hpMax": 7,
+      "hpIsRecommendation": false
     },
     "releasedDate": "05.11.2025",
     "dependencies": [],
@@ -185055,8 +185379,8 @@
     "changelog": [],
     "techData": {
       "price": 5800,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 7,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -185066,7 +185390,10 @@
       "priceMin": 5800,
       "priceMax": 5800,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 7,
+      "hpMax": 7,
+      "hpIsRecommendation": false
     },
     "releasedDate": "06.11.2025",
     "dependencies": [],
@@ -186634,8 +186961,8 @@
     "changelog": [],
     "techData": {
       "price": 81850,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 13,
+      "hpIsRequirement": true,
       "capacity": 28300,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -186645,7 +186972,10 @@
       "priceMin": 260,
       "priceMax": 81850,
       "capacityMin": 200,
-      "capacityMax": 28300
+      "capacityMax": 28300,
+      "hpMin": 13,
+      "hpMax": 13,
+      "hpIsRecommendation": false
     },
     "releasedDate": "16.10.2025",
     "dependencies": [],
@@ -190112,8 +190442,8 @@
     "changelog": [],
     "techData": {
       "price": 4000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -190121,7 +190451,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 2500,
-      "priceMax": 4000
+      "priceMax": 4000,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "17.12.2025",
     "dependencies": [],
@@ -194558,8 +194891,8 @@
     "changelog": [],
     "techData": {
       "price": 6900,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 126,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -194569,7 +194902,10 @@
       "priceMin": 6900,
       "priceMax": 6900,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 126,
+      "hpMax": 126,
+      "hpIsRecommendation": true
     },
     "releasedDate": "04.12.2025",
     "dependencies": [
@@ -197015,8 +197351,8 @@
     "changelog": [],
     "techData": {
       "price": 300000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -197026,7 +197362,10 @@
       "priceMin": 150000,
       "priceMax": 300000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "10.04.2026",
     "dependencies": [],
@@ -199651,8 +199990,8 @@
     "changelog": [],
     "techData": {
       "price": 1000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 10,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -199662,7 +200001,10 @@
       "priceMin": 1000,
       "priceMax": 1000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 10,
+      "hpMax": 10,
+      "hpIsRecommendation": false
     },
     "releasedDate": "19.12.2025",
     "dependencies": [
@@ -201720,8 +202062,8 @@
     "changelog": [],
     "techData": {
       "price": 13000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 360,
+      "hpIsRequirement": true,
       "capacity": 1210,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -201731,7 +202073,10 @@
       "priceMin": 7500,
       "priceMax": 13000,
       "capacityMin": 610,
-      "capacityMax": 1210
+      "capacityMax": 1210,
+      "hpMin": 360,
+      "hpMax": 360,
+      "hpIsRecommendation": true
     },
     "releasedDate": "17.12.2025",
     "dependencies": [],
@@ -202405,8 +202750,8 @@
     "changelog": [],
     "techData": {
       "price": 2300,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 360,
+      "hpIsRequirement": true,
       "capacity": 330,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -202416,7 +202761,10 @@
       "priceMin": 2300,
       "priceMax": 2300,
       "capacityMin": 330,
-      "capacityMax": 330
+      "capacityMax": 330,
+      "hpMin": 360,
+      "hpMax": 360,
+      "hpIsRecommendation": true
     },
     "releasedDate": "23.10.2025",
     "dependencies": [],
@@ -203466,8 +203814,8 @@
     "changelog": [],
     "techData": {
       "price": 11500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 23,
+      "hpIsRequirement": true,
       "capacity": 4860,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -203477,7 +203825,10 @@
       "priceMin": 11500,
       "priceMax": 11500,
       "capacityMin": 4860,
-      "capacityMax": 4860
+      "capacityMax": 4860,
+      "hpMin": 23,
+      "hpMax": 23,
+      "hpIsRecommendation": true
     },
     "releasedDate": "16.01.2026",
     "dependencies": [],
@@ -204704,8 +205055,8 @@
     "changelog": [],
     "techData": {
       "price": 60000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 120,
+      "hpIsRequirement": true,
       "capacity": 60000,
       "unitCapacity": 60,
       "unitCapacityType": "cows",
@@ -204715,7 +205066,10 @@
       "priceMin": 5000,
       "priceMax": 60000,
       "capacityMin": 60000,
-      "capacityMax": 60000
+      "capacityMax": 60000,
+      "hpMin": 120,
+      "hpMax": 120,
+      "hpIsRecommendation": true
     },
     "releasedDate": "17.06.2026",
     "dependencies": [],
@@ -206933,8 +207287,8 @@
     "changelog": [],
     "techData": {
       "price": 60000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 120,
+      "hpIsRequirement": true,
       "capacity": 1000000,
       "unitCapacity": 400,
       "unitCapacityType": "pigs",
@@ -206944,7 +207298,10 @@
       "priceMin": 100,
       "priceMax": 60000,
       "capacityMin": 50000,
-      "capacityMax": 1000000
+      "capacityMax": 1000000,
+      "hpMin": 120,
+      "hpMax": 120,
+      "hpIsRecommendation": true
     },
     "releasedDate": "05.12.2025",
     "dependencies": [],
@@ -214334,8 +214691,8 @@
     "changelog": [],
     "techData": {
       "price": 11500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 23,
+      "hpIsRequirement": true,
       "capacity": 4860,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -214345,7 +214702,10 @@
       "priceMin": 11500,
       "priceMax": 11500,
       "capacityMin": 4860,
-      "capacityMax": 4860
+      "capacityMax": 4860,
+      "hpMin": 23,
+      "hpMax": 23,
+      "hpIsRecommendation": true
     },
     "releasedDate": "15.01.2026",
     "dependencies": [],
@@ -215731,8 +216091,8 @@
     "changelog": [],
     "techData": {
       "price": 76000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 15600,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -215742,7 +216102,10 @@
       "priceMin": 76000,
       "priceMax": 76000,
       "capacityMin": 15600,
-      "capacityMax": 15600
+      "capacityMax": 15600,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "06.11.2025",
     "dependencies": [],
@@ -217512,8 +217875,8 @@
     "changelog": [],
     "techData": {
       "price": 56000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 112,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -217521,7 +217884,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 56000,
-      "priceMax": 56000
+      "priceMax": 56000,
+      "hpMin": 112,
+      "hpMax": 112,
+      "hpIsRecommendation": true
     },
     "releasedDate": "04.02.2026",
     "dependencies": [],
@@ -218223,8 +218589,8 @@
     "changelog": [],
     "techData": {
       "price": 300500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 400000,
       "unitCapacity": 140,
       "unitCapacityType": "cows",
@@ -218234,7 +218600,10 @@
       "priceMin": 120,
       "priceMax": 300500,
       "capacityMin": 60000,
-      "capacityMax": 400000
+      "capacityMax": 400000,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "10.12.2025",
     "dependencies": [],
@@ -219475,8 +219844,8 @@
     "changelog": [],
     "techData": {
       "price": 6300,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 420,
+      "hpIsRequirement": true,
       "capacity": 700,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -219486,7 +219855,10 @@
       "priceMin": 6300,
       "priceMax": 6300,
       "capacityMin": 700,
-      "capacityMax": 700
+      "capacityMax": 700,
+      "hpMin": 420,
+      "hpMax": 420,
+      "hpIsRecommendation": true
     },
     "releasedDate": "01.12.2025",
     "dependencies": [],
@@ -219926,8 +220298,8 @@
     "changelog": [],
     "techData": {
       "price": 72977,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 3200,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -219937,7 +220309,10 @@
       "priceMin": 72977,
       "priceMax": 72977,
       "capacityMin": 3200,
-      "capacityMax": 3200
+      "capacityMax": 3200,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "08.05.2026",
     "dependencies": [],
@@ -222540,8 +222915,8 @@
     "changelog": [],
     "techData": {
       "price": 66000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 4600,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -222551,7 +222926,10 @@
       "priceMin": 66000,
       "priceMax": 66000,
       "capacityMin": 4600,
-      "capacityMax": 4600
+      "capacityMax": 4600,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "04.12.2025",
     "dependencies": [],
@@ -227101,8 +227479,8 @@
     "changelog": [],
     "techData": {
       "price": 4900,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 40,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -227112,7 +227490,10 @@
       "priceMin": 4900,
       "priceMax": 4900,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 40,
+      "hpMax": 40,
+      "hpIsRecommendation": true
     },
     "releasedDate": "14.01.2026",
     "dependencies": [],
@@ -229682,8 +230063,8 @@
     "changelog": [],
     "techData": {
       "price": 13000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 360,
+      "hpIsRequirement": true,
       "capacity": 1210,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -229693,7 +230074,10 @@
       "priceMin": 7500,
       "priceMax": 13000,
       "capacityMin": 610,
-      "capacityMax": 1210
+      "capacityMax": 1210,
+      "hpMin": 360,
+      "hpMax": 360,
+      "hpIsRecommendation": true
     },
     "releasedDate": "07.01.2026",
     "dependencies": [],
@@ -232488,8 +232872,8 @@
     "changelog": [],
     "techData": {
       "price": 84000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 4380,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -232499,7 +232883,10 @@
       "priceMin": 8000,
       "priceMax": 84000,
       "capacityMin": 1300,
-      "capacityMax": 4380
+      "capacityMax": 4380,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "14.05.2026",
     "dependencies": [],
@@ -232538,8 +232925,8 @@
     "changelog": [],
     "techData": {
       "price": 850,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 60,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -232549,7 +232936,10 @@
       "priceMin": 850,
       "priceMax": 850,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 60,
+      "hpMax": 60,
+      "hpIsRecommendation": true
     },
     "releasedDate": "12.01.2026",
     "dependencies": [],
@@ -235835,8 +236225,8 @@
     "changelog": [],
     "techData": {
       "price": 19500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 96,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -235846,7 +236236,10 @@
       "priceMin": 19500,
       "priceMax": 19500,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 96,
+      "hpMax": 96,
+      "hpIsRecommendation": true
     },
     "releasedDate": "30.01.2026",
     "dependencies": [],
@@ -237796,8 +238189,8 @@
     "changelog": [],
     "techData": {
       "price": 2722,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 20,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -237807,7 +238200,10 @@
       "priceMin": 2722,
       "priceMax": 2722,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 20,
+      "hpMax": 20,
+      "hpIsRecommendation": true
     },
     "releasedDate": "06.03.2026",
     "dependencies": [],
@@ -241340,8 +241736,8 @@
     "changelog": [],
     "techData": {
       "price": 1200,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -241351,7 +241747,10 @@
       "priceMin": 1200,
       "priceMax": 1200,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": false
     },
     "releasedDate": "03.03.2026",
     "dependencies": [],
@@ -242256,8 +242655,8 @@
     "changelog": [],
     "techData": {
       "price": 300000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 1000000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -242267,7 +242666,10 @@
       "priceMin": 300000,
       "priceMax": 300000,
       "capacityMin": 6050,
-      "capacityMax": 1000000
+      "capacityMax": 1000000,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "11.03.2026",
     "dependencies": [],
@@ -242307,8 +242709,8 @@
     "changelog": [],
     "techData": {
       "price": 4473,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 20,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -242318,7 +242720,10 @@
       "priceMin": 4473,
       "priceMax": 4473,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 20,
+      "hpMax": 20,
+      "hpIsRecommendation": true
     },
     "releasedDate": "06.03.2026",
     "dependencies": [],
@@ -242697,8 +243102,8 @@
     "changelog": [],
     "techData": {
       "price": 4500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 144,
+      "hpIsRequirement": true,
       "capacity": 250,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -242708,7 +243113,10 @@
       "priceMin": 4500,
       "priceMax": 4500,
       "capacityMin": 250,
-      "capacityMax": 250
+      "capacityMax": 250,
+      "hpMin": 144,
+      "hpMax": 144,
+      "hpIsRecommendation": true
     },
     "releasedDate": "05.02.2026",
     "dependencies": [],
@@ -242807,8 +243215,8 @@
     "changelog": [],
     "techData": {
       "price": 6900,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 20,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -242818,7 +243226,10 @@
       "priceMin": 6900,
       "priceMax": 6900,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 20,
+      "hpMax": 20,
+      "hpIsRecommendation": true
     },
     "releasedDate": "06.03.2026",
     "dependencies": [],
@@ -244524,8 +244935,8 @@
     "changelog": [],
     "techData": {
       "price": 15000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 450,
+      "hpIsRequirement": true,
       "capacity": 2600,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -244535,7 +244946,10 @@
       "priceMin": 15000,
       "priceMax": 15000,
       "capacityMin": 1700,
-      "capacityMax": 2600
+      "capacityMax": 2600,
+      "hpMin": 450,
+      "hpMax": 450,
+      "hpIsRecommendation": true
     },
     "releasedDate": "05.02.2026",
     "dependencies": [],
@@ -246924,8 +247338,8 @@
     "changelog": [],
     "techData": {
       "price": 7000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -246935,7 +247349,10 @@
       "priceMin": 7000,
       "priceMax": 7000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "16.02.2026",
     "dependencies": [],
@@ -248010,8 +248427,8 @@
     "changelog": [],
     "techData": {
       "price": 149500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 40000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -248021,7 +248438,10 @@
       "priceMin": 149500,
       "priceMax": 149500,
       "capacityMin": 30300,
-      "capacityMax": 40000
+      "capacityMax": 40000,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "26.01.2026",
     "dependencies": [],
@@ -248898,8 +249318,8 @@
     "changelog": [],
     "techData": {
       "price": 600,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 10,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -248909,7 +249329,10 @@
       "priceMin": 600,
       "priceMax": 600,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 10,
+      "hpMax": 10,
+      "hpIsRecommendation": false
     },
     "releasedDate": "09.03.2026",
     "dependencies": [],
@@ -251095,8 +251518,8 @@
     "changelog": [],
     "techData": {
       "price": 450,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 20,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -251106,7 +251529,10 @@
       "priceMin": 450,
       "priceMax": 450,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 20,
+      "hpMax": 20,
+      "hpIsRecommendation": true
     },
     "releasedDate": "17.02.2026",
     "dependencies": [],
@@ -251342,8 +251768,8 @@
     "changelog": [],
     "techData": {
       "price": 189500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 40000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -251353,7 +251779,10 @@
       "priceMin": 189500,
       "priceMax": 189500,
       "capacityMin": 28000,
-      "capacityMax": 40000
+      "capacityMax": 40000,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "24.03.2026",
     "dependencies": [],
@@ -252661,8 +253090,8 @@
     "changelog": [],
     "techData": {
       "price": 16230,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 84,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -252670,7 +253099,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 10100,
-      "priceMax": 16230
+      "priceMax": 16230,
+      "hpMin": 84,
+      "hpMax": 84,
+      "hpIsRecommendation": true
     },
     "releasedDate": "02.03.2026",
     "dependencies": [],
@@ -262454,8 +262886,8 @@
     "changelog": [],
     "techData": {
       "price": 45000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 90,
+      "hpIsRequirement": true,
       "capacity": 13000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -262465,7 +262897,10 @@
       "priceMin": 30000,
       "priceMax": 45000,
       "capacityMin": 10000,
-      "capacityMax": 13000
+      "capacityMax": 13000,
+      "hpMin": 90,
+      "hpMax": 90,
+      "hpIsRecommendation": true
     },
     "releasedDate": "17.06.2026",
     "dependencies": [],
@@ -263331,8 +263766,8 @@
     "changelog": [],
     "techData": {
       "price": 600,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -263342,7 +263777,10 @@
       "priceMin": 600,
       "priceMax": 600,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": false
     },
     "releasedDate": "25.03.2026",
     "dependencies": [],
@@ -263569,8 +264007,8 @@
     "changelog": [],
     "techData": {
       "price": 1200,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -263580,7 +264018,10 @@
       "priceMin": 1200,
       "priceMax": 1200,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": false
     },
     "releasedDate": "26.03.2026",
     "dependencies": [],
@@ -264248,8 +264689,8 @@
     "changelog": [],
     "techData": {
       "price": 95500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 191,
+      "hpIsRequirement": true,
       "capacity": 30000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -264259,7 +264700,10 @@
       "priceMin": 18500,
       "priceMax": 95500,
       "capacityMin": 30000,
-      "capacityMax": 30000
+      "capacityMax": 30000,
+      "hpMin": 191,
+      "hpMax": 191,
+      "hpIsRecommendation": true
     },
     "releasedDate": "27.03.2026",
     "dependencies": [],
@@ -266124,8 +266568,8 @@
     "changelog": [],
     "techData": {
       "price": 8500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 10,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -266133,7 +266577,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 8500,
-      "priceMax": 8500
+      "priceMax": 8500,
+      "hpMin": 10,
+      "hpMax": 10,
+      "hpIsRecommendation": false
     },
     "releasedDate": "16.03.2026",
     "dependencies": [],
@@ -276801,8 +277248,8 @@
     "changelog": [],
     "techData": {
       "price": 4000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 60,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -276810,7 +277257,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 4000,
-      "priceMax": 4000
+      "priceMax": 4000,
+      "hpMin": 60,
+      "hpMax": 60,
+      "hpIsRecommendation": true
     },
     "releasedDate": "21.04.2026",
     "dependencies": [],
@@ -277809,8 +278259,8 @@
     "changelog": [],
     "techData": {
       "price": 600,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -277820,7 +278270,10 @@
       "priceMin": 600,
       "priceMax": 600,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": false
     },
     "releasedDate": "09.04.2026",
     "dependencies": [],
@@ -278558,14 +279011,17 @@
     "changelog": [],
     "techData": {
       "price": 0,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 10,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
       "speed": 0,
       "weight": 0,
-      "scraped": true
+      "scraped": true,
+      "hpMin": 10,
+      "hpMax": 10,
+      "hpIsRecommendation": true
     },
     "releasedDate": "08.04.2026",
     "dependencies": [],
@@ -278605,8 +279061,8 @@
     "changelog": [],
     "techData": {
       "price": 7450,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 20,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -278616,7 +279072,10 @@
       "priceMin": 7450,
       "priceMax": 7450,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 20,
+      "hpMax": 20,
+      "hpIsRecommendation": true
     },
     "releasedDate": "09.04.2026",
     "dependencies": [],
@@ -280388,8 +280847,8 @@
     "changelog": [],
     "techData": {
       "price": 8500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 10,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -280397,7 +280856,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 8500,
-      "priceMax": 8500
+      "priceMax": 8500,
+      "hpMin": 10,
+      "hpMax": 10,
+      "hpIsRecommendation": false
     },
     "releasedDate": "21.04.2026",
     "dependencies": [],
@@ -281076,8 +281538,8 @@
     "changelog": [],
     "techData": {
       "price": 12500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 540,
+      "hpIsRequirement": true,
       "capacity": 2000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -281087,7 +281549,10 @@
       "priceMin": 12500,
       "priceMax": 12500,
       "capacityMin": 2000,
-      "capacityMax": 2000
+      "capacityMax": 2000,
+      "hpMin": 540,
+      "hpMax": 540,
+      "hpIsRecommendation": true
     },
     "releasedDate": "19.05.2026",
     "dependencies": [],
@@ -282158,8 +282623,8 @@
     "changelog": [],
     "techData": {
       "price": 50000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 100,
+      "hpIsRequirement": true,
       "capacity": 60000,
       "unitCapacity": 40,
       "unitCapacityType": "cows",
@@ -282169,7 +282634,10 @@
       "priceMin": 5000,
       "priceMax": 50000,
       "capacityMin": 60000,
-      "capacityMax": 60000
+      "capacityMax": 60000,
+      "hpMin": 100,
+      "hpMax": 100,
+      "hpIsRecommendation": true
     },
     "releasedDate": "24.04.2026",
     "dependencies": [],
@@ -283581,8 +284049,8 @@
     "changelog": [],
     "techData": {
       "price": 8000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 180,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -283592,7 +284060,10 @@
       "priceMin": 8000,
       "priceMax": 8000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 180,
+      "hpMax": 180,
+      "hpIsRecommendation": true
     },
     "releasedDate": "21.04.2026",
     "dependencies": [],
@@ -283936,8 +284407,8 @@
     "changelog": [],
     "techData": {
       "price": 8000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 180,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -283947,7 +284418,10 @@
       "priceMin": 8000,
       "priceMax": 8000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 180,
+      "hpMax": 180,
+      "hpIsRecommendation": true
     },
     "releasedDate": "21.04.2026",
     "dependencies": [],
@@ -285549,8 +286023,8 @@
     "changelog": [],
     "techData": {
       "price": 13000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 33,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -285560,7 +286034,10 @@
       "priceMin": 13000,
       "priceMax": 13000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 33,
+      "hpMax": 33,
+      "hpIsRecommendation": true
     },
     "releasedDate": "28.04.2026",
     "dependencies": [],
@@ -286898,8 +287375,8 @@
     "changelog": [],
     "techData": {
       "price": 765,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -286907,7 +287384,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 665,
-      "priceMax": 765
+      "priceMax": 765,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "17.04.2026",
     "dependencies": [],
@@ -286947,8 +287427,8 @@
     "changelog": [],
     "techData": {
       "price": 79500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 5200,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -286958,7 +287438,10 @@
       "priceMin": 79500,
       "priceMax": 79500,
       "capacityMin": 5200,
-      "capacityMax": 5200
+      "capacityMax": 5200,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "25.06.2026",
     "dependencies": [],
@@ -288258,8 +288741,8 @@
     "changelog": [],
     "techData": {
       "price": 765,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -288267,7 +288750,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 665,
-      "priceMax": 765
+      "priceMax": 765,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "19.05.2026",
     "dependencies": [],
@@ -290125,8 +290611,8 @@
     "changelog": [],
     "techData": {
       "price": 80000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 160,
+      "hpIsRequirement": true,
       "capacity": 25000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -290136,7 +290622,10 @@
       "priceMin": 50000,
       "priceMax": 80000,
       "capacityMin": 18000,
-      "capacityMax": 25000
+      "capacityMax": 25000,
+      "hpMin": 160,
+      "hpMax": 160,
+      "hpIsRecommendation": true
     },
     "releasedDate": "20.07.2026",
     "dependencies": [],
@@ -290419,8 +290908,8 @@
     "changelog": [],
     "techData": {
       "price": 80000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 160,
+      "hpIsRequirement": true,
       "capacity": 25000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -290430,7 +290919,10 @@
       "priceMin": 50000,
       "priceMax": 80000,
       "capacityMin": 18000,
-      "capacityMax": 25000
+      "capacityMax": 25000,
+      "hpMin": 160,
+      "hpMax": 160,
+      "hpIsRecommendation": true
     },
     "releasedDate": "16.07.2026",
     "dependencies": [],
@@ -291600,8 +292092,8 @@
     "changelog": [],
     "techData": {
       "price": 84000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 4380,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -291611,7 +292103,10 @@
       "priceMin": 84000,
       "priceMax": 84000,
       "capacityMin": 3430,
-      "capacityMax": 4380
+      "capacityMax": 4380,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "08.06.2026",
     "dependencies": [],
@@ -294210,8 +294705,8 @@
     "changelog": [],
     "techData": {
       "price": 3000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 110,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -294221,7 +294716,10 @@
       "priceMin": 3000,
       "priceMax": 3000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 110,
+      "hpMax": 110,
+      "hpIsRecommendation": true
     },
     "releasedDate": "10.06.2026",
     "dependencies": [],
@@ -299623,8 +300121,8 @@
     "changelog": [],
     "techData": {
       "price": 1230,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 10,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -299634,7 +300132,10 @@
       "priceMin": 1230,
       "priceMax": 1230,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 10,
+      "hpMax": 10,
+      "hpIsRecommendation": false
     },
     "releasedDate": "03.06.2026",
     "dependencies": [],
@@ -302652,8 +303153,8 @@
     "changelog": [],
     "techData": {
       "price": 1200,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 450,
+      "hpIsRequirement": true,
       "capacity": 400,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -302663,7 +303164,10 @@
       "priceMin": 1200,
       "priceMax": 1200,
       "capacityMin": 400,
-      "capacityMax": 400
+      "capacityMax": 400,
+      "hpMin": 450,
+      "hpMax": 450,
+      "hpIsRecommendation": true
     },
     "releasedDate": "25.06.2026",
     "dependencies": [],
@@ -306560,8 +307064,8 @@
     "changelog": [],
     "techData": {
       "price": 45000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 90,
+      "hpIsRequirement": true,
       "capacity": 13000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -306571,7 +307075,10 @@
       "priceMin": 30000,
       "priceMax": 45000,
       "capacityMin": 10000,
-      "capacityMax": 13000
+      "capacityMax": 13000,
+      "hpMin": 90,
+      "hpMax": 90,
+      "hpIsRecommendation": true
     },
     "releasedDate": "22.06.2026",
     "dependencies": [],
@@ -308674,8 +309181,8 @@
     "changelog": [],
     "techData": {
       "price": 62000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 6700,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -308685,7 +309192,10 @@
       "priceMin": 62000,
       "priceMax": 62000,
       "capacityMin": 2800,
-      "capacityMax": 6700
+      "capacityMax": 6700,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "29.06.2026",
     "dependencies": [],
@@ -316849,8 +317359,8 @@
     "changelog": [],
     "techData": {
       "price": 125000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 250,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 825,
       "unitCapacityType": "pigs",
@@ -316860,7 +317370,10 @@
       "priceMin": 125000,
       "priceMax": 125000,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 250,
+      "hpMax": 250,
+      "hpIsRecommendation": true
     },
     "releasedDate": "21.07.2026",
     "dependencies": [],
@@ -316944,8 +317457,8 @@
     "changelog": [],
     "techData": {
       "price": 41700,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 240,
+      "hpIsRequirement": true,
       "capacity": 14000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -316955,7 +317468,10 @@
       "priceMin": 41700,
       "priceMax": 41700,
       "capacityMin": 14000,
-      "capacityMax": 14000
+      "capacityMax": 14000,
+      "hpMin": 240,
+      "hpMax": 240,
+      "hpIsRecommendation": true
     },
     "releasedDate": "30.07.2026",
     "dependencies": [],
@@ -319289,8 +319805,8 @@
     "changelog": [],
     "techData": {
       "price": 4800,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 15,
+      "hpIsRequirement": true,
       "capacity": 500,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -319300,7 +319816,10 @@
       "priceMin": 4800,
       "priceMax": 4800,
       "capacityMin": 500,
-      "capacityMax": 500
+      "capacityMax": 500,
+      "hpMin": 15,
+      "hpMax": 15,
+      "hpIsRecommendation": true
     },
     "releasedDate": "18.08.2026",
     "dependencies": [],
@@ -324423,8 +324942,8 @@
     "changelog": [],
     "techData": {
       "price": 15000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 135,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -324432,7 +324951,10 @@
       "weight": 0,
       "scraped": true,
       "priceMin": 15000,
-      "priceMax": 15000
+      "priceMax": 15000,
+      "hpMin": 135,
+      "hpMax": 135,
+      "hpIsRecommendation": true
     },
     "releasedDate": "05.08.2026",
     "dependencies": [],
@@ -324566,8 +325088,8 @@
     "changelog": [],
     "techData": {
       "price": 0,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 10,
+      "hpIsRequirement": true,
       "capacity": 0,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -324575,7 +325097,10 @@
       "weight": 0,
       "scraped": true,
       "capacityMin": 0,
-      "capacityMax": 0
+      "capacityMax": 0,
+      "hpMin": 10,
+      "hpMax": 10,
+      "hpIsRecommendation": true
     },
     "releasedDate": "13.08.2026",
     "dependencies": [],
@@ -332576,8 +333101,8 @@
     "changelog": [],
     "techData": {
       "price": 95500,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 191,
+      "hpIsRequirement": true,
       "capacity": 25000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -332587,7 +333112,10 @@
       "priceMin": 18500,
       "priceMax": 95500,
       "capacityMin": 25000,
-      "capacityMax": 25000
+      "capacityMax": 25000,
+      "hpMin": 191,
+      "hpMax": 191,
+      "hpIsRecommendation": true
     },
     "releasedDate": "01.10.2026",
     "dependencies": [],
@@ -338248,8 +338776,8 @@
     "changelog": [],
     "techData": {
       "price": 45000,
-      "hp": 0,
-      "hpIsRequirement": false,
+      "hp": 600,
+      "hpIsRequirement": true,
       "capacity": 14000,
       "unitCapacity": 0,
       "unitCapacityType": "",
@@ -338259,7 +338787,10 @@
       "priceMin": 4000,
       "priceMax": 45000,
       "capacityMin": 9000,
-      "capacityMax": 14000
+      "capacityMax": 14000,
+      "hpMin": 600,
+      "hpMax": 600,
+      "hpIsRecommendation": true
     },
     "releasedDate": "07.10.2026",
     "dependencies": [],

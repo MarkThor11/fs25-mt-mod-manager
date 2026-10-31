@@ -1185,7 +1185,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           const showPrice = rawPrice > 0 && !hidePrice && !isMap;
           const isTechFilterActive = activeFilters.hpRange[0] > 0 || activeFilters.hpRange[1] < 2000 || activeFilters.priceRange[0] > 0 || activeFilters.priceRange[1] < 1000000 || activeFilters.capRange[0] > 0 || activeFilters.capRange[1] < 1000000;
           const showEstimated = isSmartMatchEnabled || isTechFilterActive;
-          const hasHP = mod.techData?.hp > 0 && !hideHP && !hidePower && (!mod.techData.hpIsRecommendation || showEstimated) && !isMap;
+          const hasHP = mod.techData?.hp > 0 && !hideHP && !hidePower && !isMap;
           const noCapKeywords = [
             'gameplay', 'script', 'prefab', 'map', 'chainsaw', 'flashlight', 'handtool',
             'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
