@@ -208,9 +208,13 @@ export const useModHubStore = create((set, get) => ({
           const catStr = (v.category || v.metadata?.Category || '').toLowerCase();
           const titleStr = (v.title || '').toLowerCase();
           const descStr = (v.description || '').toLowerCase();
-          const isNoCap = NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes(k)) ||
-                          catStr.includes('gameplay') || catStr.includes('script') ||
-                          titleStr.includes('script') || descStr.includes('with this script');
+          const isScriptOrGameplay = catStr.includes('gameplay') || catStr.includes('script') ||
+                          titleStr.includes('script') || titleStr.includes('addon') ||
+                          descStr.includes('with this script') || descStr.includes('.lua') ||
+                          descStr.includes('keyboard shortcuts:') || descStr.includes('keyboard shortcuts') ||
+                          descStr.includes('specializations/') || descStr.includes('this mod aims to make') ||
+                          titleStr === 'realistic seeder';
+          const isNoCap = isScriptOrGameplay || NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes(k));
           if (isNoCap) {
             if (v.techData.capacity > 0 || v.techData.unitCapacity > 0) hasPruned = true;
             v.techData.capacity = 0;
@@ -1208,9 +1212,13 @@ export const useModHubStore = create((set, get) => ({
             const catStr = (mod.category || cachedMod.category || cachedMod.metadata?.Category || '').toLowerCase();
             const titleStr = (mod.title || cachedMod.title || '').toLowerCase();
             const descStr = (cachedMod.description || '').toLowerCase();
-            const isNoCap = NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes(k)) ||
-                            catStr.includes('gameplay') || catStr.includes('script') ||
-                            titleStr.includes('script') || descStr.includes('with this script');
+            const isScriptOrGameplay = catStr.includes('gameplay') || catStr.includes('script') ||
+                          titleStr.includes('script') || titleStr.includes('addon') ||
+                          descStr.includes('with this script') || descStr.includes('.lua') ||
+                          descStr.includes('keyboard shortcuts:') || descStr.includes('keyboard shortcuts') ||
+                          descStr.includes('specializations/') || descStr.includes('this mod aims to make') ||
+                          titleStr === 'realistic seeder';
+          const isNoCap = isScriptOrGameplay || NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes(k));
             if (isNoCap) {
               cachedMod.techData.capacity = 0;
               cachedMod.techData.capacityMin = 0;
@@ -1575,7 +1583,11 @@ export const useModHubStore = create((set, get) => ({
     };
     const catStr = (mod.category || detail.category || detail.metadata?.Category || '').toLowerCase();
     const titleStr = (mod.title || detail.title || '').toLowerCase();
-    const isNoCap = NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes('script'));
+    const isScriptOrGameplay = catStr.includes('gameplay') || catStr.includes('script') ||
+                          titleStr.includes('script') || titleStr.includes('addon') ||
+                          (detail.description || '').toLowerCase().includes('.lua') ||
+                          titleStr === 'realistic seeder';
+    const isNoCap = isScriptOrGameplay || NO_CAPACITY_KEYWORDS.some(k => catStr.includes(k) || titleStr.includes(k));
     if (isNoCap) {
       techData.capacity = 0;
       techData.capacityMin = 0;

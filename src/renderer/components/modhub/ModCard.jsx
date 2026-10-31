@@ -1136,9 +1136,13 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
             'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car',
             'forklift', 'gabelstapler', 'forage harvesting - harvesters', 'forage harvesters', 'forageharvesters'
           ];
-          const isNoCap = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k)) ||
-                          catStr.includes('gameplay') || catStr.includes('script') ||
-                          titleStr.includes('script') || descStr.includes('with this script');
+          const isScriptOrGameplay = catStr.includes('gameplay') || catStr.includes('script') ||
+                       titleStr.includes('script') || titleStr.includes('addon') ||
+                       descStr.includes('with this script') || descStr.includes('.lua') ||
+                       descStr.includes('keyboard shortcuts:') || descStr.includes('keyboard shortcuts') ||
+                       descStr.includes('specializations/') || descStr.includes('this mod aims to make') ||
+                       titleStr === 'realistic seeder';
+          const isNoCap = isScriptOrGameplay || noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k));
           const rawCap = mod.techData?.capacity ?? (mod.metadata?.Capacity ? parseInt(String(mod.metadata.Capacity).replace(/[^0-9]/g, ''), 10) : 0);
           const capMin = mod.techData?.capacityMin ?? rawCap;
           const capMax = mod.techData?.capacityMax ?? rawCap;

@@ -737,9 +737,13 @@ ipcMain.handle('modhub:fetchModDetail', async (_, { modId, bustCache }) => {
           'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car',
           'forklift', 'gabelstapler', 'forage harvesting - harvesters', 'forage harvesters', 'forageharvesters'
         ];
-        const isNoCap = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k)) ||
-                        catStr.includes('gameplay') || catStr.includes('script') ||
-                        titleStr.includes('script') || descStr.includes('with this script');
+        const isScriptOrGameplay = catStr.includes('gameplay') || catStr.includes('script') ||
+                        titleStr.includes('script') || titleStr.includes('addon') ||
+                        descStr.includes('with this script') || descStr.includes('.lua') ||
+                        descStr.includes('keyboard shortcuts:') || descStr.includes('keyboard shortcuts') ||
+                        descStr.includes('specializations/') || descStr.includes('this mod aims to make') ||
+                        titleStr === 'realistic seeder';
+        const isNoCap = isScriptOrGameplay || noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k));
         const isVehicle = /(?:tractor|traktor|truck|lkw|car|auto|pkw|harvester|mähdrescher|forage|häcksler|excavator|bagger|loader|radlader|teleskoplader|forklift|gabelstapler)/i.test(catStr) || cached.techData?.isDrivable;
         if (cached.techData && isNoCap) {
           cached.techData.capacity = 0;
@@ -880,7 +884,10 @@ ipcMain.handle('modhub:getBatchDetails', async (_, modIds) => {
         'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car',
         'forklift', 'gabelstapler', 'forage harvesting - harvesters', 'forage harvesters', 'forageharvesters'
       ];
-      const isNoCap = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes('script'));
+      const isScriptOrGameplay = catStr.includes('gameplay') || catStr.includes('script') ||
+                        titleStr.includes('script') || titleStr.includes('addon') ||
+                        titleStr === 'realistic seeder';
+      const isNoCap = isScriptOrGameplay || noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k));
       const isVehicle = /(?:tractor|traktor|truck|lkw|car|auto|pkw|harvester|mähdrescher|forage|häcksler|excavator|bagger|loader|radlader|teleskoplader|forklift|gabelstapler)/i.test(catStr) || cached.techData?.isDrivable;
       if (cached.techData && isNoCap) {
         cached.techData.capacity = 0;

@@ -1083,9 +1083,13 @@ function parseModDetailFromHtml(html, modId) {
       'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car',
       'forklift', 'gabelstapler', 'forage harvesting - harvesters', 'forage harvesters', 'forageharvesters'
     ];
-    const isNoCapCat = noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k)) ||
-                       catStr.includes('gameplay') || catStr.includes('script') ||
-                       titleStr.includes('script') || descStr.includes('with this script');
+    const isScriptOrGameplay = catStr.includes('gameplay') || catStr.includes('script') ||
+                       titleStr.includes('script') || titleStr.includes('addon') ||
+                       descStr.includes('with this script') || descStr.includes('.lua') ||
+                       descStr.includes('keyboard shortcuts:') || descStr.includes('keyboard shortcuts') ||
+                       descStr.includes('specializations/') || descStr.includes('this mod aims to make') ||
+                       titleStr === 'realistic seeder';
+    const isNoCapCat = isScriptOrGameplay || noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k));
 
     // 3. Litre Capacity scan across lines — run even if base capacity exists to catch multi-capacity ranges!
     if (!isNoCapCat) {

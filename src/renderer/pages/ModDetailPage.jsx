@@ -1480,6 +1480,23 @@ export default function ModDetailPage() {
               const tech = mod.techData;
               if (!tech) return null;
               const isMap = Boolean(mod.isMap || isMapCategory(mod.category) || isMapCategory(mod.metadata?.Category));
+              const catStr = (mod.category || mod.metadata?.Category || '').toLowerCase();
+              const titleStr = (mod.title || '').toLowerCase();
+              const descStr = (mod.description || '').toLowerCase();
+              const noCapKeywords = [
+                'gameplay', 'script', 'prefab', 'map', 'chainsaw', 'flashlight', 'handtool',
+                'weight', 'fence', 'tree', 'decoration', 'generator', 'floodlight',
+                'plow', 'cultivator', 'subsoiler', 'spader', 'mulcher', 'roller',
+                'weeder', 'hoe', 'mower', 'tedder', 'windrower', 'tractor', 'traktor', 'car',
+                'forklift', 'gabelstapler', 'forage harvesting - harvesters', 'forage harvesters', 'forageharvesters'
+              ];
+              const isScriptOrGameplay = catStr.includes('gameplay') || catStr.includes('script') ||
+                                         titleStr.includes('script') || titleStr.includes('addon') ||
+                                         descStr.includes('with this script') || descStr.includes('.lua') ||
+                                         descStr.includes('keyboard shortcuts:') || descStr.includes('keyboard shortcuts') ||
+                                         descStr.includes('specializations/') || descStr.includes('this mod aims to make') ||
+                                         titleStr === 'realistic seeder';
+              const isNoCap = isScriptOrGameplay || noCapKeywords.some(k => catStr.includes(k) || titleStr.includes(k));
               const price = tech.price || (tech.priceMin && tech.priceMax ? tech.priceMin : 0);
               const priceDisplay = (tech.priceMin && tech.priceMax && tech.priceMin !== tech.priceMax) 
                 ? `$${tech.priceMin.toLocaleString()} - $${tech.priceMax.toLocaleString()}`
@@ -1510,13 +1527,13 @@ export default function ModDetailPage() {
                       <span className="mod-detail__meta-value">{hpDisplay}</span>
                     </div>
                   )}
-                  {!isMap && capDisplay && (
+                  {!isMap && !isNoCap && capDisplay && (
                     <div className="mod-detail__meta-row">
                       <span className="mod-detail__meta-label">Capacity</span>
                       <span className="mod-detail__meta-value">{capDisplay}</span>
                     </div>
                   )}
-                  {!isMap && unitCapDisplay && (
+                  {!isMap && !isNoCap && unitCapDisplay && (
                     <div className="mod-detail__meta-row">
                       <span className="mod-detail__meta-label">Unit Capacity</span>
                       <span className="mod-detail__meta-value">{unitCapDisplay}</span>
