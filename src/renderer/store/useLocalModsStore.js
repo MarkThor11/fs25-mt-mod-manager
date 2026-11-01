@@ -49,29 +49,19 @@ function reconcileUpdates(currentUpdates, localMods) {
   });
 }
 
-const getInitialSnapshot = () => {
+const initialModCount = (() => {
   try {
-    const raw = localStorage.getItem('fast_installed_snapshot');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.mods) && parsed.mods.length > 0) {
-        return {
-          mods: parsed.mods,
-          allFolders: parsed.allFolders || [],
-          modCount: computeModCount(parsed.mods)
-        };
-      }
-    }
-  } catch (_) {}
-  return { mods: [], allFolders: [], modCount: 0 };
-};
-
-const initialSnapshot = getInitialSnapshot();
+    const raw = localStorage.getItem('installed_mod_count');
+    return raw ? parseInt(raw, 10) || 0 : 0;
+  } catch (_) {
+    return 0;
+  }
+})();
 
 export const useLocalModsStore = create((set, get) => ({
-  mods: initialSnapshot.mods,
-  modCount: initialSnapshot.modCount,
-  allFolders: initialSnapshot.allFolders,
+  mods: [],
+  modCount: initialModCount,
+  allFolders: [],
   isLoading: false,
   isCheckingUpdates: false,
   isSyncing: false,
@@ -107,10 +97,7 @@ export const useLocalModsStore = create((set, get) => ({
           set({ mods: modArray, modCount: computeModCount(modArray), allFolders: parsed.allFolders || [], updates: cleanUpdates, lastScanTime: 0 });
           try {
             localStorage.setItem('mod_updates', JSON.stringify(cleanUpdates));
-            localStorage.setItem('fast_installed_snapshot', JSON.stringify({
-              mods: modArray,
-              allFolders: parsed.allFolders || []
-            }));
+            localStorage.setItem('installed_mod_count', String(modArray.length));
           } catch (_) {}
         }
       }
@@ -286,10 +273,7 @@ export const useLocalModsStore = create((set, get) => ({
             allFolders: allFolders || []
         }));
         try {
-          localStorage.setItem('fast_installed_snapshot', JSON.stringify({
-            mods: lightweightMods,
-            allFolders: allFolders || []
-          }));
+          localStorage.setItem('installed_mod_count', String(lightweightMods.length));
         } catch (_) {}
       } catch (_) {}
 
