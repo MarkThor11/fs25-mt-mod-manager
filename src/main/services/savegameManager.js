@@ -17,7 +17,7 @@ function ultraNormalize(str) {
     s = s.replace(/(?:mod|pack|prefab|map)+/g, '');
     return s;
 }
-const INTERNAL_HELPER_MODS = ['fs25_managerpersistencebridge', 'fs25_filltypeextender', 'fs25_mtradiomanager', 'fs25_quietloadingscreen'];
+const INTERNAL_HELPER_MODS = ['fs25_managerpersistencebridge'];
 const INCOMPATIBLE_ENGINE_MODS = new Set(['fs25_maxdensityheighttypesbymap']);
 
 // 🛠️ DIAGNOSTIC UTILITY 🛠️
@@ -841,7 +841,7 @@ async function getSavegameMods(savegamePath) {
         const mods = [];
         const modEntries = data.careerSavegame.mod || data.careerSavegame.mods?.mod || [];
         const entries = Array.isArray(modEntries) ? modEntries : [modEntries];
-        const internalMods = ['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager', 'fs25_filltypeextender'];
+        const internalMods = ['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
         
         for (const entry of entries) {
             if (entry && entry['@_modName']) {
@@ -2678,7 +2678,7 @@ async function getAllSavegames() {
                 playTime: parseFloat(stats?.['@_playTime'] || stats?.playTime || 0),
                 lastSaveDate: settings['@_saveDateFormatted'] || settings.saveDateFormatted,
                 modCount: (Array.isArray(data.careerSavegame.mod) ? data.careerSavegame.mod : (data.careerSavegame.mod ? [data.careerSavegame.mod] : (data.careerSavegame.mods?.mod || [])))
-                    .filter(m => !['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager', 'fs25_filltypeextender'].includes((m['@_modName'] || m.modName || '').toLowerCase())).length,
+                    .filter(m => !['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'].includes((m['@_modName'] || m.modName || '').toLowerCase())).length,
                 // Add more settings for the editor
                 economicDifficulty: settings['@_economicDifficulty'] || settings.economicDifficulty,
                 autoSaveInterval: settings['@_autoSaveInterval'] || settings.autoSaveInterval,
@@ -2713,7 +2713,7 @@ async function getAllSavegames() {
                 isRadioEnabled,
                 radioVehicleOnly,
                 mods: (Array.isArray(data.careerSavegame.mod) ? data.careerSavegame.mod : (data.careerSavegame.mod ? [data.careerSavegame.mod] : (data.careerSavegame.mods?.mod || [])))
-                    .filter(m => !['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager', 'fs25_filltypeextender'].includes((m['@_modName'] || m.modName || '').toLowerCase()))
+                    .filter(m => !['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'].includes((m['@_modName'] || m.modName || '').toLowerCase()))
                     .map(m => ({
                         modName: m['@_modName'] || m.modName,
                         title: m['@_title'] || m.title,
@@ -4373,7 +4373,7 @@ async function repairSavegameMapId(savePath) {
             for (const mEntry of modsList) {
                 const mName = mEntry['@_modName'];
                 if (!mName) continue;
-                if (!['MapUS', 'MapEU', 'MapAS', 'FS25_QuietLoadingScreen', 'FS25_MTRadioManager', 'FS25_storeDeliveries', 'FS25_FillTypeExtender'].includes(mName)) {
+                if (!['MapUS', 'MapEU', 'MapAS', 'FS25_QuietLoadingScreen', 'FS25_MTRadioManager', 'FS25_storeDeliveries'].includes(mName)) {
                     const found = allMods.find(m => (m.modName || '').toLowerCase() === mName.toLowerCase());
                     if (found && (found.isMap || found.mapId)) {
                         customMapMod = found;
@@ -6132,7 +6132,7 @@ async function auditSavegameUtilization(savePath) {
             for (const acMod of activeCareerMods) {
                 const low = acMod.toLowerCase();
                 // Exclude system/persistence bridge mods and DLCs
-                if (['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager', 'fs25_filltypeextender'].includes(low)) continue;
+                if (['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'].includes(low)) continue;
                 if (low.startsWith('pdlc_')) continue;
 
                 const usage = stats.modUsage[low];
@@ -6379,7 +6379,7 @@ async function prepareServerModsFolder(slotIndex, savePath) {
 
         const xml = await fs.readFile(careerPath, 'utf8');
         const data = parser.parse(xml);
-        const APP_HELPER_MODS = ['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager', 'fs25_filltypeextender'];
+        const APP_HELPER_MODS = ['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
         const requiredMods = (Array.isArray(data.careerSavegame?.mod) ? data.careerSavegame.mod : (data.careerSavegame?.mod ? [data.careerSavegame.mod] : (data.careerSavegame?.mods?.mod || [])))
             .filter(m => !APP_HELPER_MODS.includes((m['@_modName'] || m.modName || '').toLowerCase()))
             .map(m => ({
@@ -6519,7 +6519,7 @@ async function prepareServerModsFolder(slotIndex, savePath) {
         }
 
         // Copy internal companion helper mods into server isolated mods folder
-        const companionMods = ['FS25_FillTypeExtender.zip'];
+        const companionMods = [];
         for (const compMod of companionMods) {
             const internalModPath = path.join(__dirname, '..', 'resources', 'internalMods', compMod);
             if (fs.existsSync(internalModPath)) {

@@ -286,21 +286,6 @@ async function launch(options = {}) {
     };
   }
 
-  // Ensure internal engine limit extender is present in primary mods folder (for standalone/direct launches)
-  try {
-    const defaultModsPath = pathProvider.getDefaultModsPath();
-    const internalExtenderZip = path.join(__dirname, '..', 'resources', 'internalMods', 'FS25_FillTypeExtender.zip');
-    if (defaultModsPath && fs.existsSync(defaultModsPath) && fs.existsSync(internalExtenderZip)) {
-      const destZip = path.join(defaultModsPath, 'FS25_FillTypeExtender.zip');
-      if (!fs.existsSync(destZip)) {
-        await fs.copy(internalExtenderZip, destZip);
-        console.log('[LAUNCH] Deployed FS25_FillTypeExtender into primary mods directory.');
-      }
-    }
-  } catch (extErr) {
-    console.warn('[LAUNCH] FillTypeExtender auto-deploy warning:', extErr.message);
-  }
-
   // Ensure radio settings and base game music.xml override are applied
   try {
     const radioManager = require('./radioManager');

@@ -1154,28 +1154,6 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
             }
         }
 
-		// Stage internal engine companion mods (e.g. FS25_FillTypeExtender) to resolve game-level limits
-		try {
-			const internalExtenderZip = path.join(__dirname, '..', 'resources', 'internalMods', 'FS25_FillTypeExtender.zip');
-			if (fs.existsSync(internalExtenderZip)) {
-				const destZip = path.join(virtualPath, 'FS25_FillTypeExtender.zip');
-				if (!fs.existsSync(destZip)) {
-					try {
-						await fs.link(internalExtenderZip, destZip);
-					} catch (_) {
-						try {
-							await fs.symlink(internalExtenderZip, destZip, 'file');
-						} catch (_) {
-							await atomicCopyFile(internalExtenderZip, destZip);
-						}
-					}
-					debugLog('[VIRTUAL] Injected FS25_FillTypeExtender into virtual mods folder.');
-				}
-			}
-		} catch (extErr) {
-			console.warn('[VIRTUAL] Failed to inject internal FillTypeExtender:', extErr.message);
-		}
-
 		debugLog(`[VIRTUAL] Successfully synthesized ${linkedCount} mods for launch.`);
 		return virtualPath;
 	} catch (err) {
@@ -2556,7 +2534,7 @@ async function performScan(manualPaths = null) {
 	let finalMods = Array.from(new Set(uniqueModsMap.values()));
 
 	// Filter out internal background logic mods so they don't appear in UI
-	const internalMods = ['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager', 'fs25_filltypeextender'];
+	const internalMods = ['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
 	finalMods = finalMods.filter(m => {
 		const name = (m.modName || '').toLowerCase();
 		const file = path.basename(m.fileName || m.filePath || '').toLowerCase().replace(/\.zip$/, '');
