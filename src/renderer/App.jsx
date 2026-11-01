@@ -116,13 +116,7 @@ export default function App() {
             return;
         }
         
-        if (import.meta.env.DEV) {
-          try {
-            localStorage.removeItem('modhub_stats');
-            localStorage.removeItem('modhub_cache_v2');
-            console.log('[APP] [DEV MODE] Purged volatile modhub_stats & modhub_cache_v2 from localStorage.');
-          } catch (_) {}
-        }
+        // Cache persists naturally across launches based on TTL.
         useModHubStore.getState().loadCache();
         
         // Load cached installed mods and savegames immediately so UI shows them right away
