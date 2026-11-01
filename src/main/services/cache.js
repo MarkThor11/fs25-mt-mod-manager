@@ -574,6 +574,17 @@ function getLocalModCache(filePath) {
   return db.prepare('SELECT * FROM local_mod_cache WHERE file_path = ?').get(filePath);
 }
 
+function getLocalModIconsBatch(filePaths) {
+  if (!db || !Array.isArray(filePaths) || filePaths.length === 0) return [];
+  try {
+    const placeholders = filePaths.map(() => '?').join(',');
+    return db.prepare(`SELECT file_path, icon_base64 FROM local_mod_cache WHERE file_path IN (${placeholders})`).all(...filePaths);
+  } catch (e) {
+    console.error('[CACHE] getLocalModIconsBatch error:', e.message);
+    return [];
+  }
+}
+
 function getLocalModIconOnly(filePath) {
   if (!db) return null;
   const row = db.prepare('SELECT icon_base64 FROM local_mod_cache WHERE file_path = ?').get(filePath);
@@ -735,7 +746,7 @@ module.exports = {
   getModHubTotalCount,
   getDelistedModIdsSet,
   setModTags, setModLocation,
-  getLocalModCache, getLocalModIconOnly, getAllLocalModCache, setLocalModCache, removeLocalModCache, clearLocalModCache, updateLocalModIcon,
+  getLocalModCache, getLocalModIconOnly, getLocalModIconsBatch, getAllLocalModCache, setLocalModCache, removeLocalModCache, clearLocalModCache, updateLocalModIcon,
   getLuaClaimsCache, getAllLuaClaimsCache, setLuaClaimsCache,
   updateLocalModCachePath, updateModTrackingFileInfo,
   getModHubMetadataPool,
