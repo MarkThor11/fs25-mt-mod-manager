@@ -32,6 +32,14 @@ function debugLog(msg) {
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=8192');
 
 // Enforce single-instance lock to prevent process collisions
+// App identification for desktop environments (KDE, GNOME, Windows taskbar)
+app.setName('FS25 MT Mod Manager');
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.fs25.modhub-manager');
+} else if (process.platform === 'linux' && typeof app.setDesktopName === 'function') {
+  app.setDesktopName('fs25-mt-mod-manager.desktop');
+}
+
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
@@ -232,7 +240,19 @@ function createWindow() {
       webviewTag: false,
       sandbox: true,
     },
-    icon: path.join(app.getAppPath(), 'assets', 'icon.png'),
+    icon: (() => {
+      try {
+        const { nativeImage } = require('electron');
+        const iconPath = path.join(__dirname, '..', '..', 'assets', 'icon.png');
+        const altPath = path.join(app.getAppPath(), 'assets', 'icon.png');
+        const finalPath = fs.existsSync(iconPath) ? iconPath : (fs.existsSync(altPath) ? altPath : null);
+        if (finalPath) {
+          const nImg = nativeImage.createFromPath(finalPath);
+          if (!nImg.isEmpty()) return nImg;
+        }
+      } catch (e) {}
+      return path.join(app.getAppPath(), 'assets', 'icon.png');
+    })(),
     show: true,
   });
 
