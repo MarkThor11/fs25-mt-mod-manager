@@ -136,34 +136,7 @@ app.whenReady().then(() => {
     const MAX_ICON_CACHE_SIZE = 3000;
 
     // Mod icon local stream protocol
-          function prewarmIconCache(modsList) {
-        if (!Array.isArray(modsList) || modsList.length === 0) return;
-        // Prioritize first 120 mods visible on load
-        const priorityPaths = modsList.slice(0, 120).map(m => m.filePath).filter(p => p && !iconBufferCache.has(p));
-        if (priorityPaths.length === 0) return;
-
-        setImmediate(() => {
-          try {
-            const rows = cache.getLocalModIconsBatch ? cache.getLocalModIconsBatch(priorityPaths) : [];
-            for (const r of rows) {
-              if (r.icon_base64 && !r.icon_base64.startsWith('CATEGORY:') && !iconBufferCache.has(r.file_path)) {
-                const base64Data = r.icon_base64.replace(/^data:image\/\w+;base64,/, '');
-                const buffer = Buffer.from(base64Data, 'base64');
-                if (iconBufferCache.size >= MAX_ICON_CACHE_SIZE) {
-                  const firstKey = iconBufferCache.keys().next().value;
-                  iconBufferCache.delete(firstKey);
-                }
-                iconBufferCache.set(r.file_path, buffer);
-              }
-            }
-            console.log(`[MOD-ICON] Pre-warmed ${rows.length} icons in memory for 0ms rendering.`);
-          } catch (e) {
-            console.warn('[MOD-ICON] Prewarm warning:', e.message);
-          }
-        });
-      }
-
-protocol.handle('mod-icon', async (request) => {
+    protocol.handle('mod-icon', async (request) => {
       try {
         const urlObj = new URL(request.url);
         let filePath = urlObj.searchParams.get('path');
@@ -1249,9 +1222,7 @@ ipcMain.handle('mods:installLocal', async (_, filePaths) => {
 // ── Local Mods ──
 ipcMain.handle('localMods:scan', async (_, force = false) => {
   try {
-    const scanRes = await modManager.scanLocalMods(null, force);
-      if (scanRes?.mods) prewarmIconCache(scanRes.mods);
-      return scanRes;
+    return await modManager.scanLocalMods(null, force);
   } catch (err) {
     console.error('Scan failed:', err);
     return { mods: [], error: err.message };

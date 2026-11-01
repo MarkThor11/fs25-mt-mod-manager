@@ -208,9 +208,7 @@ const LocalModIcon = React.memo(({ mod }) => {
   return (
     <div style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
       <img 
-        src={`mod-icon://icon?path=${encodeURIComponent(mod.filePath)}`}
-        decoding="async"
-        loading="eager" 
+        src={`mod-icon://icon?path=${encodeURIComponent(mod.filePath)}`} 
         style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid var(--border)' }} 
         alt="" 
         onError={() => setError(true)}
