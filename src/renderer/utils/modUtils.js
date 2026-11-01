@@ -323,6 +323,14 @@ export const resolveRecursiveDependencies = (targetModOrName, allMods, sessionIn
       match = indexByName.get(nameLower);
     }
 
+    // 3.5. Strip custom color/recolor/flavor suffixes (e.g. _Brown, _Green, _Red, _Wood, _White, _Grey, _Black, _Dark)
+    if (!match) {
+      const strippedFlavor = nameLower.replace(/_(?:brown|green|red|wood|white|grey|gray|black|dark|blue|yellow|orange)(_|$)/i, '$1');
+      if (strippedFlavor !== nameLower) {
+        match = indexByName.get(strippedFlavor);
+      }
+    }
+
     // 4. Global Alphanumeric Title / ModName Lookup
     if (!match && alphaKey) {
       match = indexByCleanAlpha.get(alphaKey);

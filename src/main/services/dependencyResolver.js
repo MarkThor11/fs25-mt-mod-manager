@@ -271,6 +271,13 @@ function resolveRecursiveDependencies(targetModOrName, allMods, sessionInstalled
                 null;
 
     if (!match) {
+      const strippedFlavor = nameLower.replace(/_(?:brown|green|red|wood|white|grey|gray|black|dark|blue|yellow|orange)(_|$)/i, '$1');
+      if (strippedFlavor !== nameLower) {
+        match = indexByName.get(strippedFlavor);
+      }
+    }
+
+    if (!match) {
       match = allMods.find(m => matchModWithDependency(m, depObjOrString, resolvedMetadata));
     }
     if (!match && mapSubfolderMods.length > 0) {
