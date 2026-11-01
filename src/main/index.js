@@ -221,6 +221,81 @@ let mainWindow = null;
 let isQuittingCleanly = false;
 let isUpdating = false;
 
+
+/**
+ * Automatically install/update .desktop file and icon into ~/.local/share/ on Linux
+ * so application menu and taskbar show the icon automatically without manual setup.
+ */
+function ensureLinuxDesktopIntegration() {
+  if (process.platform !== 'linux') return;
+  try {
+    const homeDir = process.env.HOME;
+    if (!homeDir) return;
+
+    const appsDir = path.join(homeDir, '.local', 'share', 'applications');
+    const iconsBaseDir = path.join(homeDir, '.local', 'share', 'icons', 'hicolor');
+    const exePath = process.execPath; // Absolute path to running binary
+    const appDir = path.dirname(exePath);
+
+    // 1. Locate icon source
+    const candidateIcons = [
+      path.join(appDir, 'assets', 'icon.png'),
+      path.join(app.getAppPath(), 'assets', 'icon.png'),
+      path.join(__dirname, '..', '..', 'assets', 'icon.png')
+    ];
+    const iconSrc = candidateIcons.find(p => fs.existsSync(p));
+
+    // 2. Copy icon to standard FreeDesktop location ~/.local/share/icons/hicolor/512x512/apps/
+    const targetIconDir = path.join(iconsBaseDir, '512x512', 'apps');
+    const targetIconFile = path.join(targetIconDir, 'fs25-mt-mod-manager.png');
+
+    if (iconSrc) {
+      try {
+        fs.ensureDirSync(targetIconDir);
+        fs.copyFileSync(iconSrc, targetIconFile);
+      } catch (e) {
+        console.warn('[LINUX-DESKTOP] Could not copy icon to hicolor theme:', e.message);
+      }
+    }
+
+    // 3. Write or update .desktop file in ~/.local/share/applications/
+    const desktopFilePath = path.join(appsDir, 'fs25-mt-mod-manager.desktop');
+    const iconIdentifier = fs.existsSync(targetIconFile) ? targetIconFile : (iconSrc || 'fs25-mt-mod-manager');
+
+    const desktopContent = [
+      '[Desktop Entry]',
+      'Name=FS25 MT Mod Manager',
+      'Comment=Farming Simulator 25 ModHub Desktop Manager',
+      `Exec="${exePath}" --no-sandbox %U`,
+      `Icon=${iconIdentifier}`,
+      'Terminal=false',
+      'Type=Application',
+      'Categories=Game;Utility;',
+      'StartupWMClass=FS25 MT Mod Manager',
+      'StartupNotify=true'
+    ].join('\n') + '\n';
+
+    fs.ensureDirSync(appsDir);
+    fs.writeFileSync(desktopFilePath, desktopContent, 'utf8');
+
+    // Make .desktop file executable
+    try {
+      fs.chmodSync(desktopFilePath, 0o755);
+    } catch (_) {}
+
+    // Trigger icon cache update if tools exist
+    try {
+      const { exec } = require('child_process');
+      exec('update-desktop-database ~/.local/share/applications/ 2>/dev/null || true', () => {});
+      exec('gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor/ 2>/dev/null || true', () => {});
+    } catch (_) {}
+
+    console.log('[LINUX-DESKTOP] Auto-registered desktop entry and icon at:', desktopFilePath);
+  } catch (err) {
+    console.warn('[LINUX-DESKTOP] Failed to register desktop integration:', err.message);
+  }
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -2259,6 +2334,7 @@ app.whenReady().then(() => {
     });
   });
 
+  ensureLinuxDesktopIntegration();
   createWindow();
 
   // Background initialization tasks (non-blocking) - deferred so initial window paint and user interaction are 100% idle
