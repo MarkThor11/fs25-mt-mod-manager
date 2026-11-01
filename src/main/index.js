@@ -232,7 +232,7 @@ function createWindow() {
       webviewTag: false,
       sandbox: true,
     },
-    icon: path.join(__dirname, '../../assets/icon.png'),
+    icon: path.join(app.getAppPath(), 'assets', 'icon.png'),
     show: true,
   });
 
@@ -293,8 +293,13 @@ function createWindow() {
       mainWindow.webContents.closeDevTools();
     });
     
-    // Packaged path: app.asar/src/main/index.js -> dist is at app.asar/dist
-    const indexPath = path.join(__dirname, '..', '..', 'dist', 'index.html');
+    // Packaged path: supports both src/main/index.js and dist-main/index.js
+    const candidatePaths = [
+      path.join(__dirname, '..', '..', 'dist', 'index.html'),
+      path.join(__dirname, '..', 'dist', 'index.html'),
+      path.join(app.getAppPath(), 'dist', 'index.html')
+    ];
+    const indexPath = candidatePaths.find(p => fs.existsSync(p)) || candidatePaths[0];
     if (!fs.existsSync(indexPath)) {
       dialog.showErrorBox('Missing Files', `Critical application files are missing.\n\nPath: ${indexPath}\n\nPlease reinstall the application.`);
       app.quit();

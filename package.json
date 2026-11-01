@@ -63,6 +63,7 @@
     "files": [
       "dist/**/*",
       "dist-main/**/*",
+      "assets/**/*",
       "main-entry.js",
       "package.json",
       "!**/*.map",
