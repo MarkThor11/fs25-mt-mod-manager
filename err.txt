@@ -1,0 +1,1 @@
+[20380:1101/052945.930:WARNING:electron_api_native_image.cc(194)] Failed to load image from path 'C:\Users\Mark\AppData\Local\Programs\fs25-mt-mod-manager\resources\assets\icon.png'
