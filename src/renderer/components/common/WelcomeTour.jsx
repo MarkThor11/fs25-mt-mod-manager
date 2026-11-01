@@ -273,7 +273,7 @@ const SLIDES = [
 ];
 
 export default function WelcomeTour({ forceShow = false, onClose }) {
-  const { hasSeenGuide, setHasSeenGuide, tourVersion, setTourVersion } = useSettingsStore();
+  const { hasSeenGuide, setHasSeenGuide, tourVersion, setTourVersion, isLoaded } = useSettingsStore();
   const CURRENT_TOUR_VERSION = '1.2.9';
   const [currentSlide, setCurrentSlide] = useState(0);
   const [visible, setVisible] = useState(false);
@@ -281,6 +281,9 @@ export default function WelcomeTour({ forceShow = false, onClose }) {
   const highlightTimer = useRef(null);
 
   useEffect(() => {
+    // Never evaluate or show the tour before settings have finished loading from SQLite
+    if (!isLoaded) return;
+
     // Only auto-show if explicitly requested (forceShow) or if the user has NEVER seen the guide at all.
     // If user has already seen the guide, sync the tour version silently without trapping them in a modal on app restart.
     if (forceShow || !hasSeenGuide) {
@@ -288,7 +291,7 @@ export default function WelcomeTour({ forceShow = false, onClose }) {
     } else if (hasSeenGuide && tourVersion !== CURRENT_TOUR_VERSION) {
       setTourVersion(CURRENT_TOUR_VERSION);
     }
-  }, [hasSeenGuide, tourVersion, forceShow]);
+  }, [hasSeenGuide, tourVersion, forceShow, isLoaded]);
 
   // Escape key handler to close tour safely
   useEffect(() => {
@@ -350,8 +353,11 @@ export default function WelcomeTour({ forceShow = false, onClose }) {
 
   const handleClose = () => {
     setVisible(false);
-    setHasSeenGuide(true);
-    setTourVersion(CURRENT_TOUR_VERSION);
+    // Persist asynchronously in background without blocking UI
+    Promise.resolve().then(() => {
+      setHasSeenGuide(true);
+      setTourVersion(CURRENT_TOUR_VERSION);
+    }).catch(console.error);
     if (onClose) onClose();
   };
 

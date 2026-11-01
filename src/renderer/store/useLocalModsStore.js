@@ -97,7 +97,7 @@ export const useLocalModsStore = create((set, get) => ({
           set({ mods: modArray, modCount: computeModCount(modArray), allFolders: parsed.allFolders || [], updates: cleanUpdates, lastScanTime: 0 });
           try {
             localStorage.setItem('mod_updates', JSON.stringify(cleanUpdates));
-            localStorage.setItem('installed_mod_count', String(modArray.length));
+            localStorage.setItem('installed_mod_count', String(computeModCount(modArray)));
           } catch (_) {}
         }
       }
@@ -273,7 +273,7 @@ export const useLocalModsStore = create((set, get) => ({
             allFolders: allFolders || []
         }));
         try {
-          localStorage.setItem('installed_mod_count', String(lightweightMods.length));
+          localStorage.setItem('installed_mod_count', String(computeModCount(lightweightMods)));
         } catch (_) {}
       } catch (_) {}
 
