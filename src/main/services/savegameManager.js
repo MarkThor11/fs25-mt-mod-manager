@@ -17,7 +17,7 @@ function ultraNormalize(str) {
     s = s.replace(/(?:mod|pack|prefab|map)+/g, '');
     return s;
 }
-const INTERNAL_HELPER_MODS = ['fs25_managerpersistencebridge'];
+const INTERNAL_HELPER_MODS = ['fs25_managerpersistencebridge', 'fs25_rememberpositions'];
 const INCOMPATIBLE_ENGINE_MODS = new Set(['fs25_maxdensityheighttypesbymap']);
 
 // 🛠️ DIAGNOSTIC UTILITY 🛠️
@@ -2712,6 +2712,7 @@ async function getAllSavegames() {
                 voiceVolume,
                 isRadioEnabled,
                 radioVehicleOnly,
+                isPersistenceActive: await isSavegamePersistenceActive(savePath),
                 mods: (Array.isArray(data.careerSavegame.mod) ? data.careerSavegame.mod : (data.careerSavegame.mod ? [data.careerSavegame.mod] : (data.careerSavegame.mods?.mod || [])))
                     .filter(m => !['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'].includes((m['@_modName'] || m.modName || '').toLowerCase()))
                     .map(m => ({
@@ -4210,6 +4211,64 @@ async function ensureStoreDeliveries() {
     return { success: false, error: 'Store Deliveries mod is not installed. Please download it from ModHub.' };
 }
 
+async function ensureBridgeMod() {
+    try {
+        const modManager = require('./modManager');
+        const modsDir = modManager.getModsPath();
+        if (!modsDir) return { success: false, error: 'Mods directory not found' };
+        
+        const fs = require('fs');
+        const path = require('path');
+        const destZip = path.join(modsDir, 'FS25_ManagerPersistenceBridge.zip');
+        if (fs.existsSync(destZip)) return { success: true };
+        
+        const appPath = require('electron').app ? require('electron').app.getAppPath() : process.cwd();
+        const candidatePaths = [
+            path.join(appPath, 'src', 'main', 'resources', 'internalMods', 'FS25_ManagerPersistenceBridge.zip'),
+            path.join(process.cwd(), 'src', 'main', 'resources', 'internalMods', 'FS25_ManagerPersistenceBridge.zip'),
+            path.join(appPath, 'resources', 'internalMods', 'FS25_ManagerPersistenceBridge.zip'),
+            path.join(appPath, 'src', 'main', 'resources', 'internalMods', 'FS25_rememberPositions.zip'),
+            path.join(process.cwd(), 'src', 'main', 'resources', 'internalMods', 'FS25_rememberPositions.zip')
+        ];
+
+        let sourceZip = null;
+        for (const p of candidatePaths) {
+            if (fs.existsSync(p)) {
+                sourceZip = p;
+                break;
+            }
+        }
+
+        if (!sourceZip) return { success: false, error: 'Persistence bridge asset not found' };
+        await fs.promises.copyFile(sourceZip, destZip);
+        return { success: true };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+}
+
+async function isSavegamePersistenceActive(savePath) {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const metaPath = path.join(savePath, 'manager_persistence.json');
+        if (fs.existsSync(metaPath)) {
+            const data = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+            if (data && typeof data.active === 'boolean') return data.active;
+        }
+        const xmlPath = path.join(savePath, 'careerSavegame.xml');
+        if (fs.existsSync(xmlPath)) {
+            const xml = fs.readFileSync(xmlPath, 'utf8');
+            if (xml.includes('FS25_ManagerPersistenceBridge') || xml.includes('FS25_rememberPositions')) {
+                return true;
+            }
+        }
+        return false;
+    } catch (_) {
+        return false;
+    }
+}
+
 async function cleanInternalHelperModsFromSavegame(savePath) {
     try {
         const fs = require('fs');
@@ -4221,8 +4280,13 @@ async function cleanInternalHelperModsFromSavegame(savePath) {
         const modRegex = /<mod\s+[^>]*modName=["']([^"']+)["'][^>]*\/>\r?\n?/gi;
         let modified = false;
 
+        const persistenceActive = await isSavegamePersistenceActive(savePath);
+
         xmlData = xmlData.replace(modRegex, (match, modName) => {
             const mLow = (modName || '').toLowerCase();
+            if (persistenceActive && (mLow === 'fs25_managerpersistencebridge' || mLow === 'fs25_rememberpositions')) {
+                return match;
+            }
             if (INTERNAL_HELPER_MODS.includes(mLow) || INCOMPATIBLE_ENGINE_MODS.has(mLow)) {
                 modified = true;
                 return '';
@@ -4314,8 +4378,28 @@ async function updateNativeEnhancement(savePath, includeBridge, includeDeliverie
                 await resetPlayerSpawn(savePath);
             }
             
-            // Always strip the rememberPositions mod as it is no longer used and causes UI issues/prompts
-            mods = mods.filter(m => m['@_modName'] !== 'FS25_rememberPositions');
+            // Handle Persistence Bridge
+            const hasBridgePersistence = mods.some(m => {
+                const n = (m['@_modName'] || '').toLowerCase();
+                return n === 'fs25_managerpersistencebridge' || n === 'fs25_rememberpositions';
+            });
+
+            if (includeBridge) {
+                if (!hasBridgePersistence) {
+                    mods.push({ '@_modName': 'FS25_ManagerPersistenceBridge', '@_title': 'Manager Persistence Bridge', '@_version': '1.0.2.1', '@_required': 'false', '@_fileHash': '' });
+                }
+                await ensureBridgeMod();
+            } else {
+                mods = mods.filter(m => {
+                    const n = (m['@_modName'] || '').toLowerCase();
+                    return n !== 'fs25_managerpersistencebridge' && n !== 'fs25_rememberpositions';
+                });
+            }
+
+            // Save persistence status explicitly in save slot metadata
+            try {
+                fs.writeFileSync(path.join(savePath, 'manager_persistence.json'), JSON.stringify({ active: !!includeBridge, updatedAt: new Date().toISOString() }), 'utf8');
+            } catch (_) {}
             
             obj.careerSavegame.mod = mods;
             if (obj.careerSavegame) obj.careerSavegame['@_valid'] = 'true';

@@ -786,8 +786,11 @@ const [activeTab, setActiveTab] = useState('general');
     if (!window.api?.savegames) return;
     
     // Check Persistence
-    let hasDeliveries = (save.mods || []).some(m => m === 'FS25_storeDeliveries' || m?.modName === 'FS25_storeDeliveries');
-    setIsPersistenceActive(hasDeliveries);
+    const activePersistence = save.isPersistenceActive ?? (save.mods || []).some(m => {
+      const name = (typeof m === 'string' ? m : m?.modName) || '';
+      return name === 'FS25_ManagerPersistenceBridge' || name === 'FS25_rememberPositions';
+    });
+    setIsPersistenceActive(Boolean(activePersistence));
 
 
 
@@ -795,13 +798,6 @@ const [activeTab, setActiveTab] = useState('general');
     if (activeTab === 'spawn') {
       window.api.savegames.getPlayerPosition(save.path).then(pos => {
         setPlayerPos(pos);
-        if (pos) {
-          const savedRaw = localStorage.getItem(`selected_spawn_${save.path}`);
-          if (!savedRaw && pos.vehicleUniqueId) {
-            setSelectedSpawnMode('vehicle');
-            setSelectedVehicleId(pos.vehicleUniqueId);
-          }
-        }
       });
       const getMapModName = (mapId) => {
         if (mapId && mapId.includes('.')) {
@@ -1753,7 +1749,7 @@ const [activeTab, setActiveTab] = useState('general');
                     onClick={async () => {
                       if (!window.api?.savegames) return;
                       const newState = !isPersistenceActive;
-                      const res = await window.api.savegames.updateNativeEnhancement({ savePath: save.path, includeBridge: newState, includeDeliveries: newState });
+                      const res = await window.api.savegames.updateNativeEnhancement({ savePath: save.path, includeBridge: newState, includeDeliveries: false });
                       if (res.success) {
                         setIsPersistenceActive(newState);
                         if (!newState) {

@@ -891,6 +891,9 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 					const careerPath = path.join(savePath, 'careerSavegame.xml');
 					if (fs.existsSync(careerPath)) {
 						const xml = await fs.readFile(careerPath, 'utf8');
+						if (xml.includes('FS25_ManagerPersistenceBridge') || xml.includes('FS25_rememberPositions')) {
+							activeModNames.add('fs25_managerpersistencebridge');
+						}
 						mapModObj = savegameManager.findMapModInSavegame(xml, mods);
 						if (mapModObj && mapModObj.modName) {
 							mapModName = mapModObj.modName.toLowerCase();
@@ -1151,6 +1154,37 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
             } catch (e) {
                 console.error(`[VIRTUAL] Failed to stage mod ${m.modName} in virtual folder:`, e.message);
                 debugLog(`[VIRTUAL] Link failed for ${m.modName}: ${e.message}`);
+            }
+        }
+
+        // Ensure internal persistence bridge is staged if active for this savegame
+        if (activeModNames && (activeModNames.has('fs25_managerpersistencebridge') || activeModNames.has('fs25_rememberpositions'))) {
+            try {
+                const appPath = require('electron').app ? require('electron').app.getAppPath() : process.cwd();
+                const bridgeCandidates = [
+                    path.join(appPath, 'src', 'main', 'resources', 'internalMods', 'FS25_ManagerPersistenceBridge.zip'),
+                    path.join(process.cwd(), 'src', 'main', 'resources', 'internalMods', 'FS25_ManagerPersistenceBridge.zip'),
+                    path.join(appPath, 'resources', 'internalMods', 'FS25_ManagerPersistenceBridge.zip'),
+                    path.join(appPath, 'src', 'main', 'resources', 'internalMods', 'FS25_rememberPositions.zip'),
+                    path.join(process.cwd(), 'src', 'main', 'resources', 'internalMods', 'FS25_rememberPositions.zip')
+                ];
+                let bridgeSrc = null;
+                for (const cand of bridgeCandidates) {
+                    if (fs.existsSync(cand)) {
+                        bridgeSrc = cand;
+                        break;
+                    }
+                }
+                if (bridgeSrc) {
+                    const bridgeDest = path.join(virtualPath, 'FS25_ManagerPersistenceBridge.zip');
+                    if (!fs.existsSync(bridgeDest)) {
+                        await fs.copy(bridgeSrc, bridgeDest);
+                        linkedCount++;
+                        debugLog(`[VIRTUAL] Copied FS25_ManagerPersistenceBridge to ${virtualPath}`);
+                    }
+                }
+            } catch (bridgeErr) {
+                console.warn('[VIRTUAL] Could not copy FS25_ManagerPersistenceBridge to virtual folder:', bridgeErr.message);
             }
         }
 
@@ -4276,6 +4310,7 @@ async function syncSavegameModBridges(targetRootPath = null) {
 
 		// 1. Gather all mod paths required across all active savegame slots (1-20)
 		const activeSaveModPaths = new Map(); // modNameLower -> realFilePath
+		let anyPersistenceActive = false;
 
 		for (let i = 1; i <= 20; i++) {
 			const slotPath = path.join(fs25DataRoot, `savegame${i}`);
@@ -4311,6 +4346,9 @@ async function syncSavegameModBridges(targetRootPath = null) {
 
 					if (!mapModObj) {
 						const xml = await fs.readFile(careerPath, 'utf8');
+						if (xml.includes('FS25_ManagerPersistenceBridge') || xml.includes('FS25_rememberPositions')) {
+							anyPersistenceActive = true;
+						}
 						mapModObj = savegameManager.findMapModInSavegame(xml, allInstalledMods);
 						if (mapModObj && mapModObj.modName) {
 							const mNameLow = mapModObj.modName.toLowerCase();
@@ -4532,6 +4570,39 @@ async function syncSavegameModBridges(targetRootPath = null) {
 				} catch (bErr) {
 					console.warn(`[SAVE-BRIDGE] Bridge error for ${targetFileName}:`, bErr.message);
 				}
+			}
+		}
+
+		// If any active savegame has persistence bridge enabled, ensure it is copied into root mods directories
+		if (anyPersistenceActive) {
+			try {
+				const appPath = require('electron').app ? require('electron').app.getAppPath() : process.cwd();
+				const bridgeCandidates = [
+					path.join(appPath, 'src', 'main', 'resources', 'internalMods', 'FS25_ManagerPersistenceBridge.zip'),
+					path.join(process.cwd(), 'src', 'main', 'resources', 'internalMods', 'FS25_ManagerPersistenceBridge.zip'),
+					path.join(appPath, 'resources', 'internalMods', 'FS25_ManagerPersistenceBridge.zip'),
+					path.join(appPath, 'src', 'main', 'resources', 'internalMods', 'FS25_rememberPositions.zip'),
+					path.join(process.cwd(), 'src', 'main', 'resources', 'internalMods', 'FS25_rememberPositions.zip')
+				];
+				let bridgeSrc = null;
+				for (const cand of bridgeCandidates) {
+					if (fs.existsSync(cand)) {
+						bridgeSrc = cand;
+						break;
+					}
+				}
+				if (bridgeSrc) {
+					for (const rootPath of targetRoots) {
+						const destZip = path.join(rootPath, 'FS25_ManagerPersistenceBridge.zip');
+						if (!fs.existsSync(destZip)) {
+							await fs.copy(bridgeSrc, destZip);
+							totalCreated++;
+							console.log(`[SAVE-BRIDGE] Copied FS25_ManagerPersistenceBridge to root ${path.basename(rootPath)}`);
+						}
+					}
+				}
+			} catch (bErr) {
+				console.warn('[SAVE-BRIDGE] Failed to bridge persistence mod to root:', bErr.message);
 			}
 		}
 
