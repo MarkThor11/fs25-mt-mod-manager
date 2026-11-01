@@ -44,35 +44,11 @@ export default function ScrollRestorer({ children }) {
     const currentKey = location.pathname + location.search;
     const savedPos = getScrollPosition(currentKey);
 
-    // If we're moving to a NEW search or filter, we PROBABLY want to reset to top
-    // BUT if we're clicking 'back' from a detail page, we want the saved position.
-    
-    // Logic: If the base pathname changed (e.g. going from /installed to /modhub), 
-    // or if it's a route we've never seen, start at 0.
-    // HashRouter handles these transitions by remounting/re-routing.
-
-    const restore = () => {
-      if (savedPos > 0) {
-        // We use two attempts: one immediate, and one slightly delayed 
-        // to handle async content loading in ModHub/Library.
-        container.scrollTo({ top: savedPos, behavior: 'instant' });
-        
-        setTimeout(() => {
-          container.scrollTo({ top: savedPos, behavior: 'instant' });
-        }, 100);
-        
-        // Final "insurance" scroll for slower loading grids
-        setTimeout(() => {
-          if (container.scrollTop < savedPos - 10) {
-            container.scrollTo({ top: savedPos, behavior: 'smooth' });
-          }
-        }, 400);
-      } else {
-        container.scrollTo(0, 0);
-      }
-    };
-
-    restore();
+    if (savedPos > 0) {
+      container.scrollTop = savedPos;
+    } else {
+      container.scrollTop = 0;
+    }
     lastPathRef.current = currentKey;
   }, [location.pathname, location.search, getScrollPosition]);
 
