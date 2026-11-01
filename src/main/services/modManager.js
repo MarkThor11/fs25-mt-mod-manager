@@ -890,10 +890,13 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 					// Identify the map mod using robust detection
 					const careerPath = path.join(savePath, 'careerSavegame.xml');
 					if (fs.existsSync(careerPath)) {
-						const xml = await fs.readFile(careerPath, 'utf8');
-						if (xml.includes('FS25_ManagerPersistenceBridge') || xml.includes('FS25_rememberPositions')) {
+						const isPersistenceOn = (typeof savegameManager.isSavegamePersistenceActive === 'function')
+							? await savegameManager.isSavegamePersistenceActive(savePath)
+							: true;
+						if (isPersistenceOn) {
 							activeModNames.add('fs25_managerpersistencebridge');
 						}
+						const xml = await fs.readFile(careerPath, 'utf8');
 						mapModObj = savegameManager.findMapModInSavegame(xml, mods);
 						if (mapModObj && mapModObj.modName) {
 							mapModName = mapModObj.modName.toLowerCase();

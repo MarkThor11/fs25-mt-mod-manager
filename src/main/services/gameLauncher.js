@@ -308,7 +308,10 @@ async function launch(options = {}) {
     if (options.savegameIndex) {
       const fs25Path = pathProvider.getFS25DataRoot();
       const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
-      await savegameManager.cleanupBridgeModFromSavegame(savePath);
+      // Ensure persistence bridge is in careerSavegame.xml if persistence is active for this save
+      if (typeof savegameManager.ensurePersistenceBridgeInSavegame === 'function') {
+        await savegameManager.ensurePersistenceBridgeInSavegame(savePath);
+      }
       await savegameManager.syncSubfolderMapDependencies(savePath);
       await savegameManager.autoInjectDependencies(savePath);
       await savegameManager.ensureSavegameDensityMaps(savePath);
@@ -466,9 +469,12 @@ async function launch(options = {}) {
         }
       }
 
-      // Ensure careerSavegame.xml is completely clean of internal helper mod entries
+      // Ensure careerSavegame.xml is clean of other helper mods while respecting active persistence
       try {
         await savegameManager.cleanInternalHelperModsFromSavegame(savePath);
+        if (typeof savegameManager.ensurePersistenceBridgeInSavegame === 'function') {
+          await savegameManager.ensurePersistenceBridgeInSavegame(savePath);
+        }
       } catch (e) {
         console.warn('[LAUNCH] Helper mods cleanup warning:', e.message);
       }
