@@ -3437,6 +3437,66 @@ export default function SavegamesPage() {
   const [selectedSaves, setSelectedSaves] = useState(new Set());
   const [includeMustHaves, setIncludeMustHaves] = useState(true);
   const [localMissingDeps, setLocalMissingDeps] = useState([]);
+  const [modHubMetadataPool, setModHubMetadataPool] = useState(null);
+
+  useEffect(() => {
+    if (showCreateModal && !modHubMetadataPool && window.api?.modhub?.getPersistentCache) {
+      window.api.modhub.getPersistentCache().then(cache => {
+        if (cache) setModHubMetadataPool(cache);
+      }).catch(err => {
+        console.error('[CAREER MODAL] Failed to load ModHub metadata pool:', err);
+      });
+    }
+  }, [showCreateModal, modHubMetadataPool]);
+
+  // Split missing dependencies into ModHub-downloadable vs External / Third-party
+  const { downloadableDeps, externalMissingDeps } = React.useMemo(() => {
+    if (!localMissingDeps || localMissingDeps.length === 0) {
+      return { downloadableDeps: [], externalMissingDeps: [] };
+    }
+    const pool = modHubMetadataPool || {};
+    const modCache = useModHubStore.getState().modCache || {};
+    const dl = [];
+    const ext = [];
+
+    localMissingDeps.forEach(dep => {
+      if (!dep) return;
+      const rawName = typeof dep === 'string' ? dep.trim() : (dep.modName || dep.fileName || dep.title || '').trim();
+      const lowerName = rawName.toLowerCase();
+      const cleanBase = lowerName.replace(/\.zip$/i, '');
+      const cleanNoPrefix = cleanBase.replace(/^(?:fs25|fs22|pdlc)_/i, '');
+      const alpha = cleanNoPrefix.replace(/[^a-z0-9]/g, '');
+
+      // Check if known to ModHub metadata pool or modCache
+      const inPool = Boolean(
+        pool[cleanBase] ||
+        pool[`file_${cleanBase}`] ||
+        pool[`file_${cleanBase}.zip`] ||
+        pool[lowerName] ||
+        pool[cleanNoPrefix] ||
+        (alpha && pool[alpha]) ||
+        (pool._byCleanTitle && pool._byCleanTitle[alpha])
+      );
+
+      const inModCache = Boolean(
+        modCache[cleanBase] ||
+        Object.values(modCache).some(m => {
+          if (!m) return false;
+          const mFile = (m.fileName || '').toLowerCase().replace(/\.zip$/i, '');
+          const mMod = (m.modName || '').toLowerCase();
+          return mFile === cleanBase || mMod === cleanBase;
+        })
+      );
+
+      if (inPool || inModCache) {
+        dl.push(dep);
+      } else {
+        ext.push(dep);
+      }
+    });
+
+    return { downloadableDeps: dl, externalMissingDeps: ext };
+  }, [localMissingDeps, modHubMetadataPool]);
     
     const availableCreateBrands = React.useMemo(() => {
         if (!showCreateModal) return [];
@@ -3920,8 +3980,8 @@ export default function SavegamesPage() {
 
   const handleCreate = async () => {
     if (!createName.trim()) return;
-    if (localMissingDeps && localMissingDeps.length > 0) {
-      setMissingDeps(localMissingDeps);
+    if (downloadableDeps && downloadableDeps.length > 0) {
+      setMissingDeps(downloadableDeps);
       useToastStore.getState().warning("Please download the required dependencies for this map first.");
       return;
     }
@@ -4689,22 +4749,37 @@ export default function SavegamesPage() {
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                                     <AlertTriangle size={14} style={{ color: '#ef4444' }} /> MISSING DEPENDENCIES ({localMissingDeps.length})
                                                 </div>
-                                                <button 
-                                                    className="btn btn--xs btn--primary"
-                                                    style={{ background: '#ef4444', color: '#fff', border: 'none', fontWeight: 700, padding: '4px 10px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                                                    onClick={() => setMissingDeps(localMissingDeps)}
-                                                >
-                                                    <Download size={12} /> Download Required Mods
-                                                </button>
+                                                {downloadableDeps.length > 0 && (
+                                                    <button 
+                                                        className="btn btn--xs btn--primary"
+                                                        style={{ background: '#ef4444', color: '#fff', border: 'none', fontWeight: 700, padding: '4px 10px', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                                                        onClick={() => setMissingDeps(downloadableDeps)}
+                                                    >
+                                                        <Download size={12} /> Download Required Mods ({downloadableDeps.length})
+                                                    </button>
+                                                )}
                                             </div>
                                             <div style={{ opacity: 0.9, fontSize: 12, lineHeight: 1.5 }}>
                                                 This map requires the following mods which are not installed:
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 8px', marginTop: 6, fontWeight: 700, color: 'var(--text-primary)' }}>
-                                                    {localMissingDeps.map(dep => (
-                                                        <span key={dep} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                            {dep}
-                                                        </span>
-                                                    ))}
+                                                    {localMissingDeps.map(dep => {
+                                                        const isExternal = externalMissingDeps.includes(dep);
+                                                        return (
+                                                            <span 
+                                                                key={dep} 
+                                                                title={isExternal ? 'Third-party / external mod (not found on ModHub - install manually)' : 'ModHub mod'}
+                                                                style={{ 
+                                                                    background: isExternal ? 'rgba(234, 179, 8, 0.1)' : 'rgba(255,255,255,0.05)', 
+                                                                    padding: '2px 8px', 
+                                                                    borderRadius: 4, 
+                                                                    border: isExternal ? '1px solid rgba(234, 179, 8, 0.3)' : '1px solid rgba(255,255,255,0.1)',
+                                                                    color: isExternal ? '#facc15' : 'inherit'
+                                                                }}
+                                                            >
+                                                                {dep}{isExternal ? ' (External)' : ''}
+                                                            </span>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         </div>
