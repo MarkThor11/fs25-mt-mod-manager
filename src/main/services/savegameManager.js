@@ -4389,11 +4389,50 @@ async function updateNativeEnhancement(savePath, includeBridge, includeDeliverie
                     mods.push({ '@_modName': 'FS25_ManagerPersistenceBridge', '@_title': 'Manager Persistence Bridge', '@_version': '1.0.2.1', '@_required': 'false', '@_fileHash': '' });
                 }
                 await ensureBridgeMod();
+
+                // If re-enabling persistence, restore the last known backed up position if present
+                try {
+                    const backupPath = path.join(savePath, 'manager_spawn_backup.json');
+                    if (fs.existsSync(backupPath)) {
+                        const pos = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+                        if (pos && pos.x !== undefined && pos.y !== undefined && pos.z !== undefined) {
+                            await setPlayerPosition({ savePath, x: pos.x, y: pos.y, z: pos.z, vehicleUniqueId: pos.vehicleUniqueId });
+                            console.log(`[PERSISTENCE] Restored backed up player position on re-enable: ${pos.x}, ${pos.y}, ${pos.z}`);
+                        }
+                    }
+                } catch (rErr) {
+                    console.warn('[PERSISTENCE] Note on restoring position backup:', rErr.message);
+                }
             } else {
+                // When DISABLING persistence:
+                // 1. Snapshot the player's last known location to manager_spawn_backup.json so it is safely preserved
+                try {
+                    const pos = await getPlayerPosition(savePath);
+                    if (pos && pos.x !== undefined) {
+                        let vehicleUniqueId = pos.vehicleUniqueId || null;
+                        const xmlPlayersPath = path.join(savePath, 'players.xml');
+                        if (fs.existsSync(xmlPlayersPath)) {
+                            const { XMLParser } = require('fast-xml-parser');
+                            const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseAttributeValue: false, parseTagValue: false, allowBooleanAttributes: true });
+                            const data = parser.parse(fs.readFileSync(xmlPlayersPath, 'utf8'));
+                            const player = Array.isArray(data?.players?.player) ? data.players.player[0] : data?.players?.player;
+                            if (player?.spawn?.['@_vehicleUniqueId']) vehicleUniqueId = player.spawn['@_vehicleUniqueId'];
+                        }
+                        fs.writeFileSync(path.join(savePath, 'manager_spawn_backup.json'), JSON.stringify({ ...pos, vehicleUniqueId, savedAt: new Date().toISOString() }), 'utf8');
+                        console.log(`[PERSISTENCE] Safely backed up last known player position before disabling: ${pos.x}, ${pos.y}, ${pos.z}`);
+                    }
+                } catch (bErr) {
+                    console.warn('[PERSISTENCE] Failed to backup player position on disable:', bErr.message);
+                }
+
+                // 2. Remove bridge mod from mods list
                 mods = mods.filter(m => {
                     const n = (m['@_modName'] || '').toLowerCase();
                     return n !== 'fs25_managerpersistencebridge' && n !== 'fs25_rememberpositions';
                 });
+
+                // 3. Reset player spawn node so game engine takes over native spawn behavior
+                await resetPlayerSpawn(savePath);
             }
 
             // Save persistence status explicitly in save slot metadata
