@@ -49,10 +49,29 @@ function reconcileUpdates(currentUpdates, localMods) {
   });
 }
 
+const getInitialSnapshot = () => {
+  try {
+    const raw = localStorage.getItem('fast_installed_snapshot');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.mods) && parsed.mods.length > 0) {
+        return {
+          mods: parsed.mods,
+          allFolders: parsed.allFolders || [],
+          modCount: computeModCount(parsed.mods)
+        };
+      }
+    }
+  } catch (_) {}
+  return { mods: [], allFolders: [], modCount: 0 };
+};
+
+const initialSnapshot = getInitialSnapshot();
+
 export const useLocalModsStore = create((set, get) => ({
-  mods: [],
-  modCount: 0,
-  allFolders: [],
+  mods: initialSnapshot.mods,
+  modCount: initialSnapshot.modCount,
+  allFolders: initialSnapshot.allFolders,
   isLoading: false,
   isCheckingUpdates: false,
   isSyncing: false,
@@ -86,7 +105,13 @@ export const useLocalModsStore = create((set, get) => ({
           const modArray = parsed.mods;
           const cleanUpdates = reconcileUpdates(get().updates, modArray);
           set({ mods: modArray, modCount: computeModCount(modArray), allFolders: parsed.allFolders || [], updates: cleanUpdates, lastScanTime: 0 });
-          try { localStorage.setItem('mod_updates', JSON.stringify(cleanUpdates)); } catch (_) {}
+          try {
+            localStorage.setItem('mod_updates', JSON.stringify(cleanUpdates));
+            localStorage.setItem('fast_installed_snapshot', JSON.stringify({
+              mods: modArray,
+              allFolders: parsed.allFolders || []
+            }));
+          } catch (_) {}
         }
       }
     } catch (e) {
@@ -260,6 +285,12 @@ export const useLocalModsStore = create((set, get) => ({
             mods: lightweightMods,
             allFolders: allFolders || []
         }));
+        try {
+          localStorage.setItem('fast_installed_snapshot', JSON.stringify({
+            mods: lightweightMods,
+            allFolders: allFolders || []
+          }));
+        } catch (_) {}
       } catch (_) {}
 
       // Refresh corrupt mods list after each successful scan (non-blocking)
