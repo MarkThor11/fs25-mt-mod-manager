@@ -3642,14 +3642,7 @@ export default function SavegamesPage() {
 
             if (missingList.length > 0) {
               console.log(`[CAREER MODAL] Missing dependencies detected:`, missingList);
-              // Temporary bypass for testing fillType/heightType fix on Gage Kentucky map
-              const isGageMap = cleanMapModName.toLowerCase().includes('gage');
-              if (!isGageMap) {
-                setLocalMissingDeps(missingList);
-              } else {
-                console.log(`[CAREER MODAL] Bypassing missing dependencies check for Gage map session test.`);
-                setLocalMissingDeps([]);
-              }
+              setLocalMissingDeps(missingList);
             }
           } catch (e) {
             console.error('[CAREER MODAL] Dependency auto-select failed:', e);
