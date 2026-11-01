@@ -2786,7 +2786,7 @@ const [activeTab, setActiveTab] = useState('general');
   );
 }
 
-function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, onExport, onToggleMode, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop, isPlaying, isGameRunning, recentlyExitedSlots }) {
+const SaveSlotCard = React.memo(function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, onAudit, onRename, onAdopt, onDelete, onExport, onToggleMode, isSelected, onToggleSelection, editingName, newName, setNewName, handleRename, setEditingName, formatMoney, formatPlayTime, mods, onDrop, isPlaying, isGameRunning, recentlyExitedSlots }) {
     const isEmpty = Boolean(save.isEmpty);
     const [isDragOver, setIsDragOver] = useState(false);
     
@@ -3117,7 +3117,7 @@ function SaveSlotCard({ save, onPlay, onArchive, onRollback, onCreate, onEdit, o
 
         </div>
     );
-}
+});
 
 
 

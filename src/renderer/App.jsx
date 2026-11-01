@@ -81,10 +81,13 @@ function AppRoutes() {
         if (!visitedPaths.has(path)) return null;
         const isActive = isMainTab && currentPath === path;
         return (
-          <div
+                    <div
             key={path}
-            style={{
-              display: isActive ? 'contents' : 'none'
+            style={isActive ? {
+              display: 'contents'
+            } : {
+              display: 'none',
+              contentVisibility: 'hidden'
             }}
           >
             <Component />

@@ -643,7 +643,7 @@ const FolderRequirements = React.memo(({ folderMods, allMods, sessionInstalled, 
   );
 });
 
-const LazyModList = ({
+const LazyModList = React.memo(({
 
   folderMods,
   folderName,
@@ -668,7 +668,7 @@ const LazyModList = ({
   handleUpdate,
   handleUninstall
 }) => {
-  const [visibleCount, setVisibleCount] = useState(120);
+  const [visibleCount, setVisibleCount] = useState(60);
   const sentinelRef = React.useRef(null);
   const prevModsLengthRef = React.useRef(folderMods.length);
   const prevFolderNameRef = React.useRef(folderName);
@@ -679,7 +679,7 @@ const LazyModList = ({
   useEffect(() => {
     // Only reset visibleCount if the folder itself changed or the mod list shrank significantly (e.g. filter applied)
     if (prevFolderNameRef.current !== folderName || folderMods.length < prevModsLengthRef.current - 5) {
-      setVisibleCount(120);
+      setVisibleCount(60);
     }
     prevFolderNameRef.current = folderName;
     prevModsLengthRef.current = folderMods.length;
@@ -1011,7 +1011,7 @@ const LazyModList = ({
       )}
     </>
   );
-};
+});
 
 
 
