@@ -60,12 +60,16 @@ function AppRoutes() {
   const currentPath = location.pathname;
   const isMainTab = MAIN_ROUTES.some(r => r.path === currentPath);
 
-  // Synchronously track visited paths in a ref so the active view mounts instantly on the very first render pass
-  const visitedRef = useRef(new Set([currentPath]));
-  if (isMainTab && !visitedRef.current.has(currentPath)) {
-    visitedRef.current.add(currentPath);
+  // Keep-alive set in state: renders the new active view synchronously on first switch
+  const [visitedPaths, setVisitedPaths] = useState(() => new Set([currentPath]));
+
+  if (isMainTab && !visitedPaths.has(currentPath)) {
+    setVisitedPaths(prev => {
+      const next = new Set(prev);
+      next.add(currentPath);
+      return next;
+    });
   }
-  const visitedPaths = visitedRef.current;
 
   return (
     <>
@@ -74,13 +78,10 @@ function AppRoutes() {
         if (!visitedPaths.has(path)) return null;
         const isActive = isMainTab && currentPath === path;
         return (
-                    <div
+          <div
             key={path}
-            style={isActive ? {
-              display: 'contents'
-            } : {
-              display: 'none',
-              contentVisibility: 'hidden'
+            style={{
+              display: isActive ? 'contents' : 'none'
             }}
           >
             <Component />
