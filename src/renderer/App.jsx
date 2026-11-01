@@ -365,7 +365,7 @@ export default function App() {
     };
 
     // Run once on load (with a delay to let startup settle)
-    const initialTimer = setTimeout(runAutoUpdateCheck, 5000);
+    const initialTimer = setTimeout(runAutoUpdateCheck, 20000);
     
     // Then set interval
     const interval = setInterval(runAutoUpdateCheck, CHECK_INTERVAL);

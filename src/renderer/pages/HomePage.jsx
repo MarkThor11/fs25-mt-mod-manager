@@ -20,7 +20,10 @@ import mapKinlaig from '../assets/maps/map_kinlaig.jpg';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { mods: localMods, modCount, scanMods, checkUpdates, updates, isCheckingUpdates, setShowOnlyUpdates } = useLocalModsStore();
+  const modCount = useLocalModsStore(s => s.modCount);
+  const updates = useLocalModsStore(s => s.updates);
+  const isCheckingUpdates = useLocalModsStore(s => s.isCheckingUpdates);
+  const setShowOnlyUpdates = useLocalModsStore(s => s.setShowOnlyUpdates);
   const { savegames, detectedPlayerName, fetchSavegames } = useSavegameStore();
   const { 
     totalMods, latestCount, newCount, updateCount, fetchStats,
