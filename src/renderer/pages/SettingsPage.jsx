@@ -1857,7 +1857,7 @@ export default function SettingsPage() {
         fontSize: 'var(--fs-sm)',
         padding: 'var(--sp-6) 0'
       }}>
-        <div style={{ marginBottom: 4 }}>App: FS25 MT Mod Manager v1.2.9</div>
+        <div style={{ marginBottom: 4 }}>App: FS25 MT Mod Manager v1.3.0</div>
         <p style={{ marginTop: 'var(--sp-1)' }}>Not affiliated with GIANTS Software</p>
       </div>
     </div>
