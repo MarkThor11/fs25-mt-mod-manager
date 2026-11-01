@@ -59,7 +59,7 @@ function AppRoutes() {
   const currentPath = location.pathname;
 
   // Track which main tab pages have been visited so we mount them on-demand and keep them alive
-  const [visitedPaths, setVisitedPaths] = useState(() => new Set([currentPath, '/installed']));
+  const [visitedPaths, setVisitedPaths] = useState(() => new Set([currentPath, '/installed', '/savegames']));
 
   useEffect(() => {
     if (MAIN_ROUTES.some(r => r.path === currentPath)) {
@@ -130,22 +130,21 @@ export default function App() {
         await useMapStore.getState().loadCache();
         await useSavegameStore.getState().loadCache();
         
-        // Startup ModHub Warming: 
-        // Fetch the category menu structure immediately so it's ready before the user clicks "ModHub".
-        // Once categories are retrieved, initiate a gentle background prefetch of popular mod lists.
-        const { fetchCategories, prefetchCategories, startPeriodicStats } = useModHubStore.getState();
-        fetchCategories().then(() => {
-            // We wait for the category structure to be ready before firing the prefetch loop
-            prefetchCategories();
-        });
-        
-        startPeriodicStats();
-        
-        // Background sync to ensure physical disk files stay 100% in sync with cache
+        // Staggered Startup: Prioritize immediate UI responsiveness
+        // 1. File sync runs first after 2.5s once initial UI paint has fully settled
         setTimeout(() => {
             useLocalModsStore.getState().scanMods(null, false);
             useMapStore.getState().fetchTemplates();
-        }, 2000);
+        }, 2500);
+
+        // 2. ModHub network scraping and stats deferred to 5.5s so switching tabs during boot has 0 CPU lag
+        setTimeout(() => {
+            const { fetchCategories, prefetchCategories, startPeriodicStats } = useModHubStore.getState();
+            fetchCategories().then(() => {
+                prefetchCategories();
+            }).catch(() => {});
+            startPeriodicStats();
+        }, 5500);
 
         // ── DOWNLOAD RESUMPTION ──
         // Check if there were any interrupted downloads and resume them automatically
