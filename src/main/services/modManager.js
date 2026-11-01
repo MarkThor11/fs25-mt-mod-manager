@@ -7577,56 +7577,150 @@ async function repairCorruptMod(fileName, modId, allPaths, onProgress) {
 }
 
 /**
- * to find code-level conflicts where multiple mods overwrite or append to the 
- * exact same base game functions (e.g. Utils.overwrittenFunction).
+ * Extracts Lua claims (function overwrites, appends, and global declarations) from a mod.
+ * Uses persistent cache to avoid re-reading zip archives if mtime/size have not changed.
  */
-async function deepScanLuaConflicts(modsToScan) {
-	// regex matches: Utils.overwrittenFunction( Vehicle, "update", ... )
-	const regex = /Utils\.(overwritten|appended|prepended)Function\(\s*([^,]+),\s*["']([^"']+)["']/g;
-	
-	const overrides = new Map();
+function extractModLuaClaims(modFilePath) {
+	try {
+		if (!modFilePath || !nodeFs.existsSync(modFilePath)) {
+			return { overwrites: [], globals: [], hasScripts: false };
+		}
 
-	for (const mod of modsToScan) {
-		if (!mod.filePath || !nodeFs.existsSync(mod.filePath)) continue;
-		
-		try {
-			const zip = new AdmZip(mod.filePath);
+		const stats = nodeFs.statSync(modFilePath);
+		const cached = cache.getLuaClaimsCache(modFilePath);
+		if (cached && cached.mtime === Math.floor(stats.mtimeMs) && cached.size === stats.size) {
+			try {
+				return {
+					overwrites: JSON.parse(cached.overwrites || '[]'),
+					globals: JSON.parse(cached.globals || '[]'),
+					hasScripts: !!cached.has_scripts
+				};
+			} catch (_) {}
+		}
+
+		const overwritesSet = new Set();
+		const globalsSet = new Set();
+		let hasScripts = false;
+
+		// 1. Matches: ClassName.functionName = Utils.overwrittenFunction(...)
+		const utilsAssignRegex = /([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+)\s*=\s*Utils\.(overwritten|appended|prepended)Function/g;
+		// 2. Matches: Utils.overwrittenFunction(ClassName, "functionName", ...)
+		const utilsHookRegex = /Utils\.(overwritten|appended|prepended)Function\(\s*([^,]+),\s*["']([^"']+)["']/g;
+		// 3. Matches direct assignment: ClassName.functionName = function(...)
+		const directAssignRegex = /(?:^|[\r\n\s;])([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+)\s*=\s*function\b/g;
+		// 4. Global table / class definitions: _G['Name'] or ClassName = {} / ClassName:new()
+		const globalDeclRegex = /(?:^|[\r\n])(?:_G\[["']([A-Za-z0-9_]+)["']\]|([A-Za-z0-9_]{4,})\s*=\s*(?:\{\}|[A-Za-z0-9_]+:new\b))/g;
+
+		if (modFilePath.toLowerCase().endsWith('.zip')) {
+			try {
+			const zip = new AdmZip(modFilePath);
 			const entries = zip.getEntries();
 			for (const entry of entries) {
 				if (entry.entryName.toLowerCase().endsWith('.lua')) {
+					hasScripts = true;
 					const content = entry.getData().toString('utf8');
-					let match;
-					while ((match = regex.exec(content)) !== null) {
-						const type = match[1]; // overwritten, appended, prepended
-						const baseObj = match[2].trim();
-						const funcName = match[3].trim();
-						const target = `${baseObj}.${funcName}`;
-						
-						if (!overrides.has(target)) overrides.set(target, []);
-						const list = overrides.get(target);
-						
-						if (!list.find(x => x.modName === mod.modName)) {
-							list.push({
-								modName: mod.modName,
-								title: mod.title,
-								file: entry.entryName,
-								type
-							});
+
+					let m;
+					while ((m = utilsAssignRegex.exec(content)) !== null) {
+						overwritesSet.add(m[1].trim());
+					}
+
+					while ((m = utilsHookRegex.exec(content)) !== null) {
+						overwritesSet.add(`${m[2].trim()}.${m[3].trim()}`);
+					}
+
+					while ((m = directAssignRegex.exec(content)) !== null) {
+						const target = m[1].trim();
+						if (!target.startsWith('local') && (target.includes('.') || target.startsWith('g_'))) {
+							overwritesSet.add(target);
+						}
+					}
+
+					while ((m = globalDeclRegex.exec(content)) !== null) {
+						const gName = (m[1] || m[2] || '').trim();
+						if (gName && !['local', 'function', 'return', 'self', 'true', 'false', 'type'].includes(gName.toLowerCase())) {
+							globalsSet.add(gName);
 						}
 					}
 				}
 			}
-		} catch (err) {
-			debugLog(`deepScanLuaConflicts failed to parse zip: ${mod.filePath} - ${err.message}`);
+			} catch (zipErr) {
+				debugLog(`[CLAIMS] Zip read error for ${path.basename(modFilePath)}: ${zipErr.message}`);
+			}
+		}
+
+		const overwrites = Array.from(overwritesSet);
+		const globals = Array.from(globalsSet);
+
+		cache.setLuaClaimsCache(modFilePath, stats.mtimeMs, stats.size, overwrites, globals, hasScripts);
+
+		return { overwrites, globals, hasScripts };
+	} catch (err) {
+		debugLog(`[CLAIMS] Failed extracting claims for ${path.basename(modFilePath)}: ${err.message}`);
+		return { overwrites: [], globals: [], hasScripts: false };
+	}
+}
+
+/**
+ * Scans Lua scripts across the given list of mods to find code-level conflicts where multiple mods:
+ * 1. Overwrite, hook, or append to the exact same base game engine function/manager
+ * 2. Declare colliding global variables or classes
+ */
+async function deepScanLuaConflicts(modsToScan) {
+	const overrideMap = new Map();
+	const globalsMap = new Map();
+
+	for (const mod of (modsToScan || [])) {
+		if (!mod.filePath || !nodeFs.existsSync(mod.filePath)) continue;
+
+		const claims = extractModLuaClaims(mod.filePath);
+		if (!claims.hasScripts) continue;
+
+		for (const target of claims.overwrites) {
+			if (!overrideMap.has(target)) overrideMap.set(target, []);
+			const list = overrideMap.get(target);
+			if (!list.find(x => x.modName === mod.modName)) {
+				list.push({
+					modName: mod.modName,
+					title: mod.title || mod.modName,
+					file: mod.fileName,
+					type: 'overwrite'
+				});
+			}
+		}
+
+		for (const gName of claims.globals) {
+			if (!globalsMap.has(gName)) globalsMap.set(gName, []);
+			const list = globalsMap.get(gName);
+			if (!list.find(x => x.modName === mod.modName)) {
+				list.push({
+					modName: mod.modName,
+					title: mod.title || mod.modName
+				});
+			}
 		}
 	}
 
 	const deepConflicts = [];
-	overrides.forEach((involvedMods, target) => {
+
+	overrideMap.forEach((involvedMods, target) => {
 		if (involvedMods.length > 1) {
 			deepConflicts.push({
+				type: 'function_override',
 				target,
-				mods: involvedMods
+				mods: involvedMods,
+				severity: 'warning'
+			});
+		}
+	});
+
+	globalsMap.forEach((involvedMods, gName) => {
+		if (involvedMods.length > 1) {
+			deepConflicts.push({
+				type: 'global_collision',
+				target: gName,
+				mods: involvedMods,
+				severity: 'warning'
 			});
 		}
 	});
@@ -7635,6 +7729,7 @@ async function deepScanLuaConflicts(modsToScan) {
 }
 
 module.exports = {
+	extractModLuaClaims,
 	getModsPaths,
 	getModsPath,
 	getFS25DataRoot,

@@ -74,6 +74,15 @@ function init() {
       json_data TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS lua_claims_cache (
+      file_path TEXT PRIMARY KEY,
+      mtime INTEGER,
+      size INTEGER,
+      overwrites TEXT,
+      globals TEXT,
+      has_scripts INTEGER
+    );
+
     CREATE TABLE IF NOT EXISTS image_cache (
       url TEXT PRIMARY KEY,
       base64 TEXT NOT NULL,
@@ -537,6 +546,28 @@ function setModTags(identifier, tags) {
   }
 }
 
+function getLuaClaimsCache(filePath) {
+  if (!db) return null;
+  return db.prepare('SELECT * FROM lua_claims_cache WHERE file_path = ?').get(filePath);
+}
+
+function getAllLuaClaimsCache() {
+  if (!db) return [];
+  return db.prepare('SELECT file_path, mtime, size, overwrites, globals, has_scripts FROM lua_claims_cache').all();
+}
+
+function setLuaClaimsCache(filePath, mtime, size, overwrites, globals, hasScripts) {
+  if (!db) return;
+  try {
+    db.prepare(`
+      INSERT OR REPLACE INTO lua_claims_cache (file_path, mtime, size, overwrites, globals, has_scripts)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(filePath, Math.floor(mtime), size, JSON.stringify(overwrites || []), JSON.stringify(globals || []), hasScripts ? 1 : 0);
+  } catch (e) {
+    console.error('[CACHE] setLuaClaimsCache error:', e.message);
+  }
+}
+
 // ── Local Mod Metadata Cache (Performance) ──
 function getLocalModCache(filePath) {
   if (!db) return null;
@@ -705,6 +736,7 @@ module.exports = {
   getDelistedModIdsSet,
   setModTags, setModLocation,
   getLocalModCache, getLocalModIconOnly, getAllLocalModCache, setLocalModCache, removeLocalModCache, clearLocalModCache, updateLocalModIcon,
+  getLuaClaimsCache, getAllLuaClaimsCache, setLuaClaimsCache,
   updateLocalModCachePath, updateModTrackingFileInfo,
   getModHubMetadataPool,
   getRemoteImage, setRemoteImage,

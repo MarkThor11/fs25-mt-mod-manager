@@ -6033,6 +6033,122 @@ async function getUsedModsInSavegame(savePath) {
     }
 }
 
+/**
+ * Deeply audits a savegame's vehicles.xml and placeables.xml to calculate:
+ * 1. Vehicle counts and placeable counts per mod
+ * 2. Unused / safe-to-disable mods (enabled in careerSavegame.xml but 0 placed items or vehicles)
+ * 3. Vehicle ID continuity (checking for gaps that cause engine corruption)
+ */
+async function auditSavegameUtilization(savePath) {
+    try {
+        if (!fs.existsSync(savePath)) {
+            return { success: false, error: 'Savegame path does not exist' };
+        }
+
+        const stats = {
+            totalVehicles: 0,
+            totalPlaceables: 0,
+            vehicleGaps: 0,
+            maxVehicleId: 0,
+            farmCount: 0,
+            modUsage: {}, // modNameLower -> { vehicles: count, placeables: count }
+            safeToRemoveMods: [],
+            activeModsCount: 0
+        };
+
+        // 1. Audit vehicles.xml
+        const vehiclesPath = path.join(savePath, 'vehicles.xml');
+        const vehicleIds = [];
+        if (fs.existsSync(vehiclesPath)) {
+            const vContent = await fs.readFile(vehiclesPath, 'utf8').catch(() => '');
+            const vehicleTagRegex = /<vehicle\b([^>]+)>/gi;
+            let vm;
+            while ((vm = vehicleTagRegex.exec(vContent)) !== null) {
+                stats.totalVehicles++;
+                const attrs = vm[1];
+                const idMatch = attrs.match(/\bid=["'](\d+)["']/i);
+                if (idMatch) {
+                    vehicleIds.push(parseInt(idMatch[1], 10));
+                }
+
+                const modMatch = attrs.match(/(?:\$moddir\$|\$pdlcdir\$)([^\/\\<"']+)/i);
+                if (modMatch) {
+                    const mName = modMatch[1].trim().toLowerCase();
+                    if (!stats.modUsage[mName]) stats.modUsage[mName] = { vehicles: 0, placeables: 0 };
+                    stats.modUsage[mName].vehicles++;
+                }
+            }
+        }
+
+        // Check vehicle ID continuity & gaps
+        if (vehicleIds.length > 0) {
+            vehicleIds.sort((a, b) => a - b);
+            stats.maxVehicleId = vehicleIds[vehicleIds.length - 1];
+            for (let i = 0; i < vehicleIds.length - 1; i++) {
+                if (vehicleIds[i + 1] - vehicleIds[i] > 1) {
+                    stats.vehicleGaps += (vehicleIds[i + 1] - vehicleIds[i] - 1);
+                }
+            }
+        }
+
+        // 2. Audit placeables.xml
+        const placeablesPath = path.join(savePath, 'placeables.xml');
+        if (fs.existsSync(placeablesPath)) {
+            const pContent = await fs.readFile(placeablesPath, 'utf8').catch(() => '');
+            const placeableTagRegex = /<placeable\b([^>]+)>/gi;
+            let pm;
+            while ((pm = placeableTagRegex.exec(pContent)) !== null) {
+                stats.totalPlaceables++;
+                const attrs = pm[1];
+                const modMatch = attrs.match(/(?:\$moddir\$|\$pdlcdir\$)([^\/\\<"']+)/i);
+                if (modMatch) {
+                    const mName = modMatch[1].trim().toLowerCase();
+                    if (!stats.modUsage[mName]) stats.modUsage[mName] = { vehicles: 0, placeables: 0 };
+                    stats.modUsage[mName].placeables++;
+                }
+            }
+        }
+
+        // 3. Count active farms from farms.xml
+        const farmsPath = path.join(savePath, 'farms.xml');
+        if (fs.existsSync(farmsPath)) {
+            const fContent = await fs.readFile(farmsPath, 'utf8').catch(() => '');
+            const farmMatches = fContent.match(/<farm\b/gi) || [];
+            stats.farmCount = farmMatches.length;
+        }
+
+        // 4. Compare with active mods in careerSavegame.xml to find safe-to-remove mods
+        const careerPath = path.join(savePath, 'careerSavegame.xml');
+        if (fs.existsSync(careerPath)) {
+            const cContent = await fs.readFile(careerPath, 'utf8').catch(() => '');
+            const cModRegex = /<mod\s+[^>]*modName=["']([^"']+)["'][^>]*\/?>/gi;
+            let cm;
+            const activeCareerMods = [];
+            while ((cm = cModRegex.exec(cContent)) !== null) {
+                activeCareerMods.push(cm[1].trim());
+            }
+            stats.activeModsCount = activeCareerMods.length;
+
+            for (const acMod of activeCareerMods) {
+                const low = acMod.toLowerCase();
+                // Exclude system/persistence bridge mods and DLCs
+                if (['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'].includes(low)) continue;
+                if (low.startsWith('pdlc_')) continue;
+
+                const usage = stats.modUsage[low];
+                if (!usage || (usage.vehicles === 0 && usage.placeables === 0)) {
+                    stats.safeToRemoveMods.push(acMod);
+                }
+            }
+        }
+
+        return { success: true, stats };
+    } catch (err) {
+        console.error('[UTILIZATION] Audit error:', err);
+        return { success: false, error: err.message };
+    }
+}
+
 async function adoptSaveAsTemplate(saveIndex) {
     try {
         const fs25Path = getFs25Path();
@@ -7371,6 +7487,7 @@ async function processPostGameExit(saveIndex) {
 }
 
 module.exports = {
+    auditSavegameUtilization,
     getGlobalPlayerName,
     processPostGameExit,
     adoptSaveAsTemplate,

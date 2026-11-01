@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const scraper = require('./services/scraper');
 const cache = require('./services/cache');
+const discordRpc = require('./services/discordRpc');
 const modManager = require('./services/modManager');
 const savegameManager = require('./services/savegameManager');
 const gameLauncher = require('./services/gameLauncher');
@@ -1626,6 +1627,32 @@ ipcMain.handle('savegames:syncModVersions', async (_, { savePath }) => {
   }
 });
 
+  ipcMain.handle('savegames:auditUtilization', async (_, { savePath }) => {
+    try {
+      return await savegameManager.auditSavegameUtilization(savePath);
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('discord:setActivity', async (_, activity) => {
+    try {
+      discordRpc.getDiscordRpc().setActivity(activity);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('discord:clearActivity', async () => {
+    try {
+      discordRpc.getDiscordRpc().clearActivity();
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
 
 ipcMain.handle('savegames:getUsedMods', async (_, savePath) => {
   try {
@@ -2171,6 +2198,17 @@ ipcMain.handle('mods:probePath', async (event, path) => {
 // ── App lifecycle ──
 app.whenReady().then(() => {
   cache.init();
+    try {
+      const rpc = discordRpc.getDiscordRpc();
+      rpc.connect();
+      rpc.on('ready', () => {
+        rpc.setActivity({
+          details: 'Managing FS25 Mods',
+          state: 'FS25 Mod Manager by Mark',
+          timestamps: { start: Math.floor(Date.now() / 1000) }
+        });
+      });
+    } catch (e) { console.warn('[DISCORD] RPC init warning:', e.message); }
   try {
     // Automatically detect and register all storage drives (e.g. F:\mods4, D:\mods) on startup
     modManager.getModsPaths();
