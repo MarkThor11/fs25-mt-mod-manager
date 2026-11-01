@@ -76,7 +76,8 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
     folderOrder, setFolderOrder, folderZooms, setFolderZoom, isInternalDragging, setIsInternalDragging,
     iconOnlyFolders, toggleIconOnlyFolder, isOnline
   } = useSettingsStore();
-  const localMods = useLocalModsStore((s) => s.mods);
+  // Only subscribe to localMods if getInstalledVersion wasn't passed down
+  const localMods = useLocalModsStore((s) => getInstalledVersion ? null : s.mods);
 
   
   const isFavorite = favoriteAuthors.some(a => {
@@ -487,7 +488,8 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
 
   const requirementsMet = useMemo(() => {
     if (!mod.dependencies || mod.dependencies.length === 0) return true;
-    if (!localMods) return false;
+    const currentLocal = localMods || useLocalModsStore.getState().mods;
+    if (!currentLocal) return false;
 
     const currentActiveDownloads = useDownloadStore.getState().activeDownloads || {};
 
@@ -495,7 +497,7 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
       const depId = typeof dep === 'object' && dep.url ? dep.url.match(/mod_id=(\d+)/)?.[1] : null;
 
       // Check Local Mods
-      const isDepInstalled = localMods.some(lm => matchModWithDependency(lm, dep));
+      const isDepInstalled = currentLocal.some(lm => matchModWithDependency(lm, dep));
 
       if (isDepInstalled) return true;
 
