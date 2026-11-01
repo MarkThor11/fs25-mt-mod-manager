@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<modDesc descVersion="100">
+    <author>MT Mod Manager</author>
+    <version>1.0.0.0</version>
+    <title>
+        <en>FillType Engine Extender</en>
+        <de>Fülltyp-Engine-Erweiterung</de>
+    </title>
+    <description>
+        <en><![CDATA[Automatic game-level engine extension for MT Mod Manager. Safely expands fillType limits to 511 to ensure complete compatibility for heavily modded games, custom maps, and DLC expansions like Straw Harvest.]]></en>
+        <de><![CDATA[Automatische Game-Level-Engine-Erweiterung für MT Mod Manager. Erweitert die FillType-Grenzen sicher auf 511.]]></de>
+    </description>
+    <multiplayer supported="true"/>
+    <iconFilename>icon.dds</iconFilename>
+
+    <extraSourceFiles>
+        <sourceFile filename="src/fillTypeExtender.lua"/>
+    </extraSourceFiles>
+</modDesc>
