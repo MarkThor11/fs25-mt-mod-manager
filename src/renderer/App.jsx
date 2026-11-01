@@ -57,22 +57,14 @@ const MAIN_ROUTES = [
 function AppRoutes() {
   const location = useLocation();
   const currentPath = location.pathname;
-
-  // Track which main tab pages have been visited so we mount them on-demand and keep them alive
-  const [visitedPaths, setVisitedPaths] = useState(() => new Set([currentPath]));
-
-  useEffect(() => {
-    if (MAIN_ROUTES.some(r => r.path === currentPath)) {
-      setVisitedPaths(prev => {
-        if (prev.has(currentPath)) return prev;
-        const next = new Set(prev);
-        next.add(currentPath);
-        return next;
-      });
-    }
-  }, [currentPath]);
-
   const isMainTab = MAIN_ROUTES.some(r => r.path === currentPath);
+
+  // Synchronously track visited paths in a ref so the active view mounts instantly on the very first render pass
+  const visitedRef = useRef(new Set([currentPath]));
+  if (isMainTab && !visitedRef.current.has(currentPath)) {
+    visitedRef.current.add(currentPath);
+  }
+  const visitedPaths = visitedRef.current;
 
   return (
     <>
@@ -444,7 +436,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <HashRouter future={{ v7_startTransition: false, v7_relativeSplatPath: true }}>
         <TitleBar />
         <div className="app-layout">
           <Sidebar />

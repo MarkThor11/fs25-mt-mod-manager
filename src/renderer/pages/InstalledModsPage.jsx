@@ -1030,17 +1030,14 @@ export default function InstalledModsPage() {
     showTagBar, setShowTagBar, installedTagFilter: rawSelectedTags, setInstalledTagFilter: setSelectedTags
   } = useSettingsStore();
   const selectedTags = Array.isArray(rawSelectedTags) ? rawSelectedTags : [];
-  const { toggleFavoriteMod, toggleFavoriteAuthor, favoriteMods, favoriteAuthors, modCache = {} } = useModHubStore();
+  const { toggleFavoriteMod, toggleFavoriteAuthor, favoriteMods, favoriteAuthors } = useModHubStore();
   const sessionInstalled = useDownloadStore((s) => s.sessionInstalled);
   const activeDownloadsKeysStr = useDownloadStore((s) => Object.keys(s.activeDownloads || {}).sort().join(','));
   const activeDownloadsKeys = useMemo(() => activeDownloadsKeysStr ? activeDownloadsKeysStr.split(',') : [], [activeDownloadsKeysStr]);
   const navigate = useNavigate();
 
-  // useDeferredValue lets React prioritize urgent renders (user interactions) over
-  // the expensive useMemo recalculations that happen when a background scan updates mods.
-  // Without this, every background scan would cause a synchronous freeze while all
-  // memos (filteredMods, modLookupIndex, folders, etc.) recompute across 3k mods.
-  const mods = useDeferredValue(rawMods);
+  // Use rawMods directly so the initial tab mount renders immediately on the first pass
+  const mods = rawMods;
 
   const favModIdsSet = useMemo(() => {
     const set = new Set();

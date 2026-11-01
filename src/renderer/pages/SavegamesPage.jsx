@@ -2801,7 +2801,7 @@ const SaveSlotCard = React.memo(function SaveSlotCard({ save, onPlay, onArchive,
     const isReadyForFirstLaunch = !save.hasTemplate && !save.isInitialized;
 
     const versionMismatches = React.useMemo(() => {
-        if (!save.mods || !mods) return 0;
+        if (!save.isServerSave || !save.mods || !mods) return 0;
         let mismatches = 0;
         for (const req of save.mods) {
             if (!req.version) continue;
@@ -3377,6 +3377,7 @@ export default function SavegamesPage() {
   const [createSourceFilter, setCreateSourceFilter] = useState('ALL');
   const [createModSearchQuery, setCreateModSearchQuery] = useState('');
   const createAvailableCategories = React.useMemo(() => {
+    if (!showCreateModal) return [];
     const cats = new Set();
     const cache = useModHubStore.getState().modCache || {};
     const favs = useModHubStore.getState().favoriteMods || [];
@@ -3397,7 +3398,7 @@ export default function SavegamesPage() {
     if (cats.has('DLC')) arr.unshift('DLC');
     if (hasFavs) arr.unshift('Favourites');
     return arr;
-  }, [mods]);
+  }, [mods, showCreateModal]);
   const [editingName, setEditingName] = useState(null);
   const [newName, setNewName] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -3436,6 +3437,7 @@ export default function SavegamesPage() {
   const [localMissingDeps, setLocalMissingDeps] = useState([]);
     
     const availableCreateBrands = React.useMemo(() => {
+        if (!showCreateModal) return [];
         const brands = new Set();
         const modCache = useModHubStore.getState().modCache || {};
         const hardcoded = useModHubStore.getState().hardcodedBrands || [];
@@ -3453,9 +3455,9 @@ export default function SavegamesPage() {
             if (b) brands.add(b);
         });
         return Array.from(brands).sort();
-    }, [mods]);
+    }, [mods, showCreateModal]);
   
-    const activeModalConflicts = getActiveConflictsForSave(modalSelectedMods, useLocalModsStore.getState().conflicts);
+    const activeModalConflicts = showCreateModal ? getActiveConflictsForSave(modalSelectedMods, useLocalModsStore.getState().conflicts) : null;
   // Savegame Editor state
   const [showEditor, setShowEditor] = useState(null); // Save object
   const [showAudit, setShowAudit] = useState(null); // Save object
