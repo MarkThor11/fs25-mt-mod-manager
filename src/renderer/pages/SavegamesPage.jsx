@@ -4050,6 +4050,31 @@ export default function SavegamesPage() {
             if (s.modName) finalModNames.add(s.modName);
           });
           console.log(`[CREATE] Auto-included ${mapDepMods.length} map dependency mods from dedicated folders.`);
+
+          // Relocate root map dependencies into "Map Dependencies" folder if they were placed in root mods folder
+          try {
+            const rootMapDeps = (mods || []).filter(m => {
+              if (!m || m.isMap) return false;
+              const isRoot = !m.folder || m.folder === '' || m.folder.toLowerCase() === 'mods';
+              if (!isRoot) return false;
+              return installedList.some(d => matchModWithDependency(m, d, {}));
+            });
+
+            if (rootMapDeps.length > 0 && window.api?.mods?.moveModsToFolder) {
+              const fileNamesToRelocate = rootMapDeps.map(m => m.fileName).filter(Boolean);
+              if (fileNamesToRelocate.length > 0) {
+                console.log(`[CREATE] Automatically relocating ${fileNamesToRelocate.length} map dependencies to "Map Dependencies":`, fileNamesToRelocate);
+                await window.api.mods.moveModsToFolder({
+                  fileNames: fileNamesToRelocate,
+                  destinationFolder: 'Map Dependencies'
+                });
+                // Background scan refresh to keep local library paths in sync
+                useLocalModsStore.getState().scanMods(null, true).catch(() => {});
+              }
+            }
+          } catch (relocateErr) {
+            console.warn('[CREATE] Map dependencies relocation note:', relocateErr.message);
+          }
         } catch (e) {
           console.error('[CREATE] Safety net dependency resolution failed:', e);
         }
