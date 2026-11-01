@@ -1312,9 +1312,11 @@ export default function ProfilesPage() {
                                           {isPCOnly && (
                                             <span className="pc-only-badge" style={{ marginTop: 2 }}>PC ONLY</span>
                                            )}
-                                           {!mod.modId && !mod.isModHub && (
+                                           {(mod.isDLC || mod.folder === 'DLC' || (mod.fileName && (mod.fileName.toLowerCase().endsWith('.dlc') || mod.fileName.toLowerCase().startsWith('pdlc_'))) || (mod.modName && mod.modName.toLowerCase().startsWith('pdlc_'))) ? (
+                                             <span className="dlc-badge" style={{ marginTop: 2, background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', fontSize: 8, padding: '1px 5px', borderRadius: 3, fontWeight: 900 }}>DLC</span>
+                                          ) : (!mod.modId && !mod.isModHub && (
                                              <span className="non-modhub-badge" style={{ marginTop: 2 }}>NON-MODHUB</span>
-                                          )}
+                                          ))}
                                           <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 'auto', paddingTop: 2 }}>
                                             <span>v{mod.version || '1.0.0.0'}</span>
                                           </div>
@@ -1376,7 +1378,7 @@ export default function ProfilesPage() {
                                 if (b !== selectedBrand) return false;
                               }
                               if (sourceFilter === 'MODHUB' && (!m.modId && !m.isModHub)) return false;
-                              if (sourceFilter === 'NON_MODHUB' && (m.modId || m.isModHub)) return false;
+                              if (sourceFilter === 'NON_MODHUB' && (m.modId || m.isModHub || m.isDLC || m.folder === 'DLC' || (m.fileName && (m.fileName.toLowerCase().endsWith('.dlc') || m.fileName.toLowerCase().startsWith('pdlc_'))))) return false;
                               if (modSearchQuery) {
                                 const q = modSearchQuery.toLowerCase();
                                 const titleMatch = m.title?.toLowerCase().includes(q);
@@ -1591,7 +1593,9 @@ export default function ProfilesPage() {
                                                   </div>
                                                 )}
                                               {isPCOnly && <div className="pc-only-badge">PC ONLY</div>}
-                                              {!mod.modId && !mod.isModHub && <div className="non-modhub-badge">NON-MODHUB</div>}
+                                              {(mod.isDLC || mod.folder === 'DLC' || (mod.fileName && (mod.fileName.toLowerCase().endsWith('.dlc') || mod.fileName.toLowerCase().startsWith('pdlc_'))) || (mod.modName && mod.modName.toLowerCase().startsWith('pdlc_'))) ? (
+                                                <div className="dlc-badge" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', fontSize: 8, padding: '1px 5px', borderRadius: 3, fontWeight: 900 }}>DLC</div>
+                                              ) : (!mod.modId && !mod.isModHub && <div className="non-modhub-badge">NON-MODHUB</div>)}
                                               <div style={{ marginTop: 'auto', paddingTop: 4, fontSize: 10, color: 'var(--text-tertiary)', opacity: 0.7 }}>
                                                 <span>v{mod.version || '1.0.0.0'}</span>
                                               </div>
@@ -1665,9 +1669,11 @@ export default function ProfilesPage() {
                                             {isPCOnly && (
                                               <span className="pc-only-badge">PC ONLY</span>
                                             )}
-                                            {!mod.modId && !mod.isModHub && (
+                                            {(mod.isDLC || mod.folder === 'DLC' || (mod.fileName && (mod.fileName.toLowerCase().endsWith('.dlc') || mod.fileName.toLowerCase().startsWith('pdlc_'))) || (mod.modName && mod.modName.toLowerCase().startsWith('pdlc_'))) ? (
+                                              <span className="dlc-badge" style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', fontSize: 8, padding: '1px 5px', borderRadius: 3, fontWeight: 900 }}>DLC</span>
+                                            ) : (!mod.modId && !mod.isModHub && (
                                               <span className="non-modhub-badge">NON-MODHUB</span>
-                                            )}
+                                            ))}
                                             <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 'auto', paddingTop: 2 }}>
                                               <span>v{mod.version || '1.0.0.0'}</span>
                                             </div>

@@ -2510,7 +2510,7 @@ const [activeTab, setActiveTab] = useState('general');
                                   if (selectedMods.has(m.modName)) return false;
                                   if (showOnlyUsed && !usedMods.has(m.modName.toLowerCase())) return false;
                                   if (editorSourceFilter === 'MODHUB' && (!m.modId && !m.isModHub)) return false;
-                                  if (editorSourceFilter === 'NON_MODHUB' && (m.modId || m.isModHub)) return false;
+                                  if (editorSourceFilter === 'NON_MODHUB' && (m.modId || m.isModHub || m.isDLC || m.folder === 'DLC' || (m.fileName && (m.fileName.toLowerCase().endsWith('.dlc') || m.fileName.toLowerCase().startsWith('pdlc_'))))) return false;
                                   if (selectedCategory) {
                                       if (selectedCategory === 'Favourites') {
                                           const fnStr = typeof m.fileName === 'string' ? m.fileName : '';
@@ -2595,9 +2595,11 @@ const [activeTab, setActiveTab] = useState('general');
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
                                               {m.isFolder && <FolderOpen size={13} style={{ color: '#fbbf24', flexShrink: 0 }} title="Unzipped Mod Folder" />}
                                               <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title || m.modName}</span>
-                                              {!m.modId && !m.isModHub && (
+                                              {(m.isDLC || m.folder === 'DLC' || (m.fileName && (m.fileName.toLowerCase().endsWith('.dlc') || m.fileName.toLowerCase().startsWith('pdlc_'))) || (m.modName && m.modName.toLowerCase().startsWith('pdlc_'))) ? (
+                                                <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 3, background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', fontWeight: 900, letterSpacing: '0.04em', flexShrink: 0 }}>DLC</span>
+                                              ) : (!m.modId && !m.isModHub && (
                                                 <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 3, background: 'rgba(30, 41, 59, 0.9)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.3)', fontWeight: 800, letterSpacing: '0.04em', flexShrink: 0 }}>NON-MODHUB</span>
-                                              )}
+                                              ))}
                                             </div>
                                             <div style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'}</div>
                                           </div>
@@ -5031,7 +5033,7 @@ export default function SavegamesPage() {
                                       ))
                                   ).filter(m => {
                                       if (createSourceFilter === 'MODHUB' && (!m.modId && !m.isModHub)) return false;
-                                      if (createSourceFilter === 'NON_MODHUB' && (m.modId || m.isModHub)) return false;
+                                      if (createSourceFilter === 'NON_MODHUB' && (m.modId || m.isModHub || m.isDLC || m.folder === 'DLC' || (m.fileName && (m.fileName.toLowerCase().endsWith('.dlc') || m.fileName.toLowerCase().startsWith('pdlc_'))))) return false;
                                       if (!createModSearchQuery) return true;
                                       const q = createModSearchQuery.toLowerCase();
                                       return (m.title && m.title.toLowerCase().includes(q)) || (m.modName && m.modName.toLowerCase().includes(q)) || (m.author && m.author.toLowerCase().includes(q));
@@ -5040,7 +5042,7 @@ export default function SavegamesPage() {
                                   
                                   const otherMods = allValidMods.filter(m => {
                                       if (createSourceFilter === 'MODHUB' && (!m.modId && !m.isModHub)) return false;
-                                      if (createSourceFilter === 'NON_MODHUB' && (m.modId || m.isModHub)) return false;
+                                      if (createSourceFilter === 'NON_MODHUB' && (m.modId || m.isModHub || m.isDLC || m.folder === 'DLC' || (m.fileName && (m.fileName.toLowerCase().endsWith('.dlc') || m.fileName.toLowerCase().startsWith('pdlc_'))))) return false;
                                       if (createCategoryFilter) {
                                           if (createCategoryFilter === 'Favourites') {
                                               const bn = m.fileName ? m.fileName.split(/[\\/]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : '');
@@ -5209,9 +5211,11 @@ export default function SavegamesPage() {
                                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
                                                                  {m.isFolder && <FolderOpen size={13} style={{ color: '#fbbf24', flexShrink: 0 }} title="Unzipped Mod Folder" />}
                                                                  <span style={{ fontWeight: 700, fontSize: 13, color: isConflicting ? 'orange' : 'inherit', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.title}</span>
-                                                                 {!m.modId && !m.isModHub && (
+                                                                 {(m.isDLC || m.folder === 'DLC' || (m.fileName && (m.fileName.toLowerCase().endsWith('.dlc') || m.fileName.toLowerCase().startsWith('pdlc_'))) || (m.modName && m.modName.toLowerCase().startsWith('pdlc_'))) ? (
+                                                                   <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 3, background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.4)', fontWeight: 900, letterSpacing: '0.04em', flexShrink: 0 }}>DLC</span>
+                                                                 ) : (!m.modId && !m.isModHub && (
                                                                    <span style={{ fontSize: 8, padding: '1px 4px', borderRadius: 3, background: 'rgba(30, 41, 59, 0.9)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.3)', fontWeight: 800, letterSpacing: '0.04em', flexShrink: 0 }}>NON-MODHUB</span>
-                                                                 )}
+                                                                 ))}
                                                                </div>
                                                                <div style={{ fontSize: 11, opacity: 0.6, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{m.author || 'Unknown'}</div>
                                                              </div>
