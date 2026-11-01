@@ -4256,16 +4256,10 @@ async function isSavegamePersistenceActive(savePath) {
             const data = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
             if (data && typeof data.active === 'boolean') return data.active;
         }
-        const xmlPath = path.join(savePath, 'careerSavegame.xml');
-        if (fs.existsSync(xmlPath)) {
-            const xml = fs.readFileSync(xmlPath, 'utf8');
-            if (xml.includes('FS25_ManagerPersistenceBridge') || xml.includes('FS25_rememberPositions')) {
-                return true;
-            }
-        }
-        return false;
+        // Persistence defaults to ON unless explicitly disabled
+        return true;
     } catch (_) {
-        return false;
+        return true;
     }
 }
 

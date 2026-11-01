@@ -785,12 +785,25 @@ const [activeTab, setActiveTab] = useState('general');
   useEffect(() => {
     if (!window.api?.savegames) return;
     
-    // Check Persistence
-    const activePersistence = save.isPersistenceActive ?? (save.mods || []).some(m => {
-      const name = (typeof m === 'string' ? m : m?.modName) || '';
-      return name === 'FS25_ManagerPersistenceBridge' || name === 'FS25_rememberPositions';
-    });
-    setIsPersistenceActive(Boolean(activePersistence));
+    // Check Persistence: Defaults to ON unless explicitly disabled by the user for this save
+    const disableKey = `persistence_disabled_${save.path}`;
+    const userExplicitlyDisabled = localStorage.getItem(disableKey) === 'true';
+
+    let activePersistence = false;
+    if (userExplicitlyDisabled) {
+      activePersistence = false;
+    } else {
+      activePersistence = true;
+      // If it should be active by default but isn't yet registered, activate it
+      const currentModActive = save.isPersistenceActive || (save.mods || []).some(m => {
+        const name = (typeof m === 'string' ? m : m?.modName) || '';
+        return name === 'FS25_ManagerPersistenceBridge' || name === 'FS25_rememberPositions';
+      });
+      if (!currentModActive && window.api?.savegames?.updateNativeEnhancement) {
+        window.api.savegames.updateNativeEnhancement({ savePath: save.path, includeBridge: true, includeDeliveries: false }).catch(() => {});
+      }
+    }
+    setIsPersistenceActive(activePersistence);
 
 
 
