@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import TitleBar from './components/layout/TitleBar';
 import Sidebar from './components/layout/Sidebar';
