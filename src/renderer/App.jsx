@@ -59,7 +59,7 @@ function AppRoutes() {
   const currentPath = location.pathname;
 
   // Track which main tab pages have been visited so we mount them on-demand and keep them alive
-  const [visitedPaths, setVisitedPaths] = useState(() => new Set([currentPath, '/installed', '/savegames']));
+  const [visitedPaths, setVisitedPaths] = useState(() => new Set([currentPath]));
 
   useEffect(() => {
     if (MAIN_ROUTES.some(r => r.path === currentPath)) {
