@@ -34,6 +34,7 @@ import { useMapStore } from './store/useMapStore';
 import { useDownloadStore } from './store/useDownloadStore';
 import { useToastStore } from './store/useToastStore';
 import { useSavegameStore } from './store/useSavegameStore';
+import { useRadioStore } from './store/useRadioStore';
 
 const MAIN_ROUTES = [
   { path: '/', Component: HomePage },
@@ -118,6 +119,7 @@ export default function App() {
         await useLocalModsStore.getState().loadCache();
         await useMapStore.getState().loadCache();
         await useSavegameStore.getState().loadCache();
+        await useRadioStore.getState().loadCache();
         
         // Staggered Startup: Prioritize immediate UI responsiveness
         // 1. File sync runs first after 2.5s once initial UI paint has fully settled

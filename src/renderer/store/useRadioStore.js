@@ -18,6 +18,24 @@ const loadHiddenStations = () => {
   }
 };
 
+const loadCachedStations = () => {
+  try {
+    const raw = localStorage.getItem('radio_installed_stations');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+const loadCachedSearchResults = () => {
+  try {
+    const raw = localStorage.getItem('radio_search_results');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
 const saveFiltersToStorage = (state) => {
   try {
     localStorage.setItem('radio_filters', JSON.stringify({
@@ -37,11 +55,23 @@ const saveHiddenStationsToStorage = (hiddenStations) => {
   } catch (e) {}
 };
 
+const saveCachedStationsToStorage = (stations) => {
+  try {
+    localStorage.setItem('radio_installed_stations', JSON.stringify(stations));
+  } catch (e) {}
+};
+
+const saveCachedSearchResultsToStorage = (results) => {
+  try {
+    localStorage.setItem('radio_search_results', JSON.stringify(results));
+  } catch (e) {}
+};
+
 const savedFilters = loadSavedFilters();
 
 export const useRadioStore = create((set, get) => ({
-  stations: [],
-  searchResults: [],
+  stations: loadCachedStations(),
+  searchResults: loadCachedSearchResults(),
   hiddenStations: loadHiddenStations(),
   isSearching: false,
   isLoading: false,
@@ -120,6 +150,23 @@ export const useRadioStore = create((set, get) => ({
   overrideBuiltins: true,
   isCompanionInstalled: false,
 
+  loadCache: async () => {
+    // Instant hydration from localStorage was done on store creation,
+    // also attempt to load from SQLite settings if available
+    if (window.api?.settings) {
+      try {
+        const cachedStations = await window.api.settings.get('radio_installed_cache');
+        if (cachedStations) {
+          const parsed = JSON.parse(cachedStations);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            set({ stations: parsed });
+            saveCachedStationsToStorage(parsed);
+          }
+        }
+      } catch (_) {}
+    }
+  },
+
   fetchRadioSettings: async () => {
     if (!window.api?.radio?.getSettings) return;
     try {
@@ -142,12 +189,20 @@ export const useRadioStore = create((set, get) => ({
     }
   },
 
-  fetchRadios: async () => {
+  fetchRadios: async (skipLoading = false) => {
     if (!window.api?.radio) return;
-    set({ isLoading: true });
+    if (!skipLoading && get().stations.length === 0) {
+      set({ isLoading: true });
+    }
     try {
       const stations = await window.api.radio.getRadios();
-      set({ stations });
+      if (Array.isArray(stations)) {
+        set({ stations });
+        saveCachedStationsToStorage(stations);
+        if (window.api?.settings?.set) {
+          window.api.settings.set('radio_installed_cache', JSON.stringify(stations)).catch(() => {});
+        }
+      }
       get().fetchRadioSettings();
     } finally {
       set({ isLoading: false });
@@ -167,10 +222,15 @@ export const useRadioStore = create((set, get) => ({
     set({ isSearching: true });
     try {
       const results = await window.api.radio.search(filters);
-      set({ searchResults: results || [] });
+      const stationsList = results || [];
+      set({ searchResults: stationsList });
+      saveCachedSearchResultsToStorage(stationsList);
     } catch (err) {
       console.error('Radio search failed:', err);
-      set({ searchResults: [] });
+      // Retain existing cached results on error rather than wiping blank
+      if (get().searchResults.length === 0) {
+        set({ searchResults: [] });
+      }
     } finally {
       set({ isSearching: false });
     }

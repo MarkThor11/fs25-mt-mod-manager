@@ -3,6 +3,7 @@ const fs = require('fs-extra');
 const { XMLParser, XMLBuilder } = require('fast-xml-parser');
 const pathProvider = require('./pathProvider');
 const https = require('https');
+const cache = require('./cache');
 
 let radioFilePath = null;
 
@@ -529,6 +530,23 @@ async function deployCompanionMod() {
 async function searchStations(filters = {}) {
     const { query, country, language, tag, order = 'votes', source } = filters;
 
+    // Fast SQLite Cache Lookup (24h TTL) for station searches
+    const filterKey = JSON.stringify({
+        q: (query || '').trim().toLowerCase(),
+        c: (country || '').trim().toLowerCase(),
+        l: (language || '').trim().toLowerCase(),
+        t: (tag || '').trim().toLowerCase(),
+        o: order,
+        s: source || 'all'
+    });
+    const cacheKey = `radio_search_${filterKey}`;
+    try {
+        const cached = cache.get(cacheKey);
+        if (Array.isArray(cached) && cached.length > 0) {
+            return cached;
+        }
+    } catch (_) {}
+
     let radioBrowserResults = [];
     let radioFeedsResults = [];
 
@@ -633,6 +651,13 @@ async function searchStations(filters = {}) {
         seenNames.add(nameKey);
         if (normUrl) seenUrls.add(normUrl);
         deduped.push(station);
+    }
+
+    if (deduped.length > 0) {
+        try {
+            // Cache valid search results in SQLite with 24 hours TTL
+            cache.set(cacheKey, deduped, 24 * 60 * 60 * 1000);
+        } catch (_) {}
     }
 
     return deduped;
