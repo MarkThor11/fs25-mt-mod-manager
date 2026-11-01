@@ -6,6 +6,8 @@
 - **MANDATORY BACKUP**: Before making significant code changes, you MUST create a backup commit to save the user's progress. Use: `git add .` and `git commit -m "AI Backup before changes"`.
 - **RESTORING WORK**: You are ONLY allowed to use `git restore`, `git checkout`, or `git reset` if you have explicitly created a backup commit first. You may use these commands to revert the workspace back to your backup commit if you make a mistake.
 - **NEVER** use destructive git commands to go back further than your most recent backup commit. Doing so will permanently wipe out the USER's uncommitted work.
+- **STRICT FORBIDDEN REMOTE PUSH**: NEVER run `git push`, push commits, push tags, or sync git to the remote GitHub repository under ANY circumstances. The user only wants releases distributed as compiled binaries (e.g. the installer `.exe` in `release/`), and NEVER wants the source code or local commit tree pushed to GitHub. Remote git pushing is strictly forbidden.
+
 ## App-Wide UI Lock & Scope Discipline
 - **STRICT GLOBAL UI LOCK**: NEVER alter, add, remove, or modify ANY UI components, layouts, badges, styling, or pages anywhere in the app unless the user explicitly requests that specific change.
 - **SURGICAL SCOPE**: Focus 100% on the exact logic or bug requested. Do NOT refactor, touch, or adjust unrelated UI components, styles, or page layouts.
