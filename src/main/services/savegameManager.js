@@ -4603,11 +4603,11 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true, fal
 
         if (!mapModName || isOfficialMap(mapModName) || isOfficialMap(mapId)) {
             if (mapId === 'MapUS' || mapTitle === 'Riverbend Springs') {
-                return { x: -783.801, y: 46.977, z: 132.735 };
+                return { x: -783.801, y: 46.977, z: 132.735, yaw: 2.2407 };
             } else if (mapId === 'MapEU' || mapTitle === 'Zielonka') {
-                return { x: -263.0, y: 60.0, z: 44.0 };
+                return { x: -263.0, y: 60.0, z: 44.0, yaw: -0.9948 };
             } else if (mapId === 'MapAS' || mapTitle === 'Hutan Pantai') {
-                return { x: -528.8, y: 19.8, z: -61.1 };
+                return { x: -528.8, y: 19.8, z: -61.1, yaw: 2.3795 };
             } else if (mapId === 'pdlc_highlandsFishingPack.HighlandsFishingMap' || (mapId || '').toLowerCase().includes('highlandsfishing') || (mapTitle || '').toLowerCase() === 'kinlaig') {
                 return null;
             }
@@ -5256,16 +5256,16 @@ async function getMapShopCoordinates(savePath, allowFallback = true) {
         // 1. Official FS25 maps exact shop hotspot spawn positions (only for official base game maps)
         if (!mapModName) {
             if (mapId === 'MapUS') {
-                return { x: -128.0, y: 49.2, z: -162.0 };
+                return { x: -128.0, y: 49.2, z: -162.0, yaw: -1.5708 };
             } else if (mapId === 'MapEU') {
-                return { x: -263.0, y: 60.0, z: 44.0 };
+                return { x: -263.0, y: 60.0, z: 44.0, yaw: 1.0472 };
             } else if (mapId === 'MapAS') {
-                return { x: -528.8, y: 19.8, z: -61.1 };
+                return { x: -528.8, y: 19.8, z: -61.1, yaw: -1.5708 };
             }
         }
         
         if (mapIdLower.includes('highland') || mapTitleLower.includes('highland') || mapTitleLower.includes('kinlaig')) {
-            return { x: -204.544, y: 82.996, z: -300.276 };
+            return { x: -204.544, y: 82.996, z: -300.276, yaw: -1.5708 };
         }
         
         // Helper to identify shop placeables
@@ -5475,6 +5475,11 @@ async function resetPlayerSpawn(savePath) {
                         p.spawn = {
                             '@_position': `${defaultSpawn.x.toFixed(3)} ${defaultSpawn.y.toFixed(3)} ${defaultSpawn.z.toFixed(3)}`
                         };
+                        if (defaultSpawn.yaw !== undefined && defaultSpawn.yaw !== null) {
+                            p.spawn['@_yaw'] = String(Number(defaultSpawn.yaw).toFixed(4));
+                        } else {
+                            delete p.spawn['@_yaw'];
+                        }
                     } else if (p.spawn) {
                         delete p.spawn['@_position'];
                         delete p.spawn['@_yaw'];
@@ -5499,13 +5504,18 @@ async function resetPlayerSpawn(savePath) {
                     careerObj.careerSavegame.player['@_spawnPositionX'] = defaultSpawn.x.toFixed(3);
                     careerObj.careerSavegame.player['@_spawnPositionY'] = defaultSpawn.y.toFixed(3);
                     careerObj.careerSavegame.player['@_spawnPositionZ'] = defaultSpawn.z.toFixed(3);
+                    if (defaultSpawn.yaw !== undefined && defaultSpawn.yaw !== null) {
+                        careerObj.careerSavegame.player['@_spawnYaw'] = String(Number(defaultSpawn.yaw).toFixed(4));
+                    } else {
+                        delete careerObj.careerSavegame.player['@_spawnYaw'];
+                    }
                 } else {
                     delete careerObj.careerSavegame.player['@_spawnPositionX'];
                     delete careerObj.careerSavegame.player['@_spawnPositionY'];
                     delete careerObj.careerSavegame.player['@_spawnPositionZ'];
+                    delete careerObj.careerSavegame.player['@_spawnYaw'];
                 }
                 delete careerObj.careerSavegame.player['@_vehicleId'];
-                delete careerObj.careerSavegame.player['@_spawnYaw'];
                 delete careerObj['?xml'];
                 const careerBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });
                 const newCareerXml = careerBuilder.build(careerObj);
@@ -5536,10 +5546,6 @@ function ensureValidPlayerXml(savePath) {
                 for (let p of players) {
                     if (p['@_uniqueUserId'] && !p['@_uniqueUserId'].endsWith('=')) {
                         p['@_uniqueUserId'] += '=';
-                        modified = true;
-                    }
-                    if (p.spawn && p.spawn['@_yaw'] !== undefined) {
-                        delete p.spawn['@_yaw'];
                         modified = true;
                     }
                 }
@@ -5592,6 +5598,7 @@ async function getPlayerPosition(savePath) {
                         x: parseFloat(coords[0]), 
                         y: parseFloat(coords[1]), 
                         z: parseFloat(coords[2]),
+                        yaw: player.spawn['@_yaw'] !== undefined ? parseFloat(player.spawn['@_yaw']) : undefined,
                         vehicleUniqueId: player.spawn['@_vehicleUniqueId'] || null
                     };
                 } else if (player['@_lastPosition']) {
@@ -5614,6 +5621,7 @@ async function getPlayerPosition(savePath) {
                             x: parseFloat(player['@_spawnPositionX']),
                             y: parseFloat(player['@_spawnPositionY']),
                             z: parseFloat(player['@_spawnPositionZ']),
+                            yaw: player['@_spawnYaw'] !== undefined ? parseFloat(player['@_spawnYaw']) : undefined,
                             vehicleUniqueId: player['@_vehicleId'] || null
                         };
                     }
@@ -5635,14 +5643,15 @@ async function getPlayerPosition(savePath) {
 }
 
 async function setPlayerPosition(options) {
-    let savePath, x, y, z, vehicleUniqueId;
+    let savePath, x, y, z, vehicleUniqueId, yaw;
     if (typeof options === 'object') {
-        ({ savePath, x, y, z, vehicleUniqueId } = options);
+        ({ savePath, x, y, z, vehicleUniqueId, yaw } = options);
     } else {
         savePath = arguments[0];
         x = arguments[1];
         y = arguments[2];
         z = arguments[3];
+        yaw = arguments[4];
     }
     
     try {
@@ -5668,7 +5677,11 @@ async function setPlayerPosition(options) {
                     } else {
                         delete p.spawn['@_vehicleUniqueId'];
                     }
-                    delete p.spawn['@_yaw'];
+                    if (yaw !== undefined && yaw !== null && !isNaN(yaw)) {
+                        p.spawn['@_yaw'] = String(Number(yaw).toFixed(4));
+                    } else {
+                        delete p.spawn['@_yaw'];
+                    }
                     if (p['@_uniqueUserId'] && !p['@_uniqueUserId'].endsWith('=')) {
                         p['@_uniqueUserId'] = p['@_uniqueUserId'] + '=';
                     }
@@ -5701,7 +5714,11 @@ async function setPlayerPosition(options) {
                     delete player['@_vehicleId'];
                 }
                 delete player['@_vehicleFilename'];
-                delete player['@_spawnYaw'];
+                if (yaw !== undefined && yaw !== null && !isNaN(yaw)) {
+                    player['@_spawnYaw'] = String(Number(yaw).toFixed(4));
+                } else {
+                    delete player['@_spawnYaw'];
+                }
                 
                 delete careerObj['?xml'];
                 const careerBuilder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '@_', format: true, suppressBooleanAttributes: false, suppressEmptyNode: true });

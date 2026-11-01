@@ -1827,7 +1827,7 @@ const [activeTab, setActiveTab] = useState('general');
                       }
                       const res = await window.api?.savegames?.getStoreDeliveryCoordinates(save.path);
                       if (res) {
-                        const setRes = await window.api.savegames.setPlayerPosition({ savePath: save.path, x: res.x, y: res.y, z: res.z });
+                        const setRes = await window.api.savegames.setPlayerPosition({ savePath: save.path, x: res.x, y: res.y, z: res.z, yaw: res.yaw });
                         if (setRes && setRes.success) {
                           useToastStore.getState().success(res.type === 'Custom' ? 'Custom spawn point applied!' : 'Spawning at home location. Set a delivery point in-game to customise.');
                           window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
@@ -1916,7 +1916,7 @@ const [activeTab, setActiveTab] = useState('general');
                       localStorage.setItem(`selected_spawn_${save.path}`, JSON.stringify({ mode: 'shop' }));
                       const res = await window.api?.savegames?.getMapShopCoordinates(save.path);
                       if (res) {
-                          const setRes = await window.api.savegames.setPlayerPosition({ savePath: save.path, x: res.x, y: res.y, z: res.z });
+                          const setRes = await window.api.savegames.setPlayerPosition({ savePath: save.path, x: res.x, y: res.y, z: res.z, yaw: res.yaw });
                           if (setRes && setRes.success) {
                               useToastStore.getState().success("Selected Vehicle Shop Spawn Point!");
                               window.api.savegames.getPlayerPosition(save.path).then(setPlayerPos);
@@ -3698,10 +3698,10 @@ export default function SavegamesPage() {
         const spawnPref = (() => { try { return JSON.parse(localStorage.getItem(`selected_spawn_${savePath}`) || '{}'); } catch { return {}; } })();
         if (spawnPref.mode === 'custom') {
           const coords = await window.api.savegames.getStoreDeliveryCoordinates(savePath);
-          if (coords) await window.api.savegames.setPlayerPosition({ savePath, x: coords.x, y: coords.y, z: coords.z });
+          if (coords) await window.api.savegames.setPlayerPosition({ savePath, x: coords.x, y: coords.y, z: coords.z, yaw: coords.yaw });
         } else if (spawnPref.mode === 'shop') {
           const coords = await window.api.savegames.getMapShopCoordinates(savePath);
-          if (coords) await window.api.savegames.setPlayerPosition({ savePath, x: coords.x, y: coords.y, z: coords.z });
+          if (coords) await window.api.savegames.setPlayerPosition({ savePath, x: coords.x, y: coords.y, z: coords.z, yaw: coords.yaw });
         } else if (spawnPref.mode === 'vehicle' && spawnPref.vehicleId) {
           await window.api.savegames.setPlayerPosition({ savePath, vehicleUniqueId: spawnPref.vehicleId });
         } else {
@@ -3710,7 +3710,7 @@ export default function SavegamesPage() {
           if (!curPos || (curPos.x === 0 && curPos.y === 0 && curPos.z === 0)) {
             const defCoords = await window.api.savegames.getMapHomeCoordinates(savePath);
             if (defCoords && defCoords.x !== undefined) {
-              await window.api.savegames.setPlayerPosition({ savePath, x: defCoords.x, y: defCoords.y, z: defCoords.z });
+              await window.api.savegames.setPlayerPosition({ savePath, x: defCoords.x, y: defCoords.y, z: defCoords.z, yaw: defCoords.yaw });
             }
           }
         }
