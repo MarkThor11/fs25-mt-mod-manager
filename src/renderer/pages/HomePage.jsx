@@ -155,7 +155,7 @@ export default function HomePage() {
 
       // Fetch enough pages (up to 4 pages = 96 mods) to cover recent release days
       while (page < totalPages && page < 4) {
-        const result = await window.api.modhub.fetchMods({ filter: 'latest', page, bustCache: page === 0 });
+        const result = await window.api.modhub.fetchMods({ filter: 'latest', page, bustCache: false });
         const list = result?.mods || [];
         if (result?.pagination?.total) totalPages = result.pagination.total;
         if (list.length === 0) break;
@@ -254,7 +254,7 @@ export default function HomePage() {
   const loadTopDownloadedMods = async () => {
     if (!window.api?.modhub) return;
     try {
-      const result = await window.api.modhub.fetchMods({ filter: 'downloads', page: 0, bustCache: true });
+      const result = await window.api.modhub.fetchMods({ filter: 'downloads', page: 0, bustCache: false });
       const sorted = (result.mods || []).sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
       const topMods = sorted.slice(0, 18);
       if (topMods.length > 0) {
