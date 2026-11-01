@@ -3371,6 +3371,7 @@ export default function SavegamesPage() {
 
   const [updatingMod, setUpdatingMod] = useState(null);
   const [autoResolveMode, setAutoResolveMode] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [createActiveTab, setCreateActiveTab] = useState('basic');
     const [createBrandFilter, setCreateBrandFilter] = useState('');
   const [createCategoryFilter, setCreateCategoryFilter] = useState('');
@@ -3401,7 +3402,6 @@ export default function SavegamesPage() {
   }, [mods, showCreateModal]);
   const [editingName, setEditingName] = useState(null);
   const [newName, setNewName] = useState('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showRestoreModal, setShowRestoreModal] = useState(null); // Archived folder name
   const [restoreSlot, setRestoreSlot] = useState('1');
   const [swapping, setSwapping] = useState(false);
