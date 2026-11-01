@@ -2236,7 +2236,7 @@ app.whenReady().then(() => {
 
   createWindow();
 
-  // Background initialization tasks (non-blocking)
+  // Background initialization tasks (non-blocking) - deferred so initial window paint and user interaction are 100% idle
   setTimeout(() => {
     // Ensure modsDirectoryOverride is disabled on app startup so standalone game launches use standard mods folder
     gameLauncher.isGameRunning().then(running => {
@@ -2287,7 +2287,7 @@ app.whenReady().then(() => {
         }).catch(err => console.warn('[STARTUP] Existing mod keybind migration warning:', err.message));
       }
     } catch (e) {}
-  }, 100);
+  }, 10000);
 
   // 2. Deny all permission requests (Camera, Mic, Location, etc.)
   const ses = session.defaultSession;
