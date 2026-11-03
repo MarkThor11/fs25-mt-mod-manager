@@ -11,12 +11,12 @@
     "dist:linux": "npm run build && electron-builder --linux",
     "dist": "npm run build && electron-builder --mac --linux --win",
     "build:main": "node scripts/build-main.js",
-    "build:renderer": "vite build"
+    "build:renderer": "vite build",
 
   "author": {
     "name": "MarkThor11",
     "email": "markwadlow32@gmail.com"
-
+  },
   "license": "MIT",
   "devDependencies": {
     "electron": "^45.2.1",
