@@ -11,7 +11,7 @@ import SaveSlotModal from '../components/profiles/SaveSlotModal';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 
 import { useLocalModsStore } from '../store/useLocalModsStore';
-import { resolveRecursiveDependencies } from '../utils/modUtils';
+import { resolveRecursiveDependencies, getModSelectionKey, stripModSelectionKey, isModVariantSelected, buildInitialModSelectionSet } from '../utils/modUtils';
 import { parseModCategory, getEffectiveModCategory, MAIN_CATEGORY_NAMES, isMapCategory, isMapMod } from '../utils/categoryUtils';
 
 const MAPS = [
@@ -248,20 +248,18 @@ export default function ProfilesPage() {
     if (selectedProfile) {
       // Only update local state if the profile ID changed or if were not currently editing
       setProfileName(selectedProfile.name);
-      setSelectedMods(new Set((selectedProfile?.mods || []).map(m => m.modName)));
+      const initialSel = buildInitialModSelectionSet(selectedProfile?.mods || [], installedMods);
       
       // Auto-inject MUST-HAVE mods that are installed
-      const mustHaveModNames = installedMods
-        .filter(m => favoriteMods.some(fm => fm.isMustHave && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && m.fileName && fm.fileName === m.fileName))))
-        .map(m => m.modName);
+      const mustHaveModsList = installedMods
+        .filter(m => favoriteMods.some(fm => fm.isMustHave && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && m.fileName && fm.fileName === m.fileName))));
       
-      if (mustHaveModNames.length > 0) {
-        setSelectedMods(prev => {
-          const next = new Set(prev);
-          mustHaveModNames.forEach(name => next.add(name));
-          return next;
-        });
-      }
+      mustHaveModsList.forEach(m => {
+        const k = getModSelectionKey(m);
+        const opp = getModSelectionKey(m.modName, !m.isFolder);
+        if (!initialSel.has(opp)) initialSel.add(k);
+      });
+      setSelectedMods(initialSel);
 
       setOptions(prev => ({
         ...prev,
@@ -403,8 +401,14 @@ export default function ProfilesPage() {
     setSelectedMods(prev => {
       const next = new Set(prev);
       mods.forEach(m => {
-        if (deselect) next.delete(m.modName);
-        else next.add(m.modName);
+        const k = getModSelectionKey(m);
+        const opp = getModSelectionKey(m.modName, !m.isFolder);
+        next.delete(m.modName);
+        if (deselect) {
+          next.delete(k);
+        } else if (!next.has(opp)) {
+          next.add(k);
+        }
       });
       return next;
     });
@@ -433,16 +437,22 @@ export default function ProfilesPage() {
   const handleCreateNew = async () => {
     const name = `Profile ${(profiles || []).length + 1}`;
     
-    // Auto-select "Must Have" mods
-    const mustHaveModNames = (installedMods || [])
-      .filter(m => (favoriteMods || []).some(fm => fm.isMustHave && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && m.fileName && fm.fileName === m.fileName))))
-      .map(m => m.modName);
+    // Auto-select "Must Have" mods (without bundling duplicate zip/folder variants)
+    const mustHaveMods = [];
+    const seenMustHaveNames = new Set();
+    (installedMods || []).forEach(m => {
+      const isMh = (favoriteMods || []).some(fm => fm.isMustHave && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && m.fileName && fm.fileName === m.fileName)));
+      if (isMh && m.modName && !seenMustHaveNames.has(m.modName.toLowerCase())) {
+        seenMustHaveNames.add(m.modName.toLowerCase());
+        mustHaveMods.push(m);
+      }
+    });
     
-    const result = await createProfile(name, (installedMods || []).filter(m => mustHaveModNames.includes(m.modName)));
+    const result = await createProfile(name, mustHaveMods);
     if (result.success) {
       setSelectedProfileId(result.profile.id);
-      if (mustHaveModNames.length > 0) {
-        useToastStore.getState().success(`Template created with ${mustHaveModNames.length} Must-Have mods auto-selected`);
+      if (mustHaveMods.length > 0) {
+        useToastStore.getState().success(`Template created with ${mustHaveMods.length} Must-Have mods auto-selected`);
       } else {
         useToastStore.getState().success('Template profile created');
       }
@@ -454,13 +464,17 @@ export default function ProfilesPage() {
   const handleSave = async () => {
     if (!selectedProfile) return;
     setIsSaving(true);
-    let finalModNames = new Set(selectedMods);
+    let finalModKeys = new Set(selectedMods);
     if (includeMustHaves) {
         (installedMods || [])
           .filter(m => (favoriteMods || []).some(fm => fm.isMustHave && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && m.fileName && fm.fileName === m.fileName))))
-          .forEach(m => finalModNames.add(m.modName));
+          .forEach(m => {
+            const k = getModSelectionKey(m);
+            const opp = getModSelectionKey(m.modName, !m.isFolder);
+            if (!finalModKeys.has(opp)) finalModKeys.add(k);
+          });
     }
-    const modsToSave = installedMods.filter(m => finalModNames.has(m.modName));
+    const modsToSave = installedMods.filter(m => isModVariantSelected(m, finalModKeys, installedMods));
     const result = await updateProfile(selectedProfile.id, profileName, modsToSave, options);
     if (result.success) {
       useToastStore.getState().success('Profile template updated');
@@ -499,13 +513,17 @@ export default function ProfilesPage() {
 
   const handleInitializeSave = async (slotIndex) => {
     if (!selectedProfile) return;
-    let finalModNames = new Set(selectedMods);
+    let finalModKeys = new Set(selectedMods);
     if (includeMustHaves) {
         (installedMods || [])
           .filter(m => (favoriteMods || []).some(fm => fm.isMustHave && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && m.fileName && fm.fileName === m.fileName))))
-          .forEach(m => finalModNames.add(m.modName));
+          .forEach(m => {
+            const k = getModSelectionKey(m);
+            const opp = getModSelectionKey(m.modName, !m.isFolder);
+            if (!finalModKeys.has(opp)) finalModKeys.add(k);
+          });
     }
-    const modsToSave = installedMods.filter(m => finalModNames.has(m.modName));
+    const modsToSave = installedMods.filter(m => isModVariantSelected(m, finalModKeys, installedMods));
     
     try {
       if (!window.api?.savegames) {
@@ -582,11 +600,27 @@ export default function ProfilesPage() {
     }));
   };
 
-  const toggleMod = (modName) => {
+  const toggleMod = (modOrName, isFolderArg) => {
     setSelectedMods(prev => {
+      const modObj = typeof modOrName === 'object' && modOrName !== null
+        ? modOrName
+        : (installedMods || []).find(m => m.modName === modOrName && (typeof isFolderArg === 'boolean' ? Boolean(m.isFolder) === isFolderArg : true))
+          || (installedMods || []).find(m => m.modName === modOrName);
+      const modName = modObj?.modName || (typeof modOrName === 'string' ? stripModSelectionKey(modOrName) : '');
+      const isFolder = modObj ? Boolean(modObj.isFolder) : Boolean(isFolderArg);
+      const selKey = getModSelectionKey(modName, isFolder);
+      const oppositeKey = getModSelectionKey(modName, !isFolder);
+
       const next = new Set(prev);
-      if (next.has(modName)) next.delete(modName);
-      else next.add(modName);
+      const wasPlainSelected = next.has(modName);
+      next.delete(modName);
+
+      if (next.has(selKey) || (wasPlainSelected && !next.has(oppositeKey) && isModVariantSelected(modObj || { modName, isFolder }, prev, installedMods))) {
+        next.delete(selKey);
+      } else {
+        next.delete(oppositeKey);
+        next.add(selKey);
+      }
       return next;
     });
   };
@@ -1204,7 +1238,7 @@ export default function ProfilesPage() {
                         {(() => {
                           const seenSel = new Set();
                           const explicitlySelected = installedMods.filter(m => {
-                            if (!m || !selectedMods.has(m.modName)) return false;
+                            if (!m || !isModVariantSelected(m, selectedMods, installedMods)) return false;
                             const typeTag = m.isFolder ? '[UNZIPPED]' : '[ZIP]';
                             const k = `${(m.modName || '').toLowerCase()}_${typeTag}`;
                             if (seenSel.has(k)) return false;
@@ -1257,7 +1291,7 @@ export default function ProfilesPage() {
                                     return (
                                       <div 
                                         key={`${mod.modName}-${mod.isFolder ? 'folder' : 'zip'}`} 
-                                        onClick={() => toggleMod(mod.modName)}
+                                        onClick={() => toggleMod(mod)}
                                         className="mod-template-item mod-template-item--active"
                                         style={{ 
                                           display: 'flex', 
@@ -1396,7 +1430,7 @@ export default function ProfilesPage() {
                             if (filteredFolderMods.length === 0) return null;
 
                             const isExpanded = expandedFolders[folderName] || (modSearchQuery && filteredFolderMods.length > 0);
-                            const selectedInFolder = filteredFolderMods.filter(m => selectedMods.has(m.modName)).length;
+                            const selectedInFolder = filteredFolderMods.filter(m => isModVariantSelected(m, selectedMods, installedMods)).length;
                             const allSelected = selectedInFolder === filteredFolderMods.length && filteredFolderMods.length > 0;
                             const viewMode = folderViewModes[folderName] || 'list';
                             const zoom = folderZooms[folderName] || 220;
@@ -1524,7 +1558,7 @@ export default function ProfilesPage() {
                                       const isMustHave = favoriteMods.some(fm => fm.isMustHave && ((fm.modId && mod.modId && String(fm.modId) === String(mod.modId)) || (fm.fileName && mod.fileName && fm.fileName === mod.fileName)));
                                       const isPCOnly = (mod.scripts && mod.scripts.length > 0) || (mod.specializations && mod.specializations.length > 0);
                                       const isConflict = options.isCrossPlatform && isPCOnly;
-                                      const isSelected = selectedMods.has(mod.modName);
+                                      const isSelected = isModVariantSelected(mod, selectedMods, installedMods);
                                       
                                       
                                       
@@ -1535,7 +1569,7 @@ export default function ProfilesPage() {
                                         return (
                                           <div 
                                             key={`${mod.modName}-${mod.isFolder ? 'folder' : 'zip'}`} 
-                                            onClick={() => toggleMod(mod.modName)}
+                                            onClick={() => toggleMod(mod)}
                                             style={{ 
                                               display: 'flex', 
                                               flexDirection: 'column', 
@@ -1613,7 +1647,7 @@ export default function ProfilesPage() {
                                       return (
                                         <div 
                                           key={`${mod.modName}-${mod.isFolder ? 'folder' : 'zip'}`} 
-                                          onClick={() => toggleMod(mod.modName)}
+                                          onClick={() => toggleMod(mod)}
                                           className={`mod-template-item ${isSelected ? 'mod-template-item--active' : ''} ${isConflict ? 'mod-template-item--conflict' : ''}`}
                                           style={{ 
                                             display: 'flex', 

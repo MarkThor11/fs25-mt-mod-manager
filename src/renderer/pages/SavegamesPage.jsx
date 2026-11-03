@@ -16,7 +16,7 @@ import { useLocalModsStore } from '../store/useLocalModsStore';
 import { useModHubStore } from '../store/useModHubStore';
 import { useDownloadStore } from '../store/useDownloadStore';
 import MapImage, { MAP_PREVIEWS } from '../components/common/MapImage';
-import { resolveRecursiveDependencies, matchModWithDependency, getActiveConflictsForSave } from '../utils/modUtils';
+import { resolveRecursiveDependencies, matchModWithDependency, getActiveConflictsForSave, getModSelectionKey, stripModSelectionKey, isModVariantSelected, buildInitialModSelectionSet } from '../utils/modUtils';
 import { parseModCategory, getEffectiveModCategory, isMapMod, isMapCategory } from '../utils/categoryUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
 import MapSelectDropdown from '../components/common/MapSelectDropdown';
@@ -648,9 +648,9 @@ const [activeTab, setActiveTab] = useState('general');
   const [selectedFolder, setSelectedFolder] = useState('ALL');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [editorSourceFilter, setEditorSourceFilter] = useState('ALL');
-  const [selectedMods, setSelectedMods] = useState(new Set((save.mods || []).map(m => typeof m === 'string' ? m : m?.modName)));
-  const activeModalConflicts = getActiveConflictsForSave(selectedMods, useLocalModsStore.getState().conflicts);
   const { mods: installedMods } = useLocalModsStore();
+  const [selectedMods, setSelectedMods] = useState(() => buildInitialModSelectionSet(save.mods || [], useLocalModsStore.getState().mods || []));
+  const activeModalConflicts = getActiveConflictsForSave(selectedMods, useLocalModsStore.getState().conflicts);
   const [expandedFolders, setExpandedFolders] = useState(new Set(['MAIN']));
   const [isEditorSelectedSectionOpen, setIsEditorSelectedSectionOpen] = useState(true);
   const [fleetCleanPct, setFleetCleanPct] = useState(100);
@@ -911,20 +911,39 @@ const [activeTab, setActiveTab] = useState('general');
     }
   };
 
-  const toggleMod = async (modName) => {
+  const toggleMod = async (modOrName, isFolderArg) => {
+    const modObj = typeof modOrName === 'object' && modOrName !== null
+      ? modOrName
+      : (installedMods || []).find(m => m.modName === modOrName && (typeof isFolderArg === 'boolean' ? Boolean(m.isFolder) === isFolderArg : true))
+        || (installedMods || []).find(m => m.modName === modOrName || (m.fileName && m.fileName.replace(/\.zip$/i, '') === modOrName));
+    const modName = modObj?.modName || (typeof modOrName === 'string' ? stripModSelectionKey(modOrName) : '');
+    const isFolder = modObj ? Boolean(modObj.isFolder) : Boolean(isFolderArg);
+    const selKey = getModSelectionKey(modName, isFolder);
+    const oppositeKey = getModSelectionKey(modName, !isFolder);
+
     const nextSelected = new Set(selectedMods);
-    if (nextSelected.has(modName)) {
-      nextSelected.delete(modName);
+    // Clean up any un-normalized plain modName key for this mod
+    const wasPlainSelected = nextSelected.has(modName);
+    nextSelected.delete(modName);
+
+    if (nextSelected.has(selKey) || (wasPlainSelected && !nextSelected.has(oppositeKey) && isModVariantSelected(modObj || { modName, isFolder }, selectedMods, installedMods))) {
+      nextSelected.delete(selKey);
     } else {
-      nextSelected.add(modName);
+      // Mutually exclusive packaging: selecting unzipped deselects zipped of the same modName (and vice versa)
+      nextSelected.delete(oppositeKey);
+      nextSelected.add(selKey);
       try {
-        const modObj = (installedMods || []).find(m => m.modName === modName || (m.fileName && m.fileName.replace(/\.zip$/i, '') === modName));
         if (modObj) {
           const { installed } = resolveRecursiveDependencies(modObj, installedMods, {}, {});
           (installed || []).forEach(depName => {
-            const depObj = (installedMods || []).find(m => matchModWithDependency(m, depName, {}));
+            const depObj = (installedMods || []).find(m => matchModWithDependency(m, depName, {}) && Boolean(m.isFolder) === isFolder)
+              || (installedMods || []).find(m => matchModWithDependency(m, depName, {}));
             if (depObj && depObj.modName && !depObj.isMap) {
-              nextSelected.add(depObj.modName);
+              const depKey = getModSelectionKey(depObj);
+              const depOppKey = getModSelectionKey(depObj.modName, !depObj.isFolder);
+              if (!nextSelected.has(depKey) && !nextSelected.has(depOppKey)) {
+                nextSelected.add(depKey);
+              }
             }
           });
         }
@@ -933,7 +952,7 @@ const [activeTab, setActiveTab] = useState('general');
 
     // Apply conflict resolution if toggling ON
     const { conflictSensitivity } = useSettingsStore.getState();
-    if (conflictSensitivity !== 'off' && nextSelected.has(modName)) {
+    if (conflictSensitivity !== 'off' && nextSelected.has(selKey)) {
         const allConflicts = useLocalModsStore.getState().conflicts;
         const activeConflictsMap = getActiveConflictsForSave(nextSelected, allConflicts);
         if (activeConflictsMap.has(modName.toLowerCase())) {
@@ -942,6 +961,8 @@ const [activeTab, setActiveTab] = useState('general');
                 conflictDataArr.forEach(c => {
                     c.activeConflictingMods.forEach(otherModName => {
                         nextSelected.delete(otherModName);
+                        nextSelected.delete(getModSelectionKey(otherModName, true));
+                        nextSelected.delete(getModSelectionKey(otherModName, false));
                     });
                 });
                 import('../store/useToastStore').then(m => m.useToastStore.getState().info('Auto-disabled conflicting mods to maintain stability.'));
@@ -955,7 +976,7 @@ const [activeTab, setActiveTab] = useState('general');
     
     // Auto-save the mod list change surgically
     if (!window.api?.savegames) return;
-    const modsToApply = installedMods.filter(m => nextSelected.has(m.modName));
+    const modsToApply = installedMods.filter(m => isModVariantSelected(m, nextSelected, installedMods));
     const result = window.api.savegames.setSavegameMods
       ? await window.api.savegames.setSavegameMods(save.path, modsToApply)
       : await window.api.savegames.setMods({ savegamePath: save.path, mods: modsToApply });
@@ -971,8 +992,8 @@ const [activeTab, setActiveTab] = useState('general');
     const p = profiles.find(x => x.id === profileId);
     if (!p) return;
 
-    // Start with the mods from the profile
-    const nextSelected = new Set((p.mods || []).map(m => typeof m === 'string' ? m : m?.modName).filter(Boolean));
+    // Start with the mods from the profile (normalized per variant)
+    const nextSelected = buildInitialModSelectionSet(p.mods || [], installedMods);
 
     // Ensure map mod is preserved
     if (save.mapId) {
@@ -982,7 +1003,7 @@ const [activeTab, setActiveTab] = useState('general');
         (m.mapId && m.mapId.toLowerCase() === save.mapId.toLowerCase())
       ));
       if (mapModObj && mapModObj.modName) {
-        nextSelected.add(mapModObj.modName);
+        nextSelected.add(getModSelectionKey(mapModObj));
       }
     }
 
@@ -990,7 +1011,10 @@ const [activeTab, setActiveTab] = useState('general');
     (save.mods || []).forEach(m => {
       const mName = typeof m === 'string' ? m : m?.modName;
       if (m?.required === 'true' || m?.['@_required'] === 'true') {
-        if (mName) nextSelected.add(mName);
+        if (mName) {
+          const reqKey = buildInitialModSelectionSet([m], installedMods);
+          reqKey.forEach(k => nextSelected.add(k));
+        }
       }
     });
 
@@ -1002,8 +1026,9 @@ const [activeTab, setActiveTab] = useState('general');
       if (activeMap.size > 0) {
         if (conflictSensitivity === 'auto-disable_REMOVED') {
           activeMap.forEach((_, modName) => {
-            const match = Array.from(nextSelected).find(m => m.toLowerCase() === modName);
-            if (match) nextSelected.delete(match);
+            Array.from(nextSelected).forEach(k => {
+              if (stripModSelectionKey(k).toLowerCase() === modName) nextSelected.delete(k);
+            });
           });
           useToastStore.getState().info('Auto-disabled conflicting mods from profile.');
         } else if (conflictSensitivity === 'warn' || conflictSensitivity === 'resolve') {
@@ -1015,7 +1040,7 @@ const [activeTab, setActiveTab] = useState('general');
     setSelectedMods(nextSelected);
 
     if (window.api?.savegames) {
-      const modsToApply = installedMods.filter(m => nextSelected.has(m.modName));
+      const modsToApply = installedMods.filter(m => isModVariantSelected(m, nextSelected, installedMods));
       const res = window.api.savegames.setSavegameMods
         ? await window.api.savegames.setSavegameMods(save.path, modsToApply)
         : await window.api.savegames.setMods({ savegamePath: save.path, mods: modsToApply });
@@ -2219,7 +2244,8 @@ const [activeTab, setActiveTab] = useState('general');
                             const nextSelected = new Set(selectedMods);
                             const toRemove = [];
                             installedMods.forEach(mod => {
-                              if (nextSelected.has(mod.modName) && !usedMods.has(mod.modName.toLowerCase())) {
+                              if (isModVariantSelected(mod, nextSelected, installedMods) && !usedMods.has(mod.modName.toLowerCase())) {
+                                toRemove.push(getModSelectionKey(mod));
                                 toRemove.push(mod.modName);
                               }
                             });
@@ -2227,7 +2253,7 @@ const [activeTab, setActiveTab] = useState('general');
                               setIsDeselectingUnused(true);
                               toRemove.forEach(m => nextSelected.delete(m));
                               setSelectedMods(nextSelected);
-                              const modsToApply = installedMods.filter(m => nextSelected.has(m.modName));
+                              const modsToApply = installedMods.filter(m => isModVariantSelected(m, nextSelected, installedMods));
                               window.api.savegames.setSavegameMods(save.path, modsToApply).then(() => {
                                 setIsDeselectingUnused(false);
                                 onRefresh();
@@ -2259,7 +2285,7 @@ const [activeTab, setActiveTab] = useState('general');
                                            });
                                            if (isMustHave) {
                                                totalCount++;
-                                               if (selectedMods.has(mnStr)) activeCount++;
+                                               if (isModVariantSelected(m, selectedMods, installedMods)) activeCount++;
                                            }
                                        });
                                        return (totalCount > 0 && activeCount === totalCount) ? 'var(--accent)' : 'transparent';
@@ -2281,7 +2307,7 @@ const [activeTab, setActiveTab] = useState('general');
                                            });
                                            if (isMustHave) {
                                                totalCount++;
-                                               if (selectedMods.has(mnStr)) activeCount++;
+                                               if (isModVariantSelected(m, selectedMods, installedMods)) activeCount++;
                                            }
                                        });
                                        return (totalCount > 0 && activeCount === totalCount) ? 'white' : 'var(--text-secondary)';
@@ -2303,7 +2329,7 @@ const [activeTab, setActiveTab] = useState('general');
                                            });
                                            if (isMustHave) {
                                                totalCount++;
-                                               if (selectedMods.has(mnStr)) activeCount++;
+                                               if (isModVariantSelected(m, selectedMods, installedMods)) activeCount++;
                                            }
                                        });
                                        return (totalCount > 0 && activeCount === totalCount) ? 'var(--accent)' : 'var(--border)';
@@ -2315,7 +2341,7 @@ const [activeTab, setActiveTab] = useState('general');
                                 let changed = false;
                                 const favs = useModHubStore.getState().favoriteMods || [];
                                 
-                                const mustHaveModNames = new Set();
+                                const mustHaveKeys = new Set();
                                 installedMods.forEach(mod => {
                                     const fnStr = typeof mod.fileName === 'string' ? mod.fileName : '';
                                     const mnStr = typeof mod.modName === 'string' ? mod.modName : '';
@@ -2328,25 +2354,29 @@ const [activeTab, setActiveTab] = useState('general');
                                         return idMatch || (fmStr && fmStr.toLowerCase() === modBasename);
                                     });
                                     if (isMustHave && mnStr) {
-                                        mustHaveModNames.add(mnStr);
+                                        const key = getModSelectionKey(mod);
+                                        const oppKey = getModSelectionKey(mnStr, !mod.isFolder);
+                                        if (!mustHaveKeys.has(oppKey)) {
+                                            mustHaveKeys.add(key);
+                                        }
                                     }
                                 });
                                 
-                                const isAdoptMustHavesActive = mustHaveModNames.size > 0 && Array.from(mustHaveModNames).every(mn => nextSelected.has(mn));
+                                const isAdoptMustHavesActive = mustHaveKeys.size > 0 && Array.from(mustHaveKeys).every(k => nextSelected.has(k));
                                 
                                 if (isAdoptMustHavesActive) {
                                     // Turn OFF
-                                    mustHaveModNames.forEach(mn => {
-                                        if (nextSelected.has(mn)) {
-                                            nextSelected.delete(mn);
+                                    mustHaveKeys.forEach(k => {
+                                        if (nextSelected.has(k)) {
+                                            nextSelected.delete(k);
                                             changed = true;
                                         }
                                     });
                                 } else {
                                     // Turn ON
-                                    mustHaveModNames.forEach(mn => {
-                                        if (!nextSelected.has(mn)) {
-                                            nextSelected.add(mn);
+                                    mustHaveKeys.forEach(k => {
+                                        if (!nextSelected.has(k)) {
+                                            nextSelected.add(k);
                                             changed = true;
                                         }
                                     });
@@ -2359,7 +2389,11 @@ const [activeTab, setActiveTab] = useState('general');
         const activeMap = getActiveConflictsForSave(nextSelected, allConflicts);
         if (activeMap.size > 0) {
             if (conflictSensitivity === 'auto-disable_REMOVED') {
-                activeMap.forEach((_, modName) => nextSelected.delete(Array.from(nextSelected).find(m => m.toLowerCase() === modName) || modName));
+                activeMap.forEach((_, modName) => {
+                    Array.from(nextSelected).forEach(k => {
+                        if (stripModSelectionKey(k).toLowerCase() === modName) nextSelected.delete(k);
+                    });
+                });
                 import('../store/useToastStore').then(m => m.useToastStore.getState().info(`Auto-disabled ${activeMap.size} conflicting mods.`));
             } else if (conflictSensitivity === 'warn' || conflictSensitivity === 'resolve') {
                 import('../store/useToastStore').then(m => m.useToastStore.getState().warning(`Warning: Must-haves introduced ${activeMap.size} conflicts.`));
@@ -2368,7 +2402,7 @@ const [activeTab, setActiveTab] = useState('general');
     }
 
     setSelectedMods(nextSelected);
-    const modsToApply = installedMods.filter(m => typeof m.modName === 'string' && nextSelected.has(m.modName));
+    const modsToApply = installedMods.filter(m => typeof m.modName === 'string' && isModVariantSelected(m, nextSelected, installedMods));
 
     const result = window.api.savegames.setSavegameMods
                                     ? await window.api.savegames.setSavegameMods(save.path, modsToApply)
@@ -2398,7 +2432,7 @@ const [activeTab, setActiveTab] = useState('general');
                         {(() => {
                           const seenSel = new Set();
                           const explicitlySelected = installedMods.filter(m => {
-                            if (!m || !selectedMods.has(m.modName)) return false;
+                            if (!m || !isModVariantSelected(m, selectedMods, installedMods)) return false;
                             const typeTag = m.isFolder ? '[UNZIPPED]' : '[ZIP]';
                             const k = `${(m.modName || '').toLowerCase()}_${typeTag}`;
                             if (seenSel.has(k)) return false;
@@ -2445,7 +2479,7 @@ const [activeTab, setActiveTab] = useState('general');
                                     return (
                                       <div
                                         key={`${m.modName}-${m.isFolder ? 'folder' : 'zip'}`}
-                                        onClick={() => toggleMod(m.modName)}
+                                        onClick={() => toggleMod(m)}
                                         style={{ 
                                           display: 'flex', 
                                           alignItems: 'center', 
@@ -2516,7 +2550,7 @@ const [activeTab, setActiveTab] = useState('general');
                               }
                               
                               const displayedMods = list.filter(m => {
-                                  if (selectedMods.has(m.modName)) return false;
+                                  if (isModVariantSelected(m, selectedMods, installedMods)) return false;
                                   if (showOnlyUsed && !usedMods.has(m.modName.toLowerCase())) return false;
                                   if (editorSourceFilter === 'MODHUB' && (!m.modId && !m.isModHub)) return false;
                                   if (editorSourceFilter === 'NON_MODHUB' && (m.modId || m.isModHub || m.isDLC || m.folder === 'DLC' || (m.fileName && (m.fileName.toLowerCase().endsWith('.dlc') || m.fileName.toLowerCase().startsWith('pdlc_'))))) return false;
@@ -2577,10 +2611,11 @@ const [activeTab, setActiveTab] = useState('general');
                                     (f.modId && m.modId && String(f.modId) === String(m.modId)) || 
                                     (f.fileName && f.fileName.toLowerCase() === mBasename)
                                 ));
+                                const isVarSelected = isModVariantSelected(m, selectedMods, installedMods);
                                 return (
                                   <div
                                     key={`${m.modName}-${m.isFolder ? 'folder' : 'zip'}`}
-                                    onClick={() => toggleMod(m.modName)}
+                                    onClick={() => toggleMod(m)}
                                     style={{ 
                                       display: 'flex', 
                                       alignItems: 'center', 
@@ -2589,8 +2624,8 @@ const [activeTab, setActiveTab] = useState('general');
                                       fontSize: 14, 
                                       cursor: 'pointer', 
                                       borderRadius: 10, 
-                                      background: isConflicting ? 'rgba(255, 100, 0, 0.05)' : (selectedMods.has(m.modName) ? 'var(--accent-dim)' : 'var(--bg-card)'), 
-                                      border: `2px solid ${isConflicting ? 'rgba(255, 100, 0, 0.6)' : (selectedMods.has(m.modName) ? 'var(--accent)' : 'var(--border-light)')}`, 
+                                      background: isConflicting ? 'rgba(255, 100, 0, 0.05)' : (isVarSelected ? 'var(--accent-dim)' : 'var(--bg-card)'), 
+                                      border: `2px solid ${isConflicting ? 'rgba(255, 100, 0, 0.6)' : (isVarSelected ? 'var(--accent)' : 'var(--border-light)')}`, 
                                       transition: 'all 0.15s',
                                       contentVisibility: 'auto',
                                       containIntrinsicSize: '64px 80px'
@@ -3625,15 +3660,21 @@ export default function SavegamesPage() {
               const next = new Set(prev);
               // Always ensure the map mod itself is in modalSelectedMods
               if (birglandMod && birglandMod.modName) {
-                next.add(birglandMod.modName);
+                next.add(getModSelectionKey(birglandMod));
               } else if (cleanMapModName) {
-                next.add(cleanMapModName);
+                next.add(getModSelectionKey(cleanMapModName, false));
               }
 
               installedList.forEach(d => {
                 if (d) {
                   const matchedModObj = mods ? mods.find(m => (m.modName || '').toLowerCase() === d.toLowerCase() || (m.fileName || '').replace(/\.zip$/i, '').toLowerCase() === d.toLowerCase()) : null;
-                  next.add(matchedModObj ? matchedModObj.modName : d);
+                  if (matchedModObj) {
+                    const k = getModSelectionKey(matchedModObj);
+                    const opp = getModSelectionKey(matchedModObj.modName, !matchedModObj.isFolder);
+                    if (!next.has(opp)) next.add(k);
+                  } else {
+                    next.add(getModSelectionKey(d, false));
+                  }
                 }
               });
 
@@ -3642,7 +3683,11 @@ export default function SavegamesPage() {
                 const fLow = birglandMod.folder.toLowerCase();
                 const sibs = (mods || []).filter(m => m.folder && m.folder.toLowerCase() === fLow && !m.isMap && m.modName);
                 sibs.forEach(s => {
-                  if (s.modName) next.add(s.modName);
+                  if (s.modName) {
+                    const k = getModSelectionKey(s);
+                    const opp = getModSelectionKey(s.modName, !s.isFolder);
+                    if (!next.has(opp)) next.add(k);
+                  }
                 });
               }
 
@@ -4010,12 +4055,21 @@ export default function SavegamesPage() {
       }
 
       const slotIndex = parseInt(targetSlotValue);
-      let finalModNames = new Set(modalSelectedMods);
+      let finalModKeys = new Set(modalSelectedMods);
+      const addModObjToFinal = (modObj) => {
+        if (!modObj || !modObj.modName) return;
+        const key = getModSelectionKey(modObj);
+        const oppKey = getModSelectionKey(modObj.modName, !modObj.isFolder);
+        if (!finalModKeys.has(key) && !finalModKeys.has(oppKey) && !finalModKeys.has(modObj.modName)) {
+          finalModKeys.add(key);
+        }
+      };
+
       if (includeMustHaves) {
         const favoriteMods = useModHubStore.getState().favoriteMods || [];
         mods
           .filter(m => !m.isMap && favoriteMods.some(fm => fm.isMustHave && ((fm.modId && m.modId && String(fm.modId) === String(m.modId)) || (fm.fileName && fm.fileName.toLowerCase() === (m.fileName ? m.fileName.split(/[\\/\\]/).pop().toLowerCase() : (m.modName ? `${m.modName.toLowerCase()}.zip` : ""))))))
-          .forEach(m => finalModNames.add(m.modName));
+          .forEach(m => addModObjToFinal(m));
       }
 
       // Safety net: always resolve map dependencies for custom maps even if UI missed them
@@ -4034,9 +4088,9 @@ export default function SavegamesPage() {
           ) || mods.find(m => m.modName && m.modName.toLowerCase() === cLow) : null;
 
           if (mapObj && mapObj.modName) {
-            finalModNames.add(mapObj.modName);
+            addModObjToFinal(mapObj);
           } else {
-            finalModNames.add(cleanMapForDeps);
+            finalModKeys.add(getModSelectionKey(cleanMapForDeps, false));
           }
 
           let targetForDeps = mapObj || cleanMapForDeps;
@@ -4046,9 +4100,10 @@ export default function SavegamesPage() {
           installedList.forEach(d => {
             const matchedModObj = mods ? mods.find(m => matchModWithDependency(m, d, {})) : null;
             if (matchedModObj && matchedModObj.modName) {
-              finalModNames.add(matchedModObj.modName);
+              addModObjToFinal(matchedModObj);
             } else {
-              finalModNames.add(typeof d === 'string' ? d : (d.modName || d.fileName || d.title || ''));
+              const rawDep = typeof d === 'string' ? d : (d.modName || d.fileName || d.title || '');
+              if (rawDep) finalModKeys.add(getModSelectionKey(rawDep, false));
             }
           });
           console.log(`[CREATE] Safety net resolved ${installedList.length} map dependencies:`, installedList);
@@ -4056,7 +4111,7 @@ export default function SavegamesPage() {
           // Auto-include non-map mods from dedicated map subfolders
           const mapDepMods = (mods || []).filter(m => !m.isMap && m.folder && (mapObj && mapObj.folder && m.folder.toLowerCase() === mapObj.folder.toLowerCase() && m.folder.toLowerCase() !== 'mods'));
           mapDepMods.forEach(s => {
-            if (s.modName) finalModNames.add(s.modName);
+            if (s.modName) addModObjToFinal(s);
           });
           console.log(`[CREATE] Auto-included ${mapDepMods.length} map dependency mods from dedicated folders.`);
 
@@ -4091,7 +4146,7 @@ export default function SavegamesPage() {
 
       // Safety net: resolve dependencies for ALL selected mods (vehicles, implements, scripts, gameplay packs)
       try {
-        const queue = Array.from(finalModNames);
+        const queue = Array.from(finalModKeys).map(k => stripModSelectionKey(k));
         const seenToResolve = new Set();
         while (queue.length > 0) {
           const modNameCandidate = queue.shift();
@@ -4108,10 +4163,19 @@ export default function SavegamesPage() {
             const depList = Array.isArray(deps) ? deps : Array.from(deps || []);
             depList.forEach(d => {
               const matched = (mods || []).find(m => matchModWithDependency(m, d, {}));
-              const resolvedName = matched?.modName || (typeof d === 'string' ? d : (d.modName || d.fileName || ''));
-              if (resolvedName && !finalModNames.has(resolvedName)) {
-                finalModNames.add(resolvedName);
-                queue.push(resolvedName);
+              if (matched && matched.modName) {
+                const prevSize = finalModKeys.size;
+                addModObjToFinal(matched);
+                if (finalModKeys.size > prevSize) {
+                  queue.push(matched.modName);
+                }
+              } else {
+                const resolvedName = typeof d === 'string' ? d : (d.modName || d.fileName || '');
+                const k = getModSelectionKey(resolvedName, false);
+                if (resolvedName && !finalModKeys.has(k)) {
+                  finalModKeys.add(k);
+                  queue.push(resolvedName);
+                }
               }
             });
           }
@@ -4120,13 +4184,9 @@ export default function SavegamesPage() {
         console.error('[CREATE] Mod dependency resolution error:', depErr);
       }
 
-      // Case-insensitive lookup set for modsToAdd filtering
-            const selectedLower = new Set(Array.from(finalModNames).map(s => String(s).toLowerCase()));
       const modsToAdd = (mods || []).filter(m => {
         if (!m || !m.modName) return false;
-        const mNameLow = m.modName.toLowerCase();
-        const fNameLow = (m.fileName || '').replace(/\.zip$/i, '').toLowerCase();
-        return selectedLower.has(mNameLow) || selectedLower.has(fNameLow);
+        return isModVariantSelected(m, finalModKeys, mods);
       });
       const [mapId, mapTitle, mapModName, , filePath] = createMap.split('|');
       
@@ -4285,21 +4345,38 @@ export default function SavegamesPage() {
     }
   };
 
-  const toggleModalModSelection = (modName) => {
+  const toggleModalModSelection = (modOrName, isFolderArg) => {
     setModalSelectedMods(prev => {
+      const modObj = typeof modOrName === 'object' && modOrName !== null
+        ? modOrName
+        : (mods || []).find(m => m.modName === modOrName && (typeof isFolderArg === 'boolean' ? Boolean(m.isFolder) === isFolderArg : true))
+          || (mods || []).find(m => m.modName === modOrName || (m.fileName && m.fileName.replace(/\.zip$/i, '') === modOrName));
+      const modName = modObj?.modName || (typeof modOrName === 'string' ? stripModSelectionKey(modOrName) : '');
+      const isFolder = modObj ? Boolean(modObj.isFolder) : Boolean(isFolderArg);
+      const selKey = getModSelectionKey(modName, isFolder);
+      const oppositeKey = getModSelectionKey(modName, !isFolder);
+
       const next = new Set(prev);
-      if (next.has(modName)) {
-        next.delete(modName);
+      const wasPlainSelected = next.has(modName);
+      next.delete(modName);
+
+      if (next.has(selKey) || (wasPlainSelected && !next.has(oppositeKey) && isModVariantSelected(modObj || { modName, isFolder }, prev, mods))) {
+        next.delete(selKey);
       } else {
-        next.add(modName);
+        next.delete(oppositeKey);
+        next.add(selKey);
         try {
-          const modObj = (mods || []).find(m => m.modName === modName || (m.fileName && m.fileName.replace(/\.zip$/i, '') === modName));
           if (modObj) {
             const { installed } = resolveRecursiveDependencies(modObj, mods, {}, {});
             (installed || []).forEach(depName => {
-              const depObj = (mods || []).find(m => matchModWithDependency(m, depName, {}));
+              const depObj = (mods || []).find(m => matchModWithDependency(m, depName, {}) && Boolean(m.isFolder) === isFolder)
+                || (mods || []).find(m => matchModWithDependency(m, depName, {}));
               if (depObj && depObj.modName && !depObj.isMap) {
-                next.add(depObj.modName);
+                const depKey = getModSelectionKey(depObj);
+                const depOpp = getModSelectionKey(depObj.modName, !depObj.isFolder);
+                if (!next.has(depKey) && !next.has(depOpp)) {
+                  next.add(depKey);
+                }
               }
             });
           }
@@ -4312,14 +4389,18 @@ export default function SavegamesPage() {
   const applyProfileToModal = (profileId) => {
     const p = profiles.find(x => x.id === profileId);
     if (p) {
-        const next = new Set((p.mods || []).map(m => m.modName));
+        const next = buildInitialModSelectionSet(p.mods || [], mods);
         const { conflictSensitivity } = useSettingsStore.getState();
         if (conflictSensitivity !== 'off') {
             const allConflicts = useLocalModsStore.getState().conflicts;
             const activeMap = getActiveConflictsForSave(next, allConflicts);
             if (activeMap.size > 0) {
                 if (conflictSensitivity === 'auto-disable_REMOVED') {
-                    activeMap.forEach((_, modName) => next.delete(Array.from(next).find(m => m.toLowerCase() === modName) || modName));
+                    activeMap.forEach((_, modName) => {
+                        Array.from(next).forEach(k => {
+                            if (stripModSelectionKey(k).toLowerCase() === modName) next.delete(k);
+                        });
+                    });
                     import('../store/useToastStore').then(m => m.useToastStore.getState().info(`Auto-disabled  conflicting mods from profile.`));
                 } else if (conflictSensitivity === 'warn' || conflictSensitivity === 'resolve') {
                     import('../store/useToastStore').then(m => m.useToastStore.getState().warning(`Warning: Profile contains script conflicts.`));
@@ -5072,14 +5153,23 @@ export default function SavegamesPage() {
                                         </select>
                                     )}
                                     <button className="btn btn--secondary btn--sm" onClick={() => {
-    const next = new Set(mods.filter(m => !m.isMap).map(m => m.modName));
+    const next = new Set();
+    mods.filter(m => !m.isMap && m.modName).forEach(m => {
+        const k = getModSelectionKey(m);
+        const opp = getModSelectionKey(m.modName, !m.isFolder);
+        if (!next.has(opp)) next.add(k);
+    });
     const { conflictSensitivity } = useSettingsStore.getState();
     if (conflictSensitivity !== 'off') {
         const allConflicts = useLocalModsStore.getState().conflicts;
         const activeMap = getActiveConflictsForSave(next, allConflicts);
         if (activeMap.size > 0) {
             if (conflictSensitivity === 'auto-disable_REMOVED') {
-                activeMap.forEach((_, modName) => next.delete(Array.from(next).find(m => m.toLowerCase() === modName) || modName));
+                activeMap.forEach((_, modName) => {
+                    Array.from(next).forEach(k => {
+                        if (stripModSelectionKey(k).toLowerCase() === modName) next.delete(k);
+                    });
+                });
                 import('../store/useToastStore').then(m => m.useToastStore.getState().info(`Auto-disabled ${activeMap.size} conflicting mods.`));
             } else if (conflictSensitivity === 'warn' || conflictSensitivity === 'resolve') {
                 import('../store/useToastStore').then(m => m.useToastStore.getState().warning(`Warning: ${activeMap.size} script conflicts.`));
@@ -5174,8 +5264,8 @@ export default function SavegamesPage() {
                                       !(includeMustHaves && mustHaveNameSet.has((m.modName || '').toLowerCase()))
                                   );
 
-                                  const explicitlySelectedMods = otherMods.filter(m => modalSelectedMods.has(m.modName));
-                                  const availableMods = otherMods.filter(m => !modalSelectedMods.has(m.modName));
+                                  const explicitlySelectedMods = otherMods.filter(m => isModVariantSelected(m, modalSelectedMods, mods));
+                                  const availableMods = otherMods.filter(m => !isModVariantSelected(m, modalSelectedMods, mods));
 
                                   return (
                                       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -5293,7 +5383,7 @@ export default function SavegamesPage() {
                                                   return (
                                                     <div 
                                                       key={`${m.modName}-${m.isFolder ? 'folder' : 'zip'}`} 
-                                                      onClick={() => toggleModalModSelection(m.modName)}
+                                                      onClick={() => toggleModalModSelection(m)}
                                                       style={{ 
                                                           display: 'flex', 
                                                           alignItems: 'center', 
@@ -5360,7 +5450,7 @@ export default function SavegamesPage() {
                                               {availableMods.map(m => (
                                               <div 
                                                 key={`${m.modName}-${m.isFolder ? 'folder' : 'zip'}`} 
-                                                onClick={() => toggleModalModSelection(m.modName)}
+                                                onClick={() => toggleModalModSelection(m)}
                                                 style={{ 
                                                     display: 'flex', 
                                                     alignItems: 'center', 

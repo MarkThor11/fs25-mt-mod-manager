@@ -855,6 +855,7 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 
 		// Initialize as an empty set if we are in selective mode
 		let activeModNames = savegameIndex !== null ? new Set() : null;
+		let modPackagingPrefs = {};
 		let mapModName = null;
 		let mapModObj = null;
 		let isNewSlot = false;
@@ -865,10 +866,18 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 			const savePath = path.join(fs25Path, `savegame${savegameIndex}`);
 			
 			if (fs.existsSync(savePath)) {
+				if (typeof savegameManager.readSavegameModPackagingSync === 'function') {
+					modPackagingPrefs = savegameManager.readSavegameModPackagingSync(savePath) || {};
+				}
 				try {
 					const { mods: modsList } = await savegameManager.getSavegameMods(savePath);
 					if (modsList) {
-						modsList.forEach(m => activeModNames.add(m.modName.toLowerCase()));
+						modsList.forEach(m => {
+							activeModNames.add(m.modName.toLowerCase());
+							if (typeof m.isFolder === 'boolean' && !modPackagingPrefs[m.modName.toLowerCase()]) {
+								modPackagingPrefs[m.modName.toLowerCase()] = { isFolder: m.isFolder, filePath: m.filePath || null };
+							}
+						});
 					}
 
 					// Scan placeables.xml, vehicles.xml, and items.xml for $moddir$ references
@@ -922,6 +931,9 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 					isNewSlot = true;
 					try {
 						const pending = await fs.readJson(pendingPath);
+						if (pending && pending.modPackaging && typeof pending.modPackaging === 'object') {
+							modPackagingPrefs = { ...modPackagingPrefs, ...pending.modPackaging };
+						}
 						if (Array.isArray(pending.mods)) {
 							pending.mods.forEach(n => { if (n) activeModNames.add(String(n).toLowerCase()); });
 						}
@@ -1043,7 +1055,22 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
             }
         } catch (_) {}
 
-        for (const m of mods) {
+        // Order mods so that if both a .zip and an unzipped folder exist for the same modName:
+        // 1. Honor explicit user packaging preference in modPackagingPrefs (zip vs folder)
+        // 2. If no explicit preference exists, prioritize the unzipped folder (isFolder === true) over .zip
+        //    so developers testing unzipped mods are not shadowed by a .zip archive.
+        const orderedModsForStaging = [...mods].sort((a, b) => {
+            const aName = (a.modName || '').toLowerCase();
+            const bName = (b.modName || '').toLowerCase();
+            if (aName && aName === bName && Boolean(a.isFolder) !== Boolean(b.isFolder)) {
+                const pref = modPackagingPrefs[aName];
+                const preferFolder = (pref && typeof pref.isFolder === 'boolean') ? pref.isFolder : true;
+                return (Boolean(a.isFolder) === preferFolder) ? -1 : 1;
+            }
+            return 0;
+        });
+
+        for (const m of orderedModsForStaging) {
             const modNameLower = m.modName.toLowerCase();
             
             // EXCLUDE: Never link official DLC packages into the mods folder (engine loads them natively from pdlc/)
@@ -1064,6 +1091,18 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
             // This isolates the map selection carousel from the 300+ unused installed maps while keeping all save slot images intact.
             if (activeModNames && !activeModNames.has(modNameLower)) {
                 if (!m.isMap || !savegameMapNames.has(modNameLower)) {
+                    continue;
+                }
+            }
+
+            // If an explicit packaging preference exists for this mod (zip vs folder) and the preferred variant is installed,
+            // skip the non-preferred variant so only the chosen packaging type is staged.
+            const pkgPref = modPackagingPrefs[modNameLower];
+            if (pkgPref && typeof pkgPref.isFolder === 'boolean' && Boolean(m.isFolder) !== pkgPref.isFolder) {
+                const hasPreferredInstalled = orderedModsForStaging.some(other =>
+                    other && other.modName && other.modName.toLowerCase() === modNameLower && Boolean(other.isFolder) === pkgPref.isFolder
+                );
+                if (hasPreferredInstalled) {
                     continue;
                 }
             }
@@ -1124,10 +1163,12 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
             // Name the symlink EXACTLY what the engine expects (m.modName + .zip if it was a zip)
             const isZip = realSource.toLowerCase().endsWith('.zip');
             const destPath = path.join(virtualPath, m.modName + (isZip ? '.zip' : ''));
+            const altDestPath = path.join(virtualPath, m.modName + (isZip ? '' : '.zip'));
 
             try {
-                // Remove existing if it somehow persisted
+                // Remove existing or opposite-packaging entry if it somehow persisted
                 if (fs.existsSync(destPath)) await fs.remove(destPath);
+                if (fs.existsSync(altDestPath)) await fs.remove(altDestPath);
                 
                 if (isZip) {
                     // Try Hardlink first (requires no admin privileges on Windows when on same drive)
@@ -4291,13 +4332,15 @@ async function syncSavegameModBridges(targetRootPath = null) {
 		for (const m of allInstalledMods) {
 			if (m && m.modName && m.filePath) {
 				const nameLower = m.modName.toLowerCase();
-				if (!modsByName.has(nameLower)) {
+				const existingByName = modsByName.get(nameLower);
+				if (!existingByName || (!existingByName.isFolder && m.isFolder)) {
 					modsByName.set(nameLower, m);
 				}
 				// Also index by fileName without .zip
 				if (m.fileName) {
 					const fnClean = path.basename(m.fileName).replace(/\.zip$/i, '').toLowerCase();
-					if (!modsByName.has(fnClean)) {
+					const existingByFn = modsByName.get(fnClean);
+					if (!existingByFn || (!existingByFn.isFolder && m.isFolder)) {
 						modsByName.set(fnClean, m);
 					}
 				}
@@ -4446,9 +4489,19 @@ async function syncSavegameModBridges(targetRootPath = null) {
 			}
 
 			// Add all resolved slot mods to activeSaveModPaths
+			const slotPkgPrefs = (typeof savegameManager.readSavegameModPackagingSync === 'function')
+				? (savegameManager.readSavegameModPackagingSync(slotPath) || {})
+				: {};
 			for (const modNameLower of slotModNames) {
 				if (INCOMPATIBLE_ENGINE_MODS.has(modNameLower)) continue;
-				const m = modsByName.get(modNameLower);
+				let m = modsByName.get(modNameLower);
+				const pref = slotPkgPrefs[modNameLower];
+				if (pref && typeof pref.isFolder === 'boolean') {
+					const preferredMatch = allInstalledMods.find(cand =>
+						cand && cand.modName && cand.modName.toLowerCase() === modNameLower && Boolean(cand.isFolder) === pref.isFolder && !cand.isDLC
+					);
+					if (preferredMatch) m = preferredMatch;
+				}
 				if (m && m.filePath && !m.isDLC) {
 					let realSource = m.filePath;
 					try {

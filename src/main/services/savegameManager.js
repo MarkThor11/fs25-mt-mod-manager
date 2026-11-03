@@ -823,6 +823,49 @@ async function hasMapTemplate(mapId, mapTitle = null, modName = null) {
 }
 
 /**
+ * Read per-mod packaging preferences (.mm_mod_packaging.json) for a savegame slot.
+ * Maps modNameLower -> { isFolder: boolean, filePath?: string }
+ */
+function readSavegameModPackagingSync(savegamePath) {
+    try {
+        if (!savegamePath) return {};
+        const pkgPath = path.join(savegamePath, '.mm_mod_packaging.json');
+        if (fs.existsSync(pkgPath)) {
+            return fs.readJsonSync(pkgPath) || {};
+        }
+        const pendingPath = path.join(savegamePath, '.mm_pending_settings.json');
+        if (fs.existsSync(pendingPath)) {
+            const pending = fs.readJsonSync(pendingPath);
+            if (pending && pending.modPackaging) return pending.modPackaging;
+        }
+    } catch (_) {}
+    return {};
+}
+
+async function writeSavegameModPackaging(savegamePath, mods) {
+    try {
+        if (!savegamePath || !Array.isArray(mods)) return;
+        const pkgPath = path.join(savegamePath, '.mm_mod_packaging.json');
+        const existing = readSavegameModPackagingSync(savegamePath);
+        const nextPkg = { ...existing };
+        for (const m of mods) {
+            if (!m) continue;
+            const name = m.modName || (m.fileName ? m.fileName.replace(/\.zip$/i, '') : '');
+            if (!name) continue;
+            if (typeof m.isFolder === 'boolean') {
+                nextPkg[name.toLowerCase()] = {
+                    isFolder: m.isFolder,
+                    filePath: m.filePath || null
+                };
+            }
+        }
+        await fs.writeJson(pkgPath, nextPkg, { spaces: 2 });
+    } catch (err) {
+        console.warn('[SAVEGAME] Failed to write .mm_mod_packaging.json:', err.message);
+    }
+}
+
+/**
  * Get mods for a specific savegame.
  */
 async function getSavegameMods(savegamePath) {
@@ -838,6 +881,7 @@ async function getSavegameMods(savegamePath) {
             return { mods: [] };
         }
 
+        const packagingMap = readSavegameModPackagingSync(savegamePath);
         const mods = [];
         const modEntries = data.careerSavegame.mod || data.careerSavegame.mods?.mod || [];
         const entries = Array.isArray(modEntries) ? modEntries : [modEntries];
@@ -847,12 +891,18 @@ async function getSavegameMods(savegamePath) {
             if (entry && entry['@_modName']) {
                 const nameLow = entry['@_modName'].toLowerCase();
                 if (internalMods.includes(nameLow)) continue;
-                mods.push({
+                const pkg = packagingMap[nameLow];
+                const modEntry = {
                     modName: entry['@_modName'],
                     title: entry['@_title'] || entry['@_modName'],
                     version: entry['@_version'] || '1.0.0.0',
                     required: entry['@_required'] === 'true'
-                });
+                };
+                if (pkg && typeof pkg.isFolder === 'boolean') {
+                    modEntry.isFolder = pkg.isFolder;
+                    if (pkg.filePath) modEntry.filePath = pkg.filePath;
+                }
+                mods.push(modEntry);
             }
         }
         return { mods };
@@ -993,6 +1043,7 @@ async function setSavegameMods(savegamePath, mods) {
     }
     
     await fs.writeFile(careerPath, newXml);
+    await writeSavegameModPackaging(savegamePath, mods);
     
     // Auto-inject any missing map dependencies and declared mod dependencies
     await syncSubfolderMapDependencies(savegamePath);
@@ -2107,6 +2158,16 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         }
     } catch (_) {}
 
+    const modPackaging = {};
+    for (const m of finalMods) {
+        if (m && m.modName && typeof m.isFolder === 'boolean') {
+            modPackaging[m.modName.toLowerCase()] = {
+                isFolder: m.isFolder,
+                filePath: m.filePath || null
+            };
+        }
+    }
+
     if (requiresEngineInit) {
         // Save slot is completely empty for native GIANTS Engine first-run initialization.
         // Remove all written files from slot directory and store user settings in .mm_pending_settings.json
@@ -2119,13 +2180,20 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
             // Resolved map mod name + full mod list: the slot is emptied below, so the
             // virtual mods builder cannot read them from careerSavegame.xml on first launch.
             resolvedMapModName: isOfficialBaseMap ? null : (trueMapModName || null),
-            mods: finalMods.filter(m => m && m.modName).map(m => m.modName)
+            mods: finalMods.filter(m => m && m.modName).map(m => m.modName),
+            modPackaging
         };
         await fs.emptyDir(slotPath);
         await fs.writeJson(path.join(slotPath, '.mm_pending_settings.json'), pendingSettings, { spaces: 2 });
+        if (Object.keys(modPackaging).length > 0) {
+            await fs.writeJson(path.join(slotPath, '.mm_mod_packaging.json'), modPackaging, { spaces: 2 });
+        }
         await ensureSavegameImage(slotPath, mapModName, mapTitle, mapId, modZipPath);
         console.log(`[CREATE] Slot ${savegameIndex} cleared for clean FS25 native map initialization. Wrote .mm_pending_settings.json.`);
     } else {
+        if (Object.keys(modPackaging).length > 0) {
+            await fs.writeJson(path.join(slotPath, '.mm_mod_packaging.json'), modPackaging, { spaces: 2 });
+        }
         await ensureSavegameImage(slotPath, mapModName, mapTitle, mapId, modZipPath);
     }
 
@@ -2713,13 +2781,25 @@ async function getAllSavegames() {
                 isRadioEnabled,
                 radioVehicleOnly,
                 isPersistenceActive: await isSavegamePersistenceActive(savePath),
-                mods: (Array.isArray(data.careerSavegame.mod) ? data.careerSavegame.mod : (data.careerSavegame.mod ? [data.careerSavegame.mod] : (data.careerSavegame.mods?.mod || [])))
-                    .filter(m => !['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'].includes((m['@_modName'] || m.modName || '').toLowerCase()))
-                    .map(m => ({
-                        modName: m['@_modName'] || m.modName,
-                        title: m['@_title'] || m.title,
-                        version: m['@_version'] || m.version
-                    }))
+                mods: (() => {
+                    const pkgMap = readSavegameModPackagingSync(savePath);
+                    return (Array.isArray(data.careerSavegame.mod) ? data.careerSavegame.mod : (data.careerSavegame.mod ? [data.careerSavegame.mod] : (data.careerSavegame.mods?.mod || [])))
+                        .filter(m => !['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'].includes((m['@_modName'] || m.modName || '').toLowerCase()))
+                        .map(m => {
+                            const mName = m['@_modName'] || m.modName;
+                            const pkg = mName ? pkgMap[mName.toLowerCase()] : null;
+                            const out = {
+                                modName: mName,
+                                title: m['@_title'] || m.title,
+                                version: m['@_version'] || m.version
+                            };
+                            if (pkg && typeof pkg.isFolder === 'boolean') {
+                                out.isFolder = pkg.isFolder;
+                                if (pkg.filePath) out.filePath = pkg.filePath;
+                            }
+                            return out;
+                        });
+                })()
             });
         } catch (slotErr) {
             console.error(`[SAVEGAMES] Error scanning savegame slot ${i}:`, slotErr);
@@ -7670,6 +7750,7 @@ module.exports = {
     hasMapTemplate,
     getSavegameMods,
     setSavegameMods,
+    readSavegameModPackagingSync,
     getUsedModsInSavegame,
     createSavegameWithMods,
     importSavegame,

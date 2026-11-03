@@ -380,17 +380,150 @@ export const compareVersions = (v1, v2) => {
 };
 
 /**
+ * Returns a unique selection key for a mod object or saved mod entry,
+ * distinguishing between zipped (.zip) and unzipped (folder) variants.
+ * @param {Object|string} mod - Mod object or modName string
+ * @param {boolean} [isFolderOverride] - Optional override for folder status
+ * @returns {string} Unique selection key (e.g. "FS25_ModName::UNZIPPED" or "FS25_ModName::ZIP")
+ */
+export const getModSelectionKey = (mod, isFolderOverride) => {
+  if (!mod) return '';
+  if (typeof mod === 'string') {
+    if (mod.endsWith('::UNZIPPED') || mod.endsWith('::ZIP')) return mod;
+    if (typeof isFolderOverride === 'boolean') {
+      return `${mod}::${isFolderOverride ? 'UNZIPPED' : 'ZIP'}`;
+    }
+    return `${mod}::ZIP`;
+  }
+  const modName = mod.modName || (mod.fileName ? mod.fileName.replace(/\.zip$/i, '') : '');
+  if (!modName) return '';
+  if (modName.endsWith('::UNZIPPED') || modName.endsWith('::ZIP')) return modName;
+  const isFolder = typeof isFolderOverride === 'boolean' ? isFolderOverride : Boolean(mod.isFolder);
+  return `${modName}::${isFolder ? 'UNZIPPED' : 'ZIP'}`;
+};
+
+/**
+ * Extracts the clean modName from a selection key or mod object.
+ * @param {string|Object} keyOrMod
+ * @returns {string}
+ */
+export const stripModSelectionKey = (keyOrMod) => {
+  if (!keyOrMod) return '';
+  const raw = typeof keyOrMod === 'string' ? keyOrMod : (keyOrMod.modName || '');
+  return String(raw).replace(/::(?:UNZIPPED|ZIP)$/i, '');
+};
+
+/**
+ * Checks if a specific mod variant (zip vs folder) is selected in a selection Set.
+ * Supports both variant-specific keys ("ModName::UNZIPPED" / "ModName::ZIP") and legacy plain "ModName" keys.
+ * When a legacy plain key is present and both zipped & unzipped variants exist in allInstalledMods,
+ * only matches ONE variant (preferring the unzipped folder for testing or the single installed variant) so they never bundle together.
+ * @param {Object} mod - Installed mod object
+ * @param {Set} selectedSet - Set of selected keys
+ * @param {Array} [allInstalledMods] - Optional list of all installed mods to disambiguate legacy plain keys
+ * @returns {boolean}
+ */
+export const isModVariantSelected = (mod, selectedSet, allInstalledMods = null) => {
+  if (!mod || !mod.modName || !selectedSet) return false;
+  const exactKey = getModSelectionKey(mod);
+  if (selectedSet.has(exactKey)) return true;
+
+  // Fallback for plain modName strings in selectedSet (if not yet normalized)
+  if (selectedSet.has(mod.modName)) {
+    // Check if the opposite explicit key is already in selectedSet
+    const oppositeKey = getModSelectionKey(mod, !mod.isFolder);
+    if (selectedSet.has(oppositeKey)) return false;
+
+    // If allInstalledMods is provided and BOTH folder and zip exist for this modName,
+    // only match the unzipped folder (or zip if folder doesn't exist) so both are never bundled together!
+    if (Array.isArray(allInstalledMods)) {
+      const nameLow = mod.modName.toLowerCase();
+      const hasFolder = allInstalledMods.some(m => m && m.modName && m.modName.toLowerCase() === nameLow && Boolean(m.isFolder));
+      const hasZip = allInstalledMods.some(m => m && m.modName && m.modName.toLowerCase() === nameLow && !m.isFolder);
+      if (hasFolder && hasZip) {
+        return Boolean(mod.isFolder);
+      }
+    }
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Builds an initial normalized Set of variant-specific selection keys ("ModName::UNZIPPED" or "ModName::ZIP")
+ * from a saved mod list (e.g., save.mods or profile.mods) and the current installedMods list.
+ * Ensures zipped and unzipped versions of the same mod are NEVER bundled together.
+ * @param {Array} savedMods - Array of saved mod entries (strings or objects with { modName, isFolder })
+ * @param {Array} installedMods - Array of currently installed mod objects
+ * @returns {Set<string>}
+ */
+export const buildInitialModSelectionSet = (savedMods, installedMods = []) => {
+  const result = new Set();
+  if (!Array.isArray(savedMods)) return result;
+
+  const installedByName = new Map();
+  (installedMods || []).forEach(m => {
+    if (!m || !m.modName) return;
+    const low = m.modName.toLowerCase();
+    if (!installedByName.has(low)) installedByName.set(low, []);
+    installedByName.get(low).push(m);
+  });
+
+  savedMods.forEach(entry => {
+    if (!entry) return;
+    const rawName = typeof entry === 'string' ? entry : (entry.modName || '');
+    if (!rawName) return;
+
+    if (rawName.endsWith('::UNZIPPED') || rawName.endsWith('::ZIP')) {
+      result.add(rawName);
+      return;
+    }
+
+    const nameLow = rawName.toLowerCase();
+    const variants = installedByName.get(nameLow) || [];
+
+    // 1. If the saved entry explicitly recorded `isFolder` (boolean), honor that exact packaging choice
+    if (typeof entry === 'object' && typeof entry.isFolder === 'boolean') {
+      const matchingVariant = variants.find(v => Boolean(v.isFolder) === entry.isFolder);
+      if (matchingVariant) {
+        result.add(getModSelectionKey(matchingVariant));
+      } else if (variants.length > 0) {
+        result.add(getModSelectionKey(variants[0]));
+      } else {
+        result.add(getModSelectionKey(rawName, entry.isFolder));
+      }
+      return;
+    }
+
+    // 2. Legacy entry without explicit isFolder boolean:
+    // Never select both variants! Pick at most ONE variant.
+    if (variants.length === 1) {
+      result.add(getModSelectionKey(variants[0]));
+    } else if (variants.length > 1) {
+      // Both zipped and unzipped exist on disk, and no preference was saved yet.
+      // Default to the unzipped folder variant (or first variant) so only ONE is selected, never both.
+      const folderVariant = variants.find(v => Boolean(v.isFolder));
+      result.add(getModSelectionKey(folderVariant || variants[0]));
+    } else {
+      result.add(getModSelectionKey(rawName, false));
+    }
+  });
+
+  return result;
+};
+
+/**
  * Calculates which mods in a given savegame are actively conflicting.
  * A conflict only triggers if MULTIPLE mods from the same conflict group are active.
- * @param {Array|Set} activeModNames - List of currently active modNames in the savegame
+ * @param {Array|Set} activeModNames - List of currently active modNames or selection keys in the savegame
  * @param {Array} allConflicts - Global array of all detected script conflicts
  * @returns {Map} Map of modName (lowercase) to array of conflict objects
  */
 export const getActiveConflictsForSave = (activeModNames, allConflicts) => {
   const activeSet = new Set();
   (activeModNames || []).forEach(name => {
-    if (typeof name === 'string') activeSet.add(name.toLowerCase());
-    else if (name && name.modName) activeSet.add(name.modName.toLowerCase());
+    if (typeof name === 'string') activeSet.add(stripModSelectionKey(name).toLowerCase());
+    else if (name && name.modName) activeSet.add(stripModSelectionKey(name.modName).toLowerCase());
   });
 
   const conflictsMap = new Map();
