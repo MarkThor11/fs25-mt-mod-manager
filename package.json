@@ -18,10 +18,9 @@
     "email": "markwadlow32@gmail.com"
   },
   "license": "MIT",
-  "devDependencies": {
+    "electron": "^45.2.1",
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^8.2.2",
-    "electron": "^30.0.1",
     "electron-builder": "^24.13.3",
     "icon-gen": "^5.0.0",
     "javascript-obfuscator": "^5.9.0",
@@ -32,9 +31,10 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.12",
-    "better-sqlite3": "^11.0.0",
+    "better-sqlite3": "^11.10.0",
     "bytenode": "^2.1.0",
     "cheerio": "^1.0.0-rc.12",
+    
     "electron-store": "^8.2.0",
     "electron-updater": "^6.8.3",
     "fast-xml-parser": "^5.7.1",
