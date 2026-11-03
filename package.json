@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.12",
-    "better-sqlite3": "^11.10.0",
+    "better-sqlite3": "^13.1.0",
     "bytenode": "^2.1.0",
     "cheerio": "^1.0.0-rc.12",
     "electron-store": "^8.2.0",
