@@ -4,7 +4,9 @@
   "description": "Farming Simulator 25 ModHub Desktop Manager",
   "main": "main-entry.js",
   "scripts": {
+    "postinstall": "electron-rebuild",
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+
     "build": "npm run build:renderer && npm run build:main",
     "dist:win": "npm run build && electron-builder --win",
     "dist:mac": "npm run build && electron-builder --mac",
@@ -20,6 +22,7 @@
   "license": "MIT",
   "devDependencies": {
     "node-abi": "^3.55.0",
+    "@electron/rebuild": "^3.2.0",
     "electron-rebuild": "^3.2.0",
     "electron": "^45.2.1",
     "@vitejs/plugin-react": "^4.2.1",
@@ -34,7 +37,7 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.12",
-    "better-sqlite3": "^13.1.0",
+    "better-sqlite3": "^13.0.3",
     "bytenode": "^2.1.0",
     "cheerio": "^1.0.0-rc.12",
     "electron-store": "^8.2.0",
