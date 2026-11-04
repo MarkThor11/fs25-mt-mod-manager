@@ -1,0 +1,107 @@
+<?xml version='1.0' encoding='utf-8'?>
+<modDesc xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" descVersion="92"
+    xsi:noNamespaceSchemaLocation="https://validation.gdn.giants-software.com/xml/fs25/modDesc.xsd">
+    <author>Gagefield Modding</author>
+    <version>1.0.0</version>
+    <title>
+        <en>Gage, Kentucky (Row Crop System)</en>
+    </title>
+
+    <description>
+        <en>Western Kentucky farms near the Gage area with a diverse landscape suitable for corn,
+            soybeans, and wheat.
+            Category: Maps
+        </en>
+    </description>
+
+    <iconFilename>preview-RCS.dds</iconFilename>
+
+    <multiplayer supported="true" />
+    <maps>
+        <map id="GAGERCS" configFilename="map/map.xml"
+            defaultVehiclesXMLFilename="map/config/vehicles.xml"
+            defaultPlaceablesXMLFilename="map/config/placeables.xml"
+            defaultHandToolsXMLFilename="map/config/handTools.xml"
+            defaultItemsXMLFilename="map/config/items.xml">
+            <title>
+                <en>Gage, Kentucky (Row Crop System)</en>
+            </title>
+            <description>
+                <en>Western Kentucky farms near the Gage area with a diverse landscape suitable for
+                    corn, soybeans, and wheat.</en>
+            </description>
+            <iconFilename>preview-RCS.dds</iconFilename>
+        </map>
+    </maps>
+
+    <l10n filenamePrefix="map/translations/l10n" />
+
+
+    <storeItems>
+        <storeItem
+            xmlFilename="map/objects/sell_points/sellingStationGeneric/sellingStationGeneric01.xml" />
+        <storeItem
+            xmlFilename="map/objects/sell_points/sellingStationGeneric/sellingStationProducts02.xml" />
+        <storeItem xmlFilename="map/objects/buy_points/propane/propane.xml" />
+        <storeItem xmlFilename="map/objects/buy_points/anhydrous/anhydrous.xml" />
+        <storeItem xmlFilename="map/objects/buy_points/fertilizer/fertilizer.xml" />
+        <storeItem xmlFilename="map/objects/buy_points/grain/grain.xml" />
+    </storeItems>
+
+    <dependencies>
+
+        <dependency>FS25_0_THDesignKit</dependency>
+
+        <dependency>FS25_0_THRowCropSystem</dependency>
+        <dependency>FS25_0_THPFConfigurator</dependency>
+
+        <dependency>FS25_unlimitedColorConfigurations</dependency>
+        <dependency>FS25_AmericanMidwestShop</dependency>
+        <dependency>FS25_AmericanMidwestTruckshop</dependency>
+
+        <dependency>FS25_100x240ColdStoragePack_Crossplay</dependency>
+        <dependency>FS25_100x62_Shed</dependency>
+        <dependency>FS25_115X55ColdStorage_crossplay</dependency>
+        <dependency>FS25_1970_Farmhouse</dependency>
+        <dependency>FS25_40x120ImplementShed_Brown_Crossplay</dependency>
+        <dependency>FS25_40x120ImplementShed_Crossplay</dependency>
+        <dependency>FS25_60x95BaleShedPack_Crossplay</dependency>
+        <dependency>FS25_72x126_Shop_Brown_Crossplay</dependency>
+        <dependency>FS25_81x120Shop</dependency>
+        <dependency>FS25_AmericanMidwestWoodsShed_Brown</dependency>
+        <dependency>FS25_American_Shed_Pack</dependency>
+        <dependency>FS25_BulkBuyBunkers</dependency>
+        <dependency>FS25_CattleStable</dependency>
+        <dependency>FS25_CowWoodBarn</dependency>
+        <dependency>FS25_FarmhouseInterior</dependency>
+        <dependency>FS25_FuelStorage</dependency>
+        <dependency>FS25_GrainSiloSystem</dependency>
+        <dependency>FS25_ImplementShedPack_Crossplay</dependency>
+        <dependency>FS25_Liquidstorage</dependency>
+        <dependency>FS25_MM_32x40Shed</dependency>
+        <dependency>FS25_Medium_Modern_House</dependency>
+        <dependency>FS25_MetGarage</dependency>
+        <dependency>FS25_MetallGarage</dependency>
+        <dependency>FS25_MidwestShouse</dependency>
+        <dependency>FS25_NoCreekFarmhouse</dependency>
+        <dependency>FS25_OldBarnPD</dependency>
+        <dependency>FS25_OldFarmHouse</dependency>
+        <dependency>FS25_PhiberDash</dependency>
+        <dependency>FS25_Placeable_Filling_Stations</dependency>
+        <dependency>FS25_SmallBarndominium</dependency>
+        <dependency>FS25_SmallFarmHouse</dependency>
+        <dependency>FS25_USAFlag</dependency>
+        <dependency>FS25_US_Mailboxes</dependency>
+        <dependency>FS25_americanFarmhouse</dependency>
+        <dependency>FS25_deco_Debris</dependency>
+        <dependency>FS25_farmFencePack</dependency>
+        <dependency>FS25_modernHouse</dependency>
+        <dependency>FS25_old_wooden_shed</dependency>
+        <dependency>FS25_sheds_WS11</dependency>
+        <dependency>FS25_smallGravityFuelTank</dependency>
+        <dependency>FS25_toddlerHouse</dependency>
+        <dependency>FS25_usWorkshopHall</dependency>
+        <dependency>FS25_woodFarmhouses</dependency>
+        <dependency>Hashy_Luxhouse</dependency>
+    </dependencies>
+</modDesc>
