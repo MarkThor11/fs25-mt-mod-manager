@@ -712,6 +712,19 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 
 
 				// 2. Inject missing <densityMapHeightTypes> tag if map XML
+				const isDensityHeightXml = entryNameLower.endsWith('densitymapheighttypes.xml');
+				if (isDensityHeightXml) {
+					if (/numChannels=["'][0-7]["']/i.test(xmlText)) {
+						xmlText = xmlText.replace(/numChannels=["'][0-7]["']/i, 'numChannels="8"');
+						entryModified = true;
+						debugLog(`[MAP-PATCH] Upgraded numChannels="8" in standalone height types file: ${entry.entryName} of ${path.basename(mapPath)}`);
+					} else if (!/numChannels=["']/i.test(xmlText) && /<densityMapHeightTypes\b/i.test(xmlText)) {
+						xmlText = xmlText.replace(/(<densityMapHeightTypes\b)/i, '$1 numChannels="8"');
+						entryModified = true;
+						debugLog(`[MAP-PATCH] Added numChannels="8" to standalone height types file: ${entry.entryName} of ${path.basename(mapPath)}`);
+					}
+				}
+
 				const isMapXml = entryNameLower.endsWith('mapus.xml') || 
 								 entryNameLower.endsWith('mapeu.xml') || 
 								 entryNameLower.endsWith('mapas.xml') || 
@@ -722,19 +735,44 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 								  !entryNameLower.includes('shop') && 
 								  !entryNameLower.includes('field'));
 
-				if (isMapXml && !xmlText.includes('densityMapHeightTypes')) {
-					debugLog(`[MAP-PATCH] Injecting missing densityMapHeightTypes in map XML entry: ${entry.entryName} of ${path.basename(mapPath)}`);
-					const patchTag = '    <densityMapHeightTypes filename="$data/maps/maps_densityMapHeightTypes.xml"/>';
-					if (/<fruitTypes[^>]*\/>/i.test(xmlText)) {
-						xmlText = xmlText.replace(/(<fruitTypes[^>]*\/>)/i, `$1\n${patchTag}`);
-					} else if (/<fillTypes[^>]*\/>/i.test(xmlText)) {
-						xmlText = xmlText.replace(/(<fillTypes[^>]*\/>)/i, `$1\n${patchTag}`);
-					} else if (/<\/map>/i.test(xmlText)) {
-						xmlText = xmlText.replace(/<\/map>/i, `${patchTag}\n</map>`);
+				if (isMapXml) {
+					// 1. Ensure <densityMapHeightTypes> tag exists
+					if (!xmlText.includes('densityMapHeightTypes')) {
+						debugLog(`[MAP-PATCH] Injecting missing densityMapHeightTypes in map XML entry: ${entry.entryName} of ${path.basename(mapPath)}`);
+						const patchTag = '    <densityMapHeightTypes filename="$data/maps/maps_densityMapHeightTypes.xml" numChannels="8"/>';
+						if (/<fruitTypes[^>]*\/>/i.test(xmlText)) {
+							xmlText = xmlText.replace(/(<fruitTypes[^>]*\/>)/i, `$1\n${patchTag}`);
+						} else if (/<fillTypes[^>]*\/>/i.test(xmlText)) {
+							xmlText = xmlText.replace(/(<fillTypes[^>]*\/>)/i, `$1\n${patchTag}`);
+						} else if (/<\/map>/i.test(xmlText)) {
+							xmlText = xmlText.replace(/<\/map>/i, `${patchTag}\n</map>`);
+						} else {
+							xmlText += `\n${patchTag}\n`;
+						}
+						entryModified = true;
 					} else {
-						xmlText += `\n${patchTag}\n`;
+						// 2. If already present, upgrade channels < 8 to 8 channels so ground heaps never hit the 63/127 cap
+						const heightTypeTagRegex = /<densityMapHeightTypes\b([^>]*?)(\/?)>/i;
+						const match = xmlText.match(heightTypeTagRegex);
+						if (match) {
+							let attrs = match[1];
+							const isSelfClosing = match[2] === '/' || !xmlText.includes('</densityMapHeightTypes>');
+							if (/numChannels=["']([0-7])["']/i.test(attrs)) {
+								attrs = attrs.replace(/numChannels=["'][0-7]["']/i, 'numChannels="8"');
+								const replacement = `<densityMapHeightTypes${attrs}${isSelfClosing ? '/>' : '>'}`;
+								xmlText = xmlText.replace(match[0], replacement);
+								entryModified = true;
+								debugLog(`[MAP-PATCH] Upgraded densityMapHeightTypes to 8 channels in ${entry.entryName} of ${path.basename(mapPath)}`);
+							} else if (!/numChannels=["']/i.test(attrs)) {
+								// No numChannels defined (defaults to basegame 6) -> explicitly add numChannels="8"
+								attrs = `${attrs.trim()} numChannels="8"`;
+								const replacement = `<densityMapHeightTypes ${attrs}${isSelfClosing ? '/>' : '>'}`;
+								xmlText = xmlText.replace(match[0], replacement);
+								entryModified = true;
+								debugLog(`[MAP-PATCH] Added numChannels="8" to densityMapHeightTypes in ${entry.entryName} of ${path.basename(mapPath)}`);
+							}
+						}
 					}
-					entryModified = true;
 				}
 
 				// 3. Clean broken precisionFarming soilMap tags pointing to missing files
@@ -791,18 +829,41 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 						const lowerName = f.toLowerCase();
 						const isMapXml = lowerName === 'mapus.xml' || lowerName === 'mapeu.xml' || lowerName === 'mapas.xml' ||
 										 (lowerName.endsWith('map.xml') && !lowerName.includes('placeable') && !lowerName.includes('store') && !lowerName.includes('item'));
-						if (isMapXml && !xmlText.includes('densityMapHeightTypes')) {
-							const patchTag = '    <densityMapHeightTypes filename="$data/maps/maps_densityMapHeightTypes.xml"/>';
-							if (/<fruitTypes[^>]*\/>/i.test(xmlText)) {
-								xmlText = xmlText.replace(/(<fruitTypes[^>]*\/>)/i, `$1\n${patchTag}`);
-							} else if (/<fillTypes[^>]*\/>/i.test(xmlText)) {
-								xmlText = xmlText.replace(/(<fillTypes[^>]*\/>)/i, `$1\n${patchTag}`);
-							} else if (/<\/map>/i.test(xmlText)) {
-								xmlText = xmlText.replace(/<\/map>/i, `${patchTag}\n</map>`);
+						if (isMapXml) {
+							if (!xmlText.includes('densityMapHeightTypes')) {
+								const patchTag = '    <densityMapHeightTypes filename="$data/maps/maps_densityMapHeightTypes.xml" numChannels="8"/>';
+								if (/<fruitTypes[^>]*\/>/i.test(xmlText)) {
+									xmlText = xmlText.replace(/(<fruitTypes[^>]*\/>)/i, `$1\n${patchTag}`);
+								} else if (/<fillTypes[^>]*\/>/i.test(xmlText)) {
+									xmlText = xmlText.replace(/(<fillTypes[^>]*\/>)/i, `$1\n${patchTag}`);
+								} else if (/<\/map>/i.test(xmlText)) {
+									xmlText = xmlText.replace(/<\/map>/i, `${patchTag}\n</map>`);
+								} else {
+									xmlText += `\n${patchTag}\n`;
+								}
+								fileModified = true;
 							} else {
-								xmlText += `\n${patchTag}\n`;
+								// Upgrade channels < 8 to 8 channels
+								const heightTypeTagRegex = /<densityMapHeightTypes\b([^>]*?)(\/?)>/i;
+								const match = xmlText.match(heightTypeTagRegex);
+								if (match) {
+									let attrs = match[1];
+									const isSelfClosing = match[2] === '/' || !xmlText.includes('</densityMapHeightTypes>');
+									if (/numChannels=["']([0-7])["']/i.test(attrs)) {
+										attrs = attrs.replace(/numChannels=["'][0-7]["']/i, 'numChannels="8"');
+										const replacement = `<densityMapHeightTypes${attrs}${isSelfClosing ? '/>' : '>'}`;
+										xmlText = xmlText.replace(match[0], replacement);
+										fileModified = true;
+										debugLog(`[MAP-PATCH] Upgraded densityMapHeightTypes to 8 channels in directory XML: ${fullPath}`);
+									} else if (!/numChannels=["']/i.test(attrs)) {
+										attrs = `${attrs.trim()} numChannels="8"`;
+										const replacement = `<densityMapHeightTypes ${attrs}${isSelfClosing ? '/>' : '>'}`;
+										xmlText = xmlText.replace(match[0], replacement);
+										fileModified = true;
+										debugLog(`[MAP-PATCH] Added numChannels="8" to densityMapHeightTypes in directory XML: ${fullPath}`);
+									}
+								}
 							}
-							fileModified = true;
 						}
 
 						if (fileModified) {
