@@ -4356,8 +4356,7 @@ async function syncSavegameModBridges(targetRootPath = null) {
 
 		// 1. Gather all mod paths required across all active savegame slots (1-20)
 		const activeSaveModPaths = new Map(); // modNameLower -> realFilePath
-		let anyPersistenceActive = false;
-
+		
 		for (let i = 1; i <= 20; i++) {
 			const slotPath = path.join(fs25DataRoot, `savegame${i}`);
 			if (!fs.existsSync(slotPath)) continue;
@@ -4392,9 +4391,6 @@ async function syncSavegameModBridges(targetRootPath = null) {
 
 					if (!mapModObj) {
 						const xml = await fs.readFile(careerPath, 'utf8');
-						if (xml.includes('FS25_ManagerPersistenceBridge') || xml.includes('FS25_rememberPositions')) {
-							anyPersistenceActive = true;
-						}
 						mapModObj = savegameManager.findMapModInSavegame(xml, allInstalledMods);
 						if (mapModObj && mapModObj.modName) {
 							const mNameLow = mapModObj.modName.toLowerCase();
@@ -4629,36 +4625,18 @@ async function syncSavegameModBridges(targetRootPath = null) {
 			}
 		}
 
-		// If any active savegame has persistence bridge enabled, ensure it is copied into root mods directories
-		if (anyPersistenceActive) {
-			try {
-				const appPath = require('electron').app ? require('electron').app.getAppPath() : process.cwd();
-				const bridgeCandidates = [
-					path.join(appPath, 'src', 'main', 'resources', 'internalMods', 'FS25_ManagerPersistenceBridge.zip'),
-					path.join(process.cwd(), 'src', 'main', 'resources', 'internalMods', 'FS25_ManagerPersistenceBridge.zip'),
-					path.join(appPath, 'resources', 'internalMods', 'FS25_ManagerPersistenceBridge.zip'),
-					path.join(appPath, 'src', 'main', 'resources', 'internalMods', 'FS25_rememberPositions.zip'),
-					path.join(process.cwd(), 'src', 'main', 'resources', 'internalMods', 'FS25_rememberPositions.zip')
-				];
-				let bridgeSrc = null;
-				for (const cand of bridgeCandidates) {
-					if (fs.existsSync(cand)) {
-						bridgeSrc = cand;
-						break;
-					}
+		// Helper mods must NEVER be copied or linked into the user's root mods directories.
+		// Instead, clean up any lingering bridge files in the target directories so player mods folders stay pristine.
+		for (const rootPath of targetRoots) {
+			const lingeringBridgeZip = path.join(rootPath, 'FS25_ManagerPersistenceBridge.zip');
+			const lingeringRememberZip = path.join(rootPath, 'FS25_rememberPositions.zip');
+			for (const lingering of [lingeringBridgeZip, lingeringRememberZip]) {
+				if (fs.existsSync(lingering)) {
+					try {
+						await fs.remove(lingering);
+						console.log(`[CLEANUP] Removed lingering helper mod from root: ${lingering}`);
+					} catch (_) {}
 				}
-				if (bridgeSrc) {
-					for (const rootPath of targetRoots) {
-						const destZip = path.join(rootPath, 'FS25_ManagerPersistenceBridge.zip');
-						if (!fs.existsSync(destZip)) {
-							await fs.copy(bridgeSrc, destZip);
-							totalCreated++;
-							console.log(`[SAVE-BRIDGE] Copied FS25_ManagerPersistenceBridge to root ${path.basename(rootPath)}`);
-						}
-					}
-				}
-			} catch (bErr) {
-				console.warn('[SAVE-BRIDGE] Failed to bridge persistence mod to root:', bErr.message);
 			}
 		}
 

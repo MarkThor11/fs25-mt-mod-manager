@@ -4354,13 +4354,9 @@ async function cleanInternalHelperModsFromSavegame(savePath) {
         const modRegex = /<mod\s+[^>]*modName=["']([^"']+)["'][^>]*\/>\r?\n?/gi;
         let modified = false;
 
-        const persistenceActive = await isSavegamePersistenceActive(savePath);
-
         xmlData = xmlData.replace(modRegex, (match, modName) => {
             const mLow = (modName || '').toLowerCase();
-            if (persistenceActive && (mLow === 'fs25_managerpersistencebridge' || mLow === 'fs25_rememberpositions')) {
-                return match;
-            }
+            // Helper mods must NEVER remain written inside careerSavegame.xml
             if (INTERNAL_HELPER_MODS.includes(mLow) || INCOMPATIBLE_ENGINE_MODS.has(mLow)) {
                 modified = true;
                 return '';
@@ -4378,27 +4374,12 @@ async function cleanInternalHelperModsFromSavegame(savePath) {
 }
 
 async function ensurePersistenceBridgeInSavegame(savePath) {
+    // Internal helper mods must NEVER be written into careerSavegame.xml.
+    // Strip any lingering helper mod entries to ensure the save is completely clean.
     try {
-        const fs = require('fs');
-        const path = require('path');
-        const active = await isSavegamePersistenceActive(savePath);
-        if (!active) return;
-
-        const xmlPath = path.join(savePath, 'careerSavegame.xml');
-        if (!fs.existsSync(xmlPath)) return;
-
-        let xmlData = fs.readFileSync(xmlPath, 'utf8');
-        if (!xmlData.includes('FS25_ManagerPersistenceBridge') && !xmlData.includes('FS25_rememberPositions')) {
-            const entry = '    <mod modName="FS25_ManagerPersistenceBridge" title="Manager Persistence Bridge" version="1.0.2.1" required="false" fileHash=""/>\n';
-            if (xmlData.includes('</careerSavegame>')) {
-                xmlData = xmlData.replace('</careerSavegame>', `${entry}</careerSavegame>`);
-                fs.writeFileSync(xmlPath, xmlData, 'utf8');
-                console.log(`[PERSISTENCE] Registered FS25_ManagerPersistenceBridge in careerSavegame.xml for ${savePath}`);
-            }
-        }
-        await ensureBridgeMod();
+        await cleanInternalHelperModsFromSavegame(savePath);
     } catch (err) {
-        console.warn('[PERSISTENCE] ensurePersistenceBridgeInSavegame error:', err.message);
+        console.warn('[PERSISTENCE] ensurePersistenceBridgeInSavegame cleanup warning:', err.message);
     }
 }
 
@@ -4484,11 +4465,7 @@ async function updateNativeEnhancement(savePath, includeBridge, includeDeliverie
             });
 
             if (includeBridge) {
-                if (!hasBridgePersistence) {
-                    mods.push({ '@_modName': 'FS25_ManagerPersistenceBridge', '@_title': 'Manager Persistence Bridge', '@_version': '1.0.2.1', '@_required': 'false', '@_fileHash': '' });
-                }
-                await ensureBridgeMod();
-
+                // Never write bridge into careerSavegame.xml mods list - handled dynamically by app staging
                 // If re-enabling persistence, restore the last known backed up position if present
                 try {
                     const backupPath = path.join(savePath, 'manager_spawn_backup.json');
@@ -7692,6 +7669,9 @@ async function processPostGameExit(saveIndex) {
         }
 
         if (!fs.existsSync(careerPath)) return;
+
+        // Strip any helper mods that the game engine may have retained upon saving
+        await cleanInternalHelperModsFromSavegame(savePath).catch(() => {});
 
         const xml = await fs.readFile(careerPath, 'utf8');
         const data = parser.parse(xml);
