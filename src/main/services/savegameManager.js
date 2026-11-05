@@ -944,12 +944,20 @@ async function setSavegameMods(savegamePath, mods) {
     // Preserve required existing mods and installed DLCs (excluding internal app helper mods)
     existingModsArray.forEach(m => {
         if (m && m['@_modName']) {
-            const nameLow = m['@_modName'].toLowerCase();
-            const isDlcEntry = nameLow.startsWith('pdlc_');
-            if ((m['@_required'] === 'true' || isDlcEntry) && !INTERNAL_HELPER_MODS.includes(nameLow)) {
-                newModsMap.set(m['@_modName'], {
-                    '@_modName': m['@_modName'],
-                    '@_title': String(m['@_title'] || m['@_modName']).replace(/"/g, "'"),
+            let mName = m['@_modName'];
+            const nameLow = mName.toLowerCase();
+            const isDlcEntry = nameLow.startsWith('pdlc_') || nameLow.endsWith('pack') || nameLow.includes('extracontent');
+            if (INTERNAL_HELPER_MODS.includes(nameLow)) return;
+
+            // Normalize DLC name so bare DLC names don't duplicate or linger
+            if (isDlcEntry && !nameLow.startsWith('pdlc_')) {
+                mName = 'pdlc_' + mName;
+            }
+
+            if (m['@_required'] === 'true' || isDlcEntry) {
+                newModsMap.set(mName.toLowerCase(), {
+                    '@_modName': mName,
+                    '@_title': String(m['@_title'] || mName).replace(/"/g, "'"),
                     '@_version': m['@_version'] || '1.0.0.0',
                     '@_required': m['@_required'] || (isDlcEntry ? 'false' : 'true'),
                     '@_fileHash': m['@_fileHash'] || ''
@@ -972,7 +980,11 @@ async function setSavegameMods(savegamePath, mods) {
         const existing = existingLookup.get(name.toLowerCase());
         const rawTitle = m.title || (existing && existing['@_title']) || name || '';
         const cleanTitle = String(rawTitle).replace(/"/g, "'");
-        newModsMap.set(name, {
+        // If this mod is a DLC, ensure any old unprefixed variant is deleted
+        if (name.toLowerCase().startsWith('pdlc_')) {
+            newModsMap.delete(name.toLowerCase().replace(/^pdlc_/i, ''));
+        }
+        newModsMap.set(name.toLowerCase(), {
             '@_modName': name,
             '@_title': cleanTitle,
             '@_version': m.version || (existing && existing['@_version']) || '1.0.0.0',
