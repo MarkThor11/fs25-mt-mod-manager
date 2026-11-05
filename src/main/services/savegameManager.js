@@ -960,7 +960,12 @@ async function setSavegameMods(savegamePath, mods) {
 
     // Add/update user-selected mods (excluding internal app helper mods)
     mods.forEach(m => {
-        const name = m?.modName || m?.fileName?.replace(/\.zip$/i, '');
+        let name = m?.modName || m?.fileName?.replace(/\.zip$/i, '');
+        if (m && (m.isDLC || m.folder === 'DLC' || (m.fileName && m.fileName.toLowerCase().endsWith('.dlc')))) {
+            if (name && !name.toLowerCase().startsWith('pdlc_')) {
+                name = 'pdlc_' + name;
+            }
+        }
         if (!name || INTERNAL_HELPER_MODS.includes(name.toLowerCase())) return;
         
         const isMap = m.required || (mapId && name === mapId.split('.')[0]) || (mapTitle && m.title === mapTitle);
@@ -1470,7 +1475,18 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     const careerPath = path.join(slotPath, 'careerSavegame.xml');
     const today = new Date().toISOString().split('T')[0];
 
-    let finalMods = (Array.isArray(selectedMods) ? selectedMods : []).filter(m => m && m.modName !== 'FS25_rememberPositions');
+    let finalMods = (Array.isArray(selectedMods) ? selectedMods : [])
+        .filter(m => m && m.modName !== 'FS25_rememberPositions')
+        .map(m => {
+            if (!m || !m.modName) return m;
+            let mName = m.modName;
+            if (m.isDLC || (m.folder === 'DLC') || (m.fileName && m.fileName.toLowerCase().endsWith('.dlc'))) {
+                if (!mName.toLowerCase().startsWith('pdlc_')) {
+                    mName = 'pdlc_' + mName;
+                }
+            }
+            return { ...m, modName: mName };
+        });
     // Add map mod if not already there
     const mapBaseName = (mapModName || '').split('.')[0];
     const matchedMapMod = isOfficialBaseMap ? null : (() => {
@@ -1754,7 +1770,14 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                 const existingNames = new Set(modData.map(m => (m['@_modName'] || '').toLowerCase()));
                 for (const tMod of templateMods) {
                     const tName = tMod['@_modName'];
-                    if (tName && !existingNames.has(tName.toLowerCase())) {
+                    if (!tName) continue;
+                    const tNameLow = tName.toLowerCase();
+                    const tNameNorm = tNameLow.replace(/^pdlc_/i, '');
+                    const isAlreadyPresent = Array.from(existingNames).some(en => {
+                        const enNorm = en.replace(/^pdlc_/i, '');
+                        return en === tNameLow || enNorm === tNameNorm;
+                    });
+                    if (!isAlreadyPresent) {
                         modData.push({
                             '@_modName': tName,
                             '@_title': String(tMod['@_title'] || tName || '').replace(/"/g, '&quot;'),

@@ -1335,9 +1335,12 @@ function scanDLCs(pdlcPath) {
                 cleanTitle = cleanTitle.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
             }
 
+            const rawDlcBase = file.replace(/\.dlc$/i, '');
+            const canonicalDlcName = rawDlcBase.toLowerCase().startsWith('pdlc_') ? rawDlcBase : 'pdlc_' + rawDlcBase;
+
             return {
                 fileName: file,
-                modName: file.replace(/\.dlc$/i, ''),
+                modName: canonicalDlcName,
                 filePath: path.join(pdlcPath, file),
                 title: mapping?.title || cleanTitle,
                 author: mapping?.author || 'GIANTS Software',

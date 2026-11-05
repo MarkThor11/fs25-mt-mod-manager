@@ -414,7 +414,7 @@ function scanDLCs(pdlcPath) {
 
             return {
                 fileName: file,
-                modName: file.replace(/\.dlc$/i, ''),
+                modName: file.replace(/\.dlc$/i, '').toLowerCase().startsWith('pdlc_') ? file.replace(/\.dlc$/i, '') : pdlc_\,
                 filePath: path.join(pdlcPath, file),
                 title: mapping?.title || cleanTitle,
                 author: mapping?.author || 'GIANTS Software',
