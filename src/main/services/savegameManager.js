@@ -17,7 +17,7 @@ function ultraNormalize(str) {
     s = s.replace(/(?:mod|pack|prefab|map)+/g, '');
     return s;
 }
-const INTERNAL_HELPER_MODS = ['fs25_managerpersistencebridge', 'fs25_rememberpositions'];
+const INTERNAL_HELPER_MODS = ['fs25_managerpersistencebridge', 'fs25_rememberpositions', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
 const INCOMPATIBLE_ENGINE_MODS = new Set(['fs25_maxdensityheighttypesbymap']);
 
 // 🛠️ DIAGNOSTIC UTILITY 🛠️
@@ -1476,7 +1476,7 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     const today = new Date().toISOString().split('T')[0];
 
     let finalMods = (Array.isArray(selectedMods) ? selectedMods : [])
-        .filter(m => m && m.modName !== 'FS25_rememberPositions')
+        .filter(m => m && m.modName && !INTERNAL_HELPER_MODS.includes(m.modName.toLowerCase()))
         .map(m => {
             if (!m || !m.modName) return m;
             let mName = m.modName;
@@ -1777,6 +1777,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
                         const enNorm = en.replace(/^pdlc_/i, '');
                         return en === tNameLow || enNorm === tNameNorm;
                     });
+                    if (INTERNAL_HELPER_MODS.includes(tNameLow) || INTERNAL_HELPER_MODS.includes(tNameNorm)) {
+                        continue;
+                    }
                     if (!isAlreadyPresent) {
                         modData.push({
                             '@_modName': tName,
