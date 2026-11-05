@@ -7711,6 +7711,36 @@ async function processPostGameExit(saveIndex) {
         // Strip any helper mods that the game engine may have retained upon saving
         await cleanInternalHelperModsFromSavegame(savePath).catch(() => {});
 
+        // Sync player position to careerSavegame.xml for autoStart spawn persistence
+        try {
+            const playersXmlPath = path.join(savePath, 'players.xml');
+            if (fs.existsSync(playersXmlPath) && fs.existsSync(careerPath)) {
+                const pxData = await fs.readFile(playersXmlPath, 'utf8');
+                const pxParsed = parser.parse(pxData);
+                const pEntry = Array.isArray(pxParsed && pxParsed.players && pxParsed.players.player)
+                    ? pxParsed.players.player[0]
+                    : (pxParsed && pxParsed.players && pxParsed.players.player);
+                if (pEntry && pEntry.spawn && pEntry.spawn['@_position']) {
+                    const coords = pEntry.spawn['@_position'].split(' ').map(Number);
+                    const pYaw = pEntry.spawn['@_yaw'] !== undefined ? Number(pEntry.spawn['@_yaw']) : undefined;
+                    const vId = pEntry.spawn['@_vehicleUniqueId'] || null;
+                    if (coords.length >= 3 && !isNaN(coords[0]) && !isNaN(coords[1]) && !isNaN(coords[2])) {
+                        await setPlayerPosition({
+                            savePath: savePath,
+                            x: coords[0],
+                            y: coords[1],
+                            z: coords[2],
+                            yaw: !isNaN(pYaw) ? pYaw : undefined,
+                            vehicleUniqueId: vId
+                        });
+                        console.log('[POST-GAME] Synced player position to careerSavegame.xml for slot ' + saveIndex);
+                    }
+                }
+            }
+        } catch (posErr) {
+            console.warn('[POST-GAME] Could not sync player position for slot ' + saveIndex + ': ' + posErr.message);
+        }
+
         const xml = await fs.readFile(careerPath, 'utf8');
         const data = parser.parse(xml);
         if (!data || !data.careerSavegame) return;
