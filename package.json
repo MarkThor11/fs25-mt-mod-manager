@@ -4,7 +4,6 @@
   "description": "Farming Simulator 25 ModHub Desktop Manager",
   "main": "main-entry.js",
   "scripts": {
-    "postinstall": "electron-rebuild",
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
 
     "build": "npm run build:renderer && npm run build:main",
