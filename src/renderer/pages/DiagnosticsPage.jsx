@@ -18,7 +18,7 @@ export default function DiagnosticsPage() {
     try {
       const report = {
         app: 'FS25 MT Mod Manager',
-        version: '1.3.0',
+        version: '1.3.1',
         platform: window.navigator.platform,
         timestamp: new Date().toISOString(),
         stats: {
