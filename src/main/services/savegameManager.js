@@ -5967,13 +5967,24 @@ async function _legacyCleanupBridgeModFromSavegame(savePath) {
 function findMapModInSavegame(xmlData, localMods = []) {
     if (!xmlData || !localMods || localMods.length === 0) return null;
 
+    const isOfficialDlcMod = (m) => Boolean(
+        m && (
+            m.isDLC ||
+            m.folder === 'DLC' ||
+            (m.modName && m.modName.toLowerCase().startsWith('pdlc_')) ||
+            (m.fileName && (m.fileName.toLowerCase().endsWith('.dlc') || m.fileName.toLowerCase().startsWith('pdlc_'))) ||
+            (m.filePath && m.filePath.toLowerCase().endsWith('.dlc'))
+        )
+    );
+
     // 1. Check <careerSavegame><mod modName="..." .../></careerSavegame> list
     // In FS25, every mod map is recorded as an active mod tag in careerSavegame.xml
     const modMatches = [...xmlData.matchAll(/<mod\s+[^>]*modName=["']([^"']+)["']/gi)];
     const saveModNames = modMatches.map(m => m[1]);
 
     for (const sName of saveModNames) {
-        const matched = localMods.find(m => m.isMap && m.modName && m.modName.toLowerCase() === sName.toLowerCase());
+        if (sName.toLowerCase().startsWith('pdlc_')) continue;
+        const matched = localMods.find(m => m.isMap && !isOfficialDlcMod(m) && m.modName && m.modName.toLowerCase() === sName.toLowerCase());
         if (matched) return matched;
     }
 
@@ -5981,8 +5992,8 @@ function findMapModInSavegame(xmlData, localMods = []) {
     const mapIdMatch = xmlData.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xmlData.match(/mapId=["']([^"']+)["']/i);
     const rawMapId = mapIdMatch ? mapIdMatch[1].trim() : null;
 
-    // Skip default base-game maps
-    if (rawMapId && (isOfficialMap(rawMapId) || ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(rawMapId.toLowerCase()))) {
+    // Skip default base-game maps and official DLC maps
+    if (rawMapId && (isOfficialMap(rawMapId) || rawMapId.toLowerCase().startsWith('pdlc_') || ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(rawMapId.toLowerCase()))) {
         return null;
     }
 
@@ -5992,7 +6003,7 @@ function findMapModInSavegame(xmlData, localMods = []) {
     if (rawMapId) {
         // If mapId is "FS25_Courtright_Line.CourtrightLineModMap", split('.')[0] gives "FS25_Courtright_Line"
         const prefix = rawMapId.split('.')[0];
-        const matchByPrefix = localMods.find(m => m.isMap && (
+        const matchByPrefix = localMods.find(m => m.isMap && !isOfficialDlcMod(m) && (
             (m.modName && m.modName.toLowerCase() === prefix.toLowerCase()) ||
             (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === prefix.toLowerCase())
         ));
@@ -6001,7 +6012,7 @@ function findMapModInSavegame(xmlData, localMods = []) {
 
     if (rawMapTitle) {
         const titleLower = rawMapTitle.toLowerCase();
-        const matchByTitle = localMods.find(m => m.isMap && (
+        const matchByTitle = localMods.find(m => m.isMap && !isOfficialDlcMod(m) && (
             (m.title && m.title.toLowerCase() === titleLower) ||
             (m.mapTitle && m.mapTitle.toLowerCase() === titleLower)
         ));
@@ -6011,7 +6022,7 @@ function findMapModInSavegame(xmlData, localMods = []) {
     // Fallback: match by file basename or modName
     if (rawMapId) {
         const rawLower = rawMapId.toLowerCase();
-        const fallbackMatch = localMods.find(m => m.isMap && (
+        const fallbackMatch = localMods.find(m => m.isMap && !isOfficialDlcMod(m) && (
             (m.modName && m.modName.toLowerCase() === rawLower) ||
             (m.fileName && m.fileName.replace(/\.zip$/i, '').toLowerCase() === rawLower)
         ));

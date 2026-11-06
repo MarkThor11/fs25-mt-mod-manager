@@ -4434,9 +4434,13 @@ async function syncSavegameModBridges(targetRootPath = null) {
 			const mapModPath = await savegameManager.resolveMapModPath(slotPath);
 			if (mapModPath && fs.existsSync(mapModPath)) {
 				const baseName = path.basename(mapModPath);
-				const modNameLower = baseName.replace(/\.zip$/i, '').toLowerCase();
-				activeSaveModPaths.set(modNameLower, mapModPath);
-				mapModObj = modsByName.get(modNameLower);
+				const modNameLower = baseName.replace(/\.(zip|dlc)$/i, '').toLowerCase();
+				const resolvedModObj = modsByName.get(modNameLower);
+				const isDlcPath = baseName.toLowerCase().endsWith('.dlc') || modNameLower.startsWith('pdlc_') || Boolean(resolvedModObj && resolvedModObj.isDLC);
+				if (!isDlcPath) {
+					activeSaveModPaths.set(modNameLower, mapModPath);
+					mapModObj = resolvedModObj;
+				}
 			}
 
 			// Slot required mod names
@@ -4455,8 +4459,9 @@ async function syncSavegameModBridges(targetRootPath = null) {
 
 					if (!mapModObj) {
 						const xml = await fs.readFile(careerPath, 'utf8');
-						mapModObj = savegameManager.findMapModInSavegame(xml, allInstalledMods);
-						if (mapModObj && mapModObj.modName) {
+						const foundMap = savegameManager.findMapModInSavegame(xml, allInstalledMods);
+						if (foundMap && foundMap.modName && !foundMap.isDLC && !foundMap.modName.toLowerCase().startsWith('pdlc_') && !(foundMap.filePath && foundMap.filePath.toLowerCase().endsWith('.dlc'))) {
+							mapModObj = foundMap;
 							const mNameLow = mapModObj.modName.toLowerCase();
 							activeSaveModPaths.set(mNameLow, mapModObj.filePath);
 						}
@@ -4474,9 +4479,9 @@ async function syncSavegameModBridges(targetRootPath = null) {
 					}
 					const mapCand = pending.resolvedMapModName || pending.mapModName;
 					if (mapCand) {
-						const cLower = String(mapCand).replace(/\.zip$/i, '').toLowerCase();
+						const cLower = String(mapCand).replace(/\.(zip|dlc)$/i, '').toLowerCase();
 						const mObj = modsByName.get(cLower);
-						if (mObj && mObj.filePath) {
+						if (mObj && mObj.filePath && !mObj.isDLC && !cLower.startsWith('pdlc_') && !mObj.filePath.toLowerCase().endsWith('.dlc')) {
 							activeSaveModPaths.set(cLower, mObj.filePath);
 							if (!mapModObj) mapModObj = mObj;
 						}
@@ -4607,13 +4612,21 @@ async function syncSavegameModBridges(targetRootPath = null) {
 
 			// 3. Ensure a link/hardlink exists in this root directory for each active savegame mod
 			for (const [modNameLower, sourcePath] of activeSaveModPaths.entries()) {
+				// Never link official DLCs into the user's mods directory
+				if (modNameLower.startsWith('pdlc_') || sourcePath.toLowerCase().endsWith('.dlc')) {
+					continue;
+				}
+				const modObj = modsByName.get(modNameLower);
+				if (modObj && modObj.isDLC) {
+					continue;
+				}
+
 				// Don't link a file to itself if sourcePath is already directly in rootPath
 				if (path.resolve(path.dirname(sourcePath)).toLowerCase() === rootPath.toLowerCase()) {
 					continue;
 				}
 
 				const isZip = sourcePath.toLowerCase().endsWith('.zip');
-				const modObj = modsByName.get(modNameLower);
 				const targetFileName = (modObj && modObj.modName) ? (modObj.modName + (isZip ? '.zip' : '')) : path.basename(sourcePath);
 				const destPath = path.join(rootPath, targetFileName);
 
@@ -4689,7 +4702,7 @@ async function syncSavegameModBridges(targetRootPath = null) {
 			}
 		}
 
-		// Helper mods must NEVER be copied or linked into the user's root mods directories.
+		// Helper mods and pdlc_ links must NEVER be copied or linked into the user's root mods directories.
 		// Instead, clean up any lingering bridge files in the target directories so player mods folders stay pristine.
 		for (const rootPath of targetRoots) {
 			const lingeringBridgeZip = path.join(rootPath, 'FS25_ManagerPersistenceBridge.zip');
@@ -4702,6 +4715,18 @@ async function syncSavegameModBridges(targetRootPath = null) {
 					} catch (_) {}
 				}
 			}
+			try {
+				const rootEntries = await fs.readdir(rootPath, { withFileTypes: true }).catch(() => []);
+				for (const ent of rootEntries) {
+					if (ent.name.toLowerCase().startsWith('pdlc_') || ent.name.toLowerCase().endsWith('.dlc')) {
+						const badDlcLink = path.join(rootPath, ent.name);
+						try {
+							await fs.remove(badDlcLink);
+							console.log(`[CLEANUP] Removed invalid DLC link/entry from root mods folder: ${badDlcLink}`);
+						} catch (_) {}
+					}
+				}
+			} catch (_) {}
 		}
 
 		console.log(`[SAVE-BRIDGE] Synchronized ${activeSaveModPaths.size} mods across all active savegames into root mods folder.`);
