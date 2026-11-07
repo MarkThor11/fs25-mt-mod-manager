@@ -825,19 +825,44 @@ function patchBaseGameDensityHeightTypes(gameExeOrInstallDir = null, targetMapId
 				}
 				const isDlcMap = targetMapId && (targetMapId.toLowerCase().startsWith('pdlc_') || targetMapId.toLowerCase().includes('beansandalpacas') || targetMapId.toLowerCase().includes('catuai') || targetMapId.toLowerCase().includes('catua') || targetMapId.toLowerCase().includes('highlandsfishing') || targetMapId.toLowerCase().includes('kinlaig'));
 				if (isDlcMap) {
+					let modified = false;
 					if (/numChannels=["'][78]["']/i.test(xmlText)) {
 						xmlText = xmlText.replace(/numChannels=["'][78]["']/i, 'numChannels="6"');
+						modified = true;
+					}
+					// On 6-channel encrypted DLC maps (capacity 63), base game alone registers 48 height types,
+					// which starves mods and causes Straw Harvest / Pumps N' Hoses to crash when slot 63 is reached.
+					// Strip non-tippable entries (liquids, un-tippable crops, cut residue) that are never dumped into ground heaps.
+					const nonTippablePattern = /[\t ]*<densityMapHeightType\s+fillTypeName=["'](?:GRAPE|GREENBEAN|PEA|SPINACH|OLIVE|LIQUIDMANURE|DIGESTATE|TARP|WHEAT_CUT|BARLEY_CUT|OAT_CUT|CANOLA_CUT|SOYBEAN_CUT|SUGARBEET_CUT|POPLAR|COTTON)["'][^>]*>[\s\S]*?<\/densityMapHeightType>\r?\n?/gi;
+					if (nonTippablePattern.test(xmlText)) {
+						xmlText = xmlText.replace(nonTippablePattern, '');
+						modified = true;
+					}
+					if (modified) {
 						fs.writeFileSync(baseHeightXmlPath, xmlText, 'utf8');
 						anyPatched = true;
-						console.log(`[MAP-PATCH] Aligned base game maps_densityMapHeightTypes.xml to numChannels="6" for encrypted DLC map: ${targetMapId}`);
-						debugLog(`[MAP-PATCH] Aligned base game maps_densityMapHeightTypes.xml to numChannels="6" for encrypted DLC map: ${targetMapId}`);
+						console.log(`[MAP-PATCH] Aligned base game maps_densityMapHeightTypes.xml to numChannels="6" and optimized slots for encrypted DLC map: ${targetMapId}`);
+						debugLog(`[MAP-PATCH] Aligned base game maps_densityMapHeightTypes.xml to numChannels="6" and optimized slots for encrypted DLC map: ${targetMapId}`);
 					}
-				} else if (/numChannels=["'][0-7]["']/i.test(xmlText)) {
-					xmlText = xmlText.replace(/numChannels=["'][0-7]["']/i, 'numChannels="8"');
-					fs.writeFileSync(baseHeightXmlPath, xmlText, 'utf8');
-					anyPatched = true;
-					console.log(`[MAP-PATCH] Upgraded base game maps_densityMapHeightTypes.xml to numChannels="8"`);
-					debugLog(`[MAP-PATCH] Upgraded base game maps_densityMapHeightTypes.xml to numChannels="8"`);
+				} else {
+					let modified = false;
+					if (fs.existsSync(bakPath)) {
+						const origBakText = fs.readFileSync(bakPath, 'utf8');
+						if (origBakText.includes('fillTypeName="GRAPE"') && !xmlText.includes('fillTypeName="GRAPE"')) {
+							xmlText = origBakText;
+							modified = true;
+						}
+					}
+					if (/numChannels=["'][0-7]["']/i.test(xmlText)) {
+						xmlText = xmlText.replace(/numChannels=["'][0-7]["']/i, 'numChannels="8"');
+						modified = true;
+					}
+					if (modified) {
+						fs.writeFileSync(baseHeightXmlPath, xmlText, 'utf8');
+						anyPatched = true;
+						console.log(`[MAP-PATCH] Upgraded base game maps_densityMapHeightTypes.xml to numChannels="8" (255 types)`);
+						debugLog(`[MAP-PATCH] Upgraded base game maps_densityMapHeightTypes.xml to numChannels="8" (255 types)`);
+					}
 				}
 			} catch (xmlErr) {
 				console.warn(`[MAP-PATCH] Could not patch base game maps_densityMapHeightTypes.xml:`, xmlErr.message);
