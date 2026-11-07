@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<collectibles isComplete="false">
+    <collectible index="29" collected="false" uncovered="false"/>
+    <collectible index="14" collected="false" uncovered="false"/>
+    <collectible index="25" collected="false" uncovered="false"/>
+    <collectible index="22" collected="false" uncovered="false"/>
+    <collectible index="3" collected="false" uncovered="false"/>
+    <collectible index="9" collected="false" uncovered="false"/>
+    <collectible index="37" collected="false" uncovered="false"/>
+    <collectible index="24" collected="false" uncovered="false"/>
+    <collectible index="34" collected="false" uncovered="false"/>
+    <collectible index="30" collected="false" uncovered="false"/>
+    <collectible index="36" collected="false" uncovered="false"/>
+    <collectible index="4" collected="false" uncovered="false"/>
+    <collectible index="1" collected="false" uncovered="false"/>
+    <collectible index="12" collected="false" uncovered="false"/>
+    <collectible index="35" collected="false" uncovered="false"/>
+    <collectible index="21" collected="false" uncovered="false"/>
+    <collectible index="2" collected="false" uncovered="false"/>
+    <collectible index="39" collected="false" uncovered="false"/>
+    <collectible index="26" collected="false" uncovered="false"/>
+    <collectible index="40" collected="false" uncovered="false"/>
+    <collectible index="38" collected="false" uncovered="false"/>
+    <collectible index="15" collected="false" uncovered="false"/>
+    <collectible index="28" collected="false" uncovered="false"/>
+    <collectible index="33" collected="false" uncovered="false"/>
+    <collectible index="32" collected="false" uncovered="false"/>
+    <collectible index="20" collected="false" uncovered="false"/>
+    <collectible index="5" collected="false" uncovered="false"/>
+    <collectible index="27" collected="false" uncovered="false"/>
+    <collectible index="17" collected="false" uncovered="false"/>
+    <collectible index="13" collected="false" uncovered="false"/>
+    <collectible index="18" collected="false" uncovered="false"/>
+    <collectible index="16" collected="false" uncovered="false"/>
+    <collectible index="10" collected="false" uncovered="false"/>
+    <collectible index="23" collected="false" uncovered="false"/>
+    <collectible index="7" collected="false" uncovered="false"/>
+    <collectible index="19" collected="false" uncovered="false"/>
+    <collectible index="6" collected="false" uncovered="false"/>
+    <collectible index="11" collected="false" uncovered="false"/>
+    <collectible index="8" collected="false" uncovered="false"/>
+    <collectible index="31" collected="false" uncovered="false"/>
+</collectibles>

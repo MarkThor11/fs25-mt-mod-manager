@@ -6,7 +6,8 @@ const OFFICIAL_MAPS = [
   { value: 'MapUS|Riverbend Springs|||', title: 'Riverbend Springs (US)', hasTemplate: true },
   { value: 'MapAS|Hutan Pantai|||', title: 'Hutan Pantai (Asia)', hasTemplate: true },
   { value: 'MapEU|Zielonka|||', title: 'Zielonka (Europe)', hasTemplate: true },
-  { value: 'HighlandsFishingMap|Kinlaig|pdlc_highlandsFishingPack||', title: 'Kinlaig (DLC)', hasTemplate: true }
+  { value: 'HighlandsFishingMap|Kinlaig|pdlc_highlandsFishingPack||', title: 'Kinlaig (DLC)', hasTemplate: true },
+  { value: 'BeansAndAlpacasMap|Catuaí|pdlc_beansAndAlpacasPack||', title: 'Catuaí (DLC)', hasTemplate: true }
 ];
 
 export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTemplate = false, style = {} }) {
@@ -71,13 +72,15 @@ export default function MapSelectDropdown({ value, onChange, mods = [], mapHasTe
     const norm = (s) => clean(s).replace(/[^a-z0-9]/g, '');
 
     const OFFICIAL_TEMPLATES = new Set([
-      'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap'
+      'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap',
+      'beansandalpacasmap', 'pdlcbeansandalpacaspackbeansandalpacasmap', 'pdlcbeansandalpacaspack'
     ]);
     const GENERIC_MAP_NAMES = new Set([
       'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
       'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
       'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
-      'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpack', 'mapforest'
+      'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpack',
+      'beansandalpacasmap', 'pdlcbeansandalpacaspack', 'catuai', 'mapforest'
     ]);
 
     return (mod) => {

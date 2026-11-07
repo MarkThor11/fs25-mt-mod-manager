@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<players>
+    <player uniqueUserId="i+QOspKR7Rz/+5dq9rqsECnaqxfS1Eeb0I4hrQbVzzs=" timeLastConnected="2026/11/07 17:33">
+        <style filename="dataS/character/playerM/playerM.xml">
+            <facegear color="1"/>
+            <onepiece color="1" name="empty"/>
+            <bottom color="1" name="jeans"/>
+            <face color="1" name="head01"/>
+            <top color="1" name="collaredShirt"/>
+            <gloves color="1" name="empty"/>
+            <headgear color="1" name="empty"/>
+            <glasses color="1" name="empty"/>
+            <footwear color="1" name="workBoots2"/>
+            <hairStyle color="6" name="hair02"/>
+            <beard color="6" name="empty"/>
+        </style>
+    </player>
+</players>

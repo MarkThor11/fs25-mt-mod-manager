@@ -4,6 +4,7 @@ import mapUS from '../../assets/maps/map_us.png';
 import mapAS from '../../assets/maps/map_as.png';
 import mapEU from '../../assets/maps/map_eu.png';
 import mapKinlaig from '../../assets/maps/map_kinlaig.jpg';
+import mapCatuai from '../../assets/maps/map_catuai.jpg';
 
 export const MAP_PREVIEWS = {
   'Riverbend Springs': mapUS,
@@ -12,12 +13,40 @@ export const MAP_PREVIEWS = {
   'Kinlaig': mapKinlaig,
   'Highlands Fishing Expansion': mapKinlaig,
   'Highlands Fishing Map': mapKinlaig,
+  'Catua\u00ed': mapCatuai,
+  'Catuai': mapCatuai,
+  'Beans & Alpacas Expansion': mapCatuai,
+  'Beans & Alpacas Pack': mapCatuai,
+  'BeansAndAlpacasMap': mapCatuai,
+  'beansAndAlpacasMap': mapCatuai,
+  'pdlc_beansAndAlpacasPack.beansAndAlpacasMap': mapCatuai,
+  'pdlc_beansAndAlpacasPack.BeansAndAlpacasMap': mapCatuai,
 };
 
 const MapImage = ({ mapTitle, mapId, mods, savePath, opacity = 0.25 }) => {
   const [saveImgFailed, setSaveImgFailed] = React.useState(false);
 
-  // 0. Primary slot savegame.png match if it exists and hasn't failed to load
+  // 0. Base / Official DLC map match (16:9 full-bleed landscape photos)
+  const isCatuaiMatch = (mapTitle || '').toLowerCase().startsWith('catua') || (mapId || '').toLowerCase().includes('beansandalpacas');
+  const previewSrc = MAP_PREVIEWS[mapTitle] || MAP_PREVIEWS[mapId] || (isCatuaiMatch ? mapCatuai : null);
+  if (previewSrc) {
+    const isKinlaig = (mapTitle || '').includes('Kinlaig') || (mapTitle || '').includes('Highlands');
+    return (
+      <img 
+        src={previewSrc} 
+        alt="" 
+        style={{ 
+          width: '100%', 
+          height: '100%', 
+          objectFit: 'cover',
+          transform: isKinlaig ? 'scale(1.3)' : 'scale(1.0)',
+          transition: 'transform 0.3s ease'
+        }} 
+      />
+    );
+  }
+
+  // 1. Primary slot savegame.png match if it exists and hasn't failed to load
   if (savePath && !saveImgFailed) {
     const saveImgUrl = `mod-icon://icon?path=${encodeURIComponent(savePath + '/savegame.png')}`;
     return (
@@ -32,24 +61,6 @@ const MapImage = ({ mapTitle, mapId, mods, savePath, opacity = 0.25 }) => {
         onError={() => {
           setSaveImgFailed(true);
         }}
-      />
-    );
-  }
-
-  // 1. Base map match (16:9 full-bleed landscape photos)
-  if (MAP_PREVIEWS[mapTitle]) {
-    const isKinlaig = mapTitle.includes('Kinlaig') || mapTitle.includes('Highlands');
-    return (
-      <img 
-        src={MAP_PREVIEWS[mapTitle]} 
-        alt="" 
-        style={{ 
-          width: '100%', 
-          height: '100%', 
-          objectFit: 'cover',
-          transform: isKinlaig ? 'scale(1.3)' : 'scale(1.0)',
-          transition: 'transform 0.3s ease'
-        }} 
       />
     );
   }

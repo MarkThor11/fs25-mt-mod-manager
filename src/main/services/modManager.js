@@ -150,11 +150,11 @@ const DLC_MAPPING = {
     techData: { hp: 1100, price: 0 }
   },
   'beansAndAlpacasPack.dlc': {
-    title: 'Beans & Alpacas Pack',
+    title: 'Beans & Alpacas Expansion',
     author: 'GIANTS Software',
-    version: '1.0.0.0',
+    version: '1.1.1.0',
     dlcId: 'fs25beansandalpacas',
-    description: 'Expand your farming experience with the Beans & Alpacas Pack for Farming Simulator 25!',
+    description: 'Expand your farming experience with the Beans & Alpacas Expansion for Farming Simulator 25! Includes the South American map Catuaí, coffee & banana cultivation, alpacas, and specialized machinery.',
     screenshots: []
   },
   'emergencyPack.dlc': {
@@ -1274,7 +1274,7 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
 							activeModNames.add(mapModName);
 						} else {
 							const mapMatch = xml.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || xml.match(/mapId="([^"]+)"/i);
-							if (mapMatch && mapMatch[1] && !['MapUS', 'MapEU', 'MapAS', 'HighlandsFishingMap'].includes(mapMatch[1])) {
+							if (mapMatch && mapMatch[1] && !['MapUS', 'MapEU', 'MapAS', 'HighlandsFishingMap', 'BeansAndAlpacasMap'].includes(mapMatch[1]) && !mapMatch[1].toLowerCase().startsWith('pdlc_')) {
 								mapModName = mapMatch[1].split('.')[0].toLowerCase();
 								activeModNames.add(mapModName);
 								mapModObj = mods.find(m => m.modName && m.modName.toLowerCase() === mapModName);
@@ -1409,7 +1409,7 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                     const mMatch = cXml.match(/<mapId[^>]*>([^<]+)<\/mapId>/i) || cXml.match(/mapId="([^"]+)"/i);
                     if (mMatch && mMatch[1]) {
                         const mName = mMatch[1].split('.')[0].toLowerCase();
-                        if (!['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlc_highlandsfishingpack'].includes(mName)) {
+                        if (!['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlc_highlandsfishingpack', 'beansandalpacasmap', 'pdlc_beansandalpacaspack'].includes(mName)) {
                             savegameMapNames.add(mName);
                         }
                     }
@@ -3605,6 +3605,7 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 		                  titleClean.startsWith('mapeu') || 
 		                  titleClean.startsWith('mapas') || 
 		                  titleClean.startsWith('kinlaig') || 
+		                  titleClean.startsWith('catuai') || 
 		                  titleClean.startsWith('zielonka') || 
 		                  titleClean.startsWith('elmcreek') || 
 		                  titleClean.startsWith('riverbend') || 

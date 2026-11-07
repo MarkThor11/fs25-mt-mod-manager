@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<sales>
+    <item timeLeft="39" isGenerated="true" xmlFilename="c:/program files (x86)/steam/steamapps/common/Farming Simulator 25/pdlc/skyAgriculturePack/vehicles/skyAgriculture/tf2200/tf2200.xml" age="33" price="8095" damage="0.399518" wear="0.440031" operatingTime="146394.296875"/>
+    <item timeLeft="24" isGenerated="true" xmlFilename="data/vehicles/amazone/cenio4000/cenio4000.xml" age="31" price="9742" damage="0.464602" wear="0.494332" operatingTime="105682.812500"/>
+    <item timeLeft="36" isGenerated="true" xmlFilename="data/vehicles/masseyFerguson/mf8570/mf8570.xml" age="35" price="42890" damage="0.311697" wear="0.922831" operatingTime="83102.898438"/>
+    <item timeLeft="32" isGenerated="true" xmlFilename="data/vehicles/demco/steelDropDeck/steelDropDeck.xml" age="27" price="17167" damage="0.565770" wear="0.901258" operatingTime="88432.109375"/>
+</sales>

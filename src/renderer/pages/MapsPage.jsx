@@ -333,9 +333,12 @@ export default function MapsPage() {
                                   'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
                                   'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
                                   'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
-                                  'mapus', 'mapeu', 'mapas', 'highlandsfishingmap'
+                                  'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'beansandalpacasmap', 'catuai'
                                 ]);
-                                const OFFICIAL_TEMPLATES = new Set(['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap']);
+                                const OFFICIAL_TEMPLATES = new Set([
+                                  'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap',
+                                  'beansandalpacasmap', 'pdlcbeansandalpacaspackbeansandalpacasmap', 'pdlcbeansandalpacaspack'
+                                ]);
 
                                 const tIdNorm = cleanStr(t.id);
                                 if (OFFICIAL_TEMPLATES.has(tIdNorm)) return false;

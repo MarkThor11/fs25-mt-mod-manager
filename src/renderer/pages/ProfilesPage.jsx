@@ -18,6 +18,8 @@ const MAPS = [
   { id: 'MapUS', title: 'Riverbend Springs' },
   { id: 'MapEU', title: 'Zielonka' },
   { id: 'MapAS', title: 'Hutan Pantai' },
+  { id: 'HighlandsFishingMap|Kinlaig|pdlc_highlandsFishingPack', title: 'Kinlaig (DLC)' },
+  { id: 'BeansAndAlpacasMap|Catuaí|pdlc_beansAndAlpacasPack', title: 'Catuaí (DLC)' },
 ];
 
 const DLC_ICONS = {
@@ -815,11 +817,15 @@ export default function ProfilesPage() {
                                 if (val.includes('|')) {
                                   const [mapId, title, modName] = val.split('|');
                                   setOptions(prev => ({ ...prev, mapId: mapId, mapModName: modName, mapTitle: title }));
-                                  try {
-                                    const { installed, missing } = resolveRecursiveDependencies(modName, installedMods);
-                                    if (installed.size > 0) setSelectedMods(prev => { const next = new Set(prev); installed.forEach(d => next.add(d)); return next; });
-                                    if (missing.size > 0) setMissingDeps(Array.from(missing)); else setMissingDeps(null);
-                                  } catch (e) { console.error('[MAP SELECT] Dependency auto-select failed:', e); }
+                                  if (modName && !modName.toLowerCase().startsWith('pdlc_')) {
+                                    try {
+                                      const { installed, missing } = resolveRecursiveDependencies(modName, installedMods);
+                                      if (installed.size > 0) setSelectedMods(prev => { const next = new Set(prev); installed.forEach(d => next.add(d)); return next; });
+                                      if (missing.size > 0) setMissingDeps(Array.from(missing)); else setMissingDeps(null);
+                                    } catch (e) { console.error('[MAP SELECT] Dependency auto-select failed:', e); }
+                                  } else {
+                                    setMissingDeps(null);
+                                  }
                                 } else {
                                   const m = MAPS.find(m => m.id === val);
                                   setOptions(prev => ({ ...prev, mapId: val, mapModName: null, mapTitle: m?.title || 'Unknown' }));
@@ -829,9 +835,9 @@ export default function ProfilesPage() {
                               <optgroup label="Official Maps">
                                 {MAPS.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
                               </optgroup>
-                              {installedMods.some(m => isMapMod(m, getEffectiveModCategory(m, useModHubStore.getState().modCache || {}))) && (
+                              {installedMods.some(m => !m.isDLC && isMapMod(m, getEffectiveModCategory(m, useModHubStore.getState().modCache || {}))) && (
                                 <optgroup label="Modded Maps">
-                                  {installedMods.filter(m => isMapMod(m, getEffectiveModCategory(m, useModHubStore.getState().modCache || {}))).map(m => {
+                                  {installedMods.filter(m => !m.isDLC && isMapMod(m, getEffectiveModCategory(m, useModHubStore.getState().modCache || {}))).map(m => {
                                     const isCP = (
                                       m.isCrossplay || 
                                       /crossplay|\(cp\)|\[cp\]/i.test(m.title || '') ||

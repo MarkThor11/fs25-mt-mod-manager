@@ -3618,14 +3618,14 @@ export default function SavegamesPage() {
       if (mapId && window.api?.maps) {
         window.api.maps.checkTemplate(mapId, title, modName).then(exists => {
             setMapHasTemplate(exists);
-            // Official base maps (MapUS, MapEU, MapAS, HighlandsFishingMap) NEVER need auto-launch; only uninitialized custom modded maps auto-launch!
-            const isOfficial = ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(String(mapId).toLowerCase());
-            setAutoLaunchOnCreate(!isOfficial && !exists);
+            // Official maps that have a bundled master template (MapUS, MapEU, MapAS, HighlandsFishingMap, BeansAndAlpacasMap) never need auto-launch; any map without a template auto-launches!
+            const isBundledOfficial = ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'beansandalpacasmap', 'catuai', 'catua\u00ed'].includes(String(mapId).toLowerCase());
+            setAutoLaunchOnCreate(!isBundledOfficial && !exists);
         });
 
-        // Auto-select required mods for custom modded maps (skip official DLCs like pdlc_highlandsFishingPack)
+        // Auto-select required mods for custom modded maps (skip official DLCs like pdlc_highlandsFishingPack / pdlc_beansAndAlpacasPack)
         const cleanMapModName = (modName || '').split('.')[0];
-        if (cleanMapModName && !cleanMapModName.toLowerCase().startsWith('pdlc_') && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(cleanMapModName.toLowerCase())) {
+        if (cleanMapModName && !cleanMapModName.toLowerCase().startsWith('pdlc_') && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'beansandalpacasmap', 'catuai', 'catuaí'].includes(cleanMapModName.toLowerCase())) {
           try {
             console.log(`[CAREER MODAL] Resolving dependencies for map: ${cleanMapModName}. Total mods available: ${mods ? mods.length : 0}`);
             const cLow = cleanMapModName.toLowerCase();
@@ -4075,7 +4075,7 @@ export default function SavegamesPage() {
       // Safety net: always resolve map dependencies for custom maps even if UI missed them
       const [mapIdForDeps, mapTitleForDeps, mapModForDeps] = createMap.split('|');
       const cleanMapForDeps = (mapModForDeps || '').split('.')[0];
-      if (cleanMapForDeps && !cleanMapForDeps.toLowerCase().startsWith('pdlc_') && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(cleanMapForDeps.toLowerCase())) {
+      if (cleanMapForDeps && !cleanMapForDeps.toLowerCase().startsWith('pdlc_') && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'beansandalpacasmap', 'catuai', 'catuaí'].includes(cleanMapForDeps.toLowerCase())) {
         try {
           const cLow = cleanMapForDeps.toLowerCase();
           console.log(`[CREATE-SAFETY] Resolving dependencies for ${cleanMapForDeps}. Total mods: ${mods ? mods.length : 0}`);

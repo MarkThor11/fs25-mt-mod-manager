@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<missions version="0">
+    <herbicideMission uniqueId="missiona63bd430aa08a2381579885b72e77f8a" status="CREATED" finishState="NONE" targetWeedState="8">
+        <info reward="0" reimbursement="0.000000" completion="0.000000"/>
+        <vehicles spawned="false" group="3"/>
+        <endDate endDay="6" endDayTime="86399999"/>
+        <field id="37"/>
+    </herbicideMission>
+</missions>

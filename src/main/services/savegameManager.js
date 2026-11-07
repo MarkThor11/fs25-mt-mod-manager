@@ -150,7 +150,7 @@ function getTemplatesPath() {
         ].find(dir => fs.existsSync(dir));
 
         if (bundledTemplates) {
-            const masterFolders = ['MapAS', 'MapEU', 'MapUS', 'pdlc_highlandsFishingPack_HighlandsFishingMap'];
+            const masterFolders = ['MapAS', 'MapEU', 'MapUS', 'pdlc_highlandsFishingPack_HighlandsFishingMap', 'pdlc_beansAndAlpacasPack_BeansAndAlpacasMap'];
             const filesToPurge = [
                 'densityMap_fruits_broken14.gdm', 'densityMap_fruits_fixed14.gdm',
                 'fieldGround.xml', 'densityMap_fruits_growthState.xml',
@@ -193,7 +193,7 @@ function getTemplatesPath() {
             'fieldGround.xml', 'densityMap_fruits_growthState.xml',
             'stone_growthState.xml', 'weed_growthState.xml', 'densityMapHeight.xml', 'densityMap_height.gdm'
         ];
-        const masterFoldersSet = new Set(['mapas', 'mapeu', 'mapus', 'pdlc_highlandsfishingpack_highlandsfishingmap']);
+        const masterFoldersSet = new Set(['mapas', 'mapeu', 'mapus', 'pdlc_highlandsfishingpack_highlandsfishingmap', 'pdlc_beansandalpacaspack_beansandalpacasmap', 'pdlc_beansandalpacaspack']);
         for (const tItem of allTemplateDirs) {
             const tItemLower = tItem.replace(/\.zip$/i, '').toLowerCase();
             const tPath = path.join(p, tItem);
@@ -245,10 +245,13 @@ function getElementText(xml, tag) {
 function isOfficialMap(mapId) {
     if (!mapId) return false;
     const lower = mapId.toLowerCase();
-    return ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'kinlaig'].includes(lower) || 
+    return ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'kinlaig', 'beansandalpacasmap', 'catuai', 'catuaí'].includes(lower) || 
            lower.startsWith('pdlc_') || 
            lower.includes('highlandsfishing') ||
-           lower.includes('kinlaig');
+           lower.includes('kinlaig') ||
+           lower.includes('beansandalpacas') ||
+           lower.includes('catuai') ||
+           lower.includes('catuaí');
 }
 
 /**
@@ -308,12 +311,15 @@ async function ensureSavegameImage(slotPath, mapModName = null, mapTitle = null,
                 else if (lowerId === 'mapeu' || (effectiveMapTitle || '').toLowerCase() === 'zielonka') assetFileName = 'map_eu.png';
                 else if (lowerId === 'mapas' || (effectiveMapTitle || '').toLowerCase() === 'hutan pantai') assetFileName = 'map_as.png';
                 else if (lowerId.includes('highlands') || lowerId.includes('kinlaig') || (effectiveMapTitle || '').toLowerCase() === 'kinlaig') assetFileName = 'map_kinlaig.jpg';
+                else if (lowerId.includes('beansandalpacas') || lowerId.includes('catua') || (effectiveMapTitle || '').toLowerCase().includes('catua')) assetFileName = 'map_catuai.jpg';
 
                 if (assetFileName) {
                     const candidatePaths = [
                         path.join(__dirname, '../assets', assetFileName),
                         path.join(__dirname, '../../dist/assets', assetFileName),
+                        path.join(__dirname, '../../src/renderer/assets/maps', assetFileName),
                         path.join(process.cwd(), 'src/renderer/assets', assetFileName),
+                        path.join(process.cwd(), 'src/renderer/assets/maps', assetFileName),
                         path.join(process.cwd(), 'dist/assets', assetFileName)
                     ];
                     for (const cp of candidatePaths) {
@@ -623,8 +629,8 @@ async function getMapTemplates() {
     });
 
     const results = await Promise.all(templatePromises);
-    const OFFICIAL_TEMPLATE_FOLDERS = ['mapus', 'mapeu', 'mapas', 'pdlc_highlandsfishingpack_highlandsfishingmap'];
-    return results.filter(t => t !== null && !OFFICIAL_TEMPLATE_FOLDERS.includes(t.id.toLowerCase()));
+    const OFFICIAL_TEMPLATE_FOLDERS = ['mapus', 'mapeu', 'mapas', 'pdlc_highlandsfishingpack_highlandsfishingmap', 'pdlc_highlandsfishingpack', 'pdlc_beansandalpacaspack_beansandalpacasmap', 'pdlc_beansandalpacaspack'];
+    return results.filter(t => t !== null && t.isModMap && !OFFICIAL_TEMPLATE_FOLDERS.includes(t.id.replace(/\.zip$/i, '').toLowerCase()) && !t.id.toLowerCase().startsWith('pdlc_'));
 }
 
 /**
@@ -645,7 +651,8 @@ async function deleteMapTemplate(folderName) {
             if (fClean === cleanName || fClean === baseName || fClean.includes(baseName) || (baseName.length >= 4 && fClean.startsWith(baseName))) {
                 // Do not delete official base templates
                 const OFFICIAL_MASTER_TEMPLATES = new Set([
-                    'mapus', 'mapeu', 'mapas', 'pdlc_highlandsfishingpack_highlandsfishingmap'
+                    'mapus', 'mapeu', 'mapas', 'pdlc_highlandsfishingpack_highlandsfishingmap',
+                    'pdlc_beansandalpacaspack_beansandalpacasmap', 'pdlc_beansandalpacaspack'
                 ]);
                 if (OFFICIAL_MASTER_TEMPLATES.has(fClean)) continue;
 
@@ -672,7 +679,7 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
     let effMapTitle = mapTitle;
     if (effMapModName && !effMapTitle) {
         const lowerMod = String(effMapModName).toLowerCase();
-        if (lowerMod === 'riverbend springs' || lowerMod === 'zielonka' || lowerMod === 'hutan pantai' || lowerMod === 'kinlaig' || effMapModName.includes(' ')) {
+        if (lowerMod === 'riverbend springs' || lowerMod === 'zielonka' || lowerMod === 'hutan pantai' || lowerMod === 'kinlaig' || lowerMod === 'catuaí' || lowerMod === 'catuai' || effMapModName.includes(' ')) {
             effMapTitle = effMapModName;
             effMapModName = null;
         }
@@ -691,19 +698,21 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
         'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
         'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
         'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
-        'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpack', 'mapforest'
+        'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpack',
+        'beansandalpacasmap', 'pdlcbeansandalpacaspack', 'catuai', 'mapforest'
     ]);
 
     const OFFICIAL_MASTER_TEMPLATES = new Set([
-        'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap'
+        'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpackhighlandsfishingmap',
+        'beansandalpacasmap', 'pdlcbeansandalpacaspackbeansandalpacasmap', 'pdlcbeansandalpacaspack'
     ]);
 
     const targetMapIdNorm = ultraNorm(mapId);
     const targetTitleNorm = ultraNorm(effMapTitle);
 
-    // Official base maps (Riverbend Springs, Zielonka, Hutan Pantai, Kinlaig) ALWAYS resolve
+    // Official base maps (Riverbend Springs, Zielonka, Hutan Pantai, Kinlaig, Catuaí) ALWAYS resolve
     // to their master base game templates first, regardless of custom mod maps sharing mapUS id.
-    const isBaseGameLaunch = isOfficialMap(mapId) || ['riverbendsprings', 'zielonka', 'hutanpantai', 'kinlaig'].includes(targetTitleNorm);
+    const isBaseGameLaunch = isOfficialMap(mapId) || ['riverbendsprings', 'zielonka', 'hutanpantai', 'kinlaig', 'catua', 'catuai'].includes(targetTitleNorm);
 
     if (isBaseGameLaunch && (!effMapModName || isOfficialMap(effMapModName))) {
         const OFFICIAL_FOLDER_MAP = {
@@ -713,18 +722,29 @@ async function resolveTemplateFolder(mapId, mapModName = null, mapTitle = null) 
             'highlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
             'highlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
             'pdlchighlandsfishingpackhighlandsfishingmap': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+            'beansandalpacasmap': 'pdlc_beansAndAlpacasPack_BeansAndAlpacasMap',
+            'beansandalpacaspackbeansandalpacasmap': 'pdlc_beansAndAlpacasPack_BeansAndAlpacasMap',
+            'pdlcbeansandalpacaspackbeansandalpacasmap': 'pdlc_beansAndAlpacasPack_BeansAndAlpacasMap',
+            'beansandalpacaspack': 'pdlc_beansAndAlpacasPack_BeansAndAlpacasMap',
         };
         const officialByTitle = {
             'riverbendsprings': 'MapUS',
             'zielonka': 'MapEU',
             'hutanpantai': 'MapAS',
-            'kinlaig': 'pdlc_highlandsFishingPack_HighlandsFishingMap'
+            'kinlaig': 'pdlc_highlandsFishingPack_HighlandsFishingMap',
+            'catua': 'pdlc_beansAndAlpacasPack_BeansAndAlpacasMap',
+            'catuai': 'pdlc_beansAndAlpacasPack_BeansAndAlpacasMap'
         };
         const officialTarget = OFFICIAL_FOLDER_MAP[targetMapIdNorm] || officialByTitle[targetTitleNorm];
         if (officialTarget) {
-            const folderPath = path.join(templatesDir, officialTarget);
-            if (fs.existsSync(folderPath) || fs.existsSync(`${folderPath}.zip`)) {
-                return officialTarget;
+            const candidates = [officialTarget];
+            if (officialTarget === 'pdlc_beansAndAlpacasPack_BeansAndAlpacasMap') {
+                candidates.push('pdlc_beansAndAlpacasPack', 'BeansAndAlpacasMap');
+            }
+            for (const cand of candidates) {
+                const folderPath = path.join(templatesDir, cand);
+                if (fs.existsSync(folderPath)) return cand;
+                if (fs.existsSync(`${folderPath}.zip`)) return `${cand}.zip`;
             }
         }
         return null;
@@ -1191,7 +1211,8 @@ async function setupSavegameFarmlands(slotPath, modZipPath, engineMapId, mapModN
         mapus: ['1', '2', '3', '4', '5'],
         mapeu: ['45', '46'],
         mapas: ['27', '28', '30', '31'],
-        pdlc_highlandsfishingpack: ['20', '22', '23', '35', '49', '50']
+        pdlc_highlandsfishingpack: ['20', '22', '23', '35', '49', '50'],
+        pdlc_beansandalpacaspack: ['35', '36', '41', '42', '102']
     };
 
     const lowId = (engineMapId || '').toLowerCase();
@@ -1362,9 +1383,9 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
     const startFarmFlag = includeStartFarm ? 'true' : 'false';
 
     const isOfficialBaseMap = isOfficialMap(mapId) || isOfficialMap(mapModName) || 
-        ['riverbend springs', 'zielonka', 'hutan pantai', 'kinlaig', 'highlands fishing expansion', 'highlands fishing map'].includes((mapTitle || '').toLowerCase()) ||
-        ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'kinlaig', 'pdlc_highlandsfishingpack'].includes((mapId || '').toLowerCase()) ||
-        ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'kinlaig', 'pdlc_highlandsfishingpack'].includes((mapModName || '').toLowerCase());
+        ['riverbend springs', 'zielonka', 'hutan pantai', 'kinlaig', 'highlands fishing expansion', 'highlands fishing map', 'catuaí', 'catuai', 'beans & alpacas expansion', 'beans & alpacas pack'].includes((mapTitle || '').toLowerCase()) ||
+        ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'kinlaig', 'pdlc_highlandsfishingpack', 'beansandalpacasmap', 'catuai', 'catuaí', 'pdlc_beansandalpacaspack'].includes((mapId || '').toLowerCase()) ||
+        ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'kinlaig', 'pdlc_highlandsfishingpack', 'beansandalpacasmap', 'catuai', 'catuaí', 'pdlc_beansandalpacaspack'].includes((mapModName || '').toLowerCase());
 
     // 1. Prepare Slot
     if (fs.existsSync(slotPath)) {
@@ -1393,7 +1414,8 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         'samplemodmap', 'templatemap', 'multifruitmodmap', 'modmap', 
         'map', 'maps4s', 'novabase', 'mountain', 'firstmap', 
         'davidsmap', 'baseblack', 'camposgauchos', 'elmcreek',
-        'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpack', 'mapforest'
+        'mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'pdlchighlandsfishingpack',
+        'beansandalpacasmap', 'pdlcbeansandalpacaspack', 'catuai', 'mapforest'
     ]);
 
     let modZipPath = null;
@@ -1565,6 +1587,35 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         mapModObj.required = true;
         mapModObj.modName = trueMapModName;
         if (matchedMapMod?.version) mapModObj.version = matchedMapMod.version;
+    } else if (isOfficialBaseMap) {
+        const lowCheck = `${mapId || ''} ${mapModName || ''} ${mapTitle || ''}`.toLowerCase();
+        let requiredDlcName = null;
+        let requiredDlcTitle = null;
+        let requiredDlcVersion = '1.0.0.0';
+        if (lowCheck.includes('beansandalpacas') || lowCheck.includes('catuai') || lowCheck.includes('catuaí')) {
+            requiredDlcName = 'pdlc_beansAndAlpacasPack';
+            requiredDlcTitle = 'Beans & Alpacas Expansion';
+            requiredDlcVersion = '1.1.1.0';
+        } else if (lowCheck.includes('highlandsfishing') || lowCheck.includes('kinlaig')) {
+            requiredDlcName = 'pdlc_highlandsFishingPack';
+            requiredDlcTitle = 'Highlands Fishing Expansion';
+            requiredDlcVersion = '1.3.0.0';
+        }
+        if (requiredDlcName) {
+            const dlcInAll = allMods.find(m => m && m.modName && m.modName.toLowerCase() === requiredDlcName.toLowerCase());
+            const existingDlc = finalMods.find(m => m && m.modName && m.modName.toLowerCase() === requiredDlcName.toLowerCase());
+            if (existingDlc) {
+                existingDlc.required = true;
+            } else {
+                finalMods.unshift({
+                    modName: requiredDlcName,
+                    title: dlcInAll?.title || requiredDlcTitle,
+                    version: dlcInAll?.version || requiredDlcVersion,
+                    required: true,
+                    fileHash: dlcInAll?.fileHash || ''
+                });
+            }
+        }
     }
 
     // Auto-include map dependencies declared in map's modDesc.xml (<dependency>ModName</dependency>) and subfolders
@@ -1708,11 +1759,15 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
 
     if (isOfficialBaseMap) {
         const lowEngineId = (engineMapId || '').toLowerCase();
-        if (lowEngineId === 'mapus' || (mapTitle || '').toLowerCase() === 'riverbend springs') engineMapId = 'MapUS';
-        else if (lowEngineId === 'mapeu' || (mapTitle || '').toLowerCase() === 'zielonka') engineMapId = 'MapEU';
-        else if (lowEngineId === 'mapas' || (mapTitle || '').toLowerCase() === 'hutan pantai') engineMapId = 'MapAS';
-        else if (lowEngineId.includes('highlandsfishing') || (effectiveMapModName || '').toLowerCase().includes('highlandsfishing') || (mapTitle || '').toLowerCase() === 'kinlaig') {
+        const lowTitle = (mapTitle || '').toLowerCase();
+        const lowMod = (mapModName || '').toLowerCase();
+        if (lowEngineId === 'mapus' || lowTitle === 'riverbend springs') engineMapId = 'MapUS';
+        else if (lowEngineId === 'mapeu' || lowTitle === 'zielonka') engineMapId = 'MapEU';
+        else if (lowEngineId === 'mapas' || lowTitle === 'hutan pantai') engineMapId = 'MapAS';
+        else if (lowEngineId.includes('highlandsfishing') || lowMod.includes('highlandsfishing') || lowTitle === 'kinlaig') {
             engineMapId = 'pdlc_highlandsFishingPack.HighlandsFishingMap';
+        } else if (lowEngineId.includes('beansandalpacas') || lowMod.includes('beansandalpacas') || lowTitle === 'catuaí' || lowTitle === 'catuai' || lowTitle.startsWith('catua')) {
+            engineMapId = 'pdlc_beansAndAlpacasPack.beansAndAlpacasMap';
         }
     } else if (effectiveMapModName) {
         // Strip any previous mod prefix if mismatched
@@ -2659,7 +2714,10 @@ async function getAllSavegames() {
 
 
             const mapId = settings['@_mapId'] || settings.mapId;
-            const mapTitle = settings['@_mapTitle'] || settings.mapTitle;
+            let mapTitle = settings['@_mapTitle'] || settings.mapTitle;
+            if ((mapId && String(mapId).toLowerCase().includes('beansandalpacas')) || (mapTitle && String(mapTitle).toLowerCase().startsWith('catua'))) {
+                mapTitle = 'Catua\u00ed';
+            }
             let mapModName = null;
             if (mapId && mapId.includes('.')) {
                 mapModName = mapId.split('.')[0];
@@ -4666,7 +4724,7 @@ async function repairSavegameMapId(savePath) {
 
         if (customMapMod) {
             const mapModName = customMapMod.modName;
-            const officialIds = ['mapus', 'mapeu', 'mapas', 'pdlc_highlandsfishingpack.highlandsfishingmap'];
+            const officialIds = ['mapus', 'mapeu', 'mapas', 'pdlc_highlandsfishingpack.highlandsfishingmap', 'pdlc_beansandalpacaspack.beansandalpacasmap'];
             const curLow = (currentMapId || '').toLowerCase();
 
             // If careerSavegame.xml currently points to an official base map ID (like MapUS) BUT this save belongs to a custom map mod!
@@ -4748,6 +4806,8 @@ async function getMapDefaultStartCoordinates(savePath, allowFallback = true, fal
             } else if (mapId === 'MapAS' || mapTitle === 'Hutan Pantai') {
                 return { x: -528.8, y: 19.8, z: -61.1, yaw: 2.3795 };
             } else if (mapId === 'pdlc_highlandsFishingPack.HighlandsFishingMap' || (mapId || '').toLowerCase().includes('highlandsfishing') || (mapTitle || '').toLowerCase() === 'kinlaig') {
+                return null;
+            } else if (mapId === 'pdlc_beansAndAlpacasPack.BeansAndAlpacasMap' || (mapId || '').toLowerCase().includes('beansandalpacas') || (mapTitle || '').toLowerCase() === 'catuaí' || (mapTitle || '').toLowerCase() === 'catuai') {
                 return null;
             }
         }
@@ -6011,7 +6071,7 @@ function findMapModInSavegame(xmlData, localMods = []) {
     const rawMapId = mapIdMatch ? mapIdMatch[1].trim() : null;
 
     // Skip default base-game maps and official DLC maps
-    if (rawMapId && (isOfficialMap(rawMapId) || rawMapId.toLowerCase().startsWith('pdlc_') || ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap'].includes(rawMapId.toLowerCase()))) {
+    if (rawMapId && (isOfficialMap(rawMapId) || rawMapId.toLowerCase().startsWith('pdlc_') || ['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'beansandalpacasmap'].includes(rawMapId.toLowerCase()))) {
         return null;
     }
 
@@ -6483,8 +6543,11 @@ async function adoptSaveAsTemplate(saveIndex) {
             mapModName = mapId.split('.')[0];
         }
         
-        // Construct template name strictly matching the map ZIP name
+        // Construct template name strictly matching the map ZIP name (or official DLC template convention)
         let templateFolder = mapModName ? mapModName : mapId.replace(/[^a-z0-9]/gi, '_');
+        if (mapModName && mapModName.toLowerCase().startsWith('pdlc_') && mapId.includes('.')) {
+            templateFolder = mapId.replace(/\./g, '_');
+        }
         
         const templatesDir = getTemplatesPath();
         const destPath = path.join(templatesDir, templateFolder);
@@ -7853,7 +7916,7 @@ async function processPostGameExit(saveIndex) {
         const isInitialized = fs.existsSync(farmsFile) && fs.existsSync(initFile) && fs.existsSync(placeablesFile) && hasEngineData;
         const canAutoHarvest = isInitialized && (fs.existsSync(path.join(savePath, 'densityMap_fruits.gdm')) || fs.existsSync(path.join(savePath, 'densityMap_ground.gdm')));
 
-        if (isInitialized && mapId && !isOfficialMap(mapId) && canAutoHarvest) {
+        if (isInitialized && mapId && canAutoHarvest) {
             const hasTemplate = await hasMapTemplate(mapId, mapTitle, mapModName);
             if (!hasTemplate) {
                 console.log(`[AUTO-HARVEST] Automatically learning master template for map ${mapId} from slot ${saveIndex}...`);
