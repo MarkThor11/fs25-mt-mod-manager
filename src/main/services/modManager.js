@@ -2971,7 +2971,7 @@ async function performScan(manualPaths = null) {
 
 		// Key scoped to folder for items in folders
 		const scopedFileKey = `FOLDER_${folderKey}_${baseName}_${typeTag}`;
-		const scopedIdKey = cleanId ? `FOLDER_${folderKey}_ID_${cleanId}_${typeTag}` : null;
+		const scopedIdKey = cleanId ? `FOLDER_${folderKey}_ID_${cleanId}_${baseName}_${typeTag}` : null;
 
 		// Global key to track if a subfolder version already claimed this file
 		const globalSubfolderKey = `SUBFOLDER_${baseName}_${typeTag}`;
