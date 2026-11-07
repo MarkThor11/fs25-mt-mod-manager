@@ -3697,6 +3697,8 @@ export default function SavegamesPage() {
             if (missingList.length > 0) {
               console.log(`[CAREER MODAL] Missing dependencies detected:`, missingList);
               setLocalMissingDeps(missingList);
+            } else {
+              setLocalMissingDeps([]);
             }
           } catch (e) {
             console.error('[CAREER MODAL] Dependency auto-select failed:', e);
