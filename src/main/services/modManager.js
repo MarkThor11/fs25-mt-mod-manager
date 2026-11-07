@@ -833,7 +833,7 @@ function patchBaseGameDensityHeightTypes(gameExeOrInstallDir = null, targetMapId
 					// On 6-channel encrypted DLC maps (capacity 63), base game alone registers 48 height types,
 					// which starves mods and causes Straw Harvest / Pumps N' Hoses to crash when slot 63 is reached.
 					// Strip non-tippable entries (liquids, un-tippable crops, cut residue) that are never dumped into ground heaps.
-					const nonTippablePattern = /[\t ]*<densityMapHeightType\s+fillTypeName=["'](?:GRAPE|GREENBEAN|PEA|SPINACH|OLIVE|LIQUIDMANURE|DIGESTATE|TARP|WHEAT_CUT|BARLEY_CUT|OAT_CUT|CANOLA_CUT|SOYBEAN_CUT|SUGARBEET_CUT|POPLAR|COTTON|ROADSALT|MINERAL_FEED|SNOW)["'][^>]*>[\s\S]*?<\/densityMapHeightType>\r?\n?/gi;
+					const nonTippablePattern = /[\t ]*<densityMapHeightType\s+fillTypeName=["'](?:GRAPE|GREENBEAN|PEA|SPINACH|OLIVE|LIQUIDMANURE|DIGESTATE|TARP|WHEAT_CUT|BARLEY_CUT|OAT_CUT|CANOLA_CUT|SOYBEAN_CUT|SUGARBEET_CUT|POPLAR|COTTON|ROADSALT|MINERAL_FEED|SNOW|SEEDS|FERTILIZER|FORAGE|PIGFOOD|RICELONGGRAIN|RICE)["'][^>]*>[\s\S]*?<\/densityMapHeightType>\r?\n?/gi;
 					if (nonTippablePattern.test(xmlText)) {
 						xmlText = xmlText.replace(nonTippablePattern, '');
 						modified = true;
