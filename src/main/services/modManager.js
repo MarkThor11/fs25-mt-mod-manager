@@ -689,9 +689,218 @@ async function getFolderSize(folderPath) {
 }
 
 /**
- * Automatically inspects a map mod zip archive or directory and patches missing <densityMapHeightTypes> XML tag.
- * FS25 requires <densityMapHeightTypes filename="$data/maps/maps_densityMapHeightTypes.xml"/> in map XML files.
- * Missing this tag causes DensityMapHeightManager.lua:635 to fail with Divide by Zero, freezing map loading at 55%.
+ * Upgrades the <DetailLayer name="terrainDetailHeight" .../> node inside an .i3d string to 8 type channels + 6 height channels (14 total channels),
+ * or if the map's .gdm already has 16 channels, 8 type + 8 height.
+ * Using 8 type + 6 height (14 total) preserves standard 6-bit pile height while allowing the FS25 engine's built-in
+ * GDM converter ("GDM file has wrong number of type index channels (6 should be 8). Converting format.") to automatically
+ * convert ANY existing 12-channel (6+6) or 13-channel (7+6) densityMap_height.gdm (even with pre-placed heaps!).
+ */
+function upgradeI3dTerrainDetailHeight(i3dText, gdmTotalChannels = null) {
+	if (!i3dText || !i3dText.includes('terrainDetailHeight')) return { text: i3dText, modified: false };
+	const layerRegex = /<DetailLayer\b[^>]*\bname=["']terrainDetailHeight["'][^>]*>/i;
+	const match = i3dText.match(layerRegex);
+	if (!match) return { text: i3dText, modified: false };
+
+	let tag = match[0];
+	const origTag = tag;
+
+	const setOrUpdateAttr = (str, attrName, newVal) => {
+		const re = new RegExp(`(\\b${attrName}=["'])([^"']*)(["'])`, 'i');
+		if (re.test(str)) {
+			return str.replace(re, `$1${newVal}$3`);
+		}
+		return str.replace(/(\/?>)$/, ` ${attrName}="${newVal}"$1`);
+	};
+
+	const compMatch = tag.match(/\bcompressionChannels=["'](\d+)["']/i);
+	const firstMatch = tag.match(/\bheightFirstChannel=["'](\d+)["']/i);
+	const heightNumMatch = tag.match(/\bheightNumChannels=["'](\d+)["']/i);
+	const numChannelsMatch = tag.match(/\bnumDensityMapChannels=["'](\d+)["']/i);
+
+	const compVal = compMatch ? parseInt(compMatch[1], 10) : 6;
+	const firstVal = firstMatch ? parseInt(firstMatch[1], 10) : 6;
+	const heightNumVal = heightNumMatch ? parseInt(heightNumMatch[1], 10) : 6;
+	const totalVal = numChannelsMatch ? parseInt(numChannelsMatch[1], 10) : 12;
+
+	// If the map's GDM is natively 16 channels (8+8), keep 16/8/8/8.
+	// Otherwise, use 8 type channels + 6 height channels = 14 total channels so the engine's native converter
+	// converts any 12-channel (6+6) or 14-channel (8+6) GDM seamlessly without failing on heightNumChannels mismatch!
+	const targetHeightNum = (gdmTotalChannels === 16 || (totalVal === 16 && heightNumVal === 8 && gdmTotalChannels !== 12 && gdmTotalChannels !== 14)) ? 8 : 6;
+	const targetTotal = 8 + targetHeightNum;
+
+	if (compVal !== 8 || firstVal !== 8 || totalVal !== targetTotal || heightNumVal !== targetHeightNum) {
+		tag = setOrUpdateAttr(tag, 'numDensityMapChannels', String(targetTotal));
+		tag = setOrUpdateAttr(tag, 'compressionChannels', '8');
+		tag = setOrUpdateAttr(tag, 'combinedValuesChannels', '0 8 0');
+		tag = setOrUpdateAttr(tag, 'heightFirstChannel', '8');
+		tag = setOrUpdateAttr(tag, 'heightNumChannels', String(targetHeightNum));
+	}
+
+	if (tag !== origTag) {
+		return { text: i3dText.replace(origTag, tag), modified: true };
+	}
+	return { text: i3dText, modified: false };
+}
+
+/**
+ * Upgrades a binary densityMap_height.gdm (or terrainDetailHeight_density.gdm) buffer from 12/13 channels (6/7-bit type + 6-bit height)
+ * to 14 channels (8-bit type + 6-bit height).
+ * Because GDM files compress each tile range independently by palette/bpp (byte 11 = totalChannels, byte 16 = compressionChannels),
+ * upgrading a 6+6 (12-ch) or 7+6 (13-ch) GDM to 8+6 (14-ch) only requires updating the header channel bytes (11 -> 14, 16 -> 8)
+ * while preserving all existing compressed tile bitstreams and pre-placed ground heaps intact!
+ */
+function upgradeHeightGdmBuffer(buf) {
+	if (!buf || buf.length < 24) return { buffer: buf, modified: false };
+	// Verify MDF header magic: 0x22 'M' 'D' 'F' (34, 77, 68, 70)
+	if (buf[0] !== 0x22 || buf[1] !== 0x4D || buf[2] !== 0x44 || buf[3] !== 0x46) {
+		return { buffer: buf, modified: false };
+	}
+	const totalChannels = buf[11];
+	const compressionChannels = buf[16];
+	// Leave native 16-channel (8+8) non-empty GDMs untouched
+	if (totalChannels === 16 && compressionChannels === 8 && buf.length !== 131089 && buf.length !== 524305) {
+		return { buffer: buf, modified: false };
+	}
+	if (totalChannels !== 14 || compressionChannels !== 8) {
+		const copy = Buffer.from(buf);
+		copy[11] = 14;
+		copy[16] = 8;
+		return { buffer: copy, modified: true };
+	}
+	return { buffer: buf, modified: false };
+}
+
+/**
+ * Ensures the base game FS25 installation files (data/maps/maps_densityMapHeightTypes.xml and mapUS/mapEU/mapAS .i3d files)
+ * are upgraded to 8 height type channels (255 height types) so base game maps and mod maps referencing $data/maps/maps_densityMapHeightTypes.xml
+ * never fail with the 63 height-type limit when using mods like Straw Harvest, Pumps N' Hoses, or Additional Filltypes.
+ */
+function patchBaseGameDensityHeightTypes(gameExeOrInstallDir = null) {
+	try {
+		let installDir = null;
+		if (gameExeOrInstallDir && typeof gameExeOrInstallDir === 'string') {
+			let clean = gameExeOrInstallDir.trim().replace(/^"(.*)"$/, '$1');
+			if (fs.existsSync(clean)) {
+				const st = fs.statSync(clean);
+				if (!st.isDirectory()) {
+					clean = path.dirname(clean);
+				}
+				if (path.basename(clean).toLowerCase() === 'x64') {
+					clean = path.dirname(clean);
+				}
+				if (fs.existsSync(path.join(clean, 'data', 'maps'))) {
+					installDir = clean;
+				}
+			}
+		}
+
+		if (!installDir) {
+			const candidates = [
+				'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Farming Simulator 25',
+				'C:\\Program Files\\Steam\\steamapps\\common\\Farming Simulator 25',
+				'D:\\SteamLibrary\\steamapps\\common\\Farming Simulator 25',
+				'E:\\SteamLibrary\\steamapps\\common\\Farming Simulator 25',
+				'C:\\Program Files\\Farming Simulator 2025',
+				'C:\\Program Files (x86)\\Farming Simulator 2025'
+			];
+			for (const c of candidates) {
+				if (fs.existsSync(path.join(c, 'data', 'maps'))) {
+					installDir = c;
+					break;
+				}
+			}
+		}
+
+		if (!installDir) return false;
+		let anyPatched = false;
+
+		// 1. Patch data/maps/maps_densityMapHeightTypes.xml
+		const baseHeightXmlPath = path.join(installDir, 'data', 'maps', 'maps_densityMapHeightTypes.xml');
+		if (fs.existsSync(baseHeightXmlPath)) {
+			try {
+				let xmlText = fs.readFileSync(baseHeightXmlPath, 'utf8');
+				if (/numChannels=["'][0-7]["']/i.test(xmlText)) {
+					const bakPath = baseHeightXmlPath + '.mm_bak';
+					if (!fs.existsSync(bakPath)) {
+						try { fs.copyFileSync(baseHeightXmlPath, bakPath); } catch (_) {}
+					}
+					xmlText = xmlText.replace(/numChannels=["'][0-7]["']/i, 'numChannels="8"');
+					fs.writeFileSync(baseHeightXmlPath, xmlText, 'utf8');
+					anyPatched = true;
+					console.log(`[MAP-PATCH] Upgraded base game maps_densityMapHeightTypes.xml to numChannels="8"`);
+					debugLog(`[MAP-PATCH] Upgraded base game maps_densityMapHeightTypes.xml to numChannels="8"`);
+				}
+			} catch (xmlErr) {
+				console.warn(`[MAP-PATCH] Could not patch base game maps_densityMapHeightTypes.xml:`, xmlErr.message);
+			}
+		}
+
+		// 2. Patch base game map .i3d files (mapUS, mapEU, mapAS)
+		const baseMapI3ds = [
+			path.join(installDir, 'data', 'maps', 'mapUS', 'mapUS.i3d'),
+			path.join(installDir, 'data', 'maps', 'mapEU', 'mapEU.i3d'),
+			path.join(installDir, 'data', 'maps', 'mapAS', 'mapAS.i3d')
+		];
+
+		for (const i3dPath of baseMapI3ds) {
+			if (fs.existsSync(i3dPath)) {
+				try {
+					const i3dText = fs.readFileSync(i3dPath, 'utf8');
+					const { text: updatedText, modified } = upgradeI3dTerrainDetailHeight(i3dText, 14);
+					if (modified) {
+						const bakPath = i3dPath + '.mm_bak';
+						if (!fs.existsSync(bakPath)) {
+							try { fs.copyFileSync(i3dPath, bakPath); } catch (_) {}
+						}
+						fs.writeFileSync(i3dPath, updatedText, 'utf8');
+						anyPatched = true;
+						console.log(`[MAP-PATCH] Upgraded terrainDetailHeight to 8 channels (14 total) in base map: ${path.basename(i3dPath)}`);
+						debugLog(`[MAP-PATCH] Upgraded terrainDetailHeight to 8 channels (14 total) in base map: ${path.basename(i3dPath)}`);
+					}
+				} catch (i3dErr) {
+					console.warn(`[MAP-PATCH] Could not patch base map i3d (${path.basename(i3dPath)}):`, i3dErr.message);
+				}
+			}
+		}
+
+		// 3. Patch base game map densityMap_height.gdm files (mapUS, mapEU, mapAS) to 14 channels (8 type + 6 height)
+		const baseMapHeightGdms = [
+			path.join(installDir, 'data', 'maps', 'mapUS', 'data', 'densityMap_height.gdm'),
+			path.join(installDir, 'data', 'maps', 'mapEU', 'data', 'densityMap_height.gdm'),
+			path.join(installDir, 'data', 'maps', 'mapAS', 'data', 'densityMap_height.gdm')
+		];
+
+		for (const gdmPath of baseMapHeightGdms) {
+			if (fs.existsSync(gdmPath)) {
+				try {
+					const rawBuf = fs.readFileSync(gdmPath);
+					const { buffer: updatedBuf, modified: gdmModified } = upgradeHeightGdmBuffer(rawBuf);
+					if (gdmModified) {
+						const bakPath = gdmPath + '.mm_bak';
+						if (!fs.existsSync(bakPath)) {
+							try { fs.copyFileSync(gdmPath, bakPath); } catch (_) {}
+						}
+						fs.writeFileSync(gdmPath, updatedBuf);
+						anyPatched = true;
+						console.log(`[MAP-PATCH] Upgraded densityMap_height.gdm to 14 channels in base map: ${gdmPath}`);
+						debugLog(`[MAP-PATCH] Upgraded densityMap_height.gdm to 14 channels in base map: ${gdmPath}`);
+					}
+				} catch (gdmErr) {
+					console.warn(`[MAP-PATCH] Could not patch base map densityMap_height.gdm (${gdmPath}):`, gdmErr.message);
+				}
+			}
+		}
+
+		return anyPatched;
+	} catch (err) {
+		console.warn('[MAP-PATCH] patchBaseGameDensityHeightTypes error:', err.message);
+		return false;
+	}
+}
+
+/**
+ * Automatically inspects a map mod zip archive or directory and patches missing <densityMapHeightTypes> XML tag
+ * AND upgrades both XML numChannels and .i3d terrainDetailHeight channels to 8 channels (255 height types).
  */
 function patchMapDensityHeightTypesIfNeeded(mapPath) {
 	if (!mapPath || !fs.existsSync(mapPath)) return false;
@@ -702,30 +911,71 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 		if (isZip) {
 			const zip = new AdmZip(mapPath);
 			const entries = zip.getEntries();
+
+			// Detect map's existing densityMap_height.gdm channel count first so .i3d matches native 16-ch GDMs vs 12/14-ch GDMs
+			let gdmTotalChannels = null;
+			for (const entry of entries) {
+				const enl = entry.entryName.toLowerCase();
+				if (!entry.isDirectory && (enl.endsWith('densitymap_height.gdm') || enl.endsWith('terraindetailheight_density.gdm'))) {
+					const b = entry.getData();
+					if (b && b.length >= 24 && b[0] === 0x22 && b[1] === 0x4D && b[2] === 0x44 && b[3] === 0x46) {
+						gdmTotalChannels = b[11];
+						break;
+					}
+				}
+			}
+
 			for (const entry of entries) {
 				const entryNameLower = entry.entryName.toLowerCase();
+				if (entry.isDirectory) continue;
+
+				// Patch map densityMap_height.gdm (or terrainDetailHeight_density.gdm) to 14 channels (8 type + 6 height) if empty template
+				if (entryNameLower.endsWith('densitymap_height.gdm') || entryNameLower.endsWith('terraindetailheight_density.gdm')) {
+					const gdmBuf = entry.getData();
+					const { buffer: newGdmBuf, modified: gdmModified } = upgradeHeightGdmBuffer(gdmBuf);
+					if (gdmModified) {
+						zip.updateFile(entry.entryName, newGdmBuf);
+						patched = true;
+						debugLog(`[MAP-PATCH] Upgraded ${entry.entryName} to 14 channels (8-bit type + 6-bit height) in ${path.basename(mapPath)}`);
+					}
+					continue;
+				}
+
+				// Patch map .i3d files (upgrade <DetailLayer name="terrainDetailHeight" .../> to 8 type channels)
+				if (entryNameLower.endsWith('.i3d')) {
+					let i3dText = entry.getData().toString('utf8');
+					if (i3dText.includes('terrainDetailHeight')) {
+						const { text: newI3dText, modified: i3dModified } = upgradeI3dTerrainDetailHeight(i3dText, gdmTotalChannels);
+						if (i3dModified) {
+							zip.updateFile(entry.entryName, Buffer.from(newI3dText, 'utf8'));
+							patched = true;
+							debugLog(`[MAP-PATCH] Upgraded terrainDetailHeight to 8 type channels in ${entry.entryName} of ${path.basename(mapPath)}`);
+						}
+					}
+					continue;
+				}
+
 				if (!entryNameLower.endsWith('.xml')) continue;
 
 				let xmlText = entry.getData().toString('utf8');
 				let entryModified = false;
 
-
-
-				// 2. Inject missing <densityMapHeightTypes> tag if map XML
-				const isDensityHeightXml = entryNameLower.endsWith('densitymapheighttypes.xml');
-				if (isDensityHeightXml) {
+				// 1. Any XML containing <densityMapHeightTypes ...> with numChannels < 8 (or standalone heightTypes XML)
+				const isDensityHeightXml = entryNameLower.endsWith('densitymapheighttypes.xml') || /<densityMapHeightType\b/i.test(xmlText);
+				if (isDensityHeightXml && /<densityMapHeightTypes\b/i.test(xmlText)) {
 					if (/numChannels=["'][0-7]["']/i.test(xmlText)) {
 						xmlText = xmlText.replace(/numChannels=["'][0-7]["']/i, 'numChannels="8"');
 						entryModified = true;
-						debugLog(`[MAP-PATCH] Upgraded numChannels="8" in standalone height types file: ${entry.entryName} of ${path.basename(mapPath)}`);
-					} else if (!/numChannels=["']/i.test(xmlText) && /<densityMapHeightTypes\b/i.test(xmlText)) {
+						debugLog(`[MAP-PATCH] Upgraded numChannels="8" in height types file: ${entry.entryName} of ${path.basename(mapPath)}`);
+					} else if (!/numChannels=["']/i.test(xmlText)) {
 						xmlText = xmlText.replace(/(<densityMapHeightTypes\b)/i, '$1 numChannels="8"');
 						entryModified = true;
-						debugLog(`[MAP-PATCH] Added numChannels="8" to standalone height types file: ${entry.entryName} of ${path.basename(mapPath)}`);
+						debugLog(`[MAP-PATCH] Added numChannels="8" to height types file: ${entry.entryName} of ${path.basename(mapPath)}`);
 					}
 				}
 
-				const isMapXml = entryNameLower.endsWith('mapus.xml') || 
+				const isMapXml = (/<map\b[^>]*>/i.test(xmlText) && /<filename>[^<]*\.i3d<\/filename>/i.test(xmlText)) ||
+								 entryNameLower.endsWith('mapus.xml') || 
 								 entryNameLower.endsWith('mapeu.xml') || 
 								 entryNameLower.endsWith('mapas.xml') || 
 								 (entryNameLower.endsWith('map.xml') && 
@@ -797,8 +1047,8 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 
 			if (patched) {
 				zip.writeZip(mapPath);
-				console.log(`[MAP-PATCH] Successfully patched map XMLs in archive: ${path.basename(mapPath)}`);
-				debugLog(`[MAP-PATCH] Successfully patched map XMLs in archive: ${path.basename(mapPath)}`);
+				console.log(`[MAP-PATCH] Successfully patched map XMLs/i3d in archive: ${path.basename(mapPath)}`);
+				debugLog(`[MAP-PATCH] Successfully patched map XMLs/i3d in archive: ${path.basename(mapPath)}`);
 			}
 
 			// Automatically evaluate and patch maps_fruitTypes.xml if missing base crops
@@ -813,6 +1063,27 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 				console.warn(`[MAP-PATCH] Fruit type patcher warning for ${path.basename(mapPath)}:`, fErr.message);
 			}
 		} else if (fs.statSync(mapPath).isDirectory()) {
+			let dirGdmTotalChannels = null;
+			function findDirGdm(dirPath) {
+				if (dirGdmTotalChannels !== null) return;
+				const files = fs.readdirSync(dirPath);
+				for (const f of files) {
+					if (dirGdmTotalChannels !== null) return;
+					const fullPath = path.join(dirPath, f);
+					const stat = fs.statSync(fullPath);
+					if (stat.isDirectory()) {
+						findDirGdm(fullPath);
+					} else if (f.toLowerCase().endsWith('densitymap_height.gdm') || f.toLowerCase().endsWith('terraindetailheight_density.gdm')) {
+						const b = fs.readFileSync(fullPath);
+						if (b && b.length >= 24 && b[0] === 0x22 && b[1] === 0x4D && b[2] === 0x44 && b[3] === 0x46) {
+							dirGdmTotalChannels = b[11];
+							return;
+						}
+					}
+				}
+			}
+			findDirGdm(mapPath);
+
 			function scanAndPatchDir(dirPath) {
 				const files = fs.readdirSync(dirPath);
 				for (const f of files) {
@@ -820,14 +1091,44 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 					const stat = fs.statSync(fullPath);
 					if (stat.isDirectory()) {
 						scanAndPatchDir(fullPath);
+					} else if (f.toLowerCase().endsWith('densitymap_height.gdm') || f.toLowerCase().endsWith('terraindetailheight_density.gdm')) {
+						const gdmBuf = fs.readFileSync(fullPath);
+						const { buffer: newGdmBuf, modified: gdmModified } = upgradeHeightGdmBuffer(gdmBuf);
+						if (gdmModified) {
+							fs.writeFileSync(fullPath, newGdmBuf);
+							patched = true;
+							debugLog(`[MAP-PATCH] Upgraded ${fullPath} to 14 channels`);
+						}
+					} else if (f.toLowerCase().endsWith('.i3d')) {
+						let i3dText = fs.readFileSync(fullPath, 'utf8');
+						if (i3dText.includes('terrainDetailHeight')) {
+							const { text: newI3dText, modified: i3dModified } = upgradeI3dTerrainDetailHeight(i3dText, dirGdmTotalChannels);
+							if (i3dModified) {
+								fs.writeFileSync(fullPath, newI3dText, 'utf8');
+								patched = true;
+								debugLog(`[MAP-PATCH] Upgraded terrainDetailHeight to 8 channels in directory i3d: ${fullPath}`);
+							}
+						}
 					} else if (f.toLowerCase().endsWith('.xml')) {
 						let xmlText = fs.readFileSync(fullPath, 'utf8');
 						let fileModified = false;
 
-
-
 						const lowerName = f.toLowerCase();
-						const isMapXml = lowerName === 'mapus.xml' || lowerName === 'mapeu.xml' || lowerName === 'mapas.xml' ||
+						const isDensityHeightXml = lowerName.endsWith('densitymapheighttypes.xml') || /<densityMapHeightType\b/i.test(xmlText);
+						if (isDensityHeightXml && /<densityMapHeightTypes\b/i.test(xmlText)) {
+							if (/numChannels=["'][0-7]["']/i.test(xmlText)) {
+								xmlText = xmlText.replace(/numChannels=["'][0-7]["']/i, 'numChannels="8"');
+								fileModified = true;
+								debugLog(`[MAP-PATCH] Upgraded numChannels="8" in directory height types XML: ${fullPath}`);
+							} else if (!/numChannels=["']/i.test(xmlText)) {
+								xmlText = xmlText.replace(/(<densityMapHeightTypes\b)/i, '$1 numChannels="8"');
+								fileModified = true;
+								debugLog(`[MAP-PATCH] Added numChannels="8" to directory height types XML: ${fullPath}`);
+							}
+						}
+
+						const isMapXml = (/<map\b[^>]*>/i.test(xmlText) && /<filename>[^<]*\.i3d<\/filename>/i.test(xmlText)) ||
+										 lowerName === 'mapus.xml' || lowerName === 'mapeu.xml' || lowerName === 'mapas.xml' ||
 										 (lowerName.endsWith('map.xml') && !lowerName.includes('placeable') && !lowerName.includes('store') && !lowerName.includes('item'));
 						if (isMapXml) {
 							if (!xmlText.includes('densityMapHeightTypes')) {
@@ -877,7 +1178,7 @@ function patchMapDensityHeightTypesIfNeeded(mapPath) {
 			scanAndPatchDir(mapPath);
 		}
 	} catch (e) {
-		console.warn(`[MAP-PATCH] Could not patch map XML for ${path.basename(mapPath)}:`, e.message);
+		console.warn(`[MAP-PATCH] Could not patch map XML/i3d for ${path.basename(mapPath)}:`, e.message);
 	}
 	return patched;
 }
@@ -1216,8 +1517,8 @@ async function prepareVirtualModsFolder(savegameIndex = null) {
                 continue;
             }
 
-            // Auto-patch the specific map mod being launched if missing <densityMapHeightTypes> to prevent Divide by Zero crash at 55% map load
-            if (mapModName && modNameLower === mapModName) {
+            // Auto-patch map mods being launched (both XML numChannels="8" and .i3d terrainDetailHeight 8-channel alignment)
+            if ((mapModName && modNameLower === mapModName) || (!savegameIndex && m.isMap)) {
                 patchMapDensityHeightTypesIfNeeded(realSource);
             }
 
@@ -7976,6 +8277,8 @@ module.exports = {
 	repairCorruptMod,
 	consolidateDependencies,
 	patchMapDensityHeightTypesIfNeeded,
+	patchBaseGameDensityHeightTypes,
+	upgradeI3dTerrainDetailHeight,
 	MAP_DEPENDENCIES_FOLDER,
 	decodeDDS,
 	getImageDimensions,

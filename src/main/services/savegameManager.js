@@ -888,14 +888,20 @@ async function getSavegameMods(savegamePath) {
         const entries = Array.isArray(modEntries) ? modEntries : [modEntries];
         const internalMods = ['fs25_managerpersistencebridge', 'fs25_quietloadingscreen', 'fs25_mtradiomanager'];
         
+        const seenEntries = new Set();
         for (const entry of entries) {
             if (entry && entry['@_modName']) {
-                const nameLow = entry['@_modName'].toLowerCase();
-                if (internalMods.includes(nameLow)) continue;
+                let rawModName = entry['@_modName'];
+                if (/^pdlc_fs25_/i.test(rawModName)) {
+                    rawModName = rawModName.replace(/^pdlc_/i, '');
+                }
+                const nameLow = rawModName.toLowerCase();
+                if (internalMods.includes(nameLow) || seenEntries.has(nameLow)) continue;
+                seenEntries.add(nameLow);
                 const pkg = packagingMap[nameLow];
                 const modEntry = {
-                    modName: entry['@_modName'],
-                    title: entry['@_title'] || entry['@_modName'],
+                    modName: rawModName,
+                    title: entry['@_title'] || rawModName,
                     version: entry['@_version'] || '1.0.0.0',
                     required: entry['@_required'] === 'true'
                 };
@@ -938,7 +944,11 @@ async function setSavegameMods(savegamePath, mods) {
     const existingLookup = new Map();
     existingModsArray.forEach(m => {
         if (m && m['@_modName']) {
-            existingLookup.set(m['@_modName'].toLowerCase(), m);
+            let rawKey = m['@_modName'];
+            if (/^pdlc_fs25_/i.test(rawKey)) {
+                rawKey = rawKey.replace(/^pdlc_/i, '');
+            }
+            existingLookup.set(rawKey.toLowerCase(), m);
         }
     });
 
@@ -946,8 +956,12 @@ async function setSavegameMods(savegamePath, mods) {
     existingModsArray.forEach(m => {
         if (m && m['@_modName']) {
             let mName = m['@_modName'];
+            if (/^pdlc_fs25_/i.test(mName)) {
+                mName = mName.replace(/^pdlc_/i, '');
+            }
             const nameLow = mName.toLowerCase();
-            const isDlcEntry = nameLow.startsWith('pdlc_') || nameLow.endsWith('pack') || nameLow.includes('extracontent');
+            const isRegularFsMod = /^fs\d{2}_/i.test(nameLow);
+            const isDlcEntry = !isRegularFsMod && (nameLow.startsWith('pdlc_') || nameLow.includes('extracontent'));
             if (INTERNAL_HELPER_MODS.includes(nameLow)) return;
 
             // Normalize DLC name so bare DLC names don't duplicate or linger
@@ -999,8 +1013,8 @@ async function setSavegameMods(savegamePath, mods) {
         const modManager = require('./modManager');
         const { mods: allInstalledMods } = await modManager.scanLocalMods();
         const detectedMap = findMapModInSavegame(xml, allInstalledMods);
-        if (detectedMap && detectedMap.modName && !newModsMap.has(detectedMap.modName)) {
-            newModsMap.set(detectedMap.modName, {
+        if (detectedMap && detectedMap.modName && !newModsMap.has(detectedMap.modName.toLowerCase())) {
+            newModsMap.set(detectedMap.modName.toLowerCase(), {
                 '@_modName': detectedMap.modName,
                 '@_title': String(detectedMap.title || detectedMap.modName).replace(/"/g, "'"),
                 '@_version': detectedMap.version || '1.0.0.0',
@@ -1019,16 +1033,16 @@ async function setSavegameMods(savegamePath, mods) {
                 let match;
                 while ((match = re.exec(content)) !== null) {
                     const requiredModName = match[1];
-                    if (requiredModName && !newModsMap.has(requiredModName)) {
-                        const reqClean = requiredModName.toLowerCase().replace(/\.zip$/i, '');
+                    const reqClean = (requiredModName || '').toLowerCase().replace(/\.zip$/i, '');
+                    if (reqClean && !newModsMap.has(reqClean) && !newModsMap.has(`pdlc_${reqClean}`)) {
                         const matchingInstalled = allInstalledMods.find(m => {
                             if (!m) return false;
                             const mName = (m.modName || '').toLowerCase();
                             const fName = (m.fileName || '').replace(/\.zip$|\.dlc$/i, '').toLowerCase();
                             return mName === reqClean || fName === reqClean || mName === `pdlc_${reqClean}` || fName === `pdlc_${reqClean}`;
                         });
-                        if (matchingInstalled) {
-                            newModsMap.set(matchingInstalled.modName, {
+                        if (matchingInstalled && matchingInstalled.modName) {
+                            newModsMap.set(matchingInstalled.modName.toLowerCase(), {
                                 '@_modName': matchingInstalled.modName,
                                 '@_title': String(matchingInstalled.title || matchingInstalled.modName).replace(/"/g, "'"),
                                 '@_version': matchingInstalled.version || '1.0.0.0',
@@ -1721,9 +1735,14 @@ async function createSavegameWithMods(savegameIndex, savegameName, selectedMods,
         };
     });
 
-    // Dynamically set map densityMap revision matching map file or default to 1
+    // Dynamically set map densityMap revision matching map file or default to 1, and ensure map height types/i3d are upgraded to 8 channels
     let mapDeclaredRev = '1';
     if (modZipPath && fs.existsSync(modZipPath)) {
+        try {
+            if (typeof modManager.patchMapDensityHeightTypesIfNeeded === 'function') {
+                modManager.patchMapDensityHeightTypesIfNeeded(modZipPath);
+            }
+        } catch (_) {}
         try {
             const AdmZip = require('adm-zip');
             const zip = new AdmZip(modZipPath);
@@ -4339,7 +4358,6 @@ async function ensureBridgeMod() {
         const fs = require('fs');
         const path = require('path');
         const destZip = path.join(modsDir, 'FS25_ManagerPersistenceBridge.zip');
-        if (fs.existsSync(destZip)) return { success: true };
         
         const appPath = require('electron').app ? require('electron').app.getAppPath() : process.cwd();
         const candidatePaths = [
@@ -7482,18 +7500,55 @@ async function ensureSavegameDensityMaps(savePath) {
             } catch (e) {}
         }
 
-        // 3. Remove flat placeholder densityMap_height.gdm and lock caches that cause elevation bugs
+        // 3. Remove flat placeholder densityMap_height.gdm (<= 131089 bytes) or mismatched 16-channel GDM on 14-channel base/mod maps
+        // so engine loads the map's height GDM cleanly.
+        // For non-empty 12/13-channel (6/7+6) savegame height GDMs, upgrade header bytes to 14 channels (8+6) so existing heaps load seamlessly.
         const heightGdmPath = path.join(savePath, 'densityMap_height.gdm');
         if (fs.existsSync(heightGdmPath)) {
             try {
-                if (fs.statSync(heightGdmPath).size <= 131349) {
+                const st = fs.statSync(heightGdmPath);
+                let shouldRemoveHeightGdm = st.size <= 131089;
+                if (!shouldRemoveHeightGdm && st.size >= 24) {
+                    const hdr = Buffer.alloc(24);
+                    const fd = fs.openSync(heightGdmPath, 'r');
+                    fs.readSync(fd, hdr, 0, 24, 0);
+                    fs.closeSync(fd);
+                    if (hdr[0] === 0x22 && hdr[1] === 0x4D && hdr[2] === 0x44 && hdr[3] === 0x46) {
+                        if (hdr[11] < 14) {
+                            const fullBuf = fs.readFileSync(heightGdmPath);
+                            fullBuf[11] = 14;
+                            fullBuf[16] = 8;
+                            fs.writeFileSync(heightGdmPath, fullBuf);
+                            console.log(`[DENSITY-CHECK] Upgraded savegame densityMap_height.gdm (${st.size} bytes) to 14 channels in ${savePath}`);
+                        } else if (hdr[11] === 16) {
+                            // Check if this savegame is on an official base game map (which uses 14 channels)
+                            const careerP = path.join(savePath, 'careerSavegame.xml');
+                            if (fs.existsSync(careerP)) {
+                                const cXml = fs.readFileSync(careerP, 'utf8');
+                                const mMatch = cXml.match(/<mapId>([^<]+)<\/mapId>/i);
+                                if (mMatch && isOfficialMap(mMatch[1].trim())) {
+                                    shouldRemoveHeightGdm = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (shouldRemoveHeightGdm) {
                     await fs.remove(heightGdmPath);
-                    console.log(`[DENSITY-CHECK] Removed flat template densityMap_height.gdm to avoid floating objects in ${savePath}`);
+                    const dmhXml = path.join(savePath, 'densityMapHeight.xml');
+                    if (fs.existsSync(dmhXml)) {
+                        try { await fs.remove(dmhXml); } catch (_) {}
+                    }
+                    console.log(`[DENSITY-CHECK] Removed flat/mismatched densityMap_height.gdm in ${savePath}`);
                 }
             } catch (e) {}
         }
 
-        const cachesToRemove = ['fieldGround.xml', 'densityMapHeight.xml'];
+        const cachesToRemove = ['fieldGround.xml'];
+        // Only remove densityMapHeight.xml if densityMap_height.gdm does NOT exist (preserve tipTypeMappings for active heaps)
+        if (!fs.existsSync(heightGdmPath)) {
+            cachesToRemove.push('densityMapHeight.xml');
+        }
         for (const cf of cachesToRemove) {
             const cp = path.join(savePath, cf);
             if (fs.existsSync(cp)) {

@@ -303,6 +303,25 @@ async function launch(options = {}) {
   let targetModsPath = options.modsPath;
   const modManager = require('./modManager');
 
+  // Ensure base game densityMapHeightTypes.xml and base map .i3d files are upgraded to 8 channels (255 height types)
+  try {
+    if (typeof modManager.patchBaseGameDensityHeightTypes === 'function') {
+      modManager.patchBaseGameDensityHeightTypes(gamePath);
+    }
+  } catch (bgErr) {
+    console.warn('[LAUNCH] Base game height types patch warning:', bgErr.message);
+  }
+
+  // Ensure inputBinding.xml has a clean single XML header so controls never break in-game
+  try {
+    const inputBindingManager = require('./inputBindingManager');
+    if (typeof inputBindingManager.ensureCleanInputBindingFile === 'function') {
+      await inputBindingManager.ensureCleanInputBindingFile();
+    }
+  } catch (ibErr) {
+    console.warn('[LAUNCH] inputBinding.xml self-heal warning:', ibErr.message);
+  }
+
   try {
     const savegameManager = require('./savegameManager');
     if (options.savegameIndex) {

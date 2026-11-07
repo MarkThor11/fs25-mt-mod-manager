@@ -441,6 +441,36 @@ function formatKeyName(rawInput) {
     }).join(' + ');
 }
 
+/**
+ * Strip duplicate <?xml ...?> headers and ensure a single valid XML declaration on line 1.
+ */
+function sanitizeXmlHeader(xmlString) {
+    if (!xmlString || typeof xmlString !== 'string') return '';
+    const stripped = xmlString.replace(/^\uFEFF/, '').replace(/<\?xml[^>]*\?>\s*/gi, '').trimStart();
+    return '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + stripped;
+}
+
+/**
+ * Self-heal inputBinding.xml if it has duplicate <?xml ...?> declarations.
+ */
+async function ensureCleanInputBindingFile(filePath = null) {
+    const targetPath = filePath || getInputBindingPath();
+    if (!targetPath || !fs.existsSync(targetPath)) return false;
+    try {
+        const raw = await fs.readFile(targetPath, 'utf8');
+        const declMatches = raw.match(/<\?xml[^>]*\?>/gi);
+        if (declMatches && declMatches.length > 1) {
+            const cleaned = sanitizeXmlHeader(raw);
+            await fs.writeFile(targetPath, cleaned, 'utf8');
+            console.log(`[INPUT-BINDINGS] Self-healed ${declMatches.length} duplicate XML declarations in ${targetPath}`);
+            return true;
+        }
+    } catch (err) {
+        console.warn('[INPUT-BINDINGS] ensureCleanInputBindingFile warning:', err.message);
+    }
+    return false;
+}
+
 async function getInputBindings() {
     const filePath = getInputBindingPath();
     if (!fs.existsSync(filePath)) {
@@ -454,6 +484,7 @@ async function getInputBindings() {
     }
 
     try {
+        await ensureCleanInputBindingFile(filePath);
         const xml = await fs.readFile(filePath, 'utf8');
         const data = parser.parse(xml);
         const root = data.inputBinding || {};
@@ -845,8 +876,9 @@ async function updateBinding(actionName, deviceId, oldInput, newInput) {
 
         targetAction.binding = bindings;
 
+        delete data['?xml'];
         const newXml = builder.build(data);
-        await fs.writeFile(filePath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml);
+        await fs.writeFile(filePath, sanitizeXmlHeader(newXml), 'utf8');
         return { success: true };
     } catch (err) {
         console.error('[INPUT-BINDINGS] Update error:', err);
@@ -915,6 +947,7 @@ async function restoreBackup(fileName) {
         }
 
         await fs.copy(sourcePath, destPath);
+        await ensureCleanInputBindingFile(destPath);
         return { success: true };
     } catch (err) {
         return { success: false, error: err.message };
@@ -931,6 +964,7 @@ async function updateBackup(fileName) {
 
     try {
         await fs.copy(sourcePath, destPath);
+        await ensureCleanInputBindingFile(destPath);
         return { success: true };
     } catch (err) {
         return { success: false, error: err.message };
@@ -1153,6 +1187,7 @@ async function compileModKeybinds(specificModPaths = null) {
         }
 
         // Parse current inputBinding.xml
+        await ensureCleanInputBindingFile(inputBindingPath);
         const xml = await fs.readFile(inputBindingPath, 'utf8');
         const data = parser.parse(xml);
         const root = data.inputBinding || {};
@@ -1225,8 +1260,9 @@ async function compileModKeybinds(specificModPaths = null) {
             const autoBakPath = path.join(getKeybindBackupsPath(), `auto_backup_before_compile_${timestamp}.xml`);
             await fs.copy(inputBindingPath, autoBakPath);
 
+            delete data['?xml'];
             const newXml = builder.build(data);
-            await fs.writeFile(inputBindingPath, '<?xml version="1.0" encoding="utf-8" standalone="no" ?>\n' + newXml, 'utf8');
+            await fs.writeFile(inputBindingPath, sanitizeXmlHeader(newXml), 'utf8');
             console.log(`[KEYBIND-COMPILER] Compiled mod keybinds into inputBinding.xml: ${addedCount} new action(s) added, ${modifiedActionsCount} bound.`);
         }
 
@@ -1252,6 +1288,8 @@ module.exports = {
     deleteBackup,
     resetToDefaults,
     compileModKeybinds,
-    extractKeybindsFromMod
+    extractKeybindsFromMod,
+    ensureCleanInputBindingFile,
+    sanitizeXmlHeader
 };
 
