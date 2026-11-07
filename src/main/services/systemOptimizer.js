@@ -101,53 +101,76 @@ async function getSystemSpecs() {
                 // 4. Heuristic Fallback for known GPU series if vramGB is still <= 4
                 if (specs.gpu.vramGB <= 4) {
                     const name = specs.gpu.name.toLowerCase();
-                    // RTX 50 Series
-                    if (name.includes('rtx 5090')) specs.gpu.vramGB = 32;
-                    else if (name.includes('rtx 5080')) specs.gpu.vramGB = 16;
-                    else if (name.includes('rtx 5070 ti')) specs.gpu.vramGB = 16;
-                    else if (name.includes('rtx 5070')) specs.gpu.vramGB = 12;
-                    else if (name.includes('rtx 5060 ti')) specs.gpu.vramGB = 16;
-                    else if (name.includes('rtx 5060')) specs.gpu.vramGB = 8;
-                    // RTX 40 Series
-                    else if (name.includes('rtx 4090')) specs.gpu.vramGB = 24;
-                    else if (name.includes('rtx 4080')) specs.gpu.vramGB = 16;
-                    else if (name.includes('rtx 4070 ti')) specs.gpu.vramGB = 12;
-                    else if (name.includes('rtx 4070')) specs.gpu.vramGB = 12;
-                    else if (name.includes('rtx 4060 ti')) specs.gpu.vramGB = 16;
-                    else if (name.includes('rtx 4060')) specs.gpu.vramGB = 8;
-                    // RTX 30 Series
-                    else if (name.includes('rtx 3090')) specs.gpu.vramGB = 24;
-                    else if (name.includes('rtx 3080 ti')) specs.gpu.vramGB = 12;
-                    else if (name.includes('rtx 3080')) specs.gpu.vramGB = 10;
-                    else if (name.includes('rtx 3070 ti')) specs.gpu.vramGB = 8;
-                    else if (name.includes('rtx 3070')) specs.gpu.vramGB = 8;
-                    else if (name.includes('rtx 3060 ti')) specs.gpu.vramGB = 8;
-                    else if (name.includes('rtx 3060')) specs.gpu.vramGB = 12;
-                    // RTX 20 Series
-                    else if (name.includes('rtx 2080 ti')) specs.gpu.vramGB = 11;
-                    else if (name.includes('rtx 2080')) specs.gpu.vramGB = 8;
-                    else if (name.includes('rtx 2070')) specs.gpu.vramGB = 8;
-                    else if (name.includes('rtx 2060 super')) specs.gpu.vramGB = 8;
-                    else if (name.includes('rtx 2060')) specs.gpu.vramGB = 6;
-                    // GTX 10 Series
+                    // NVIDIA RTX 50 Series
+                    if (name.includes('5090')) specs.gpu.vramGB = 32;
+                    else if (name.includes('5080')) specs.gpu.vramGB = 16;
+                    else if (name.includes('5070 ti')) specs.gpu.vramGB = 16;
+                    else if (name.includes('5070')) specs.gpu.vramGB = 12;
+                    else if (name.includes('5060 ti')) specs.gpu.vramGB = 16;
+                    else if (name.includes('5060')) specs.gpu.vramGB = 8;
+                    // NVIDIA RTX 40 Series
+                    else if (name.includes('4090')) specs.gpu.vramGB = 24;
+                    else if (name.includes('4080 super') || name.includes('4080')) specs.gpu.vramGB = 16;
+                    else if (name.includes('4070 ti super')) specs.gpu.vramGB = 16;
+                    else if (name.includes('4070 ti') || name.includes('4070 super') || name.includes('4070')) specs.gpu.vramGB = 12;
+                    else if (name.includes('4060 ti')) specs.gpu.vramGB = 16;
+                    else if (name.includes('4060')) specs.gpu.vramGB = 8;
+                    // NVIDIA RTX 30 Series
+                    else if (name.includes('3090')) specs.gpu.vramGB = 24;
+                    else if (name.includes('3080 ti')) specs.gpu.vramGB = 12;
+                    else if (name.includes('3080')) specs.gpu.vramGB = 10;
+                    else if (name.includes('3070 ti') || name.includes('3070')) specs.gpu.vramGB = 8;
+                    else if (name.includes('3060 ti')) specs.gpu.vramGB = 8;
+                    else if (name.includes('3060')) specs.gpu.vramGB = 12;
+                    else if (name.includes('3050 6gb')) specs.gpu.vramGB = 6;
+                    else if (name.includes('3050')) specs.gpu.vramGB = 8;
+                    // NVIDIA RTX 20 Series
+                    else if (name.includes('2080 ti')) specs.gpu.vramGB = 11;
+                    else if (name.includes('2080 super') || name.includes('2080')) specs.gpu.vramGB = 8;
+                    else if (name.includes('2070 super') || name.includes('2070')) specs.gpu.vramGB = 8;
+                    else if (name.includes('2060 super')) specs.gpu.vramGB = 8;
+                    else if (name.includes('2060')) specs.gpu.vramGB = 6;
+                    // NVIDIA GTX 16 Series
+                    else if (name.includes('1660 ti') || name.includes('1660 super') || name.includes('1660')) specs.gpu.vramGB = 6;
+                    else if (name.includes('1650 super') || name.includes('1650')) specs.gpu.vramGB = 4;
+                    // NVIDIA GTX 10 Series
                     else if (name.includes('1080 ti')) specs.gpu.vramGB = 11;
-                    else if (name.includes('1080')) specs.gpu.vramGB = 8;
-                    else if (name.includes('1070')) specs.gpu.vramGB = 8;
-                    else if (name.includes('1060')) specs.gpu.vramGB = 6;
-                    // AMD RX Series
-                    else if (name.includes('rx 7900 xtx')) specs.gpu.vramGB = 24;
-                    else if (name.includes('rx 7900 xt')) specs.gpu.vramGB = 20;
-                    else if (name.includes('rx 7900 gre')) specs.gpu.vramGB = 16;
-                    else if (name.includes('rx 7800')) specs.gpu.vramGB = 16;
-                    else if (name.includes('rx 7700')) specs.gpu.vramGB = 12;
-                    else if (name.includes('rx 6950') || name.includes('rx 6900')) specs.gpu.vramGB = 16;
-                    else if (name.includes('rx 6800')) specs.gpu.vramGB = 16;
-                    else if (name.includes('rx 6750') || name.includes('rx 6700')) specs.gpu.vramGB = 12;
-                    else if (name.includes('rx 6650') || name.includes('rx 6600')) specs.gpu.vramGB = 8;
+                    else if (name.includes('1080') || name.includes('1070 ti') || name.includes('1070')) specs.gpu.vramGB = 8;
+                    else if (name.includes('1060 6gb') || name.includes('1060')) specs.gpu.vramGB = 6;
+                    else if (name.includes('1050 ti') || name.includes('1050')) specs.gpu.vramGB = 4;
+                    // NVIDIA GTX 900 / Titan Series
+                    else if (name.includes('titan x') || name.includes('titan')) specs.gpu.vramGB = 12;
+                    else if (name.includes('980 ti')) specs.gpu.vramGB = 6;
+                    else if (name.includes('980') || name.includes('970')) specs.gpu.vramGB = 4;
+                    // AMD RX 7000 Series
+                    else if (name.includes('7900 xtx')) specs.gpu.vramGB = 24;
+                    else if (name.includes('7900 xt')) specs.gpu.vramGB = 20;
+                    else if (name.includes('7900 gre')) specs.gpu.vramGB = 16;
+                    else if (name.includes('7800 xt') || name.includes('7800')) specs.gpu.vramGB = 16;
+                    else if (name.includes('7700 xt') || name.includes('7700')) specs.gpu.vramGB = 12;
+                    else if (name.includes('7600 xt')) specs.gpu.vramGB = 16;
+                    else if (name.includes('7600')) specs.gpu.vramGB = 8;
+                    // AMD RX 6000 Series
+                    else if (name.includes('6950') || name.includes('6900')) specs.gpu.vramGB = 16;
+                    else if (name.includes('6800 xt') || name.includes('6800')) specs.gpu.vramGB = 16;
+                    else if (name.includes('6750') || name.includes('6700 xt')) specs.gpu.vramGB = 12;
+                    else if (name.includes('6700')) specs.gpu.vramGB = 10;
+                    else if (name.includes('6650') || name.includes('6600 xt') || name.includes('6600')) specs.gpu.vramGB = 8;
+                    else if (name.includes('6500 xt') || name.includes('6400')) specs.gpu.vramGB = 4;
+                    // AMD RX 5000 Series
+                    else if (name.includes('5700 xt') || name.includes('5700')) specs.gpu.vramGB = 8;
+                    else if (name.includes('5600 xt')) specs.gpu.vramGB = 6;
+                    else if (name.includes('5500 xt')) specs.gpu.vramGB = 8;
+                    // AMD Vega / Radeon VII / RX 500 / 400 Series
+                    else if (name.includes('radeon vii')) specs.gpu.vramGB = 16;
+                    else if (name.includes('vega 64') || name.includes('vega 56')) specs.gpu.vramGB = 8;
+                    else if (name.includes('rx 590') || name.includes('rx 580') || name.includes('rx 480')) specs.gpu.vramGB = 8;
+                    else if (name.includes('rx 570') || name.includes('rx 470')) specs.gpu.vramGB = 4;
                     // Intel Arc Series
                     else if (name.includes('arc a770')) specs.gpu.vramGB = 16;
                     else if (name.includes('arc a750') || name.includes('arc a580')) specs.gpu.vramGB = 8;
                     else if (name.includes('arc b580')) specs.gpu.vramGB = 12;
+                    else if (name.includes('arc a380') || name.includes('arc b570')) specs.gpu.vramGB = 6;
                 }
             }
 
