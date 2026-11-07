@@ -180,26 +180,58 @@ async function getSystemSpecs() {
  * 0: Low, 1: Medium, 2: High, 3: Very High, 4: Ultra
  */
 function recommendPerformanceClass(specs) {
-    const { ram, gpu } = specs;
-    const gpuLower = gpu.name.toLowerCase();
+    const { ram = {}, gpu = {} } = specs || {};
+    const ramGB = ram.totalGB || 0;
+    const vramGB = gpu.vramGB || 0;
+    const gpuLower = (gpu.name || '').toLowerCase();
 
-    // ULTRA (4)
-    if (ram.totalGB >= 32 && (gpu.vramGB >= 10 || gpuLower.includes('rtx 50') || gpuLower.includes('rtx 40') || gpuLower.includes('rtx 3080') || gpuLower.includes('rtx 3090') || gpuLower.includes('rx 7900') || gpuLower.includes('1080 ti'))) {
+    // Check if GPU indicates dedicated/powerful graphics even if vram is unknown
+    const isUltraGpu = vramGB >= 10 || 
+        gpuLower.includes('rtx 50') || gpuLower.includes('rtx 40') || 
+        gpuLower.includes('rtx 3080') || gpuLower.includes('rtx 3090') || 
+        gpuLower.includes('rx 7900') || gpuLower.includes('rx 7800') || 
+        gpuLower.includes('rx 6900') || gpuLower.includes('rx 6950') || 
+        gpuLower.includes('1080 ti') || gpuLower.includes('arc a770');
+
+    // ULTRA (4): 32GB+ RAM and top-tier GPU (10GB+ VRAM)
+    if (ramGB >= 32 && isUltraGpu) {
         return 4;
     }
 
-    // VERY HIGH (3)
-    if (ram.totalGB >= 16 && (gpu.vramGB >= 8 || gpuLower.includes('rtx 3070') || gpuLower.includes('rtx 3060') || gpuLower.includes('rtx 2080') || gpuLower.includes('rx 6800') || gpuLower.includes('gtx 1080'))) {
+    // VERY HIGH (3): 16GB+ RAM and high-tier GPU (8GB+ VRAM)
+    const isVeryHighGpu = vramGB >= 8 || isUltraGpu ||
+        gpuLower.includes('rtx 3070') || gpuLower.includes('rtx 3060') || 
+        gpuLower.includes('rtx 2080') || gpuLower.includes('rtx 2070') || 
+        gpuLower.includes('rx 6800') || gpuLower.includes('rx 6700') || 
+        gpuLower.includes('rx 7700') || gpuLower.includes('gtx 1080') || 
+        gpuLower.includes('arc a750') || gpuLower.includes('arc b580');
+
+    if (ramGB >= 16 && isVeryHighGpu) {
         return 3;
     }
 
-    // HIGH (2)
-    if (ram.totalGB >= 12 && (gpu.vramGB >= 6 || gpuLower.includes('rtx 2060') || gpuLower.includes('rx 6600') || gpuLower.includes('gtx 1660'))) {
+    // HIGH (2): 12GB+ RAM and mid-high GPU (6GB+ VRAM)
+    const isHighGpu = vramGB >= 6 || isVeryHighGpu ||
+        gpuLower.includes('rtx 2060') || gpuLower.includes('rtx 3050') || 
+        gpuLower.includes('rx 6600') || gpuLower.includes('rx 7600') || 
+        gpuLower.includes('gtx 1660') || gpuLower.includes('gtx 1070');
+
+    if (ramGB >= 12 && isHighGpu) {
         return 2;
     }
 
-    // MEDIUM (1)
-    if (ram.totalGB >= 8 && (gpu.vramGB >= 4 || gpuLower.includes('gtx 1060') || gpuLower.includes('gtx 1650') || gpuLower.includes('rx 580'))) {
+    // MEDIUM (1): 8GB+ RAM and mid GPU (4GB+ VRAM) or modern dedicated/discrete GPU
+    const isMediumGpu = vramGB >= 4 || isHighGpu ||
+        gpuLower.includes('gtx 1060') || gpuLower.includes('gtx 1650') || 
+        gpuLower.includes('rx 580') || gpuLower.includes('rx 570') || 
+        gpuLower.includes('geforce') || gpuLower.includes('radeon');
+
+    if (ramGB >= 8 && isMediumGpu) {
+        return 1;
+    }
+
+    // If system has at least 16GB RAM, default to Medium rather than dropping to Low
+    if (ramGB >= 16) {
         return 1;
     }
 
@@ -361,11 +393,56 @@ async function optimizeRevert() {
     const gameXmlPath = path.join(dataRoot, 'game.xml');
     const backupPath = path.join(dataRoot, 'game.xml.original');
 
-    if (!fs.existsSync(backupPath)) {
-        throw new Error('No backup found.');
+    if (!fs.existsSync(gameXmlPath)) {
+        throw new Error('game.xml not found.');
     }
 
-    await fs.copy(backupPath, gameXmlPath);
+    // 1. If an original backup exists and contains valid graphic settings, restore it
+    if (fs.existsSync(backupPath)) {
+        try {
+            const backupContent = await fs.readFile(backupPath, 'utf8');
+            if (backupContent && backupContent.includes('<graphic>')) {
+                await fs.copy(backupPath, gameXmlPath);
+                return { success: true };
+            }
+        } catch (_) {}
+    }
+
+    // 2. Otherwise reset game.xml scalability overrides to default game engine auto-detection
+    const xmlData = await fs.readFile(gameXmlPath, 'utf8');
+    const parser = new XMLParser({
+        ignoreAttributes: false,
+        attributeNamePrefix: "@_",
+        parseAttributeValue: false,
+        parseTagValue: false
+    });
+    const jsonObj = parser.parse(xmlData);
+
+    if (jsonObj && jsonObj.game && jsonObj.game.graphic) {
+        if (jsonObj.game.graphic.scalability) {
+            jsonObj.game.graphic.scalability = {
+                performanceClass: 'auto'
+            };
+        }
+    }
+
+    const builder = new XMLBuilder({
+        format: true,
+        indentBy: '    ',
+        ignoreAttributes: false,
+        attributeNamePrefix: "@_",
+        suppressEmptyNode: true,
+        processEntities: false,
+        suppressBooleanAttributes: false
+    });
+
+    let newXml = builder.build(jsonObj);
+    newXml = newXml.trim();
+    if (!newXml.startsWith('<?xml')) {
+        newXml = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n' + newXml;
+    }
+
+    await fs.writeFile(gameXmlPath, newXml, 'utf8');
     return { success: true };
 }
 

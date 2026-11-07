@@ -340,10 +340,7 @@ async function launch(options = {}) {
     if (options.savegameIndex) {
       const fs25Path = pathProvider.getFS25DataRoot();
       const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
-      // Ensure persistence bridge is in careerSavegame.xml if persistence is active for this save
-      if (typeof savegameManager.ensurePersistenceBridgeInSavegame === 'function') {
-        await savegameManager.ensurePersistenceBridgeInSavegame(savePath);
-      }
+      await savegameManager.cleanInternalHelperModsFromSavegame(savePath);
       await savegameManager.syncSubfolderMapDependencies(savePath);
       await savegameManager.autoInjectDependencies(savePath);
       await savegameManager.ensureSavegameDensityMaps(savePath);
@@ -501,12 +498,9 @@ async function launch(options = {}) {
         }
       }
 
-      // Ensure careerSavegame.xml is clean of other helper mods while respecting active persistence
+      // Ensure careerSavegame.xml is completely clean of internal helper mod entries
       try {
         await savegameManager.cleanInternalHelperModsFromSavegame(savePath);
-        if (typeof savegameManager.ensurePersistenceBridgeInSavegame === 'function') {
-          await savegameManager.ensurePersistenceBridgeInSavegame(savePath);
-        }
       } catch (e) {
         console.warn('[LAUNCH] Helper mods cleanup warning:', e.message);
       }
@@ -704,18 +698,8 @@ async function restoreGlobalGameSettings() {
     console.warn('[LAUNCH] Failed to restore menu music setting:', e.message);
   }
 
-  // Restore game.xml graphics settings from backup if an original was saved
-  try {
-    const systemOptimizer = require('./systemOptimizer');
-    const dataRoot = pathProvider.getFS25DataRoot();
-    const backupGameXml = path.join(dataRoot, 'game.xml.original');
-    if (fs.existsSync(backupGameXml)) {
-      await systemOptimizer.optimizeRevert();
-      console.log('[LAUNCH] Restored game.xml from original backup');
-    }
-  } catch (e) {
-    // Ignore if not present
-  }
+  // Do not clobber user in-game graphics settings upon exit.
+  // game.xml.original is preserved for manual revert via Settings -> Return to Default.
 
   try {
     const savegameManager = require('./savegameManager');
