@@ -2881,9 +2881,7 @@ async function performScan(manualPaths = null) {
 								}
 							}
 						}
-						if (folderHasMods) {
-							allFolders.push(entryName);
-						}
+						allFolders.push(entryName);
 					}
 				} else if ((entry.isFile() || entry.isSymbolicLink()) && entryName.toLowerCase().endsWith('.zip')) {
 					potentialRootEntries.push({ root: modsPath, name: entryName, sub: '' });

@@ -589,6 +589,9 @@ export const useLocalModsStore = create((set, get) => ({
   createFolder: async (folderName) => {
     if (!window.api?.mods) return;
     await window.api.mods.createFolder(folderName);
+    set(state => ({
+      allFolders: Array.from(new Set([...(state.allFolders || []), folderName])).sort()
+    }));
     await get().scanMods(null, true);
   },
 
