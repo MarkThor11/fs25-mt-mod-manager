@@ -775,7 +775,7 @@ function upgradeHeightGdmBuffer(buf) {
  * are upgraded to 8 height type channels (255 height types) so base game maps and mod maps referencing $data/maps/maps_densityMapHeightTypes.xml
  * never fail with the 63 height-type limit when using mods like Straw Harvest, Pumps N' Hoses, or Additional Filltypes.
  */
-function patchBaseGameDensityHeightTypes(gameExeOrInstallDir = null) {
+function patchBaseGameDensityHeightTypes(gameExeOrInstallDir = null, targetMapId = null) {
 	try {
 		let installDir = null;
 		if (gameExeOrInstallDir && typeof gameExeOrInstallDir === 'string') {
@@ -819,11 +819,20 @@ function patchBaseGameDensityHeightTypes(gameExeOrInstallDir = null) {
 		if (fs.existsSync(baseHeightXmlPath)) {
 			try {
 				let xmlText = fs.readFileSync(baseHeightXmlPath, 'utf8');
-				if (/numChannels=["'][0-7]["']/i.test(xmlText)) {
-					const bakPath = baseHeightXmlPath + '.mm_bak';
-					if (!fs.existsSync(bakPath)) {
-						try { fs.copyFileSync(baseHeightXmlPath, bakPath); } catch (_) {}
+				const bakPath = baseHeightXmlPath + '.mm_bak';
+				if (!fs.existsSync(bakPath)) {
+					try { fs.copyFileSync(baseHeightXmlPath, bakPath); } catch (_) {}
+				}
+				const isDlcMap = targetMapId && (targetMapId.toLowerCase().startsWith('pdlc_') || targetMapId.toLowerCase().includes('beansandalpacas') || targetMapId.toLowerCase().includes('catuai') || targetMapId.toLowerCase().includes('catua') || targetMapId.toLowerCase().includes('highlandsfishing') || targetMapId.toLowerCase().includes('kinlaig'));
+				if (isDlcMap) {
+					if (/numChannels=["'][78]["']/i.test(xmlText)) {
+						xmlText = xmlText.replace(/numChannels=["'][78]["']/i, 'numChannels="6"');
+						fs.writeFileSync(baseHeightXmlPath, xmlText, 'utf8');
+						anyPatched = true;
+						console.log(`[MAP-PATCH] Aligned base game maps_densityMapHeightTypes.xml to numChannels="6" for encrypted DLC map: ${targetMapId}`);
+						debugLog(`[MAP-PATCH] Aligned base game maps_densityMapHeightTypes.xml to numChannels="6" for encrypted DLC map: ${targetMapId}`);
 					}
+				} else if (/numChannels=["'][0-7]["']/i.test(xmlText)) {
 					xmlText = xmlText.replace(/numChannels=["'][0-7]["']/i, 'numChannels="8"');
 					fs.writeFileSync(baseHeightXmlPath, xmlText, 'utf8');
 					anyPatched = true;

@@ -303,10 +303,23 @@ async function launch(options = {}) {
   let targetModsPath = options.modsPath;
   const modManager = require('./modManager');
 
-  // Ensure base game densityMapHeightTypes.xml and base map .i3d files are upgraded to 8 channels (255 height types)
+  // Ensure base game densityMapHeightTypes.xml aligns with target map (6 channels for encrypted DLC maps, 8 channels for base/mod maps)
   try {
     if (typeof modManager.patchBaseGameDensityHeightTypes === 'function') {
-      modManager.patchBaseGameDensityHeightTypes(gamePath);
+      let targetMapId = null;
+      if (options.savegameIndex) {
+        try {
+          const fs25Path = pathProvider.getFS25DataRoot();
+          const savePath = path.join(fs25Path, `savegame${options.savegameIndex}`);
+          const careerFile = path.join(savePath, 'careerSavegame.xml');
+          if (fs.existsSync(careerFile)) {
+            const cXml = fs.readFileSync(careerFile, 'utf8');
+            const mMatch = cXml.match(/<mapId>([^<]+)<\/mapId>/i);
+            if (mMatch) targetMapId = mMatch[1].trim();
+          }
+        } catch (_) {}
+      }
+      modManager.patchBaseGameDensityHeightTypes(gamePath, targetMapId);
     }
   } catch (bgErr) {
     console.warn('[LAUNCH] Base game height types patch warning:', bgErr.message);

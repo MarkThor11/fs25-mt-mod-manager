@@ -242,6 +242,17 @@ function getElementText(xml, tag) {
     return match ? match[1] : null;
 }
 
+function isEncryptedDlcMap(mapId) {
+    if (!mapId) return false;
+    const lower = mapId.toLowerCase();
+    return lower.startsWith('pdlc_') || 
+           lower.includes('beansandalpacas') ||
+           lower.includes('catuai') ||
+           lower.includes('catua') ||
+           lower.includes('highlandsfishing') ||
+           lower.includes('kinlaig');
+}
+
 function isOfficialMap(mapId) {
     if (!mapId) return false;
     const lower = mapId.toLowerCase();
@@ -7577,7 +7588,16 @@ async function ensureSavegameDensityMaps(savePath) {
                     fs.readSync(fd, hdr, 0, 24, 0);
                     fs.closeSync(fd);
                     if (hdr[0] === 0x22 && hdr[1] === 0x4D && hdr[2] === 0x44 && hdr[3] === 0x46) {
-                        if (hdr[11] < 14) {
+                        const careerP = path.join(savePath, 'careerSavegame.xml');
+                        let isDlc = false;
+                        if (fs.existsSync(careerP)) {
+                            const cXml = fs.readFileSync(careerP, 'utf8');
+                            const mMatch = cXml.match(/<mapId>([^<]+)<\/mapId>/i);
+                            if (mMatch && isEncryptedDlcMap(mMatch[1].trim())) {
+                                isDlc = true;
+                            }
+                        }
+                        if (!isDlc && hdr[11] < 14) {
                             const fullBuf = fs.readFileSync(heightGdmPath);
                             fullBuf[11] = 14;
                             fullBuf[16] = 8;
