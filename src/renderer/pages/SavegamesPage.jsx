@@ -4497,28 +4497,42 @@ export default function SavegamesPage() {
     }
     
     if (modKeysToApply.length > 0) {
-      // Identify all map mods and their dependencies to filter out of the incoming applied save mods
+      // Exclude foreign custom map mods & their dependencies from the applied save mods.
+      // NOTE: Official DLC expansion packs (pdlc_*) are gameplay DLC packs owned by the player, NOT foreign custom maps,
+      // and must never be filtered out!
+      const currentMapModName = (createMap ? (createMap.split('|')[2] || '').split('.')[0] : '').toLowerCase();
       const foreignMapAndDepNames = new Set();
       (mods || []).forEach(m => {
-        if (m.isMap) {
-          if (m.modName) foreignMapAndDepNames.add(m.modName.toLowerCase());
-          if (m.fileName) foreignMapAndDepNames.add(m.fileName.replace(/\.zip$/i, '').toLowerCase());
+        const isCustomMap = (m.isMap || isMapMod(m)) && !m.isDLC && !(m.folder === 'DLC') &&
+          !(m.modName && m.modName.toLowerCase().startsWith('pdlc_')) &&
+          !(m.fileName && m.fileName.toLowerCase().startsWith('pdlc_'));
+        
+        if (isCustomMap) {
+          const mName = (m.modName || '').toLowerCase();
+          const fName = (m.fileName || '').replace(/\.zip$/i, '').toLowerCase();
+          // If this custom map is not the currently selected map in the modal, treat as foreign
+          if (mName && mName !== currentMapModName) foreignMapAndDepNames.add(mName);
+          if (fName && fName !== currentMapModName) foreignMapAndDepNames.add(fName);
           try {
             const { installed: mapDeps } = resolveRecursiveDependencies(m, mods, {}, {});
             (mapDeps || []).forEach(d => {
               const dName = typeof d === 'string' ? d : (d.modName || d.fileName || '');
-              if (dName) foreignMapAndDepNames.add(dName.toLowerCase());
+              if (dName && !dName.toLowerCase().startsWith('pdlc_')) {
+                foreignMapAndDepNames.add(dName.toLowerCase());
+              }
             });
           } catch (_) {}
-          if (m.folder && m.folder.toLowerCase() !== 'mods') {
+          if (m.folder && m.folder.toLowerCase() !== 'mods' && m.folder.toLowerCase() !== 'dlc') {
             (mods || []).filter(sub => sub.folder && sub.folder.toLowerCase() === m.folder.toLowerCase()).forEach(sub => {
-              if (sub.modName) foreignMapAndDepNames.add(sub.modName.toLowerCase());
+              if (sub.modName && !sub.modName.toLowerCase().startsWith('pdlc_')) {
+                foreignMapAndDepNames.add(sub.modName.toLowerCase());
+              }
             });
           }
         }
       });
       
-      // Filter foreign map mods & their dependencies from the applied save mods
+      // Filter foreign custom maps & their map-exclusive dependencies from the applied save mods
       const filteredModKeys = modKeysToApply.filter(k => {
         const rawName = stripModSelectionKey(k).toLowerCase();
         return !foreignMapAndDepNames.has(rawName);
