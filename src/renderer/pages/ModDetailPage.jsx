@@ -12,6 +12,8 @@ import { useModHubStore } from '../store/useModHubStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { compareVersions, resolveRecursiveDependencies, matchModWithDependency, isMapCategory, isModMatch } from '../utils/modUtils';
 import DependencyDownloadModal from '../components/common/DependencyDownloadModal';
+import DownloadLocationPromptModal from '../components/common/DownloadLocationPromptModal';
+import { resolveDownloadDestination, shouldPromptForDownload } from '../utils/downloadRouter';
 
 
 
@@ -200,6 +202,7 @@ export default function ModDetailPage() {
   const [restoring, setRestoring] = useState(false);
   const [hasBak, setHasBak] = useState(false);
   const [showDepModal, setShowDepModal] = useState(false);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
 
   // ── Dependency Management ──
 
@@ -783,15 +786,20 @@ export default function ModDetailPage() {
   const handleInstall = async () => {
     if (isCurrentlyInstalling || !mod || !isOnline) return;
     
-    // Register in global store and fire starting toast
-    useToastStore.getState().info(`Downloading ${mod.title}...`, { id: `dl-toast-${mod.modId}` });
-    addDownload(mod.modId, mod.title, mod.images?.[0]);
-
     try {
       const isMap = mod.isMap || isMapCategory(mod.category) || (localMod && localMod.isMap);
-      const cleanTitle = mod.title.replace(/\([^)]+\)/g, '').trim();
       const subFolder = parentFolder || null;
 
+      if (!subFolder && shouldPromptForDownload({ category: mod.category, isMap })) {
+        setShowLocationPrompt(true);
+        return;
+      }
+
+      const finalSubFolder = subFolder || resolveDownloadDestination({ category: mod.category, isMap });
+
+      // Register in global store and fire starting toast
+      useToastStore.getState().info(`Downloading ${mod.title}...`, { id: `dl-toast-${mod.modId}` });
+      addDownload(mod.modId, mod.title, mod.images?.[0]);
 
       // 2. Normal install flow
       const result = await window.api.mods.install({
@@ -799,7 +807,7 @@ export default function ModDetailPage() {
         modTitle: mod.title,
         downloadUrl: mod.downloadUrl || '',
         category: mod.category || '',
-        subFolder
+        subFolder: finalSubFolder
       });
       if (!result.success) {
         useToastStore.getState().error(`Failed: ${result.error}`, { id: `dl-toast-${mod.modId}` });
@@ -1669,6 +1677,34 @@ export default function ModDetailPage() {
           />
         );
       })()}
+      {/* Download Destination Prompt Modal */}
+      <DownloadLocationPromptModal
+        isOpen={showLocationPrompt}
+        modTitle={mod?.title}
+        category={mod?.category}
+        onConfirm={async (chosenDestination) => {
+          setShowLocationPrompt(false);
+          useToastStore.getState().info(`Downloading ${mod.title}...`, { id: `dl-toast-${mod.modId}` });
+          addDownload(mod.modId, mod.title, mod.images?.[0]);
+          try {
+            const result = await window.api.mods.install({
+              modId: mod.modId,
+              modTitle: mod.title,
+              downloadUrl: mod.downloadUrl || '',
+              category: mod.category || '',
+              subFolder: chosenDestination || null
+            });
+            if (!result.success) {
+              useToastStore.getState().error(`Failed: ${result.error}`, { id: `dl-toast-${mod.modId}` });
+              removeDownload(mod.modId);
+            }
+          } catch (err) {
+            useToastStore.getState().error(`Install failed: ${err.message}`, { id: `dl-toast-${mod?.modId || modId}` });
+            removeDownload(mod.modId);
+          }
+        }}
+        onCancel={() => setShowLocationPrompt(false)}
+      />
       </div>
     );
   }

@@ -78,6 +78,9 @@ export const useSettingsStore = create((set) => ({
   autoDownloadMapDeps: true,
   nickname: '',
   hasPromptedConsolidation: false,
+  downloadRoutingMode: 'prompt_and_rules', // 'direct' | 'rules_only' | 'prompt_only' | 'prompt_and_rules'
+  downloadCategoryRoutes: {}, // categoryKey -> destination (subfolder name or absolute path)
+  lastUsedDownloadDestination: '',
 
   setIsOnline: (isOnline) => set({ isOnline }),
 
@@ -226,12 +229,36 @@ export const useSettingsStore = create((set) => ({
         autoDownloadMapDeps: settings.autoDownloadMapDeps !== 'false',
         nickname: settings.nickname || '',
         hasPromptedConsolidation: settings.hasPromptedConsolidation === 'true',
+        downloadRoutingMode: settings.downloadRoutingMode || 'prompt_and_rules',
+        downloadCategoryRoutes: (() => {
+          try {
+            return settings.downloadCategoryRoutes ? JSON.parse(settings.downloadCategoryRoutes) : {};
+          } catch (_) {
+            return {};
+          }
+        })(),
+        lastUsedDownloadDestination: settings.lastUsedDownloadDestination || '',
         isLoaded: true,
       });
     } catch (err) {
       console.error('Failed to load settings:', err);
       set({ isLoaded: true });
     }
+  },
+
+  setDownloadRoutingMode: async (downloadRoutingMode) => {
+    set({ downloadRoutingMode });
+    if (window.api?.settings) await window.api.settings.set('downloadRoutingMode', downloadRoutingMode);
+  },
+
+  setDownloadCategoryRoutes: async (downloadCategoryRoutes) => {
+    set({ downloadCategoryRoutes });
+    if (window.api?.settings) await window.api.settings.set('downloadCategoryRoutes', JSON.stringify(downloadCategoryRoutes));
+  },
+
+  setLastUsedDownloadDestination: async (lastUsedDownloadDestination) => {
+    set({ lastUsedDownloadDestination });
+    if (window.api?.settings) await window.api.settings.set('lastUsedDownloadDestination', lastUsedDownloadDestination);
   },
 
   setHasPromptedConsolidation: async (hasPromptedConsolidation) => {

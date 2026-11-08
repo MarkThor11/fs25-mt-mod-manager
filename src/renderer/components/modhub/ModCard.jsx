@@ -7,6 +7,8 @@ import { useModHubStore } from '../../store/useModHubStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useLocalModsStore } from '../../store/useLocalModsStore';
 import { compareVersions, matchModWithDependency, isMapCategory, isModMatch } from '../../utils/modUtils';
+import DownloadLocationPromptModal from '../common/DownloadLocationPromptModal';
+import { resolveDownloadDestination, shouldPromptForDownload } from '../../utils/downloadRouter';
 
 const CategoryPlaceholder = ({ category, size = 100, hideZap = false }) => {
   const Icon = useMemo(() => {
@@ -118,6 +120,8 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
   const [installing, setInstalling] = useState(false);
   const [isScanningRef, setIsScanningRef] = useState(false);
   const [showPackSelector, setShowPackSelector] = useState(false);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [pendingInstallData, setPendingInstallData] = useState(null);
   const [packHPs, setPackHPs] = useState([]);
   const isPowerReference = powerReference?.modId === mod.modId;
   const isModMap = useMemo(() => {
@@ -353,17 +357,29 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
         throw new Error('Could not find a valid download link for this mod.');
       }
 
+      const effectiveCategory = detail?.category || modCategory;
+      const isMap = Boolean(mod.isMap || isMapCategory(effectiveCategory));
+
+      if (shouldPromptForDownload({ category: effectiveCategory, isMap })) {
+        setPendingInstallData({ modId, modTitle, downloadUrl, category: effectiveCategory, imgSrc });
+        setShowLocationPrompt(true);
+        setInstalling(false);
+        return;
+      }
+
+      const resolvedSubFolder = resolveDownloadDestination({ category: effectiveCategory, isMap });
+
       // Show starting download toast with consistent custom ID so completion updates it cleanly
       useToastStore.getState().info(`Downloading ${modTitle}...`, { id: `dl-toast-${modId}` });
       useDownloadStore.getState().addDownload(modId, modTitle, imgSrc);
 
-      if (!window.api?.mods) throw new Error('System bridge not available');
+      if (!window.api?.mods) throw new Error("System bridge not available");
       const result = await window.api.mods.install({
         modId,
         modTitle,
         downloadUrl,
-        category: detail?.category || modCategory,
-        subFolder: null
+        category: effectiveCategory,
+        subFolder: resolvedSubFolder
       });
 
       if (result.success) {
@@ -1297,6 +1313,45 @@ export default React.memo(function ModCard({ mod, status, updateInfo, showAction
           </button>
         </div>
       )}
+      {/* Download Destination Prompt Modal */}
+      <DownloadLocationPromptModal
+        isOpen={showLocationPrompt}
+        modTitle={pendingInstallData?.modTitle || mod.title}
+        category={pendingInstallData?.category || mod.category}
+        onConfirm={async (chosenDestination) => {
+          setShowLocationPrompt(false);
+          if (!pendingInstallData) return;
+          const { modId, modTitle, downloadUrl, category, imgSrc } = pendingInstallData;
+          setPendingInstallData(null);
+          setInstalling(true);
+          try {
+            useToastStore.getState().info(`Downloading ${modTitle}...`, { id: `dl-toast-${modId}` });
+            useDownloadStore.getState().addDownload(modId, modTitle, imgSrc);
+            const result = await window.api.mods.install({
+              modId,
+              modTitle,
+              downloadUrl,
+              category,
+              subFolder: chosenDestination || null
+            });
+            if (result.success) {
+              useLocalModsStore.getState().scanMods();
+            } else {
+              useToastStore.getState().error(`Failed: ${result.error}`, { id: `dl-toast-${modId}` });
+              useDownloadStore.getState().removeDownload(modId);
+            }
+          } catch (err) {
+            useToastStore.getState().error(`Install failed: ${err.message}`, { id: `dl-toast-${modId}` });
+            useDownloadStore.getState().removeDownload(modId);
+          } finally {
+            setInstalling(false);
+          }
+        }}
+        onCancel={() => {
+          setShowLocationPrompt(false);
+          setPendingInstallData(null);
+        }}
+      />
     </div>
   );
 });

@@ -3662,8 +3662,6 @@ async function installModInternal(modId, modTitle, downloadUrl, onProgress, cate
 			subFolder = cleanMapFolder;
 			console.log(`[INSTALL] Custom Mod Map detected ("${cleanMapFolder}"). Auto-assigned to dedicated subfolder: ${subFolder}`);
 		}
-	} else if (subFolder && !path.isAbsolute(subFolder) && subFolder.toLowerCase() !== MAP_DEPENDENCIES_FOLDER.toLowerCase()) {
-		subFolder = null;
 	}
 
 	const modsPath = getModsPath();

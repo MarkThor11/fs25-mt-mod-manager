@@ -1,8 +1,9 @@
 import LoadingScreenCustomizer from '../components/settings/LoadingScreenCustomizer';
+import DownloadRoutingSection from '../components/settings/DownloadRoutingSection';
 import React, { useEffect, useState } from 'react';
 import {
   Trash2, RefreshCw, Info, Sliders, Eye, HelpCircle, Plus, Folder, ShieldAlert,
-  ChevronDown, ChevronRight, Zap, Settings, FolderOpen, Palette, Monitor, Gamepad2, X, Wallpaper,
+  ChevronDown, ChevronRight, Zap, Settings, FolderOpen, FolderDown, Palette, Monitor, Gamepad2, X, Wallpaper,
   Download, ExternalLink, AlertTriangle
 } from 'lucide-react';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -657,6 +658,11 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+      </CollapsibleSection>
+
+      {/* Mod Download Routing & Organization */}
+      <CollapsibleSection title="Mod Download Routing & Organization" icon={FolderDown}>
+        <DownloadRoutingSection />
       </CollapsibleSection>
 
       {/* Theme */}
