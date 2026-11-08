@@ -855,6 +855,40 @@ async function hasMapTemplate(mapId, mapTitle = null, modName = null) {
 }
 
 /**
+ * Read per-savegame custom settings (.mm_custom_settings.json) for a savegame slot.
+ * Stores manager-specific enhancements like graphicsProfile ('auto', 'ultra', 'balanced_4x', 'performance_16x', 'default')
+ */
+function readSavegameCustomSettingsSync(savegamePath) {
+    try {
+        if (!savegamePath) return {};
+        const setPath = path.join(savegamePath, '.mm_custom_settings.json');
+        if (fs.existsSync(setPath)) {
+            return fs.readJsonSync(setPath) || {};
+        }
+        const pendingPath = path.join(savegamePath, '.mm_pending_settings.json');
+        if (fs.existsSync(pendingPath)) {
+            const pending = fs.readJsonSync(pendingPath);
+            if (pending && pending.customSettings) return pending.customSettings;
+        }
+    } catch (_) {}
+    return {};
+}
+
+async function writeSavegameCustomSetting(savegamePath, key, value) {
+    try {
+        if (!savegamePath || !key) return { success: false, error: 'Missing path or key' };
+        const setPath = path.join(savegamePath, '.mm_custom_settings.json');
+        const existing = readSavegameCustomSettingsSync(savegamePath);
+        existing[key] = value;
+        await fs.writeJson(setPath, existing, { spaces: 2 });
+        return { success: true };
+    } catch (err) {
+        console.warn('[SAVEGAME] Failed to write custom setting:', err.message);
+        return { success: false, error: err.message };
+    }
+}
+
+/**
  * Read per-mod packaging preferences (.mm_mod_packaging.json) for a savegame slot.
  * Maps modNameLower -> { isFolder: boolean, filePath?: string }
  */
@@ -2396,6 +2430,11 @@ function applyWeatherToEnvironment(env, weatherType) {
  * Surgical attribute update for a savegame XML
  */
 async function updateSavegameAttribute(savePath, fileType, attribute, value) {
+    // Custom manager settings (stored in .mm_custom_settings.json)
+    if (fileType === 'custom') {
+        return await writeSavegameCustomSetting(savePath, attribute, value);
+    }
+
     // Audio settings are global (not per-savegame) — write to gameSettings.xml / game.xml
     if (fileType === 'audio') {
         const fs25Path = getFs25Path();
@@ -2665,7 +2704,8 @@ async function getAllSavegames() {
                         money: pending.money !== undefined ? pending.money : 1000000,
                         playTime: 0,
                         modCount: 0,
-                        mods: []
+                        mods: [],
+                        customSettings: readSavegameCustomSettingsSync(savePath)
                     });
                     continue;
                 } catch (_) {}
@@ -2908,6 +2948,7 @@ async function getAllSavegames() {
                 isRadioEnabled,
                 radioVehicleOnly,
                 isPersistenceActive: await isSavegamePersistenceActive(savePath),
+                customSettings: readSavegameCustomSettingsSync(savePath),
                 mods: (() => {
                     const pkgMap = readSavegameModPackagingSync(savePath);
                     return (Array.isArray(data.careerSavegame.mod) ? data.careerSavegame.mod : (data.careerSavegame.mod ? [data.careerSavegame.mod] : (data.careerSavegame.mods?.mod || [])))
@@ -7990,5 +8031,7 @@ module.exports = {
     ensurePersistenceBridgeInSavegame,
     isSavegamePersistenceActive,
     syncSavegameModVersions,
-    cleanInternalHelperModsFromAllSavegames
+    cleanInternalHelperModsFromAllSavegames,
+    readSavegameCustomSettingsSync,
+    writeSavegameCustomSetting
 };

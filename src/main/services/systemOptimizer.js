@@ -284,9 +284,81 @@ function recommendPerformanceClass(specs) {
 }
 
 /**
- * Apply optimization settings to game.xml
+ * Inspect a map mod or official map to determine its dimension scale (1x, 4x, 16x).
+ * Standard maps in FS are 2048x2048 (1x ~2km). 4096 is 4x (~4km). 8192 is 16x (~8km).
+ * @param {string} mapId
+ * @param {string} [savePath]
+ * @returns {Promise<{ scale: number, label: string }>} 
  */
-async function optimize() {
+async function detectMapScale(mapId, savePath = null) {
+    if (!mapId) return { scale: 1, label: '1x (Standard)' };
+    const lowerId = String(mapId).toLowerCase();
+    if (['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'kinlaig', 'beansandalpacasmap', 'catuai', 'catuaí'].includes(lowerId) ||
+        lowerId.startsWith('pdlc_') || lowerId.includes('highlandsfishing') || lowerId.includes('kinlaig') ||
+        lowerId.includes('beansandalpacas') || lowerId.includes('catuai') || lowerId.includes('catuaí')) {
+        return { scale: 1, label: '1x (Standard)' };
+    }
+    try {
+        const savegameManager = require('./savegameManager');
+        let mapZipPath = null;
+        if (savePath) {
+            mapZipPath = await savegameManager.resolveMapModPath(savePath);
+        }
+        if (!mapZipPath) {
+            const mapModName = mapId.includes('.') ? mapId.split('.')[0] : mapId;
+            const modManager = require('./modManager');
+            const configuredRoots = modManager.getModsPaths ? modManager.getModsPaths() : [];
+            for (const root of configuredRoots) {
+                if (!fs.existsSync(root)) continue;
+                const directZip = path.join(root, `${mapModName}.zip`);
+                if (fs.existsSync(directZip) && fs.statSync(directZip).size > 0) {
+                    mapZipPath = directZip;
+                    break;
+                }
+            }
+        }
+        if (mapZipPath && fs.existsSync(mapZipPath)) {
+            const AdmZip = require('adm-zip');
+            const zip = new AdmZip(mapZipPath);
+            const modDescEntry = zip.getEntry('modDesc.xml');
+            if (modDescEntry) {
+                const modDescXml = modDescEntry.getData().toString('utf8');
+                const cfgMatch = modDescXml.match(/<map\s+[^>]*configFilename=["']([^"']+)["']/i) || modDescXml.match(/configFilename=["']([^"']+)["']/i);
+                if (cfgMatch && cfgMatch[1]) {
+                    const normCfg = cfgMatch[1].replace(/\\/g, '/');
+                    const cfgEntry = zip.getEntry(normCfg) || zip.getEntry(cfgMatch[1]);
+                    if (cfgEntry) {
+                        const cfgXml = cfgEntry.getData().toString('utf8');
+                        const wMatch = cfgXml.match(/<map\s+[^>]*width=["'](\d+)["']/i) || cfgXml.match(/width=["'](\d+)["']/i);
+                        const hMatch = cfgXml.match(/<map\s+[^>]*height=["'](\d+)["']/i) || cfgXml.match(/height=["'](\d+)["']/i);
+                        const width = wMatch ? parseInt(wMatch[1], 10) : 2048;
+                        const height = hMatch ? parseInt(hMatch[1], 10) : 2048;
+                        const maxDim = Math.max(width, height);
+                        if (maxDim >= 8192) return { scale: 16, label: '16x (Massive)' };
+                        if (maxDim >= 4096) return { scale: 4, label: '4x (Large)' };
+                        return { scale: 1, label: '1x (Standard)' };
+                    }
+                }
+            }
+            const baseName = path.basename(mapZipPath).toLowerCase();
+            if (baseName.includes('16x')) return { scale: 16, label: '16x (Massive)' };
+            if (baseName.includes('4x')) return { scale: 4, label: '4x (Large)' };
+        }
+    } catch (e) {
+        console.warn('[MAP-SCALE] Error detecting map scale:', e.message);
+    }
+    if (lowerId.includes('16x')) return { scale: 16, label: '16x (Massive)' };
+    if (lowerId.includes('4x')) return { scale: 4, label: '4x (Large)' };
+    return { scale: 1, label: '1x (Standard)' };
+}
+
+/**
+ * Apply optimization settings to game.xml
+ * @param {Object} [options]
+ * @param {number|string} [options.savegameIndex]
+ * @param {string} [options.graphicsProfile]
+ */
+async function optimize(options = {}) {
     const specs = await getSystemSpecs();
     const performanceClass = recommendPerformanceClass(specs);
     const dataRoot = pathProvider.getFS25DataRoot();
@@ -297,7 +369,39 @@ async function optimize() {
         throw new Error('game.xml not found');
     }
 
-    // Create backup if it doesn't exist yet
+    let savePath = null;
+    let customSettings = null;
+    let mapId = null;
+    if (options.savegameIndex) {
+        savePath = path.join(dataRoot, `savegame${options.savegameIndex}`);
+        const savegameManager = require('./savegameManager');
+        customSettings = savegameManager.readSavegameCustomSettingsSync ? savegameManager.readSavegameCustomSettingsSync(savePath) : {};
+        const careerFile = path.join(savePath, 'careerSavegame.xml');
+        const pendingFile = path.join(savePath, '.mm_pending_settings.json');
+        if (fs.existsSync(careerFile)) {
+            try {
+                const cXml = fs.readFileSync(careerFile, 'utf8');
+                const mMatch = cXml.match(/<mapId>([^<]+)<\/mapId>/i);
+                if (mMatch) mapId = mMatch[1].trim();
+            } catch (_) {}
+        } else if (fs.existsSync(pendingFile)) {
+            try {
+                const pending = fs.readJsonSync(pendingFile);
+                mapId = pending?.mapId || null;
+            } catch (_) {}
+        }
+    }
+
+    const profileOverride = options.graphicsProfile || customSettings?.graphicsProfile || 'auto';
+    if (profileOverride === 'default') {
+        return await optimizeRevert();
+    }
+
+    let mapScale = { scale: 1, label: '1x (Standard)' };
+    if (profileOverride === 'auto' && mapId) {
+        mapScale = await detectMapScale(mapId, savePath);
+    }
+
     if (!fs.existsSync(backupPath)) {
         await fs.copy(gameXmlPath, backupPath);
     }
@@ -316,30 +420,39 @@ async function optimize() {
     if (!jsonObj.game.graphic.scalability) jsonObj.game.graphic.scalability = {};
 
     const scalability = jsonObj.game.graphic.scalability;
-    
-    // Set basic performance class
     scalability.performanceClass = performanceClass >= 4 ? 'ultra' : 
                                    performanceClass === 3 ? 'very high' :
                                    performanceClass === 2 ? 'high' :
                                    performanceClass === 1 ? 'medium' : 'low';
 
-    // ── GENTLE OPTIMIZATIONS (Merging, not replacing) ──
-    
-    // 1. Texture Filtering (Safe)
+    // 1. Texture Filtering
     scalability.textureFiltering = performanceClass >= 3 ? "16" : "8";
 
-    // 2. View Distance (Extreme potential)
-    if (performanceClass >= 4) {
-        scalability.viewDistanceCoeff = "4.000000"; // Pushed to 400% for Ultra systems
+    // 2. View Distance & LOD Scaling adapting to map scale
+    const isUltraRig = performanceClass >= 4;
+    if (profileOverride === 'performance_16x' || (profileOverride === 'auto' && mapScale.scale >= 16)) {
+        scalability.viewDistanceCoeff = "1.500000";
+        scalability.lodDistanceCoeff = "1.200000";
+        scalability.foliageViewDistanceCoeff = "1.200000";
+        scalability.foliageLODDistanceCoeff = "1.000000";
+    } else if (profileOverride === 'balanced_4x' || (profileOverride === 'auto' && mapScale.scale >= 4)) {
+        scalability.viewDistanceCoeff = isUltraRig ? "2.500000" : "2.000000";
+        scalability.lodDistanceCoeff = "1.500000";
+        scalability.foliageViewDistanceCoeff = "1.500000";
+        scalability.foliageLODDistanceCoeff = "1.200000";
+    } else if (profileOverride === 'ultra' || isUltraRig) {
+        scalability.viewDistanceCoeff = "4.000000";
         scalability.lodDistanceCoeff = "2.000000";
         scalability.foliageViewDistanceCoeff = "2.000000";
+        scalability.foliageLODDistanceCoeff = "1.500000";
     } else if (performanceClass >= 2) {
         scalability.viewDistanceCoeff = "2.000000";
         scalability.lodDistanceCoeff = "1.500000";
+        scalability.foliageViewDistanceCoeff = "1.400000";
     }
 
-    // 3. Shadows (The usual crash culprit)
-    if (performanceClass >= 4) {
+    // 3. Shadows
+    if (isUltraRig && (profileOverride === 'ultra' || mapScale.scale <= 4)) {
         scalability.shadowMapSize = "4096";
         scalability.maxNumShadowLights = "15";
     } else {
@@ -348,28 +461,20 @@ async function optimize() {
     }
     scalability.softShadows = "true";
 
-    // 4. Smart Upscaling (Leveraging hardware potential)
+    // 4. Smart Upscaling
     const gpuLower = specs.gpu.name.toLowerCase();
-    
-    // Clear existing upscaling to prevent conflicts
     delete scalability.dlss;
     delete scalability.fsr;
     delete scalability.xess;
     delete scalability.dlssFrameGen;
-
     if (gpuLower.includes('rtx')) {
-        // NVIDIA RTX - Enable DLSS
-        scalability.dlss = { "@_quality": "1" }; // Quality Mode
-        
-        // RTX 40-series - Enable Frame Generation
+        scalability.dlss = { "@_quality": "1" };
         if (gpuLower.includes('rtx 40')) {
             scalability.dlssFrameGen = { "@_enable": "true" };
         }
     } else if (gpuLower.includes('nvidia') || gpuLower.includes('gtx') || gpuLower.includes('amd') || gpuLower.includes('radeon')) {
-        // GTX or AMD - Enable FSR (Best compatible upscaler)
-        scalability.fsr = { "@_quality": "1" }; // Quality Mode
+        scalability.fsr = { "@_quality": "1" };
     } else if (gpuLower.includes('intel') && gpuLower.includes('arc')) {
-        // Intel Arc - Enable XeSS
         scalability.xess = { "@_quality": "1" };
     }
 
@@ -381,10 +486,9 @@ async function optimize() {
     if (!jsonObj.game.development) jsonObj.game.development = {};
     jsonObj.game.development.controls = "true";
 
-    // Audio Hardening (Preserve user volume setting if present, don't force to 100%)
+    // Audio Hardening
     if (jsonObj.game.audio && typeof jsonObj.game.audio === 'object') {
         jsonObj.game.audio["@_enable"] = "true";
-        // Preserve existing user-configured volume; only initialize if undefined
         if (jsonObj.game.audio["@_volume"] === undefined || jsonObj.game.audio["@_volume"] === null) {
             jsonObj.game.audio["@_volume"] = "1.000000";
         }
@@ -399,35 +503,31 @@ async function optimize() {
         processEntities: false,
         suppressBooleanAttributes: false
     });
-    
-    let newXml = builder.build(jsonObj);
-    newXml = newXml.trim();
+    let newXml = builder.build(jsonObj).trim();
     if (!newXml.startsWith('<?xml')) {
         newXml = '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n' + newXml;
     }
 
-    // 5. System Power Plan (New)
     try {
         if (!specs.power.isHighPerformance) {
-            console.log('[OPTIMIZER] Setting Power Plan to High Performance...');
-            execSync('powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c'); // GUID for High Performance
+            execSync('powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c');
         }
-    } catch (e) {
-        console.warn('[OPTIMIZER] Failed to set power plan:', e.message);
-    }
+    } catch (e) {}
 
     await fs.writeFile(gameXmlPath, newXml);
 
     return {
         success: true,
         specs,
+        profile: profileOverride,
+        mapScale: mapScale.label,
         applied: performanceClass >= 4 ? 'ultra' : 
                  performanceClass === 3 ? 'very high' :
                  performanceClass === 2 ? 'high' :
                  performanceClass === 1 ? 'medium' : 'low',
         tweaks: {
-            viewDistance: performanceClass >= 2 ? '300%' : '100%',
-            shadows: performanceClass >= 4 ? 'HighRes' : 'Standard',
+            viewDistance: `${Math.round(parseFloat(scalability.viewDistanceCoeff || 1) * 100)}%`,
+            shadows: scalability.shadowMapSize === '4096' ? 'HighRes (4096)' : 'Standard (2048)',
             powerPlan: !specs.power.isHighPerformance ? 'Optimized' : 'Existing'
         }
     };
@@ -501,4 +601,4 @@ async function setHighPerformancePlan() {
     }
 }
 
-module.exports = { getSystemSpecs, recommendPerformanceClass, optimize, optimizeRevert, setHighPerformancePlan };
+module.exports = { getSystemSpecs, recommendPerformanceClass, optimize, optimizeRevert, setHighPerformancePlan, detectMapScale };

@@ -265,8 +265,8 @@ async function launch(options = {}) {
   const cache = require('./cache');
   if (cache.getSetting('autoOptimize') !== 'false') {
     try {
-      console.log('[LAUNCH] Auto-Optimizing game settings...');
-      await systemOptimizer.optimize();
+      console.log(`[LAUNCH] Auto-Optimizing game settings${options.savegameIndex ? ` for savegame ${options.savegameIndex}` : ''}...`);
+      await systemOptimizer.optimize({ savegameIndex: options.savegameIndex });
     } catch (e) {
       console.error('[LAUNCH] Optimization skipped:', e.message);
     }

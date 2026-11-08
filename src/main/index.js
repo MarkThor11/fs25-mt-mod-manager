@@ -738,8 +738,8 @@ ipcMain.handle('system:getSpecs', async () => {
   return await getSystemSpecs();
 });
 
-ipcMain.handle('system:optimizeGraphics', async () => {
-  return await optimize();
+ipcMain.handle('system:optimizeGraphics', async (_, options) => {
+  return await optimize(options);
 });
 
 ipcMain.handle('system:optimizeRevert', async () => {

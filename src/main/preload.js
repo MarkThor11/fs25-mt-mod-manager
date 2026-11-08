@@ -243,7 +243,7 @@ contextBridge.exposeInMainWorld('api', {
   // System
   system: {
     getSpecs: () => ipcRenderer.invoke('system:getSpecs'),
-    optimizeGraphics: () => ipcRenderer.invoke('system:optimizeGraphics'),
+    optimizeGraphics: (options) => ipcRenderer.invoke('system:optimizeGraphics', options),
     optimizeRevert: () => ipcRenderer.invoke('system:optimizeRevert'),
     setHighPerformancePlan: () => ipcRenderer.invoke('system:setHighPerformancePlan'),
     getDiskSpace: (targetPath) => ipcRenderer.invoke('system:getDiskSpace', targetPath),

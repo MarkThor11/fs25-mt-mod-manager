@@ -1530,6 +1530,22 @@ const [activeTab, setActiveTab] = useState('general');
                 <h3 className="section-title"><Video size={16} /> Camera & Visuals</h3>
                 <div className="settings-grid">
                   <div className="setting">
+                    <label title="Controls graphics view distance and LOD scalability specifically when launching this savegame, adapting for 1x standard, 4x large, or 16x massive maps.">Graphics &amp; Map Scale Profile</label>
+                    <div className="input-with-icon">
+                      <Sliders size={14} />
+                      <select 
+                        defaultValue={save.customSettings?.graphicsProfile || 'auto'} 
+                        onChange={(e) => handleUpdate('custom', 'graphicsProfile', e.target.value)}
+                      >
+                        <option value="auto">Auto (Adaptive to Map Scale)</option>
+                        <option value="ultra">Ultra (Max View Distance 400%)</option>
+                        <option value="balanced_4x">Balanced / 4x Maps (200% - 250%)</option>
+                        <option value="performance_16x">Performance / 16x Maps (120% - 150%)</option>
+                        <option value="default">Game Engine Default</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="setting">
                     <label title="Mouse and controller look sensitivity.">Camera Sensitivity ({Math.round(controlsSettings.cameraSensitivity * 100)}%)</label>
                     <CustomSlider 
                       min="0.5" 
