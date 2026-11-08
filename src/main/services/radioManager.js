@@ -30,7 +30,7 @@ async function apiGet(url, params = {}) {
         const request = (targetUrl) => {
             const options = {
                 headers: {
-                    'User-Agent': 'FS25-MT-Mod-Manager/1.3.2',
+                    'User-Agent': 'FS25-MT-Mod-Manager/1.3.3',
                     'Accept': 'application/json'
                 }
             };

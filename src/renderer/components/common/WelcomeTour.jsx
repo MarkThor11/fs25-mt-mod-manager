@@ -10,8 +10,8 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 
 const SLIDES = [
   {
-    title: "MT Mod Manager v1.3.2",
-    description: "Welcome to v1.3.2! This update brings Smart Mod Download Routing by Category, Adaptive Map Scale & Per-Savegame Graphics Profiles, Multiplayer Server Save Management & Protected Exports, 1-Click Keybind Conflict Auto-Resolution, Fleet Maintenance & Teleportation, and Loading Screen Customization!",
+    title: "MT Mod Manager v1.3.3",
+    description: "Welcome to v1.3.3! This update brings Smart Mod Download Routing by Category, Adaptive Map Scale & Per-Savegame Graphics Profiles, Multiplayer Server Save Management & Protected Exports, 1-Click Keybind Conflict Auto-Resolution, Fleet Maintenance & Teleportation, and Loading Screen Customization!",
     icon: <Rocket className="w-12 h-12 text-accent" />,
     color: "var(--accent)"
   },
@@ -288,7 +288,7 @@ const SLIDES = [
 
 export default function WelcomeTour({ forceShow = false, onClose }) {
   const { hasSeenGuide, setHasSeenGuide, tourVersion, setTourVersion, isLoaded } = useSettingsStore();
-  const CURRENT_TOUR_VERSION = '1.3.2';
+  const CURRENT_TOUR_VERSION = '1.3.3';
   const [currentSlide, setCurrentSlide] = useState(0);
   const [visible, setVisible] = useState(false);
   const [highlightStyle, setHighlightStyle] = useState(null);
