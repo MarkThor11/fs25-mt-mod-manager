@@ -71,9 +71,7 @@ export default function DownloadLocationPromptModal({
         justifyContent: 'center',
         padding: 20
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel();
-      }}
+      onClick={(e) => { e.stopPropagation(); if (e.target === e.currentTarget) onCancel(); }}
     >
       <div 
         style={{
