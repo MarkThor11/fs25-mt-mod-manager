@@ -195,10 +195,11 @@ export default function DownloadRoutingSection() {
             <select
               value={selectedCat}
               onChange={(e) => setSelectedCat(e.target.value)}
+              className="sort-bar__select"
               style={{
-                background: 'var(--bg-surface, #1e222b)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                color: '#fff',
+                background: 'var(--bg-tertiary, #1e222b)',
+                border: '1px solid var(--border, rgba(255, 255, 255, 0.15))',
+                color: 'var(--text-primary, #fff)',
                 borderRadius: 8,
                 padding: '6px 10px',
                 fontSize: 12,
@@ -207,7 +208,7 @@ export default function DownloadRoutingSection() {
               }}
             >
               {COMMON_CATEGORIES.map(c => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c} style={{ background: '#1e222b', color: '#fff' }}>{c}</option>
               ))}
             </select>
 
@@ -216,10 +217,11 @@ export default function DownloadRoutingSection() {
             <select
               value={targetDest}
               onChange={(e) => setTargetDest(e.target.value)}
+              className="sort-bar__select"
               style={{
-                background: 'var(--bg-surface, #1e222b)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                color: '#fff',
+                background: 'var(--bg-tertiary, #1e222b)',
+                border: '1px solid var(--border, rgba(255, 255, 255, 0.15))',
+                color: 'var(--text-primary, #fff)',
                 borderRadius: 8,
                 padding: '6px 10px',
                 fontSize: 12,
@@ -227,16 +229,16 @@ export default function DownloadRoutingSection() {
                 minWidth: 180
               }}
             >
-              <option value="">Select destination...</option>
+              <option value="" style={{ background: '#1e222b', color: '#94a3b8' }}>Select destination...</option>
               {/* Secondary Drives */}
               {modsPaths.slice(1).map((p, idx) => (
-                <option key={p} value={p}>Drive: {p}</option>
+                <option key={p} value={p} style={{ background: '#1e222b', color: '#fff' }}>Drive: {p}</option>
               ))}
               {/* Subfolders */}
               {userFolders.map(f => (
-                <option key={f} value={f}>Folder: {f}</option>
+                <option key={f} value={f} style={{ background: '#1e222b', color: '#fff' }}>Folder: {f}</option>
               ))}
-              <option value="__CUSTOM__">+ New custom subfolder...</option>
+              <option value="__CUSTOM__" style={{ background: '#1e222b', color: '#38bdf8' }}>+ New custom subfolder...</option>
             </select>
 
             {targetDest === '__CUSTOM__' && (
