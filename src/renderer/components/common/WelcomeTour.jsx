@@ -4,14 +4,14 @@ import {
   ShieldCheck, Heart, Layout, LayoutGrid, Zap, Home, Globe, HardDrive, 
   Save, EyeOff, Map, MousePointer2, MessageCircle, Share2, Folders, Sliders, Layers,
   AlertTriangle, Pin, Palette, MousePointer, List, ShieldAlert, ArrowRightLeft, Download, Radio,
-  SlidersHorizontal, Lock, Scale, Image, History, Users, Key
+  SlidersHorizontal, Lock, Scale, Image, History, Users, Key, FolderDown, Monitor
 } from 'lucide-react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
 const SLIDES = [
   {
     title: "MT Mod Manager v1.3.2",
-    description: "Welcome to v1.3.2! This update brings Multiplayer Server Save Management & Protected Exports, 1-Click Keybind Conflict Auto-Resolution, Fleet Maintenance & Teleportation tools, a Loading Screen Customizer, Multi-Drive Mod Migration, and Side-by-Side Mod Comparison!",
+    description: "Welcome to v1.3.2! This update brings Smart Mod Download Routing by Category, Adaptive Map Scale & Per-Savegame Graphics Profiles, Multiplayer Server Save Management & Protected Exports, 1-Click Keybind Conflict Auto-Resolution, Fleet Maintenance & Teleportation, and Loading Screen Customization!",
     icon: <Rocket className="w-12 h-12 text-accent" />,
     color: "var(--accent)"
   },
@@ -142,6 +142,13 @@ const SLIDES = [
     targetId: "tour-nav-savegames"
   },
   {
+    title: "Adaptive Map Scale & Visual Profiles",
+    description: "Set graphics presets per savegame! In the Savegame Editor under Visuals, choose Auto to dynamically adjust view distances for standard 1x, large 4x, or massive 16x maps—preventing memory exhaustion on large maps while maximizing visual fidelity on smaller ones.",
+    icon: <Monitor className="w-12 h-12 text-emerald-400" />,
+    color: "#10b981",
+    targetId: "tour-nav-savegames"
+  },
+  {
     title: "Multiplayer Server Saves & Exports",
     description: "Switch any save into Server Mode! Edit in-game farm permissions offline, run Mod Integrity Audits, and export saves as a Locked Player Version (view-only) or Admin Version with a Server Mod Host link.",
     icon: <Users className="w-12 h-12 text-cyan-400" />,
@@ -203,6 +210,13 @@ const SLIDES = [
     icon: <Download className="w-12 h-12 text-accent" />,
     color: "var(--accent)",
     targetId: "tour-nav-downloads"
+  },
+  {
+    title: "Smart Download Routing",
+    description: "Automate your mod organization! In Settings under Download Routing, assign default destination folders for each mod category (e.g., Maps to a dedicated drive, Harvesters to Harvesters) or enable prompt mode to choose on download.",
+    icon: <FolderDown className="w-12 h-12 text-cyan-400" />,
+    color: "#22d3ee",
+    targetId: "tour-nav-settings"
   },
   {
     title: "Reporting & Diagnostics",
