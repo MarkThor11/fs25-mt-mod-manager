@@ -7745,6 +7745,13 @@ async function cleanupLegacyDuplicates() {
 			
 			for (const dir of subDirs) {
 				const subDirPath = path.join(rootPath, dir.name);
+
+				// Skip if the directory itself is an unzipped mod (contains modDesc.xml directly)
+				// Unzipped mod folders are developer or extracted mods, not map organizational subfolders!
+				if (await fs.pathExists(path.join(subDirPath, 'modDesc.xml'))) {
+					continue;
+				}
+
 				const subEntries = await fs.readdir(subDirPath, { withFileTypes: true }).catch(() => []);
 				for (const sub of subEntries) {
 					if (!sub.isFile() || !sub.name.toLowerCase().endsWith('.zip')) continue;
@@ -7971,6 +7978,12 @@ async function consolidateDependencies(onProgress = null) {
 		if (entry.name.startsWith('.') || entryNameLower === 'backups' || entryNameLower === 'pdlc' || entryNameLower === MAP_DEPENDENCIES_FOLDER.toLowerCase()) continue;
 
 		const subDir = path.join(modsPath, entry.name);
+
+		// Skip if directory itself is an unzipped mod folder (contains modDesc.xml)
+		if (await fs.pathExists(path.join(subDir, 'modDesc.xml'))) {
+			continue;
+		}
+
 		const subEntries = await fs.readdir(subDir, { withFileTypes: true }).catch(() => []);
 
 		for (const sub of subEntries) {
