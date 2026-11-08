@@ -1,6 +1,7 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
+  getPathForFile: (file) => (webUtils && typeof webUtils.getPathForFile === 'function' ? webUtils.getPathForFile(file) : (file ? file.path : null)),
   isDev: process.env.NODE_ENV === 'development' || !process.env.ELECTRON_IS_PACKAGED,
   // Window controls
   window: {

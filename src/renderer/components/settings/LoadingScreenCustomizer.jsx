@@ -82,7 +82,7 @@ export default function LoadingScreenCustomizer() {
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
       const file = files[0];
-      const filePath = file.path;
+      const filePath = window.api?.getPathForFile ? window.api.getPathForFile(file) : (file.path || null);
       if (filePath) {
         const ext = filePath.split('.').pop().toLowerCase();
         if (['png', 'jpg', 'jpeg', 'webp', 'bmp', 'dds'].includes(ext)) {

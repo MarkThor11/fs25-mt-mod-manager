@@ -4608,7 +4608,7 @@ export default function SavegamesPage() {
     if (files.length === 0) return;
 
     const file = files[0];
-    const sourcePath = file.path;
+    const sourcePath = window.api?.getPathForFile ? window.api.getPathForFile(file) : (file.path || null);
 
     // If slotIndex is null, find first empty slot
     let targetSlot = slotIndex;

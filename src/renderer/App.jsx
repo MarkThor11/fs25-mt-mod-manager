@@ -229,7 +229,7 @@ export default function App() {
         const savegamePaths = [];
 
         for (const f of files) {
-            const p = f.path;
+            const p = window.api?.getPathForFile ? window.api.getPathForFile(f) : (f.path || null);
             if (!p) continue;
             let isSave = false;
             try {
