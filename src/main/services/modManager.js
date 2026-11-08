@@ -382,6 +382,7 @@ function readEntryFromZip(zipPath, targetEntryName) {
 		const targetLower = targetEntryName.toLowerCase();
 		let cdPos = 0;
 		let targetEntry = null;
+		let fallbackEntry = null;
 
 		while (cdPos <= cdSize - 46) {
 			const sig = cdBuf.readUInt32LE(cdPos);
@@ -425,7 +426,8 @@ function readEntryFromZip(zipPath, targetEntryName) {
 				}
 			}
 
-			if (entryNameLower === targetLower || entryNameLower === `/${targetLower}` || entryNameLower.endsWith(`/${targetLower}`)) {
+			// Prioritize root-level matches (e.g. root modDesc.xml) over nested matches (e.g. maps/.../modDesc.xml)
+			if (entryNameLower === targetLower || entryNameLower === `/${targetLower}`) {
 				targetEntry = {
 					entryName,
 					method,
@@ -434,32 +436,41 @@ function readEntryFromZip(zipPath, targetEntryName) {
 					localOffset
 				};
 				break;
+			} else if (!fallbackEntry && entryNameLower.endsWith(`/${targetLower}`)) {
+				fallbackEntry = {
+					entryName,
+					method,
+					compSize,
+					uncompSize,
+					localOffset
+				};
 			}
 
 			cdPos += 46 + nameLen + extraLen + commentLen;
 		}
 
-		if (!targetEntry || targetEntry.uncompSize > 100 * 1024 * 1024) {
+		const chosenEntry = targetEntry || fallbackEntry;
+		if (!chosenEntry || chosenEntry.uncompSize > 100 * 1024 * 1024) {
 			return null;
 		}
 
 		// 3. Read Local Header to find exact data offset
 		const localHeader = Buffer.alloc(30);
-		nodeFs.readSync(fd, localHeader, 0, 30, targetEntry.localOffset);
+		nodeFs.readSync(fd, localHeader, 0, 30, chosenEntry.localOffset);
 		if (localHeader.readUInt32LE(0) !== 0x04034b50) {
 			return null;
 		}
 		const localNameLen = localHeader.readUInt16LE(26);
 		const localExtraLen = localHeader.readUInt16LE(28);
-		const dataOffset = targetEntry.localOffset + 30 + localNameLen + localExtraLen;
+		const dataOffset = chosenEntry.localOffset + 30 + localNameLen + localExtraLen;
 
 		// 4. Read compressed data
-		const compData = Buffer.alloc(targetEntry.compSize);
-		nodeFs.readSync(fd, compData, 0, targetEntry.compSize, dataOffset);
+		const compData = Buffer.alloc(chosenEntry.compSize);
+		nodeFs.readSync(fd, compData, 0, chosenEntry.compSize, dataOffset);
 
-		if (targetEntry.method === 0) {
+		if (chosenEntry.method === 0) {
 			return compData;
-		} else if (targetEntry.method === 8) {
+		} else if (chosenEntry.method === 8) {
 			return zlib.inflateRawSync(compData);
 		}
 	} catch (err) {
@@ -7293,10 +7304,11 @@ function ultraNormalize(str) {
 // Auto-prune on startup removed to prevent launch hang.
 // Now called inside scanLocalMods() for better safety.
 
-function looksLikeMap(modDesc) {
-    if (!modDesc || !modDesc.title) return false;
+function looksLikeMap(modDesc, optionalFileName = null) {
+    if (!modDesc) return false;
+    if (modDesc.isMap) return true;
     const title = (modDesc.title || '').toLowerCase();
-    const fileName = (modDesc.fileName || '').toLowerCase();
+    const fileName = (optionalFileName || modDesc.fileName || '').toLowerCase();
     
     // Negative keywords: things that suggest it's a placeable, production, or pack
     const negativeKeywords = ['pack', 'set', 'building', 'shed', 'tank', 'object', 'asset', 'prop', 'marker', 'hangar', 'storage', 'factory', 'production', 'station', 'barn', 'stable', 'silo', 'shop', 'market', 'scale', 'collection', 'prefab'];
@@ -7304,7 +7316,7 @@ function looksLikeMap(modDesc) {
     
     // Must contain map indicators or explicit mapId
     const hasMapIndicator = title.includes('map') || fileName.includes('map') || fileName.includes('valley') || fileName.includes('river') || fileName.includes('mountain') || fileName.includes('creek') || fileName.includes('countryside') || fileName.includes('terrain') || fileName.includes('wood') || fileName.includes('plain') || fileName.includes('island') || fileName.includes('coast') || fileName.includes('springs');
-    return (modDesc.mapId && modDesc.mapId.length > 0) || hasMapIndicator;
+    return Boolean((modDesc.mapId && modDesc.mapId.length > 0) || hasMapIndicator);
 }
 
 /**
@@ -7757,7 +7769,7 @@ async function cleanupLegacyDuplicates() {
 
 					// Determine if this file is the map itself
 					const subMeta = parseModDesc(subFilePath);
-					const isMapMod = subMeta && (subMeta.isMap || looksLikeMap(sub.name, subMeta));
+					const isMapMod = subMeta && (subMeta.isMap || looksLikeMap(subMeta, sub.name));
 
 					const rootFilePath = path.join(rootPath, sub.name);
 					const rootExists = await fs.pathExists(rootFilePath);
