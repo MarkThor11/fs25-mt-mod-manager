@@ -1797,6 +1797,38 @@ export default function InstalledModsPage() {
       folderSizeMap.set(name, sum);
     }
 
+    // Helper to determine relative position of a folder respecting folderOrder and alphabetical slot
+    const getFolderRank = (name) => {
+        if (name === 'DLC') return -2000000;
+        if (name === '') return -1000000;
+        if (name.toLowerCase() === 'map dependencies') return -999999;
+        
+        const idx = Array.isArray(folderOrder) ? folderOrder.indexOf(name) : -1;
+        if (idx !== -1) return idx;
+
+        // When a folder/map is newly imported and not yet in saved folderOrder,
+        // find its natural alphabetical position among the non-pinned folders in folderOrder.
+        if (Array.isArray(folderOrder) && folderOrder.length > 0) {
+            const startIdx = Math.max(
+                folderOrder.indexOf('DLC') + 1,
+                folderOrder.indexOf('') + 1,
+                folderOrder.findIndex(k => k.toLowerCase() === 'map dependencies') + 1,
+                0
+            );
+
+            for (let i = startIdx; i < folderOrder.length; i++) {
+                const item = folderOrder[i];
+                if (item === 'DLC' || item === '' || item.toLowerCase() === 'map dependencies') continue;
+                if (name.localeCompare(item, undefined, { numeric: true, sensitivity: 'base' }) < 0) {
+                    return i - 0.5;
+                }
+            }
+            return folderOrder.length + 0.5;
+        }
+
+        return 0;
+    };
+
     // 6. DLC folder first, then sort by Size or Alphabetical/Order
     const sortedKeys = finalKeys.sort((a,b) => {
         if (a === 'DLC') return -1;
@@ -1805,18 +1837,12 @@ export default function InstalledModsPage() {
             const diff = (folderSizeMap.get(b) || 0) - (folderSizeMap.get(a) || 0);
             if (diff !== 0) return diff;
         }
-        const indexA = folderOrder.indexOf(a);
-        const indexB = folderOrder.indexOf(b);
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-        // Default order when not custom-ordered:
-        // MAIN ('') is always first, followed immediately by 'Map Dependencies'
-        if (a === '') return -1;
-        if (b === '') return 1;
-        if (a.toLowerCase() === 'map dependencies') return -1;
-        if (b.toLowerCase() === 'map dependencies') return 1;
-        return a.localeCompare(b);
+        
+        const rankA = getFolderRank(a);
+        const rankB = getFolderRank(b);
+        if (rankA !== rankB) return rankA - rankB;
+
+        return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
     });
 
     // 7. Lock maps to the first position within each folder
