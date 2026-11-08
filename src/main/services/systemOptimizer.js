@@ -50,9 +50,16 @@ async function getSystemSpecs() {
                 // Win32_VideoController.AdapterRAM caps at 4GB (32-bit uint) for high-vram GPUs
                 try {
                     const regScript = `
-                        Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\00*' | Where-Object { $_.'HardwareInformation.AdapterString' -or $_.DriverDesc } | ForEach-Object {
+                        $paths = @(
+                            'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0*',
+                            'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Video\\*\\0*'
+                        )
+                        Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue | Where-Object { 
+                            $_.'HardwareInformation.AdapterString' -or $_.DriverDesc 
+                        } | ForEach-Object {
                             [PSCustomObject]@{
-                                Name = if ($_.'HardwareInformation.AdapterString') { $_.'HardwareInformation.AdapterString' } else { $_.DriverDesc }
+                                Adapter = [string]($_.'HardwareInformation.AdapterString')
+                                Desc = [string]($_.DriverDesc)
                                 qwMem = [int64]($_.'HardwareInformation.qwMemorySize')
                                 mem = [int64]($_.'HardwareInformation.MemorySize')
                             }
@@ -73,8 +80,14 @@ async function getSystemSpecs() {
                     let regEntries = JSON.parse(cleanJson);
                     if (!Array.isArray(regEntries)) regEntries = [regEntries];
                     
-                    const matched = regEntries.find(e => e.Name && e.Name.toLowerCase() === specs.gpu.name.toLowerCase()) || 
-                                    regEntries.sort((a, b) => (b.qwMem || b.mem || 0) - (a.qwMem || a.mem || 0))[0];
+                    const gpuTargetName = specs.gpu.name.toLowerCase();
+                    // Match by full or partial name, prioritizing highest qwMem / mem
+                    const matched = regEntries.find(e => {
+                        const a = (e.Adapter || '').toLowerCase();
+                        const d = (e.Desc || '').toLowerCase();
+                        return (a && (a === gpuTargetName || gpuTargetName.includes(a) || a.includes(gpuTargetName))) ||
+                               (d && (d === gpuTargetName || gpuTargetName.includes(d) || d.includes(gpuTargetName)));
+                    }) || regEntries.sort((a, b) => (b.qwMem || b.mem || 0) - (a.qwMem || a.mem || 0))[0];
                                     
                     if (matched) {
                         if (matched.qwMem && matched.qwMem > 0) {
@@ -142,6 +155,13 @@ async function getSystemSpecs() {
                     else if (name.includes('titan x') || name.includes('titan')) specs.gpu.vramGB = 12;
                     else if (name.includes('980 ti')) specs.gpu.vramGB = 6;
                     else if (name.includes('980') || name.includes('970')) specs.gpu.vramGB = 4;
+                    // AMD RX 9000 Series (RDNA 4)
+                    else if (name.includes('9070 xt') || name.includes('9070')) specs.gpu.vramGB = 16;
+                    else if (name.includes('9060 xt') || name.includes('9060')) specs.gpu.vramGB = 16;
+                    else if (name.includes('9050')) specs.gpu.vramGB = 8;
+                    // AMD RX 8000 Series (RDNA 4 pre-release designations)
+                    else if (name.includes('8800 xt') || name.includes('8800') || name.includes('8700')) specs.gpu.vramGB = 16;
+                    else if (name.includes('8600')) specs.gpu.vramGB = 12;
                     // AMD RX 7000 Series
                     else if (name.includes('7900 xtx')) specs.gpu.vramGB = 24;
                     else if (name.includes('7900 xt')) specs.gpu.vramGB = 20;
@@ -212,6 +232,8 @@ function recommendPerformanceClass(specs) {
     const isUltraGpu = vramGB >= 10 || 
         gpuLower.includes('rtx 50') || gpuLower.includes('rtx 40') || 
         gpuLower.includes('rtx 3080') || gpuLower.includes('rtx 3090') || 
+        gpuLower.includes('rx 9070') || gpuLower.includes('rx 9060') ||
+        gpuLower.includes('rx 8800') || gpuLower.includes('rx 8700') ||
         gpuLower.includes('rx 7900') || gpuLower.includes('rx 7800') || 
         gpuLower.includes('rx 6900') || gpuLower.includes('rx 6950') || 
         gpuLower.includes('1080 ti') || gpuLower.includes('arc a770');
