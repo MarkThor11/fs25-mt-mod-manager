@@ -4497,7 +4497,58 @@ export default function SavegamesPage() {
     }
     
     if (modKeysToApply.length > 0) {
-      const next = buildInitialModSelectionSet(modKeysToApply, mods);
+      // Replace existing selection cleanly: exclude any current map mod and map dependencies
+      const [curMapId, curMapTitle, curMapMod] = (createMap || '').split('|');
+      const cleanCurMap = (curMapMod || '').split('.')[0].toLowerCase();
+      
+      // Build a set of mod keys to exclude (maps and their dependencies)
+      const excludedModNames = new Set();
+      if (cleanCurMap) {
+        excludedModNames.add(cleanCurMap);
+      }
+      
+      // Identify all map mods and their dependencies
+      (mods || []).forEach(m => {
+        if (m.isMap) {
+          if (m.modName) excludedModNames.add(m.modName.toLowerCase());
+          if (m.fileName) excludedModNames.add(m.fileName.replace(/\.zip$/i, '').toLowerCase());
+          try {
+            const { installed: mapDeps } = resolveRecursiveDependencies(m, mods, {}, {});
+            (mapDeps || []).forEach(d => {
+              const dName = typeof d === 'string' ? d : (d.modName || d.fileName || '');
+              if (dName) excludedModNames.add(dName.toLowerCase());
+            });
+          } catch (_) {}
+          if (m.folder && m.folder.toLowerCase() !== 'mods') {
+            (mods || []).filter(sub => sub.folder && sub.folder.toLowerCase() === m.folder.toLowerCase()).forEach(sub => {
+              if (sub.modName) excludedModNames.add(sub.modName.toLowerCase());
+            });
+          }
+        }
+      });
+      
+      // Also resolve current map dependencies specifically
+      if (cleanCurMap && !['mapus', 'mapeu', 'mapas', 'highlandsfishingmap', 'beansandalpacasmap', 'catuai', 'catuaí'].includes(cleanCurMap)) {
+        const curMapObj = (mods || []).find(m => m.isMap && (m.modName?.toLowerCase() === cleanCurMap || m.fileName?.replace(/\.zip$/i, '').toLowerCase() === cleanCurMap));
+        if (curMapObj) {
+          try {
+            const { installed: curDeps } = resolveRecursiveDependencies(curMapObj, mods, {}, {});
+            (curDeps || []).forEach(d => {
+              const dName = typeof d === 'string' ? d : (d.modName || d.fileName || '');
+              if (dName) excludedModNames.add(dName.toLowerCase());
+            });
+          } catch (_) {}
+        }
+      }
+      
+      // Filter applied mods so map mods and map dependencies are excluded
+      const filteredModKeys = modKeysToApply.filter(k => {
+        const rawName = stripModSelectionKey(k).toLowerCase();
+        return !excludedModNames.has(rawName);
+      });
+      
+      // Cleanly replace selection with the applied saved mods (excluding any previous selections and map dependencies)
+      const next = buildInitialModSelectionSet(filteredModKeys, mods);
       const { conflictSensitivity } = useSettingsStore.getState();
       if (conflictSensitivity !== 'off') {
         const allConflicts = useLocalModsStore.getState().conflicts;
@@ -4515,8 +4566,9 @@ export default function SavegamesPage() {
           }
         }
       }
+      // Set the selection directly to replace previously selected mods and exclude maps/map dependencies
       setModalSelectedMods(next);
-      import('../store/useToastStore').then(m => m.useToastStore.getState().success(`Applied mods from "${saveLabel}"!`));
+      import('../store/useToastStore').then(m => m.useToastStore.getState().success(`Applied saved mods from "${saveLabel}"!`));
     } else {
       import('../store/useToastStore').then(m => m.useToastStore.getState().info(`No mods found in save "${saveLabel}".`));
     }
