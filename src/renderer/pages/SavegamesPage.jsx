@@ -739,6 +739,38 @@ const [activeTab, setActiveTab] = useState('general');
       return Array.from(brands).sort();
   }, [installedMods]);
   const [isDeselectingUnused, setIsDeselectingUnused] = useState(false);
+  const [isSaveSelectionSaved, setIsSaveSelectionSaved] = useState(() => {
+    try {
+      const presets = JSON.parse(localStorage.getItem('saved_career_presets') || '{}');
+      return Boolean(presets[save.path || save.folderName || `slot_${save.index}`]);
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSaveSelectionPreset = (checked) => {
+    setIsSaveSelectionSaved(checked);
+    try {
+      const presets = JSON.parse(localStorage.getItem('saved_career_presets') || '{}');
+      const key = save.path || save.folderName || `slot_${save.index}`;
+      if (checked) {
+        presets[key] = {
+          slotIndex: save.index,
+          savePath: save.path,
+          saveName: save.farmName || `Slot ${save.index}`,
+          modKeys: Array.from(selectedMods),
+          savedAt: Date.now()
+        };
+        useToastStore.getState().success(`Saved "${save.farmName || `Slot ${save.index}`}" mod selection for New Career`);
+      } else {
+        delete presets[key];
+        useToastStore.getState().info(`Removed "${save.farmName || `Slot ${save.index}`}" from New Career presets`);
+      }
+      localStorage.setItem('saved_career_presets', JSON.stringify(presets));
+    } catch (e) {
+      console.error('Failed to toggle save selection preset:', e);
+    }
+  };
 
   useEffect(() => {
     if (!window.api?.savegames?.getUsedMods || !save?.path) return;
@@ -2212,6 +2244,31 @@ const [activeTab, setActiveTab] = useState('general');
                         <div style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', background: 'var(--bg-tertiary)', borderRadius: 100, border: '1px solid var(--border)' }}>
                           {selectedMods.size} Selected
                         </div>
+                        <label title="Save this mod selection so it can be quickly applied when creating a new save."
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            padding: '4px 10px',
+                            borderRadius: 8,
+                            border: '1px solid ' + (isSaveSelectionSaved ? 'var(--accent)' : 'var(--border)'),
+                            background: isSaveSelectionSaved ? 'rgba(var(--accent-rgb), 0.12)' : 'var(--bg-tertiary)',
+                            color: isSaveSelectionSaved ? 'var(--accent)' : 'var(--text-secondary)',
+                            transition: 'all 0.15s'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSaveSelectionSaved}
+                            onChange={e => toggleSaveSelectionPreset(e.target.checked)}
+                            style={{ cursor: 'pointer', accentColor: 'var(--accent)' }}
+                          />
+                          <span>Save Selection</span>
+                        </label>
                         <label title="Filter the list to only show mods currently used in this savegame."
                           style={{
                             display: 'inline-flex',
@@ -4413,6 +4470,58 @@ export default function SavegamesPage() {
     }
 };
 
+  const applySaveToModal = (saveKey) => {
+    if (!saveKey) return;
+    let modKeysToApply = [];
+    let saveLabel = saveKey;
+    
+    // First check custom presets saved via checkbox
+    try {
+      const presets = JSON.parse(localStorage.getItem('saved_career_presets') || '{}');
+      if (presets[saveKey] && Array.isArray(presets[saveKey].modKeys)) {
+        modKeysToApply = presets[saveKey].modKeys;
+        saveLabel = presets[saveKey].saveName || saveKey;
+      }
+    } catch (e) {
+      console.warn('Error reading saved_career_presets:', e);
+    }
+    
+    // If not found in custom presets, check existing savegames
+    if (modKeysToApply.length === 0) {
+      const foundSave = savegames.find(s => String(s.index) === String(saveKey) || s.path === saveKey || s.folderName === saveKey);
+      if (foundSave && foundSave.mods) {
+        saveLabel = foundSave.farmName || `Slot ${foundSave.index}`;
+        const initialSet = buildInitialModSelectionSet(foundSave.mods || [], mods);
+        modKeysToApply = Array.from(initialSet);
+      }
+    }
+    
+    if (modKeysToApply.length > 0) {
+      const next = buildInitialModSelectionSet(modKeysToApply, mods);
+      const { conflictSensitivity } = useSettingsStore.getState();
+      if (conflictSensitivity !== 'off') {
+        const allConflicts = useLocalModsStore.getState().conflicts;
+        const activeMap = getActiveConflictsForSave(next, allConflicts);
+        if (activeMap.size > 0) {
+          if (conflictSensitivity === 'auto-disable_REMOVED') {
+            activeMap.forEach((_, modName) => {
+              Array.from(next).forEach(k => {
+                if (stripModSelectionKey(k).toLowerCase() === modName) next.delete(k);
+              });
+            });
+            import('../store/useToastStore').then(m => m.useToastStore.getState().info(`Auto-disabled conflicting mods from ${saveLabel}.`));
+          } else if (conflictSensitivity === 'warn' || conflictSensitivity === 'resolve') {
+            import('../store/useToastStore').then(m => m.useToastStore.getState().warning(`Warning: ${saveLabel} contains script conflicts.`));
+          }
+        }
+      }
+      setModalSelectedMods(next);
+      import('../store/useToastStore').then(m => m.useToastStore.getState().success(`Applied mods from "${saveLabel}"!`));
+    } else {
+      import('../store/useToastStore').then(m => m.useToastStore.getState().info(`No mods found in save "${saveLabel}".`));
+    }
+  };
+
   const allSlots = [...Array(20)].map((_, i) => {
       const idx = i + 1;
       return savegames.find(s => s.index === idx) || { index: idx, folderName: `savegame${idx}`, farmName: `Empty Slot ${idx}`, modCount: 0, isEmpty: true };
@@ -5149,11 +5258,56 @@ export default function SavegamesPage() {
                                         <option value="NON_MODHUB">Non-ModHub Only</option>
                                     </select>
                                     {profiles.length > 0 && (
-                                        <select onChange={e => applyProfileToModal(e.target.value)} defaultValue="" style={{ fontSize: 13, padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                                        <select onChange={e => { applyProfileToModal(e.target.value); e.target.value = ""; }} defaultValue="" style={{ fontSize: 13, padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}>
                                             <option value="" disabled>Apply Profile...</option>
                                             {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                         </select>
                                     )}
+                                    {(() => {
+                                        // Compute available saves & saved presets
+                                        let savedPresets = {};
+                                        try {
+                                            savedPresets = JSON.parse(localStorage.getItem('saved_career_presets') || '{}');
+                                        } catch (_) {}
+                                        const presetEntries = Object.entries(savedPresets);
+                                        const activeSavegames = savegames.filter(s => !s.isEmpty && (s.modCount > 0 || (s.mods && s.mods.length > 0)));
+                                        
+                                        if (presetEntries.length === 0 && activeSavegames.length === 0) return null;
+                                        
+                                        return (
+                                            <select 
+                                                onChange={e => {
+                                                    if (e.target.value) {
+                                                        applySaveToModal(e.target.value);
+                                                        e.target.value = "";
+                                                    }
+                                                }} 
+                                                defaultValue="" 
+                                                title="Apply mod selection from a saved selection or an existing save"
+                                                style={{ fontSize: 13, padding: '8px 12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: 8 }}
+                                            >
+                                                <option value="" disabled>Apply Save...</option>
+                                                {presetEntries.length > 0 && (
+                                                    <optgroup label="Saved Selections">
+                                                        {presetEntries.map(([k, p]) => (
+                                                            <option key={k} value={k}>
+                                                                ★ {p.saveName || `Slot ${p.slotIndex || 'Preset'}`} ({p.modKeys ? p.modKeys.length : 0} mods)
+                                                            </option>
+                                                        ))}
+                                                    </optgroup>
+                                                )}
+                                                {activeSavegames.length > 0 && (
+                                                    <optgroup label="Existing Saves">
+                                                        {activeSavegames.map(s => (
+                                                            <option key={s.path || s.index} value={s.path || s.index}>
+                                                                Slot {s.index}: {s.farmName || s.folderName} ({s.modCount || (s.mods ? s.mods.length : 0)} mods)
+                                                            </option>
+                                                        ))}
+                                                    </optgroup>
+                                                )}
+                                            </select>
+                                        );
+                                    })()}
                                     <button className="btn btn--secondary btn--sm" onClick={() => {
     const next = new Set();
     mods.filter(m => !m.isMap && m.modName).forEach(m => {
