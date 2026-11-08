@@ -7140,9 +7140,19 @@ async function deleteFolder(folderName) {
 	if (Array.isArray(cachedMods)) {
 		for (const mod of cachedMods) {
 			const base = path.basename(mod.file_path);
-			const modFolder = mod.folder || '';
-			const modTitle = (mod.title || '').replace(/\([^)]+\)/g, '').trim();
-			if (modFolder === folderName || (mod.is_map && modTitle === folderName)) {
+			let modTitle = '';
+			let isMap = false;
+			if (mod.json_data) {
+				try {
+					const data = JSON.parse(mod.json_data);
+					modTitle = (data.title || '').replace(/\([^)]+\)/g, '').trim();
+					isMap = !!data.isMap;
+				} catch (_) {}
+			}
+			const modFolder = (mod.file_path && path.dirname(mod.file_path) !== path.dirname(path.dirname(mod.file_path)))
+				? path.basename(path.dirname(mod.file_path))
+				: '';
+			if (modFolder.toLowerCase() === folderName.toLowerCase() || (isMap && (modTitle.toLowerCase() === folderName.toLowerCase() || folderName.toLowerCase().startsWith(modTitle.toLowerCase())))) {
 				try {
 					if (fs.existsSync(mod.file_path)) {
 						await safeRemove(mod.file_path);

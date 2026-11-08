@@ -626,9 +626,16 @@ export const useLocalModsStore = create((set, get) => ({
             setFolderOrder(newOrder);
         }
         set(state => {
-          const nextMods = state.mods.filter(m => (m.folder || '') !== folderName);
+          const fLower = folderName.toLowerCase();
+          const nextMods = state.mods.filter(m => {
+            const mFolder = (m.folder || '').toLowerCase();
+            const mTitle = (m.title || '').toLowerCase();
+            if (mFolder === fLower) return false;
+            if (m.isMap && (mTitle === fLower || fLower.startsWith(mTitle))) return false;
+            return true;
+          });
           return {
-            allFolders: state.allFolders.filter(f => f !== folderName),
+            allFolders: state.allFolders.filter(f => f.toLowerCase() !== fLower),
             mods: nextMods,
             modCount: computeModCount(nextMods)
           };
